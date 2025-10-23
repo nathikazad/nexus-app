@@ -182,6 +182,17 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     setState(() {
       _speakerEnabled = !_speakerEnabled;
     });
+
+    // Update the audio stream manager with the new speaker state
+    _audioStreamManager.setSpeakerEnabled(_speakerEnabled);
+
+    // If speaker is being disabled, stop any currently playing audio
+    if (!_speakerEnabled) {
+      _audioPlayer.stop();
+      setState(() {
+        _currentlyPlayingAudio = null;
+      });
+    }
   }
 
 

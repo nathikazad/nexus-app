@@ -10,7 +10,7 @@ class AudioStreamManager {
   final List<Uint8List> _streamedAudioChunks = [];
   bool _isPlayingStreamedAudio = false;
   StreamSubscription? _audioPlayerSubscription;
-
+  bool _speakerEnabled = false;
   // Callback for when audio playback state changes
   Function(bool)? onPlaybackStateChanged;
 
@@ -18,6 +18,9 @@ class AudioStreamManager {
 
   /// Add audio data to the streaming queue
   Future<void> playStreamedAudio(Uint8List audioData) async {
+    if (!_speakerEnabled) {
+      return;
+    }
     try {
       // Add audio chunk to the list
       _streamedAudioChunks.add(audioData);
@@ -31,6 +34,13 @@ class AudioStreamManager {
       }
     } catch (e) {
       debugPrint('Error handling streamed audio: $e');
+    }
+  }
+
+  void setSpeakerEnabled(bool enabled) {
+    _speakerEnabled = enabled;
+    if (!enabled) {
+      stopAudio();
     }
   }
 
@@ -205,6 +215,7 @@ class AudioStreamManager {
       await _audioPlayer.stop();
       _isPlayingStreamedAudio = false;
       onPlaybackStateChanged?.call(false);
+      _streamedAudioChunks.clear();
     } catch (e) {
       debugPrint('Error stopping audio: $e');
     }
