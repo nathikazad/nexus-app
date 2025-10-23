@@ -22,6 +22,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _isRecording = false;
   bool _isConnected = false;
   bool _isTyping = false;
+  bool _opusMode = false;
   String _currentTranscript = '';
   
   StreamSubscription<Uint8List>? _audioSubscription;
@@ -141,6 +142,14 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     }
   }
 
+  void _toggleOpusMode() {
+    setState(() {
+      _opusMode = !_opusMode;
+    });
+    // Update the audio service with the new Opus mode
+    _audioService.setOpusMode(_opusMode);
+  }
+
   Future<void> _sendTextMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty || !_isConnected) {
@@ -251,10 +260,14 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
                 children: [
                   const Icon(Icons.mic, color: Colors.red),
                   const SizedBox(width: 8),
+                  if (_opusMode) ...[
+                    const Icon(Icons.compress, color: Colors.blue, size: 16),
+                    const SizedBox(width: 4),
+                  ],
                   Expanded(
                     child: Text(
                       _currentTranscript.isEmpty 
-                        ? 'Recording...' 
+                        ? 'Recording${_opusMode ? ' (Opus)' : ''}...' 
                         : 'You said: $_currentTranscript',
                       style: const TextStyle(color: Colors.red),
                     ),
@@ -286,6 +299,19 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
                     backgroundColor: _isRecording ? Colors.red : Colors.grey[300],
                     foregroundColor: _isRecording ? Colors.white : Colors.black,
                   ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Opus mode toggle button
+                IconButton(
+                  onPressed: _isConnected ? _toggleOpusMode : null,
+                  icon: Icon(_opusMode ? Icons.compress : Icons.compress_outlined),
+                  style: IconButton.styleFrom(
+                    backgroundColor: _opusMode ? Theme.of(context).primaryColor : Colors.grey[300],
+                    foregroundColor: _opusMode ? Colors.white : Colors.black,
+                  ),
+                  tooltip: _opusMode ? 'Disable Opus compression' : 'Enable Opus compression',
                 ),
                 
                 const SizedBox(width: 8),
