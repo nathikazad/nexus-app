@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../services/audio_service.dart';
 import '../services/openai_service.dart';
-import '../services/audio_stream_manager.dart';
+import '../widgets/audio_stream_manager.dart';
+import '../widgets/message_bubble.dart';
+import '../widgets/input_area.dart';
 
 class VoiceAssistantScreen extends StatefulWidget {
   const VoiceAssistantScreen({super.key});
@@ -27,6 +29,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _isConnected = false;
   bool _isTyping = false;
   bool _opusMode = false;
+  bool _speakerEnabled = false;
   String _currentTranscript = '';
   String? _currentlyPlayingAudio;
   
@@ -90,9 +93,11 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           });
           _scrollToBottom();
         } else if (type == 'audio' && speaker == 'AI') {
-          // Handle streamed audio from AI
-          Uint8List audioData = data['audio']!;
-          _audioStreamManager.playStreamedAudio(audioData);
+          // Handle streamed audio from AI - only play if speaker is enabled
+          if (_speakerEnabled) {
+            Uint8List audioData = data['audio']!;
+            _audioStreamManager.playStreamedAudio(audioData);
+          }
         }
       });
       
@@ -171,6 +176,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     });
     // Update the audio service with the new Opus mode
     _audioService.setOpusMode(_opusMode);
+  }
+
+  void _toggleSpeaker() {
+    setState(() {
+      _speakerEnabled = !_speakerEnabled;
+    });
   }
 
 
@@ -289,13 +300,15 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
             ),
           
           // Input area
-          _InputArea(
+          InputArea(
             isConnected: _isConnected,
             isRecording: _isRecording,
             opusMode: _opusMode,
+            speakerEnabled: _speakerEnabled,
             textController: _textController,
             onToggleRecording: _toggleRecording,
             onToggleOpusMode: _toggleOpusMode,
+            onToggleSpeaker: _toggleSpeaker,
             onSendTextMessage: _sendTextMessage,
           ),
         ],
@@ -304,117 +317,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   }
 }
 
-class ChatMessage {
-  final String text;
-  final bool isFromUser;
-  final DateTime timestamp;
-  final String? audioFilePath;
-  
-  ChatMessage({
-    required this.text,
-    required this.isFromUser,
-    required this.timestamp,
-    this.audioFilePath,
-  });
-}
 
-class _MessageBubble extends StatelessWidget {
-  final ChatMessage message;
-  final VoidCallback? onPlayAudio;
-  final bool isPlaying;
-  
-  const _MessageBubble({
-    required this.message,
-    this.onPlayAudio,
-    this.isPlaying = false,
-  });
-  
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        mainAxisAlignment: message.isFromUser 
-          ? MainAxisAlignment.end 
-          : MainAxisAlignment.start,
-        children: [
-          if (!message.isFromUser) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(Icons.smart_toy, color: Colors.white, size: 16),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment: message.isFromUser 
-                ? CrossAxisAlignment.end 
-                : CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: message.isFromUser
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    message.text,
-                    style: TextStyle(
-                      color: message.isFromUser ? Colors.white : Colors.black,
-                    ),
-                  ),
-                ),
-                // Add playback button if audio file exists
-                if (message.audioFilePath != null && message.isFromUser) ...[
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: onPlayAudio,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isPlaying ? Icons.stop : Icons.play_arrow,
-                            size: 16,
-                            color: Colors.black87,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isPlaying ? 'Stop' : 'Play',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (message.isFromUser) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.grey[300],
-              child: const Icon(Icons.person, color: Colors.white, size: 16),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
 
 class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isConnected;
@@ -490,7 +393,7 @@ class _MessagesList extends StatelessWidget {
         }
         
         final message = messages[index];
-        return _MessageBubble(
+        return MessageBubble(
           message: message,
           onPlayAudio: message.audioFilePath != null 
             ? () => onPlayAudio(message.audioFilePath!)
@@ -538,111 +441,6 @@ class _RecordingIndicator extends StatelessWidget {
   }
 }
 
-class _InputArea extends StatelessWidget {
-  final bool isConnected;
-  final bool isRecording;
-  final bool opusMode;
-  final TextEditingController textController;
-  final VoidCallback onToggleRecording;
-  final VoidCallback onToggleOpusMode;
-  final VoidCallback onSendTextMessage;
-
-  const _InputArea({
-    required this.isConnected,
-    required this.isRecording,
-    required this.opusMode,
-    required this.textController,
-    required this.onToggleRecording,
-    required this.onToggleOpusMode,
-    required this.onSendTextMessage,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Voice recording button
-          IconButton(
-            onPressed: isConnected ? onToggleRecording : null,
-            icon: Icon(isRecording ? Icons.stop : Icons.mic),
-            style: IconButton.styleFrom(
-              backgroundColor: isRecording ? Colors.red : Colors.grey[300],
-              foregroundColor: isRecording ? Colors.white : Colors.black,
-            ),
-          ),
-          
-          const SizedBox(width: 8),
-          
-          // Opus mode toggle button
-          IconButton(
-            onPressed: isConnected ? onToggleOpusMode : null,
-            icon: Icon(opusMode ? Icons.compress : Icons.compress_outlined),
-            style: IconButton.styleFrom(
-              backgroundColor: opusMode ? Theme.of(context).primaryColor : Colors.grey[300],
-              foregroundColor: opusMode ? Colors.white : Colors.black,
-            ),
-            tooltip: opusMode ? 'Disable Opus compression' : 'Enable Opus compression',
-          ),
-          
-          const SizedBox(width: 8),
-          
-          // Text input field
-          Expanded(
-            child: TextField(
-              controller: textController,
-              enabled: isConnected,
-              decoration: InputDecoration(
-                hintText: 'Type a message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              onSubmitted: (_) => onSendTextMessage(),
-              textInputAction: TextInputAction.send,
-            ),
-          ),
-          
-          const SizedBox(width: 8),
-          
-          // Send button
-          IconButton(
-            onPressed: isConnected ? onSendTextMessage : null,
-            icon: const Icon(Icons.send),
-            style: IconButton.styleFrom(
-              backgroundColor: isConnected ? Theme.of(context).primaryColor : Colors.grey[300],
-              foregroundColor: isConnected ? Colors.white : Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _TypingIndicator extends StatelessWidget {
   const _TypingIndicator();

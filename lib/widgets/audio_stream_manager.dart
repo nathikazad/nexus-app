@@ -63,6 +63,7 @@ class AudioStreamManager {
 
     try {
       // Take the first chunk
+      print('Playing next audio chunk, remaining chunks: ${_streamedAudioChunks.length}');
       final audioChunk = _streamedAudioChunks.removeAt(0);
       final wavData = _convertPcmToWav(audioChunk);
       
