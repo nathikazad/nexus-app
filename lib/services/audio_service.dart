@@ -67,7 +67,7 @@ class AudioService {
       stream.listen(
         (data) {
           if (_audioStreamController != null && !_audioStreamController!.isClosed) {
-            debugPrint('AudioService: Received audio data (${data.length} bytes)');
+            // debugPrint('AudioService: Received audio data (${data.length} bytes)');
             _audioStreamController!.add(data);
           }
         },

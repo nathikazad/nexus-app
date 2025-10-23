@@ -15,132 +15,172 @@ class VoiceAssistantScreen extends StatefulWidget {
 class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   final OpenAIService _openAIService = OpenAIService();
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _textController = TextEditingController();
+  final List<ChatMessage> _messages = [];
   
   bool _isRecording = false;
   bool _isConnected = false;
-  String _status = 'Not connected';
-  String _conversation = '';
-  String _currentSpeaker = '';
-  String _currentMessage = '';
+  bool _isTyping = false;
+  String _currentTranscript = '';
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, String>>? _conversationSubscription;
-  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _setupSubscriptions();
+    _initializeServices();
   }
 
-  void _setupSubscriptions() {
-    _conversationSubscription = _openAIService.conversationStream.listen((data) {
-      String speaker = data['speaker']!;
-      String word = data['word']!;
-      
+  Future<void> _initializeServices() async {
+    try {
+      await _openAIService.initialize();
+      await _openAIService.connect();
       setState(() {
-        // If speaker changed, finalize the previous message and start a new one
-        if (_currentSpeaker != speaker && _currentSpeaker.isNotEmpty) {
-          String speakerIcon = _currentSpeaker == 'AI' ? '🤖 AI' : '👤 You';
-          _conversation += '$speakerIcon: $_currentMessage\n';
-          _currentMessage = word;
-        } else {
-          // Same speaker, append to current message
-          _currentMessage += word;
-        }
-        _currentSpeaker = speaker;
+        _isConnected = true;
       });
       
-      // Auto-scroll to bottom
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
+      // Listen to conversation stream
+      _conversationSubscription = _openAIService.conversationStream.listen((data) {
+        String speaker = data['speaker']!;
+        String word = data['word']!;
+        
+        setState(() {
+          if (speaker == 'AI') {
+            // Update or create AI message
+            if (_messages.isNotEmpty && _messages.last.isFromUser == false) {
+              // Update the last assistant message
+              final lastMessage = _messages.removeLast();
+              _messages.add(ChatMessage(
+                text: lastMessage.text + word,
+                isFromUser: false,
+                timestamp: lastMessage.timestamp,
+              ));
+            } else {
+              // Create new assistant message
+              _messages.add(ChatMessage(
+                text: word,
+                isFromUser: false,
+                timestamp: DateTime.now(),
+              ));
+            }
+          } else {
+            // Update current transcript for user
+            _currentTranscript += word;
+          }
+        });
+        _scrollToBottom();
       });
-    });
-  }
-
-  Future<void> _connectToOpenAI() async {
-    setState(() {
-      _status = 'Connecting...';
-    });
-
-    final initialized = await _openAIService.initialize();
-
-    if (!initialized) {
-      setState(() {
-        _status = 'Failed to initialize';
-      });
-      _showSnackBar('Failed to initialize OpenAI service');
-      return;
-    }
-
-    final connected = await _openAIService.connect();
-    
-    setState(() {
-      _isConnected = connected;
-      _status = connected ? 'Connected' : 'Connection failed';
-    });
-
-    if (connected) {
-      _showSnackBar('Connected to OpenAI Realtime API');
-    } else {
-      _showSnackBar('Failed to connect to OpenAI');
+      
+    } catch (e) {
+      _showErrorDialog('Failed to connect to OpenAI: $e');
     }
   }
 
-  Future<void> _startRecording() async {
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _toggleRecording() async {
     if (!_isConnected) {
-      _showSnackBar('Please connect to OpenAI first');
+      _showErrorDialog('Not connected to OpenAI service');
+      return;
+    }
+    
+    try {
+      if (_isRecording) {
+        await _audioService.stopRecording();
+        await _audioSubscription?.cancel();
+        
+        // If we have a transcript, add it as a user message
+        if (_currentTranscript.isNotEmpty) {
+          setState(() {
+            _messages.add(ChatMessage(
+              text: _currentTranscript,
+              isFromUser: true,
+              timestamp: DateTime.now(),
+            ));
+          });
+          _scrollToBottom();
+        }
+        
+        setState(() {
+          _isRecording = false;
+          _currentTranscript = '';
+        });
+      } else {
+        final started = await _audioService.startRecording();
+        if (started) {
+          setState(() {
+            _isRecording = true;
+            _currentTranscript = '';
+          });
+
+          // Listen to audio stream and send to OpenAI
+          _audioSubscription = _audioService.audioStream?.listen((audioData) {
+            _openAIService.sendAudio(audioData);
+          });
+        } else {
+          _showErrorDialog('Failed to start recording. Check microphone permissions.');
+        }
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to toggle recording: $e');
+      setState(() {
+        _isRecording = false;
+      });
+    }
+  }
+
+  Future<void> _sendTextMessage() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty || !_isConnected) {
       return;
     }
 
-    final started = await _audioService.startRecording();
-    if (started) {
-      setState(() {
-        _isRecording = true;
-      });
+    // Add user message to chat
+    setState(() {
+      _messages.add(ChatMessage(
+        text: text,
+        isFromUser: true,
+        timestamp: DateTime.now(),
+      ));
+    });
+    _scrollToBottom();
 
-      // Listen to audio stream and send to OpenAI
-      _audioSubscription = _audioService.audioStream?.listen((audioData) {
-        _openAIService.sendAudio(audioData);
-      });
+    // Clear text field
+    _textController.clear();
 
-      _showSnackBar('Recording started');
-    } else {
-      _showSnackBar('Failed to start recording. Check microphone permissions or try on a physical device (iOS Simulator has audio limitations).');
-      setState(() {
-        _status = 'Recording failed';
-      });
+    // Send to OpenAI
+    try {
+      await _openAIService.sendTextMessage(text);
+    } catch (e) {
+      _showErrorDialog('Failed to send message: $e');
     }
   }
 
-  Future<void> _stopRecording() async {
-    await _audioService.stopRecording();
-    await _audioSubscription?.cancel();
-    
-    setState(() {
-      _isRecording = false;
-    });
-
-    _showSnackBar('Recording stopped');
-  }
-
-  void _clearConversation() {
-    setState(() {
-      _conversation = '';
-      _currentSpeaker = '';
-      _currentMessage = '';
-    });
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -149,6 +189,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _audioSubscription?.cancel();
     _conversationSubscription?.cancel();
     _scrollController.dispose();
+    _textController.dispose();
     _audioService.dispose();
     _openAIService.dispose();
     super.dispose();
@@ -158,139 +199,252 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nexus Voice Assistant'),
+        title: const Text('Voice Assistant'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            onPressed: _clearConversation,
-            icon: const Icon(Icons.clear_all),
-            tooltip: 'Clear conversation',
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: Row(
+              children: [
+                Icon(
+                  _isConnected ? Icons.wifi : Icons.wifi_off,
+                  color: _isConnected ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _isConnected ? 'Connecteds' : 'Disconnected',
+                  style: TextStyle(
+                    color: _isConnected ? Colors.green : Colors.red,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Connection Status and Controls
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'OpenAI Connection',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      body: Column(
+        children: [
+          // Messages list
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length + (_isTyping ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _messages.length && _isTyping) {
+                  return const _TypingIndicator();
+                }
+                
+                final message = _messages[index];
+                return _MessageBubble(message: message);
+              },
+            ),
+          ),
+          
+          // Recording indicator
+          if (_isRecording)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.red.withOpacity(0.1),
+              child: Row(
+                children: [
+                  const Icon(Icons.mic, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _currentTranscript.isEmpty 
+                        ? 'Recording...' 
+                        : 'You said: $_currentTranscript',
+                      style: const TextStyle(color: Colors.red),
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _isConnected ? null : _connectToOpenAI,
-                      child: Text(_isConnected ? 'Connected' : 'Connect to OpenAI'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            
-            const SizedBox(height: 16),
-            
-            // Status
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      _isConnected ? Icons.check_circle : Icons.error,
-                      color: _isConnected ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 8),
-                    Text('Status: $_status'),
-                  ],
+          
+          // Input area
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
                 ),
-              ),
+              ],
             ),
-            
-            const SizedBox(height: 16),
-            
-            // Recording Controls
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Voice Recording',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        FloatingActionButton(
-                          onPressed: _isRecording ? null : _startRecording,
-                          backgroundColor: Colors.green,
-                          child: const Icon(Icons.mic),
-                        ),
-                        FloatingActionButton(
-                          onPressed: _isRecording ? _stopRecording : null,
-                          backgroundColor: Colors.red,
-                          child: const Icon(Icons.stop),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _isRecording ? 'Recording...' : 'Tap mic to start recording',
-                      style: TextStyle(
-                        color: _isRecording ? Colors.red : Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Conversation Transcript
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.chat, color: Colors.blue, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Conversation',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: _scrollController,
-                          child: Text(
-                            _conversation.isEmpty ? 'No conversation yet...\n\nTap the microphone to start talking!' : _conversation,
-                            style: const TextStyle(fontSize: 14, height: 1.4),
-                          ),
-                        ),
-                      ),
-                    ],
+            child: Row(
+              children: [
+                // Voice recording button
+                IconButton(
+                  onPressed: _isConnected ? _toggleRecording : null,
+                  icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+                  style: IconButton.styleFrom(
+                    backgroundColor: _isRecording ? Colors.red : Colors.grey[300],
+                    foregroundColor: _isRecording ? Colors.white : Colors.black,
                   ),
                 ),
+                
+                const SizedBox(width: 8),
+                
+                // Text input field
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    enabled: _isConnected,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    onSubmitted: (_) => _sendTextMessage(),
+                    textInputAction: TextInputAction.send,
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Send button
+                IconButton(
+                  onPressed: _isConnected ? _sendTextMessage : null,
+                  icon: const Icon(Icons.send),
+                  style: IconButton.styleFrom(
+                    backgroundColor: _isConnected ? Theme.of(context).primaryColor : Colors.grey[300],
+                    foregroundColor: _isConnected ? Colors.white : Colors.grey[600],
+                  ),
+                ),
+                
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ChatMessage {
+  final String text;
+  final bool isFromUser;
+  final DateTime timestamp;
+  
+  ChatMessage({
+    required this.text,
+    required this.isFromUser,
+    required this.timestamp,
+  });
+}
+
+class _MessageBubble extends StatelessWidget {
+  final ChatMessage message;
+  
+  const _MessageBubble({required this.message});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: message.isFromUser 
+          ? MainAxisAlignment.end 
+          : MainAxisAlignment.start,
+        children: [
+          if (!message.isFromUser) ...[
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Theme.of(context).primaryColor,
+              child: const Icon(Icons.smart_toy, color: Colors.white, size: 16),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: message.isFromUser
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                message.text,
+                style: TextStyle(
+                  color: message.isFromUser ? Colors.white : Colors.black,
+                ),
               ),
             ),
+          ),
+          if (message.isFromUser) ...[
+            const SizedBox(width: 8),
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.grey[300],
+              child: const Icon(Icons.person, color: Colors.white, size: 16),
+            ),
           ],
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypingIndicator extends StatelessWidget {
+  const _TypingIndicator();
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: Theme.of(context).primaryColor,
+            child: const Icon(Icons.smart_toy, color: Colors.white, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text('AI is typing...'),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
