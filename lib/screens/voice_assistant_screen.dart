@@ -50,7 +50,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       });
     };
   }
-
+  String currentSpeaker = '';
   Future<void> _initializeServices() async {
     try {
       await _openAIService.initialize();
@@ -66,13 +66,20 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         
         if (type == 'transcript') {
           String word = data['word']!;
-          
+          String newLog = '';
+          if (currentSpeaker != speaker) {
+            newLog = '${speaker}: ';
+          }
+          newLog += word;
+          print(newLog);
+          currentSpeaker = speaker;
           setState(() {
             if (speaker == 'AI') {
               // Update or create AI message
               if (_messages.isNotEmpty && _messages.last.isFromUser == false) {
                 // Update the last assistant message
                 final lastMessage = _messages.removeLast();
+                // print('ai: ${lastMessage.text + word}');
                 _messages.add(ChatMessage(
                   text: lastMessage.text + word,
                   isFromUser: false,
@@ -89,6 +96,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
             } else {
               // Update current transcript for user
               _currentTranscript += word;
+              // print('user: $_currentTranscript');
             }
           });
           _scrollToBottom();
@@ -232,6 +240,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     if (text.isEmpty || !_isConnected) {
       return;
     }
+
+    String newLog = 'You: $text';
+    print(newLog);
 
     // Add user message to chat
     setState(() {
