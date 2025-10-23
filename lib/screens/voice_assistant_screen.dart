@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../services/audio_service.dart';
 import '../services/openai_service.dart';
+import '../services/audio_stream_manager.dart';
 
 class VoiceAssistantScreen extends StatefulWidget {
   const VoiceAssistantScreen({super.key});
@@ -16,6 +17,7 @@ class VoiceAssistantScreen extends StatefulWidget {
 class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   final OpenAIService _openAIService = OpenAIService();
+  final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
@@ -29,12 +31,21 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   String? _currentlyPlayingAudio;
   
   StreamSubscription<Uint8List>? _audioSubscription;
-  StreamSubscription<Map<String, String>>? _conversationSubscription;
+  StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
 
   @override
   void initState() {
     super.initState();
     _initializeServices();
+    _setupAudioStreamManager();
+  }
+
+  void _setupAudioStreamManager() {
+    _audioStreamManager.onPlaybackStateChanged = (isPlaying) {
+      setState(() {
+        // Update UI state based on audio playback
+      });
+    };
   }
 
   Future<void> _initializeServices() async {
@@ -48,33 +59,41 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       // Listen to conversation stream
       _conversationSubscription = _openAIService.conversationStream.listen((data) {
         String speaker = data['speaker']!;
-        String word = data['word']!;
+        String type = data['type']!;
         
-        setState(() {
-          if (speaker == 'AI') {
-            // Update or create AI message
-            if (_messages.isNotEmpty && _messages.last.isFromUser == false) {
-              // Update the last assistant message
-              final lastMessage = _messages.removeLast();
-              _messages.add(ChatMessage(
-                text: lastMessage.text + word,
-                isFromUser: false,
-                timestamp: lastMessage.timestamp,
-              ));
+        if (type == 'transcript') {
+          String word = data['word']!;
+          
+          setState(() {
+            if (speaker == 'AI') {
+              // Update or create AI message
+              if (_messages.isNotEmpty && _messages.last.isFromUser == false) {
+                // Update the last assistant message
+                final lastMessage = _messages.removeLast();
+                _messages.add(ChatMessage(
+                  text: lastMessage.text + word,
+                  isFromUser: false,
+                  timestamp: lastMessage.timestamp,
+                ));
+              } else {
+                // Create new assistant message
+                _messages.add(ChatMessage(
+                  text: word,
+                  isFromUser: false,
+                  timestamp: DateTime.now(),
+                ));
+              }
             } else {
-              // Create new assistant message
-              _messages.add(ChatMessage(
-                text: word,
-                isFromUser: false,
-                timestamp: DateTime.now(),
-              ));
+              // Update current transcript for user
+              _currentTranscript += word;
             }
-          } else {
-            // Update current transcript for user
-            _currentTranscript += word;
-          }
-        });
-        _scrollToBottom();
+          });
+          _scrollToBottom();
+        } else if (type == 'audio' && speaker == 'AI') {
+          // Handle streamed audio from AI
+          Uint8List audioData = data['audio']!;
+          _audioStreamManager.playStreamedAudio(audioData);
+        }
       });
       
     } catch (e) {
@@ -154,6 +173,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _audioService.setOpusMode(_opusMode);
   }
 
+
   Future<void> _playAudio(String filePath) async {
     try {
       if (_currentlyPlayingAudio == filePath) {
@@ -166,14 +186,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         // Stop any currently playing audio
         await _audioPlayer.stop();
         
-        // Play the new audio - handle both file paths and blob URLs
-        if (kIsWeb && filePath.startsWith('blob:')) {
-          // For web blob URLs
-          await _audioPlayer.play(UrlSource(filePath));
-        } else {
-          // For mobile file paths
-          await _audioPlayer.play(DeviceFileSource(filePath));
-        }
+        // Use the audio stream manager for consistent audio handling
+        await _audioStreamManager.playAudio(filePath);
         
         setState(() {
           _currentlyPlayingAudio = filePath;
@@ -243,170 +257,46 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _audioPlayer.dispose();
     _audioService.dispose();
     _openAIService.dispose();
+    _audioStreamManager.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Voice Assistant'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                Icon(
-                  _isConnected ? Icons.wifi : Icons.wifi_off,
-                  color: _isConnected ? Colors.green : Colors.red,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _isConnected ? 'Connecteds' : 'Disconnected',
-                  style: TextStyle(
-                    color: _isConnected ? Colors.green : Colors.red,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      appBar: _VoiceAssistantAppBar(
+        isConnected: _isConnected,
+        isPlayingStreamedAudio: _audioStreamManager.isPlayingStreamedAudio,
       ),
       body: Column(
         children: [
           // Messages list
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length && _isTyping) {
-                  return const _TypingIndicator();
-                }
-                
-                final message = _messages[index];
-                return _MessageBubble(
-                  message: message,
-                  onPlayAudio: message.audioFilePath != null 
-                    ? () => _playAudio(message.audioFilePath!)
-                    : null,
-                  isPlaying: _currentlyPlayingAudio == message.audioFilePath,
-                );
-              },
+            child: _MessagesList(
+              messages: _messages,
+              isTyping: _isTyping,
+              scrollController: _scrollController,
+              onPlayAudio: _playAudio,
+              currentlyPlayingAudio: _currentlyPlayingAudio,
             ),
           ),
           
           // Recording indicator
           if (_isRecording)
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.red.withOpacity(0.1),
-              child: Row(
-                children: [
-                  const Icon(Icons.mic, color: Colors.red),
-                  const SizedBox(width: 8),
-                  if (_opusMode) ...[
-                    const Icon(Icons.compress, color: Colors.blue, size: 16),
-                    const SizedBox(width: 4),
-                  ],
-                  Expanded(
-                    child: Text(
-                      _currentTranscript.isEmpty 
-                        ? 'Recording${_opusMode ? ' (Opus)' : ''}...' 
-                        : 'You said: $_currentTranscript',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
+            _RecordingIndicator(
+              currentTranscript: _currentTranscript,
+              opusMode: _opusMode,
             ),
           
           // Input area
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Voice recording button
-                IconButton(
-                  onPressed: _isConnected ? _toggleRecording : null,
-                  icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-                  style: IconButton.styleFrom(
-                    backgroundColor: _isRecording ? Colors.red : Colors.grey[300],
-                    foregroundColor: _isRecording ? Colors.white : Colors.black,
-                  ),
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Opus mode toggle button
-                IconButton(
-                  onPressed: _isConnected ? _toggleOpusMode : null,
-                  icon: Icon(_opusMode ? Icons.compress : Icons.compress_outlined),
-                  style: IconButton.styleFrom(
-                    backgroundColor: _opusMode ? Theme.of(context).primaryColor : Colors.grey[300],
-                    foregroundColor: _opusMode ? Colors.white : Colors.black,
-                  ),
-                  tooltip: _opusMode ? 'Disable Opus compression' : 'Enable Opus compression',
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Text input field
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    enabled: _isConnected,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendTextMessage(),
-                    textInputAction: TextInputAction.send,
-                  ),
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Send button
-                IconButton(
-                  onPressed: _isConnected ? _sendTextMessage : null,
-                  icon: const Icon(Icons.send),
-                  style: IconButton.styleFrom(
-                    backgroundColor: _isConnected ? Theme.of(context).primaryColor : Colors.grey[300],
-                    foregroundColor: _isConnected ? Colors.white : Colors.grey[600],
-                  ),
-                ),
-                
-              ],
-            ),
+          _InputArea(
+            isConnected: _isConnected,
+            isRecording: _isRecording,
+            opusMode: _opusMode,
+            textController: _textController,
+            onToggleRecording: _toggleRecording,
+            onToggleOpusMode: _toggleOpusMode,
+            onSendTextMessage: _sendTextMessage,
           ),
         ],
       ),
@@ -520,6 +410,234 @@ class _MessageBubble extends StatelessWidget {
               child: const Icon(Icons.person, color: Colors.white, size: 16),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final bool isConnected;
+  final bool isPlayingStreamedAudio;
+
+  const _VoiceAssistantAppBar({
+    required this.isConnected,
+    required this.isPlayingStreamedAudio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      title: const Text('Voice Assistant'),
+      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          child: Row(
+            children: [
+              // Streamed audio indicator
+              if (isPlayingStreamedAudio) ...[
+                const Icon(Icons.volume_up, color: Colors.blue, size: 16),
+                const SizedBox(width: 4),
+              ],
+              Icon(
+                isConnected ? Icons.wifi : Icons.wifi_off,
+                color: isConnected ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isConnected ? 'Connected' : 'Disconnected',
+                style: TextStyle(
+                  color: isConnected ? Colors.green : Colors.red,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class _MessagesList extends StatelessWidget {
+  final List<ChatMessage> messages;
+  final bool isTyping;
+  final ScrollController scrollController;
+  final Function(String) onPlayAudio;
+  final String? currentlyPlayingAudio;
+
+  const _MessagesList({
+    required this.messages,
+    required this.isTyping,
+    required this.scrollController,
+    required this.onPlayAudio,
+    required this.currentlyPlayingAudio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: messages.length + (isTyping ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == messages.length && isTyping) {
+          return const _TypingIndicator();
+        }
+        
+        final message = messages[index];
+        return _MessageBubble(
+          message: message,
+          onPlayAudio: message.audioFilePath != null 
+            ? () => onPlayAudio(message.audioFilePath!)
+            : null,
+          isPlaying: currentlyPlayingAudio == message.audioFilePath,
+        );
+      },
+    );
+  }
+}
+
+class _RecordingIndicator extends StatelessWidget {
+  final String currentTranscript;
+  final bool opusMode;
+
+  const _RecordingIndicator({
+    required this.currentTranscript,
+    required this.opusMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.red.withOpacity(0.1),
+      child: Row(
+        children: [
+          const Icon(Icons.mic, color: Colors.red),
+          const SizedBox(width: 8),
+          if (opusMode) ...[
+            const Icon(Icons.compress, color: Colors.blue, size: 16),
+            const SizedBox(width: 4),
+          ],
+          Expanded(
+            child: Text(
+              currentTranscript.isEmpty 
+                ? 'Recording${opusMode ? ' (Opus)' : ''}...' 
+                : 'You said: $currentTranscript',
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InputArea extends StatelessWidget {
+  final bool isConnected;
+  final bool isRecording;
+  final bool opusMode;
+  final TextEditingController textController;
+  final VoidCallback onToggleRecording;
+  final VoidCallback onToggleOpusMode;
+  final VoidCallback onSendTextMessage;
+
+  const _InputArea({
+    required this.isConnected,
+    required this.isRecording,
+    required this.opusMode,
+    required this.textController,
+    required this.onToggleRecording,
+    required this.onToggleOpusMode,
+    required this.onSendTextMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Voice recording button
+          IconButton(
+            onPressed: isConnected ? onToggleRecording : null,
+            icon: Icon(isRecording ? Icons.stop : Icons.mic),
+            style: IconButton.styleFrom(
+              backgroundColor: isRecording ? Colors.red : Colors.grey[300],
+              foregroundColor: isRecording ? Colors.white : Colors.black,
+            ),
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // Opus mode toggle button
+          IconButton(
+            onPressed: isConnected ? onToggleOpusMode : null,
+            icon: Icon(opusMode ? Icons.compress : Icons.compress_outlined),
+            style: IconButton.styleFrom(
+              backgroundColor: opusMode ? Theme.of(context).primaryColor : Colors.grey[300],
+              foregroundColor: opusMode ? Colors.white : Colors.black,
+            ),
+            tooltip: opusMode ? 'Disable Opus compression' : 'Enable Opus compression',
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // Text input field
+          Expanded(
+            child: TextField(
+              controller: textController,
+              enabled: isConnected,
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onSubmitted: (_) => onSendTextMessage(),
+              textInputAction: TextInputAction.send,
+            ),
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // Send button
+          IconButton(
+            onPressed: isConnected ? onSendTextMessage : null,
+            icon: const Icon(Icons.send),
+            style: IconButton.styleFrom(
+              backgroundColor: isConnected ? Theme.of(context).primaryColor : Colors.grey[300],
+              foregroundColor: isConnected ? Colors.white : Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
