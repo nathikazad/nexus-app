@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:io';
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,32 +9,115 @@ import 'package:path_provider/path_provider.dart';
 class AudioStreamManager {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<Uint8List> _streamedAudioChunks = [];
+  final Queue<String> _batchedAudioFiles = Queue<String>(); // Queue of batched WAV files
   bool _isPlayingStreamedAudio = false;
   StreamSubscription? _audioPlayerSubscription;
   bool _speakerEnabled = false;
+  
+  // Batching settings
+  static const int _chunksPerBatch = 20; // Accumulate 20 chunks before creating WAV file
+  static const int _batchTimeoutMs = 200; // Create batch if no new data for 200ms
+  List<Uint8List> _currentBatch = []; // Current batch being accumulated
+  Timer? _batchTimeoutTimer; // Timer for batch timeout
+  
   // Callback for when audio playback state changes
   Function(bool)? onPlaybackStateChanged;
 
   AudioStreamManager();
 
-  /// Add audio data to the streaming queue
+  /// Add audio data to the streaming queue (with batching)
   Future<void> playStreamedAudio(Uint8List audioData) async {
     if (!_speakerEnabled) {
       return;
     }
     try {
-      // Add audio chunk to the list
-      _streamedAudioChunks.add(audioData);
+      // Cancel existing timeout timer
+      _batchTimeoutTimer?.cancel();
+      
+      // Add chunk to current batch
+      _currentBatch.add(audioData);
+      debugPrint('📦 Added chunk to batch: ${_currentBatch.length}/${_chunksPerBatch} chunks');
+      
+      // Check if batch is complete
+      if (_currentBatch.length >= _chunksPerBatch) {
+        await _createBatchedWavFile();
+      } else {
+        // Set timeout timer for remaining chunks
+        _batchTimeoutTimer = Timer(Duration(milliseconds: _batchTimeoutMs), () async {
+          if (_currentBatch.isNotEmpty) {
+            debugPrint('⏰ Batch timeout (${_batchTimeoutMs}ms) - creating batch with ${_currentBatch.length} chunks');
+            await _createBatchedWavFile();
+          }
+        });
+      }
       
       // If we're not already playing streamed audio, start playing
-      if (!_isPlayingStreamedAudio) {
+      if (!_isPlayingStreamedAudio && _batchedAudioFiles.isNotEmpty) {
         _isPlayingStreamedAudio = true;
         onPlaybackStateChanged?.call(true);
         _setupAudioPlayerListener();
-        _playNextAudioChunk();
+        _playNextBatchedFile();
       }
     } catch (e) {
       debugPrint('Error handling streamed audio: $e');
+    }
+  }
+
+  /// Create a batched WAV file from accumulated chunks
+  Future<void> _createBatchedWavFile() async {
+    if (_currentBatch.isEmpty) return;
+    
+    // Cancel timeout timer since we're creating the batch
+    _batchTimeoutTimer?.cancel();
+    
+    try {
+      // Concatenate all PCM chunks in the batch
+      int totalLength = 0;
+      for (final chunk in _currentBatch) {
+        totalLength += chunk.length;
+      }
+      
+      final Uint8List concatenatedPcm = Uint8List(totalLength);
+      int offset = 0;
+      for (final chunk in _currentBatch) {
+        concatenatedPcm.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
+      }
+      
+      // Convert to WAV
+      final wavData = _convertPcmToWav(concatenatedPcm);
+      
+      // Create file or data URL
+      String audioFile;
+      if (kIsWeb) {
+        // For web: create data URL
+        audioFile = Uri.dataFromBytes(wavData, mimeType: 'audio/wav').toString();
+      } else {
+        // For mobile: create temp file
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/batched_audio_${DateTime.now().millisecondsSinceEpoch}.wav');
+        await tempFile.writeAsBytes(wavData);
+        audioFile = tempFile.path;
+      }
+      
+      // Add to queue
+      _batchedAudioFiles.add(audioFile);
+      debugPrint('🎵 Created batched WAV file: ${_currentBatch.length} chunks -> ${(wavData.length / 1024).toStringAsFixed(1)} KB');
+      
+      // Clear current batch
+      _currentBatch.clear();
+      
+      // Start playback if not already playing
+      if (!_isPlayingStreamedAudio && _batchedAudioFiles.isNotEmpty) {
+        _isPlayingStreamedAudio = true;
+        onPlaybackStateChanged?.call(true);
+        _setupAudioPlayerListener();
+        _playNextBatchedFile();
+      }
+      
+    } catch (e) {
+      debugPrint('Error creating batched WAV file: $e');
+      _currentBatch.clear(); // Clear batch even on error
     }
   }
 
@@ -51,9 +135,9 @@ class AudioStreamManager {
     
     // Set up a single listener for audio completion
     _audioPlayerSubscription = _audioPlayer.onPlayerComplete.listen((_) {
-      // Play next chunk if available
-      if (_streamedAudioChunks.isNotEmpty) {
-        _playNextAudioChunk();
+      // Play next batched file if available
+      if (_batchedAudioFiles.isNotEmpty) {
+        _playNextBatchedFile();
       } else {
         _isPlayingStreamedAudio = false;
         onPlaybackStateChanged?.call(false);
@@ -62,9 +146,9 @@ class AudioStreamManager {
     });
   }
 
-  /// Play the next audio chunk in the queue
-  Future<void> _playNextAudioChunk() async {
-    if (_streamedAudioChunks.isEmpty) {
+  /// Play the next batched audio file in the queue
+  Future<void> _playNextBatchedFile() async {
+    if (_batchedAudioFiles.isEmpty) {
       _isPlayingStreamedAudio = false;
       onPlaybackStateChanged?.call(false);
       _audioPlayerSubscription?.cancel();
@@ -72,69 +156,27 @@ class AudioStreamManager {
     }
 
     try {
-      // Take the first chunk
-      print('Playing next audio chunk, remaining chunks: ${_streamedAudioChunks.length}');
-      final audioChunk = _streamedAudioChunks.removeAt(0);
-      final wavData = _convertPcmToWav(audioChunk);
+      // Take the first batched file
+      final audioFile = _batchedAudioFiles.removeFirst();
+      debugPrint('🎵 Playing batched file, remaining files: ${_batchedAudioFiles.length}');
       
-      if (kIsWeb) {
-        // For web, create a blob URL
-        await _playWebAudioChunk(wavData);
+      // Play the audio file
+      if (kIsWeb && audioFile.startsWith('data:')) {
+        // For web data URLs
+        await _audioPlayer.play(UrlSource(audioFile));
       } else {
-        // For mobile, create a temporary file
-        await _playMobileAudioChunk(wavData);
+        // For mobile file paths
+        await _audioPlayer.play(DeviceFileSource(audioFile));
       }
       
     } catch (e) {
-      debugPrint('Error playing audio chunk: $e');
+      debugPrint('Error playing batched audio file: $e');
       _isPlayingStreamedAudio = false;
       onPlaybackStateChanged?.call(false);
       _audioPlayerSubscription?.cancel();
     }
   }
 
-  /// Play audio chunk on web platform
-  Future<void> _playWebAudioChunk(Uint8List wavData) async {
-    try {
-      // Convert the WAV data to a base64 data URL
-      final base64Audio = Uri.dataFromBytes(wavData, mimeType: 'audio/wav').toString();
-      
-      // Play the audio using the data URL
-      await _audioPlayer.play(UrlSource(base64Audio));
-      
-    } catch (e) {
-      debugPrint('Error playing web audio chunk: $e');
-      _isPlayingStreamedAudio = false;
-      onPlaybackStateChanged?.call(false);
-    }
-  }
-
-  /// Play audio chunk on mobile platform
-  Future<void> _playMobileAudioChunk(Uint8List wavData) async {
-    try {
-      // Create a temporary file for this audio chunk
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/streamed_audio_${DateTime.now().millisecondsSinceEpoch}.wav');
-      await tempFile.writeAsBytes(wavData);
-      
-      // Play the audio chunk
-      await _audioPlayer.play(DeviceFileSource(tempFile.path));
-      
-      // Schedule cleanup of the temporary file after a delay
-      // (We can't clean it up immediately as the audio player might still need it)
-      Timer(const Duration(seconds: 30), () {
-        tempFile.delete().catchError((e) {
-          debugPrint('Error deleting temp file: $e');
-          return tempFile;
-        });
-      });
-      
-    } catch (e) {
-      debugPrint('Error playing mobile audio chunk: $e');
-      _isPlayingStreamedAudio = false;
-      onPlaybackStateChanged?.call(false);
-    }
-  }
 
   /// Convert raw PCM data to WAV format
   Uint8List _convertPcmToWav(Uint8List pcmData) {
@@ -216,21 +258,38 @@ class AudioStreamManager {
       _isPlayingStreamedAudio = false;
       onPlaybackStateChanged?.call(false);
       _streamedAudioChunks.clear();
+      _batchedAudioFiles.clear();
+      _currentBatch.clear();
+      _batchTimeoutTimer?.cancel();
     } catch (e) {
       debugPrint('Error stopping audio: $e');
+    }
+  }
+
+  /// Flush any remaining chunks in the current batch
+  Future<void> flushRemainingChunks() async {
+    if (_currentBatch.isNotEmpty) {
+      debugPrint('🔄 Flushing remaining ${_currentBatch.length} chunks...');
+      await _createBatchedWavFile();
     }
   }
 
   /// Get current playback state
   bool get isPlayingStreamedAudio => _isPlayingStreamedAudio;
 
-  /// Get number of queued audio chunks
-  int get queuedChunksCount => _streamedAudioChunks.length;
+  /// Get number of queued batched files
+  int get queuedFilesCount => _batchedAudioFiles.length;
+  
+  /// Get number of chunks in current batch
+  int get currentBatchSize => _currentBatch.length;
 
   /// Dispose of resources
   void dispose() {
     _audioPlayerSubscription?.cancel();
     _audioPlayer.dispose();
     _streamedAudioChunks.clear();
+    _batchedAudioFiles.clear();
+    _currentBatch.clear();
+    _batchTimeoutTimer?.cancel();
   }
 }
