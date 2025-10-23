@@ -146,7 +146,7 @@ class AudioService {
     }
   }
 
-  Future<Uint8List> encodeAudioToOpus(Uint8List audioData) async {
+  static Future<Uint8List> encodeAudioToOpus(Uint8List audioData) async {
     try {
       const int sampleRate = 24000; // Match your recording sample rate
       const int channels = 1;
@@ -188,7 +188,7 @@ class AudioService {
     }
   }
 
-  Future<Uint8List> decodeAudioFromOpus(Uint8List opusData) async {
+  static Future<Uint8List> decodeAudioFromOpus(Uint8List opusData) async {
     try {
       const int sampleRate = 24000; // Match your recording sample rate
       const int channels = 1;
