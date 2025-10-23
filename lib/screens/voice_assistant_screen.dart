@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../services/audio_service.dart';
 import '../services/openai_service.dart';
 
@@ -15,6 +16,7 @@ class VoiceAssistantScreen extends StatefulWidget {
 class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   final OpenAIService _openAIService = OpenAIService();
+  final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
@@ -24,6 +26,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _isTyping = false;
   bool _opusMode = false;
   String _currentTranscript = '';
+  String? _currentlyPlayingAudio;
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, String>>? _conversationSubscription;
@@ -99,7 +102,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     
     try {
       if (_isRecording) {
-        await _audioService.stopRecording();
+        final audioFilePath = await _audioService.stopRecording();
         await _audioSubscription?.cancel();
         
         // If we have a transcript, add it as a user message
@@ -109,6 +112,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
               text: _currentTranscript,
               isFromUser: true,
               timestamp: DateTime.now(),
+              audioFilePath: audioFilePath,
             ));
           });
           _scrollToBottom();
@@ -148,6 +152,43 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     });
     // Update the audio service with the new Opus mode
     _audioService.setOpusMode(_opusMode);
+  }
+
+  Future<void> _playAudio(String filePath) async {
+    try {
+      if (_currentlyPlayingAudio == filePath) {
+        // If the same audio is playing, stop it
+        await _audioPlayer.stop();
+        setState(() {
+          _currentlyPlayingAudio = null;
+        });
+      } else {
+        // Stop any currently playing audio
+        await _audioPlayer.stop();
+        
+        // Play the new audio - handle both file paths and blob URLs
+        if (kIsWeb && filePath.startsWith('blob:')) {
+          // For web blob URLs
+          await _audioPlayer.play(UrlSource(filePath));
+        } else {
+          // For mobile file paths
+          await _audioPlayer.play(DeviceFileSource(filePath));
+        }
+        
+        setState(() {
+          _currentlyPlayingAudio = filePath;
+        });
+        
+        // Listen for completion
+        _audioPlayer.onPlayerComplete.listen((_) {
+          setState(() {
+            _currentlyPlayingAudio = null;
+          });
+        });
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to play audio: $e');
+    }
   }
 
   Future<void> _sendTextMessage() async {
@@ -199,6 +240,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _conversationSubscription?.cancel();
     _scrollController.dispose();
     _textController.dispose();
+    _audioPlayer.dispose();
     _audioService.dispose();
     _openAIService.dispose();
     super.dispose();
@@ -246,7 +288,13 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
                 }
                 
                 final message = _messages[index];
-                return _MessageBubble(message: message);
+                return _MessageBubble(
+                  message: message,
+                  onPlayAudio: message.audioFilePath != null 
+                    ? () => _playAudio(message.audioFilePath!)
+                    : null,
+                  isPlaying: _currentlyPlayingAudio == message.audioFilePath,
+                );
               },
             ),
           ),
@@ -370,18 +418,26 @@ class ChatMessage {
   final String text;
   final bool isFromUser;
   final DateTime timestamp;
+  final String? audioFilePath;
   
   ChatMessage({
     required this.text,
     required this.isFromUser,
     required this.timestamp,
+    this.audioFilePath,
   });
 }
 
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
+  final VoidCallback? onPlayAudio;
+  final bool isPlaying;
   
-  const _MessageBubble({required this.message});
+  const _MessageBubble({
+    required this.message,
+    this.onPlayAudio,
+    this.isPlaying = false,
+  });
   
   @override
   Widget build(BuildContext context) {
@@ -401,20 +457,59 @@ class _MessageBubble extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: message.isFromUser
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey[200],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: message.isFromUser ? Colors.white : Colors.black,
+            child: Column(
+              crossAxisAlignment: message.isFromUser 
+                ? CrossAxisAlignment.end 
+                : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: message.isFromUser
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    message.text,
+                    style: TextStyle(
+                      color: message.isFromUser ? Colors.white : Colors.black,
+                    ),
+                  ),
                 ),
-              ),
+                // Add playback button if audio file exists
+                if (message.audioFilePath != null && message.isFromUser) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: onPlayAudio,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isPlaying ? Icons.stop : Icons.play_arrow,
+                            size: 16,
+                            color: Colors.black87,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isPlaying ? 'Stop' : 'Play',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           if (message.isFromUser) ...[
