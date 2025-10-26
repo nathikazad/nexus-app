@@ -34,10 +34,11 @@ class OpenAIService {
         // dangerouslyAllowAPIKeyInBrowser: kIsWeb,
       );
 
+      // Add list_people tool
       await _client!.addTool(
         const ToolDefinition(
-          name: 'roll_dice',
-          description: 'Roll a dice and get a random number from 0 to 100.',
+          name: 'list_people',
+          description: 'List all people in your Personal Knowledge Management (PKM) database. Returns their names and descriptions.',
           parameters: {
             'type': 'object',
             'properties': {},
@@ -45,15 +46,15 @@ class OpenAIService {
           },
         ),
         (Map<String, dynamic> params) async {
-          debugPrint('Dice tool called with params: $params');
+          debugPrint('List people tool called with params: $params');
           try {
-            // Call the MCP server
+            // Call the PKM MCP server
             final url = 'http://localhost:8000/mcp';
             final requestBody = {
               'jsonrpc': '2.0',
               'method': 'tools/call',
               'params': {
-                'name': 'roll_dice',
+                'name': 'list_people',
                 'arguments': {}
               },
               'id': DateTime.now().millisecondsSinceEpoch,
@@ -70,25 +71,99 @@ class OpenAIService {
             
             if (response.statusCode == 200) {
               final result = jsonDecode(response.body);
-              debugPrint('MCP Dice API result: $result');
+              debugPrint('MCP List People API result: $result');
               
-              // Extract the dice result from the MCP response
+              // Extract the people list from the MCP response
               if (result['result'] != null && result['result']['structuredContent'] != null) {
-                final diceResult = result['result']['structuredContent']['result'];
+                final peopleResult = result['result']['structuredContent']['result'];
                 return {
-                  'result': diceResult['result'],
-                  'range': diceResult['range'],
-                  'message': diceResult['message'],
+                  'people': peopleResult['people'],
+                  'count': peopleResult['count'],
+                  'message': peopleResult['message'],
                 };
               } else {
                 return {'error': 'Invalid response format from MCP server'};
               }
             } else {
-              debugPrint('MCP Dice API error: ${response.statusCode} - ${response.body}');
+              debugPrint('MCP List People API error: ${response.statusCode} - ${response.body}');
               return {'error': 'HTTP ${response.statusCode}: ${response.body}'};
             }
           } catch (e) {
-            debugPrint('MCP Dice API error: $e');
+            debugPrint('MCP List People API error: $e');
+            return {'error': e.toString()};
+          }
+        },
+      );
+
+      // Add add_people tool
+      await _client!.addTool(
+        const ToolDefinition(
+          name: 'add_people',
+          description: 'Add a new person to your Personal Knowledge Management (PKM) database. Requires a name and optionally a description.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'name': {
+                'type': 'string',
+                'description': 'The name of the person to add (required)',
+              },
+              'description': {
+                'type': 'string',
+                'description': 'A description of the person (optional)',
+              },
+            },
+            'required': ['name'],
+          },
+        ),
+        (Map<String, dynamic> params) async {
+          debugPrint('Add people tool called with params: $params');
+          try {
+            // Call the PKM MCP server
+            final url = 'http://localhost:8000/mcp';
+            final requestBody = {
+              'jsonrpc': '2.0',
+              'method': 'tools/call',
+              'params': {
+                'name': 'add_people',
+                'arguments': {
+                  'name': params['name'],
+                  'description': params['description'] ?? '',
+                }
+              },
+              'id': DateTime.now().millisecondsSinceEpoch,
+            };
+            
+            final response = await http.post(
+              Uri.parse(url),
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json, text/event-stream',
+              },
+              body: jsonEncode(requestBody),
+            );
+            
+            if (response.statusCode == 200) {
+              final result = jsonDecode(response.body);
+              debugPrint('MCP Add People API result: $result');
+              
+              // Extract the result from the MCP response
+              if (result['result'] != null && result['result']['structuredContent'] != null) {
+                final addResult = result['result']['structuredContent']['result'];
+                return {
+                  'success': addResult['success'],
+                  'person': addResult['person'],
+                  'message': addResult['message'],
+                  'error': addResult['error'],
+                };
+              } else {
+                return {'error': 'Invalid response format from MCP server'};
+              }
+            } else {
+              debugPrint('MCP Add People API error: ${response.statusCode} - ${response.body}');
+              return {'error': 'HTTP ${response.statusCode}: ${response.body}'};
+            }
+          } catch (e) {
+            debugPrint('MCP Add People API error: $e');
             return {'error': e.toString()};
           }
         },
@@ -96,7 +171,7 @@ class OpenAIService {
 
       // Configure session for voice interaction
       await _client!.updateSession(
-        instructions: 'You are a helpful voice assistant. You have access to a dice rolling tool called roll_dice. When users ask you to roll a dice, roll some dice, or want a random number, you MUST use the roll_dice tool. The tool will return a random number from 0 to 100. Always call the tool first, then provide a natural response based on the dice result. Respond naturally and conversationally in English.',
+        instructions: 'You are a helpful voice assistant with access to a Personal Knowledge Management (PKM) database. You have two tools available: 1) list_people - to retrieve all people in the knowledge base with their names and descriptions, and 2) add_people - to add new people with a name (required) and description (optional). When users ask to see people, list people, or show contacts, use list_people. When users want to add someone, save a person, or remember someone, use add_people. Always call the appropriate tool first, then provide a natural response based on the result. Respond naturally and conversationally in English.',
         voice: Voice.alloy,
         turnDetection: TurnDetection(
           type: TurnDetectionType.serverVad,
