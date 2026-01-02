@@ -136,14 +136,16 @@ class AudioProcessor {
   }
   
   /// Resamples PCM24 from 24kHz to 16kHz
+  /// Ensures exact output size: for 1440 samples input (60ms at 24kHz), outputs exactly 960 samples (60ms at 16kHz)
   static Uint8List resamplePcm24To16(Uint8List pcm24Data) {
     const int inputSampleRate = 24000;
     const int outputSampleRate = 16000;
-    const double ratio = outputSampleRate / inputSampleRate;
     const int bytesPerSample = 2;
     
     int inputSampleCount = pcm24Data.length ~/ bytesPerSample;
-    int outputSampleCount = (inputSampleCount * ratio).round();
+    // Calculate exact output sample count: input * 2/3, using integer math to avoid rounding errors
+    // For 1440 samples: 1440 * 2 / 3 = 960 exactly
+    int outputSampleCount = (inputSampleCount * outputSampleRate) ~/ inputSampleRate;
     int outputLength = outputSampleCount * bytesPerSample;
     
     Uint8List output = Uint8List(outputLength);
@@ -158,8 +160,10 @@ class AudioProcessor {
       outputSampleCount
     );
     
+    const double ratio = inputSampleRate / outputSampleRate; // 24/16 = 1.5
     for (int i = 0; i < outputSampleCount; i++) {
-      double inputIndex = i / ratio;
+      // Use exact ratio calculation: i * inputRate / outputRate
+      double inputIndex = i * ratio;
       int inputIndexFloor = inputIndex.floor();
       int inputIndexCeil = (inputIndex + 1).floor();
       double fraction = inputIndex - inputIndexFloor;
@@ -379,30 +383,12 @@ class AudioTransmitter {
   
   AudioTransmitter(this._bleService);
   
-  /// Sends WAV file back to ESP32 as Opus packets
+  /// Sends WAV file back to ESP32 as Opus packets using stream processing
   Future<void> sendWavToEsp32(String wavFilePath) async {
-    final wavFile = File(wavFilePath);
-    if (!await wavFile.exists()) {
-      throw Exception('WAV file does not exist: $wavFilePath');
-    }
-
-    final wavData = await wavFile.readAsBytes();
-    if (wavData.length < 44) {
-      throw Exception('WAV file too small');
-    }
-
-    final pcm24Data = wavData.sublist(44);
-    final pcm16Data = AudioProcessor.resamplePcm24To16(pcm24Data);
-    await encodeAndSendPcm16(pcm16Data);
-  }
-  
-  /// Encodes PCM16 to Opus and sends to ESP32
-  Future<void> encodeAndSendPcm16(Uint8List pcm16Data) async {
     const int sampleRate = 16000;
     const int channels = 1;
-    const int frameSize = 960;
-    const int frameSizeBytes = frameSize * 2;
     
+    // Create Opus encoder for 60ms frames
     final encoder = StreamOpusEncoder.bytes(
       floatInput: false,
       frameTime: FrameTime.ms60,
@@ -413,32 +399,24 @@ class AudioTransmitter {
       fillUpLastFrame: true,
     );
     
-    List<Uint8List> frameBuffer = [];
-    int offset = 0;
+    // Create transformers
+    final resampleTransformer = Pcm24ToPcm16Transformer();
+    final encodeTransformer = Pcm16ToOpusTransformer(encoder);
     
-    while (offset < pcm16Data.length) {
-      int frameEnd = (offset + frameSizeBytes < pcm16Data.length) 
-          ? offset + frameSizeBytes 
-          : pcm16Data.length;
-      
-      Uint8List frame = pcm16Data.sublist(offset, frameEnd);
-      
-      if (frame.length < frameSizeBytes) {
-        Uint8List paddedFrame = Uint8List(frameSizeBytes);
-        paddedFrame.setRange(0, frame.length, frame);
-        frame = paddedFrame;
-      }
-      
-      frameBuffer.add(frame);
-      offset += frameSizeBytes;
-    }
+    // Build the stream pipeline:
+    // WAV file -> 60ms PCM24 chunks -> Resample to PCM16 -> Encode to Opus -> Send
+    final pcm24ChunkStream = WavToPcm24ChunksTransformer.createChunkStream(wavFilePath);
+    final pcm16ChunkStream = pcm24ChunkStream.transform(resampleTransformer);
+    final opusPacketStream = pcm16ChunkStream.transform(encodeTransformer);
     
+    // Send Opus packets as they're produced
     final mtu = _bleService.getMTU();
     Uint8List batch = Uint8List(0);
     int framesSent = 0;
     
-    await for (final opusPacket in encoder.bind(Stream.fromIterable(frameBuffer))) {
-      if (opusPacket.isNotEmpty) {
+    try {
+      await for (final opusPacket in opusPacketStream) {
+        // Create packet: [length (2 bytes)] + [opus data]
         Uint8List packet = Uint8List(2 + opusPacket.length);
         packet[0] = opusPacket.length & 0xFF;
         packet[1] = (opusPacket.length >> 8) & 0xFF;
@@ -446,12 +424,14 @@ class AudioTransmitter {
         
         await _bleService.waitIfPaused();
         
+        // If adding would exceed MTU, send current batch
         if (batch.length + packet.length > mtu && batch.isNotEmpty) {
           await _bleService.sendBatch(batch);
           batch = Uint8List(0);
           await Future.delayed(const Duration(milliseconds: 20));
         }
         
+        // Add packet to batch
         Uint8List newBatch = Uint8List(batch.length + packet.length);
         if (batch.isNotEmpty) {
           newBatch.setRange(0, batch.length, batch);
@@ -460,20 +440,27 @@ class AudioTransmitter {
         batch = newBatch;
         
         framesSent++;
+        debugPrint('[SEND] Processed frame $framesSent (${opusPacket.length} bytes Opus, batch size: ${batch.length} bytes)');
         await Future.delayed(const Duration(milliseconds: 5));
       }
+      
+      // Send remaining batch
+      if (batch.isNotEmpty) {
+        await _bleService.sendBatch(batch);
+        debugPrint('[SEND] Sent final batch: ${batch.length} bytes');
+      }
+      
+      // Send EOF signal
+      debugPrint('[SEND] Sent EOF signal. Total frames sent: $framesSent');
+      const int signalEof = 0x0000;
+      Uint8List eofPacket = Uint8List(2);
+      eofPacket[0] = signalEof & 0xFF;
+      eofPacket[1] = (signalEof >> 8) & 0xFF;
+      await _bleService.sendPacket(eofPacket);
+    } catch (e) {
+      debugPrint('Error sending WAV to ESP32: $e');
+      rethrow;
     }
-    
-    if (batch.isNotEmpty) {
-      await _bleService.sendBatch(batch);
-    }
-    
-    debugPrint('Sent EOF signal. Total frames sent: $framesSent');
-    const int signalEof = 0x0000;
-    Uint8List eofPacket = Uint8List(2);
-    eofPacket[0] = signalEof & 0xFF;
-    eofPacket[1] = (signalEof >> 8) & 0xFF;
-    await _bleService.sendPacket(eofPacket);
   }
 }
 
@@ -503,6 +490,99 @@ class OpusToPcm24Transformer extends StreamTransformerBase<Uint8List, Uint8List>
         // Don't yield anything on error, just log it
       }
     });
+  }
+}
+
+/// Creates a stream of 60ms PCM24 chunks from a WAV file
+class WavToPcm24ChunksTransformer {
+  /// Creates a stream that emits 60ms PCM24 chunks from a WAV file
+  static Stream<Uint8List> createChunkStream(String wavFilePath) async* {
+    const int wavHeaderSize = 44;
+    const int sampleRate24kHz = 24000;
+    const int bytesPerSample = 2;
+    const int chunkDurationMs = 60;
+    
+    // 60ms at 24kHz = 1440 samples = 2880 bytes (16-bit mono)
+    const int chunkSizeBytes = (sampleRate24kHz * chunkDurationMs ~/ 1000) * bytesPerSample;
+    
+    final wavFile = File(wavFilePath);
+    if (!await wavFile.exists()) {
+      throw Exception('WAV file does not exist: $wavFilePath');
+    }
+    
+    final wavData = await wavFile.readAsBytes();
+    if (wavData.length < wavHeaderSize) {
+      throw Exception('WAV file too small');
+    }
+    
+    // Extract PCM data (skip WAV header)
+    final pcm24Data = wavData.sublist(wavHeaderSize);
+    
+    // Emit chunks of 60ms
+    int offset = 0;
+    while (offset < pcm24Data.length) {
+      int chunkEnd = (offset + chunkSizeBytes < pcm24Data.length)
+          ? offset + chunkSizeBytes
+          : pcm24Data.length;
+      
+      Uint8List chunk = pcm24Data.sublist(offset, chunkEnd);
+      
+      // Pad last chunk if needed to maintain 60ms duration
+      if (chunk.length < chunkSizeBytes) {
+        Uint8List paddedChunk = Uint8List(chunkSizeBytes);
+        paddedChunk.setRange(0, chunk.length, chunk);
+        // Rest is zeros (silence)
+        chunk = paddedChunk;
+      }
+      
+      yield chunk;
+      offset += chunkSizeBytes;
+    }
+  }
+}
+
+/// Transforms PCM24 chunks to PCM16 chunks by resampling
+class Pcm24ToPcm16Transformer extends StreamTransformerBase<Uint8List, Uint8List> {
+  static const int expectedPcm16Bytes = 1920; // 960 samples * 2 bytes = 60ms at 16kHz
+  
+  @override
+  Stream<Uint8List> bind(Stream<Uint8List> stream) {
+    return stream.map((pcm24Chunk) {
+      final resampled = AudioProcessor.resamplePcm24To16(pcm24Chunk);
+      
+      // Validate output size - should be exactly 1920 bytes for 60ms chunks
+      if (resampled.length != expectedPcm16Bytes) {
+        debugPrint('[RESAMPLE] WARNING: Resampled chunk size ${resampled.length} != expected $expectedPcm16Bytes bytes');
+        debugPrint('[RESAMPLE] Input was ${pcm24Chunk.length} bytes (${pcm24Chunk.length ~/ 2} samples at 24kHz)');
+        debugPrint('[RESAMPLE] Output is ${resampled.length} bytes (${resampled.length ~/ 2} samples at 16kHz)');
+      }
+      
+      return resampled;
+    });
+  }
+}
+
+/// Transforms PCM16 chunks to Opus packets by encoding
+/// Processes all chunks through a single encoder stream for proper state management
+class Pcm16ToOpusTransformer extends StreamTransformerBase<Uint8List, Uint8List> {
+  final StreamOpusEncoder encoder;
+  static const int expectedPcm16Bytes = 1920; // 960 samples * 2 bytes = 60ms at 16kHz
+  
+  Pcm16ToOpusTransformer(this.encoder);
+  
+  @override
+  Stream<Uint8List> bind(Stream<Uint8List> stream) {
+    // Process all chunks through a single encoder stream
+    // This ensures the encoder maintains proper state across chunks
+    return encoder.bind(stream.map((pcm16Chunk) {
+      // Validate chunk size before encoding
+      if (pcm16Chunk.length != expectedPcm16Bytes) {
+        debugPrint('[ENCODE] ERROR: PCM16 chunk size ${pcm16Chunk.length} != expected $expectedPcm16Bytes bytes');
+        debugPrint('[ENCODE] Input was ${pcm16Chunk.length} bytes (${pcm16Chunk.length ~/ 2} samples)');
+        throw Exception('Invalid PCM16 chunk size: ${pcm16Chunk.length} bytes, expected $expectedPcm16Bytes bytes');
+      }
+      return pcm16Chunk;
+    })).where((opusPacket) => opusPacket.isNotEmpty);
   }
 }
 
