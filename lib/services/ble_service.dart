@@ -31,11 +31,29 @@ class BLEService {
   
   bool _isConnected = false;
   bool _isScanning = false;
+  bool _paused = false;
 
   Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
   Stream<void>? get eofStream => _eofController?.stream;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
+  
+  int getMTU() {
+    // Get MTU size (minus 3 bytes for ATT overhead)
+    // Fallback to conservative MTU if not available
+    try {
+      if (_device != null && _isConnected) {
+        // flutter_blue_plus doesn't expose MTU directly, use conservative default
+        // Typical BLE MTU is 23 bytes default, but can be negotiated up to 517
+        // Conservative payload: 185 - 3 = 182 bytes (matches Python fallback)
+        return 182;
+      }
+    } catch (e) {
+      debugPrint('Error getting MTU: $e');
+    }
+    return 182; // Fallback to conservative MTU
+  }
+  bool get isPaused => _paused;
 
   Future<bool> initialize() async {
     try {
@@ -228,11 +246,15 @@ class BLEService {
 
         // Handle flow control signals
         if (identifier == signalPause) {
-          debugPrint('[FLOW] Received PAUSE');
+          debugPrint('[FLOW] Received PAUSE signal (0xFFFE) - pausing transmission');
+          _paused = true;
+          debugPrint('[FLOW] Pause state: $_paused');
           continue;
         }
         if (identifier == signalResume) {
-          debugPrint('[FLOW] Received RESUME');
+          debugPrint('[FLOW] Received RESUME signal (0xFFFD) - resuming transmission');
+          _paused = false;
+          debugPrint('[FLOW] Pause state: $_paused');
           continue;
         }
 
@@ -284,6 +306,7 @@ class BLEService {
   Future<void> disconnect() async {
     try {
       _isScanning = false;
+      _paused = false; // Reset pause state on disconnect
       await FlutterBluePlus.stopScan();
       
       _notificationSubscription?.cancel();
@@ -310,6 +333,67 @@ class BLEService {
       debugPrint('Disconnected');
     } catch (e) {
       debugPrint('Error disconnecting: $e');
+    }
+  }
+
+  Future<void> waitIfPaused() async {
+    ///Wait if paused (for flow control)"""
+    if (_paused) {
+      debugPrint('[FLOW] Waiting while paused...');
+      int waitCount = 0;
+      while (_paused) {
+        await Future.delayed(const Duration(milliseconds: 10));
+        waitCount++;
+        if (waitCount % 100 == 0) {
+          debugPrint('[FLOW] Still waiting... (waited ${waitCount * 10}ms)');
+        }
+      }
+      debugPrint('[FLOW] Resumed, continuing transmission');
+    }
+  }
+
+  Future<void> sendPacket(Uint8List packet) async {
+    if (_rxCharacteristic == null || !_isConnected) {
+      debugPrint('[SEND] Cannot send packet: not connected or RX characteristic not available');
+      return;
+    }
+
+    // Wait if paused (flow control)
+    if (_paused) {
+      debugPrint('[SEND] Packet queued, waiting for resume (packet size: ${packet.length} bytes)');
+    }
+    await waitIfPaused();
+
+    try {
+      debugPrint('[SEND] Sending packet: ${packet.length} bytes');
+      await _rxCharacteristic!.write(packet, withoutResponse: true);
+      debugPrint('[SEND] Packet sent successfully');
+    } catch (e) {
+      debugPrint('[SEND] Error sending packet: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> sendBatch(Uint8List batch) async {
+    if (_rxCharacteristic == null || !_isConnected) {
+      debugPrint('[SEND] Cannot send batch: not connected or RX characteristic not available');
+      return;
+    }
+
+    if (batch.isEmpty) {
+      return;
+    }
+
+    // Wait if paused (flow control)
+    await waitIfPaused();
+
+    try {
+      debugPrint('[SEND] Sending batch: ${batch.length} bytes');
+      await _rxCharacteristic!.write(batch, withoutResponse: true);
+      debugPrint('[SEND] Batch sent successfully');
+    } catch (e) {
+      debugPrint('[SEND] Error sending batch: $e');
+      rethrow;
     }
   }
 
