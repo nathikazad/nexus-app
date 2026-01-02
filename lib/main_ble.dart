@@ -262,29 +262,29 @@ class FileManager {
     int sampleRate = 16000,
     int frameSize = 1920,
   }) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final opusPath = '${directory.path}/recording_$timestamp.opus';
-    final opusFile = File(opusPath);
+      final directory = await getApplicationDocumentsDirectory();
+      final opusPath = '${directory.path}/recording_$timestamp.opus';
+      final opusFile = File(opusPath);
 
     final opusHeader = buildOpusHeader(sampleRate, frameSize);
-    int totalLength = opusHeader.length;
+      int totalLength = opusHeader.length;
     for (Uint8List packet in opusPackets) {
       totalLength += 2 + packet.length;
-    }
-    
-    Uint8List concatenatedData = Uint8List(totalLength);
-    concatenatedData.setRange(0, opusHeader.length, opusHeader);
-    
-    int offset = opusHeader.length;
+      }
+      
+      Uint8List concatenatedData = Uint8List(totalLength);
+      concatenatedData.setRange(0, opusHeader.length, opusHeader);
+      
+      int offset = opusHeader.length;
     for (Uint8List packet in opusPackets) {
-      concatenatedData[offset] = packet.length & 0xFF;
-      concatenatedData[offset + 1] = (packet.length >> 8) & 0xFF;
-      offset += 2;
-      concatenatedData.setRange(offset, offset + packet.length, packet);
-      offset += packet.length;
-    }
+        concatenatedData[offset] = packet.length & 0xFF;
+        concatenatedData[offset + 1] = (packet.length >> 8) & 0xFF;
+        offset += 2;
+        concatenatedData.setRange(offset, offset + packet.length, packet);
+        offset += packet.length;
+      }
 
-    await opusFile.writeAsBytes(concatenatedData);
+      await opusFile.writeAsBytes(concatenatedData);
     return opusPath;
   }
   
@@ -328,174 +328,7 @@ class FileManager {
     final xFile = XFile(filePath);
     await Share.shareXFiles([xFile], text: text, subject: subject);
   }
-}
 
-// ============================================================================
-// AUDIO PLAYBACK MODULE
-// ============================================================================
-
-class AudioPlaybackManager {
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  
-  /// Plays Opus file by decoding to PCM and converting to WAV
-  Future<void> playOpusFile(
-    String opusFilePath,
-    List<Uint8List> opusPackets,
-  ) async {
-    if (opusFilePath.isEmpty || opusPackets.isEmpty) {
-      throw Exception('No Opus file or packets to play');
-    }
-
-    final opusFile = File(opusFilePath);
-    if (!await opusFile.exists()) {
-      throw Exception('Opus file does not exist: $opusFilePath');
-    }
-
-    final pcmData = await AudioProcessor.decodeOpusPackets(opusPackets);
-    if (pcmData.isEmpty) {
-      throw Exception('Decoded PCM data is empty');
-    }
-
-    const int sampleRate = 16000;
-    final wavData = AudioProcessor.pcmToWav(pcmData, sampleRate: sampleRate);
-
-    final directory = await getTemporaryDirectory();
-    final tempWavPath = '${directory.path}/temp_playback_${DateTime.now().millisecondsSinceEpoch}.wav';
-    final tempWavFile = File(tempWavPath);
-    await tempWavFile.writeAsBytes(wavData);
-
-    await _audioPlayer.play(DeviceFileSource(tempWavPath));
-    await _audioPlayer.onPlayerComplete.first;
-    await tempWavFile.delete();
-  }
-  
-  void dispose() {
-    _audioPlayer.dispose();
-  }
-}
-
-// ============================================================================
-// AUDIO TRANSMITTER MODULE
-// ============================================================================
-
-class AudioTransmitter {
-  final BLEService _bleService;
-  
-  AudioTransmitter(this._bleService);
-  
-  /// Sends WAV file back to ESP32 as Opus packets using stream processing
-  Future<void> sendWavToEsp32(String wavFilePath) async {
-    const int sampleRate = 16000;
-    const int channels = 1;
-    
-    // Create Opus encoder for 60ms frames
-    final encoder = StreamOpusEncoder.bytes(
-      floatInput: false,
-      frameTime: FrameTime.ms60,
-      sampleRate: sampleRate,
-      channels: channels,
-      application: Application.audio,
-      copyOutput: true,
-      fillUpLastFrame: true,
-    );
-    
-    // Create transformers
-    final resampleTransformer = Pcm24ToPcm16Transformer();
-    final encodeTransformer = Pcm16ToOpusTransformer(encoder);
-    
-    // Build the stream pipeline:
-    // WAV file -> 60ms PCM24 chunks -> Resample to PCM16 -> Encode to Opus -> Send
-    final pcm24ChunkStream = WavToPcm24ChunksTransformer.createChunkStream(wavFilePath);
-    final pcm16ChunkStream = pcm24ChunkStream.transform(resampleTransformer);
-    final opusPacketStream = pcm16ChunkStream.transform(encodeTransformer);
-    
-    // Send Opus packets as they're produced
-    final mtu = _bleService.getMTU();
-    Uint8List batch = Uint8List(0);
-    int framesSent = 0;
-    
-    try {
-      await for (final opusPacket in opusPacketStream) {
-        // Create packet: [length (2 bytes)] + [opus data]
-        Uint8List packet = Uint8List(2 + opusPacket.length);
-        packet[0] = opusPacket.length & 0xFF;
-        packet[1] = (opusPacket.length >> 8) & 0xFF;
-        packet.setRange(2, 2 + opusPacket.length, opusPacket);
-        
-        await _bleService.waitIfPaused();
-        
-        // If adding would exceed MTU, send current batch
-        if (batch.length + packet.length > mtu && batch.isNotEmpty) {
-          await _bleService.sendBatch(batch);
-          batch = Uint8List(0);
-          await Future.delayed(const Duration(milliseconds: 20));
-        }
-        
-        // Add packet to batch
-        Uint8List newBatch = Uint8List(batch.length + packet.length);
-        if (batch.isNotEmpty) {
-          newBatch.setRange(0, batch.length, batch);
-        }
-        newBatch.setRange(batch.length, batch.length + packet.length, packet);
-        batch = newBatch;
-        
-        framesSent++;
-        debugPrint('[SEND] Processed frame $framesSent (${opusPacket.length} bytes Opus, batch size: ${batch.length} bytes)');
-        await Future.delayed(const Duration(milliseconds: 5));
-      }
-      
-      // Send remaining batch
-      if (batch.isNotEmpty) {
-        await _bleService.sendBatch(batch);
-        debugPrint('[SEND] Sent final batch: ${batch.length} bytes');
-      }
-      
-      // Send EOF signal
-      debugPrint('[SEND] Sent EOF signal. Total frames sent: $framesSent');
-      const int signalEof = 0x0000;
-      Uint8List eofPacket = Uint8List(2);
-      eofPacket[0] = signalEof & 0xFF;
-      eofPacket[1] = (signalEof >> 8) & 0xFF;
-      await _bleService.sendPacket(eofPacket);
-    } catch (e) {
-      debugPrint('Error sending WAV to ESP32: $e');
-      rethrow;
-    }
-  }
-}
-
-// ============================================================================
-// STREAM TRANSFORMER MODULE
-// ============================================================================
-
-/// Transforms Opus packets to PCM24 chunks by decoding and resampling
-class OpusToPcm24Transformer extends StreamTransformerBase<Uint8List, Uint8List> {
-  final StreamOpusDecoder decoder;
-  
-  OpusToPcm24Transformer(this.decoder);
-  
-  @override
-  Stream<Uint8List> bind(Stream<Uint8List> stream) {
-    return stream.asyncExpand((opusPacket) async* {
-      try {
-        final decodedStream = decoder.bind(Stream.value(opusPacket));
-        await for (final pcm16Chunk in decodedStream) {
-          if (pcm16Chunk is Uint8List && pcm16Chunk.isNotEmpty) {
-            final pcm24Chunk = AudioProcessor.resamplePcm16To24(pcm16Chunk);
-            yield pcm24Chunk;
-          }
-        }
-      } catch (e) {
-        debugPrint('Error in OpusToPcm24Transformer: $e');
-        // Don't yield anything on error, just log it
-      }
-    });
-  }
-}
-
-/// Creates a stream of 60ms PCM24 chunks from a WAV file
-class WavToPcm24ChunksTransformer {
-  /// Creates a stream that emits 60ms PCM24 chunks from a WAV file
   static Stream<Uint8List> createChunkStream(String wavFilePath) async* {
     const int wavHeaderSize = 44;
     const int sampleRate24kHz = 24000;
@@ -538,6 +371,87 @@ class WavToPcm24ChunksTransformer {
       yield chunk;
       offset += chunkSizeBytes;
     }
+  }
+}
+
+// ============================================================================
+// AUDIO PLAYBACK MODULE
+// ============================================================================
+
+class AudioPlaybackManager {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  
+  /// Plays Opus file by decoding to PCM and converting to WAV
+  Future<void> playOpusFile(
+    String opusFilePath,
+    List<Uint8List> opusPackets,
+  ) async {
+    if (opusFilePath.isEmpty || opusPackets.isEmpty) {
+      throw Exception('No Opus file or packets to play');
+    }
+
+    final opusFile = File(opusFilePath);
+    if (!await opusFile.exists()) {
+      throw Exception('Opus file does not exist: $opusFilePath');
+    }
+
+    final pcmData = await AudioProcessor.decodeOpusPackets(opusPackets);
+      if (pcmData.isEmpty) {
+        throw Exception('Decoded PCM data is empty');
+      }
+
+      const int sampleRate = 16000;
+    final wavData = AudioProcessor.pcmToWav(pcmData, sampleRate: sampleRate);
+
+      final directory = await getTemporaryDirectory();
+      final tempWavPath = '${directory.path}/temp_playback_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final tempWavFile = File(tempWavPath);
+      await tempWavFile.writeAsBytes(wavData);
+
+      await _audioPlayer.play(DeviceFileSource(tempWavPath));
+      await _audioPlayer.onPlayerComplete.first;
+      await tempWavFile.delete();
+  }
+  
+  void dispose() {
+    _audioPlayer.dispose();
+  }
+}
+// ============================================================================
+// STREAM TRANSFORMER MODULE
+// ============================================================================
+
+/// Transforms Opus packets to PCM16 chunks by decoding
+class OpusToPcm16Transformer extends StreamTransformerBase<Uint8List, Uint8List> {
+  final StreamOpusDecoder decoder;
+  
+  OpusToPcm16Transformer(this.decoder);
+  
+  @override
+  Stream<Uint8List> bind(Stream<Uint8List> stream) {
+    return stream.asyncExpand((opusPacket) async* {
+      try {
+        final decodedStream = decoder.bind(Stream.value(opusPacket));
+        await for (final pcm16Chunk in decodedStream) {
+          if (pcm16Chunk is Uint8List && pcm16Chunk.isNotEmpty) {
+            yield pcm16Chunk;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error in OpusToPcm16Transformer: $e');
+        // Don't yield anything on error, just log it
+      }
+    });
+  }
+}
+
+/// Transforms PCM16 chunks to PCM24 chunks by resampling
+class Pcm16ToPcm24Transformer extends StreamTransformerBase<Uint8List, Uint8List> {
+  @override
+  Stream<Uint8List> bind(Stream<Uint8List> stream) {
+    return stream.map((pcm16Chunk) {
+      return AudioProcessor.resamplePcm16To24(pcm16Chunk);
+    });
   }
 }
 
@@ -635,7 +549,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   final BLEService _bleService = BLEService();
   final AudioService _audioService = AudioService();
   final AudioPlaybackManager _playbackManager = AudioPlaybackManager();
-  late final AudioTransmitter _transmitter;
   final RecordingState _recordingState = RecordingState();
   
   bool _isConnected = false;
@@ -647,7 +560,8 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   StreamSubscription<Uint8List>? _pcm24ChunkSubscription;
   StreamSubscription<void>? _eofSubscription;
   StreamOpusDecoder? _streamDecoder;
-  OpusToPcm24Transformer? _opusTransformer;
+  OpusToPcm16Transformer? _opusToPcm16Transformer;
+  Pcm16ToPcm24Transformer? _pcm16ToPcm24Transformer;
 
   @override
   void initState() {
@@ -659,14 +573,15 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
     await _bleService.initialize();
     await _audioService.initialize();
     
-    _transmitter = AudioTransmitter(_bleService);
     _streamDecoder = AudioProcessor.createDecoder();
-    _opusTransformer = OpusToPcm24Transformer(_streamDecoder!);
+    _opusToPcm16Transformer = OpusToPcm16Transformer(_streamDecoder!);
+    _pcm16ToPcm24Transformer = Pcm16ToPcm24Transformer();
     
-    // Set up the stream pipeline: Opus packets -> PCM24 chunks
+    // Set up the stream pipeline: Opus packets -> PCM16 -> PCM24 chunks
     final opusStream = _bleService.opusPacketStream;
     if (opusStream != null) {
-      final pcm24Stream = opusStream.transform(_opusTransformer!);
+      final pcm16Stream = opusStream.transform(_opusToPcm16Transformer!);
+      final pcm24Stream = pcm16Stream.transform(_pcm16ToPcm24Transformer!);
       
       // Listen for Opus packets (for saving)
       _opusPacketSubscription = opusStream.listen(
@@ -697,7 +612,7 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
         await _finalizeFiles();
         
         if (_wavFilePath != null) {
-          await _transmitter.sendWavToEsp32(_wavFilePath!);
+          await _sendWavToEsp32(_wavFilePath!);
         }
         
         setState(() {
@@ -705,6 +620,91 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
         });
       },
     );
+  }
+
+  /// Transforms Opus packets and sends them to ESP32
+  Future<void> _sendWavToEsp32(String wavFilePath) async {
+    try {
+    const int sampleRate = 16000;
+    const int channels = 1;
+    
+      // Create Opus encoder for 60ms frames
+      final encoder = StreamOpusEncoder.bytes(
+        floatInput: false,
+        frameTime: FrameTime.ms60,
+        sampleRate: sampleRate,
+        channels: channels,
+        application: Application.audio,
+        copyOutput: true,
+        fillUpLastFrame: true,
+      );
+      
+      // Create transformers
+      final resampleTransformer = Pcm24ToPcm16Transformer();
+      final encodeTransformer = Pcm16ToOpusTransformer(encoder);
+      
+      // Build the stream pipeline:
+      // WAV file -> 60ms PCM24 chunks -> Resample to PCM16 -> Encode to Opus
+      final pcm24ChunkStream = FileManager.createChunkStream(wavFilePath);
+      final pcm16ChunkStream = pcm24ChunkStream.transform(resampleTransformer);
+      final opusPacketStream = pcm16ChunkStream.transform(encodeTransformer);
+      
+      // Send Opus packets as they're produced
+      final mtu = _bleService.getMTU();
+      Uint8List batch = Uint8List(0);
+      int framesSent = 0;
+      
+      await for (final opusPacket in opusPacketStream) {
+          // Create packet: [length (2 bytes)] + [opus data]
+          Uint8List packet = Uint8List(2 + opusPacket.length);
+          packet[0] = opusPacket.length & 0xFF;
+          packet[1] = (opusPacket.length >> 8) & 0xFF;
+          packet.setRange(2, 2 + opusPacket.length, opusPacket);
+          
+          await _bleService.waitIfPaused();
+          
+          // If adding would exceed MTU, send current batch
+          if (batch.length + packet.length > mtu && batch.isNotEmpty) {
+            await _bleService.sendBatch(batch);
+            batch = Uint8List(0);
+            await Future.delayed(const Duration(milliseconds: 20));
+          }
+          
+          // Add packet to batch
+          Uint8List newBatch = Uint8List(batch.length + packet.length);
+          if (batch.isNotEmpty) {
+            newBatch.setRange(0, batch.length, batch);
+          }
+          newBatch.setRange(batch.length, batch.length + packet.length, packet);
+          batch = newBatch;
+          
+          framesSent++;
+        debugPrint('[SEND] Processed frame $framesSent (${opusPacket.length} bytes Opus, batch size: ${batch.length} bytes)');
+          await Future.delayed(const Duration(milliseconds: 5));
+      }
+      
+      // Send remaining batch
+      if (batch.isNotEmpty) {
+        await _bleService.sendBatch(batch);
+        debugPrint('[SEND] Sent final batch: ${batch.length} bytes');
+      }
+      
+      // Send EOF signal
+      debugPrint('[SEND] Sent EOF signal. Total frames sent: $framesSent');
+      const int signalEof = 0x0000;
+      Uint8List eofPacket = Uint8List(2);
+      eofPacket[0] = signalEof & 0xFF;
+      eofPacket[1] = (signalEof >> 8) & 0xFF;
+      await _bleService.sendPacket(eofPacket);
+    } catch (e) {
+      debugPrint('Error sending WAV to ESP32: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending audio back: $e')),
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> _connectToDevice() async {
@@ -790,8 +790,8 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
       );
     } catch (e) {
       debugPrint('Error playing Opus file: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error playing Opus file: $e')),
         );
       }
