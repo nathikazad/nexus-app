@@ -50,7 +50,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       });
     };
   }
-  String currentSpeaker = '';
+  // String currentSpeaker = '';
   Future<void> _initializeServices() async {
     try {
       await _openAIService.initialize();
@@ -61,18 +61,15 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       
       // Listen to conversation stream
       _conversationSubscription = _openAIService.conversationStream.listen((data) {
-        String speaker = data['speaker']!;
+        
         String type = data['type']!;
         
         if (type == 'transcript') {
+          String speaker = data['speaker']!;
           String word = data['word']!;
           String newLog = '';
-          if (currentSpeaker != speaker) {
-            newLog = '${speaker}: ';
-          }
           newLog += word;
           print(newLog);
-          currentSpeaker = speaker;
           setState(() {
             if (speaker == 'AI') {
               // Update or create AI message
@@ -94,18 +91,40 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
                 ));
               }
             } else {
-              // Update current transcript for user
-              _currentTranscript += word;
-              // print('user: $_currentTranscript');
+              if (_messages.isNotEmpty && _messages.last.isFromUser == true) {
+                // Update the last assistant message
+                final lastMessage = _messages.removeLast();
+                _messages.add(ChatMessage(
+                  text: lastMessage.text + word,
+                  isFromUser: true,
+                  timestamp: lastMessage.timestamp,
+                ));
+              } else {
+                // Create new assistant message
+                final lastMessage = _messages.removeLast();
+                _messages.add(ChatMessage(
+                  text: word,
+                  isFromUser: true,
+                  timestamp: DateTime.now(),
+                ));
+                _messages.add(lastMessage);
+                _messages.add(ChatMessage(
+                  text: "",
+                  isFromUser: false,
+                  timestamp: DateTime.now(),
+                ));
+              }
             }
           });
           _scrollToBottom();
-        } else if (type == 'audio' && speaker == 'AI') {
+        } else if (type == 'audio' && data['speaker'] == 'AI') {
           // Handle streamed audio from AI - only play if speaker is enabled
           if (_speakerEnabled) {
             Uint8List audioData = data['audio']!;
             _audioStreamManager.playStreamedAudio(audioData);
           }
+        } else if (type == 'response_done') {
+          
         }
       });
       

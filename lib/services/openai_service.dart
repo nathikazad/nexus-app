@@ -207,33 +207,8 @@ class OpenAIService {
     }
   }
 
-  void debugConversationEvent(FormattedItem? item, Delta? delta) {
-    String itemSummary = '';
-      if (item != null) {
-        itemSummary = 'FormattedItem(item: ${item.formatted?.transcript}';
-        // if (item.formatted?.audio != null) {
-        //   itemSummary += 'audio: [length: ${item.formatted?.audio.length}], ';
-        // } else {
-        //   itemSummary += 'audio: null, ';
-        // }
-        itemSummary += 'text: ${item.formatted?.text}, transcript: ${item.formatted?.transcript}, tool: ${item.formatted?.tool}, output: ${item.formatted?.output})';
-      }
-      // Create a custom string representation for delta to avoid printing large audio arrays
-      String deltaSummary = '';
-      if (delta != null) {
-        deltaSummary = 'Delta(transcript: ${delta.transcript}, ';
-        if (delta.audio != null) {
-          deltaSummary += 'audio_length: [length: ${delta.audio!.length}], ';
-          deltaSummary += 'audio: ${delta.audio!}], ';
-        } else {
-          // deltaSummary += 'audio: null, ';
-        }
-        deltaSummary += 'text: ${delta.text}, arguments: ${delta.arguments})';
-      }
-      debugPrint('_setupEventHandlers: item: $itemSummary, delta: $deltaSummary');
-  }
-
   void _setupEventHandlers() {
+    print('Setting up event handlers');
     if (_client == null) {
       return;
     }
@@ -269,16 +244,32 @@ class OpenAIService {
       }
     });
 
-    // Handle conversation interruptions
-    _client!.on(RealtimeEventType.conversationInterrupted, (event) {
-      // Conversation interrupted
+    // // Handle all server events (including response.done for EOF detection)
+    // _client!.on(RealtimeEventType.all, (event) {
+    //   try {
+    //     // Try to access event properties dynamically
+    //     final eventMap = event as dynamic;
+    //     final eventType = eventMap.type?.toString() ?? '';
+        
+    //     print('Server event type: $eventType');
+        
+    //   } catch (e) {
+    //     debugPrint('Error handling server event: $e');
+    //   }
+    // });
+
+
+    _client!.realtime.on(RealtimeEventType.responseDone, (event) {
+      try {
+        print('Response done event');
+        _conversationController.add({
+          'type': 'response_done',
+        });
+      } catch (e) {
+        print('Error handling response done event: $e');
+      }
     });
 
-    // Handle errors
-    _client!.on(RealtimeEventType.error, (event) {
-      final errorEvent = event as RealtimeEventError;
-      debugPrint('OpenAI API Error: ${errorEvent.error}');
-    });
   }
 
   Future<void> disconnect() async {
@@ -310,16 +301,18 @@ class OpenAIService {
   // Send text message
   Future<void> sendTextMessage(String text) async {
     if (_client == null || !_isConnected) {
-      debugPrint('Client not connected');
+      print('Client not connected');
       return;
     }
 
     try {
+      print('Sending text message: $text');
       await _client!.sendUserMessageContent([
-        ContentPart.text(text: text),
+        // Realtime user messages must be "input_text" (not "text")
+        ContentPart.inputText(text: text),
       ]);
     } catch (e) {
-      debugPrint('Error sending text message: $e');
+      print('Error sending text message: $e');
     }
   }
 
