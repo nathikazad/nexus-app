@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class OpenAIService {
@@ -173,9 +171,8 @@ class OpenAIService {
       await _client!.updateSession(
         instructions: 'You are a helpful voice assistant with access to a Personal Knowledge Management (PKM) database. You have two tools available: 1) list_people - to retrieve all people in the knowledge base with their names and descriptions, and 2) add_people - to add new people with a name (required) and description (optional). When users ask to see people, list people, or show contacts, use list_people. When users want to add someone, save a person, or remember someone, use add_people. Always call the appropriate tool first, then provide a natural response based on the result. Respond naturally and conversationally in English.',
         voice: Voice.alloy,
-        turnDetection: TurnDetection(
-          type: TurnDetectionType.serverVad,
-        ),
+        // Disable automatic turn detection so we control when the model responds
+        turnDetection: null,
         inputAudioTranscription: const InputAudioTranscriptionConfig(
           model: 'whisper-1',
           language: 'en',

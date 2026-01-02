@@ -137,6 +137,13 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         final audioFilePath = await _audioService.stopRecording();
         await _audioSubscription?.cancel();
         
+        // Commit audio buffer and request response (equivalent to Python lines 154-158)
+        try {
+          await _openAIService.createResponse();
+        } catch (e) {
+          debugPrint('Error creating response after recording stop: $e');
+        }
+        
         // If we have a transcript, add it as a user message
         if (_currentTranscript.isNotEmpty) {
           setState(() {
