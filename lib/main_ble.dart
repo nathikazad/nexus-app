@@ -50,6 +50,7 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   bool _isReceiving = false;
   bool _isPlaying = false;
   String? _opusFilePath;
+  String? _wavFilePath;
   List<Uint8List> _opusPackets = [];
   StreamSubscription<Uint8List>? _opusPacketSubscription;
   StreamSubscription<void>? _eofSubscription;
@@ -93,6 +94,7 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
     setState(() {
       _isConnected = false;
       _opusFilePath = null;
+      _wavFilePath = null;
       _opusPackets.clear();
       _packetCount = 0;
     });
@@ -162,6 +164,9 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
 
       await opusFile.writeAsBytes(concatenatedData);
       debugPrint('Saved Opus file: $opusPath (${_opusPackets.length} packets, ${opusHeader.length + totalLength} bytes with header)');
+
+      // Also save WAV file
+      await _saveWavFile(timestamp);
 
       setState(() {
         _opusFilePath = opusPath;
@@ -294,6 +299,87 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
     }
   }
 
+  Uint8List _resamplePcm16To24(Uint8List pcm16Data) {
+    // Simple linear interpolation resampling from 16kHz to 24kHz
+    // Ratio: 24/16 = 1.5 (output samples per input sample)
+    const int inputSampleRate = 16000;
+    const int outputSampleRate = 24000;
+    const double ratio = outputSampleRate / inputSampleRate; // 1.5
+    
+    // PCM16 is 16-bit (2 bytes per sample), mono
+    const int bytesPerSample = 2;
+    int inputSampleCount = pcm16Data.length ~/ bytesPerSample;
+    int outputSampleCount = (inputSampleCount * ratio).round();
+    int outputLength = outputSampleCount * bytesPerSample;
+    
+    Uint8List output = Uint8List(outputLength);
+    
+    // Convert input to Int16List for easier manipulation
+    Int16List inputSamples = Int16List.view(pcm16Data.buffer, pcm16Data.offsetInBytes, inputSampleCount);
+    Int16List outputSamples = Int16List.view(output.buffer, output.offsetInBytes, outputSampleCount);
+    
+    // Linear interpolation resampling
+    for (int i = 0; i < outputSampleCount; i++) {
+      double inputIndex = i / ratio;
+      int inputIndexFloor = inputIndex.floor();
+      int inputIndexCeil = (inputIndex + 1).floor();
+      double fraction = inputIndex - inputIndexFloor;
+      
+      // Handle boundary cases
+      if (inputIndexCeil >= inputSampleCount) {
+        inputIndexCeil = inputSampleCount - 1;
+      }
+      
+      // Linear interpolation
+      int sample1 = inputSamples[inputIndexFloor];
+      int sample2 = inputSamples[inputIndexCeil];
+      int interpolated = (sample1 + (sample2 - sample1) * fraction).round();
+      
+      outputSamples[i] = interpolated;
+    }
+    
+    return output;
+  }
+
+  Future<void> _saveWavFile(int timestamp) async {
+    if (_opusPackets.isEmpty) {
+      debugPrint('No Opus packets to convert to WAV');
+      return;
+    }
+
+    try {
+      // Decode Opus packets to PCM (16kHz)
+      final pcm16Data = await _convertOpusPacketsToPcm(_opusPackets);
+      
+      if (pcm16Data.isEmpty) {
+        debugPrint('Decoded PCM data is empty');
+        return;
+      }
+
+      // Upsample from 16kHz to 24kHz
+      final pcm24Data = _resamplePcm16To24(pcm16Data);
+      debugPrint('Resampled PCM: ${pcm16Data.length} bytes (16kHz) -> ${pcm24Data.length} bytes (24kHz)');
+
+      // Convert PCM to WAV with 24kHz sample rate
+      const int sampleRate = 24000; // Upsampled to 24kHz
+      final wavData = _pcmToWav(pcm24Data, sampleRate: sampleRate);
+
+      // Save WAV file
+      final directory = await getApplicationDocumentsDirectory();
+      final wavPath = '${directory.path}/recording_$timestamp.wav';
+      final wavFile = File(wavPath);
+      await wavFile.writeAsBytes(wavData);
+      
+      debugPrint('Saved WAV file: $wavPath (${wavData.length} bytes)');
+
+      setState(() {
+        _wavFilePath = wavPath;
+      });
+    } catch (e) {
+      debugPrint('Error saving WAV file: $e');
+    }
+  }
+
   Uint8List _buildOpusHeader(int sampleRate, int frameSize) {
     // Build OPUS file header: 'OPUS' (4 bytes) + sample_rate (4 bytes LE) + frame_size (4 bytes LE)
     final header = Uint8List(12);
@@ -340,6 +426,36 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error sharing file: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareWavFile() async {
+    if (_wavFilePath == null) return;
+
+    try {
+      final file = File(_wavFilePath!);
+      if (!await file.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('WAV file does not exist')),
+          );
+        }
+        return;
+      }
+
+      final xFile = XFile(_wavFilePath!);
+      await Share.shareXFiles(
+        [xFile],
+        text: 'WAV audio file from ESP32',
+        subject: 'WAV Recording',
+      );
+    } catch (e) {
+      debugPrint('Error sharing WAV file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sharing WAV file: $e')),
         );
       }
     }
@@ -523,9 +639,43 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
                             foregroundColor: Colors.white,
                           ),
                           icon: const Icon(Icons.share),
-                          label: const Text('Share/Download'),
+                          label: const Text('Share Opus'),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // WAV file section
+          if (_wavFilePath != null) ...[
+            const Divider(),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      'WAV File:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _wavFilePath!.split('/').last,
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _shareWavFile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.download),
+                      label: const Text('Share/Download WAV'),
                     ),
                   ],
                 ),
