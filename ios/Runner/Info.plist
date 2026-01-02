@@ -47,5 +47,9 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs access to microphone to record audio for voice assistant functionality.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app needs Bluetooth access to connect to ESP32 audio device for voice communication.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app needs Bluetooth access to connect to ESP32 audio device for voice communication.</string>
 </dict>
 </plist>

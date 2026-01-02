@@ -61,6 +61,7 @@ app.*.map.json
 **/ios/**/.symlinks/
 **/ios/**/profile
 **/ios/**/xcuserdata
+**/ios/build/
 **/ios/.generated/
 **/ios/Flutter/App.framework
 **/ios/Flutter/Flutter.framework

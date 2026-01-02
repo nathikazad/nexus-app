@@ -1,0 +1,324 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+class BLEService {
+  static final BLEService _instance = BLEService._internal();
+  factory BLEService() => _instance;
+  BLEService._internal();
+
+  // Protocol constants
+  static const String deviceName = "ESP32_Audio";
+  static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  static const String txCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
+  static const String rxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
+  
+  // Signal constants
+  static const int signalEof = 0x0000;
+  static const int signalPause = 0xFFFE;
+  static const int signalResume = 0xFFFD;
+  static const int signalAudioPacket = 0x0001;
+
+  BluetoothDevice? _device;
+  BluetoothCharacteristic? _txCharacteristic;
+  BluetoothCharacteristic? _rxCharacteristic;
+  StreamSubscription? _notificationSubscription;
+  StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
+  
+  StreamController<Uint8List>? _opusPacketController;
+  StreamController<void>? _eofController;
+  
+  bool _isConnected = false;
+  bool _isScanning = false;
+
+  Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
+  Stream<void>? get eofStream => _eofController?.stream;
+  bool get isConnected => _isConnected;
+  bool get isScanning => _isScanning;
+
+  Future<bool> initialize() async {
+    try {
+      // Check if Bluetooth is available
+      if (await FlutterBluePlus.isSupported == false) {
+        debugPrint('Bluetooth not supported');
+        return false;
+      }
+
+      // Initialize controllers
+      _opusPacketController = StreamController<Uint8List>.broadcast();
+      _eofController = StreamController<void>.broadcast();
+
+      return true;
+    } catch (e) {
+      debugPrint('Error initializing BLE service: $e');
+      return false;
+    }
+  }
+
+  Future<bool> scanAndConnect() async {
+    if (_isConnected) {
+      debugPrint('Already connected');
+      return true;
+    }
+
+    try {
+      _isScanning = true;
+      debugPrint('Scanning for $deviceName...');
+
+      // Start scanning
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+      
+      // Listen for scan results with timeout
+      bool deviceFound = false;
+      StreamSubscription<List<ScanResult>>? scanSubscription;
+      
+      final completer = Completer<bool>();
+      Timer? timeoutTimer;
+      
+      scanSubscription = FlutterBluePlus.scanResults.listen(
+        (List<ScanResult> results) {
+          for (ScanResult result in results) {
+            final name = result.device.platformName.isNotEmpty 
+                ? result.device.platformName 
+                : result.device.advName;
+            
+            if (name == deviceName) {
+              debugPrint('Found $name at ${result.device.remoteId}');
+              deviceFound = true;
+              scanSubscription?.cancel();
+              timeoutTimer?.cancel();
+              FlutterBluePlus.stopScan();
+              _isScanning = false;
+              
+              _device = result.device;
+              _connectToDevice().then((success) {
+                if (!completer.isCompleted) {
+                  completer.complete(success);
+                }
+              }).catchError((error) {
+                if (!completer.isCompleted) {
+                  completer.completeError(error);
+                }
+              });
+              return;
+            }
+          }
+        },
+        onError: (error) {
+          debugPrint('Scan error: $error');
+          if (!completer.isCompleted) {
+            completer.complete(false);
+          }
+        },
+      );
+
+      // Set timeout
+      timeoutTimer = Timer(const Duration(seconds: 10), () {
+        if (!deviceFound && !completer.isCompleted) {
+          debugPrint('Scan timeout - device not found');
+          scanSubscription?.cancel();
+          FlutterBluePlus.stopScan();
+          _isScanning = false;
+          completer.complete(false);
+        }
+      });
+
+      return await completer.future;
+    } catch (e) {
+      _isScanning = false;
+      debugPrint('Error scanning: $e');
+      await FlutterBluePlus.stopScan();
+      return false;
+    }
+  }
+
+  Future<bool> _connectToDevice() async {
+    if (_device == null) {
+      return false;
+    }
+
+    try {
+      debugPrint('Connecting to device...');
+      
+      // Connect to device
+      await _device!.connect(timeout: const Duration(seconds: 15));
+      _isConnected = true;
+      debugPrint('Connected!');
+
+      // Discover services
+      List<BluetoothService> services = await _device!.discoverServices();
+      debugPrint('Discovered ${services.length} services');
+
+      // Find the service and characteristics
+      BluetoothService? targetService;
+      for (BluetoothService service in services) {
+        if (service.uuid.toString().toLowerCase() == serviceUuid.toLowerCase()) {
+          targetService = service;
+          break;
+        }
+      }
+
+      if (targetService == null) {
+        debugPrint('Service not found: $serviceUuid');
+        await disconnect();
+        return false;
+      }
+
+      // Find TX characteristic (NOTIFY)
+      for (BluetoothCharacteristic char in targetService.characteristics) {
+        if (char.uuid.toString().toLowerCase() == txCharacteristicUuid.toLowerCase()) {
+          _txCharacteristic = char;
+          debugPrint('Found TX characteristic');
+        } else if (char.uuid.toString().toLowerCase() == rxCharacteristicUuid.toLowerCase()) {
+          _rxCharacteristic = char;
+          debugPrint('Found RX characteristic');
+        }
+      }
+
+      if (_txCharacteristic == null) {
+        debugPrint('TX characteristic not found');
+        await disconnect();
+        return false;
+      }
+
+      // Subscribe to notifications
+      await _txCharacteristic!.setNotifyValue(true);
+      _notificationSubscription = _txCharacteristic!.lastValueStream.listen(
+        _handleNotification,
+        onError: (error) {
+          debugPrint('Notification error: $error');
+        },
+      );
+
+      debugPrint('Subscribed to notifications');
+      
+      // Listen for disconnection
+      _connectionSubscription = _device!.connectionState.listen((state) {
+        if (state == BluetoothConnectionState.disconnected) {
+          debugPrint('Device disconnected');
+          _isConnected = false;
+          _notificationSubscription?.cancel();
+          _notificationSubscription = null;
+        } else if (state == BluetoothConnectionState.connected) {
+          _isConnected = true;
+        }
+      });
+
+      return true;
+    } catch (e) {
+      debugPrint('Error connecting: $e');
+      _isConnected = false;
+      return false;
+    }
+  }
+
+  void _handleNotification(List<int> data) {
+    if (data.isEmpty) return;
+
+    try {
+      Uint8List bytes = Uint8List.fromList(data);
+      int offset = 0;
+
+      // Parse multi-frame packets
+      while (offset + 2 <= bytes.length) {
+        // Read identifier (2 bytes, little-endian)
+        int identifier = bytes[offset] | (bytes[offset + 1] << 8);
+        offset += 2;
+
+        // Handle flow control signals
+        if (identifier == signalPause) {
+          debugPrint('[FLOW] Received PAUSE');
+          continue;
+        }
+        if (identifier == signalResume) {
+          debugPrint('[FLOW] Received RESUME');
+          continue;
+        }
+
+        // Handle EOF
+        if (identifier == signalEof) {
+          debugPrint('[UPLOAD] Received EOF');
+          _eofController?.add(null);
+          continue;
+        }
+
+        // Handle audio packet
+        if (identifier == signalAudioPacket) {
+          // Read packet size (2 bytes, little-endian)
+          if (offset + 2 > bytes.length) {
+            debugPrint('[WARNING] Incomplete packet size at offset $offset');
+            break;
+          }
+          
+          int packetSize = bytes[offset] | (bytes[offset + 1] << 8);
+          offset += 2;
+
+          // Check if we have complete packet
+          if (offset + packetSize > bytes.length) {
+            debugPrint('[WARNING] Incomplete packet at offset $offset');
+            break;
+          }
+
+          // Extract Opus data
+          Uint8List opusData = bytes.sublist(offset, offset + packetSize);
+          offset += packetSize;
+
+          // Emit Opus packet
+          _opusPacketController?.add(opusData);
+        } else {
+          debugPrint('[WARNING] Unknown packet identifier: 0x${identifier.toRadixString(16).padLeft(4, '0')}');
+          // Try to recover by skipping to next potential packet
+          if (offset + 2 <= bytes.length) {
+            offset += 2;
+          } else {
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error handling notification: $e');
+    }
+  }
+
+  Future<void> disconnect() async {
+    try {
+      _isScanning = false;
+      await FlutterBluePlus.stopScan();
+      
+      _notificationSubscription?.cancel();
+      _notificationSubscription = null;
+      
+      _connectionSubscription?.cancel();
+      _connectionSubscription = null;
+
+      if (_txCharacteristic != null) {
+        try {
+          await _txCharacteristic!.setNotifyValue(false);
+        } catch (e) {
+          debugPrint('Error unsubscribing: $e');
+        }
+        _txCharacteristic = null;
+      }
+
+      if (_device != null && _isConnected) {
+        await _device!.disconnect();
+        _isConnected = false;
+      }
+
+      _device = null;
+      debugPrint('Disconnected');
+    } catch (e) {
+      debugPrint('Error disconnecting: $e');
+    }
+  }
+
+  Future<void> dispose() async {
+    await disconnect();
+    await _opusPacketController?.close();
+    await _eofController?.close();
+    _opusPacketController = null;
+    _eofController = null;
+  }
+}
+
