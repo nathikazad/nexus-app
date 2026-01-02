@@ -341,14 +341,28 @@ class BLEService {
     if (_paused) {
       debugPrint('[FLOW] Waiting while paused...');
       int waitCount = 0;
+      const int timeoutMs = 5000; // 5 second timeout
+      const int timeoutTicks = timeoutMs ~/ 10; // Number of 10ms ticks
+      
       while (_paused) {
         await Future.delayed(const Duration(milliseconds: 10));
         waitCount++;
+        
         if (waitCount % 100 == 0) {
           debugPrint('[FLOW] Still waiting... (waited ${waitCount * 10}ms)');
         }
+        
+        // Timeout after 5 seconds - auto-resume
+        if (waitCount >= timeoutTicks) {
+          debugPrint('[FLOW] Timeout after ${timeoutMs}ms, auto-resuming transmission');
+          _paused = false;
+          break;
+        }
       }
-      debugPrint('[FLOW] Resumed, continuing transmission');
+      
+      if (!_paused) {
+        debugPrint('[FLOW] Resumed, continuing transmission');
+      }
     }
   }
 
