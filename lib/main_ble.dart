@@ -52,9 +52,12 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   String? _opusFilePath;
   String? _wavFilePath;
   List<Uint8List> _opusPackets = [];
+  List<Uint8List> _pcm24Chunks = []; // Accumulated resampled PCM24 data
   StreamSubscription<Uint8List>? _opusPacketSubscription;
   StreamSubscription<void>? _eofSubscription;
+  StreamOpusDecoder? _streamDecoder;
   int _packetCount = 0;
+  int? _recordingTimestamp;
 
   @override
   void initState() {
@@ -66,28 +69,64 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
     await _bleService.initialize();
     await _audioService.initialize();
     
-    // Listen for Opus packets
+    // Initialize streaming decoder
+    const int sampleRate = 16000; // ESP32 uses 16kHz
+    const int channels = 1;
+    _streamDecoder = StreamOpusDecoder.bytes(
+      floatOutput: false,
+      sampleRate: sampleRate,
+      channels: channels,
+      copyOutput: true,
+      forwardErrorCorrection: false,
+    );
+    
+    // Listen for Opus packets - process them as they arrive
     _opusPacketSubscription = _bleService.opusPacketStream?.listen(
-      (packet) {
+      (packet) async {
+        // Set recording timestamp on first packet
+        if (_recordingTimestamp == null) {
+          _recordingTimestamp = DateTime.now().millisecondsSinceEpoch;
+        }
+        
         setState(() {
           _opusPackets.add(packet);
           _packetCount++;
           _isReceiving = true;
         });
         debugPrint('Received Opus packet ${_packetCount}: ${packet.length} bytes');
+        
+        // Process packet immediately: decode and resample
+        await _processOpusPacket(packet);
       },
     );
 
     // Listen for EOF
     _eofSubscription = _bleService.eofStream?.listen(
       (_) async {
-        debugPrint('EOF received, saving file...');
-        await _saveOpusFile();
+        debugPrint('EOF received, finalizing files...');
+        await _finalizeFiles();
         setState(() {
           _isReceiving = false;
         });
       },
     );
+  }
+
+  Future<void> _processOpusPacket(Uint8List opusPacket) async {
+    try {
+      // Decode Opus packet to PCM16
+      final decodedStream = _streamDecoder!.bind(Stream.value(opusPacket));
+      await for (final pcm16Chunk in decodedStream) {
+        if (pcm16Chunk is Uint8List && pcm16Chunk.isNotEmpty) {
+          // Resample PCM16 to PCM24
+          final pcm24Chunk = _resamplePcm16To24(pcm16Chunk);
+          _pcm24Chunks.add(pcm24Chunk);
+          debugPrint('Processed packet: ${opusPacket.length} bytes Opus -> ${pcm16Chunk.length} bytes PCM16 -> ${pcm24Chunk.length} bytes PCM24');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error processing Opus packet: $e');
+    }
   }
 
   Future<void> _connectToDevice() async {
@@ -96,8 +135,21 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
       _opusFilePath = null;
       _wavFilePath = null;
       _opusPackets.clear();
+      _pcm24Chunks.clear();
       _packetCount = 0;
+      _recordingTimestamp = null;
     });
+    
+    // Reset decoder for new recording
+    const int sampleRate = 16000;
+    const int channels = 1;
+    _streamDecoder = StreamOpusDecoder.bytes(
+      floatOutput: false,
+      sampleRate: sampleRate,
+      channels: channels,
+      copyOutput: true,
+      forwardErrorCorrection: false,
+    );
 
     final success = await _bleService.scanAndConnect();
     if (success) {
@@ -121,15 +173,44 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
     });
   }
 
-  Future<void> _saveOpusFile() async {
+  Future<void> _finalizeFiles() async {
     if (_opusPackets.isEmpty) {
       debugPrint('No Opus packets to save');
       return;
     }
 
+    // Use recording timestamp if set, otherwise create new one
+    final timestamp = _recordingTimestamp ?? DateTime.now().millisecondsSinceEpoch;
+    _recordingTimestamp = timestamp;
+
+    try {
+      // Save Opus file
+      await _saveOpusFile(timestamp);
+      
+      // Save WAV file (using accumulated PCM24 chunks)
+      await _saveWavFile(timestamp);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saved ${_opusPackets.length} packets to files'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error finalizing files: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving files: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveOpusFile(int timestamp) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final opusPath = '${directory.path}/recording_$timestamp.opus';
       final opusFile = File(opusPath);
 
@@ -165,28 +246,12 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
       await opusFile.writeAsBytes(concatenatedData);
       debugPrint('Saved Opus file: $opusPath (${_opusPackets.length} packets, ${opusHeader.length + totalLength} bytes with header)');
 
-      // Also save WAV file
-      await _saveWavFile(timestamp);
-
       setState(() {
         _opusFilePath = opusPath;
       });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved ${_opusPackets.length} packets to file'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     } catch (e) {
       debugPrint('Error saving Opus file: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving file: $e')),
-        );
-      }
+      rethrow;
     }
   }
 
@@ -220,8 +285,9 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
         throw Exception('Decoded PCM data is empty');
       }
 
-      // Convert PCM to WAV for playback
-      final wavData = _pcmToWav(pcmData);
+      // Convert PCM to WAV for playback (16kHz for playback)
+      const int sampleRate = 16000;
+      final wavData = _pcmToWav(pcmData, sampleRate: sampleRate);
       debugPrint('Created WAV data: ${wavData.length} bytes');
 
       // Save temporary WAV file for playback
@@ -342,23 +408,22 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   }
 
   Future<void> _saveWavFile(int timestamp) async {
-    if (_opusPackets.isEmpty) {
-      debugPrint('No Opus packets to convert to WAV');
+    if (_pcm24Chunks.isEmpty) {
+      debugPrint('No PCM24 data to save as WAV');
       return;
     }
 
     try {
-      // Decode Opus packets to PCM (16kHz)
-      final pcm16Data = await _convertOpusPacketsToPcm(_opusPackets);
-      
-      if (pcm16Data.isEmpty) {
-        debugPrint('Decoded PCM data is empty');
-        return;
+      // Combine all accumulated PCM24 chunks
+      int totalLength = _pcm24Chunks.fold(0, (sum, chunk) => sum + chunk.length);
+      Uint8List pcm24Data = Uint8List(totalLength);
+      int offset = 0;
+      for (Uint8List chunk in _pcm24Chunks) {
+        pcm24Data.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
       }
-
-      // Upsample from 16kHz to 24kHz
-      final pcm24Data = _resamplePcm16To24(pcm16Data);
-      debugPrint('Resampled PCM: ${pcm16Data.length} bytes (16kHz) -> ${pcm24Data.length} bytes (24kHz)');
+      
+      debugPrint('Combined PCM24 data: ${_pcm24Chunks.length} chunks -> ${pcm24Data.length} bytes (24kHz)');
 
       // Convert PCM to WAV with 24kHz sample rate
       const int sampleRate = 24000; // Upsampled to 24kHz
