@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:nexus_voice_assistant/services/hardware_service.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -20,8 +21,10 @@ class OpenAIService {
   RealtimeClient? _client;
   bool _isConnected = false;
   StreamController<Map<String, dynamic>> _conversationController = StreamController<Map<String, dynamic>>.broadcast();
+  StreamController<Uint8List> _hardWareAudioController = StreamController<Uint8List>.broadcast();
 
   Stream<Map<String, dynamic>> get conversationStream => _conversationController.stream;
+  Stream<Uint8List> get hardWareAudioOutStream => _hardWareAudioController.stream;
   bool get isConnected => _isConnected;
 
   queryOrigin _queryOrigin = queryOrigin.App;
@@ -246,11 +249,15 @@ class OpenAIService {
         // Handle audio data from assistant
         if (delta?.audio != null && message.role == ItemRole.assistant) {
           // Stream the audio data
-          _conversationController.add({
-            'speaker': 'AI',
-            'audio': delta!.audio,
-            'type': 'audio',
-          });
+          if (_queryOrigin == queryOrigin.Hardware) {
+            _hardWareAudioController.add(delta!.audio!);
+          } else {
+            _conversationController.add({
+              'speaker': 'AI',
+              'audio': delta!.audio,
+              'type': 'audio',
+            });
+          }
         }
       }
     });
@@ -270,12 +277,17 @@ class OpenAIService {
     // });
 
 
-    _client!.realtime.on(RealtimeEventType.responseDone, (event) {
+    _client!.realtime.on(RealtimeEventType.responseDone, (event) async {
       try {
         print('Response done event');
+        // add a delay of 1 second
+        await Future.delayed(const Duration(milliseconds: 100));
         _conversationController.add({
           'type': 'response_done',
         });
+        if (_queryOrigin == queryOrigin.Hardware) {
+          HardwareService.instance.sendEOFToEsp32();
+        }
       } catch (e) {
         print('Error handling response done event: $e');
       }
@@ -301,7 +313,7 @@ class OpenAIService {
       return;
     }
 
-    _queryOrigin = origin;
+    // _queryOrigin = origin;
 
     try {
       // debugPrint('OpenAIService: Sending audio data (${audioData.length} bytes)');

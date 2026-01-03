@@ -419,7 +419,7 @@ class BLEService {
     try {
       debugPrint('[SEND] Sending batch: ${batch.length} bytes');
       await _rxCharacteristic!.write(batch, withoutResponse: true);
-      debugPrint('[SEND] Batch sent successfully');
+      // debugPrint('[SEND] Batch sent successfully');
     } catch (e) {
       debugPrint('[SEND] Error sending batch: $e');
       rethrow;
