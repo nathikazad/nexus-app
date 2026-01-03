@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'services/ble_service.dart';
 import 'services/audio_service.dart';
-import 'util/audio_transformers.dart';
+import 'util/audio.dart';
 
 // ============================================================================
 // MAIN APP
@@ -35,201 +35,6 @@ class BLEOpusReceiver extends StatelessWidget {
         body: const BLEOpusReceiverScreen(),
       ),
     );
-  }
-}
-
-// ============================================================================
-// AUDIO PROCESSING MODULE
-// ============================================================================
-
-class AudioProcessor {
-  static const int defaultSampleRate = 16000;
-  static const int defaultChannels = 1;
-  
-  /// Creates a new Opus decoder for streaming
-  static StreamOpusDecoder createDecoder({
-    int sampleRate = defaultSampleRate,
-    int channels = defaultChannels,
-  }) {
-    return StreamOpusDecoder.bytes(
-      floatOutput: false,
-      sampleRate: sampleRate,
-      channels: channels,
-      copyOutput: true,
-      forwardErrorCorrection: false,
-    );
-  }
-  
-  /// Decodes Opus packets to PCM16
-  static Future<Uint8List> decodeOpusPackets(
-    List<Uint8List> opusPackets, {
-    int sampleRate = defaultSampleRate,
-    int channels = defaultChannels,
-  }) async {
-    if (opusPackets.isEmpty) {
-      throw Exception('No Opus packets to decode');
-    }
-
-    final decoder = createDecoder(sampleRate: sampleRate, channels: channels);
-    List<Uint8List> decodedChunks = [];
-    
-    await for (final chunk in decoder.bind(Stream.fromIterable(opusPackets))) {
-      if (chunk is Uint8List) {
-        decodedChunks.add(chunk);
-      }
-    }
-
-    // Combine all decoded chunks
-    int totalLength = decodedChunks.fold(0, (sum, chunk) => sum + chunk.length);
-    Uint8List result = Uint8List(totalLength);
-    int offset = 0;
-    for (Uint8List chunk in decodedChunks) {
-      if (offset + chunk.length <= result.length) {
-        result.setRange(offset, offset + chunk.length, chunk);
-        offset += chunk.length;
-      }
-    }
-
-    return result;
-  }
-  
-  /// Resamples PCM16 from 16kHz to 24kHz
-  static Uint8List resamplePcm16To24(Uint8List pcm16Data) {
-    const int inputSampleRate = 16000;
-    const int outputSampleRate = 24000;
-    const double ratio = outputSampleRate / inputSampleRate;
-    const int bytesPerSample = 2;
-    
-    int inputSampleCount = pcm16Data.length ~/ bytesPerSample;
-    int outputSampleCount = (inputSampleCount * ratio).round();
-    int outputLength = outputSampleCount * bytesPerSample;
-    
-    Uint8List output = Uint8List(outputLength);
-    Int16List inputSamples = Int16List.view(
-      pcm16Data.buffer, 
-      pcm16Data.offsetInBytes, 
-      inputSampleCount
-    );
-    Int16List outputSamples = Int16List.view(
-      output.buffer, 
-      output.offsetInBytes, 
-      outputSampleCount
-    );
-    
-    for (int i = 0; i < outputSampleCount; i++) {
-      double inputIndex = i / ratio;
-      int inputIndexFloor = inputIndex.floor();
-      int inputIndexCeil = (inputIndex + 1).floor();
-      double fraction = inputIndex - inputIndexFloor;
-      
-      if (inputIndexCeil >= inputSampleCount) {
-        inputIndexCeil = inputSampleCount - 1;
-      }
-      
-      int sample1 = inputSamples[inputIndexFloor];
-      int sample2 = inputSamples[inputIndexCeil];
-      int interpolated = (sample1 + (sample2 - sample1) * fraction).round();
-      
-      outputSamples[i] = interpolated;
-    }
-    
-    return output;
-  }
-  
-  /// Resamples PCM24 from 24kHz to 16kHz
-  /// Ensures exact output size: for 1440 samples input (60ms at 24kHz), outputs exactly 960 samples (60ms at 16kHz)
-  static Uint8List resamplePcm24To16(Uint8List pcm24Data) {
-    const int inputSampleRate = 24000;
-    const int outputSampleRate = 16000;
-    const int bytesPerSample = 2;
-    
-    int inputSampleCount = pcm24Data.length ~/ bytesPerSample;
-    // Calculate exact output sample count: input * 2/3, using integer math to avoid rounding errors
-    // For 1440 samples: 1440 * 2 / 3 = 960 exactly
-    int outputSampleCount = (inputSampleCount * outputSampleRate) ~/ inputSampleRate;
-    int outputLength = outputSampleCount * bytesPerSample;
-    
-    Uint8List output = Uint8List(outputLength);
-    Int16List inputSamples = Int16List.view(
-      pcm24Data.buffer, 
-      pcm24Data.offsetInBytes, 
-      inputSampleCount
-    );
-    Int16List outputSamples = Int16List.view(
-      output.buffer, 
-      output.offsetInBytes, 
-      outputSampleCount
-    );
-    
-    const double ratio = inputSampleRate / outputSampleRate; // 24/16 = 1.5
-    for (int i = 0; i < outputSampleCount; i++) {
-      // Use exact ratio calculation: i * inputRate / outputRate
-      double inputIndex = i * ratio;
-      int inputIndexFloor = inputIndex.floor();
-      int inputIndexCeil = (inputIndex + 1).floor();
-      double fraction = inputIndex - inputIndexFloor;
-      
-      if (inputIndexCeil >= inputSampleCount) {
-        inputIndexCeil = inputSampleCount - 1;
-      }
-      
-      int sample1 = inputSamples[inputIndexFloor];
-      int sample2 = inputSamples[inputIndexCeil];
-      int interpolated = (sample1 + (sample2 - sample1) * fraction).round();
-      
-      outputSamples[i] = interpolated;
-    }
-    
-    return output;
-  }
-  
-  /// Converts PCM data to WAV format
-  static Uint8List pcmToWav(
-    Uint8List pcmData, {
-    int sampleRate = 16000,
-    int channels = 1,
-    int bitsPerSample = 16,
-  }) {
-    final int dataSize = pcmData.length;
-    final int fileSize = 36 + dataSize;
-    final ByteData wavHeader = ByteData(44);
-
-    // RIFF header
-    wavHeader.setUint8(0, 0x52); // 'R'
-    wavHeader.setUint8(1, 0x49); // 'I'
-    wavHeader.setUint8(2, 0x46); // 'F'
-    wavHeader.setUint8(3, 0x46); // 'F'
-    wavHeader.setUint32(4, fileSize, Endian.little);
-    wavHeader.setUint8(8, 0x57);  // 'W'
-    wavHeader.setUint8(9, 0x41);  // 'A'
-    wavHeader.setUint8(10, 0x56); // 'V'
-    wavHeader.setUint8(11, 0x45); // 'E'
-
-    // fmt chunk
-    wavHeader.setUint8(12, 0x66); // 'f'
-    wavHeader.setUint8(13, 0x6D); // 'm'
-    wavHeader.setUint8(14, 0x74); // 't'
-    wavHeader.setUint8(15, 0x20); // ' '
-    wavHeader.setUint32(16, 16, Endian.little);
-    wavHeader.setUint16(20, 1, Endian.little);
-    wavHeader.setUint16(22, channels, Endian.little);
-    wavHeader.setUint32(24, sampleRate, Endian.little);
-    wavHeader.setUint32(28, sampleRate * channels * bitsPerSample ~/ 8, Endian.little);
-    wavHeader.setUint16(32, channels * bitsPerSample ~/ 8, Endian.little);
-    wavHeader.setUint16(34, bitsPerSample, Endian.little);
-
-    // data chunk
-    wavHeader.setUint8(36, 0x64); // 'd'
-    wavHeader.setUint8(37, 0x61); // 'a'
-    wavHeader.setUint8(38, 0x74); // 't'
-    wavHeader.setUint8(39, 0x61); // 'a'
-    wavHeader.setUint32(40, dataSize, Endian.little);
-
-    final Uint8List wavData = Uint8List(44 + dataSize);
-    wavData.setRange(0, 44, wavHeader.buffer.asUint8List());
-    wavData.setRange(44, 44 + dataSize, pcmData);
-
-    return wavData;
   }
 }
 
@@ -288,6 +93,55 @@ class FileManager {
       await opusFile.writeAsBytes(concatenatedData);
     return opusPath;
   }
+
+  /// Converts PCM data to WAV format
+  static Uint8List pcmToWav(
+    Uint8List pcmData, {
+    int sampleRate = 16000,
+    int channels = 1,
+    int bitsPerSample = 16,
+  }) {
+    final int dataSize = pcmData.length;
+    final int fileSize = 36 + dataSize;
+    final ByteData wavHeader = ByteData(44);
+
+    // RIFF header
+    wavHeader.setUint8(0, 0x52); // 'R'
+    wavHeader.setUint8(1, 0x49); // 'I'
+    wavHeader.setUint8(2, 0x46); // 'F'
+    wavHeader.setUint8(3, 0x46); // 'F'
+    wavHeader.setUint32(4, fileSize, Endian.little);
+    wavHeader.setUint8(8, 0x57);  // 'W'
+    wavHeader.setUint8(9, 0x41);  // 'A'
+    wavHeader.setUint8(10, 0x56); // 'V'
+    wavHeader.setUint8(11, 0x45); // 'E'
+
+    // fmt chunk
+    wavHeader.setUint8(12, 0x66); // 'f'
+    wavHeader.setUint8(13, 0x6D); // 'm'
+    wavHeader.setUint8(14, 0x74); // 't'
+    wavHeader.setUint8(15, 0x20); // ' '
+    wavHeader.setUint32(16, 16, Endian.little);
+    wavHeader.setUint16(20, 1, Endian.little);
+    wavHeader.setUint16(22, channels, Endian.little);
+    wavHeader.setUint32(24, sampleRate, Endian.little);
+    wavHeader.setUint32(28, sampleRate * channels * bitsPerSample ~/ 8, Endian.little);
+    wavHeader.setUint16(32, channels * bitsPerSample ~/ 8, Endian.little);
+    wavHeader.setUint16(34, bitsPerSample, Endian.little);
+
+    // data chunk
+    wavHeader.setUint8(36, 0x64); // 'd'
+    wavHeader.setUint8(37, 0x61); // 'a'
+    wavHeader.setUint8(38, 0x74); // 't'
+    wavHeader.setUint8(39, 0x61); // 'a'
+    wavHeader.setUint32(40, dataSize, Endian.little);
+
+    final Uint8List wavData = Uint8List(44 + dataSize);
+    wavData.setRange(0, 44, wavHeader.buffer.asUint8List());
+    wavData.setRange(44, 44 + dataSize, pcmData);
+
+    return wavData;
+  }
   
   /// Saves WAV file from PCM24 chunks
   static Future<String> saveWavFile(
@@ -307,7 +161,7 @@ class FileManager {
       offset += chunk.length;
     }
 
-    final wavData = AudioProcessor.pcmToWav(pcm24Data, sampleRate: sampleRate);
+    final wavData = pcmToWav(pcm24Data, sampleRate: sampleRate);
     final directory = await getApplicationDocumentsDirectory();
     final wavPath = '${directory.path}/recording_$timestamp.wav';
     final wavFile = File(wavPath);
@@ -402,7 +256,7 @@ class AudioPlaybackManager {
       }
 
       const int sampleRate = 16000;
-    final wavData = AudioProcessor.pcmToWav(pcmData, sampleRate: sampleRate);
+    final wavData = FileManager.pcmToWav(pcmData, sampleRate: sampleRate);
 
       final directory = await getTemporaryDirectory();
       final tempWavPath = '${directory.path}/temp_playback_${DateTime.now().millisecondsSinceEpoch}.wav';
