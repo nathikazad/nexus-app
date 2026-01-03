@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:nexus_voice_assistant/services/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/agent_tool_service.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -46,144 +47,45 @@ class OpenAIService {
         // dangerouslyAllowAPIKeyInBrowser: kIsWeb,
       );
 
-      // Add list_people tool
-      // await _client!.addTool(
-      //   const ToolDefinition(
-      //     name: 'list_people',
-      //     description: 'List all people in your Personal Knowledge Management (PKM) database. Returns their names and descriptions.',
-      //     parameters: {
-      //       'type': 'object',
-      //       'properties': {},
-      //       'required': [],
-      //     },
-      //   ),
-      //   (Map<String, dynamic> params) async {
-      //     debugPrint('List people tool called with params: $params');
-      //     try {
-      //       // Call the PKM MCP server
-      //       final url = 'http://localhost:8000/mcp';
-      //       final requestBody = {
-      //         'jsonrpc': '2.0',
-      //         'method': 'tools/call',
-      //         'params': {
-      //           'name': 'list_people',
-      //           'arguments': {}
-      //         },
-      //         'id': DateTime.now().millisecondsSinceEpoch,
-      //       };
-            
-      //       final response = await http.post(
-      //         Uri.parse(url),
-      //         headers: {
-      //           'Content-Type': 'application/json',
-      //           'Accept': 'application/json, text/event-stream',
-      //         },
-      //         body: jsonEncode(requestBody),
-      //       );
-            
-      //       if (response.statusCode == 200) {
-      //         final result = jsonDecode(response.body);
-      //         debugPrint('MCP List People API result: $result');
-              
-      //         // Extract the people list from the MCP response
-      //         if (result['result'] != null && result['result']['structuredContent'] != null) {
-      //           final peopleResult = result['result']['structuredContent']['result'];
-      //           return {
-      //             'people': peopleResult['people'],
-      //             'count': peopleResult['count'],
-      //             'message': peopleResult['message'],
-      //           };
-      //         } else {
-      //           return {'error': 'Invalid response format from MCP server'};
-      //         }
-      //       } else {
-      //         debugPrint('MCP List People API error: ${response.statusCode} - ${response.body}');
-      //         return {'error': 'HTTP ${response.statusCode}: ${response.body}'};
-      //       }
-      //     } catch (e) {
-      //       debugPrint('MCP List People API error: $e');
-      //       return {'error': e.toString()};
-      //     }
-      //   },
-      // );
-
-      // // Add add_people tool
-      // await _client!.addTool(
-      //   const ToolDefinition(
-      //     name: 'add_people',
-      //     description: 'Add a new person to your Personal Knowledge Management (PKM) database. Requires a name and optionally a description.',
-      //     parameters: {
-      //       'type': 'object',
-      //       'properties': {
-      //         'name': {
-      //           'type': 'string',
-      //           'description': 'The name of the person to add (required)',
-      //         },
-      //         'description': {
-      //           'type': 'string',
-      //           'description': 'A description of the person (optional)',
-      //         },
-      //       },
-      //       'required': ['name'],
-      //     },
-      //   ),
-      //   (Map<String, dynamic> params) async {
-      //     debugPrint('Add people tool called with params: $params');
-      //     try {
-      //       // Call the PKM MCP server
-      //       final url = 'http://localhost:8000/mcp';
-      //       final requestBody = {
-      //         'jsonrpc': '2.0',
-      //         'method': 'tools/call',
-      //         'params': {
-      //           'name': 'add_people',
-      //           'arguments': {
-      //             'name': params['name'],
-      //             'description': params['description'] ?? '',
-      //           }
-      //         },
-      //         'id': DateTime.now().millisecondsSinceEpoch,
-      //       };
-            
-      //       final response = await http.post(
-      //         Uri.parse(url),
-      //         headers: {
-      //           'Content-Type': 'application/json',
-      //           'Accept': 'application/json, text/event-stream',
-      //         },
-      //         body: jsonEncode(requestBody),
-      //       );
-            
-      //       if (response.statusCode == 200) {
-      //         final result = jsonDecode(response.body);
-      //         debugPrint('MCP Add People API result: $result');
-              
-      //         // Extract the result from the MCP response
-      //         if (result['result'] != null && result['result']['structuredContent'] != null) {
-      //           final addResult = result['result']['structuredContent']['result'];
-      //           return {
-      //             'success': addResult['success'],
-      //             'person': addResult['person'],
-      //             'message': addResult['message'],
-      //             'error': addResult['error'],
-      //           };
-      //         } else {
-      //           return {'error': 'Invalid response format from MCP server'};
-      //         }
-      //       } else {
-      //         debugPrint('MCP Add People API error: ${response.statusCode} - ${response.body}');
-      //         return {'error': 'HTTP ${response.statusCode}: ${response.body}'};
-      //       }
-      //     } catch (e) {
-      //       debugPrint('MCP Add People API error: $e');
-      //       return {'error': e.toString()};
-      //     }
-      //   },
-      // );
+      // Add ask_user_data_expert_agent tool
+      await _client!.addTool(
+        const ToolDefinition(
+          name: 'ask_user_data_expert_agent',
+          description: 'Ask the user data expert agent any question about the user.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'query': {
+                'type': 'string',
+                'description': 'The natural language question to ask the agent about the user',
+              },
+            },
+            'required': ['query'],
+          },
+        ),
+        (Map<String, dynamic> params) async {
+          // Extract query from params (required)
+          final query = params['query'] as String?;
+          if (query == null || query.isEmpty) {
+            return {'error': 'Query parameter is required'};
+          }
+          
+          // Hardcode user_id to 1
+          const userId = '1';
+          
+          return await callMCPTool(
+            'ask_user_data_agent',
+            arguments: {
+              'query': query,
+              'user_id': userId,
+            },
+          );
+        },
+      );
 
       // Configure session for voice interaction
       await _client!.updateSession(
-        instructions: 'You are a helpful voice assistant with access to a Personal Knowledge Management (PKM) database. You have two tools available: 1) list_people - to retrieve all people in the knowledge base with their names and descriptions, and 2) add_people - to add new people with a name (required) and description (optional). When users ask to see people, list people, or show contacts, use list_people. When users want to add someone, save a person, or remember someone, use add_people. Always call the appropriate tool first, then provide a natural response based on the result. Respond naturally and conversationally in English.',
+        instructions: 'You are a helpful voice assistant with access to a Personal Knowledge Management (PKM) database. You have access to the ask_user_data_expert_agent tool which can answer questions about the user\'s data. When users ask questions about their data, use the ask_user_data_expert_agent tool with their question as the query parameter. Always call the tool first, then provide a natural response based on the result. Respond naturally and conversationally in English.',
         voice: Voice.alloy,
         // Disable automatic turn detection so we control when the model responds
         turnDetection: null,
