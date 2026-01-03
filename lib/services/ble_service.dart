@@ -5,6 +5,10 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class BLEService {
   static final BLEService _instance = BLEService._internal();
+  
+  /// Singleton instance getter
+  static BLEService get instance => _instance;
+  
   factory BLEService() => _instance;
   BLEService._internal();
 
