@@ -20,6 +20,10 @@ class AudioStreamManager {
   List<Uint8List> _currentBatch = []; // Current batch being accumulated
   Timer? _batchTimeoutTimer; // Timer for batch timeout
   
+  // Guards to prevent race conditions
+  bool _isCreatingBatch = false; // Prevent concurrent batch creation
+  bool _isTransitioningPlayback = false; // Prevent stop() from triggering replay
+  
   // Callback for when audio playback state changes
   Function(bool)? onPlaybackStateChanged;
 
@@ -65,21 +69,27 @@ class AudioStreamManager {
 
   /// Create a batched WAV file from accumulated chunks
   Future<void> _createBatchedWavFile() async {
-    if (_currentBatch.isEmpty) return;
+    // Guard against concurrent batch creation
+    if (_isCreatingBatch || _currentBatch.isEmpty) return;
+    _isCreatingBatch = true;
     
     // Cancel timeout timer since we're creating the batch
     _batchTimeoutTimer?.cancel();
     
     try {
+      // Capture the current batch and clear it immediately to prevent duplicates
+      final batchToProcess = List<Uint8List>.from(_currentBatch);
+      _currentBatch.clear();
+      
       // Concatenate all PCM chunks in the batch
       int totalLength = 0;
-      for (final chunk in _currentBatch) {
+      for (final chunk in batchToProcess) {
         totalLength += chunk.length;
       }
       
       final Uint8List concatenatedPcm = Uint8List(totalLength);
       int offset = 0;
-      for (final chunk in _currentBatch) {
+      for (final chunk in batchToProcess) {
         concatenatedPcm.setRange(offset, offset + chunk.length, chunk);
         offset += chunk.length;
       }
@@ -102,10 +112,7 @@ class AudioStreamManager {
       
       // Add to queue
       _batchedAudioFiles.add(audioFile);
-      debugPrint('🎵 Created batched WAV file: ${_currentBatch.length} chunks -> ${(wavData.length / 1024).toStringAsFixed(1)} KB');
-      
-      // Clear current batch
-      _currentBatch.clear();
+      debugPrint('🎵 Created batched WAV file: ${batchToProcess.length} chunks -> ${(wavData.length / 1024).toStringAsFixed(1)} KB');
       
       // Start playback if not already playing
       if (!_isPlayingStreamedAudio && _batchedAudioFiles.isNotEmpty) {
@@ -118,6 +125,8 @@ class AudioStreamManager {
     } catch (e) {
       debugPrint('Error creating batched WAV file: $e');
       _currentBatch.clear(); // Clear batch even on error
+    } finally {
+      _isCreatingBatch = false;
     }
   }
 
@@ -134,16 +143,42 @@ class AudioStreamManager {
     _audioPlayerSubscription?.cancel();
     
     // Set up a single listener for audio completion
-    _audioPlayerSubscription = _audioPlayer.onPlayerComplete.listen((_) {
-      // Play next batched file if available
-      if (_batchedAudioFiles.isNotEmpty) {
-        _playNextBatchedFile();
-      } else {
-        _isPlayingStreamedAudio = false;
-        onPlaybackStateChanged?.call(false);
-        _audioPlayerSubscription?.cancel();
-      }
-    });
+    _audioPlayerSubscription = _audioPlayer.onPlayerComplete.listen(
+      (_) {
+        // Ignore if we're in the middle of transitioning between files
+        if (_isTransitioningPlayback) {
+          debugPrint('   ⏭️ Ignoring onPlayerComplete during transition');
+          return;
+        }
+        
+        // Play next batched file if available
+        if (_batchedAudioFiles.isNotEmpty) {
+          // Add delay to let the player fully complete before starting next file
+          // This prevents iOS AudioPlayer hang when play() called during completion
+          Future.delayed(const Duration(milliseconds: 50), () {
+            _playNextBatchedFile();
+          });
+        } else {
+          _isPlayingStreamedAudio = false;
+          onPlaybackStateChanged?.call(false);
+          _audioPlayerSubscription?.cancel();
+        }
+      },
+      onError: (error) {
+        debugPrint('⚠️ Error in audio player completion listener: $error');
+        // Try to continue with next file if available (but not during transition)
+        if (!_isTransitioningPlayback && _batchedAudioFiles.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _playNextBatchedFile();
+          });
+        } else if (!_isTransitioningPlayback) {
+          _isPlayingStreamedAudio = false;
+          onPlaybackStateChanged?.call(false);
+          _audioPlayerSubscription?.cancel();
+        }
+      },
+      cancelOnError: false, // Don't cancel subscription on error
+    );
   }
 
   /// Play the next batched audio file in the queue
@@ -159,21 +194,86 @@ class AudioStreamManager {
       // Take the first batched file
       final audioFile = _batchedAudioFiles.removeFirst();
       debugPrint('🎵 Playing batched file, remaining files: ${_batchedAudioFiles.length}');
+      debugPrint('   📁 File: ${audioFile.split('/').last}');
       
-      // Play the audio file
-      if (kIsWeb && audioFile.startsWith('data:')) {
-        // For web data URLs
-        await _audioPlayer.play(UrlSource(audioFile));
-      } else {
-        // For mobile file paths
-        await _audioPlayer.play(DeviceFileSource(audioFile));
+      // Get file info for debugging
+      if (!kIsWeb) {
+        final file = File(audioFile);
+        if (await file.exists()) {
+          final fileSize = await file.length();
+          debugPrint('   📊 File size: ${(fileSize / 1024).toStringAsFixed(1)} KB');
+        } else {
+          debugPrint('   ⚠️ Audio file does not exist: $audioFile');
+          // Continue to next file
+          if (_batchedAudioFiles.isNotEmpty) {
+            _playNextBatchedFile();
+          }
+          return;
+        }
+      }
+      
+      // Set transition guard BEFORE playing to prevent onPlayerComplete from triggering
+      _isTransitioningPlayback = true;
+      
+      try {
+        debugPrint('   ▶️ Calling play()...');
+        final playStartTime = DateTime.now();
+        
+        // Just call play() - audioplayers will stop current audio automatically
+        // Don't call stop() separately as it can trigger onPlayerComplete
+        if (kIsWeb && audioFile.startsWith('data:')) {
+          await _audioPlayer.play(UrlSource(audioFile)).timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              debugPrint('   ⏱️ TIMEOUT: play() did not resolve');
+              throw TimeoutException('Playback timeout', const Duration(seconds: 2));
+            },
+          );
+        } else {
+          await _audioPlayer.play(DeviceFileSource(audioFile)).timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              debugPrint('   ⏱️ TIMEOUT: play() did not resolve');
+              throw TimeoutException('Playback timeout', const Duration(seconds: 2));
+            },
+          );
+        }
+        
+        final playElapsed = DateTime.now().difference(playStartTime);
+        debugPrint('   ✅ play() resolved after ${playElapsed.inMilliseconds}ms');
+        
+      } catch (e) {
+        debugPrint('   ❌ Error playing: $e');
+        
+        // Continue to next file instead of stopping
+        if (_batchedAudioFiles.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 200), () {
+            _playNextBatchedFile();
+          });
+        } else {
+          _isPlayingStreamedAudio = false;
+          onPlaybackStateChanged?.call(false);
+          _audioPlayerSubscription?.cancel();
+        }
+      } finally {
+        // Clear transition guard after play() resolves
+        _isTransitioningPlayback = false;
       }
       
     } catch (e) {
-      debugPrint('Error playing batched audio file: $e');
-      _isPlayingStreamedAudio = false;
-      onPlaybackStateChanged?.call(false);
-      _audioPlayerSubscription?.cancel();
+      debugPrint('❌ Fatal error in _playNextBatchedFile: $e');
+      _isTransitioningPlayback = false;
+      // Only stop if this is a fatal error, otherwise try to continue
+      if (_batchedAudioFiles.isEmpty) {
+        _isPlayingStreamedAudio = false;
+        onPlaybackStateChanged?.call(false);
+        _audioPlayerSubscription?.cancel();
+      } else {
+        // Try to continue with next file after a delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _playNextBatchedFile();
+        });
+      }
     }
   }
 
