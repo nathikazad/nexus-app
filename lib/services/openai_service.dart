@@ -311,7 +311,7 @@ class OpenAIService {
       return;
     }
 
-    // _queryOrigin = origin;
+    _queryOrigin = origin;
 
     try {
       // debugPrint('OpenAIService: Sending audio data (${audioData.length} bytes)');

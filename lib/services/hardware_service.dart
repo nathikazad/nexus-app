@@ -32,7 +32,6 @@ class HardwareService {
   Stream<Uint8List>? get pcm24Stream => _pcm24Stream;
   bool get isInitialized => _isInitialized;
 
-  Uint8List _batch = Uint8List(0);
   int _framesSent = 0;
 
   Future<bool> initialize() async {
@@ -98,7 +97,7 @@ class HardwareService {
           debugPrint('HardwareService: Error in EOF stream: $e');
         },
       );
-      _sendAudioToEsp32();
+      _startOpenAiToBleRelayer();
       
       _isInitialized = true;
       return true;
@@ -109,8 +108,8 @@ class HardwareService {
   }
 
 
-    /// Transforms Opus packets and sends them to ESP32
-  Future<void> _sendAudioToEsp32() async {
+  /// Transforms Opus packets and queues them for sending to ESP32
+  Future<void> _startOpenAiToBleRelayer() async {
     try {
       const int sampleRate = 16000;
       const int channels = 1;
@@ -136,9 +135,7 @@ class HardwareService {
       final pcm16ChunkStream = pcm24ChunkStream.transform(resampleTransformer);
       final opusPacketStream = pcm16ChunkStream.transform(encodeTransformer);
       
-      // Send Opus packets as they're produced
-      final mtu = _bleService.getMTU();
-      
+      // Create packets and enqueue them for sending
       await for (final opusPacket in opusPacketStream) {
         // Create packet: [length (2 bytes)] + [opus data]
         Uint8List packet = Uint8List(2 + opusPacket.length);
@@ -146,50 +143,22 @@ class HardwareService {
         packet[1] = (opusPacket.length >> 8) & 0xFF;
         packet.setRange(2, 2 + opusPacket.length, opusPacket);
         
-        await _bleService.waitIfPaused();
-        
-        // If adding would exceed MTU, send current batch
-        if (_batch.length + packet.length > mtu && _batch.isNotEmpty) {
-          await _bleService.sendBatch(_batch);
-          _batch = Uint8List(0);
-          await Future.delayed(const Duration(milliseconds: 20));
-        }
-        
-        // Add packet to batch
-        Uint8List newBatch = Uint8List(_batch.length + packet.length);
-        if (_batch.isNotEmpty) {
-          newBatch.setRange(0, _batch.length, _batch);
-        }
-        newBatch.setRange(_batch.length, _batch.length + packet.length, packet);
-        _batch = newBatch;
+        // Enqueue packet - BLE service will handle batching and sending
+        _bleService.enqueuePacket(packet);
         
         _framesSent++;
-        debugPrint('[SEND] Processed frame $_framesSent (${opusPacket.length} bytes Opus, batch size: ${_batch.length} bytes)');
-          await Future.delayed(const Duration(milliseconds: 5));
+        debugPrint('[QUEUE] Enqueued frame $_framesSent (${opusPacket.length} bytes Opus)');
       }
     } catch (e) {
       debugPrint('Error sending WAV to ESP32: $e');
-      
       rethrow;
     }
   }
 
   Future<void> sendEOFToEsp32() async {
-    // Send remaining batch
-      if (_batch.isNotEmpty) {
-        await _bleService.sendBatch(_batch);
-        debugPrint('[SEND] Sent final batch: ${_batch.length} bytes');
-      }
-      
-      // Send EOF signal
-      debugPrint('[SEND] Sent EOF signal. Total frames sent: $_framesSent');
-      const int signalEof = 0x0000;
-      Uint8List eofPacket = Uint8List(2);
-      eofPacket[0] = signalEof & 0xFF;
-      eofPacket[1] = (signalEof >> 8) & 0xFF;
-      // send after 1 second
-      await Future.delayed(const Duration(seconds: 1));
-      await _bleService.sendPacket(eofPacket);
+    // Enqueue EOF packet - it will be sent after all queued audio packets
+    debugPrint('[QUEUE] Enqueuing EOF signal. Total frames sent: $_framesSent');
+    _bleService.enqueueEOF();
   }
 
   Future<void> dispose() async {
