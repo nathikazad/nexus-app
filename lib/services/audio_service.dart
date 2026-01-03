@@ -5,8 +5,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:opus_dart/opus_dart.dart';
-import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_html/html.dart' as html;
 
@@ -19,74 +17,17 @@ class AudioService {
   StreamController<Uint8List>? _audioStreamController;
   bool _isRecording = false;
   bool _isInitialized = false;
-  bool _opusMode = false;
   IOSink? _fileSink;
   String? _currentRecordingPath;
   List<Uint8List> _audioDataChunks = [];
-  List<Uint8List> _opusAccumulator = []; // For accumulating data in Opus mode
 
   Stream<Uint8List>? get audioStream => _audioStreamController?.stream;
   bool get isRecording => _isRecording;
-  
-  void setOpusMode(bool enabled) {
-    _opusMode = enabled;
-    debugPrint('Opus mode ${enabled ? 'enabled' : 'disabled'}');
-  }
-
-  Future<void> _processOpusMode(Uint8List data, {bool forceProcess = false}) async {
-    // Add data to accumulator (unless forcing processing of remaining data)
-    if (data.isNotEmpty) {
-      _opusAccumulator.add(data);
-    }
-    
-    // Check if we have enough data for a complete frame or if we're forcing processing
-    const int frameSizeBytes = 960; // 20ms at 24kHz, 16-bit, mono
-    int totalAccumulated = _opusAccumulator.fold(0, (sum, chunk) => sum + chunk.length);
-    
-    if (totalAccumulated >= frameSizeBytes || (forceProcess && totalAccumulated > 0)) {
-      // Combine chunks to get complete frames
-      Uint8List combinedData = Uint8List(totalAccumulated);
-      int offset = 0;
-      for (Uint8List chunk in _opusAccumulator) {
-        combinedData.setRange(offset, offset + chunk.length, chunk);
-        offset += chunk.length;
-      }
-      
-      // Encode to Opus packets
-      List<Uint8List> opusPackets = await encodeAudioToOpusPackets(combinedData);
-      
-      // Decode back to PCM for processing
-      Uint8List pcmData = await decodeAudioFromOpusPackets(opusPackets);
-      
-      // Send to stream controller
-      if (_audioStreamController != null && !_audioStreamController!.isClosed) {
-        _audioStreamController!.add(pcmData);
-      }
-      
-      // Save the PCM data
-      if (kIsWeb) {
-        _audioDataChunks.add(pcmData);
-      } else {
-        _fileSink?.add(pcmData);
-      }
-      
-      // Clear processed data
-      _opusAccumulator.clear();
-    }
-  }
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
 
     try {
-      // Initialize Opus
-      try {
-        initOpus(await opus_flutter.load());
-        debugPrint('Opus initialized successfully');
-      } catch (e) {
-        debugPrint('Error initializing Opus: $e');
-      }
-
       // Check permissions for mobile platforms
       if (!kIsWeb) {
         final status = await Permission.microphone.status;
@@ -125,7 +66,6 @@ class AudioService {
     try {
       // Initialize audio data storage
       _audioDataChunks.clear();
-      _opusAccumulator.clear();
       
       if (!kIsWeb) {
         // For mobile platforms, create a file to save the PCM data
@@ -154,18 +94,14 @@ class AudioService {
       // Process audio stream and send directly to the controller
       // The audio data is already in the correct PCM format for OpenAI
       stream.listen(
-        (data) async {
+        (data) {
           if (_audioStreamController != null && !_audioStreamController!.isClosed) {
-            if (_opusMode) {
-              await _processOpusMode(data);
+            _audioStreamController!.add(data);
+            // Save the PCM data
+            if (kIsWeb) {
+              _audioDataChunks.add(data);
             } else {
-              _audioStreamController!.add(data);
-              // Save the PCM data
-              if (kIsWeb) {
-                _audioDataChunks.add(data);
-              } else {
-                _fileSink?.add(data);
-              }
+              _fileSink?.add(data);
             }
           }
         },
@@ -181,102 +117,12 @@ class AudioService {
     }
   }
 
-  static Future<List<Uint8List>> encodeAudioToOpusPackets(Uint8List audioData) async {
-    try {
-      const int sampleRate = 24000; // Match your recording sample rate
-      const int channels = 1;
-      
-      // Split PCM data into proper frame sizes for Opus encoding
-      // For 20ms frames at 24kHz: 24000 * 0.02 * 2 bytes = 960 bytes per frame
-      const int frameSizeBytes = 960; // 20ms at 24kHz, 16-bit, mono
-      List<Uint8List> pcmFrames = [];
-      
-      for (int i = 0; i < audioData.length; i += frameSizeBytes) {
-        int end = (i + frameSizeBytes < audioData.length) ? i + frameSizeBytes : audioData.length;
-        pcmFrames.add(audioData.sublist(i, end));
-      }
-      
-      // Create the encoder
-      final encoder = StreamOpusEncoder.bytes(
-        floatInput: false,
-        frameTime: FrameTime.ms20,
-        sampleRate: sampleRate,
-        channels: channels,
-        application: Application.audio,
-        copyOutput: true,
-        fillUpLastFrame: true,
-      );
-      
-      // Encode each frame
-      List<Uint8List> opusPackets = [];
-      await for (final packet in encoder.bind(Stream.fromIterable(pcmFrames))) {
-        opusPackets.add(packet);
-      }
-      
-      debugPrint('Opus encode: ${audioData.length} bytes PCM -> ${opusPackets.length} packets');
-      return opusPackets;
-    } catch (e) {
-      debugPrint('Error encoding audio to Opus: $e');
-      rethrow;
-    }
-  }
-
-  static Future<Uint8List> decodeAudioFromOpusPackets(List<Uint8List> opusPackets) async {
-    try {
-      const int sampleRate = 24000; // Match your recording sample rate
-      const int channels = 1;
-      
-      if (opusPackets.isEmpty) {
-        throw Exception('No Opus packets to decode');
-      }
-      
-      // Create the decoder
-      final decoder = StreamOpusDecoder.bytes(
-        floatOutput: false,
-        sampleRate: sampleRate,
-        channels: channels,
-        copyOutput: true,
-        forwardErrorCorrection: false,
-      );
-      
-      // Decode each packet individually
-      List<Uint8List> decodedChunks = [];
-      await for (final chunk in decoder.bind(Stream.fromIterable(opusPackets))) {
-        if (chunk is Uint8List) {
-          decodedChunks.add(chunk);
-        }
-      }
-      
-      // Combine all decoded chunks
-      int totalLength = decodedChunks.fold(0, (sum, chunk) => sum + chunk.length);
-      Uint8List result = Uint8List(totalLength);
-      int offset = 0;
-      for (Uint8List chunk in decodedChunks) {
-        if (offset + chunk.length <= result.length) {
-          result.setRange(offset, offset + chunk.length, chunk);
-          offset += chunk.length;
-        }
-      }
-      
-      debugPrint('Opus decode: ${opusPackets.length} packets -> ${result.length} bytes');
-      return result;
-    } catch (e) {
-      debugPrint('Error decoding audio from Opus packets: $e');
-      rethrow;
-    }
-  }
-
   Future<String?> stopRecording() async {
     if (!_isRecording) return null;
 
     try {
       await _recorder.stop();
       _isRecording = false;
-      
-      // Process any remaining data in Opus accumulator
-      if (_opusMode && _opusAccumulator.isNotEmpty) {
-        await _processOpusMode(Uint8List(0), forceProcess: true); // Process remaining data
-      }
       
       String? filePath;
       

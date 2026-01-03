@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 class InputArea extends StatelessWidget {
   final bool isConnected;
   final bool isRecording;
-  final bool opusMode;
   final bool speakerEnabled;
   final TextEditingController textController;
   final VoidCallback onToggleRecording;
-  final VoidCallback onToggleOpusMode;
   final VoidCallback onToggleSpeaker;
   final VoidCallback onSendTextMessage;
 
@@ -15,11 +13,9 @@ class InputArea extends StatelessWidget {
     super.key,
     required this.isConnected,
     required this.isRecording,
-    required this.opusMode,
     required this.speakerEnabled,
     required this.textController,
     required this.onToggleRecording,
-    required this.onToggleOpusMode,
     required this.onToggleSpeaker,
     required this.onSendTextMessage,
   });
@@ -48,19 +44,6 @@ class InputArea extends StatelessWidget {
               backgroundColor: isRecording ? Colors.red : Colors.grey[300],
               foregroundColor: isRecording ? Colors.white : Colors.black,
             ),
-          ),
-          
-          const SizedBox(width: 8),
-          
-          // Opus mode toggle button
-          IconButton(
-            onPressed: isConnected ? onToggleOpusMode : null,
-            icon: Icon(opusMode ? Icons.compress : Icons.compress_outlined),
-            style: IconButton.styleFrom(
-              backgroundColor: opusMode ? Theme.of(context).primaryColor : Colors.grey[300],
-              foregroundColor: opusMode ? Colors.white : Colors.black,
-            ),
-            tooltip: opusMode ? 'Disable Opus compression' : 'Enable Opus compression',
           ),
           
           const SizedBox(width: 8),

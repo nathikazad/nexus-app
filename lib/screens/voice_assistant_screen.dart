@@ -55,7 +55,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _isRecording = false;
   bool _isConnected = false;
   bool _isTyping = false;
-  bool _opusMode = false;
   bool _speakerEnabled = false;
   String _currentTranscript = '';
   String? _currentlyPlayingAudio;
@@ -154,7 +153,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     
     try {
       if (_isRecording) {
-        final audioFilePath = await _audioService.stopRecording();
+        await _audioService.stopRecording();
         await _audioSubscription?.cancel();
         
         // Commit audio buffer and request response (equivalent to Python lines 154-158)
@@ -190,14 +189,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         _isRecording = false;
       });
     }
-  }
-
-  void _toggleOpusMode() {
-    setState(() {
-      _opusMode = !_opusMode;
-    });
-    // Update the audio service with the new Opus mode
-    _audioService.setOpusMode(_opusMode);
   }
 
   void _toggleSpeaker() {
@@ -328,18 +319,15 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           if (_isRecording)
             _RecordingIndicator(
               currentTranscript: _currentTranscript,
-              opusMode: _opusMode,
             ),
           
           // Input area
           InputArea(
             isConnected: _isConnected,
             isRecording: _isRecording,
-            opusMode: _opusMode,
             speakerEnabled: _speakerEnabled,
             textController: _textController,
             onToggleRecording: _toggleRecording,
-            onToggleOpusMode: _toggleOpusMode,
             onToggleSpeaker: _toggleSpeaker,
             onSendTextMessage: _sendTextMessage,
           ),
@@ -464,11 +452,9 @@ class _MessagesList extends StatelessWidget {
 
 class _RecordingIndicator extends StatelessWidget {
   final String currentTranscript;
-  final bool opusMode;
 
   const _RecordingIndicator({
     required this.currentTranscript,
-    required this.opusMode,
   });
 
   @override
@@ -480,14 +466,10 @@ class _RecordingIndicator extends StatelessWidget {
         children: [
           const Icon(Icons.mic, color: Colors.red),
           const SizedBox(width: 8),
-          if (opusMode) ...[
-            const Icon(Icons.compress, color: Colors.blue, size: 16),
-            const SizedBox(width: 4),
-          ],
           Expanded(
             child: Text(
               currentTranscript.isEmpty 
-                ? 'Recording${opusMode ? ' (Opus)' : ''}...' 
+                ? 'Recording...' 
                 : 'You said: $currentTranscript',
               style: const TextStyle(color: Colors.red),
             ),
