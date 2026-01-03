@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:nexus_voice_assistant/services/hardware_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
+import 'package:opus_dart/opus_dart.dart';
 import 'screens/voice_assistant_screen.dart';
-import 'services/ble_service.dart';
 import 'services/openai_service.dart';
 
 void main() async {
@@ -12,6 +14,11 @@ void main() async {
   // Load environment variables
   await dotenv.load();
   
+  // Initialize Opus library (only needed for mobile platforms)
+  if (!kIsWeb) {
+    initOpus(await opus_flutter.load());
+  }
+  
   // Request microphone permission (only needed for mobile platforms)
   if (!kIsWeb) {
     await Permission.microphone.request();
@@ -19,7 +26,7 @@ void main() async {
   
   // Initialize BLE service (only needed for mobile platforms)
   if (!kIsWeb) {
-    await BLEService.instance.initialize();
+    await HardwareService.instance.initialize();
   }
   
   // Initialize and connect OpenAI service

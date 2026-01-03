@@ -3,6 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+enum queryOrigin {
+  App,
+  Hardware,
+}
+
 class OpenAIService {
   static final OpenAIService _instance = OpenAIService._internal();
   
@@ -18,6 +23,8 @@ class OpenAIService {
 
   Stream<Map<String, dynamic>> get conversationStream => _conversationController.stream;
   bool get isConnected => _isConnected;
+
+  queryOrigin _queryOrigin = queryOrigin.App;
 
   Future<bool> initialize() async {
     try {
@@ -288,11 +295,13 @@ class OpenAIService {
   }
 
   // Send audio data to OpenAI
-  Future<void> sendAudio(Uint8List audioData) async {
+  Future<void> sendAudio(Uint8List audioData, queryOrigin origin) async {
     if (_client == null || !_isConnected) {
       debugPrint('Client not connected');
       return;
     }
+
+    _queryOrigin = origin;
 
     try {
       // debugPrint('OpenAIService: Sending audio data (${audioData.length} bytes)');

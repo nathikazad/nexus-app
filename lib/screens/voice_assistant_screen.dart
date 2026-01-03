@@ -176,7 +176,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
 
           // Listen to audio stream and send to OpenAI
           _audioSubscription = _audioService.audioStream?.listen((audioData) {
-            _openAIService.sendAudio(audioData);
+            _openAIService.sendAudio(audioData, queryOrigin.App);
           });
         } else {
           _showErrorDialog('Failed to start recording. Check microphone permissions.');

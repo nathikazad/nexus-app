@@ -281,6 +281,7 @@ class BLEService {
 
         // Handle audio packet
         if (identifier == signalAudioPacket) {
+          debugPrint('[UPLOAD] Received AUDIO PACKET');
           // Read packet size (2 bytes, little-endian)
           if (offset + 2 > bytes.length) {
             debugPrint('[WARNING] Incomplete packet size at offset $offset');
