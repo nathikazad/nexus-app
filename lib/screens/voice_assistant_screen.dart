@@ -86,7 +86,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       setState(() {
         _isConnected = _openAIService.isConnected;
       });
-      
+      bool responseDone = false;
       // Listen to conversation stream
       _conversationSubscription = _openAIService.conversationStream.listen((data) {
         Interaction currentInteraction = _interactions.last;
@@ -97,15 +97,25 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           String speaker = data['speaker']!;
           String word = data['word']!;
 
-          // print('speaker: $speaker, word: $word');
+          print('speaker: $speaker, word: $word');
           setState(() {
             if (speaker == 'AI') {
-              print('AI: ${currentInteraction.aiResponse + word}');
+              responseDone = false;
+              // print('AI: ${currentInteraction.aiResponse + word}');
               // Update the current interaction's AI response
               currentInteraction.addToAiResponse(word);
             } else {
               // Update the current interaction's user query
               currentInteraction.addToUserQuery(word);
+              if(responseDone) {
+                print('creating new interaction');
+                _interactions.add(Interaction(
+                  userQuery: '',
+                  aiResponse: '',
+                  timestamp: DateTime.now(),
+                  userAudioFilePath: currentInteraction.userAudioFilePath,
+                ));
+              }
             }
           });
           _scrollToBottom();
@@ -116,14 +126,18 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
             _audioStreamManager.playStreamedAudio(audioData);
           }
         } else if (type == 'response_done') {
-          // _turnCount++;
+
+          responseDone = true;
           // Create new interaction for next turn
-          _interactions.add(Interaction(
-            userQuery: '',
-            aiResponse: '',
-            timestamp: DateTime.now(),
-            userAudioFilePath: currentInteraction.userAudioFilePath,
-          ));
+          if(!currentInteraction.userQuery.isEmpty) {
+            print('creating new interaction');
+            _interactions.add(Interaction(
+              userQuery: '',
+              aiResponse: '',
+              timestamp: DateTime.now(),
+              userAudioFilePath: currentInteraction.userAudioFilePath,
+            ));
+          }
         }
       });
       

@@ -280,8 +280,6 @@ class OpenAIService {
     _client!.realtime.on(RealtimeEventType.responseDone, (event) async {
       try {
         print('Response done event');
-        // add a delay of 1 second
-        await Future.delayed(const Duration(milliseconds: 100));
         _conversationController.add({
           'type': 'response_done',
         });
