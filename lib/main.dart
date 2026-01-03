@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/voice_assistant_screen.dart';
+import 'services/ble_service.dart';
+import 'services/openai_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,15 @@ void main() async {
   if (!kIsWeb) {
     await Permission.microphone.request();
   }
+  
+  // Initialize BLE service (only needed for mobile platforms)
+  if (!kIsWeb) {
+    await BLEService.instance.initialize();
+  }
+  
+  // Initialize and connect OpenAI service
+  await OpenAIService.instance.initialize();
+  await OpenAIService.instance.connect();
   
   runApp(const MyApp());
 }

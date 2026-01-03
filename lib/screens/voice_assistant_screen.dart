@@ -44,7 +44,7 @@ class VoiceAssistantScreen extends StatefulWidget {
 
 class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
-  final OpenAIService _openAIService = OpenAIService();
+  final OpenAIService _openAIService = OpenAIService.instance;
   final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
@@ -82,10 +82,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   // String currentSpeaker = '';
   Future<void> _initializeServices() async {
     try {
-      await _openAIService.initialize();
-      await _openAIService.connect();
+      // OpenAI service is already initialized and connected in main.dart
       setState(() {
-        _isConnected = true;
+        _isConnected = _openAIService.isConnected;
       });
       
       // Listen to conversation stream

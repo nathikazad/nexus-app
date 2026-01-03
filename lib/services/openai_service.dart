@@ -5,6 +5,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class OpenAIService {
   static final OpenAIService _instance = OpenAIService._internal();
+  
+  /// Singleton instance getter
+  static OpenAIService get instance => _instance;
+  
   factory OpenAIService() => _instance;
   OpenAIService._internal();
 

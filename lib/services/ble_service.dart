@@ -71,10 +71,28 @@ class BLEService {
       _opusPacketController = StreamController<Uint8List>.broadcast();
       _eofController = StreamController<void>.broadcast();
 
+      
+      _scanAndAutoConnectLoop();
+
       return true;
     } catch (e) {
       debugPrint('Error initializing BLE service: $e');
       return false;
+    }
+  }
+
+  Future<void> _scanAndAutoConnectLoop() async {
+    while (!_isConnected) {
+      debugPrint('Starting scan for ESP32 device...');
+      final success = await scanAndConnect();
+      
+      if (success) {
+        debugPrint('Successfully connected to device');
+        break;
+      } else {
+        debugPrint('Device not found, will retry in 2 seconds...');
+        await Future.delayed(const Duration(seconds: 2));
+      }
     }
   }
 
@@ -212,6 +230,8 @@ class BLEService {
           _isConnected = false;
           _notificationSubscription?.cancel();
           _notificationSubscription = null;
+          // Restart scanning on disconnect
+          _scanAndAutoConnectLoop();
         } else if (state == BluetoothConnectionState.connected) {
           _isConnected = true;
         }

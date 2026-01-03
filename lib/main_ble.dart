@@ -482,7 +482,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   OpusToPcm16Transformer? _opusToPcm16Transformer;
   Pcm16ToPcm24Transformer? _pcm16ToPcm24Transformer;
   Timer? _connectionCheckTimer;
-  bool _isScanningContinuously = false;
 
   @override
   void initState() {
@@ -542,44 +541,15 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
       },
     );
     
-    // Start continuous scanning
-    _startContinuousScanning();
-  }
-  
-  Future<void> _startContinuousScanning() async {
-    if (_isScanningContinuously) return;
-    _isScanningContinuously = true;
-    
-    // Start scanning and auto-connect
-    _scanAndAutoConnect();
-  }
-  
-  Future<void> _scanAndAutoConnect() async {
-    while (_isScanningContinuously && !_isConnected) {
-      debugPrint('Starting scan for ESP32 device...');
-      final success = await _bleService.scanAndConnect();
-      
-      if (success) {
-        setState(() {
-          _isConnected = true;
-        });
-        debugPrint('Successfully connected to device');
-        
-        // Set up connection state listener to restart scanning on disconnect
-        _setupConnectionStateListener();
-        break;
-      } else {
-        debugPrint('Device not found, will retry in 2 seconds...');
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    }
+    // Set up connection state listener for UI updates
+    _setupConnectionStateListener();
   }
   
   void _setupConnectionStateListener() {
     // Cancel any existing timer
     _connectionCheckTimer?.cancel();
     
-    // Check connection status periodically and restart scanning on disconnect
+    // Check connection status periodically and update UI
     _connectionCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -589,7 +559,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
       final isConnected = _bleService.isConnected;
       if (!isConnected && _isConnected) {
         // Connection was lost
-        debugPrint('Connection lost, restarting scanning...');
         setState(() {
           _isConnected = false;
           _isReceiving = false;
@@ -597,9 +566,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
           _wavFilePath = null;
           _recordingState.reset();
         });
-        timer.cancel();
-        _connectionCheckTimer = null;
-        _scanAndAutoConnect();
       } else if (isConnected && !_isConnected) {
         // Connection was established
         setState(() {
@@ -796,7 +762,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
 
   @override
   void dispose() {
-    _isScanningContinuously = false;
     _connectionCheckTimer?.cancel();
     _opusPacketSubscription?.cancel();
     _pcm24ChunkSubscription?.cancel();
