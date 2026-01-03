@@ -9,6 +9,32 @@ import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
 
+class Interaction {
+  String userQuery;
+  String aiResponse;
+  final DateTime timestamp;
+  String? userAudioFilePath;
+  
+  Interaction({
+    required this.userQuery,
+    required this.aiResponse,
+    required this.timestamp,
+    this.userAudioFilePath,
+  });
+
+  void addToAiResponse(String word) {
+    aiResponse += word;
+  }
+
+  void addToUserQuery(String word) {
+    userQuery += word;
+  }
+
+  void setUserAudioFilePath(String filePath) {
+    userAudioFilePath = filePath;
+  }
+}
+
 class VoiceAssistantScreen extends StatefulWidget {
   const VoiceAssistantScreen({super.key});
 
@@ -23,7 +49,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
-  final List<ChatMessage> _messages = [];
+  final List<Interaction> _interactions = [Interaction(userQuery: '', aiResponse: '', timestamp: DateTime.now())];
+
   
   bool _isRecording = false;
   bool _isConnected = false;
@@ -32,6 +59,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _speakerEnabled = false;
   String _currentTranscript = '';
   String? _currentlyPlayingAudio;
+  // int _turnCount = 0;
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
@@ -39,6 +67,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize with the last interaction or create a new one
+    
     _initializeServices();
     _setupAudioStreamManager();
   }
@@ -61,59 +91,23 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       
       // Listen to conversation stream
       _conversationSubscription = _openAIService.conversationStream.listen((data) {
+        Interaction currentInteraction = _interactions.last;
         
         String type = data['type']!;
         
         if (type == 'transcript') {
           String speaker = data['speaker']!;
           String word = data['word']!;
-          String newLog = '';
-          newLog += word;
-          print(newLog);
+
+          print('speaker: $speaker, word: $word');
           setState(() {
             if (speaker == 'AI') {
-              // Update or create AI message
-              if (_messages.isNotEmpty && _messages.last.isFromUser == false) {
-                // Update the last assistant message
-                final lastMessage = _messages.removeLast();
-                // print('ai: ${lastMessage.text + word}');
-                _messages.add(ChatMessage(
-                  text: lastMessage.text + word,
-                  isFromUser: false,
-                  timestamp: lastMessage.timestamp,
-                ));
-              } else {
-                // Create new assistant message
-                _messages.add(ChatMessage(
-                  text: word,
-                  isFromUser: false,
-                  timestamp: DateTime.now(),
-                ));
-              }
+              print('AI: ${currentInteraction.aiResponse + word}');
+              // Update the current interaction's AI response
+              currentInteraction.addToAiResponse(word);
             } else {
-              if (_messages.isNotEmpty && _messages.last.isFromUser == true) {
-                // Update the last assistant message
-                final lastMessage = _messages.removeLast();
-                _messages.add(ChatMessage(
-                  text: lastMessage.text + word,
-                  isFromUser: true,
-                  timestamp: lastMessage.timestamp,
-                ));
-              } else {
-                // Create new assistant message
-                final lastMessage = _messages.removeLast();
-                _messages.add(ChatMessage(
-                  text: word,
-                  isFromUser: true,
-                  timestamp: DateTime.now(),
-                ));
-                _messages.add(lastMessage);
-                _messages.add(ChatMessage(
-                  text: "",
-                  isFromUser: false,
-                  timestamp: DateTime.now(),
-                ));
-              }
+              // Update the current interaction's user query
+              currentInteraction.addToUserQuery(word);
             }
           });
           _scrollToBottom();
@@ -124,7 +118,14 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
             _audioStreamManager.playStreamedAudio(audioData);
           }
         } else if (type == 'response_done') {
-          
+          // _turnCount++;
+          // Create new interaction for next turn
+          _interactions.add(Interaction(
+            userQuery: '',
+            aiResponse: '',
+            timestamp: DateTime.now(),
+            userAudioFilePath: currentInteraction.userAudioFilePath,
+          ));
         }
       });
       
@@ -161,19 +162,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           await _openAIService.createResponse();
         } catch (e) {
           debugPrint('Error creating response after recording stop: $e');
-        }
-        
-        // If we have a transcript, add it as a user message
-        if (_currentTranscript.isNotEmpty) {
-          setState(() {
-            _messages.add(ChatMessage(
-              text: _currentTranscript,
-              isFromUser: true,
-              timestamp: DateTime.now(),
-              audioFilePath: audioFilePath,
-            ));
-          });
-          _scrollToBottom();
         }
         
         setState(() {
@@ -270,13 +258,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     String newLog = 'You: $text';
     print(newLog);
 
-    // Add user message to chat
+    // Update current interaction with user query and add to list
     setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isFromUser: true,
-        timestamp: DateTime.now(),
-      ));
+      _interactions.last.addToUserQuery(text);
     });
     _scrollToBottom();
 
@@ -332,7 +316,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           // Messages list
           Expanded(
             child: _MessagesList(
-              messages: _messages,
+              interactions: _interactions,
               isTyping: _isTyping,
               scrollController: _scrollController,
               onPlayAudio: _playAudio,
@@ -415,22 +399,47 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
 }
 
 class _MessagesList extends StatelessWidget {
-  final List<ChatMessage> messages;
+  final List<Interaction> interactions;
   final bool isTyping;
   final ScrollController scrollController;
   final Function(String) onPlayAudio;
   final String? currentlyPlayingAudio;
 
   const _MessagesList({
-    required this.messages,
+    required this.interactions,
     required this.isTyping,
     required this.scrollController,
     required this.onPlayAudio,
     required this.currentlyPlayingAudio,
   });
 
+  List<ChatMessage> _convertInteractionsToMessages() {
+    final List<ChatMessage> messages = [];
+    for (final interaction in interactions) {
+      // Add user message if user query exists
+      if (interaction.userQuery.isNotEmpty) {
+        messages.add(ChatMessage(
+          text: interaction.userQuery,
+          isFromUser: true,
+          timestamp: interaction.timestamp,
+          audioFilePath: interaction.userAudioFilePath,
+        ));
+      }
+      // Add AI message if AI response exists
+      if (interaction.aiResponse.isNotEmpty) {
+        messages.add(ChatMessage(
+          text: interaction.aiResponse,
+          isFromUser: false,
+          timestamp: interaction.timestamp,
+        ));
+      }
+    }
+    return messages;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final messages = _convertInteractionsToMessages();
     return ListView.builder(
       controller: scrollController,
       padding: const EdgeInsets.all(16),
