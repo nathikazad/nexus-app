@@ -367,14 +367,6 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
                 isConnected ? Icons.wifi : Icons.wifi_off,
                 color: isConnected ? Colors.green : Colors.red,
               ),
-              const SizedBox(width: 8),
-              Text(
-                isConnected ? 'Connected' : 'Disconnected',
-                style: TextStyle(
-                  color: isConnected ? Colors.green : Colors.red,
-                  fontSize: 12,
-                ),
-              ),
             ],
           ),
         ),

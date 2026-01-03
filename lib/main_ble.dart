@@ -562,6 +562,8 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
   StreamOpusDecoder? _streamDecoder;
   OpusToPcm16Transformer? _opusToPcm16Transformer;
   Pcm16ToPcm24Transformer? _pcm16ToPcm24Transformer;
+  Timer? _connectionCheckTimer;
+  bool _isScanningContinuously = false;
 
   @override
   void initState() {
@@ -620,6 +622,72 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
         });
       },
     );
+    
+    // Start continuous scanning
+    _startContinuousScanning();
+  }
+  
+  Future<void> _startContinuousScanning() async {
+    if (_isScanningContinuously) return;
+    _isScanningContinuously = true;
+    
+    // Start scanning and auto-connect
+    _scanAndAutoConnect();
+  }
+  
+  Future<void> _scanAndAutoConnect() async {
+    while (_isScanningContinuously && !_isConnected) {
+      debugPrint('Starting scan for ESP32 device...');
+      final success = await _bleService.scanAndConnect();
+      
+      if (success) {
+        setState(() {
+          _isConnected = true;
+        });
+        debugPrint('Successfully connected to device');
+        
+        // Set up connection state listener to restart scanning on disconnect
+        _setupConnectionStateListener();
+        break;
+      } else {
+        debugPrint('Device not found, will retry in 2 seconds...');
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+  }
+  
+  void _setupConnectionStateListener() {
+    // Cancel any existing timer
+    _connectionCheckTimer?.cancel();
+    
+    // Check connection status periodically and restart scanning on disconnect
+    _connectionCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      final isConnected = _bleService.isConnected;
+      if (!isConnected && _isConnected) {
+        // Connection was lost
+        debugPrint('Connection lost, restarting scanning...');
+        setState(() {
+          _isConnected = false;
+          _isReceiving = false;
+          _opusFilePath = null;
+          _wavFilePath = null;
+          _recordingState.reset();
+        });
+        timer.cancel();
+        _connectionCheckTimer = null;
+        _scanAndAutoConnect();
+      } else if (isConnected && !_isConnected) {
+        // Connection was established
+        setState(() {
+          _isConnected = true;
+        });
+      }
+    });
   }
 
   /// Transforms Opus packets and sends them to ESP32
@@ -707,37 +775,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
     }
   }
 
-  Future<void> _connectToDevice() async {
-    setState(() {
-      _isConnected = false;
-      _opusFilePath = null;
-      _wavFilePath = null;
-      _recordingState.reset();
-    });
-    
-    _streamDecoder = AudioProcessor.createDecoder();
-
-    final success = await _bleService.scanAndConnect();
-    if (success) {
-      setState(() {
-        _isConnected = true;
-      });
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to connect to ESP32 device')),
-        );
-      }
-    }
-  }
-
-  Future<void> _disconnect() async {
-    await _bleService.disconnect();
-    setState(() {
-      _isConnected = false;
-      _isReceiving = false;
-    });
-  }
 
   Future<void> _finalizeFiles() async {
     if (_recordingState.opusPackets.isEmpty) {
@@ -840,6 +877,8 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
 
   @override
   void dispose() {
+    _isScanningContinuously = false;
+    _connectionCheckTimer?.cancel();
     _opusPacketSubscription?.cancel();
     _pcm24ChunkSubscription?.cancel();
     _eofSubscription?.cancel();
@@ -900,28 +939,6 @@ class _BLEOpusReceiverScreenState extends State<BLEOpusReceiverScreen> {
             ),
           ),
 
-          // Connection controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(
-                onPressed: _isConnected ? null : _connectToDevice,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Connect'),
-              ),
-              ElevatedButton(
-                onPressed: _isConnected ? _disconnect : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Disconnect'),
-              ),
-            ],
-          ),
 
           // Opus file section
           if (_opusFilePath != null) ...[

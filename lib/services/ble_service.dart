@@ -82,17 +82,21 @@ class BLEService {
 
     try {
       _isScanning = true;
-      debugPrint('Scanning for $deviceName...');
+      debugPrint('Scanning indefinitely for service UUID $serviceUuid...');
 
-      // Start scanning
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+      // Convert service UUID string to Guid for filtering
+      final serviceGuid = Guid(serviceUuid);
+
+      // Start scanning indefinitely (no timeout) with service UUID filter
+      // This filters at the platform level for better performance
+      await FlutterBluePlus.startScan(
+        withServices: [serviceGuid],
+      );
       
-      // Listen for scan results with timeout
-      bool deviceFound = false;
+      // Listen for scan results - results are already filtered by service UUID
       StreamSubscription<List<ScanResult>>? scanSubscription;
       
       final completer = Completer<bool>();
-      Timer? timeoutTimer;
       
       scanSubscription = FlutterBluePlus.scanResults.listen(
         (List<ScanResult> results) {
@@ -101,46 +105,32 @@ class BLEService {
                 ? result.device.platformName 
                 : result.device.advName;
             
-            if (name == deviceName) {
-              debugPrint('Found $name at ${result.device.remoteId}');
-              deviceFound = true;
-              scanSubscription?.cancel();
-              timeoutTimer?.cancel();
-              FlutterBluePlus.stopScan();
-              _isScanning = false;
-              
-              _device = result.device;
-              _connectToDevice().then((success) {
-                if (!completer.isCompleted) {
-                  completer.complete(success);
-                }
-              }).catchError((error) {
-                if (!completer.isCompleted) {
-                  completer.completeError(error);
-                }
-              });
-              return;
-            }
+            // Device already matched by service UUID via withServices filter
+            // All results here have the matching service UUID
+            debugPrint('Found device with service UUID: $name at ${result.device.remoteId}');
+            scanSubscription?.cancel();
+            FlutterBluePlus.stopScan();
+            _isScanning = false;
+            
+            _device = result.device;
+            _connectToDevice().then((success) {
+              if (!completer.isCompleted) {
+                completer.complete(success);
+              }
+            }).catchError((error) {
+              if (!completer.isCompleted) {
+                completer.completeError(error);
+              }
+            });
+            return;
           }
         },
         onError: (error) {
           debugPrint('Scan error: $error');
-          if (!completer.isCompleted) {
-            completer.complete(false);
-          }
+          // Don't complete on error - keep scanning
+          // Only complete if explicitly cancelled or device found
         },
       );
-
-      // Set timeout
-      timeoutTimer = Timer(const Duration(seconds: 10), () {
-        if (!deviceFound && !completer.isCompleted) {
-          debugPrint('Scan timeout - device not found');
-          scanSubscription?.cancel();
-          FlutterBluePlus.stopScan();
-          _isScanning = false;
-          completer.complete(false);
-        }
-      });
 
       return await completer.future;
     } catch (e) {
