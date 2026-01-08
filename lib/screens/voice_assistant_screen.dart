@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../services/audio_service.dart';
 import '../services/openai_service.dart';
+import '../services/ble_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
@@ -45,6 +46,7 @@ class VoiceAssistantScreen extends StatefulWidget {
 class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   final OpenAIService _openAIService = OpenAIService.instance;
+  final BLEService _bleService = BLEService.instance;
   final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
@@ -62,6 +64,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
+  StreamSubscription<bool>? _bleConnectionSubscription;
 
   @override
   void initState() {
@@ -70,6 +73,23 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     
     _initializeServices();
     _setupAudioStreamManager();
+    _setupBLEConnectionListener();
+  }
+  
+  void _setupBLEConnectionListener() {
+    // Listen to BLE connection state changes (event-based, not polling)
+    _bleConnectionSubscription = _bleService.connectionStateStream?.listen((isConnected) {
+      if (mounted) {
+        setState(() {
+          _isConnected = isConnected;
+        });
+      }
+    });
+    
+    // Set initial connection state
+    setState(() {
+      _isConnected = _bleService.isConnected;
+    });
   }
 
   void _setupAudioStreamManager() {
@@ -82,10 +102,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   // String currentSpeaker = '';
   Future<void> _initializeServices() async {
     try {
-      // OpenAI service is already initialized and connected in main.dart
-      setState(() {
-        _isConnected = _openAIService.isConnected;
-      });
+      // BLE connection state is now handled by _setupBLEConnectionListener()
       bool responseDone = false;
       // Listen to conversation stream
       _conversationSubscription = _openAIService.conversationStream.listen((data) {
@@ -160,7 +177,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
 
   Future<void> _toggleRecording() async {
     if (!_isConnected) {
-      _showErrorDialog('Not connected to OpenAI service');
+      _showErrorDialog('Not connected to Bluetooth device');
       return;
     }
     
@@ -299,6 +316,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   void dispose() {
     _audioSubscription?.cancel();
     _conversationSubscription?.cancel();
+    _bleConnectionSubscription?.cancel();
     _scrollController.dispose();
     _textController.dispose();
     _audioPlayer.dispose();
@@ -377,8 +395,8 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
                 const SizedBox(width: 4),
               ],
               Icon(
-                isConnected ? Icons.wifi : Icons.wifi_off,
-                color: isConnected ? Colors.green : Colors.red,
+                isConnected ? Icons.bluetooth : Icons.bluetooth_disabled,
+                color: isConnected ? Colors.blue : Colors.red,
               ),
             ],
           ),

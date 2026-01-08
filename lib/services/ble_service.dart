@@ -33,6 +33,7 @@ class BLEService {
   
   StreamController<Uint8List>? _opusPacketController;
   StreamController<void>? _eofController;
+  StreamController<bool>? _connectionStateController;
   
   // Packet queue and sender
   final Queue<Uint8List> _packetQueue = Queue<Uint8List>();
@@ -42,11 +43,13 @@ class BLEService {
   
   bool _isConnected = false;
   bool _isScanning = false;
+  bool _isConnecting = false; // Track if connection loop is running
   bool _paused = false;
   int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
   Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
   Stream<void>? get eofStream => _eofController?.stream;
+  Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   
@@ -71,6 +74,10 @@ class BLEService {
       // Initialize controllers
       _opusPacketController = StreamController<Uint8List>.broadcast();
       _eofController = StreamController<void>.broadcast();
+      _connectionStateController = StreamController<bool>.broadcast();
+      
+      // Emit initial connection state
+      _connectionStateController?.add(_isConnected);
 
       // Start packet sender
       _startPacketSender();
@@ -85,18 +92,27 @@ class BLEService {
   }
 
   Future<void> _scanAndAutoConnectLoop() async {
-    while (!_isConnected) {
+    // Prevent multiple loops from running
+    if (_isConnecting) {
+      debugPrint('Connection loop already running, skipping...');
+      return;
+    }
+    
+    _isConnecting = true;
+    while (!_isConnected && _isConnecting) {
       debugPrint('Starting scan for ESP32 device...');
       final success = await scanAndConnect();
       
       if (success) {
         debugPrint('Successfully connected to device');
+        _isConnecting = false;
         break;
       } else {
         debugPrint('Device not found, will retry in 2 seconds...');
         await Future.delayed(const Duration(seconds: 2));
       }
     }
+    _isConnecting = false;
   }
 
   Future<bool> scanAndConnect() async {
@@ -104,10 +120,22 @@ class BLEService {
       debugPrint('Already connected');
       return true;
     }
+    
+    if (_isConnecting && _isScanning) {
+      debugPrint('Connection already in progress');
+      return false;
+    }
 
     try {
       _isScanning = true;
       debugPrint('Scanning indefinitely for service UUID $serviceUuid...');
+
+      // Stop any existing scan first
+      try {
+        await FlutterBluePlus.stopScan();
+      } catch (e) {
+        // Ignore errors if scan wasn't running
+      }
 
       // Convert service UUID string to Guid for filtering
       final serviceGuid = Guid(serviceUuid);
@@ -122,10 +150,15 @@ class BLEService {
       StreamSubscription<List<ScanResult>>? scanSubscription;
       
       final completer = Completer<bool>();
+      bool deviceFound = false; // Flag to prevent multiple connection attempts
       
       scanSubscription = FlutterBluePlus.scanResults.listen(
         (List<ScanResult> results) {
+          if (deviceFound || _isConnected) return; // Prevent duplicate connections
+          
           for (ScanResult result in results) {
+            if (deviceFound || _isConnected) break;
+            
             final name = result.device.platformName.isNotEmpty 
                 ? result.device.platformName 
                 : result.device.advName;
@@ -133,6 +166,7 @@ class BLEService {
             // Device already matched by service UUID via withServices filter
             // All results here have the matching service UUID
             debugPrint('Found device with service UUID: $name at ${result.device.remoteId}');
+            deviceFound = true; // Set flag before connecting
             scanSubscription?.cancel();
             FlutterBluePlus.stopScan();
             _isScanning = false;
@@ -143,6 +177,7 @@ class BLEService {
                 completer.complete(success);
               }
             }).catchError((error) {
+              deviceFound = false; // Reset on error
               if (!completer.isCompleted) {
                 completer.completeError(error);
               }
@@ -177,6 +212,7 @@ class BLEService {
       // Connect to device
       await _device!.connect(timeout: const Duration(seconds: 15));
       _isConnected = true;
+      _connectionStateController?.add(true);
       debugPrint('Connected!');
 
       // Discover services
@@ -254,15 +290,20 @@ class BLEService {
         if (state == BluetoothConnectionState.disconnected) {
           debugPrint('Device disconnected');
           _isConnected = false;
+          _connectionStateController?.add(false);
           _notificationSubscription?.cancel();
           _notificationSubscription = null;
-      // Clear queue and batch on disconnect
-      _packetQueue.clear();
-      _currentBatch = Uint8List(0);
-          // Restart scanning on disconnect
-          _scanAndAutoConnectLoop();
+          // Clear queue and batch on disconnect
+          _packetQueue.clear();
+          _currentBatch = Uint8List(0);
+          // Restart scanning on disconnect (only if not already connecting)
+          if (!_isConnecting) {
+            _scanAndAutoConnectLoop();
+          }
         } else if (state == BluetoothConnectionState.connected) {
           _isConnected = true;
+          _connectionStateController?.add(true);
+          _isConnecting = false; // Reset connecting flag when connected
         }
       });
 
@@ -270,6 +311,7 @@ class BLEService {
     } catch (e) {
       debugPrint('Error connecting: $e');
       _isConnected = false;
+      _connectionStateController?.add(false);
       return false;
     }
   }
@@ -350,6 +392,7 @@ class BLEService {
   Future<void> disconnect() async {
     try {
       _isScanning = false;
+      _isConnecting = false; // Reset connecting flag on disconnect
       _paused = false; // Reset pause state on disconnect
       _packetQueue.clear(); // Clear queue on disconnect
       _currentBatch = Uint8List(0); // Clear batch on disconnect
@@ -374,6 +417,7 @@ class BLEService {
       if (_device != null && _isConnected) {
         await _device!.disconnect();
         _isConnected = false;
+        _connectionStateController?.add(false);
       }
 
       _device = null;
@@ -526,8 +570,10 @@ class BLEService {
     await disconnect();
     await _opusPacketController?.close();
     await _eofController?.close();
+    await _connectionStateController?.close();
     _opusPacketController = null;
     _eofController = null;
+    _connectionStateController = null;
   }
 }
 
