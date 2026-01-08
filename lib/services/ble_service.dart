@@ -20,7 +20,7 @@ class BLEService {
   static const String rxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
   
   // Signal constants
-  static const int signalEof = 0x0000;
+  static const int signalEof = 0xFFFC;
   static const int signalPause = 0xFFFE;
   static const int signalResume = 0xFFFD;
   static const int signalAudioPacket = 0x0001;
@@ -43,6 +43,7 @@ class BLEService {
   bool _isConnected = false;
   bool _isScanning = false;
   bool _paused = false;
+  int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
   Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
   Stream<void>? get eofStream => _eofController?.stream;
@@ -51,18 +52,11 @@ class BLEService {
   
   int getMTU() {
     // Get MTU size (minus 3 bytes for ATT overhead)
-    // Fallback to conservative MTU if not available
-    try {
-      if (_device != null && _isConnected) {
-        // flutter_blue_plus doesn't expose MTU directly, use conservative default
-        // Typical BLE MTU is 23 bytes default, but can be negotiated up to 517
-        // Conservative payload: 185 - 3 = 182 bytes (matches Python fallback)
-        return 182;
-      }
-    } catch (e) {
-      debugPrint('Error getting MTU: $e');
+    // Returns the current MTU value updated from the callback
+    if (_isConnected && _currentMtu > 0) {
+      return _currentMtu - 3; // Subtract ATT overhead
     }
-    return 182; // Fallback to conservative MTU
+    return 20; // Fallback: default BLE MTU (23) - 3 = 20 bytes payload
   }
   bool get isPaused => _paused;
 
@@ -232,6 +226,29 @@ class BLEService {
 
       debugPrint('Subscribed to notifications');
       
+      // Request larger MTU (iOS may cap at 185, Android supports up to 517)
+      try {
+        final requestedMtu = await _device!.requestMtu(512);
+        debugPrint('Requested MTU: $requestedMtu bytes');
+      } catch (e) {
+        debugPrint('Error requesting MTU: $e');
+      }
+      
+      // Get and print initial MTU size
+      try {
+        final mtu = await _device!.mtu.first;
+        _currentMtu = mtu;
+        debugPrint('MTU size: $mtu bytes');
+      } catch (e) {
+        debugPrint('Error getting MTU: $e');
+      }
+      
+      // Listen for MTU updates
+      _device!.mtu.listen((mtu) {
+        _currentMtu = mtu;
+        debugPrint('MTU updated: $mtu bytes');
+      });
+      
       // Listen for disconnection
       _connectionSubscription = _device!.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
@@ -336,6 +353,7 @@ class BLEService {
       _paused = false; // Reset pause state on disconnect
       _packetQueue.clear(); // Clear queue on disconnect
       _currentBatch = Uint8List(0); // Clear batch on disconnect
+      _currentMtu = 23; // Reset MTU to default on disconnect
       await FlutterBluePlus.stopScan();
       
       _notificationSubscription?.cancel();
@@ -402,7 +420,7 @@ class BLEService {
     }
 
     // Create and enqueue EOF packet
-    const int signalEof = 0x0000;
+    const int signalEof = 0xFFFC;
     Uint8List eofPacket = Uint8List(2);
     eofPacket[0] = signalEof & 0xFF;
     eofPacket[1] = (signalEof >> 8) & 0xFF;
