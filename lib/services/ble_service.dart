@@ -18,6 +18,7 @@ class BLEService {
   static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static const String txCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
   static const String rxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
+  static const String batteryCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; // Battery (READ)
   
   // Signal constants
   static const int signalEof = 0xFFFC;
@@ -28,18 +29,21 @@ class BLEService {
   BluetoothDevice? _device;
   BluetoothCharacteristic? _txCharacteristic;
   BluetoothCharacteristic? _rxCharacteristic;
+  BluetoothCharacteristic? _batteryCharacteristic;
   StreamSubscription? _notificationSubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
   StreamController<Uint8List>? _opusPacketController;
   StreamController<void>? _eofController;
   StreamController<bool>? _connectionStateController;
+  StreamController<int>? _batteryController; // Battery percentage (0-100)
   
   // Packet queue and sender
   final Queue<Uint8List> _packetQueue = Queue<Uint8List>();
   Uint8List _currentBatch = Uint8List(0);
   bool _senderRunning = false;
   Timer? _senderTimer;
+  Timer? _batteryPollTimer;
   
   bool _isConnected = false;
   bool _isScanning = false;
@@ -50,6 +54,7 @@ class BLEService {
   Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
   Stream<void>? get eofStream => _eofController?.stream;
   Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
+  Stream<int>? get batteryStream => _batteryController?.stream;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   
@@ -75,6 +80,7 @@ class BLEService {
       _opusPacketController = StreamController<Uint8List>.broadcast();
       _eofController = StreamController<void>.broadcast();
       _connectionStateController = StreamController<bool>.broadcast();
+      _batteryController = StreamController<int>.broadcast();
       
       // Emit initial connection state
       _connectionStateController?.add(_isConnected);
@@ -242,6 +248,9 @@ class BLEService {
         } else if (char.uuid.toString().toLowerCase() == rxCharacteristicUuid.toLowerCase()) {
           _rxCharacteristic = char;
           debugPrint('Found RX characteristic');
+        } else if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
+          _batteryCharacteristic = char;
+          debugPrint('Found Battery characteristic');
         }
       }
 
@@ -296,6 +305,8 @@ class BLEService {
           // Clear queue and batch on disconnect
           _packetQueue.clear();
           _currentBatch = Uint8List(0);
+          // Stop battery polling
+          _stopBatteryPolling();
           // Restart scanning on disconnect (only if not already connecting)
           if (!_isConnecting) {
             _scanAndAutoConnectLoop();
@@ -304,8 +315,13 @@ class BLEService {
           _isConnected = true;
           _connectionStateController?.add(true);
           _isConnecting = false; // Reset connecting flag when connected
+          // Start battery polling
+          _startBatteryPolling();
         }
       });
+      
+      // Start battery polling immediately after connection
+      _startBatteryPolling();
 
       return true;
     } catch (e) {
@@ -397,6 +413,7 @@ class BLEService {
       _packetQueue.clear(); // Clear queue on disconnect
       _currentBatch = Uint8List(0); // Clear batch on disconnect
       _currentMtu = 23; // Reset MTU to default on disconnect
+      _stopBatteryPolling(); // Stop battery polling
       await FlutterBluePlus.stopScan();
       
       _notificationSubscription?.cancel();
@@ -404,6 +421,8 @@ class BLEService {
       
       _connectionSubscription?.cancel();
       _connectionSubscription = null;
+      
+      _batteryCharacteristic = null;
 
       if (_txCharacteristic != null) {
         try {
@@ -563,17 +582,61 @@ class BLEService {
   }
 
 
+  /// Read battery percentage from device
+  Future<int?> readBattery() async {
+    if (!_isConnected || _batteryCharacteristic == null) {
+      return null;
+    }
+
+    try {
+      final data = await _batteryCharacteristic!.read();
+      if (data.length >= 3) {
+        // Format: [voltage_msb, voltage_lsb, soc_percent]
+        final socPercent = data[2];
+        _batteryController?.add(socPercent);
+        return socPercent;
+      }
+    } catch (e) {
+      debugPrint('Error reading battery: $e');
+    }
+    return null;
+  }
+  
+  void _startBatteryPolling() {
+    _stopBatteryPolling(); // Stop any existing timer
+    
+    if (!_isConnected || _batteryCharacteristic == null) {
+      return;
+    }
+    
+    // Read battery immediately
+    readBattery();
+    
+    // Poll every 5 minutes
+    _batteryPollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      readBattery();
+    });
+  }
+  
+  void _stopBatteryPolling() {
+    _batteryPollTimer?.cancel();
+    _batteryPollTimer = null;
+  }
+
   Future<void> dispose() async {
     _stopPacketSender();
+    _stopBatteryPolling();
     _packetQueue.clear();
     _currentBatch = Uint8List(0);
     await disconnect();
     await _opusPacketController?.close();
     await _eofController?.close();
     await _connectionStateController?.close();
+    await _batteryController?.close();
     _opusPacketController = null;
     _eofController = null;
     _connectionStateController = null;
+    _batteryController = null;
   }
 }
 

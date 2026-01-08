@@ -60,11 +60,13 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _speakerEnabled = false;
   String _currentTranscript = '';
   String? _currentlyPlayingAudio;
+  int? _batteryPercentage;
   // int _turnCount = 0;
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
   StreamSubscription<bool>? _bleConnectionSubscription;
+  StreamSubscription<int>? _batterySubscription;
 
   @override
   void initState() {
@@ -82,6 +84,18 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       if (mounted) {
         setState(() {
           _isConnected = isConnected;
+          if (!isConnected) {
+            _batteryPercentage = null;
+          }
+        });
+      }
+    });
+    
+    // Listen to battery updates (polling handled by BLE service)
+    _batterySubscription = _bleService.batteryStream?.listen((battery) {
+      if (mounted) {
+        setState(() {
+          _batteryPercentage = battery;
         });
       }
     });
@@ -317,6 +331,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _audioSubscription?.cancel();
     _conversationSubscription?.cancel();
     _bleConnectionSubscription?.cancel();
+    _batterySubscription?.cancel();
     _scrollController.dispose();
     _textController.dispose();
     _audioPlayer.dispose();
@@ -332,6 +347,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       appBar: _VoiceAssistantAppBar(
         isConnected: _isConnected,
         isPlayingStreamedAudio: _audioStreamManager.isPlayingStreamedAudio,
+        batteryPercentage: _batteryPercentage,
       ),
       body: Column(
         children: [
@@ -373,10 +389,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
 class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isConnected;
   final bool isPlayingStreamedAudio;
+  final int? batteryPercentage;
 
   const _VoiceAssistantAppBar({
     required this.isConnected,
     required this.isPlayingStreamedAudio,
+    this.batteryPercentage,
   });
 
   @override
@@ -394,6 +412,24 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
                 const Icon(Icons.volume_up, color: Colors.blue, size: 16),
                 const SizedBox(width: 4),
               ],
+              // Battery percentage (only show when connected)
+              if (isConnected && batteryPercentage != null) ...[
+                Icon(
+                  Icons.battery_std,
+                  color: _getBatteryColor(batteryPercentage!),
+                  size: 18,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$batteryPercentage%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _getBatteryColor(batteryPercentage!),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Icon(
                 isConnected ? Icons.bluetooth : Icons.bluetooth_disabled,
                 color: isConnected ? Colors.blue : Colors.red,
@@ -403,6 +439,16 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
         ),
       ],
     );
+  }
+  
+  Color _getBatteryColor(int percentage) {
+    if (percentage >= 50) {
+      return Colors.green;
+    } else if (percentage >= 20) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
   }
 
   @override
