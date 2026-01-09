@@ -10,6 +10,7 @@ import '../services/hardware_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
+import 'hardware_screen.dart';
 
 class Interaction {
   String userQuery;
@@ -354,6 +355,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         isConnected: _isConnected,
         isPlayingStreamedAudio: _audioStreamManager.isPlayingStreamedAudio,
         batteryPercentage: _batteryPercentage,
+        onBluetoothIconTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const HardwareScreen()),
+          );
+        },
       ),
       body: Column(
         children: [
@@ -396,11 +403,13 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
   final bool isConnected;
   final bool isPlayingStreamedAudio;
   final int? batteryPercentage;
+  final VoidCallback? onBluetoothIconTap;
 
   const _VoiceAssistantAppBar({
     required this.isConnected,
     required this.isPlayingStreamedAudio,
     this.batteryPercentage,
+    this.onBluetoothIconTap,
   });
 
   @override
@@ -436,9 +445,12 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
                 ),
                 const SizedBox(width: 8),
               ],
-              Icon(
-                isConnected ? Icons.bluetooth : Icons.bluetooth_disabled,
-                color: isConnected ? Colors.blue : Colors.red,
+              GestureDetector(
+                onTap: onBluetoothIconTap,
+                child: Icon(
+                  isConnected ? Icons.bluetooth : Icons.bluetooth_disabled,
+                  color: isConnected ? Colors.blue : Colors.red,
+                ),
               ),
             ],
           ),
