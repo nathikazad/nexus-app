@@ -20,10 +20,12 @@ class BLEService {
   static const String audioTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
   static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
   static const String batteryCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; // Battery (READ)
+  static const String rtcCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab"; // RTC (READ/WRITE)
 
   BluetoothDevice? _device;
   BLEAudioTransport? _audioTransport;
   BluetoothCharacteristic? _batteryCharacteristic;
+  BluetoothCharacteristic? _rtcCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
   StreamController<Uint8List>? _opusPacketController;
@@ -42,6 +44,7 @@ class BLEService {
   Stream<void>? get eofStream => _eofController?.stream;
   Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
   BluetoothCharacteristic? get batteryCharacteristic => _batteryCharacteristic;
+  BluetoothCharacteristic? get rtcCharacteristic => _rtcCharacteristic;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   
@@ -265,7 +268,9 @@ class BLEService {
         if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
           _batteryCharacteristic = char;
           debugPrint('Found Battery characteristic');
-          break;
+        } else if (char.uuid.toString().toLowerCase() == rtcCharacteristicUuid.toLowerCase()) {
+          _rtcCharacteristic = char;
+          debugPrint('Found RTC characteristic');
         }
       }
 
@@ -343,6 +348,7 @@ class BLEService {
       _connectionSubscription = null;
       
       _batteryCharacteristic = null;
+      _rtcCharacteristic = null;
 
       if (_device != null && _isConnected) {
         await _device!.disconnect();
