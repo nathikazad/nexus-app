@@ -43,7 +43,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
       _readBatteryData();
     });
     
-    _rtcRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _rtcRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _readRTCData();
     });
   }
