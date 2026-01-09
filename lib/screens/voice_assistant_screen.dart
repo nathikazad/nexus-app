@@ -6,6 +6,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../services/audio_service.dart';
 import '../services/openai_service.dart';
 import '../services/ble_service.dart';
+import '../services/hardware_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
@@ -47,6 +48,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   final OpenAIService _openAIService = OpenAIService.instance;
   final BLEService _bleService = BLEService.instance;
+  final HardwareService _hardwareService = HardwareService.instance;
   final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
@@ -91,8 +93,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       }
     });
     
-    // Listen to battery updates (polling handled by BLE service)
-    _batterySubscription = _bleService.batteryStream?.listen((battery) {
+    // Listen to battery updates (polling handled by Hardware service)
+    _batterySubscription = _hardwareService.batteryStream?.listen((battery) {
       if (mounted) {
         setState(() {
           _batteryPercentage = battery;
@@ -116,6 +118,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   // String currentSpeaker = '';
   Future<void> _initializeServices() async {
     try {
+      // Initialize HardwareService (which initializes BLE service)
+      await _hardwareService.initialize();
+      
       // BLE connection state is now handled by _setupBLEConnectionListener()
       bool responseDone = false;
       // Listen to conversation stream
@@ -337,6 +342,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _audioPlayer.dispose();
     _audioService.dispose();
     _openAIService.dispose();
+    _hardwareService.dispose();
     _audioStreamManager.dispose();
     super.dispose();
   }

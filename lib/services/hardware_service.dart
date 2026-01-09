@@ -24,12 +24,16 @@ class HardwareService {
   StreamSubscription<Uint8List>? _opusPacketSubscription;
   StreamSubscription<Uint8List>? _pcm24ChunkSubscription;
   StreamSubscription<void>? _eofSubscription;
+  StreamSubscription<bool>? _connectionStateSubscription;
   
   Stream<Uint8List>? _pcm24Stream;
+  StreamController<int>? _batteryController; // Battery percentage (0-100)
+  Timer? _batteryPollTimer;
   
   bool _isInitialized = false;
 
   Stream<Uint8List>? get pcm24Stream => _pcm24Stream;
+  Stream<int>? get batteryStream => _batteryController?.stream;
   bool get isInitialized => _isInitialized;
 
   int _framesSent = 0;
@@ -97,6 +101,32 @@ class HardwareService {
           debugPrint('HardwareService: Error in EOF stream: $e');
         },
       );
+      
+      // Initialize battery controller
+      _batteryController = StreamController<int>.broadcast();
+      
+      // Listen for connection state changes to manage battery polling
+      final connectionStateStream = _bleService.connectionStateStream;
+      if (connectionStateStream != null) {
+        _connectionStateSubscription = connectionStateStream.listen(
+          (isConnected) {
+            if (isConnected) {
+              _startBatteryPolling();
+            } else {
+              _stopBatteryPolling();
+            }
+          },
+          onError: (e) {
+            debugPrint('HardwareService: Error in connection state stream: $e');
+          },
+        );
+      }
+      
+      // Start battery polling if already connected
+      if (_bleService.isConnected) {
+        _startBatteryPolling();
+      }
+      
       _startOpenAiToBleRelayer();
       
       _isInitialized = true;
@@ -161,14 +191,63 @@ class HardwareService {
     _bleService.enqueueEOF();
   }
 
+  /// Read battery percentage from device
+  Future<int?> readBattery() async {
+    final batteryCharacteristic = _bleService.batteryCharacteristic;
+    if (!_bleService.isConnected || batteryCharacteristic == null) {
+      return null;
+    }
+
+    try {
+      final data = await batteryCharacteristic.read();
+      if (data.length >= 3) {
+        // Format: [voltage_msb, voltage_lsb, soc_percent]
+        final socPercent = data[2];
+        _batteryController?.add(socPercent);
+        return socPercent;
+      }
+    } catch (e) {
+      debugPrint('Error reading battery: $e');
+    }
+    return null;
+  }
+  
+  void _startBatteryPolling() {
+    _stopBatteryPolling(); // Stop any existing timer
+    
+    final batteryCharacteristic = _bleService.batteryCharacteristic;
+    if (!_bleService.isConnected || batteryCharacteristic == null) {
+      return;
+    }
+    
+    // Read battery immediately
+    readBattery();
+    
+    // Poll every 5 minutes
+    _batteryPollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      readBattery();
+    });
+  }
+  
+  void _stopBatteryPolling() {
+    _batteryPollTimer?.cancel();
+    _batteryPollTimer = null;
+  }
+
   Future<void> dispose() async {
     await _opusPacketSubscription?.cancel();
     await _pcm24ChunkSubscription?.cancel();
     await _eofSubscription?.cancel();
+    await _connectionStateSubscription?.cancel();
+    
+    _stopBatteryPolling();
+    await _batteryController?.close();
     
     _opusPacketSubscription = null;
     _pcm24ChunkSubscription = null;
     _eofSubscription = null;
+    _connectionStateSubscription = null;
+    _batteryController = null;
     _streamDecoder = null;
     _opusToPcm16Transformer = null;
     _pcm16ToPcm24Transformer = null;

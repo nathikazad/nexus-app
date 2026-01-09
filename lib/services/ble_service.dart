@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../util/ble_queue.dart';
+import '../util/ble_audio_transport.dart';
 
 class BLEService {
   static final BLEService _instance = BLEService._internal();
@@ -16,45 +17,31 @@ class BLEService {
   // Protocol constants
   static const String deviceName = "ESP32_Audio";
   static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-  static const String txCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
-  static const String rxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
+  static const String audioTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
+  static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
   static const String batteryCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; // Battery (READ)
-  
-  // Signal constants
-  static const int signalEof = 0xFFFC;
-  static const int signalPause = 0xFFFE;
-  static const int signalResume = 0xFFFD;
-  static const int signalAudioPacket = 0x0001;
 
   BluetoothDevice? _device;
-  BluetoothCharacteristic? _txCharacteristic;
-  BluetoothCharacteristic? _rxCharacteristic;
+  BLEAudioTransport? _audioTransport;
   BluetoothCharacteristic? _batteryCharacteristic;
-  StreamSubscription? _notificationSubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
   StreamController<Uint8List>? _opusPacketController;
   StreamController<void>? _eofController;
   StreamController<bool>? _connectionStateController;
-  StreamController<int>? _batteryController; // Battery percentage (0-100)
   
   // Packet queue and sender
-  final Queue<Uint8List> _packetQueue = Queue<Uint8List>();
-  Uint8List _currentBatch = Uint8List(0);
-  bool _senderRunning = false;
-  Timer? _senderTimer;
-  Timer? _batteryPollTimer;
+  PacketQueue? _packetQueue;
   
   bool _isConnected = false;
   bool _isScanning = false;
   bool _isConnecting = false; // Track if connection loop is running
-  bool _paused = false;
   int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
   Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
   Stream<void>? get eofStream => _eofController?.stream;
   Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
-  Stream<int>? get batteryStream => _batteryController?.stream;
+  BluetoothCharacteristic? get batteryCharacteristic => _batteryCharacteristic;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   
@@ -66,7 +53,7 @@ class BLEService {
     }
     return 20; // Fallback: default BLE MTU (23) - 3 = 20 bytes payload
   }
-  bool get isPaused => _paused;
+  bool get isPaused => _audioTransport?.isPaused ?? false;
 
   Future<bool> initialize() async {
     try {
@@ -80,13 +67,33 @@ class BLEService {
       _opusPacketController = StreamController<Uint8List>.broadcast();
       _eofController = StreamController<void>.broadcast();
       _connectionStateController = StreamController<bool>.broadcast();
-      _batteryController = StreamController<int>.broadcast();
       
       // Emit initial connection state
       _connectionStateController?.add(_isConnected);
 
+      // Initialize audio transport
+      _audioTransport = BLEAudioTransport(
+        onOpusPacket: (packet) {
+          _opusPacketController?.add(packet);
+        },
+        onEof: () {
+          _eofController?.add(null);
+        },
+        onPauseStateChanged: (_) {
+          // Pause state is managed by transport, no action needed here
+        },
+      );
+
+      // Initialize packet queue
+      _packetQueue = PacketQueue(
+        isConnected: () => _isConnected,
+        getMTU: getMTU,
+        getRxCharacteristic: () => _audioTransport?.audioRxCharacteristic,
+        isPaused: () => _audioTransport?.isPaused ?? false,
+      );
+      
       // Start packet sender
-      _startPacketSender();
+      _packetQueue?.start();
       
       _scanAndAutoConnectLoop();
 
@@ -240,36 +247,34 @@ class BLEService {
         return false;
       }
 
-      // Find TX characteristic (NOTIFY)
-      for (BluetoothCharacteristic char in targetService.characteristics) {
-        if (char.uuid.toString().toLowerCase() == txCharacteristicUuid.toLowerCase()) {
-          _txCharacteristic = char;
-          debugPrint('Found TX characteristic');
-        } else if (char.uuid.toString().toLowerCase() == rxCharacteristicUuid.toLowerCase()) {
-          _rxCharacteristic = char;
-          debugPrint('Found RX characteristic');
-        } else if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
-          _batteryCharacteristic = char;
-          debugPrint('Found Battery characteristic');
-        }
+      // Initialize audio transport with TX/RX characteristics
+      if (_audioTransport == null) {
+        debugPrint('Audio transport not initialized');
+        await disconnect();
+        return false;
       }
-
-      if (_txCharacteristic == null) {
-        debugPrint('TX characteristic not found');
+      
+      if (!_audioTransport!.initializeCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+        debugPrint('Failed to initialize audio TX/RX characteristics');
         await disconnect();
         return false;
       }
 
-      // Subscribe to notifications
-      await _txCharacteristic!.setNotifyValue(true);
-      _notificationSubscription = _txCharacteristic!.lastValueStream.listen(
-        _handleNotification,
-        onError: (error) {
-          debugPrint('Notification error: $error');
-        },
-      );
+      // Find battery characteristic
+      for (BluetoothCharacteristic char in targetService.characteristics) {
+        if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
+          _batteryCharacteristic = char;
+          debugPrint('Found Battery characteristic');
+          break;
+        }
+      }
 
-      debugPrint('Subscribed to notifications');
+      // Subscribe to audio TX notifications via transport
+      if (!await _audioTransport!.subscribeToNotifications()) {
+        debugPrint('Failed to subscribe to audio notifications');
+        await disconnect();
+        return false;
+      }
       
       // Request larger MTU (iOS may cap at 185, Android supports up to 517)
       try {
@@ -300,13 +305,9 @@ class BLEService {
           debugPrint('Device disconnected');
           _isConnected = false;
           _connectionStateController?.add(false);
-          _notificationSubscription?.cancel();
-          _notificationSubscription = null;
+          _audioTransport?.unsubscribeFromNotifications();
           // Clear queue and batch on disconnect
-          _packetQueue.clear();
-          _currentBatch = Uint8List(0);
-          // Stop battery polling
-          _stopBatteryPolling();
+          _packetQueue?.clear();
           // Restart scanning on disconnect (only if not already connecting)
           if (!_isConnecting) {
             _scanAndAutoConnectLoop();
@@ -315,13 +316,8 @@ class BLEService {
           _isConnected = true;
           _connectionStateController?.add(true);
           _isConnecting = false; // Reset connecting flag when connected
-          // Start battery polling
-          _startBatteryPolling();
         }
       });
-      
-      // Start battery polling immediately after connection
-      _startBatteryPolling();
 
       return true;
     } catch (e) {
@@ -332,106 +328,21 @@ class BLEService {
     }
   }
 
-  void _handleNotification(List<int> data) {
-    if (data.isEmpty) return;
-
-    try {
-      Uint8List bytes = Uint8List.fromList(data);
-      int offset = 0;
-
-      // Parse multi-frame packets
-      while (offset + 2 <= bytes.length) {
-        // Read identifier (2 bytes, little-endian)
-        int identifier = bytes[offset] | (bytes[offset + 1] << 8);
-        offset += 2;
-
-        // Handle flow control signals
-        if (identifier == signalPause) {
-          debugPrint('[FLOW] Received PAUSE signal (0xFFFE) - pausing transmission');
-          _paused = true;
-          debugPrint('[FLOW] Pause state: $_paused');
-          continue;
-        }
-        if (identifier == signalResume) {
-          debugPrint('[FLOW] Received RESUME signal (0xFFFD) - resuming transmission');
-          _paused = false;
-          debugPrint('[FLOW] Pause state: $_paused');
-          continue;
-        }
-
-        // Handle EOF
-        if (identifier == signalEof) {
-          debugPrint('[UPLOAD] Received EOF');
-          _eofController?.add(null);
-          continue;
-        }
-
-        // Handle audio packet
-        if (identifier == signalAudioPacket) {
-          debugPrint('[UPLOAD] Received AUDIO PACKET');
-          // Read packet size (2 bytes, little-endian)
-          if (offset + 2 > bytes.length) {
-            debugPrint('[WARNING] Incomplete packet size at offset $offset');
-            break;
-          }
-          
-          int packetSize = bytes[offset] | (bytes[offset + 1] << 8);
-          offset += 2;
-
-          // Check if we have complete packet
-          if (offset + packetSize > bytes.length) {
-            debugPrint('[WARNING] Incomplete packet at offset $offset');
-            break;
-          }
-
-          // Extract Opus data
-          Uint8List opusData = bytes.sublist(offset, offset + packetSize);
-          offset += packetSize;
-
-          // Emit Opus packet
-          _opusPacketController?.add(opusData);
-        } else {
-          debugPrint('[WARNING] Unknown packet identifier: 0x${identifier.toRadixString(16).padLeft(4, '0')}');
-          // Try to recover by skipping to next potential packet
-          if (offset + 2 <= bytes.length) {
-            offset += 2;
-          } else {
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error handling notification: $e');
-    }
-  }
-
   Future<void> disconnect() async {
     try {
       _isScanning = false;
       _isConnecting = false; // Reset connecting flag on disconnect
-      _paused = false; // Reset pause state on disconnect
-      _packetQueue.clear(); // Clear queue on disconnect
-      _currentBatch = Uint8List(0); // Clear batch on disconnect
+      _audioTransport?.resetPauseState(); // Reset pause state on disconnect
+      _packetQueue?.clear(); // Clear queue on disconnect
       _currentMtu = 23; // Reset MTU to default on disconnect
-      _stopBatteryPolling(); // Stop battery polling
       await FlutterBluePlus.stopScan();
       
-      _notificationSubscription?.cancel();
-      _notificationSubscription = null;
+      await _audioTransport?.unsubscribeFromNotifications();
       
       _connectionSubscription?.cancel();
       _connectionSubscription = null;
       
       _batteryCharacteristic = null;
-
-      if (_txCharacteristic != null) {
-        try {
-          await _txCharacteristic!.setNotifyValue(false);
-        } catch (e) {
-          debugPrint('Error unsubscribing: $e');
-        }
-        _txCharacteristic = null;
-      }
 
       if (_device != null && _isConnected) {
         await _device!.disconnect();
@@ -448,195 +359,28 @@ class BLEService {
 
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
   void enqueuePacket(Uint8List packet) {
-    if (packet.isEmpty) {
-      return;
-    }
-
-    final mtu = getMTU();
-
-    // If adding this packet would exceed MTU and we have a batch, enqueue current batch
-    if (_currentBatch.isNotEmpty && _currentBatch.length + packet.length > mtu) {
-      _packetQueue.add(_currentBatch);
-      debugPrint('[BATCH] Enqueued batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
-      _currentBatch = Uint8List(0);
-    }
-
-    // Add packet to current batch
-    if (_currentBatch.isEmpty) {
-      _currentBatch = Uint8List.fromList(packet);
-    } else {
-      final newBatch = Uint8List(_currentBatch.length + packet.length);
-      newBatch.setRange(0, _currentBatch.length, _currentBatch);
-      newBatch.setRange(_currentBatch.length, _currentBatch.length + packet.length, packet);
-      _currentBatch = newBatch;
-    }
+    _packetQueue?.enqueuePacket(packet);
   }
 
   /// Enqueue an EOF packet. It will be sent after all queued audio packets.
   /// Flushes any pending batch first.
   void enqueueEOF() {
-    // Flush any pending batch
-    if (_currentBatch.isNotEmpty) {
-      _packetQueue.add(_currentBatch);
-      debugPrint('[BATCH] Enqueued final batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
-      _currentBatch = Uint8List(0);
-    }
-
-    // Create and enqueue EOF packet
-    const int signalEof = 0xFFFC;
-    Uint8List eofPacket = Uint8List(2);
-    eofPacket[0] = signalEof & 0xFF;
-    eofPacket[1] = (signalEof >> 8) & 0xFF;
-    _packetQueue.add(eofPacket);
-    debugPrint('[QUEUE] Enqueued EOF packet (queue size: ${_packetQueue.length})');
+    _packetQueue?.enqueueEOF();
   }
 
-  /// Check if a packet is an EOF packet
-  bool _isEOFPacket(Uint8List packet) {
-    if (packet.length != 2) {
-      return false;
-    }
-    final identifier = packet[0] | (packet[1] << 8);
-    return identifier == signalEof;
-  }
-
-  /// Start the background packet sender that processes the queue
-  void _startPacketSender() {
-    if (_senderRunning) {
-      return;
-    }
-    _senderRunning = true;
-    _senderTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
-      _processQueue();
-    });
-    debugPrint('[SENDER] Started background packet sender');
-  }
-
-  /// Stop the background packet sender
-  void _stopPacketSender() {
-    _senderRunning = false;
-    _senderTimer?.cancel();
-    _senderTimer = null;
-    debugPrint('[SENDER] Stopped background packet sender');
-  }
-
-  /// Process the packet queue - sends ready-to-send batches
-  Future<void> _processQueue() async {
-    if (!_isConnected || _rxCharacteristic == null || _paused || _packetQueue.isEmpty) {
-      return;
-    }
-
-    try {
-      // Process one batch at a time (batches are already constructed)
-      while (_packetQueue.isNotEmpty && !_paused) {
-        final batch = _packetQueue.first;
-        
-        // Check if this is an EOF packet
-        if (_isEOFPacket(batch)) {
-          // Send EOF packet immediately (not batched)
-          _packetQueue.removeFirst();
-          await _sendPacket(batch);
-          debugPrint('[SEND] Sent EOF packet');
-          break; // EOF is always the last packet
-        }
-        
-        // Send the batch (already batched up to MTU)
-        _packetQueue.removeFirst();
-        await _sendBatch(batch);
-        await Future.delayed(const Duration(milliseconds: 5));
-      }
-    } catch (e) {
-      debugPrint('[SENDER] Error processing queue: $e');
-    }
-  }
-
-  /// Internal method to send a batch to the BLE characteristic
-  Future<void> _sendBatch(Uint8List batch) async {
-    if (_rxCharacteristic == null || !_isConnected || batch.isEmpty) {
-      return;
-    }
-
-    try {
-      debugPrint('[SEND] Sending batch: ${batch.length} bytes');
-      await _rxCharacteristic!.write(batch, withoutResponse: true);
-    } catch (e) {
-      debugPrint('[SEND] Error sending batch: $e');
-      rethrow;
-    }
-  }
-
-  /// Internal method to send a single packet (for EOF signals)
-  Future<void> _sendPacket(Uint8List packet) async {
-    if (_rxCharacteristic == null || !_isConnected) {
-      debugPrint('[SEND] Cannot send packet: not connected or RX characteristic not available');
-      return;
-    }
-
-    try {
-      debugPrint('[SEND] Sending packet: ${packet.length} bytes');
-      await _rxCharacteristic!.write(packet, withoutResponse: true);
-    } catch (e) {
-      debugPrint('[SEND] Error sending packet: $e');
-      rethrow;
-    }
-  }
-
-
-  /// Read battery percentage from device
-  Future<int?> readBattery() async {
-    if (!_isConnected || _batteryCharacteristic == null) {
-      return null;
-    }
-
-    try {
-      final data = await _batteryCharacteristic!.read();
-      if (data.length >= 3) {
-        // Format: [voltage_msb, voltage_lsb, soc_percent]
-        final socPercent = data[2];
-        _batteryController?.add(socPercent);
-        return socPercent;
-      }
-    } catch (e) {
-      debugPrint('Error reading battery: $e');
-    }
-    return null;
-  }
-  
-  void _startBatteryPolling() {
-    _stopBatteryPolling(); // Stop any existing timer
-    
-    if (!_isConnected || _batteryCharacteristic == null) {
-      return;
-    }
-    
-    // Read battery immediately
-    readBattery();
-    
-    // Poll every 5 minutes
-    _batteryPollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      readBattery();
-    });
-  }
-  
-  void _stopBatteryPolling() {
-    _batteryPollTimer?.cancel();
-    _batteryPollTimer = null;
-  }
 
   Future<void> dispose() async {
-    _stopPacketSender();
-    _stopBatteryPolling();
-    _packetQueue.clear();
-    _currentBatch = Uint8List(0);
+    _packetQueue?.dispose();
+    await _audioTransport?.dispose();
     await disconnect();
     await _opusPacketController?.close();
     await _eofController?.close();
     await _connectionStateController?.close();
-    await _batteryController?.close();
     _opusPacketController = null;
     _eofController = null;
     _connectionStateController = null;
-    _batteryController = null;
+    _packetQueue = null;
+    _audioTransport = null;
   }
 }
 
