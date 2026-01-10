@@ -21,11 +21,13 @@ class BLEService {
   static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
   static const String batteryCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; // Battery (READ)
   static const String rtcCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab"; // RTC (READ/WRITE)
+  static const String hapticCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ac"; // Haptic (WRITE)
 
   BluetoothDevice? _device;
   BLEAudioTransport? _audioTransport;
   BluetoothCharacteristic? _batteryCharacteristic;
   BluetoothCharacteristic? _rtcCharacteristic;
+  BluetoothCharacteristic? _hapticCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
   StreamController<Uint8List>? _opusPacketController;
@@ -45,6 +47,7 @@ class BLEService {
   Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
   BluetoothCharacteristic? get batteryCharacteristic => _batteryCharacteristic;
   BluetoothCharacteristic? get rtcCharacteristic => _rtcCharacteristic;
+  BluetoothCharacteristic? get hapticCharacteristic => _hapticCharacteristic;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   
@@ -263,7 +266,7 @@ class BLEService {
         return false;
       }
 
-      // Find battery characteristic
+      // Find battery, RTC, and haptic characteristics
       for (BluetoothCharacteristic char in targetService.characteristics) {
         if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
           _batteryCharacteristic = char;
@@ -271,6 +274,9 @@ class BLEService {
         } else if (char.uuid.toString().toLowerCase() == rtcCharacteristicUuid.toLowerCase()) {
           _rtcCharacteristic = char;
           debugPrint('Found RTC characteristic');
+        } else if (char.uuid.toString().toLowerCase() == hapticCharacteristicUuid.toLowerCase()) {
+          _hapticCharacteristic = char;
+          debugPrint('Found Haptic characteristic');
         }
       }
 
@@ -349,6 +355,7 @@ class BLEService {
       
       _batteryCharacteristic = null;
       _rtcCharacteristic = null;
+      _hapticCharacteristic = null;
 
       if (_device != null && _isConnected) {
         await _device!.disconnect();

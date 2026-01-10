@@ -20,6 +20,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
   String? _rtcTimezone;
   bool _isConnected = false;
   bool _isSettingRTC = false;
+  bool _isPulsingHaptic = false;
   
   StreamSubscription<bool>? _connectionSubscription;
   StreamSubscription<int>? _batterySubscription;
@@ -181,6 +182,43 @@ class _HardwareScreenState extends State<HardwareScreen> {
     }
   }
 
+  Future<void> _pulseHaptic() async {
+    if (!_isConnected || _isPulsingHaptic) {
+      return;
+    }
+
+    setState(() {
+      _isPulsingHaptic = true;
+    });
+
+    try {
+      final success = await _hardwareService.triggerHapticPulse();
+      if (mounted) {
+        if (success) {
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   const SnackBar(content: Text('Haptic pulse triggered')),
+          // );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to trigger haptic pulse')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error triggering haptic pulse: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPulsingHaptic = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _stopRefreshTimers();
@@ -285,6 +323,21 @@ class _HardwareScreenState extends State<HardwareScreen> {
                       )
                     : const Icon(Icons.update),
                 label: Text(_isSettingRTC ? 'Setting...' : 'Set from System Time'),
+              ),
+            ],
+            
+            if (_isConnected) ...[
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: _isPulsingHaptic ? null : _pulseHaptic,
+                icon: _isPulsingHaptic
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.vibration),
+                label: Text(_isPulsingHaptic ? 'Pulsing...' : 'Pulse Haptic'),
               ),
             ],
             

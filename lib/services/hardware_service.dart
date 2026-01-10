@@ -420,6 +420,30 @@ class HardwareService {
     return await writeRTC(rtcTime);
   }
 
+  /// Trigger haptic pulse with specified effect ID
+  /// @param effectId Effect ID (0-123, where 0 = stop, 1-123 = predefined effects)
+  /// @return true on success, false on failure
+  Future<bool> triggerHapticPulse() async {
+    final hapticCharacteristic = _bleService.hapticCharacteristic;
+    if (!_bleService.isConnected || hapticCharacteristic == null) {
+      debugPrint('Cannot trigger haptic pulse: not connected or characteristic not available');
+      return false;
+    }
+
+ 
+
+    try {
+      // Write 1-byte effect ID to haptic characteristic
+      final data = Uint8List.fromList([16]);
+      await hapticCharacteristic.write(data, withoutResponse: true);
+      debugPrint('Haptic pulse triggered');
+      return true;
+    } catch (e) {
+      debugPrint('Error triggering haptic pulse: $e');
+      return false;
+    }
+  }
+
   Future<void> dispose() async {
     await _opusPacketSubscription?.cancel();
     await _pcm24ChunkSubscription?.cancel();
