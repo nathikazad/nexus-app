@@ -6,6 +6,17 @@ import 'package:opus_dart/opus_dart.dart';
 import '../services/ble_service.dart';
 import '../util/audio.dart';
 
+/// Battery data structure
+class BatteryData {
+  final int percentage;  // 0-100
+  final double voltage;  // Voltage in volts
+
+  BatteryData({
+    required this.percentage,
+    required this.voltage,
+  });
+}
+
 /// RTC time structure
 class RTCTime {
   final int seconds;   // 0-59
@@ -160,13 +171,13 @@ class HardwareService {
   StreamSubscription<bool>? _connectionStateSubscription;
   
   Stream<Uint8List>? _pcm24Stream;
-  StreamController<int>? _batteryController; // Battery percentage (0-100)
+  StreamController<BatteryData>? _batteryController; // Battery data (percentage and voltage)
   Timer? _batteryPollTimer;
   
   bool _isInitialized = false;
 
   Stream<Uint8List>? get pcm24Stream => _pcm24Stream;
-  Stream<int>? get batteryStream => _batteryController?.stream;
+  Stream<BatteryData>? get batteryStream => _batteryController?.stream;
   bool get isInitialized => _isInitialized;
 
   int _framesSent = 0;
@@ -236,7 +247,7 @@ class HardwareService {
       );
       
       // Initialize battery controller
-      _batteryController = StreamController<int>.broadcast();
+      _batteryController = StreamController<BatteryData>.broadcast();
       
       // Listen for connection state changes to manage battery polling
       final connectionStateStream = _bleService.connectionStateStream;
@@ -324,8 +335,8 @@ class HardwareService {
     _bleService.enqueueEOF();
   }
 
-  /// Read battery percentage from device
-  Future<int?> readBattery() async {
+  /// Read battery data from device (percentage and voltage)
+  Future<BatteryData?> readBattery() async {
     final batteryCharacteristic = _bleService.batteryCharacteristic;
     if (!_bleService.isConnected || batteryCharacteristic == null) {
       return null;
@@ -335,9 +346,21 @@ class HardwareService {
       final data = await batteryCharacteristic.read();
       if (data.length >= 3) {
         // Format: [voltage_msb, voltage_lsb, soc_percent]
+        final voltageMsb = data[0];
+        final voltageLsb = data[1];
         final socPercent = data[2];
-        _batteryController?.add(socPercent);
-        return socPercent;
+        
+        // Calculate voltage: (msb << 8) | lsb, then divide by 1000 to get volts (raw is in mV)
+        final voltageRaw = (voltageMsb << 8) | voltageLsb;
+        final voltage = voltageRaw / 1000.0;
+        
+        final batteryData = BatteryData(
+          percentage: socPercent,
+          voltage: voltage,
+        );
+        
+        _batteryController?.add(batteryData);
+        return batteryData;
       }
     } catch (e) {
       debugPrint('Error reading battery: $e');

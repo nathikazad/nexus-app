@@ -23,7 +23,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
   bool _isPulsingHaptic = false;
   
   StreamSubscription<bool>? _connectionSubscription;
-  StreamSubscription<int>? _batterySubscription;
+  StreamSubscription<BatteryData>? _batterySubscription;
   Timer? _batteryRefreshTimer;
   Timer? _rtcRefreshTimer;
 
@@ -36,12 +36,12 @@ class _HardwareScreenState extends State<HardwareScreen> {
 
   void _startRefreshTimers() {
     // Read immediately
-    _readBatteryData();
+    _hardwareService.readBattery();
     _readRTCData();
     
     // Refresh battery and RTC data every 1 second
     _batteryRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _readBatteryData();
+      _hardwareService.readBattery();
     });
     
     _rtcRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -77,10 +77,11 @@ class _HardwareScreenState extends State<HardwareScreen> {
     });
     
     // Listen to battery updates
-    _batterySubscription = _hardwareService.batteryStream?.listen((battery) {
+    _batterySubscription = _hardwareService.batteryStream?.listen((batteryData) {
       if (mounted) {
         setState(() {
-          _batteryPercentage = battery;
+          _batteryPercentage = batteryData.percentage;
+          _voltage = batteryData.voltage;
         });
       }
     });
@@ -91,39 +92,6 @@ class _HardwareScreenState extends State<HardwareScreen> {
     });
   }
 
-  Future<void> _readBatteryData() async {
-    if (!_isConnected) {
-      return;
-    }
-    
-    final batteryCharacteristic = _bleService.batteryCharacteristic;
-    if (batteryCharacteristic == null) {
-      return;
-    }
-
-    try {
-      final data = await batteryCharacteristic.read();
-      if (data.length >= 3) {
-        // Format: [voltage_msb, voltage_lsb, soc_percent]
-        final voltageMsb = data[0];
-        final voltageLsb = data[1];
-        final socPercent = data[2];
-        
-        // Calculate voltage: (msb << 8) | lsb, then divide by 100 to get volts
-        final voltageRaw = (voltageMsb << 8) | voltageLsb;
-        final voltage = voltageRaw / 100.0;
-        
-        if (mounted) {
-          setState(() {
-            _batteryPercentage = socPercent;
-            _voltage = voltage;
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Error reading battery data: $e');
-    }
-  }
 
   Future<void> _readRTCData() async {
     if (!_isConnected) {

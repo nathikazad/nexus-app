@@ -69,7 +69,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
   StreamSubscription<bool>? _bleConnectionSubscription;
-  StreamSubscription<int>? _batterySubscription;
+  StreamSubscription<BatteryData>? _batterySubscription;
 
   @override
   void initState() {
@@ -95,10 +95,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     });
     
     // Listen to battery updates (polling handled by Hardware service)
-    _batterySubscription = _hardwareService.batteryStream?.listen((battery) {
+    _batterySubscription = _hardwareService.batteryStream?.listen((batteryData) {
       if (mounted) {
         setState(() {
-          _batteryPercentage = battery;
+          _batteryPercentage = batteryData.percentage;
         });
       }
     });
