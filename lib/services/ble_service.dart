@@ -15,7 +15,7 @@ class BLEService {
   BLEService._internal();
 
   // Protocol constants
-  static const String deviceName = "ESP32_Audio";
+  static const String defaultDeviceName = "ESP32_Audio";
   static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static const String audioTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
   static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
@@ -50,6 +50,28 @@ class BLEService {
   BluetoothCharacteristic? get hapticCharacteristic => _hapticCharacteristic;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
+  BluetoothDevice? get currentDevice => _device;
+  
+  /// Get formatted device name (Nexus-XXXXX format)
+  String? get deviceName {
+    if (_device == null) return null;
+    final name = _device!.platformName.isNotEmpty 
+        ? _device!.platformName 
+        : _device!.advName;
+    // If name starts with "Nexus-", return it as-is, otherwise format from MAC
+    if (name.startsWith('Nexus-')) {
+      return name;
+    }
+    // Extract last 5 chars of MAC address
+    final macStr = _device!.remoteId.toString();
+    // MAC format: "XX:XX:XX:XX:XX:XX" or similar, extract last 5 hex chars
+    final macParts = macStr.replaceAll(':', '').replaceAll('-', '').toUpperCase();
+    if (macParts.length >= 5) {
+      final last5 = macParts.substring(macParts.length - 5);
+      return 'Nexus-$last5';
+    }
+    return name;
+  }
   
   int getMTU() {
     // Get MTU size (minus 3 bytes for ATT overhead)
@@ -132,6 +154,78 @@ class BLEService {
       }
     }
     _isConnecting = false;
+  }
+
+  /// Scan for devices and return a list of discovered devices
+  /// Returns a stream of scan results
+  Stream<List<ScanResult>> scanForDevices({Duration? timeout}) async* {
+    if (_isScanning) {
+      debugPrint('Scan already in progress');
+      return;
+    }
+
+    try {
+      _isScanning = true;
+      debugPrint('Scanning for devices with service UUID $serviceUuid...');
+
+      // Stop any existing scan first
+      try {
+        await FlutterBluePlus.stopScan();
+      } catch (e) {
+        // Ignore errors if scan wasn't running
+      }
+
+      // Convert service UUID string to Guid for filtering
+      final serviceGuid = Guid(serviceUuid);
+
+      // Start scanning with service UUID filter
+      await FlutterBluePlus.startScan(
+        withServices: [serviceGuid],
+        timeout: timeout ?? const Duration(seconds: 10),
+      );
+
+      // Yield scan results as they come in
+      await for (final results in FlutterBluePlus.scanResults) {
+        // Filter to only include devices with our service UUID
+        final filteredResults = results.where((result) {
+          // Results are already filtered by withServices, but double-check
+          return true;
+        }).toList();
+        
+        if (filteredResults.isNotEmpty) {
+          yield filteredResults;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error scanning for devices: $e');
+      yield [];
+    } finally {
+      _isScanning = false;
+      try {
+        await FlutterBluePlus.stopScan();
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+  }
+
+  /// Connect to a specific device
+  Future<bool> connectToDevice(BluetoothDevice device) async {
+    if (_isConnected && _device?.remoteId == device.remoteId) {
+      debugPrint('Already connected to this device');
+      return true;
+    }
+
+    // Stop auto-connect loop when manually selecting a device
+    _isConnecting = false;
+
+    // Disconnect from current device if connected to a different one
+    if (_isConnected && _device?.remoteId != device.remoteId) {
+      await disconnect();
+    }
+
+    _device = device;
+    return await _connectToDevice();
   }
 
   Future<bool> scanAndConnect() async {

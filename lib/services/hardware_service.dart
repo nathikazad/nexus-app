@@ -10,10 +10,12 @@ import '../util/audio.dart';
 class BatteryData {
   final int percentage;  // 0-100
   final double voltage;  // Voltage in volts
+  final bool isCharging;  // Whether battery is charging
 
   BatteryData({
     required this.percentage,
     required this.voltage,
+    required this.isCharging,
   });
 }
 
@@ -335,7 +337,7 @@ class HardwareService {
     _bleService.enqueueEOF();
   }
 
-  /// Read battery data from device (percentage and voltage)
+  /// Read battery data from device (percentage, voltage, and charging status)
   Future<BatteryData?> readBattery() async {
     final batteryCharacteristic = _bleService.batteryCharacteristic;
     if (!_bleService.isConnected || batteryCharacteristic == null) {
@@ -344,19 +346,41 @@ class HardwareService {
 
     try {
       final data = await batteryCharacteristic.read();
-      if (data.length >= 3) {
-        // Format: [voltage_msb, voltage_lsb, soc_percent]
+      if (data.length >= 4) {
+        // Format: [voltage_msb, voltage_lsb, soc_percent, charging_status]
+        final voltageMsb = data[0];
+        final voltageLsb = data[1];
+        final socPercent = data[2];
+        final chargingStatus = data[3];
+        
+        // Calculate voltage: (msb << 8) | lsb, then divide by 1000 to get volts (raw is in mV)
+        final voltageRaw = (voltageMsb << 8) | voltageLsb;
+        final voltage = voltageRaw / 1000.0;
+        
+        // Charging status: 1 = charging, 0 = not charging
+        final isCharging = chargingStatus != 0;
+        
+        final batteryData = BatteryData(
+          percentage: socPercent,
+          voltage: voltage,
+          isCharging: isCharging,
+        );
+        
+        _batteryController?.add(batteryData);
+        return batteryData;
+      } else if (data.length >= 3) {
+        // Backward compatibility: old format without charging status
         final voltageMsb = data[0];
         final voltageLsb = data[1];
         final socPercent = data[2];
         
-        // Calculate voltage: (msb << 8) | lsb, then divide by 1000 to get volts (raw is in mV)
         final voltageRaw = (voltageMsb << 8) | voltageLsb;
         final voltage = voltageRaw / 1000.0;
         
         final batteryData = BatteryData(
           percentage: socPercent,
           voltage: voltage,
+          isCharging: false,  // Default to not charging for old format
         );
         
         _batteryController?.add(batteryData);

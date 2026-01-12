@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/hardware_service.dart';
 import '../services/ble_service.dart';
+import 'device_selection_screen.dart';
 
 class HardwareScreen extends StatefulWidget {
   const HardwareScreen({super.key});
@@ -16,6 +17,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
   
   int? _batteryPercentage;
   double? _voltage;
+  bool? _isCharging;
   String? _rtcTimeDisplay;
   String? _rtcTimezone;
   bool _isConnected = false;
@@ -65,6 +67,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
           if (!isConnected) {
             _batteryPercentage = null;
             _voltage = null;
+            _isCharging = null;
             _rtcTimeDisplay = null;
             _rtcTimezone = null;
             _stopRefreshTimers();
@@ -82,6 +85,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
         setState(() {
           _batteryPercentage = batteryData.percentage;
           _voltage = batteryData.voltage;
+          _isCharging = batteryData.isCharging;
         });
       }
     });
@@ -195,18 +199,59 @@ class _HardwareScreenState extends State<HardwareScreen> {
     super.dispose();
   }
 
+  Future<void> _selectDevice() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
+    );
+    
+    if (result == true && mounted) {
+      // Device connected successfully, refresh UI
+      setState(() {
+        _isConnected = _bleService.isConnected;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final deviceName = _bleService.deviceName;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hardware Status'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bluetooth_searching),
+            onPressed: _selectDevice,
+            tooltip: 'Select Device',
+          ),
+        ],
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Device name
+            if (deviceName != null) ...[
+              Text(
+                'Device',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                deviceName,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
             // Battery percentage
             Text(
               'Battery',
@@ -215,17 +260,40 @@ class _HardwareScreenState extends State<HardwareScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              _isConnected && _batteryPercentage != null
-                  ? '$_batteryPercentage%'
-                  : '--',
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: _isConnected && _batteryPercentage != null
-                    ? _getBatteryColor(_batteryPercentage!)
-                    : Colors.grey,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  _isConnected && _batteryPercentage != null
+                      ? '$_batteryPercentage%'
+                      : '--',
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: _isConnected && _batteryPercentage != null
+                        ? _getBatteryColor(_batteryPercentage!)
+                        : Colors.grey,
+                  ),
+                ),
+                if (_isConnected && _isCharging == true) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.battery_charging_full,
+                    color: Colors.green,
+                    size: 32,
+                  ),
+                ],
+              ],
             ),
+            if (_isConnected && _isCharging != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                _isCharging! ? 'Charging' : 'Not Charging',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: _isCharging! ? Colors.green : Colors.grey[600],
+                ),
+              ),
+            ],
             
             const SizedBox(height: 32),
             
