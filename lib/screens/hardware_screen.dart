@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/hardware_service.dart';
 import '../services/battery_service.dart';
-import '../services/ble_service.dart';
 import 'device_selection_screen.dart';
 
 class HardwareScreen extends StatefulWidget {
@@ -14,7 +13,6 @@ class HardwareScreen extends StatefulWidget {
 
 class _HardwareScreenState extends State<HardwareScreen> {
   final HardwareService _hardwareService = HardwareService.instance;
-  final BLEService _bleService = BLEService.instance;
   
   int? _batteryPercentage;
   double? _voltage;
@@ -64,7 +62,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
 
   void _setupListeners() {
     // Listen to connection state
-    _connectionSubscription = _bleService.connectionStateStream?.listen((isConnected) {
+    _connectionSubscription = _hardwareService.connectionStateStream?.listen((isConnected) {
       if (mounted) {
         setState(() {
           _isConnected = isConnected;
@@ -97,7 +95,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
     
     // Set initial connection state
     setState(() {
-      _isConnected = _bleService.isConnected;
+      _isConnected = _hardwareService.isConnected;
     });
   }
 
@@ -316,7 +314,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
     if (result == true && mounted) {
       // Device connected successfully, refresh UI
       setState(() {
-        _isConnected = _bleService.isConnected;
+        _isConnected = _hardwareService.isConnected;
       });
     }
   }

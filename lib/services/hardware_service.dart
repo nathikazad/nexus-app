@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:nexus_voice_assistant/services/openai_service.dart';
 import '../services/ble_service.dart';
-import '../util/ble_audio_transport.dart';
 import 'battery_service.dart';
 import 'rtc_service.dart';
 
@@ -16,19 +14,23 @@ class HardwareService {
   
   factory HardwareService() => _instance;
 
-  final BLEService _bleService = BLEService.instance;
+  final BLEService _bleService;
   final BatteryService _batteryService;
   final RTCService _rtcService;
-  final BLEAudioTransport _audioTransport;
 
   HardwareService._internal()
-      : _batteryService = BatteryService(BLEService.instance),
-        _rtcService = RTCService(BLEService.instance),
-        _audioTransport = BLEAudioTransport();
+      : _bleService = _sharedBleService,
+        _batteryService = BatteryService(_sharedBleService),
+        _rtcService = RTCService(_sharedBleService);
+  
+  // Shared BLEService instance for all services
+  static final BLEService _sharedBleService = BLEService();
   
   bool _isInitialized = false;
 
   Stream<BatteryData>? get batteryStream => _batteryService.batteryStream;
+  Stream<bool>? get connectionStateStream => _bleService.connectionStateStream;
+  bool get isConnected => _bleService.isConnected;
   bool get isInitialized => _isInitialized;
 
   // Device name getter
@@ -58,24 +60,8 @@ class HardwareService {
     if (_isInitialized) return true;
 
     try {
-      // Wait for BLE service to be initialized
+      // Wait for BLE service to be initialized (this also initializes audio transport)
       await _bleService.initialize();
-      
-      // Initialize audio transport with callbacks and dependencies
-      _audioTransport.initialize(
-        onPcm24Chunk: (pcm24Chunk) {
-          OpenAIService.instance.sendAudio(pcm24Chunk, queryOrigin.Hardware);
-        },
-        onEof: () {
-          OpenAIService.instance.createResponse();
-        },
-        openAiAudioOutStream: OpenAIService.instance.hardWareAudioOutStream,
-        isConnected: () => _bleService.isConnected,
-        getMTU: () => _bleService.getMTU(),
-      );
-      
-      // Initialize audio processing pipeline (includes packet queue, stream subscriptions, and OpenAI relayer)
-      _audioTransport.initializeAudioProcessing();
       
       // Initialize battery service
       await _batteryService.initialize();
@@ -89,30 +75,19 @@ class HardwareService {
   }
 
 
-  /// Initialize audio transport characteristics (called from BLEService after connection)
-  Future<bool> initializeAudioTransportCharacteristics(BluetoothService service, String audioTxUuid, String audioRxUuid) async {
-    if (!await _audioTransport.initializeAudioTransportCharacteristics(service, audioTxUuid, audioRxUuid)) {
-      debugPrint('Failed to initialize audio TX/RX characteristics');
-      return false;
-    }
-    
-    return true;
-  }
-  
-  /// Disconnect audio transport (unsubscribe from notifications and reset pause state)
-  Future<void> disconnectAudioTransport() async {
-    await _audioTransport.unsubscribeFromNotifications();
-    _audioTransport.resetPauseState();
-  }
-  
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
   void enqueuePacket(Uint8List packet) {
-    _audioTransport.enqueuePacket(packet);
-      }
+    _bleService.enqueuePacket(packet);
+  }
 
   /// Send EOF to ESP32
   Future<void> sendEOFToEsp32() async {
-    await _audioTransport.sendEOFToEsp32();
+    await _bleService.sendEOFToEsp32();
+  }
+
+  /// Connect to a specific BLE device
+  Future<bool> connect(BluetoothDevice device) async {
+    return await _bleService.connectToDevice(device);
   }
 
   /// Read battery data from device (percentage, voltage, and charging status)
@@ -211,7 +186,6 @@ class HardwareService {
   }
 
   Future<void> dispose() async {
-    await _audioTransport.dispose();
     await _batteryService.dispose();
     
     _isInitialized = false;

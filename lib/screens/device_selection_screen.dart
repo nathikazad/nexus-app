@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../services/ble_service.dart';
+import 'package:nexus_voice_assistant/services/ble_service.dart';
+import '../services/hardware_service.dart';
 
 class DeviceSelectionScreen extends StatefulWidget {
   const DeviceSelectionScreen({super.key});
@@ -11,7 +12,7 @@ class DeviceSelectionScreen extends StatefulWidget {
 }
 
 class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
-  final BLEService _bleService = BLEService.instance;
+  final HardwareService _hardwareService = HardwareService.instance;
   List<ScanResult> _devices = [];
   bool _isScanning = false;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
@@ -27,7 +28,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   @override
   void dispose() {
     _scanSubscription?.cancel();
-    FlutterBluePlus.stopScan();
+    BLEService.stopScan();
     super.dispose();
   }
 
@@ -39,7 +40,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
       _devices = [];
     });
 
-    _scanSubscription = _bleService.scanForDevices(timeout: const Duration(seconds: 10)).listen(
+    _scanSubscription = BLEService.scanForDevices(timeout: const Duration(seconds: 10)).listen(
       (results) {
         // Update device list, avoiding duplicates
         final existingIds = _devices.map((d) => d.device.remoteId.toString()).toSet();
@@ -106,7 +107,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
       await FlutterBluePlus.stopScan();
 
       // Connect to device
-      final success = await _bleService.connectToDevice(result.device);
+      final success = await _hardwareService.connect(result.device);
       
       if (mounted) {
         if (success) {

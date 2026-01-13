@@ -2,19 +2,14 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'hardware_service.dart';
+import 'package:nexus_voice_assistant/services/openai_service.dart';
+import '../util/ble_audio_transport.dart';
 
 class BLEService {
-  static final BLEService _instance = BLEService._internal();
-  
-  /// Singleton instance getter
-  static BLEService get instance => _instance;
-  
-  factory BLEService() => _instance;
-  BLEService._internal();
+  BLEService();
 
   // Protocol constants
-  static const String defaultDeviceName = "ESP32_Audio";
+  static const String defaultDeviceName = "Nexus-Audio";
   static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static const String audioTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32 -> Client (NOTIFY)
   static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; // Client -> ESP32 (WRITE)
@@ -32,8 +27,11 @@ class BLEService {
   
   StreamController<bool>? _connectionStateController;
   
+  // Audio transport
+  final BLEAudioTransport _audioTransport = BLEAudioTransport();
+  
   bool _isConnected = false;
-  bool _isScanning = false;
+  static bool _isScanning = false;
   bool _isConnecting = false; // Track if connection loop is running
   int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
@@ -73,6 +71,22 @@ class BLEService {
       
       // Emit initial connection state
       _connectionStateController?.add(_isConnected);
+
+      // Initialize audio transport with callbacks and dependencies
+      _audioTransport.initialize(
+        onPcm24Chunk: (pcm24Chunk) {
+          OpenAIService.instance.sendAudio(pcm24Chunk, queryOrigin.Hardware);
+        },
+        onEof: () {
+          OpenAIService.instance.createResponse();
+        },
+        openAiAudioOutStream: OpenAIService.instance.hardWareAudioOutStream,
+        isConnected: () => isConnected,
+        getMTU: () => getMTU(),
+      );
+      
+      // Initialize audio processing pipeline (includes packet queue, stream subscriptions, and OpenAI relayer)
+      _audioTransport.initializeAudioProcessing();
       
       _scanAndAutoConnectLoop();
 
@@ -109,7 +123,7 @@ class BLEService {
 
   /// Scan for devices and return a list of discovered devices
   /// Returns a stream of scan results
-  Stream<List<ScanResult>> scanForDevices({Duration? timeout}) async* {
+  static Stream<List<ScanResult>> scanForDevices({Duration? timeout}) async* {
     if (_isScanning) {
       debugPrint('Scan already in progress');
       return;
@@ -157,6 +171,16 @@ class BLEService {
       } catch (e) {
         // Ignore errors
       }
+    }
+  }
+
+  
+  static void stopScan() {
+    _isScanning = false;
+    try {
+      FlutterBluePlus.stopScan();
+    } catch (e) {
+      // Ignore errors
     }
   }
 
@@ -313,9 +337,8 @@ class BLEService {
         return false;
       }
 
-      // Initialize audio transport with TX/RX characteristics via HardwareService
-      final hardwareService = HardwareService.instance;
-      if (!await hardwareService.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+      // Initialize audio transport with TX/RX characteristics
+      if (!await _audioTransport.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
         debugPrint('Failed to initialize audio TX/RX characteristics');
         await disconnect();
         return false;
@@ -363,7 +386,8 @@ class BLEService {
           debugPrint('Device disconnected');
           _isConnected = false;
           _connectionStateController?.add(false);
-          await hardwareService.disconnectAudioTransport();
+          await _audioTransport.unsubscribeFromNotifications();
+          _audioTransport.resetPauseState();
           // Restart scanning on disconnect (only if not already connecting)
           if (!_isConnecting) {
             _scanAndAutoConnectLoop();
@@ -429,9 +453,8 @@ class BLEService {
         return;
       }
 
-      // Initialize audio transport with TX/RX characteristics via HardwareService
-      final hardwareService = HardwareService.instance;
-      if (!await hardwareService.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+      // Initialize audio transport with TX/RX characteristics
+      if (!await _audioTransport.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
         debugPrint('Failed to initialize audio TX/RX characteristics after restore');
         return;
       }
@@ -463,8 +486,8 @@ class BLEService {
     try {
       _isScanning = false;
       _isConnecting = false; // Reset connecting flag on disconnect
-      final hardwareService = HardwareService.instance;
-      await hardwareService.disconnectAudioTransport();
+      await _audioTransport.unsubscribeFromNotifications();
+      _audioTransport.resetPauseState();
       _currentMtu = 23; // Reset MTU to default on disconnect
       await FlutterBluePlus.stopScan();
       
@@ -491,10 +514,16 @@ class BLEService {
 
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
   void enqueuePacket(Uint8List packet) {
-    HardwareService.instance.enqueuePacket(packet);
+    _audioTransport.enqueuePacket(packet);
+  }
+
+  /// Send EOF to ESP32
+  Future<void> sendEOFToEsp32() async {
+    await _audioTransport.sendEOFToEsp32();
   }
 
   Future<void> dispose() async {
+    await _audioTransport.dispose();
     await disconnect();
     await _connectionStateController?.close();
     _connectionStateController = null;

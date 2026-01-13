@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../services/audio_service.dart';
 import '../services/openai_service.dart';
-import '../services/ble_service.dart';
 import '../services/hardware_service.dart';
 import '../services/battery_service.dart';
 import '../widgets/audio_stream_manager.dart';
@@ -49,7 +48,6 @@ class VoiceAssistantScreen extends StatefulWidget {
 class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   final OpenAIService _openAIService = OpenAIService.instance;
-  final BLEService _bleService = BLEService.instance;
   final HardwareService _hardwareService = HardwareService.instance;
   final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -85,7 +83,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   
   void _setupBLEConnectionListener() {
     // Listen to BLE connection state changes (event-based, not polling)
-    _bleConnectionSubscription = _bleService.connectionStateStream?.listen((isConnected) {
+    _bleConnectionSubscription = _hardwareService.connectionStateStream?.listen((isConnected) {
       if (mounted) {
         setState(() {
           _isConnected = isConnected;
@@ -109,7 +107,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     
     // Set initial connection state
     setState(() {
-      _isConnected = _bleService.isConnected;
+      _isConnected = _hardwareService.isConnected;
     });
   }
 
