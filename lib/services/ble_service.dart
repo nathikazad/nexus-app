@@ -88,6 +88,11 @@ class BLEService {
 
   Future<bool> initialize() async {
     try {
+      // Configure FlutterBluePlus for background operation
+      await FlutterBluePlus.setOptions(
+        restoreState: true,  // Enable state restoration
+      );
+      
       // Check if Bluetooth is available
       if (await FlutterBluePlus.isSupported == false) {
         debugPrint('Bluetooth not supported');
@@ -328,8 +333,20 @@ class BLEService {
     try {
       debugPrint('Connecting to device...');
       
-      // Connect to device
-      await _device!.connect(timeout: const Duration(seconds: 15));
+      // Connect to device with auto-connect enabled for background operation
+      // Note: mtu must be null when autoConnect is true (flutter_blue_plus requirement)
+      await _device!.connect(
+        timeout: const Duration(seconds: 15),
+        autoConnect: true,  // Enable auto-reconnection in background
+        mtu: null,  // Required to be null when autoConnect is true
+      );
+      
+      // Wait for connection to be fully established (important with autoConnect)
+      await _device!.connectionState.firstWhere(
+        (state) => state == BluetoothConnectionState.connected,
+        orElse: () => BluetoothConnectionState.disconnected,
+      );
+      
       _isConnected = true;
       _connectionStateController?.add(true);
       debugPrint('Connected!');
@@ -390,13 +407,9 @@ class BLEService {
         return false;
       }
       
-      // Request larger MTU (iOS may cap at 185, Android supports up to 517)
-      try {
-        final requestedMtu = await _device!.requestMtu(512);
-        debugPrint('Requested MTU: $requestedMtu bytes');
-      } catch (e) {
-        debugPrint('Error requesting MTU: $e');
-      }
+      // Note: Cannot request MTU when autoConnect is enabled (flutter_blue_plus limitation)
+      // The device will negotiate MTU automatically, and we'll listen for updates below
+      // For background operation, autoConnect takes priority over explicit MTU request
       
       // Get and print initial MTU size
       try {
@@ -413,7 +426,7 @@ class BLEService {
         debugPrint('MTU updated: $mtu bytes');
       });
       
-      // Listen for disconnection
+      // Listen for disconnection and restored connections
       _connectionSubscription = _device!.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
           debugPrint('Device disconnected');
@@ -430,6 +443,14 @@ class BLEService {
           _isConnected = true;
           _connectionStateController?.add(true);
           _isConnecting = false; // Reset connecting flag when connected
+          
+          // Check if characteristics need to be reinitialized (e.g., after restore)
+          // This handles the case where the OS restores the connection but characteristics aren't set up
+          if (_audioTransport?.audioRxCharacteristic == null || 
+              _batteryCharacteristic == null) {
+            debugPrint('Connection restored, reinitializing characteristics...');
+            _reinitializeAfterRestore();
+          }
         }
       });
 
@@ -439,6 +460,84 @@ class BLEService {
       _isConnected = false;
       _connectionStateController?.add(false);
       return false;
+    }
+  }
+
+  /// Reinitialize characteristics after state restoration
+  Future<void> _reinitializeAfterRestore() async {
+    if (_device == null) {
+      return;
+    }
+    
+    try {
+      // Wait for connection to be fully established
+      await _device!.connectionState.firstWhere(
+        (state) => state == BluetoothConnectionState.connected,
+        orElse: () => BluetoothConnectionState.disconnected,
+      );
+      
+      if (!_isConnected) {
+        _isConnected = true;
+        _connectionStateController?.add(true);
+      }
+      
+      debugPrint('Reinitializing characteristics after restore...');
+      
+      // Rediscover services and characteristics
+      List<BluetoothService> services = await _device!.discoverServices();
+      debugPrint('Discovered ${services.length} services after restore');
+
+      // Find the service and characteristics
+      BluetoothService? targetService;
+      for (BluetoothService service in services) {
+        if (service.uuid.toString().toLowerCase() == serviceUuid.toLowerCase()) {
+          targetService = service;
+          break;
+        }
+      }
+
+      if (targetService == null) {
+        debugPrint('Service not found after restore: $serviceUuid');
+        return;
+      }
+
+      // Initialize audio transport with TX/RX characteristics
+      if (_audioTransport == null) {
+        debugPrint('Audio transport not initialized after restore');
+        return;
+      }
+      
+      if (!_audioTransport!.initializeCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+        debugPrint('Failed to initialize audio TX/RX characteristics after restore');
+        return;
+      }
+
+      // Find battery, RTC, haptic, and device name characteristics
+      for (BluetoothCharacteristic char in targetService.characteristics) {
+        if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
+          _batteryCharacteristic = char;
+          debugPrint('Found Battery characteristic after restore');
+        } else if (char.uuid.toString().toLowerCase() == rtcCharacteristicUuid.toLowerCase()) {
+          _rtcCharacteristic = char;
+          debugPrint('Found RTC characteristic after restore');
+        } else if (char.uuid.toString().toLowerCase() == hapticCharacteristicUuid.toLowerCase()) {
+          _hapticCharacteristic = char;
+          debugPrint('Found Haptic characteristic after restore');
+        } else if (char.uuid.toString().toLowerCase() == deviceNameCharacteristicUuid.toLowerCase()) {
+          _deviceNameCharacteristic = char;
+          debugPrint('Found Device Name characteristic after restore');
+        }
+      }
+
+      // Subscribe to audio TX notifications via transport
+      if (!await _audioTransport!.subscribeToNotifications()) {
+        debugPrint('Failed to subscribe to audio notifications after restore');
+        return;
+      }
+      
+      debugPrint('Successfully reinitialized after restore');
+    } catch (e) {
+      debugPrint('Error reinitializing after restore: $e');
     }
   }
 

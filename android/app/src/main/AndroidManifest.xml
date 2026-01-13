@@ -12,6 +12,11 @@
     <!-- Microphone permission for audio recording -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     
+    <!-- Foreground service for background BLE -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
     <!-- Bluetooth feature declaration -->
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
@@ -47,6 +52,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- FlutterBluePlus foreground service for background BLE -->
+        <service
+            android:name="com.boskokg.flutter_blue_plus.FlutterBluePlusService"
+            android:foregroundServiceType="connectedDevice"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
