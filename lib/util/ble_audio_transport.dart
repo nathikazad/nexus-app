@@ -81,20 +81,6 @@ class BLEAudioTransport {
     _notificationSubscription = null;
   }
   
-  /// Send data via audio RX characteristic (outgoing data to ESP32)
-  Future<void> sendData(Uint8List data) async {
-    if (_audioRxCharacteristic == null || data.isEmpty) {
-      return;
-    }
-    
-    try {
-      await _audioRxCharacteristic!.write(data, withoutResponse: true);
-    } catch (e) {
-      debugPrint('[TX] Error sending audio data: $e');
-      rethrow;
-    }
-  }
-  
   /// Handle incoming notifications from audio TX characteristic
   void _handleNotification(List<int> data) {
     if (data.isEmpty) return;

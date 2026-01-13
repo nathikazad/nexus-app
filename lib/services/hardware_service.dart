@@ -323,7 +323,7 @@ class HardwareService {
         _bleService.enqueuePacket(packet);
         
         _framesSent++;
-        debugPrint('[QUEUE] Enqueued frame $_framesSent (${opusPacket.length} bytes Opus)');
+        // debugPrint('[QUEUE] Enqueued frame $_framesSent (${opusPacket.length} bytes Opus)');
       }
     } catch (e) {
       debugPrint('Error sending WAV to ESP32: $e');

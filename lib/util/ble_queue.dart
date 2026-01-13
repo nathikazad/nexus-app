@@ -13,6 +13,7 @@ class PacketQueue {
   Uint8List _currentBatch = Uint8List(0);
   bool _senderRunning = false;
   Timer? _senderTimer;
+  bool _isProcessing = false;
   
   // Dependencies provided via callbacks
   final bool Function() _isConnected;
@@ -41,7 +42,7 @@ class PacketQueue {
     // If adding this packet would exceed MTU and we have a batch, enqueue current batch
     if (_currentBatch.isNotEmpty && _currentBatch.length + packet.length > mtu) {
       _packetQueue.add(_currentBatch);
-      debugPrint('[BATCH] Enqueued batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
+      // debugPrint('[BATCH] Enqueued batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
       _currentBatch = Uint8List(0);
     }
 
@@ -89,7 +90,7 @@ class PacketQueue {
       return;
     }
     _senderRunning = true;
-    _senderTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
+    _senderTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) {
       _processQueue();
     });
     debugPrint('[SENDER] Started background packet sender');
@@ -105,11 +106,13 @@ class PacketQueue {
 
   /// Process the packet queue - sends ready-to-send batches
   Future<void> _processQueue() async {
-    if (!_isConnected() || _getRxCharacteristic() == null || _isPaused() || _packetQueue.isEmpty) {
+    if (!_isConnected() || _getRxCharacteristic() == null || _isPaused() || _packetQueue.isEmpty || _isProcessing) {
       return;
     }
-
+    _isProcessing = true;
+    print('Processing queue');
     try {
+      int packetsSent = 0;
       // Process one batch at a time (batches are already constructed)
       while (_packetQueue.isNotEmpty && !_isPaused()) {
         final batch = _packetQueue.first;
@@ -122,14 +125,23 @@ class PacketQueue {
           debugPrint('[SEND] Sent EOF packet');
           break; // EOF is always the last packet
         }
+
+
         
         // Send the batch (already batched up to MTU)
         _packetQueue.removeFirst();
         await _sendBatch(batch);
-        await Future.delayed(const Duration(milliseconds: 5));
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (++packetsSent >= 5) {
+          print('Exiting after 5 packets');
+          break;
+        }
       }
     } catch (e) {
       debugPrint('[SENDER] Error processing queue: $e');
+    }
+    finally {
+      _isProcessing = false;
     }
   }
 
@@ -141,7 +153,10 @@ class PacketQueue {
     }
 
     try {
-      debugPrint('[SEND] Sending batch: ${batch.length} bytes');
+      final now = DateTime.now();
+      final seconds = now.millisecondsSinceEpoch ~/ 1000;
+      final milliseconds = now.millisecondsSinceEpoch % 1000;
+      debugPrint('[SEND] Sending batch: ${batch.length} bytes [${seconds}.${milliseconds.toString().padLeft(3, '0')}]');
       await rxCharacteristic.write(batch, withoutResponse: true);
     } catch (e) {
       debugPrint('[SEND] Error sending batch: $e');

@@ -137,7 +137,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           String speaker = data['speaker']!;
           String word = data['word']!;
 
-          print('speaker: $speaker, word: $word');
+          // print('speaker: $speaker, word: $word');
           setState(() {
             if (speaker == 'AI') {
               responseDone = false;
