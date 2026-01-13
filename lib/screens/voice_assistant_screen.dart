@@ -7,6 +7,7 @@ import '../services/audio_service.dart';
 import '../services/openai_service.dart';
 import '../services/ble_service.dart';
 import '../services/hardware_service.dart';
+import '../services/battery_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';

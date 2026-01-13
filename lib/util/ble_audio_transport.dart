@@ -8,6 +8,7 @@ import 'ble_queue.dart';
 
 /// Handles audio RX/TX characteristic communication for BLE
 class BLEAudioTransport {
+  
   // Signal constants
   static const int signalEof = 0xFFFC;
   static const int signalPause = 0xFFFE;
@@ -32,29 +33,53 @@ class BLEAudioTransport {
   StreamSubscription<void>? _eofSubscription;
   
   // Callbacks for handling processed audio
-  final void Function(Uint8List)? onPcm24Chunk;
-  final void Function()? onEof;
+  void Function(Uint8List)? onPcm24Chunk;
+  void Function()? onEof;
   
   // Stream for OpenAI to BLE relayer
-  final Stream<Uint8List>? _openAiAudioOutStream;
+  Stream<Uint8List>? _openAiAudioOutStream;
   
   // Dependencies for PacketQueue (provided via callbacks)
-  final bool Function()? _isConnected;
-  final int Function()? _getMTU;
-  
+  bool Function()? _isConnected;
+  int Function()? _getMTU;
   int _framesSent = 0;
   bool _paused = false;
   bool _audioProcessingInitialized = false;
+  /// Get Opus packet stream
+  Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
   
-  BLEAudioTransport({
-    this.onPcm24Chunk,
-    this.onEof,
+  /// Get EOF stream
+  Stream<void>? get eofStream => _eofController?.stream;
+  
+  /// Get PCM24 stream (processed audio)
+  Stream<Uint8List>? get pcm24Stream => _pcm24Stream;
+  
+  /// Get audio RX characteristic for external use (e.g., PacketQueue)
+  BluetoothCharacteristic? get audioRxCharacteristic => _audioRxCharacteristic;
+  
+  /// Get pause state
+  bool get isPaused => _paused;
+  
+  /// Reset pause state
+  void resetPauseState() {
+    _paused = false;
+  }
+  
+  
+  /// Initialize audio transport with callbacks and dependencies
+  void initialize({
+    void Function(Uint8List)? onPcm24Chunk,
+    void Function()? onEof,
     Stream<Uint8List>? openAiAudioOutStream,
     bool Function()? isConnected,
     int Function()? getMTU,
-  }) : _isConnected = isConnected,
-       _getMTU = getMTU,
-       _openAiAudioOutStream = openAiAudioOutStream;
+  }) {
+    this.onPcm24Chunk = onPcm24Chunk;
+    this.onEof = onEof;
+    _openAiAudioOutStream = openAiAudioOutStream;
+    _isConnected = isConnected;
+    _getMTU = getMTU;
+  }
   
   /// Initialize audio TX and RX characteristics from discovered service and subscribe to notifications
   Future<bool> initializeAudioTransportCharacteristics(BluetoothService service, String audioTxUuid, String audioRxUuid) async {
@@ -77,28 +102,6 @@ class BLEAudioTransport {
     }
     
     // Subscribe to audio TX notifications (incoming data from ESP32)
-    if (_audioTxCharacteristic == null) {
-      return false;
-    }
-    
-    try {
-      await _audioTxCharacteristic!.setNotifyValue(true);
-      _notificationSubscription = _audioTxCharacteristic!.lastValueStream.listen(
-        _handleNotification,
-        onError: (error) {
-          debugPrint('Notification error: $error');
-        },
-      );
-      debugPrint('Subscribed to audio notifications');
-      return true;
-    } catch (e) {
-      debugPrint('Error subscribing to notifications: $e');
-      return false;
-    }
-  }
-  
-  /// Subscribe to audio TX notifications (incoming data from ESP32)
-  Future<bool> subscribeToNotifications() async {
     if (_audioTxCharacteristic == null) {
       return false;
     }
@@ -285,14 +288,7 @@ class BLEAudioTransport {
     enqueueEOF();
   }
   
-  /// Get frames sent count
-  int get framesSent => _framesSent;
-  
-  /// Increment frames sent count
-  void incrementFramesSent() {
-    _framesSent++;
-  }
-  
+
   /// Start OpenAI to BLE relayer (transforms PCM24 chunks and queues them for sending)
   Future<void> startOpenAiToBleRelayer(Stream<Uint8List> pcm24ChunkStream) async {
     try {
@@ -329,36 +325,13 @@ class BLEAudioTransport {
         
         // Enqueue packet
         enqueuePacket(packet);
-        
-        incrementFramesSent();
-        // debugPrint('[QUEUE] Enqueued frame $_framesSent (${opusPacket.length} bytes Opus)');
       }
     } catch (e) {
       debugPrint('Error sending WAV to ESP32: $e');
       rethrow;
     }
   }
-  
-  /// Get Opus packet stream
-  Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
-  
-  /// Get EOF stream
-  Stream<void>? get eofStream => _eofController?.stream;
-  
-  /// Get PCM24 stream (processed audio)
-  Stream<Uint8List>? get pcm24Stream => _pcm24Stream;
-  
-  /// Get audio RX characteristic for external use (e.g., PacketQueue)
-  BluetoothCharacteristic? get audioRxCharacteristic => _audioRxCharacteristic;
-  
-  /// Get pause state
-  bool get isPaused => _paused;
-  
-  /// Reset pause state
-  void resetPauseState() {
-    _paused = false;
-  }
-  
+
   /// Dispose resources
   Future<void> dispose() async {
     await unsubscribeFromNotifications();

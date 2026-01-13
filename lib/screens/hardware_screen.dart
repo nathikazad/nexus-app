@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/hardware_service.dart';
+import '../services/battery_service.dart';
 import '../services/ble_service.dart';
 import 'device_selection_screen.dart';
 

@@ -315,7 +315,7 @@ class BLEService {
 
       // Initialize audio transport with TX/RX characteristics via HardwareService
       final hardwareService = HardwareService.instance;
-      if (!await hardwareService.initAudioTransport(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+      if (!await hardwareService.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
         debugPrint('Failed to initialize audio TX/RX characteristics');
         await disconnect();
         return false;
@@ -431,7 +431,7 @@ class BLEService {
 
       // Initialize audio transport with TX/RX characteristics via HardwareService
       final hardwareService = HardwareService.instance;
-      if (!await hardwareService.initAudioTransport(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+      if (!await hardwareService.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
         debugPrint('Failed to initialize audio TX/RX characteristics after restore');
         return;
       }
