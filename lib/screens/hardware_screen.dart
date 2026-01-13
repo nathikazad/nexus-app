@@ -20,9 +20,11 @@ class _HardwareScreenState extends State<HardwareScreen> {
   bool? _isCharging;
   String? _rtcTimeDisplay;
   String? _rtcTimezone;
+  String? _deviceName;
   bool _isConnected = false;
   bool _isSettingRTC = false;
   bool _isPulsingHaptic = false;
+  bool _isSettingDeviceName = false;
   
   StreamSubscription<bool>? _connectionSubscription;
   StreamSubscription<BatteryData>? _batterySubscription;
@@ -40,6 +42,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
     // Read immediately
     _hardwareService.readBattery();
     _readRTCData();
+    _readDeviceName();
     
     // Refresh battery and RTC data every 1 second
     _batteryRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -70,6 +73,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
             _isCharging = null;
             _rtcTimeDisplay = null;
             _rtcTimezone = null;
+            _deviceName = null;
             _stopRefreshTimers();
           } else {
             // Restart timers when connected
@@ -112,6 +116,109 @@ class _HardwareScreenState extends State<HardwareScreen> {
       }
     } catch (e) {
       debugPrint('Error reading RTC data: $e');
+    }
+  }
+
+  Future<void> _readDeviceName() async {
+    debugPrint('Reading device name');
+    if (!_isConnected) {
+      return;
+    }
+
+    try {
+      debugPrint('Reading device name from device');
+      final name = await _hardwareService.readDeviceName();
+      debugPrint('Device name read: $name');
+      if (mounted) {
+        setState(() {
+          // Use read name if available, otherwise fall back to advertising name
+          _deviceName = name ?? _bleService.deviceName;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error reading device name: $e');
+      // Fall back to advertising name on error
+      if (mounted) {
+        setState(() {
+          _deviceName = _bleService.deviceName;
+        });
+      }
+    }
+  }
+
+  Future<void> _editDeviceName() async {
+    if (!_isConnected || _isSettingDeviceName) {
+      return;
+    }
+
+    // Show dialog with current name pre-filled
+    final TextEditingController nameController = TextEditingController(text: _deviceName ?? '');
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Device Name'),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            maxLength: 19,
+            decoration: const InputDecoration(
+              labelText: 'Device Name',
+              hintText: 'Enter device name (max 19 characters)',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (value) {
+              Navigator.of(context).pop(value);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(nameController.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _isSettingDeviceName = true;
+      });
+
+      try {
+        final success = await _hardwareService.writeDeviceName(result);
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Device name updated successfully')),
+            );
+            // Refresh device name
+            await _readDeviceName();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to update device name')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error updating device name: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSettingDeviceName = false;
+          });
+        }
+      }
     }
   }
 
@@ -215,7 +322,8 @@ class _HardwareScreenState extends State<HardwareScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final deviceName = _bleService.deviceName;
+    // Use stored device name if available, otherwise fall back to advertising name
+    final displayName = _deviceName ?? _bleService.deviceName;
     
     return Scaffold(
       appBar: AppBar(
@@ -229,26 +337,61 @@ class _HardwareScreenState extends State<HardwareScreen> {
           ),
         ],
       ),
-      body: Center(
+      body: SingleChildScrollView(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Device name
-            if (deviceName != null) ...[
-              Text(
-                'Device',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
+            if (displayName != null) ...[
               const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: _isConnected && !_isSettingDeviceName ? _editDeviceName : null,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
               Text(
-                deviceName,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          displayName,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
+                        ),
+                        if (_isSettingDeviceName) ...[
+                          const SizedBox(width: 8),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (_isConnected) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: _isPulsingHaptic
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.vibration, size: 20),
+                      onPressed: _isPulsingHaptic ? null : _pulseHaptic,
+                      tooltip: 'Vibrate',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 32),
             ],
@@ -264,16 +407,16 @@ class _HardwareScreenState extends State<HardwareScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  _isConnected && _batteryPercentage != null
-                      ? '$_batteryPercentage%'
-                      : '--',
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: _isConnected && _batteryPercentage != null
-                        ? _getBatteryColor(_batteryPercentage!)
-                        : Colors.grey,
-                  ),
+            Text(
+              _isConnected && _batteryPercentage != null
+                  ? '$_batteryPercentage%'
+                  : '--',
+              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: _isConnected && _batteryPercentage != null
+                    ? _getBatteryColor(_batteryPercentage!)
+                    : Colors.grey,
+              ),
                 ),
                 if (_isConnected && _isCharging == true) ...[
                   const SizedBox(width: 8),
@@ -285,15 +428,6 @@ class _HardwareScreenState extends State<HardwareScreen> {
                 ],
               ],
             ),
-            if (_isConnected && _isCharging != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                _isCharging! ? 'Charging' : 'Not Charging',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: _isCharging! ? Colors.green : Colors.grey[600],
-                ),
-              ),
-            ],
             
             const SizedBox(height: 32),
             
@@ -327,6 +461,10 @@ class _HardwareScreenState extends State<HardwareScreen> {
               ),
             ),
             const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
             Text(
               _isConnected && _rtcTimeDisplay != null ? _rtcTimeDisplay! : '--',
               textAlign: TextAlign.center,
@@ -336,6 +474,24 @@ class _HardwareScreenState extends State<HardwareScreen> {
                     ? Colors.blue
                     : Colors.grey,
               ),
+                ),
+                if (_isConnected && _rtcTimeDisplay != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: _isSettingRTC
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.sync, size: 24),
+                    onPressed: _isSettingRTC ? null : _setRTCTime,
+                    tooltip: 'Sync with System Time',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ],
             ),
             if (_isConnected && _rtcTimezone != null) ...[
               const SizedBox(height: 4),
@@ -347,35 +503,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
                 ),
               ),
             ],
-            if (_isConnected && _rtcTimeDisplay != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _isSettingRTC ? null : _setRTCTime,
-                icon: _isSettingRTC
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.update),
-                label: Text(_isSettingRTC ? 'Setting...' : 'Set from System Time'),
-              ),
-            ],
             
-            if (_isConnected) ...[
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: _isPulsingHaptic ? null : _pulseHaptic,
-                icon: _isPulsingHaptic
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.vibration),
-                label: Text(_isPulsingHaptic ? 'Pulsing...' : 'Pulse Haptic'),
-              ),
-            ],
             
             if (!_isConnected) ...[
               const SizedBox(height: 32),
@@ -387,6 +515,8 @@ class _HardwareScreenState extends State<HardwareScreen> {
               ),
             ],
           ],
+            ),
+          ),
         ),
       ),
     );

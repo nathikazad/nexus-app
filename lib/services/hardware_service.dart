@@ -403,8 +403,8 @@ class HardwareService {
     // Read battery immediately
     readBattery();
     
-    // Poll every 5 minutes
-    _batteryPollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+    // Poll every 1 second for real-time updates
+    _batteryPollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       readBattery();
     });
   }
@@ -487,6 +487,57 @@ class HardwareService {
       return true;
     } catch (e) {
       debugPrint('Error triggering haptic pulse: $e');
+      return false;
+    }
+  }
+
+  /// Read device name from device
+  /// @return Device name string, or null on failure
+  Future<String?> readDeviceName() async {
+    final deviceNameCharacteristic = _bleService.deviceNameCharacteristic;
+    if (!_bleService.isConnected || deviceNameCharacteristic == null) {
+      return null;
+    }
+
+    try {
+      final data = await deviceNameCharacteristic.read();
+      if (data.isNotEmpty) {
+        // Convert bytes to string (UTF-8)
+        final name = String.fromCharCodes(data);
+        debugPrint('Device name read: "$name"');
+        return name;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error reading device name: $e');
+      return null;
+    }
+  }
+
+  /// Write device name to device
+  /// @param name Device name to set (max 19 characters)
+  /// @return true on success, false on failure
+  Future<bool> writeDeviceName(String name) async {
+    final deviceNameCharacteristic = _bleService.deviceNameCharacteristic;
+    if (!_bleService.isConnected || deviceNameCharacteristic == null) {
+      debugPrint('Cannot write device name: not connected or characteristic not available');
+      return false;
+    }
+
+    // Validate name length (max 19 chars)
+    if (name.length >= 20) {
+      debugPrint('Device name too long: ${name.length} (max 19)');
+      return false;
+    }
+
+    try {
+      // Convert string to UTF-8 bytes
+      final data = Uint8List.fromList(name.codeUnits);
+      await deviceNameCharacteristic.write(data, withoutResponse: false);
+      debugPrint('Device name written: "$name"');
+      return true;
+    } catch (e) {
+      debugPrint('Error writing device name: $e');
       return false;
     }
   }

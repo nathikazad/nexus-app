@@ -22,12 +22,14 @@ class BLEService {
   static const String batteryCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; // Battery (READ)
   static const String rtcCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab"; // RTC (READ/WRITE)
   static const String hapticCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ac"; // Haptic (WRITE)
+  static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad"; // Device Name (READ/WRITE)
 
   BluetoothDevice? _device;
   BLEAudioTransport? _audioTransport;
   BluetoothCharacteristic? _batteryCharacteristic;
   BluetoothCharacteristic? _rtcCharacteristic;
   BluetoothCharacteristic? _hapticCharacteristic;
+  BluetoothCharacteristic? _deviceNameCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
   StreamController<Uint8List>? _opusPacketController;
@@ -48,6 +50,7 @@ class BLEService {
   BluetoothCharacteristic? get batteryCharacteristic => _batteryCharacteristic;
   BluetoothCharacteristic? get rtcCharacteristic => _rtcCharacteristic;
   BluetoothCharacteristic? get hapticCharacteristic => _hapticCharacteristic;
+  BluetoothCharacteristic? get deviceNameCharacteristic => _deviceNameCharacteristic;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   BluetoothDevice? get currentDevice => _device;
@@ -272,9 +275,12 @@ class BLEService {
           for (ScanResult result in results) {
             if (deviceFound || _isConnected) break;
             
-            final name = result.device.platformName.isNotEmpty 
+            // Get device name from advertising packet (as set in EEPROM)
+            final name = result.advertisementData.advName.isNotEmpty 
+                ? result.advertisementData.advName 
+                : (result.device.platformName.isNotEmpty 
                 ? result.device.platformName 
-                : result.device.advName;
+                    : result.device.advName);
             
             // Device already matched by service UUID via withServices filter
             // All results here have the matching service UUID
@@ -360,7 +366,7 @@ class BLEService {
         return false;
       }
 
-      // Find battery, RTC, and haptic characteristics
+      // Find battery, RTC, haptic, and device name characteristics
       for (BluetoothCharacteristic char in targetService.characteristics) {
         if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
           _batteryCharacteristic = char;
@@ -371,6 +377,9 @@ class BLEService {
         } else if (char.uuid.toString().toLowerCase() == hapticCharacteristicUuid.toLowerCase()) {
           _hapticCharacteristic = char;
           debugPrint('Found Haptic characteristic');
+        } else if (char.uuid.toString().toLowerCase() == deviceNameCharacteristicUuid.toLowerCase()) {
+          _deviceNameCharacteristic = char;
+          debugPrint('Found Device Name characteristic');
         }
       }
 
@@ -450,6 +459,7 @@ class BLEService {
       _batteryCharacteristic = null;
       _rtcCharacteristic = null;
       _hapticCharacteristic = null;
+      _deviceNameCharacteristic = null;
 
       if (_device != null && _isConnected) {
         await _device!.disconnect();

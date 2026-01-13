@@ -64,6 +64,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   String _currentTranscript = '';
   String? _currentlyPlayingAudio;
   int? _batteryPercentage;
+  bool? _isCharging;
   // int _turnCount = 0;
   
   StreamSubscription<Uint8List>? _audioSubscription;
@@ -89,6 +90,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           _isConnected = isConnected;
           if (!isConnected) {
             _batteryPercentage = null;
+            _isCharging = null;
           }
         });
       }
@@ -99,6 +101,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       if (mounted) {
         setState(() {
           _batteryPercentage = batteryData.percentage;
+          _isCharging = batteryData.isCharging;
         });
       }
     });
@@ -355,6 +358,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         isConnected: _isConnected,
         isPlayingStreamedAudio: _audioStreamManager.isPlayingStreamedAudio,
         batteryPercentage: _batteryPercentage,
+        isCharging: _isCharging,
         onBluetoothIconTap: () {
           Navigator.push(
             context,
@@ -403,12 +407,14 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
   final bool isConnected;
   final bool isPlayingStreamedAudio;
   final int? batteryPercentage;
+  final bool? isCharging;
   final VoidCallback? onBluetoothIconTap;
 
   const _VoiceAssistantAppBar({
     required this.isConnected,
     required this.isPlayingStreamedAudio,
     this.batteryPercentage,
+    this.isCharging,
     this.onBluetoothIconTap,
   });
 
@@ -427,22 +433,30 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
                 const Icon(Icons.volume_up, color: Colors.blue, size: 16),
                 const SizedBox(width: 4),
               ],
-              // Battery percentage (only show when connected)
+              // Battery indicator (only show when connected)
               if (isConnected && batteryPercentage != null) ...[
-                Icon(
-                  Icons.battery_std,
-                  color: _getBatteryColor(batteryPercentage!),
-                  size: 18,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '$batteryPercentage%',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _getBatteryColor(batteryPercentage!),
-                    fontWeight: FontWeight.w500,
+                if (isCharging == true) ...[
+                  const Icon(
+                    Icons.battery_charging_full,
+                    color: Colors.green,
+                    size: 18,
                   ),
-                ),
+                ] else ...[
+                  Icon(
+                    Icons.battery_std,
+                    color: _getBatteryColor(batteryPercentage!),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$batteryPercentage%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _getBatteryColor(batteryPercentage!),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8),
               ],
               GestureDetector(
