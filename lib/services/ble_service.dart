@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:nexus_voice_assistant/services/openai_service.dart';
 import '../util/ble_audio_transport.dart';
 
 class BLEService {
@@ -53,7 +52,11 @@ class BLEService {
     return 20; // Fallback: default BLE MTU (23) - 3 = 20 bytes payload
   }
 
-  Future<bool> initialize() async {
+  Future<bool> initialize({
+    void Function(Uint8List)? onPcm24ChunkReceived,
+    void Function()? onEofReceived,
+    Stream<Uint8List>? openAiAudioOutStream,
+  }) async {
     try {
       // Configure FlutterBluePlus for background operation
       await FlutterBluePlus.setOptions(
@@ -74,13 +77,9 @@ class BLEService {
 
       // Initialize audio transport with callbacks and dependencies
       _audioTransport.initialize(
-        onPcm24Chunk: (pcm24Chunk) {
-          OpenAIService.instance.sendAudio(pcm24Chunk, queryOrigin.Hardware);
-        },
-        onEof: () {
-          OpenAIService.instance.createResponse();
-        },
-        openAiAudioOutStream: OpenAIService.instance.hardWareAudioOutStream,
+        onPcm24Chunk: onPcm24ChunkReceived,
+        onEof: onEofReceived,
+        openAiAudioOutStream: openAiAudioOutStream,
         isConnected: () => isConnected,
         getMTU: () => getMTU(),
       );

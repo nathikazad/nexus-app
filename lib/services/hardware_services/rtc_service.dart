@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'ble_service.dart';
+import '../ble_service.dart';
 
 /// RTC time structure
 class RTCTime {

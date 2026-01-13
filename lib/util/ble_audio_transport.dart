@@ -99,8 +99,8 @@ class BLEAudioTransport {
     if (_audioTxCharacteristic == null || _audioRxCharacteristic == null) {
       debugPrint('Failed to initialize audio TX/RX characteristics');
       return false;
-    }
-    
+  }
+  
     // Subscribe to audio TX notifications (incoming data from ESP32)
     if (_audioTxCharacteristic == null) {
       return false;
@@ -331,7 +331,7 @@ class BLEAudioTransport {
       rethrow;
     }
   }
-
+  
   /// Dispose resources
   Future<void> dispose() async {
     await unsubscribeFromNotifications();
