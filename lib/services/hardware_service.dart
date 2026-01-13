@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:nexus_voice_assistant/services/openai_service.dart';
-import 'package:opus_dart/opus_dart.dart';
 import '../services/ble_service.dart';
-import '../util/audio.dart';
+import '../util/ble_audio_transport.dart';
 
 /// Battery data structure
 class BatteryData {
@@ -163,26 +163,43 @@ class HardwareService {
 
   final BLEService _bleService = BLEService.instance;
   
-  StreamOpusDecoder? _streamDecoder;
-  OpusToPcm16Transformer? _opusToPcm16Transformer;
-  Pcm16ToPcm24Transformer? _pcm16ToPcm24Transformer;
+  // Audio transport
+  BLEAudioTransport? _audioTransport;
   
-  StreamSubscription<Uint8List>? _opusPacketSubscription;
-  StreamSubscription<Uint8List>? _pcm24ChunkSubscription;
-  StreamSubscription<void>? _eofSubscription;
   StreamSubscription<bool>? _connectionStateSubscription;
   
-  Stream<Uint8List>? _pcm24Stream;
   StreamController<BatteryData>? _batteryController; // Battery data (percentage and voltage)
   Timer? _batteryPollTimer;
   
   bool _isInitialized = false;
 
-  Stream<Uint8List>? get pcm24Stream => _pcm24Stream;
   Stream<BatteryData>? get batteryStream => _batteryController?.stream;
   bool get isInitialized => _isInitialized;
+  
+  bool get isPaused => _audioTransport?.isPaused ?? false;
+  
+  // Device name getter
+  String? get deviceName {
+    final device = _bleService.currentDevice;
+    if (device == null) return null;
+    final name = device.platformName.isNotEmpty 
+        ? device.platformName 
+        : device.advName;
+    // If name starts with "Nexus-", return it as-is, otherwise format from MAC
+    if (name.startsWith('Nexus-')) {
+      return name;
+    }
+    // Extract last 5 chars of MAC address
+    final macStr = device.remoteId.toString();
+    // MAC format: "XX:XX:XX:XX:XX:XX" or similar, extract last 5 hex chars
+    final macParts = macStr.replaceAll(':', '').replaceAll('-', '').toUpperCase();
+    if (macParts.length >= 5) {
+      final last5 = macParts.substring(macParts.length - 5);
+      return 'Nexus-$last5';
+    }
+    return name;
+  }
 
-  int _framesSent = 0;
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
@@ -191,62 +208,21 @@ class HardwareService {
       // Wait for BLE service to be initialized
       await _bleService.initialize();
       
-      // Create decoder and transformers
-      _streamDecoder = AudioProcessor.createDecoder();
-      _opusToPcm16Transformer = OpusToPcm16Transformer(_streamDecoder!);
-      _pcm16ToPcm24Transformer = Pcm16ToPcm24Transformer();
-      
-      // Set up the stream pipeline: Opus packets -> PCM16 -> PCM24 chunks
-      final opusStream = _bleService.opusPacketStream;
-      final eofStream = _bleService.eofStream;
-      
-      if (opusStream == null) {
-        debugPrint('HardwareService: opusPacketStream is null');
-        return false;
-      }
-      
-      if (eofStream == null) {
-        debugPrint('HardwareService: eofStream is null');
-        return false;
-      }
-      
-      final pcm16Stream = opusStream.transform(_opusToPcm16Transformer!);
-      final pcm24Stream = pcm16Stream.transform(_pcm16ToPcm24Transformer!);
-      
-      // Store the PCM24 stream
-      _pcm24Stream = pcm24Stream;
-
-      // Store the Opus packet subscription
-      _opusPacketSubscription = opusStream.listen(
-        (opusPacket) {
-          debugPrint('HardwareService: Received Opus packet: ${opusPacket.length} bytes');
-        },
-        onError: (e) {
-          debugPrint('HardwareService: Error in Opus stream: $e');
-        },
-      );
-      
-      // Listen for PCM24 chunks (transformed from Opus packets)
-      _pcm24ChunkSubscription = pcm24Stream.listen(
-        (pcm24Chunk) {
-          debugPrint('HardwareService: Processed PCM24 chunk: ${pcm24Chunk.length} bytes');
+      // Initialize audio transport with callbacks and dependencies
+      _audioTransport = BLEAudioTransport(
+        onPcm24Chunk: (pcm24Chunk) {
           OpenAIService.instance.sendAudio(pcm24Chunk, queryOrigin.Hardware);
         },
-        onError: (e) {
-          debugPrint('HardwareService: Error in PCM24 stream: $e');
-        },
-      );
-
-      // Listen for EOF stream
-      _eofSubscription = eofStream.listen(
-        (_) {
-          debugPrint('HardwareService: EOF received');
+        onEof: () {
           OpenAIService.instance.createResponse();
         },
-        onError: (e) {
-          debugPrint('HardwareService: Error in EOF stream: $e');
-        },
+        openAiAudioOutStream: OpenAIService.instance.hardWareAudioOutStream,
+        isConnected: () => _bleService.isConnected,
+        getMTU: () => _bleService.getMTU(),
       );
+      
+      // Initialize audio processing pipeline (includes packet queue, stream subscriptions, and OpenAI relayer)
+      _audioTransport!.initializeAudioProcessing();
       
       // Initialize battery controller
       _batteryController = StreamController<BatteryData>.broadcast();
@@ -273,8 +249,6 @@ class HardwareService {
         _startBatteryPolling();
       }
       
-      _startOpenAiToBleRelayer();
-      
       _isInitialized = true;
       return true;
     } catch (e) {
@@ -282,59 +256,43 @@ class HardwareService {
       return false;
     }
   }
-
-
-  /// Transforms Opus packets and queues them for sending to ESP32
-  Future<void> _startOpenAiToBleRelayer() async {
-    try {
-      const int sampleRate = 16000;
-      const int channels = 1;
-    
-      // Create Opus encoder for 60ms frames
-      final encoder = StreamOpusEncoder.bytes(
-        floatInput: false,
-        frameTime: FrameTime.ms60,
-        sampleRate: sampleRate,
-        channels: channels,
-        application: Application.audio,
-        copyOutput: true,
-        fillUpLastFrame: true,
-      );
-      
-      // Create transformers
-      final resampleTransformer = Pcm24ToPcm16Transformer();
-      final encodeTransformer = Pcm16ToOpusTransformer(encoder);
-      
-      // Build the stream pipeline:
-      // WAV file -> 60ms PCM24 chunks -> Resample to PCM16 -> Encode to Opus
-      final pcm24ChunkStream = OpenAIService.instance.hardWareAudioOutStream;
-      final pcm16ChunkStream = pcm24ChunkStream.transform(resampleTransformer);
-      final opusPacketStream = pcm16ChunkStream.transform(encodeTransformer);
-      
-      // Create packets and enqueue them for sending
-      await for (final opusPacket in opusPacketStream) {
-        // Create packet: [length (2 bytes)] + [opus data]
-        Uint8List packet = Uint8List(2 + opusPacket.length);
-        packet[0] = opusPacket.length & 0xFF;
-        packet[1] = (opusPacket.length >> 8) & 0xFF;
-        packet.setRange(2, 2 + opusPacket.length, opusPacket);
-        
-        // Enqueue packet - BLE service will handle batching and sending
-        _bleService.enqueuePacket(packet);
-        
-        _framesSent++;
-        // debugPrint('[QUEUE] Enqueued frame $_framesSent (${opusPacket.length} bytes Opus)');
-      }
-    } catch (e) {
-      debugPrint('Error sending WAV to ESP32: $e');
-      rethrow;
+  
+  /// Get the audio transport instance (for BLEService to access)
+  BLEAudioTransport? get audioTransport => _audioTransport;
+  
+  /// Initialize audio transport characteristics (called from BLEService after connection)
+  Future<bool> initAudioTransport(BluetoothService service, String audioTxUuid, String audioRxUuid) async {
+    if (_audioTransport == null) {
+      debugPrint('Audio transport not initialized');
+      return false;
     }
+    
+    if (!await _audioTransport!.initializeAudioTransportCharacteristics(service, audioTxUuid, audioRxUuid)) {
+      debugPrint('Failed to initialize audio TX/RX characteristics');
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /// Disconnect audio transport (unsubscribe from notifications and reset pause state)
+  Future<void> disconnectAudioTransport() async {
+    if (_audioTransport == null) {
+      return;
+    }
+    
+    await _audioTransport!.unsubscribeFromNotifications();
+    _audioTransport!.resetPauseState();
+  }
+  
+  /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
+  void enqueuePacket(Uint8List packet) {
+    _audioTransport?.enqueuePacket(packet);
   }
 
+  /// Send EOF to ESP32
   Future<void> sendEOFToEsp32() async {
-    // Enqueue EOF packet - it will be sent after all queued audio packets
-    debugPrint('[QUEUE] Enqueuing EOF signal. Total frames sent: $_framesSent');
-    _bleService.enqueueEOF();
+    await _audioTransport?.sendEOFToEsp32();
   }
 
   /// Read battery data from device (percentage, voltage, and charging status)
@@ -543,23 +501,15 @@ class HardwareService {
   }
 
   Future<void> dispose() async {
-    await _opusPacketSubscription?.cancel();
-    await _pcm24ChunkSubscription?.cancel();
-    await _eofSubscription?.cancel();
+    await _audioTransport?.dispose();
     await _connectionStateSubscription?.cancel();
     
     _stopBatteryPolling();
     await _batteryController?.close();
     
-    _opusPacketSubscription = null;
-    _pcm24ChunkSubscription = null;
-    _eofSubscription = null;
     _connectionStateSubscription = null;
     _batteryController = null;
-    _streamDecoder = null;
-    _opusToPcm16Transformer = null;
-    _pcm16ToPcm24Transformer = null;
-    _pcm24Stream = null;
+    _audioTransport = null;
     _isInitialized = false;
   }
 }

@@ -132,7 +132,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
       if (mounted) {
         setState(() {
           // Use read name if available, otherwise fall back to advertising name
-          _deviceName = name ?? _bleService.deviceName;
+          _deviceName = name ?? _hardwareService.deviceName;
         });
       }
     } catch (e) {
@@ -140,7 +140,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
       // Fall back to advertising name on error
       if (mounted) {
         setState(() {
-          _deviceName = _bleService.deviceName;
+          _deviceName = _hardwareService.deviceName;
         });
       }
     }
@@ -323,7 +323,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
   @override
   Widget build(BuildContext context) {
     // Use stored device name if available, otherwise fall back to advertising name
-    final displayName = _deviceName ?? _bleService.deviceName;
+    final displayName = _deviceName ?? _hardwareService.deviceName;
     
     return Scaffold(
       appBar: AppBar(

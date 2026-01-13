@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../util/ble_queue.dart';
-import '../util/ble_audio_transport.dart';
+import 'hardware_service.dart';
 
 class BLEService {
   static final BLEService _instance = BLEService._internal();
@@ -25,27 +24,19 @@ class BLEService {
   static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad"; // Device Name (READ/WRITE)
 
   BluetoothDevice? _device;
-  BLEAudioTransport? _audioTransport;
   BluetoothCharacteristic? _batteryCharacteristic;
   BluetoothCharacteristic? _rtcCharacteristic;
   BluetoothCharacteristic? _hapticCharacteristic;
   BluetoothCharacteristic? _deviceNameCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
-  StreamController<Uint8List>? _opusPacketController;
-  StreamController<void>? _eofController;
   StreamController<bool>? _connectionStateController;
-  
-  // Packet queue and sender
-  PacketQueue? _packetQueue;
   
   bool _isConnected = false;
   bool _isScanning = false;
   bool _isConnecting = false; // Track if connection loop is running
   int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
-  Stream<Uint8List>? get opusPacketStream => _opusPacketController?.stream;
-  Stream<void>? get eofStream => _eofController?.stream;
   Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
   BluetoothCharacteristic? get batteryCharacteristic => _batteryCharacteristic;
   BluetoothCharacteristic? get rtcCharacteristic => _rtcCharacteristic;
@@ -55,27 +46,6 @@ class BLEService {
   bool get isScanning => _isScanning;
   BluetoothDevice? get currentDevice => _device;
   
-  /// Get formatted device name (Nexus-XXXXX format)
-  String? get deviceName {
-    if (_device == null) return null;
-    final name = _device!.platformName.isNotEmpty 
-        ? _device!.platformName 
-        : _device!.advName;
-    // If name starts with "Nexus-", return it as-is, otherwise format from MAC
-    if (name.startsWith('Nexus-')) {
-      return name;
-    }
-    // Extract last 5 chars of MAC address
-    final macStr = _device!.remoteId.toString();
-    // MAC format: "XX:XX:XX:XX:XX:XX" or similar, extract last 5 hex chars
-    final macParts = macStr.replaceAll(':', '').replaceAll('-', '').toUpperCase();
-    if (macParts.length >= 5) {
-      final last5 = macParts.substring(macParts.length - 5);
-      return 'Nexus-$last5';
-    }
-    return name;
-  }
-  
   int getMTU() {
     // Get MTU size (minus 3 bytes for ATT overhead)
     // Returns the current MTU value updated from the callback
@@ -84,7 +54,6 @@ class BLEService {
     }
     return 20; // Fallback: default BLE MTU (23) - 3 = 20 bytes payload
   }
-  bool get isPaused => _audioTransport?.isPaused ?? false;
 
   Future<bool> initialize() async {
     try {
@@ -100,36 +69,10 @@ class BLEService {
       }
 
       // Initialize controllers
-      _opusPacketController = StreamController<Uint8List>.broadcast();
-      _eofController = StreamController<void>.broadcast();
       _connectionStateController = StreamController<bool>.broadcast();
       
       // Emit initial connection state
       _connectionStateController?.add(_isConnected);
-
-      // Initialize audio transport
-      _audioTransport = BLEAudioTransport(
-        onOpusPacket: (packet) {
-          _opusPacketController?.add(packet);
-        },
-        onEof: () {
-          _eofController?.add(null);
-        },
-        onPauseStateChanged: (_) {
-          // Pause state is managed by transport, no action needed here
-        },
-      );
-
-      // Initialize packet queue
-      _packetQueue = PacketQueue(
-        isConnected: () => _isConnected,
-        getMTU: getMTU,
-        getRxCharacteristic: () => _audioTransport?.audioRxCharacteristic,
-        isPaused: () => _audioTransport?.isPaused ?? false,
-      );
-      
-      // Start packet sender
-      _packetQueue?.start();
       
       _scanAndAutoConnectLoop();
 
@@ -370,14 +313,9 @@ class BLEService {
         return false;
       }
 
-      // Initialize audio transport with TX/RX characteristics
-      if (_audioTransport == null) {
-        debugPrint('Audio transport not initialized');
-        await disconnect();
-        return false;
-      }
-      
-      if (!_audioTransport!.initializeCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+      // Initialize audio transport with TX/RX characteristics via HardwareService
+      final hardwareService = HardwareService.instance;
+      if (!await hardwareService.initAudioTransport(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
         debugPrint('Failed to initialize audio TX/RX characteristics');
         await disconnect();
         return false;
@@ -398,13 +336,6 @@ class BLEService {
           _deviceNameCharacteristic = char;
           debugPrint('Found Device Name characteristic');
         }
-      }
-
-      // Subscribe to audio TX notifications via transport
-      if (!await _audioTransport!.subscribeToNotifications()) {
-        debugPrint('Failed to subscribe to audio notifications');
-        await disconnect();
-        return false;
       }
       
       // Note: Cannot request MTU when autoConnect is enabled (flutter_blue_plus limitation)
@@ -427,14 +358,12 @@ class BLEService {
       });
       
       // Listen for disconnection and restored connections
-      _connectionSubscription = _device!.connectionState.listen((state) {
+      _connectionSubscription = _device!.connectionState.listen((state) async {
         if (state == BluetoothConnectionState.disconnected) {
           debugPrint('Device disconnected');
           _isConnected = false;
           _connectionStateController?.add(false);
-          _audioTransport?.unsubscribeFromNotifications();
-          // Clear queue and batch on disconnect
-          _packetQueue?.clear();
+          await hardwareService.disconnectAudioTransport();
           // Restart scanning on disconnect (only if not already connecting)
           if (!_isConnecting) {
             _scanAndAutoConnectLoop();
@@ -446,8 +375,7 @@ class BLEService {
           
           // Check if characteristics need to be reinitialized (e.g., after restore)
           // This handles the case where the OS restores the connection but characteristics aren't set up
-          if (_audioTransport?.audioRxCharacteristic == null || 
-              _batteryCharacteristic == null) {
+          if (_batteryCharacteristic == null) {
             debugPrint('Connection restored, reinitializing characteristics...');
             _reinitializeAfterRestore();
           }
@@ -501,13 +429,9 @@ class BLEService {
         return;
       }
 
-      // Initialize audio transport with TX/RX characteristics
-      if (_audioTransport == null) {
-        debugPrint('Audio transport not initialized after restore');
-        return;
-      }
-      
-      if (!_audioTransport!.initializeCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
+      // Initialize audio transport with TX/RX characteristics via HardwareService
+      final hardwareService = HardwareService.instance;
+      if (!await hardwareService.initAudioTransport(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
         debugPrint('Failed to initialize audio TX/RX characteristics after restore');
         return;
       }
@@ -528,12 +452,6 @@ class BLEService {
           debugPrint('Found Device Name characteristic after restore');
         }
       }
-
-      // Subscribe to audio TX notifications via transport
-      if (!await _audioTransport!.subscribeToNotifications()) {
-        debugPrint('Failed to subscribe to audio notifications after restore');
-        return;
-      }
       
       debugPrint('Successfully reinitialized after restore');
     } catch (e) {
@@ -545,12 +463,10 @@ class BLEService {
     try {
       _isScanning = false;
       _isConnecting = false; // Reset connecting flag on disconnect
-      _audioTransport?.resetPauseState(); // Reset pause state on disconnect
-      _packetQueue?.clear(); // Clear queue on disconnect
+      final hardwareService = HardwareService.instance;
+      await hardwareService.disconnectAudioTransport();
       _currentMtu = 23; // Reset MTU to default on disconnect
       await FlutterBluePlus.stopScan();
-      
-      await _audioTransport?.unsubscribeFromNotifications();
       
       _connectionSubscription?.cancel();
       _connectionSubscription = null;
@@ -575,28 +491,13 @@ class BLEService {
 
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
   void enqueuePacket(Uint8List packet) {
-    _packetQueue?.enqueuePacket(packet);
+    HardwareService.instance.enqueuePacket(packet);
   }
-
-  /// Enqueue an EOF packet. It will be sent after all queued audio packets.
-  /// Flushes any pending batch first.
-  void enqueueEOF() {
-    _packetQueue?.enqueueEOF();
-  }
-
 
   Future<void> dispose() async {
-    _packetQueue?.dispose();
-    await _audioTransport?.dispose();
     await disconnect();
-    await _opusPacketController?.close();
-    await _eofController?.close();
     await _connectionStateController?.close();
-    _opusPacketController = null;
-    _eofController = null;
     _connectionStateController = null;
-    _packetQueue = null;
-    _audioTransport = null;
   }
 }
 
