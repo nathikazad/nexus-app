@@ -239,11 +239,15 @@ class BLEAudioTransport {
     }
     
     // Set up stream subscriptions if callbacks are provided
-    if (onPcm24Chunk != null && _pcm24Stream != null) {
+    // Capture callbacks in local variables to avoid null reference issues
+    final pcm24Callback = onPcm24Chunk;
+    final eofCallback = onEof;
+    
+    if (pcm24Callback != null && _pcm24Stream != null) {
       _pcm24ChunkSubscription = _pcm24Stream!.listen(
         (pcm24Chunk) {
           debugPrint('BLEAudioTransport: Processed PCM24 chunk: ${pcm24Chunk.length} bytes');
-          onPcm24Chunk!(pcm24Chunk);
+          pcm24Callback(pcm24Chunk);
         },
         onError: (e) {
           debugPrint('BLEAudioTransport: Error in PCM24 stream: $e');
@@ -251,11 +255,11 @@ class BLEAudioTransport {
       );
     }
     
-    if (onEof != null && eofStream != null) {
+    if (eofCallback != null && eofStream != null) {
       _eofSubscription = eofStream!.listen(
         (_) {
           debugPrint('BLEAudioTransport: EOF received');
-          onEof!();
+          eofCallback();
         },
         onError: (e) {
           debugPrint('BLEAudioTransport: Error in EOF stream: $e');
