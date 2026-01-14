@@ -40,26 +40,26 @@ class BatteryService {
       _batteryController = StreamController<BatteryData>.broadcast();
       
       // Listen for connection state changes to manage battery polling
-      final connectionStateStream = _bleService.connectionStateStream;
-      if (connectionStateStream != null) {
-        _connectionStateSubscription = connectionStateStream.listen(
-          (isConnected) {
-            if (isConnected) {
-              _startBatteryPolling();
-            } else {
-              _stopBatteryPolling();
-            }
-          },
-          onError: (e) {
-            debugPrint('BatteryService: Error in connection state stream: $e');
-          },
-        );
-      }
+      // final connectionStateStream = _bleService.connectionStateStream;
+      // if (connectionStateStream != null) {
+      //   _connectionStateSubscription = connectionStateStream.listen(
+      //     (isConnected) {
+      //       if (isConnected) {
+      //         _startBatteryPolling();
+      //       } else {
+      //         _stopBatteryPolling();
+      //       }
+      //     },
+      //     onError: (e) {
+      //       debugPrint('BatteryService: Error in connection state stream: $e');
+      //     },
+      //   );
+      // }
       
       // Start battery polling if already connected
-      if (_bleService.isConnected) {
-        _startBatteryPolling();
-      }
+      // if (_bleService.isConnected) {
+      //   _startBatteryPolling();
+      // }
       
       _isInitialized = true;
       return true;

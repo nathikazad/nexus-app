@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/ble_service.dart';
+import '../util/file_transfer.dart';
 import 'hardware_services/battery_service.dart';
 import 'hardware_services/rtc_service.dart';
 import 'hardware_services/name_service.dart';
@@ -39,6 +40,9 @@ class HardwareService {
   Stream<bool>? get connectionStateStream => _bleService.connectionStateStream;
   bool get isConnected => _bleService.isConnected;
   bool get isInitialized => _isInitialized;
+  
+  // File transfer access
+  FileTransfer? get fileTransfer => _bleService.fileTransfer;
 
   // Device name getter
   String? get deviceName => _nameService.deviceName;

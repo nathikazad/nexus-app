@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../util/ble_audio_transport.dart';
+import '../util/ble_file_transport.dart';
+import '../util/file_transfer.dart';
 
 class BLEService {
   BLEService();
@@ -16,18 +18,30 @@ class BLEService {
   static const String rtcCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab"; // RTC (READ/WRITE)
   static const String hapticCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ac"; // Haptic (WRITE)
   static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad"; // Device Name (READ/WRITE)
+  static const String fileTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ae"; // File TX (NOTIFY)
+  static const String fileRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26af"; // File RX (WRITE)
+  static const String fileCtrlCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b0"; // File CTRL (READ/WRITE)
 
   BluetoothDevice? _device;
   BluetoothCharacteristic? _batteryCharacteristic;
   BluetoothCharacteristic? _rtcCharacteristic;
   BluetoothCharacteristic? _hapticCharacteristic;
   BluetoothCharacteristic? _deviceNameCharacteristic;
+  BluetoothCharacteristic? _fileTxCharacteristic;
+  BluetoothCharacteristic? _fileRxCharacteristic;
+  BluetoothCharacteristic? _fileCtrlCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   
   StreamController<bool>? _connectionStateController;
   
   // Audio transport
   final BLEAudioTransport _audioTransport = BLEAudioTransport();
+  
+  // File transport
+  final BLEFileTransport _fileTransport = BLEFileTransport();
+  FileTransfer? _fileTransfer;
+  
+  FileTransfer? get fileTransfer => _fileTransfer;
   
   bool _isConnected = false;
   static bool _isScanning = false;
@@ -39,6 +53,9 @@ class BLEService {
   BluetoothCharacteristic? get rtcCharacteristic => _rtcCharacteristic;
   BluetoothCharacteristic? get hapticCharacteristic => _hapticCharacteristic;
   BluetoothCharacteristic? get deviceNameCharacteristic => _deviceNameCharacteristic;
+  BluetoothCharacteristic? get fileTxCharacteristic => _fileTxCharacteristic;
+  BluetoothCharacteristic? get fileRxCharacteristic => _fileRxCharacteristic;
+  BluetoothCharacteristic? get fileCtrlCharacteristic => _fileCtrlCharacteristic;
   bool get isConnected => _isConnected;
   bool get isScanning => _isScanning;
   BluetoothDevice? get currentDevice => _device;
@@ -342,6 +359,11 @@ class BLEService {
         await disconnect();
         return false;
       }
+      debugPrint('Initializing file transport...');
+      // Initialize file transport
+      if (!await _initializeFileTransport(targetService)) {
+        debugPrint('Failed to initialize file transport');
+      }
 
       // Find battery, RTC, haptic, and device name characteristics
       for (BluetoothCharacteristic char in targetService.characteristics) {
@@ -357,6 +379,15 @@ class BLEService {
         } else if (char.uuid.toString().toLowerCase() == deviceNameCharacteristicUuid.toLowerCase()) {
           _deviceNameCharacteristic = char;
           debugPrint('Found Device Name characteristic');
+        } else if (char.uuid.toString().toLowerCase() == fileTxCharacteristicUuid.toLowerCase()) {
+          _fileTxCharacteristic = char;
+          debugPrint('Found File TX characteristic');
+        } else if (char.uuid.toString().toLowerCase() == fileRxCharacteristicUuid.toLowerCase()) {
+          _fileRxCharacteristic = char;
+          debugPrint('Found File RX characteristic');
+        } else if (char.uuid.toString().toLowerCase() == fileCtrlCharacteristicUuid.toLowerCase()) {
+          _fileCtrlCharacteristic = char;
+          debugPrint('Found File CTRL characteristic');
         }
       }
       
@@ -458,6 +489,9 @@ class BLEService {
         return;
       }
 
+      // Initialize file transport
+      await _initializeFileTransport(targetService);
+
       // Find battery, RTC, haptic, and device name characteristics
       for (BluetoothCharacteristic char in targetService.characteristics) {
         if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
@@ -472,6 +506,15 @@ class BLEService {
         } else if (char.uuid.toString().toLowerCase() == deviceNameCharacteristicUuid.toLowerCase()) {
           _deviceNameCharacteristic = char;
           debugPrint('Found Device Name characteristic after restore');
+        } else if (char.uuid.toString().toLowerCase() == fileTxCharacteristicUuid.toLowerCase()) {
+          _fileTxCharacteristic = char;
+          debugPrint('Found File TX characteristic after restore');
+        } else if (char.uuid.toString().toLowerCase() == fileRxCharacteristicUuid.toLowerCase()) {
+          _fileRxCharacteristic = char;
+          debugPrint('Found File RX characteristic after restore');
+        } else if (char.uuid.toString().toLowerCase() == fileCtrlCharacteristicUuid.toLowerCase()) {
+          _fileCtrlCharacteristic = char;
+          debugPrint('Found File CTRL characteristic after restore');
         }
       }
       
@@ -487,6 +530,8 @@ class BLEService {
       _isConnecting = false; // Reset connecting flag on disconnect
       await _audioTransport.unsubscribeFromNotifications();
       _audioTransport.resetPauseState();
+      await _fileTransport.unsubscribeFromNotifications();
+      _fileTransfer = null;
       _currentMtu = 23; // Reset MTU to default on disconnect
       await FlutterBluePlus.stopScan();
       
@@ -497,6 +542,9 @@ class BLEService {
       _rtcCharacteristic = null;
       _hapticCharacteristic = null;
       _deviceNameCharacteristic = null;
+      _fileTxCharacteristic = null;
+      _fileRxCharacteristic = null;
+      _fileCtrlCharacteristic = null;
 
       if (_device != null && _isConnected) {
         await _device!.disconnect();
@@ -509,6 +557,28 @@ class BLEService {
     } catch (e) {
       debugPrint('Error disconnecting: $e');
     }
+  }
+  
+  /// Initialize file transport (called after service discovery)
+  Future<bool> _initializeFileTransport(BluetoothService service) async {
+    final success = await _fileTransport.initializeFileTransportCharacteristics(
+      service,
+      fileTxCharacteristicUuid,
+      fileRxCharacteristicUuid,
+      fileCtrlCharacteristicUuid,
+    );
+    
+    if (success) {
+      // Set dependencies
+      _fileTransport.isConnectedCallback = () => isConnected;
+      _fileTransport.getMTUCallback = () => getMTU();
+      
+      // Create FileTransfer instance
+      _fileTransfer = FileTransfer(_fileTransport);
+      debugPrint('File transfer initialized');
+      return true;
+    }
+    return false;
   }
 
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.

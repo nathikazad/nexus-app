@@ -10,6 +10,7 @@ import '../services/hardware_services/battery_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
+import '../models/file_entry.dart';
 import 'hardware_screen.dart';
 
 class Interaction {
@@ -396,7 +397,117 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _testLayer2,
+        tooltip: 'Test Layer 2 (List Files)',
+        child: const Icon(Icons.folder),
+      ),
     );
+  }
+  
+  Future<void> _testLayer2() async {
+    debugPrint('=== Layer 2 Test: Starting file list request ===');
+    
+    if (!_isConnected) {
+      debugPrint('Layer 2 Test: Not connected to Bluetooth device');
+      _showErrorDialog('Not connected to Bluetooth device');
+      return;
+    }
+    
+    debugPrint('Layer 2 Test: Device is connected');
+    
+    final fileTransfer = _hardwareService.fileTransfer;
+    if (fileTransfer == null) {
+      debugPrint('Layer 2 Test: File transfer not initialized');
+      _showErrorDialog('File transfer not initialized');
+      return;
+    }
+    
+    debugPrint('Layer 2 Test: File transfer instance found');
+    
+    try {
+      debugPrint('Layer 2 Test: Showing loading dialog');
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      debugPrint('Layer 2 Test: Calling listFiles()...');
+      final startTime = DateTime.now();
+      
+      // Request file list
+      final files = await fileTransfer.listFiles();
+      
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('Layer 2 Test: listFiles() completed in ${duration.inMilliseconds}ms');
+      debugPrint('Layer 2 Test: Received ${files.length} files/directories');
+      
+      // Log each file
+      for (int i = 0; i < files.length; i++) {
+        final file = files[i];
+        debugPrint('Layer 2 Test: File[$i] - name: "${file.name}", '
+            'isDirectory: ${file.isDirectory}, size: ${file.size} bytes');
+      }
+      
+      debugPrint('Layer 2 Test: Closing loading dialog');
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      debugPrint('Layer 2 Test: Showing results dialog');
+      // Show results dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Layer 2 Test - File List'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: files.isEmpty
+                ? const Text('No files found')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: files.length,
+                    itemBuilder: (context, index) {
+                      final file = files[index];
+                      return ListTile(
+                        leading: Icon(
+                          file.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                        ),
+                        title: Text(file.name),
+                        subtitle: Text(
+                          file.isDirectory 
+                              ? 'Directory' 
+                              : '${file.size} bytes',
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      
+      debugPrint('Layer 2 Test: Successfully completed');
+    } catch (e, stackTrace) {
+      debugPrint('Layer 2 Test: ERROR - $e');
+      debugPrint('Layer 2 Test: Stack trace: $stackTrace');
+      
+      // Close loading dialog if still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showErrorDialog('Failed to list files: $e');
+    }
+    
+    debugPrint('=== Layer 2 Test: Finished ===');
   }
 }
 
