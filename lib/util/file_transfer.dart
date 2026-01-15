@@ -2,7 +2,24 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'ble_file_transport.dart';
-import '../models/file_entry.dart';
+
+class FileEntry {
+  final String name;
+  final int size;
+  final bool isDirectory;
+  
+  FileEntry({
+    required this.name,
+    required this.size,
+    required this.isDirectory,
+  });
+  
+  @override
+  String toString() {
+    return '${isDirectory ? "[DIR]" : "[FILE]"} $name ($size bytes)';
+  }
+}
+
 
 enum TransferState { idle, sending, receiving, waitingAck }
 
@@ -47,7 +64,7 @@ class FileTransfer {
     // Read response from FILE_CTRL_CHAR
     final response = await transport.readControl();
     if (response == null || response.isEmpty) {
-      debugPrint('No response received for LIST_FILES');
+      debugPrint('file transfer: No response received for LIST_FILES');
       return [];
     }
     
@@ -79,7 +96,7 @@ class FileTransfer {
     
     // Parse count (2 bytes, big-endian)
     final count = (payload[1] << 8) | payload[2];
-    debugPrint('LIST_RESPONSE: $count files');
+    debugPrint('file transfer: LIST_RESPONSE: $count files');
     
     int offset = 3;
     

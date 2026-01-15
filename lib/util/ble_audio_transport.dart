@@ -109,7 +109,7 @@ class BLEAudioTransport {
     try {
       await _audioTxCharacteristic!.setNotifyValue(true);
       _notificationSubscription = _audioTxCharacteristic!.lastValueStream.listen(
-        _handleNotification,
+        _handleAudioNotification,
         onError: (error) {
           debugPrint('Notification error: $error');
         },
@@ -136,7 +136,7 @@ class BLEAudioTransport {
   }
   
   /// Handle incoming notifications from audio TX characteristic
-  void _handleNotification(List<int> data) {
+  void _handleAudioNotification(List<int> data) {
     if (data.isEmpty) return;
 
     try {

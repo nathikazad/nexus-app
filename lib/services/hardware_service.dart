@@ -3,12 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/ble_service.dart';
-import '../util/file_transfer.dart';
 import 'hardware_services/battery_service.dart';
 import 'hardware_services/rtc_service.dart';
 import 'hardware_services/name_service.dart';
 import 'hardware_services/haptic_service.dart';
 import 'openai_service.dart';
+import 'file_transfer_service.dart';
 
 class HardwareService {
   static final HardwareService _instance = HardwareService._internal();
@@ -40,9 +40,6 @@ class HardwareService {
   Stream<bool>? get connectionStateStream => _bleService.connectionStateStream;
   bool get isConnected => _bleService.isConnected;
   bool get isInitialized => _isInitialized;
-  
-  // File transfer access
-  FileTransfer? get fileTransfer => _bleService.fileTransfer;
 
   // Device name getter
   String? get deviceName => _nameService.deviceName;
@@ -61,6 +58,13 @@ class HardwareService {
           OpenAIService.instance.createResponse();
         },
         openAiAudioOutStream: OpenAIService.instance.hardWareAudioOutStream,
+        onFileReceived: (fileEntry) {
+          FileTransferService.instance.onFileReceived(fileEntry);
+        },
+        onListFilesReceived: (fileNameList) {
+          debugPrint('hardware service: Received ${fileNameList.length} files from LIST_RESPONSE');
+          FileTransferService.instance.onListFilesReceived(fileNameList);
+        }
       );
       
       // Initialize battery service
@@ -74,14 +78,21 @@ class HardwareService {
     }
   }
 
+  void sendFileRequest(String path) {
+    _bleService.sendFileRequest(path);
+  }
+
+  void sendListFilesRequest() {
+    _bleService.sendListFilesRequest();
+  }
 
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
-  void enqueuePacket(Uint8List packet) {
+  void enqueueOpusPacket(Uint8List packet) {
         _bleService.enqueuePacket(packet);
   }
 
   /// Send EOF to ESP32
-  Future<void> sendEOFToEsp32() async {
+  Future<void> sendEOAudioToEsp32() async {
     await _bleService.sendEOFToEsp32();
   }
 

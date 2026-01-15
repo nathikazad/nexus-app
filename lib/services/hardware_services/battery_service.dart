@@ -33,8 +33,6 @@ class BatteryService {
     if (_isInitialized) return true;
 
     try {
-      // Wait for BLE service to be initialized
-      await _bleService.initialize();
       
       // Initialize battery controller
       _batteryController = StreamController<BatteryData>.broadcast();

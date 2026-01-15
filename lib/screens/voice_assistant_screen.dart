@@ -7,10 +7,10 @@ import '../services/audio_service.dart';
 import '../services/openai_service.dart';
 import '../services/hardware_service.dart';
 import '../services/hardware_services/battery_service.dart';
+import '../services/file_transfer_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
-import '../models/file_entry.dart';
 import 'hardware_screen.dart';
 
 class Interaction {
@@ -416,17 +416,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     
     debugPrint('Layer 2 Test: Device is connected');
     
-    final fileTransfer = _hardwareService.fileTransfer;
-    if (fileTransfer == null) {
-      debugPrint('Layer 2 Test: File transfer not initialized');
-      _showErrorDialog('File transfer not initialized');
-      return;
-    }
-    
-    debugPrint('Layer 2 Test: File transfer instance found');
-    
     try {
-      debugPrint('Layer 2 Test: Showing loading dialog');
       // Show loading dialog
       showDialog(
         context: context,
@@ -436,28 +426,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         ),
       );
       
-      debugPrint('Layer 2 Test: Calling listFiles()...');
-      final startTime = DateTime.now();
-      
       // Request file list
-      final files = await fileTransfer.listFiles();
+      final files = await FileTransferService.instance.listFiles();
       
-      final duration = DateTime.now().difference(startTime);
-      debugPrint('Layer 2 Test: listFiles() completed in ${duration.inMilliseconds}ms');
-      debugPrint('Layer 2 Test: Received ${files.length} files/directories');
-      
-      // Log each file
-      for (int i = 0; i < files.length; i++) {
-        final file = files[i];
-        debugPrint('Layer 2 Test: File[$i] - name: "${file.name}", '
-            'isDirectory: ${file.isDirectory}, size: ${file.size} bytes');
-      }
-      
-      debugPrint('Layer 2 Test: Closing loading dialog');
       // Close loading dialog
       Navigator.of(context).pop();
       
-      debugPrint('Layer 2 Test: Showing results dialog');
       // Show results dialog
       showDialog(
         context: context,

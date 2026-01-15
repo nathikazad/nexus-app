@@ -186,7 +186,7 @@ class OpenAIService {
           'type': 'response_done',
         });
         if (_queryOrigin == queryOrigin.Hardware) {
-          HardwareService.instance.sendEOFToEsp32();
+          HardwareService.instance.sendEOAudioToEsp32();
         }
       } catch (e) {
         print('Error handling response done event: $e');
