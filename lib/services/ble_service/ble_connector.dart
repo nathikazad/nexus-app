@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_audio_transport.dart';
 import 'ble_file_transport.dart';
-import '../services/ble_service.dart';
+import 'ble_service.dart';
+
+
 
 class BLEConnectResult {
   final bool success;

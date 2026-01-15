@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:nexus_voice_assistant/services/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/agent_tool_service.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

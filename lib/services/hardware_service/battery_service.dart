@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../ble_service.dart';
+import '../ble_service/ble_service.dart';
 
 /// Battery data structure
 class BatteryData {

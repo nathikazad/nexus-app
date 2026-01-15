@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../services/hardware_service.dart';
-import '../services/hardware_services/battery_service.dart';
+import '../services/hardware_service/hardware_service.dart';
+import '../services/hardware_service/battery_service.dart';
 import 'device_selection_screen.dart';
 
 class HardwareScreen extends StatefulWidget {

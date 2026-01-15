@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nexus_voice_assistant/services/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;

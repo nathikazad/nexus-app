@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'file_transfer.dart';
+import '../../util/file_transfer.dart';
 
 /// Handles file TX/RX/CTRL characteristic communication for BLE
 class BLEFileTransport {

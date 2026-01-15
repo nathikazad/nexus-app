@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'ble_file_transport.dart';
+import '../services/ble_service/ble_file_transport.dart';
 
 class FileEntry {
   final String name;

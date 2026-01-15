@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../services/ble_service.dart';
-import 'hardware_services/battery_service.dart';
-import 'hardware_services/rtc_service.dart';
-import 'hardware_services/name_service.dart';
-import 'hardware_services/haptic_service.dart';
-import 'openai_service.dart';
-import 'file_transfer_service.dart';
+import '../ble_service/ble_service.dart';
+import 'battery_service.dart';
+import 'rtc_service.dart';
+import 'name_service.dart';
+import 'haptic_service.dart';
+import '../openai_service.dart';
+import '../file_transfer_service.dart';
 
 class HardwareService {
   static final HardwareService _instance = HardwareService._internal();

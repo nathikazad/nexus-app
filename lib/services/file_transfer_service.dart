@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../util/file_transfer.dart';
-import 'hardware_service.dart';
+import 'hardware_service/hardware_service.dart';
 
 /// High-level file transfer service
 /// Provides async API for file operations, converting callbacks to Futures

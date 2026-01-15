@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:opus_dart/opus_dart.dart';
-import 'audio.dart';
+import '../../util/audio.dart';
 import 'ble_queue.dart';
 
 /// Handles audio RX/TX characteristic communication for BLE
@@ -288,9 +288,10 @@ class BLEAudioTransport {
     _packetQueue?.enqueueEOF();
   }
   
-  /// Send EOF to ESP32 (enqueues EOF packet)
+  /// Send EOF to ESP32 (enqueues EOF packet after a brief delay to let in-flight batches finish)
   Future<void> sendEOFToEsp32() async {
     debugPrint('[QUEUE] Enqueuing EOF signal. Total frames sent: $_framesSent');
+    await Future.delayed(const Duration(milliseconds: 100));
     enqueueEOF();
   }
   
