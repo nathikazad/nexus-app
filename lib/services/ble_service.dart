@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../util/ble_audio_transport.dart';
 import '../util/ble_file_transport.dart';
+import '../util/ble_scanner.dart';
+import '../util/ble_connector.dart';
 import '../util/file_transfer.dart';
 
 class BLEService {
@@ -41,7 +43,6 @@ class BLEService {
   final BLEFileTransport _fileTransport = BLEFileTransport();
   
   bool _isConnected = false;
-  static bool _isScanning = false;
   bool _isConnecting = false; // Track if connection loop is running
   int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
@@ -54,7 +55,7 @@ class BLEService {
   BluetoothCharacteristic? get fileRxCharacteristic => _fileRxCharacteristic;
   BluetoothCharacteristic? get fileCtrlCharacteristic => _fileCtrlCharacteristic;
   bool get isConnected => _isConnected;
-  bool get isScanning => _isScanning;
+  bool get isScanning => BLEScanner.isScanning;
   BluetoothDevice? get currentDevice => _device;
   
   int getMTU() {
@@ -73,13 +74,6 @@ class BLEService {
     void Function(FileEntry)? onFileReceived,
     void Function(List<FileEntry>)? onListFilesReceived,
   }) async {
-    // Initialize file transport callbacks and dependencies
-    _fileTransport.initialize(
-      onFileReceived: onFileReceived,
-      onListFilesReceived: onListFilesReceived,
-      isConnected: () => isConnected,
-      getMTU: () => getMTU(),
-    );
 
     if (_connectionStateController != null) {
       return true;
@@ -110,10 +104,16 @@ class BLEService {
         isConnected: () => isConnected,
         getMTU: () => getMTU(),
       );
-      
-      // Initialize audio processing pipeline (includes packet queue, stream subscriptions, and OpenAI relayer)
-      _audioTransport.initializeAudioProcessing();
-      
+
+          // Initialize file transport callbacks and dependencies
+      _fileTransport.initialize(
+        onFileReceived: onFileReceived,
+        onListFilesReceived: onListFilesReceived,
+        isConnected: () => isConnected,
+        getMTU: () => getMTU(),
+      );
+      _fileTransport.onDataReceived ??= _handleFileData;
+        
       _scanAndAutoConnectLoop();
 
       return true;
@@ -150,64 +150,15 @@ class BLEService {
   /// Scan for devices and return a list of discovered devices
   /// Returns a stream of scan results
   static Stream<List<ScanResult>> scanForDevices({Duration? timeout}) async* {
-    if (_isScanning) {
-      debugPrint('Scan already in progress');
-      return;
-    }
-
-    try {
-      _isScanning = true;
-      debugPrint('Scanning for devices with service UUID $serviceUuid...');
-
-      // Stop any existing scan first
-      try {
-        await FlutterBluePlus.stopScan();
-      } catch (e) {
-        // Ignore errors if scan wasn't running
-      }
-
-      // Convert service UUID string to Guid for filtering
-      final serviceGuid = Guid(serviceUuid);
-
-      // Start scanning with service UUID filter
-      await FlutterBluePlus.startScan(
-        withServices: [serviceGuid],
-        timeout: timeout ?? const Duration(seconds: 10),
-      );
-
-      // Yield scan results as they come in
-      await for (final results in FlutterBluePlus.scanResults) {
-        // Filter to only include devices with our service UUID
-        final filteredResults = results.where((result) {
-          // Results are already filtered by withServices, but double-check
-          return true;
-        }).toList();
-        
-        if (filteredResults.isNotEmpty) {
-          yield filteredResults;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error scanning for devices: $e');
-      yield [];
-    } finally {
-      _isScanning = false;
-      try {
-        await FlutterBluePlus.stopScan();
-      } catch (e) {
-        // Ignore errors
-      }
-    }
+    yield* BLEScanner.scanForDevices(
+      serviceUuid: serviceUuid,
+      timeout: timeout,
+    );
   }
 
   
   static void stopScan() {
-    _isScanning = false;
-    try {
-      FlutterBluePlus.stopScan();
-    } catch (e) {
-      // Ignore errors
-    }
+    BLEScanner.stopScan();
   }
 
   /// Connect to a specific device
@@ -235,224 +186,56 @@ class BLEService {
       return true;
     }
     
-    if (_isConnecting && _isScanning) {
+    if (_isConnecting && BLEScanner.isScanning) {
       debugPrint('Connection already in progress');
       return false;
     }
 
-    try {
-      _isScanning = true;
-      debugPrint('Scanning indefinitely for service UUID $serviceUuid...');
-
-      // Stop any existing scan first
-      try {
-        await FlutterBluePlus.stopScan();
-      } catch (e) {
-        // Ignore errors if scan wasn't running
-      }
-
-      // Convert service UUID string to Guid for filtering
-      final serviceGuid = Guid(serviceUuid);
-
-      // Start scanning indefinitely (no timeout) with service UUID filter
-      // This filters at the platform level for better performance
-      await FlutterBluePlus.startScan(
-        withServices: [serviceGuid],
-      );
-      
-      // Listen for scan results - results are already filtered by service UUID
-      StreamSubscription<List<ScanResult>>? scanSubscription;
-      
-      final completer = Completer<bool>();
-      bool deviceFound = false; // Flag to prevent multiple connection attempts
-      
-      scanSubscription = FlutterBluePlus.scanResults.listen(
-        (List<ScanResult> results) {
-          if (deviceFound || _isConnected) return; // Prevent duplicate connections
-          
-          for (ScanResult result in results) {
-            if (deviceFound || _isConnected) break;
-            
-            // Get device name from advertising packet (as set in EEPROM)
-            final name = result.advertisementData.advName.isNotEmpty 
-                ? result.advertisementData.advName 
-                : (result.device.platformName.isNotEmpty 
-                ? result.device.platformName 
-                    : result.device.advName);
-            
-            // Device already matched by service UUID via withServices filter
-            // All results here have the matching service UUID
-            debugPrint('Found device with service UUID: $name at ${result.device.remoteId}');
-            deviceFound = true; // Set flag before connecting
-            scanSubscription?.cancel();
-            FlutterBluePlus.stopScan();
-            _isScanning = false;
-            
-            _device = result.device;
-            _connectToDevice().then((success) {
-              if (!completer.isCompleted) {
-                completer.complete(success);
-              }
-            }).catchError((error) {
-              deviceFound = false; // Reset on error
-              if (!completer.isCompleted) {
-                completer.completeError(error);
-              }
-            });
-            return;
-          }
-        },
-        onError: (error) {
-          debugPrint('Scan error: $error');
-          // Don't complete on error - keep scanning
-          // Only complete if explicitly cancelled or device found
-        },
-      );
-
-      return await completer.future;
-    } catch (e) {
-      _isScanning = false;
-      debugPrint('Error scanning: $e');
-      await FlutterBluePlus.stopScan();
+    final device = await BLEScanner.scanForSingleDevice(serviceUuid: serviceUuid);
+    if (device == null) {
       return false;
     }
+
+    _device = device;
+    return await _connectToDevice();
   }
 
   Future<bool> _connectToDevice() async {
     if (_device == null) {
       return false;
     }
-
-    try {
-      debugPrint('Connecting to device...');
-      
-      // Connect to device with auto-connect enabled for background operation
-      // Note: mtu must be null when autoConnect is true (flutter_blue_plus requirement)
-      await _device!.connect(
-        timeout: const Duration(seconds: 15),
-        autoConnect: true,  // Enable auto-reconnection in background
-        mtu: null,  // Required to be null when autoConnect is true
-      );
-      
-      // Wait for connection to be fully established (important with autoConnect)
-      await _device!.connectionState.firstWhere(
-        (state) => state == BluetoothConnectionState.connected,
-        orElse: () => BluetoothConnectionState.disconnected,
-      );
-      
-      _isConnected = true;
-      _connectionStateController?.add(true);
-      debugPrint('Connected!');
-
-      // Discover services
-      List<BluetoothService> services = await _device!.discoverServices();
-      debugPrint('Discovered ${services.length} services');
-
-      // Find the service and characteristics
-      BluetoothService? targetService;
-      for (BluetoothService service in services) {
-        if (service.uuid.toString().toLowerCase() == serviceUuid.toLowerCase()) {
-          targetService = service;
-          break;
+    final result = await BLEConnector.connectAndSetup(
+      device: _device!,
+      audioTransport: _audioTransport,
+      fileTransport: _fileTransport,
+      setBatteryCharacteristic: (char) => _batteryCharacteristic = char,
+      setRtcCharacteristic: (char) => _rtcCharacteristic = char,
+      setHapticCharacteristic: (char) => _hapticCharacteristic = char,
+      setDeviceNameCharacteristic: (char) => _deviceNameCharacteristic = char,
+      setFileTxCharacteristic: (char) => _fileTxCharacteristic = char,
+      setFileRxCharacteristic: (char) => _fileRxCharacteristic = char,
+      setFileCtrlCharacteristic: (char) => _fileCtrlCharacteristic = char,
+      setConnected: (connected) {
+        _isConnected = connected;
+        if (connected) {
+          _isConnecting = false;
         }
-      }
-
-      if (targetService == null) {
-        debugPrint('Service not found: $serviceUuid');
-        await disconnect();
-        return false;
-      }
-
-      // Initialize audio transport with TX/RX characteristics
-      if (!await _audioTransport.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
-        debugPrint('Failed to initialize audio TX/RX characteristics');
-        await disconnect();
-        return false;
-      }
-      debugPrint('Initializing file transport...');
-      // Initialize file transport
-      if (!await _initializeFileTransport(targetService)) {
-        debugPrint('Failed to initialize file transport');
-      }
-
-      // Find battery, RTC, haptic, and device name characteristics
-      for (BluetoothCharacteristic char in targetService.characteristics) {
-        if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
-          _batteryCharacteristic = char;
-          debugPrint('Found Battery characteristic');
-        } else if (char.uuid.toString().toLowerCase() == rtcCharacteristicUuid.toLowerCase()) {
-          _rtcCharacteristic = char;
-          debugPrint('Found RTC characteristic');
-        } else if (char.uuid.toString().toLowerCase() == hapticCharacteristicUuid.toLowerCase()) {
-          _hapticCharacteristic = char;
-          debugPrint('Found Haptic characteristic');
-        } else if (char.uuid.toString().toLowerCase() == deviceNameCharacteristicUuid.toLowerCase()) {
-          _deviceNameCharacteristic = char;
-          debugPrint('Found Device Name characteristic');
-        } else if (char.uuid.toString().toLowerCase() == fileTxCharacteristicUuid.toLowerCase()) {
-          _fileTxCharacteristic = char;
-          debugPrint('Found File TX characteristic');
-        } else if (char.uuid.toString().toLowerCase() == fileRxCharacteristicUuid.toLowerCase()) {
-          _fileRxCharacteristic = char;
-          debugPrint('Found File RX characteristic');
-        } else if (char.uuid.toString().toLowerCase() == fileCtrlCharacteristicUuid.toLowerCase()) {
-          _fileCtrlCharacteristic = char;
-          debugPrint('Found File CTRL characteristic');
+      },
+      updateMtu: (mtu) => _currentMtu = mtu,
+      emitConnectionState: (connected) => _connectionStateController?.add(connected),
+      onDisconnected: () async {
+        await _audioTransport.unsubscribeFromNotifications();
+        _audioTransport.resetPauseState();
+        if (!_isConnecting) {
+          _scanAndAutoConnectLoop();
         }
-      }
-      
-      // Note: Cannot request MTU when autoConnect is enabled (flutter_blue_plus limitation)
-      // The device will negotiate MTU automatically, and we'll listen for updates below
-      // For background operation, autoConnect takes priority over explicit MTU request
-      
-      // Get and print initial MTU size
-      try {
-        final mtu = await _device!.mtu.first;
-        _currentMtu = mtu;
-        debugPrint('MTU size: $mtu bytes');
-      } catch (e) {
-        debugPrint('Error getting MTU: $e');
-      }
-      
-      // Listen for MTU updates
-      _device!.mtu.listen((mtu) {
-        _currentMtu = mtu;
-        debugPrint('MTU updated: $mtu bytes');
-      });
-      
-      // Listen for disconnection and restored connections
-      _connectionSubscription = _device!.connectionState.listen((state) async {
-        if (state == BluetoothConnectionState.disconnected) {
-          debugPrint('Device disconnected');
-          _isConnected = false;
-          _connectionStateController?.add(false);
-          await _audioTransport.unsubscribeFromNotifications();
-          _audioTransport.resetPauseState();
-          // Restart scanning on disconnect (only if not already connecting)
-          if (!_isConnecting) {
-            _scanAndAutoConnectLoop();
-          }
-        } else if (state == BluetoothConnectionState.connected) {
-          _isConnected = true;
-          _connectionStateController?.add(true);
-          _isConnecting = false; // Reset connecting flag when connected
-          
-          // Check if characteristics need to be reinitialized (e.g., after restore)
-          // This handles the case where the OS restores the connection but characteristics aren't set up
-          if (_batteryCharacteristic == null) {
-            debugPrint('Connection restored, reinitializing characteristics...');
-            _reinitializeAfterRestore();
-          }
-        }
-      });
+      },
+      shouldReinitialize: () => _batteryCharacteristic == null,
+      reinitializeAfterRestore: _reinitializeAfterRestore,
+    );
 
-      return true;
-    } catch (e) {
-      debugPrint('Error connecting: $e');
-      _isConnected = false;
-      _connectionStateController?.add(false);
-      return false;
-    }
+    _connectionSubscription = result.connectionSubscription;
+    return result.success;
   }
 
   /// Reinitialize characteristics after state restoration
@@ -460,89 +243,29 @@ class BLEService {
     if (_device == null) {
       return;
     }
-    
-    try {
-      // Wait for connection to be fully established
-      await _device!.connectionState.firstWhere(
-        (state) => state == BluetoothConnectionState.connected,
-        orElse: () => BluetoothConnectionState.disconnected,
-      );
-      
-      if (!_isConnected) {
-        _isConnected = true;
-        _connectionStateController?.add(true);
-      }
-      
-      debugPrint('Reinitializing characteristics after restore...');
-      
-      // Rediscover services and characteristics
-      List<BluetoothService> services = await _device!.discoverServices();
-      debugPrint('Discovered ${services.length} services after restore');
 
-      // Find the service and characteristics
-      BluetoothService? targetService;
-      for (BluetoothService service in services) {
-        if (service.uuid.toString().toLowerCase() == serviceUuid.toLowerCase()) {
-          targetService = service;
-          break;
-        }
-      }
-
-      if (targetService == null) {
-        debugPrint('Service not found after restore: $serviceUuid');
-        return;
-      }
-
-      // Initialize audio transport with TX/RX characteristics
-      if (!await _audioTransport.initializeAudioTransportCharacteristics(targetService, audioTxCharacteristicUuid, audioRxCharacteristicUuid)) {
-        debugPrint('Failed to initialize audio TX/RX characteristics after restore');
-        return;
-      }
-
-      // Initialize file transport
-      await _initializeFileTransport(targetService);
-
-      // Find battery, RTC, haptic, and device name characteristics
-      for (BluetoothCharacteristic char in targetService.characteristics) {
-        if (char.uuid.toString().toLowerCase() == batteryCharacteristicUuid.toLowerCase()) {
-          _batteryCharacteristic = char;
-          debugPrint('Found Battery characteristic after restore');
-        } else if (char.uuid.toString().toLowerCase() == rtcCharacteristicUuid.toLowerCase()) {
-          _rtcCharacteristic = char;
-          debugPrint('Found RTC characteristic after restore');
-        } else if (char.uuid.toString().toLowerCase() == hapticCharacteristicUuid.toLowerCase()) {
-          _hapticCharacteristic = char;
-          debugPrint('Found Haptic characteristic after restore');
-        } else if (char.uuid.toString().toLowerCase() == deviceNameCharacteristicUuid.toLowerCase()) {
-          _deviceNameCharacteristic = char;
-          debugPrint('Found Device Name characteristic after restore');
-        } else if (char.uuid.toString().toLowerCase() == fileTxCharacteristicUuid.toLowerCase()) {
-          _fileTxCharacteristic = char;
-          debugPrint('Found File TX characteristic after restore');
-        } else if (char.uuid.toString().toLowerCase() == fileRxCharacteristicUuid.toLowerCase()) {
-          _fileRxCharacteristic = char;
-          debugPrint('Found File RX characteristic after restore');
-        } else if (char.uuid.toString().toLowerCase() == fileCtrlCharacteristicUuid.toLowerCase()) {
-          _fileCtrlCharacteristic = char;
-          debugPrint('Found File CTRL characteristic after restore');
-        }
-      }
-      
-      debugPrint('Successfully reinitialized after restore');
-    } catch (e) {
-      debugPrint('Error reinitializing after restore: $e');
-    }
+    await BLEConnector.reinitializeAfterRestore(
+      device: _device!,
+      audioTransport: _audioTransport,
+      fileTransport: _fileTransport,
+      setBatteryCharacteristic: (char) => _batteryCharacteristic = char,
+      setRtcCharacteristic: (char) => _rtcCharacteristic = char,
+      setHapticCharacteristic: (char) => _hapticCharacteristic = char,
+      setDeviceNameCharacteristic: (char) => _deviceNameCharacteristic = char,
+      setFileTxCharacteristic: (char) => _fileTxCharacteristic = char,
+      setFileRxCharacteristic: (char) => _fileRxCharacteristic = char,
+      setFileCtrlCharacteristic: (char) => _fileCtrlCharacteristic = char,
+    );
   }
 
   Future<void> disconnect() async {
     try {
-      _isScanning = false;
       _isConnecting = false; // Reset connecting flag on disconnect
       await _audioTransport.unsubscribeFromNotifications();
       _audioTransport.resetPauseState();
       await _fileTransport.unsubscribeFromNotifications();
       _currentMtu = 23; // Reset MTU to default on disconnect
-      await FlutterBluePlus.stopScan();
+      BLEScanner.stopScan();
       
       _connectionSubscription?.cancel();
       _connectionSubscription = null;
@@ -566,30 +289,6 @@ class BLEService {
     } catch (e) {
       debugPrint('Error disconnecting: $e');
     }
-  }
-  
-  /// Initialize file transport (called after service discovery)
-  Future<bool> _initializeFileTransport(BluetoothService service) async {
-    final success = await _fileTransport.initializeFileTransportCharacteristics(
-      service,
-      fileTxCharacteristicUuid,
-      fileRxCharacteristicUuid,
-      fileCtrlCharacteristicUuid,
-    );
-    
-    if (success) {
-      // Ensure dependencies are set (in case initialize was called earlier)
-      _fileTransport.initialize(
-        isConnected: () => isConnected,
-        getMTU: () => getMTU(),
-      );
-
-      // Optional: log incoming file data if no handler is set
-      _fileTransport.onDataReceived ??= _handleFileData;
-      debugPrint('File transfer initialized');
-      return true;
-    }
-    return false;
   }
   
   /// Handle file data received from FILE_TX_CHAR

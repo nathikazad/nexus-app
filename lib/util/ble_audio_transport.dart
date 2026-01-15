@@ -79,6 +79,8 @@ class BLEAudioTransport {
     _openAiAudioOutStream = openAiAudioOutStream;
     _isConnected = isConnected;
     _getMTU = getMTU;
+    // Initialize audio processing pipeline (includes packet queue, stream subscriptions, and OpenAI relayer)
+    initializeAudioProcessing();
   }
   
   /// Initialize audio TX and RX characteristics from discovered service and subscribe to notifications

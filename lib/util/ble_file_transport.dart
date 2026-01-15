@@ -101,6 +101,41 @@ class BLEFileTransport {
     
     return true;
   }
+
+  /// Initialize file transport after service discovery
+  Future<bool> initializeFileTransport(
+    BluetoothService service,
+    String fileTxUuid,
+    String fileRxUuid,
+    String fileCtrlUuid, {
+    void Function(Uint8List)? onDataReceived,
+    bool Function()? isConnected,
+    int Function()? getMTU,
+  }) async {
+    final success = await initializeFileTransportCharacteristics(
+      service,
+      fileTxUuid,
+      fileRxUuid,
+      fileCtrlUuid,
+    );
+
+    if (!success) {
+      return false;
+    }
+
+    initialize(
+      isConnected: isConnected,
+      getMTU: getMTU,
+      onDataReceived: onDataReceived,
+    );
+
+    if (onDataReceived != null) {
+      this.onDataReceived ??= onDataReceived;
+    }
+
+    debugPrint('File transport initialized');
+    return true;
+  }
   
   /// Send data packet via FILE_RX_CHAR (WRITE)
   Future<void> sendData(Uint8List data) async {
