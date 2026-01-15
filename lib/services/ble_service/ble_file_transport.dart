@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../util/file_transfer.dart';
 
 /// Handles file TX/RX/CTRL characteristic communication for BLE
@@ -16,11 +18,15 @@ class BLEFileTransport {
   // Callbacks
   void Function(Uint8List)? onDataReceived;  // Called when FILE_TX_CHAR receives data
   void Function(List<FileEntry>)? onListFilesReceived;  // Called when LIST_RESPONSE is received
-  void Function(FileEntry)? onFileReceived;  // Reserved for future file receive functionality
+  void Function(FileEntry)? onFileReceived;  // Called when file receive completes
   
   // Dependencies (public for BLEService to set)
   bool Function()? isConnectedCallback;
   int Function()? getMTUCallback;
+  
+  // File receive state
+  Map<int, Uint8List>? _receivedPackets;  // seq -> data (null when not receiving)
+  String? _receivingFileName;
 
   /// Initialize file transport with callbacks and dependencies
   void initialize({
@@ -79,13 +85,19 @@ class BLEFileTransport {
     }
     
     // Subscribe to FILE_TX_CHAR notifications (incoming file data)
-    // Note: For Layer 2, FILE_TX_CHAR may not have CCC descriptor yet, so this is optional
+    // FILE_TX_CHAR now has a CCC descriptor, so subscription should succeed
     try {
       await _fileTxCharacteristic!.setNotifyValue(true);
       _txNotificationSubscription = _fileTxCharacteristic!.lastValueStream.listen(
         (data) {
+          final packet = Uint8List.fromList(data);
+          // Handle file data packets if we're receiving a file
+          if (_receivedPackets != null) {
+            _handleFileDataPacket(packet);
+          }
+          // Also call the general callback if set
           if (onDataReceived != null) {
-            onDataReceived!(Uint8List.fromList(data));
+            onDataReceived!(packet);
           }
         },
         onError: (error) {
@@ -94,9 +106,9 @@ class BLEFileTransport {
       );
       debugPrint('Subscribed to file TX notifications');
     } catch (e) {
-      debugPrint('Warning: Could not subscribe to file TX notifications (may not be needed for Layer 2): $e');
-      // Don't fail initialization - FILE_TX notifications aren't needed for Layer 2 control protocol
-      // They'll be needed for Layer 3+ when we do actual file data transfer
+      debugPrint('Error: Could not subscribe to file TX notifications: $e');
+      // This should not happen now that CCC descriptor exists, but handle gracefully
+      return false;
     }
     
     return true;
@@ -156,10 +168,156 @@ class BLEFileTransport {
     await _fileCtrlCharacteristic!.write(packet, withoutResponse: true);
   }
 
-  /// Send file request command
+  /// Send file request command (legacy - use requestFile instead)
   Future<void> sendFileRequest(String path) async {
     final payload = Uint8List.fromList(path.codeUnits + [0]); // null-terminated string
     await sendControl(CMD_START_SEND_FILE, payload);
+  }
+  
+  /// Request a file and handle all receive logic
+  /// Collects packets, polls for completion, reassembles file, and calls onFileReceived callback
+  Future<void> requestFile(String path) async {
+    if (_receivedPackets != null) {
+      throw Exception('File receive already in progress');
+    }
+    
+    if (!(isConnectedCallback?.call() ?? false)) {
+      throw Exception('Not connected');
+    }
+    
+    debugPrint('BLEFileTransport: Starting file receive for: $path');
+    
+    // Initialize receive state
+    _receivedPackets = {};
+    _receivingFileName = path.split('/').last;  // Extract filename
+    
+    // Send START_SEND_FILE command
+    final payload = Uint8List.fromList(path.codeUnits + [0]); // null-terminated string
+    await sendControl(CMD_START_SEND_FILE, payload);
+    
+    // Poll for TRANSFER_COMPLETE or TRANSFER_ERROR
+    await _pollForTransferComplete();
+  }
+  
+  /// Handle incoming file data packet: [seq:2][data]
+  void _handleFileDataPacket(Uint8List packet) {
+    if (_receivedPackets == null || packet.length < 2) {
+      return;
+    }
+    
+    // Extract sequence number (little-endian, 2 bytes)
+    final seq = packet[0] | (packet[1] << 8);
+    final packetData = packet.sublist(2);
+    
+    debugPrint('BLEFileTransport: Received packet seq=$seq, data=${packetData.length} bytes');
+    
+    // Store packet
+    _receivedPackets![seq] = packetData;
+  }
+  
+  /// Poll FILE_CTRL_CHAR for TRANSFER_COMPLETE or TRANSFER_ERROR
+  Future<void> _pollForTransferComplete() async {
+    const maxAttempts = 150;  // 30 seconds / 200ms
+    int attempts = 0;
+    
+    while (attempts < maxAttempts && _receivedPackets != null) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      attempts++;
+      
+      try {
+        final response = await readControl();
+        if (response != null && response.isNotEmpty) {
+          final cmd = response[0];
+          if (cmd == CMD_TRANSFER_COMPLETE) {
+            debugPrint('BLEFileTransport: Received TRANSFER_COMPLETE');
+            await _completeFileReceive();
+            return;
+          } else if (cmd == CMD_TRANSFER_ERROR) {
+            debugPrint('BLEFileTransport: Received TRANSFER_ERROR');
+            _handleTransferError();
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('BLEFileTransport: Error polling control: $e');
+      }
+    }
+    
+    // Timeout - check if we have packets
+    if (_receivedPackets != null) {
+      if (_receivedPackets!.isNotEmpty) {
+        debugPrint('BLEFileTransport: Polling timeout, but have packets - completing transfer');
+        await _completeFileReceive();
+      } else {
+        debugPrint('BLEFileTransport: Transfer timeout - no packets received');
+        _handleTransferError();
+      }
+    }
+  }
+  
+  /// Complete file receive: reassemble and call callback
+  Future<void> _completeFileReceive() async {
+    if (_receivedPackets == null || _receivedPackets!.isEmpty) {
+      debugPrint('BLEFileTransport: No packets to reassemble');
+      _resetReceiveState();
+      return;
+    }
+    
+    // Find max sequence number
+    final maxSeq = _receivedPackets!.keys.reduce((a, b) => a > b ? a : b);
+    debugPrint('BLEFileTransport: Reassembling file: maxSeq=$maxSeq, packets=${_receivedPackets!.length}');
+    
+    // Reassemble file in order
+    final fileData = <int>[];
+    for (int seq = 0; seq <= maxSeq; seq++) {
+      if (!_receivedPackets!.containsKey(seq)) {
+        debugPrint('BLEFileTransport: Missing packet $seq');
+        _handleTransferError();
+        return;
+      }
+      fileData.addAll(_receivedPackets![seq]!);
+    }
+    
+    debugPrint('BLEFileTransport: Reassembled file: ${fileData.length} bytes');
+    
+    // Write to temporary directory
+    try {
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/${_receivingFileName ?? 'received_file'}');
+      await file.writeAsBytes(fileData);
+      
+      debugPrint('BLEFileTransport: File written to ${file.path}');
+      
+      // Create FileEntry and call callback
+      final fileEntry = FileEntry(
+        name: _receivingFileName ?? 'received_file',
+        size: fileData.length,
+        isDirectory: false,
+      );
+      
+      if (onFileReceived != null) {
+        onFileReceived!(fileEntry);
+      }
+    } catch (e) {
+      debugPrint('BLEFileTransport: Error writing file: $e');
+      _handleTransferError();
+      return;
+    }
+    
+    _resetReceiveState();
+  }
+  
+  /// Handle transfer error
+  void _handleTransferError() {
+    debugPrint('BLEFileTransport: Transfer error');
+    _resetReceiveState();
+    // Could call an error callback here if needed
+  }
+  
+  /// Reset receive state
+  void _resetReceiveState() {
+    _receivedPackets = null;
+    _receivingFileName = null;
   }
 
   /// Send list files request command and handle response

@@ -263,9 +263,9 @@ class BLEService {
     // For now, just log. File data handling will be implemented in higher layers.
   }
   
-  /// Send file request command
+  /// Send file request command (triggers file receive with all logic in BLEFileTransport)
   Future<void> sendFileRequest(String path) async {
-    await _fileTransport.sendFileRequest(path);
+    await _fileTransport.requestFile(path);
   }
   
   /// Send list files request command

@@ -397,10 +397,21 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _testLayer2,
-        tooltip: 'Test Layer 2 (List Files)',
-        child: const Icon(Icons.folder),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _testLayer2,
+            tooltip: 'Test Layer 2 (List Files)',
+            child: const Icon(Icons.folder),
+          ),
+          const SizedBox(width: 10),
+          FloatingActionButton(
+            onPressed: _testLayer3,
+            tooltip: 'Test Layer 3 (Receive File)',
+            child: const Icon(Icons.download),
+          ),
+        ],
       ),
     );
   }
@@ -482,6 +493,73 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     }
     
     debugPrint('=== Layer 2 Test: Finished ===');
+  }
+  
+  Future<void> _testLayer3() async {
+    debugPrint('=== Layer 3 Test: Starting file receive (image1.jpg) ===');
+    
+    if (!_isConnected) {
+      debugPrint('Layer 3 Test: Not connected to Bluetooth device');
+      _showErrorDialog('Not connected to Bluetooth device');
+      return;
+    }
+    
+    debugPrint('Layer 3 Test: Device is connected');
+    
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      // Request file
+      final fileEntry = await FileTransferService.instance.requestFile('image1.jpg');
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show results dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Layer 3 Test - File Received'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('File: ${fileEntry.name}'),
+              Text('Size: ${fileEntry.size} bytes'),
+              const SizedBox(height: 8),
+              const Text('File saved to temporary directory'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      
+      debugPrint('Layer 3 Test: Successfully completed');
+    } catch (e, stackTrace) {
+      debugPrint('Layer 3 Test: ERROR - $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      // Close loading dialog if still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      
+      _showErrorDialog('Layer 3 Test failed: $e');
+    }
+    
+    debugPrint('=== Layer 3 Test: Finished ===');
   }
 }
 
