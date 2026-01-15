@@ -156,7 +156,6 @@ class BLEService {
     );
   }
 
-  
   static void stopScan() {
     BLEScanner.stopScan();
   }
@@ -257,6 +256,32 @@ class BLEService {
       setFileCtrlCharacteristic: (char) => _fileCtrlCharacteristic = char,
     );
   }
+  
+  /// Handle file data received from FILE_TX_CHAR
+  void _handleFileData(Uint8List data) {
+    debugPrint('BLEService: Received file data packet, length ${data.length}');
+    // For now, just log. File data handling will be implemented in higher layers.
+  }
+  
+  /// Send file request command
+  Future<void> sendFileRequest(String path) async {
+    await _fileTransport.sendFileRequest(path);
+  }
+  
+  /// Send list files request command
+  Future<void> sendListFilesRequest({String? path}) async {
+    await _fileTransport.sendListFilesRequest(path: path);
+  }
+
+  /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
+  void enqueuePacket(Uint8List packet) {
+    _audioTransport.enqueuePacket(packet);
+  }
+
+  /// Send EOF to ESP32
+  Future<void> sendEOFToEsp32() async {
+    await _audioTransport.sendEOFToEsp32();
+  }
 
   Future<void> disconnect() async {
     try {
@@ -289,32 +314,6 @@ class BLEService {
     } catch (e) {
       debugPrint('Error disconnecting: $e');
     }
-  }
-  
-  /// Handle file data received from FILE_TX_CHAR
-  void _handleFileData(Uint8List data) {
-    debugPrint('BLEService: Received file data packet, length ${data.length}');
-    // For now, just log. File data handling will be implemented in higher layers.
-  }
-  
-  /// Send file request command
-  Future<void> sendFileRequest(String path) async {
-    await _fileTransport.sendFileRequest(path);
-  }
-  
-  /// Send list files request command
-  Future<void> sendListFilesRequest({String? path}) async {
-    await _fileTransport.sendListFilesRequest(path: path);
-  }
-
-  /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
-  void enqueuePacket(Uint8List packet) {
-    _audioTransport.enqueuePacket(packet);
-  }
-
-  /// Send EOF to ESP32
-  Future<void> sendEOFToEsp32() async {
-    await _audioTransport.sendEOFToEsp32();
   }
 
   Future<void> dispose() async {
