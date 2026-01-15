@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -527,15 +528,51 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Layer 3 Test - File Received'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('File: ${fileEntry.name}'),
-              Text('Size: ${fileEntry.size} bytes'),
-              const SizedBox(height: 8),
-              const Text('File saved to temporary directory'),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('File: ${fileEntry.name}'),
+                Text('Size: ${fileEntry.size} bytes'),
+                const SizedBox(height: 16),
+                // Show image if it's an image file and path is available
+                if (fileEntry.path != null && 
+                    (fileEntry.name.toLowerCase().endsWith('.jpg') ||
+                     fileEntry.name.toLowerCase().endsWith('.jpeg') ||
+                     fileEntry.name.toLowerCase().endsWith('.png') ||
+                     fileEntry.name.toLowerCase().endsWith('.gif'))) ...[
+                  const Text('Preview:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    constraints: const BoxConstraints(
+                      maxHeight: 400,
+                      maxWidth: 300,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(fileEntry.path!),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text('Failed to load image'),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ] else ...[
+                  const Text('File saved to temporary directory'),
+                ],
+              ],
+            ),
           ),
           actions: [
             TextButton(

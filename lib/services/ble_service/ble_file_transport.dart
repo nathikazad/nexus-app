@@ -293,6 +293,7 @@ class BLEFileTransport {
         name: _receivingFileName ?? 'received_file',
         size: fileData.length,
         isDirectory: false,
+        path: file.path,  // Include file path for displaying images
       );
       
       if (onFileReceived != null) {

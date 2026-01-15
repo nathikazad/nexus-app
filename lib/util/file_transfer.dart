@@ -7,11 +7,13 @@ class FileEntry {
   final String name;
   final int size;
   final bool isDirectory;
+  final String? path;  // File path (for received files)
   
   FileEntry({
     required this.name,
     required this.size,
     required this.isDirectory,
+    this.path,
   });
   
   @override
