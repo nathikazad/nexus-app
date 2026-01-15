@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'file_transfer.dart';
 
 /// Handles file TX/RX/CTRL characteristic communication for BLE
 class BLEFileTransport {
@@ -14,11 +15,37 @@ class BLEFileTransport {
   
   // Callbacks
   void Function(Uint8List)? onDataReceived;  // Called when FILE_TX_CHAR receives data
-  void Function(int, Uint8List)? onControlReceived;  // Called when FILE_CTRL_CHAR receives control
+  void Function(List<FileEntry>)? onListFilesReceived;  // Called when LIST_RESPONSE is received
+  void Function(FileEntry)? onFileReceived;  // Reserved for future file receive functionality
   
   // Dependencies (public for BLEService to set)
   bool Function()? isConnectedCallback;
   int Function()? getMTUCallback;
+
+  /// Initialize file transport with callbacks and dependencies
+  void initialize({
+    void Function(Uint8List)? onDataReceived,
+    void Function(List<FileEntry>)? onListFilesReceived,
+    void Function(FileEntry)? onFileReceived,
+    bool Function()? isConnected,
+    int Function()? getMTU,
+  }) {
+    if (onDataReceived != null) {
+      this.onDataReceived = onDataReceived;
+    }
+    if (onListFilesReceived != null) {
+      this.onListFilesReceived = onListFilesReceived;
+    }
+    if (onFileReceived != null) {
+      this.onFileReceived = onFileReceived;
+    }
+    if (isConnected != null) {
+      isConnectedCallback = isConnected;
+    }
+    if (getMTU != null) {
+      getMTUCallback = getMTU;
+    }
+  }
   
   /// Initialize file transport characteristics from discovered service
   Future<bool> initializeFileTransportCharacteristics(
@@ -93,6 +120,33 @@ class BLEFileTransport {
     packet.setRange(1, packet.length, payload);
     await _fileCtrlCharacteristic!.write(packet, withoutResponse: true);
   }
+
+  /// Send file request command
+  Future<void> sendFileRequest(String path) async {
+    final payload = Uint8List.fromList(path.codeUnits + [0]); // null-terminated string
+    await sendControl(CMD_START_SEND_FILE, payload);
+  }
+
+  /// Send list files request command and handle response
+  Future<void> sendListFilesRequest({String? path}) async {
+    final payload = path != null
+        ? Uint8List.fromList(path.codeUnits + [0])  // null-terminated string
+        : Uint8List(0);
+
+    await sendControl(CMD_LIST_FILES, payload);
+
+    // Wait a bit for response to be prepared
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Read response from FILE_CTRL_CHAR
+    final response = await readControl();
+    if (response != null && response.isNotEmpty) {
+      _handleListResponse(response);
+    } else {
+      debugPrint('ble file transport: No response received for LIST_FILES');
+      onListFilesReceived?.call([]);
+    }
+  }
   
   /// Read control response from FILE_CTRL_CHAR (READ)
   Future<Uint8List?> readControl() async {
@@ -106,6 +160,62 @@ class BLEFileTransport {
       debugPrint('Error reading control: $e');
       return null;
     }
+  }
+
+  void _handleListResponse(Uint8List payload) {
+    final fileList = _parseListResponse(payload);
+    if (onListFilesReceived != null) {
+      debugPrint('ble file transport: Parsed ${fileList.length} files from LIST_RESPONSE');
+      onListFilesReceived!(fileList);
+    } else {
+      debugPrint('ble file transport: No onListFilesReceived callback registered');
+    }
+  }
+
+  /// Parse LIST_RESPONSE into List<FileEntry>
+  List<FileEntry> _parseListResponse(Uint8List payload) {
+    // Parse: [0x02][count:2][file1_name_len:1][file1_name][file1_size:4][is_dir:1][...]
+    final files = <FileEntry>[];
+
+    if (payload.length < 3) {
+      debugPrint('LIST_RESPONSE too short: ${payload.length}');
+      return files;
+    }
+
+    // Check command byte
+    if (payload[0] != CMD_LIST_RESPONSE) {
+      debugPrint('Invalid LIST_RESPONSE command: 0x${payload[0].toRadixString(16)}');
+      return files;
+    }
+
+    // Parse count (2 bytes, big-endian)
+    final count = (payload[1] << 8) | payload[2];
+    debugPrint('ble file transport: LIST_RESPONSE: $count files');
+
+    int offset = 3;
+
+    for (int i = 0; i < count && offset < payload.length; i++) {
+      if (offset + 1 > payload.length) break;
+      final nameLen = payload[offset++];
+
+      if (offset + nameLen + 4 + 1 > payload.length) break;
+
+      final name = String.fromCharCodes(payload.sublist(offset, offset + nameLen));
+      offset += nameLen;
+
+      final size = (payload[offset] << 24) |
+                   (payload[offset + 1] << 16) |
+                   (payload[offset + 2] << 8) |
+                   payload[offset + 3];
+      offset += 4;
+
+      final isDir = payload[offset++] != 0;
+
+      files.add(FileEntry(name: name, size: size, isDirectory: isDir != 0));
+    }
+
+    debugPrint('Parsed ${files.length} files from LIST_RESPONSE');
+    return files;
   }
   
   /// Unsubscribe from notifications

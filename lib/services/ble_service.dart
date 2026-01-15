@@ -39,13 +39,6 @@ class BLEService {
   
   // File transport
   final BLEFileTransport _fileTransport = BLEFileTransport();
-  FileTransfer? _fileTransfer;
-  
-  // File transfer callbacks
-  void Function(FileEntry)? _onFileReceived; // Reserved for future file receiving functionality
-  void Function(List<FileEntry>)? _onListFilesReceived;
-  
-  FileTransfer? get fileTransfer => _fileTransfer;
   
   bool _isConnected = false;
   static bool _isScanning = false;
@@ -80,9 +73,17 @@ class BLEService {
     void Function(FileEntry)? onFileReceived,
     void Function(List<FileEntry>)? onListFilesReceived,
   }) async {
-    // Store file transfer callbacks
-    _onFileReceived = onFileReceived;
-    _onListFilesReceived = onListFilesReceived;
+    // Initialize file transport callbacks and dependencies
+    _fileTransport.initialize(
+      onFileReceived: onFileReceived,
+      onListFilesReceived: onListFilesReceived,
+      isConnected: () => isConnected,
+      getMTU: () => getMTU(),
+    );
+
+    if (_connectionStateController != null) {
+      return true;
+    }
     try {
       // Configure FlutterBluePlus for background operation
       await FlutterBluePlus.setOptions(
@@ -540,7 +541,6 @@ class BLEService {
       await _audioTransport.unsubscribeFromNotifications();
       _audioTransport.resetPauseState();
       await _fileTransport.unsubscribeFromNotifications();
-      _fileTransfer = null;
       _currentMtu = 23; // Reset MTU to default on disconnect
       await FlutterBluePlus.stopScan();
       
@@ -578,16 +578,14 @@ class BLEService {
     );
     
     if (success) {
-      // Set dependencies
-      _fileTransport.isConnectedCallback = () => isConnected;
-      _fileTransport.getMTUCallback = () => getMTU();
-      
-      // Set up callbacks for file transport
-      _fileTransport.onDataReceived = _handleFileData;
-      _fileTransport.onControlReceived = _handleFileControl;
-      
-      // Create FileTransfer instance (kept for compatibility, but we'll use direct transport)
-      _fileTransfer = FileTransfer(_fileTransport);
+      // Ensure dependencies are set (in case initialize was called earlier)
+      _fileTransport.initialize(
+        isConnected: () => isConnected,
+        getMTU: () => getMTU(),
+      );
+
+      // Optional: log incoming file data if no handler is set
+      _fileTransport.onDataReceived ??= _handleFileData;
       debugPrint('File transfer initialized');
       return true;
     }
@@ -600,106 +598,14 @@ class BLEService {
     // For now, just log. File data handling will be implemented in higher layers.
   }
   
-  /// Handle control response from FILE_CTRL_CHAR
-  void _handleFileControl(int cmd, Uint8List payload) {
-    debugPrint('BLEService: Received control command 0x${cmd.toRadixString(16)}, payload length ${payload.length}');
-    
-    if (cmd == CMD_LIST_RESPONSE) {
-      final fileList = _parseListResponse(payload);
-
-      if (_onListFilesReceived != null) {
-        debugPrint('ble service: Parsed ${fileList.length} files from LIST_RESPONSE');
-        _onListFilesReceived!(fileList);
-      } else {
-        debugPrint('ble service: No onListFilesReceived callback registered');
-      }
-    } else {
-      debugPrint('BLEService: Unhandled control command: 0x${cmd.toRadixString(16)}');
-    }
-  }
-  
-  /// Parse LIST_RESPONSE into List<FileEntry>
-  List<FileEntry> _parseListResponse(Uint8List payload) {
-    // Parse: [0x02][count:2][file1_name_len:1][file1_name][file1_size:4][is_dir:1][...]
-    final files = <FileEntry>[];
-    
-    if (payload.length < 3) {
-      debugPrint('LIST_RESPONSE too short: ${payload.length}');
-      return files;
-    }
-    
-    // Check command byte
-    if (payload[0] != CMD_LIST_RESPONSE) {
-      debugPrint('Invalid LIST_RESPONSE command: 0x${payload[0].toRadixString(16)}');
-      return files;
-    }
-    
-    // Parse count (2 bytes, big-endian)
-    final count = (payload[1] << 8) | payload[2];
-    debugPrint('ble service: LIST_RESPONSE: $count files');
-    
-    int offset = 3;
-    
-    for (int i = 0; i < count && offset < payload.length; i++) {
-      if (offset + 1 > payload.length) break;
-      final nameLen = payload[offset++];
-      
-      if (offset + nameLen + 4 + 1 > payload.length) break;
-      
-      final name = String.fromCharCodes(payload.sublist(offset, offset + nameLen));
-      offset += nameLen;
-      
-      final size = (payload[offset] << 24) |
-                   (payload[offset + 1] << 16) |
-                   (payload[offset + 2] << 8) |
-                   payload[offset + 3];
-      offset += 4;
-      
-      final isDir = payload[offset++] != 0;
-      
-      files.add(FileEntry(name: name, size: size, isDirectory: isDir != 0));
-    }
-    
-    debugPrint('Parsed ${files.length} files from LIST_RESPONSE');
-    return files;
-  }
-  
   /// Send file request command
   Future<void> sendFileRequest(String path) async {
-    if (!_isConnected) {
-      throw Exception('Not connected');
-    }
-    
-    final payload = Uint8List.fromList(path.codeUnits + [0]); // null-terminated string
-    await _fileTransport.sendControl(CMD_START_SEND_FILE, payload);
+    await _fileTransport.sendFileRequest(path);
   }
   
   /// Send list files request command
   Future<void> sendListFilesRequest({String? path}) async {
-    if (!_isConnected) {
-      throw Exception('Not connected');
-    }
-    
-    final payload = path != null 
-        ? Uint8List.fromList(path.codeUnits + [0])  // null-terminated string
-        : Uint8List(0);
-    
-    await _fileTransport.sendControl(CMD_LIST_FILES, payload);
-    
-    // For LIST_FILES, we need to read the response from FILE_CTRL_CHAR
-    // Wait a bit for response to be prepared
-    await Future.delayed(Duration(milliseconds: 100));
-    
-    // Read response from FILE_CTRL_CHAR
-    final response = await _fileTransport.readControl();
-    if (response != null && response.isNotEmpty) {
-      _handleFileControl(CMD_LIST_RESPONSE, response);
-    } else {
-      debugPrint('ble service: No response received for LIST_FILES');
-      if (_onListFilesReceived != null) {
-        _onListFilesReceived!([]);
-      }
-    }
+    await _fileTransport.sendListFilesRequest(path: path);
   }
 
   /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
