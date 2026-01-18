@@ -7,6 +7,7 @@ import 'ble_file_transport.dart';
 import 'ble_scanner.dart';
 import 'ble_connector.dart';
 import '../../util/file_transfer.dart';
+import '../logging_service.dart';
 
 class BLEService {
   BLEService();
@@ -44,6 +45,7 @@ class BLEService {
   
   bool _isConnected = false;
   bool _isConnecting = false; // Track if connection loop is running
+  bool _characteristicsInitialized = false; // Track if characteristics have been discovered
   int _currentMtu = 23; // Default BLE MTU (will be updated from callback)
 
   Stream<bool>? get connectionStateStream => _connectionStateController?.stream;
@@ -67,6 +69,18 @@ class BLEService {
     return 20; // Fallback: default BLE MTU (23) - 3 = 20 bytes payload
   }
 
+  /// Clear all characteristic references
+  void _clearCharacteristics() {
+    _batteryCharacteristic = null;
+    _rtcCharacteristic = null;
+    _hapticCharacteristic = null;
+    _deviceNameCharacteristic = null;
+    _fileTxCharacteristic = null;
+    _fileRxCharacteristic = null;
+    _fileCtrlCharacteristic = null;
+    _characteristicsInitialized = false;
+  }
+
   Future<bool> initialize({
     void Function(Uint8List)? onPcm24ChunkReceived,
     void Function()? onEofReceived,
@@ -86,7 +100,7 @@ class BLEService {
       
       // Check if Bluetooth is available
       if (await FlutterBluePlus.isSupported == false) {
-        debugPrint('Bluetooth not supported');
+        LoggingService.instance.log('Bluetooth not supported');
         return false;
       }
 
@@ -118,7 +132,7 @@ class BLEService {
 
       return true;
     } catch (e) {
-      debugPrint('Error initializing BLE service: $e');
+      LoggingService.instance.log('Error initializing BLE service: $e');
       return false;
     }
   }
@@ -126,21 +140,21 @@ class BLEService {
   Future<void> _scanAndAutoConnectLoop() async {
     // Prevent multiple loops from running
     if (_isConnecting) {
-      debugPrint('Connection loop already running, skipping...');
+      LoggingService.instance.log('Connection loop already running, skipping...');
       return;
     }
     
     _isConnecting = true;
     while (!_isConnected && _isConnecting) {
-      debugPrint('Starting scan for ESP32 device...');
+      LoggingService.instance.log('Starting scan for ESP32 device...');
       final success = await scanAndConnect();
       
       if (success) {
-        debugPrint('Successfully connected to device');
+        LoggingService.instance.log('Successfully connected to device');
         _isConnecting = false;
         break;
       } else {
-        debugPrint('Device not found, will retry in 2 seconds...');
+        LoggingService.instance.log('Device not found, will retry in 2 seconds...');
         await Future.delayed(const Duration(seconds: 2));
       }
     }
@@ -163,7 +177,7 @@ class BLEService {
   /// Connect to a specific device
   Future<bool> connectToDevice(BluetoothDevice device) async {
     if (_isConnected && _device?.remoteId == device.remoteId) {
-      debugPrint('Already connected to this device');
+      LoggingService.instance.log('Already connected to this device');
       return true;
     }
 
@@ -181,12 +195,12 @@ class BLEService {
 
   Future<bool> scanAndConnect() async {
     if (_isConnected) {
-      debugPrint('Already connected');
+      LoggingService.instance.log('Already connected');
       return true;
     }
     
     if (_isConnecting && BLEScanner.isScanning) {
-      debugPrint('Connection already in progress');
+      LoggingService.instance.log('Connection already in progress');
       return false;
     }
 
@@ -225,15 +239,19 @@ class BLEService {
       onDisconnected: () async {
         await _audioTransport.unsubscribeFromNotifications();
         _audioTransport.resetPauseState();
+        _clearCharacteristics();
         if (!_isConnecting) {
           _scanAndAutoConnectLoop();
         }
       },
-      shouldReinitialize: () => _batteryCharacteristic == null,
+      shouldReinitialize: () => !_characteristicsInitialized,
       reinitializeAfterRestore: _reinitializeAfterRestore,
     );
 
     _connectionSubscription = result.connectionSubscription;
+    if (result.success) {
+      _characteristicsInitialized = true;
+    }
     return result.success;
   }
 
@@ -255,11 +273,12 @@ class BLEService {
       setFileRxCharacteristic: (char) => _fileRxCharacteristic = char,
       setFileCtrlCharacteristic: (char) => _fileCtrlCharacteristic = char,
     );
+    _characteristicsInitialized = true;
   }
   
   /// Handle file data received from FILE_TX_CHAR
   void _handleFileData(Uint8List data) {
-    debugPrint('BLEService: Received file data packet, length ${data.length}');
+    LoggingService.instance.log('BLEService: Received file data packet, length ${data.length}');
     // For now, just log. File data handling will be implemented in higher layers.
   }
   
@@ -295,13 +314,7 @@ class BLEService {
       _connectionSubscription?.cancel();
       _connectionSubscription = null;
       
-      _batteryCharacteristic = null;
-      _rtcCharacteristic = null;
-      _hapticCharacteristic = null;
-      _deviceNameCharacteristic = null;
-      _fileTxCharacteristic = null;
-      _fileRxCharacteristic = null;
-      _fileCtrlCharacteristic = null;
+      _clearCharacteristics();
 
       if (_device != null && _isConnected) {
         await _device!.disconnect();
@@ -310,9 +323,9 @@ class BLEService {
       }
 
       _device = null;
-      debugPrint('Disconnected');
+      LoggingService.instance.log('Disconnected');
     } catch (e) {
-      debugPrint('Error disconnecting: $e');
+      LoggingService.instance.log('Error disconnecting: $e');
     }
   }
 

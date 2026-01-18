@@ -4,6 +4,7 @@ import 'package:nexus_voice_assistant/services/hardware_service/hardware_service
 import 'package:nexus_voice_assistant/services/agent_tool_service.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'logging_service.dart';
 
 enum queryOrigin {
   App,
@@ -38,7 +39,7 @@ class OpenAIService {
       // Get API key from environment variables
       final apiKey = dotenv.env['OPENAI_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) {
-        debugPrint('Error: OPENAI_API_KEY not found in environment variables');
+        LoggingService.instance.log('Error: OPENAI_API_KEY not found in environment variables');
         return false;
       }
       
@@ -103,7 +104,7 @@ class OpenAIService {
 
       return true;
     } catch (e) {
-      debugPrint('Error initializing OpenAI service: $e');
+      LoggingService.instance.log('Error initializing OpenAI service: $e');
       return false;
     }
   }
@@ -118,7 +119,7 @@ class OpenAIService {
       _isConnected = true;
       return true;
     } catch (e) {
-      debugPrint('Error connecting to OpenAI: $e');
+      LoggingService.instance.log('Error connecting to OpenAI: $e');
       return false;
     }
   }
@@ -174,7 +175,7 @@ class OpenAIService {
     //     print('Server event type: $eventType');
         
     //   } catch (e) {
-    //     debugPrint('Error handling server event: $e');
+    //     LoggingService.instance.log('Error handling server event: $e');
     //   }
     // });
 
@@ -201,7 +202,7 @@ class OpenAIService {
         await _client!.disconnect();
         _isConnected = false;
       } catch (e) {
-        debugPrint('Error disconnecting: $e');
+        LoggingService.instance.log('Error disconnecting: $e');
       }
     }
   }
@@ -209,17 +210,17 @@ class OpenAIService {
   // Send audio data to OpenAI
   Future<void> sendAudio(Uint8List audioData, queryOrigin origin) async {
     if (_client == null || !_isConnected) {
-      debugPrint('Client not connected');
+      LoggingService.instance.log('Client not connected');
       return;
     }
 
     _queryOrigin = origin;
 
     try {
-      // debugPrint('OpenAIService: Sending audio data (${audioData.length} bytes)');
+      // LoggingService.instance.log('OpenAIService: Sending audio data (${audioData.length} bytes)');
       await _client!.appendInputAudio(audioData);
     } catch (e) {
-      debugPrint('Error sending audio: $e');
+      LoggingService.instance.log('Error sending audio: $e');
     }
   }
 
@@ -244,14 +245,14 @@ class OpenAIService {
   // Create response (for manual mode)
   Future<void> createResponse() async {
     if (_client == null || !_isConnected) {
-      debugPrint('Client not connected');
+      LoggingService.instance.log('Client not connected');
       return;
     }
 
     try {
       await _client!.createResponse();
     } catch (e) {
-      debugPrint('Error creating response: $e');
+      LoggingService.instance.log('Error creating response: $e');
     }
   }
 

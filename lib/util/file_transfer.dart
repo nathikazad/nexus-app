@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../services/ble_service/ble_file_transport.dart';
+import '../services/logging_service.dart';
 
 class FileEntry {
   final String name;
@@ -66,7 +67,7 @@ class FileTransfer {
     // Read response from FILE_CTRL_CHAR
     final response = await transport.readControl();
     if (response == null || response.isEmpty) {
-      debugPrint('file transfer: No response received for LIST_FILES');
+      LoggingService.instance.log('file transfer: No response received for LIST_FILES');
       return [];
     }
     
@@ -76,7 +77,7 @@ class FileTransfer {
   
   /// Handle received data packet (Layer 2: just log)
   void _handleDataPacket(Uint8List data) {
-    debugPrint('FileTransfer: Received data packet, length ${data.length}');
+    LoggingService.instance.log('FileTransfer: Received data packet, length ${data.length}');
     // Layer 2: Just log data packets, will be implemented in later layers
   }
   
@@ -86,19 +87,19 @@ class FileTransfer {
     final files = <FileEntry>[];
     
     if (payload.length < 3) {
-      debugPrint('LIST_RESPONSE too short: ${payload.length}');
+      LoggingService.instance.log('LIST_RESPONSE too short: ${payload.length}');
       return files;
     }
     
     // Check command byte
     if (payload[0] != CMD_LIST_RESPONSE) {
-      debugPrint('Invalid LIST_RESPONSE command: 0x${payload[0].toRadixString(16)}');
+      LoggingService.instance.log('Invalid LIST_RESPONSE command: 0x${payload[0].toRadixString(16)}');
       return files;
     }
     
     // Parse count (2 bytes, big-endian)
     final count = (payload[1] << 8) | payload[2];
-    debugPrint('file transfer: LIST_RESPONSE: $count files');
+    LoggingService.instance.log('file transfer: LIST_RESPONSE: $count files');
     
     int offset = 3;
     
@@ -122,7 +123,7 @@ class FileTransfer {
       files.add(FileEntry(name: name, size: size, isDirectory: isDir != 0));
     }
     
-    debugPrint('Parsed ${files.length} files from LIST_RESPONSE');
+    LoggingService.instance.log('Parsed ${files.length} files from LIST_RESPONSE');
     return files;
   }
   

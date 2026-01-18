@@ -8,6 +8,7 @@ import 'rtc_service.dart';
 import 'name_service.dart';
 import 'haptic_service.dart';
 import '../openai_service.dart';
+import '../logging_service.dart';
 import '../file_transfer_service.dart';
 
 class HardwareService {
@@ -62,7 +63,7 @@ class HardwareService {
           FileTransferService.instance.onFileReceived(fileEntry);
         },
         onListFilesReceived: (fileNameList) {
-          debugPrint('hardware service: Received ${fileNameList.length} files from LIST_RESPONSE');
+          LoggingService.instance.log('hardware service: Received ${fileNameList.length} files from LIST_RESPONSE');
           FileTransferService.instance.onListFilesReceived(fileNameList);
         }
       );
@@ -73,7 +74,7 @@ class HardwareService {
       _isInitialized = true;
       return true;
     } catch (e) {
-      debugPrint('Error initializing HardwareService: $e');
+      LoggingService.instance.log('Error initializing HardwareService: $e');
       return false;
     }
   }

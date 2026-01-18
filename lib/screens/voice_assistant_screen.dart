@@ -12,7 +12,9 @@ import '../services/file_transfer_service.dart';
 import '../widgets/audio_stream_manager.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/input_area.dart';
+import '../services/logging_service.dart';
 import 'hardware_screen.dart';
+import 'log_viewer_screen.dart';
 
 class Interaction {
   String userQuery;
@@ -64,14 +66,11 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   bool _speakerEnabled = false;
   String _currentTranscript = '';
   String? _currentlyPlayingAudio;
-  int? _batteryPercentage;
-  bool? _isCharging;
   // int _turnCount = 0;
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
   StreamSubscription<bool>? _bleConnectionSubscription;
-  StreamSubscription<BatteryData>? _batterySubscription;
 
   @override
   void initState() {
@@ -89,20 +88,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       if (mounted) {
         setState(() {
           _isConnected = isConnected;
-          if (!isConnected) {
-            _batteryPercentage = null;
-            _isCharging = null;
-          }
-        });
-      }
-    });
-    
-    // Listen to battery updates (polling handled by Hardware service)
-    _batterySubscription = _hardwareService.batteryStream?.listen((batteryData) {
-      if (mounted) {
-        setState(() {
-          _batteryPercentage = batteryData.percentage;
-          _isCharging = batteryData.isCharging;
         });
       }
     });
@@ -214,7 +199,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         try {
           await _openAIService.createResponse();
         } catch (e) {
-          debugPrint('Error creating response after recording stop: $e');
+          LoggingService.instance.log('Error creating response after recording stop: $e');
         }
         
         setState(() {
@@ -341,7 +326,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _audioSubscription?.cancel();
     _conversationSubscription?.cancel();
     _bleConnectionSubscription?.cancel();
-    _batterySubscription?.cancel();
     _scrollController.dispose();
     _textController.dispose();
     _audioPlayer.dispose();
@@ -358,12 +342,16 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       appBar: _VoiceAssistantAppBar(
         isConnected: _isConnected,
         isPlayingStreamedAudio: _audioStreamManager.isPlayingStreamedAudio,
-        batteryPercentage: _batteryPercentage,
-        isCharging: _isCharging,
         onBluetoothIconTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const HardwareScreen()),
+          );
+        },
+        onLogIconTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LogViewerScreen()),
           );
         },
       ),
@@ -398,35 +386,41 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           ),
         ],
       ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: _testLayer2,
-            tooltip: 'Test Layer 2 (List Files)',
-            child: const Icon(Icons.folder),
-          ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            onPressed: _testLayer3,
-            tooltip: 'Test Layer 3 (Receive File)',
-            child: const Icon(Icons.download),
-          ),
-        ],
-      ),
+      // floatingActionButton: Row(
+      //   mainAxisAlignment: MainAxisAlignment.end,
+      //   children: [
+      //     FloatingActionButton(
+      //       onPressed: _testLayer2,
+      //       tooltip: 'Test Layer 2 (List Files)',
+      //       child: const Icon(Icons.folder),
+      //     ),
+      //     const SizedBox(width: 10),
+      //     FloatingActionButton(
+      //       onPressed: _testLayer3,
+      //       tooltip: 'Test Layer 3 (Receive File)',
+      //       child: const Icon(Icons.download),
+      //     ),
+      //     const SizedBox(width: 10),
+      //     FloatingActionButton(
+      //       onPressed: _downloadRadioWav,
+      //       tooltip: 'Download radio.wav',
+      //       child: const Icon(Icons.radio),
+      //     ),
+      //   ],
+      // ),
     );
   }
   
   Future<void> _testLayer2() async {
-    debugPrint('=== Layer 2 Test: Starting file list request ===');
+    LoggingService.instance.log('=== Layer 2 Test: Starting file list request ===');
     
     if (!_isConnected) {
-      debugPrint('Layer 2 Test: Not connected to Bluetooth device');
+      LoggingService.instance.log('Layer 2 Test: Not connected to Bluetooth device');
       _showErrorDialog('Not connected to Bluetooth device');
       return;
     }
     
-    debugPrint('Layer 2 Test: Device is connected');
+    LoggingService.instance.log('Layer 2 Test: Device is connected');
     
     try {
       // Show loading dialog
@@ -481,10 +475,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         ),
       );
       
-      debugPrint('Layer 2 Test: Successfully completed');
+      LoggingService.instance.log('Layer 2 Test: Successfully completed');
     } catch (e, stackTrace) {
-      debugPrint('Layer 2 Test: ERROR - $e');
-      debugPrint('Layer 2 Test: Stack trace: $stackTrace');
+      LoggingService.instance.log('Layer 2 Test: ERROR - $e');
+      LoggingService.instance.log('Layer 2 Test: Stack trace: $stackTrace');
       
       // Close loading dialog if still open
       if (Navigator.of(context).canPop()) {
@@ -493,19 +487,19 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       _showErrorDialog('Failed to list files: $e');
     }
     
-    debugPrint('=== Layer 2 Test: Finished ===');
+    LoggingService.instance.log('=== Layer 2 Test: Finished ===');
   }
   
   Future<void> _testLayer3() async {
-    debugPrint('=== Layer 3 Test: Starting file receive (image1.jpg) ===');
+    LoggingService.instance.log('=== Layer 3 Test: Starting file receive (image1.jpg) ===');
     
     if (!_isConnected) {
-      debugPrint('Layer 3 Test: Not connected to Bluetooth device');
+      LoggingService.instance.log('Layer 3 Test: Not connected to Bluetooth device');
       _showErrorDialog('Not connected to Bluetooth device');
       return;
     }
     
-    debugPrint('Layer 3 Test: Device is connected');
+    LoggingService.instance.log('Layer 3 Test: Device is connected');
     
     try {
       // Show loading dialog
@@ -583,10 +577,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
         ),
       );
       
-      debugPrint('Layer 3 Test: Successfully completed');
+      LoggingService.instance.log('Layer 3 Test: Successfully completed');
     } catch (e, stackTrace) {
-      debugPrint('Layer 3 Test: ERROR - $e');
-      debugPrint('Stack trace: $stackTrace');
+      LoggingService.instance.log('Layer 3 Test: ERROR - $e');
+      LoggingService.instance.log('Stack trace: $stackTrace');
       
       // Close loading dialog if still open
       if (Navigator.of(context).canPop()) {
@@ -596,7 +590,84 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       _showErrorDialog('Layer 3 Test failed: $e');
     }
     
-    debugPrint('=== Layer 3 Test: Finished ===');
+    LoggingService.instance.log('=== Layer 3 Test: Finished ===');
+  }
+  
+  Future<void> _downloadRadioWav() async {
+    LoggingService.instance.log('=== Download radio.wav: Starting ===');
+    
+    if (!_isConnected) {
+      LoggingService.instance.log('Download radio.wav: Not connected to Bluetooth device');
+      _showErrorDialog('Not connected to Bluetooth device');
+      return;
+    }
+    
+    LoggingService.instance.log('Download radio.wav: Device is connected');
+    
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      // Request radio.wav file
+      final fileEntry = await FileTransferService.instance.requestFile('radio.wav');
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show success dialog with play option
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Download Complete'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('File: ${fileEntry.name}'),
+              Text('Size: ${fileEntry.size} bytes'),
+              const SizedBox(height: 16),
+              const Text(
+                'File downloaded successfully!',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          actions: [
+            if (fileEntry.path != null)
+              TextButton(
+                onPressed: () {
+                  _playAudio(fileEntry.path!);
+                },
+                child: const Text('Play'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      
+      LoggingService.instance.log('Download radio.wav: Successfully completed');
+    } catch (e, stackTrace) {
+      LoggingService.instance.log('Download radio.wav: ERROR - $e');
+      LoggingService.instance.log('Stack trace: $stackTrace');
+      
+      // Close loading dialog if still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      
+      _showErrorDialog('Failed to download radio.wav: $e');
+    }
+    
+    LoggingService.instance.log('=== Download radio.wav: Finished ===');
   }
 }
 
@@ -605,16 +676,14 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
 class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isConnected;
   final bool isPlayingStreamedAudio;
-  final int? batteryPercentage;
-  final bool? isCharging;
   final VoidCallback? onBluetoothIconTap;
+  final VoidCallback? onLogIconTap;
 
   const _VoiceAssistantAppBar({
     required this.isConnected,
     required this.isPlayingStreamedAudio,
-    this.batteryPercentage,
-    this.isCharging,
     this.onBluetoothIconTap,
+    this.onLogIconTap,
   });
 
   @override
@@ -632,32 +701,15 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
                 const Icon(Icons.volume_up, color: Colors.blue, size: 16),
                 const SizedBox(width: 4),
               ],
-              // Battery indicator (only show when connected)
-              if (isConnected && batteryPercentage != null) ...[
-                if (isCharging == true) ...[
-                  const Icon(
-                    Icons.battery_charging_full,
-                    color: Colors.green,
-                    size: 18,
-                  ),
-                ] else ...[
-                  Icon(
-                    Icons.battery_std,
-                    color: _getBatteryColor(batteryPercentage!),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$batteryPercentage%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _getBatteryColor(batteryPercentage!),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 8),
-              ],
+              // Log icon
+              GestureDetector(
+                onTap: onLogIconTap,
+                child: const Icon(
+                  Icons.description,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: onBluetoothIconTap,
                 child: Icon(
@@ -670,16 +722,6 @@ class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidg
         ),
       ],
     );
-  }
-  
-  Color _getBatteryColor(int percentage) {
-    if (percentage >= 50) {
-      return Colors.green;
-    } else if (percentage >= 20) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
   }
 
   @override

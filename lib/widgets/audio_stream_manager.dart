@@ -5,6 +5,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
+import '../services/logging_service.dart';
 
 class AudioStreamManager {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -40,7 +41,7 @@ class AudioStreamManager {
       
       // Add chunk to current batch
       _currentBatch.add(audioData);
-      debugPrint('📦 Added chunk to batch: ${_currentBatch.length}/${_chunksPerBatch} chunks');
+      LoggingService.instance.log('📦 Added chunk to batch: ${_currentBatch.length}/${_chunksPerBatch} chunks');
       
       // Check if batch is complete
       if (_currentBatch.length >= _chunksPerBatch) {
@@ -49,7 +50,7 @@ class AudioStreamManager {
         // Set timeout timer for remaining chunks
         _batchTimeoutTimer = Timer(Duration(milliseconds: _batchTimeoutMs), () async {
           if (_currentBatch.isNotEmpty) {
-            debugPrint('⏰ Batch timeout (${_batchTimeoutMs}ms) - creating batch with ${_currentBatch.length} chunks');
+            LoggingService.instance.log('⏰ Batch timeout (${_batchTimeoutMs}ms) - creating batch with ${_currentBatch.length} chunks');
             await _createBatchedWavFile();
           }
         });
@@ -63,7 +64,7 @@ class AudioStreamManager {
         _playNextBatchedFile();
       }
     } catch (e) {
-      debugPrint('Error handling streamed audio: $e');
+      LoggingService.instance.log('Error handling streamed audio: $e');
     }
   }
 
@@ -112,7 +113,7 @@ class AudioStreamManager {
       
       // Add to queue
       _batchedAudioFiles.add(audioFile);
-      debugPrint('🎵 Created batched WAV file: ${batchToProcess.length} chunks -> ${(wavData.length / 1024).toStringAsFixed(1)} KB');
+      LoggingService.instance.log('🎵 Created batched WAV file: ${batchToProcess.length} chunks -> ${(wavData.length / 1024).toStringAsFixed(1)} KB');
       
       // Start playback if not already playing
       if (!_isPlayingStreamedAudio && _batchedAudioFiles.isNotEmpty) {
@@ -123,7 +124,7 @@ class AudioStreamManager {
       }
       
     } catch (e) {
-      debugPrint('Error creating batched WAV file: $e');
+      LoggingService.instance.log('Error creating batched WAV file: $e');
       _currentBatch.clear(); // Clear batch even on error
     } finally {
       _isCreatingBatch = false;
@@ -147,7 +148,7 @@ class AudioStreamManager {
       (_) {
         // Ignore if we're in the middle of transitioning between files
         if (_isTransitioningPlayback) {
-          debugPrint('   ⏭️ Ignoring onPlayerComplete during transition');
+          LoggingService.instance.log('   ⏭️ Ignoring onPlayerComplete during transition');
           return;
         }
         
@@ -165,7 +166,7 @@ class AudioStreamManager {
         }
       },
       onError: (error) {
-        debugPrint('⚠️ Error in audio player completion listener: $error');
+        LoggingService.instance.log('⚠️ Error in audio player completion listener: $error');
         // Try to continue with next file if available (but not during transition)
         if (!_isTransitioningPlayback && _batchedAudioFiles.isNotEmpty) {
           Future.delayed(const Duration(milliseconds: 100), () {
@@ -193,17 +194,17 @@ class AudioStreamManager {
     try {
       // Take the first batched file
       final audioFile = _batchedAudioFiles.removeFirst();
-      debugPrint('🎵 Playing batched file, remaining files: ${_batchedAudioFiles.length}');
-      debugPrint('   📁 File: ${audioFile.split('/').last}');
+      LoggingService.instance.log('🎵 Playing batched file, remaining files: ${_batchedAudioFiles.length}');
+      LoggingService.instance.log('   📁 File: ${audioFile.split('/').last}');
       
       // Get file info for debugging
       if (!kIsWeb) {
         final file = File(audioFile);
         if (await file.exists()) {
           final fileSize = await file.length();
-          debugPrint('   📊 File size: ${(fileSize / 1024).toStringAsFixed(1)} KB');
+          LoggingService.instance.log('   📊 File size: ${(fileSize / 1024).toStringAsFixed(1)} KB');
         } else {
-          debugPrint('   ⚠️ Audio file does not exist: $audioFile');
+          LoggingService.instance.log('   ⚠️ Audio file does not exist: $audioFile');
           // Continue to next file
           if (_batchedAudioFiles.isNotEmpty) {
             _playNextBatchedFile();
@@ -216,7 +217,7 @@ class AudioStreamManager {
       _isTransitioningPlayback = true;
       
       try {
-        debugPrint('   ▶️ Calling play()...');
+        LoggingService.instance.log('   ▶️ Calling play()...');
         final playStartTime = DateTime.now();
         
         // Just call play() - audioplayers will stop current audio automatically
@@ -225,7 +226,7 @@ class AudioStreamManager {
           await _audioPlayer.play(UrlSource(audioFile)).timeout(
             const Duration(seconds: 2),
             onTimeout: () {
-              debugPrint('   ⏱️ TIMEOUT: play() did not resolve');
+              LoggingService.instance.log('   ⏱️ TIMEOUT: play() did not resolve');
               throw TimeoutException('Playback timeout', const Duration(seconds: 2));
             },
           );
@@ -233,17 +234,17 @@ class AudioStreamManager {
           await _audioPlayer.play(DeviceFileSource(audioFile)).timeout(
             const Duration(seconds: 2),
             onTimeout: () {
-              debugPrint('   ⏱️ TIMEOUT: play() did not resolve');
+              LoggingService.instance.log('   ⏱️ TIMEOUT: play() did not resolve');
               throw TimeoutException('Playback timeout', const Duration(seconds: 2));
             },
           );
         }
         
         final playElapsed = DateTime.now().difference(playStartTime);
-        debugPrint('   ✅ play() resolved after ${playElapsed.inMilliseconds}ms');
+        LoggingService.instance.log('   ✅ play() resolved after ${playElapsed.inMilliseconds}ms');
         
       } catch (e) {
-        debugPrint('   ❌ Error playing: $e');
+        LoggingService.instance.log('   ❌ Error playing: $e');
         
         // Continue to next file instead of stopping
         if (_batchedAudioFiles.isNotEmpty) {
@@ -261,7 +262,7 @@ class AudioStreamManager {
       }
       
     } catch (e) {
-      debugPrint('❌ Fatal error in _playNextBatchedFile: $e');
+      LoggingService.instance.log('❌ Fatal error in _playNextBatchedFile: $e');
       _isTransitioningPlayback = false;
       // Only stop if this is a fatal error, otherwise try to continue
       if (_batchedAudioFiles.isEmpty) {
@@ -347,7 +348,7 @@ class AudioStreamManager {
       }
       
     } catch (e) {
-      debugPrint('Failed to play audio: $e');
+      LoggingService.instance.log('Failed to play audio: $e');
     }
   }
 
@@ -362,14 +363,14 @@ class AudioStreamManager {
       _currentBatch.clear();
       _batchTimeoutTimer?.cancel();
     } catch (e) {
-      debugPrint('Error stopping audio: $e');
+      LoggingService.instance.log('Error stopping audio: $e');
     }
   }
 
   /// Flush any remaining chunks in the current batch
   Future<void> flushRemainingChunks() async {
     if (_currentBatch.isNotEmpty) {
-      debugPrint('🔄 Flushing remaining ${_currentBatch.length} chunks...');
+      LoggingService.instance.log('🔄 Flushing remaining ${_currentBatch.length} chunks...');
       await _createBatchedWavFile();
     }
   }

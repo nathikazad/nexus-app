@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/hardware_service/hardware_service.dart';
 import '../services/hardware_service/battery_service.dart';
+import '../services/logging_service.dart';
 import 'device_selection_screen.dart';
 
 class HardwareScreen extends StatefulWidget {
@@ -114,20 +115,20 @@ class _HardwareScreenState extends State<HardwareScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error reading RTC data: $e');
+      LoggingService.instance.log('Error reading RTC data: $e');
     }
   }
 
   Future<void> _readDeviceName() async {
-    debugPrint('Reading device name');
+    LoggingService.instance.log('Reading device name');
     if (!_isConnected) {
       return;
     }
 
     try {
-      debugPrint('Reading device name from device');
+      LoggingService.instance.log('Reading device name from device');
       final name = await _hardwareService.readDeviceName();
-      debugPrint('Device name read: $name');
+      LoggingService.instance.log('Device name read: $name');
       if (mounted) {
         setState(() {
           // Use read name if available, otherwise fall back to advertising name
@@ -135,7 +136,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error reading device name: $e');
+      LoggingService.instance.log('Error reading device name: $e');
       // Fall back to advertising name on error
       if (mounted) {
         setState(() {

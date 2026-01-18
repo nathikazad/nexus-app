@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../logging_service.dart';
 
 /// Manages packet queue, batching, and sending for BLE communication
 class PacketQueue {
@@ -42,7 +43,7 @@ class PacketQueue {
     // If adding this packet would exceed MTU and we have a batch, enqueue current batch
     if (_currentBatch.isNotEmpty && _currentBatch.length + packet.length > mtu) {
       _packetQueue.add(_currentBatch);
-      // debugPrint('[BATCH] Enqueued batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
+      // LoggingService.instance.log('[BATCH] Enqueued batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
       _currentBatch = Uint8List(0);
     }
 
@@ -63,7 +64,7 @@ class PacketQueue {
     // Flush any pending batch
     if (_currentBatch.isNotEmpty) {
       _packetQueue.add(_currentBatch);
-      debugPrint('[BATCH] Enqueued final batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
+      LoggingService.instance.log('[BATCH] Enqueued final batch: ${_currentBatch.length} bytes (queue size: ${_packetQueue.length})');
       _currentBatch = Uint8List(0);
     }
 
@@ -72,7 +73,7 @@ class PacketQueue {
     eofPacket[0] = signalEof & 0xFF;
     eofPacket[1] = (signalEof >> 8) & 0xFF;
     _packetQueue.add(eofPacket);
-    debugPrint('[QUEUE] Enqueued EOF packet (queue size: ${_packetQueue.length})');
+    LoggingService.instance.log('[QUEUE] Enqueued EOF packet (queue size: ${_packetQueue.length})');
   }
 
   /// Check if a packet is an EOF packet
@@ -93,7 +94,7 @@ class PacketQueue {
     _senderTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) {
       _processQueue();
     });
-    debugPrint('[SENDER] Started background packet sender');
+    LoggingService.instance.log('[SENDER] Started background packet sender');
   }
 
   /// Stop the background packet sender
@@ -101,7 +102,7 @@ class PacketQueue {
     _senderRunning = false;
     _senderTimer?.cancel();
     _senderTimer = null;
-    debugPrint('[SENDER] Stopped background packet sender');
+    LoggingService.instance.log('[SENDER] Stopped background packet sender');
   }
 
   /// Process the packet queue - sends ready-to-send batches
@@ -122,7 +123,7 @@ class PacketQueue {
           // Send EOF packet immediately (not batched)
           _packetQueue.removeFirst();
           await _sendPacket(batch);
-          debugPrint('[SEND] Sent EOF packet');
+          LoggingService.instance.log('[SEND] Sent EOF packet');
           break; // EOF is always the last packet
         }
 
@@ -138,7 +139,7 @@ class PacketQueue {
         }
       }
     } catch (e) {
-      debugPrint('[SENDER] Error processing queue: $e');
+      LoggingService.instance.log('[SENDER] Error processing queue: $e');
     }
     finally {
       _isProcessing = false;
@@ -156,10 +157,10 @@ class PacketQueue {
       final now = DateTime.now();
       final seconds = now.millisecondsSinceEpoch ~/ 1000;
       final milliseconds = now.millisecondsSinceEpoch % 1000;
-      debugPrint('[SEND] Sending batch: ${batch.length} bytes [${seconds}.${milliseconds.toString().padLeft(3, '0')}]');
+      LoggingService.instance.log('[SEND] Sending batch: ${batch.length} bytes [${seconds}.${milliseconds.toString().padLeft(3, '0')}]');
       await rxCharacteristic.write(batch, withoutResponse: true);
     } catch (e) {
-      debugPrint('[SEND] Error sending batch: $e');
+      LoggingService.instance.log('[SEND] Error sending batch: $e');
       rethrow;
     }
   }
@@ -168,15 +169,15 @@ class PacketQueue {
   Future<void> _sendPacket(Uint8List packet) async {
     final rxCharacteristic = _getRxCharacteristic();
     if (rxCharacteristic == null || !_isConnected()) {
-      debugPrint('[SEND] Cannot send packet: not connected or RX characteristic not available');
+      LoggingService.instance.log('[SEND] Cannot send packet: not connected or RX characteristic not available');
       return;
     }
 
     try {
-      debugPrint('[SEND] Sending packet: ${packet.length} bytes');
+      LoggingService.instance.log('[SEND] Sending packet: ${packet.length} bytes');
       await rxCharacteristic.write(packet, withoutResponse: true);
     } catch (e) {
-      debugPrint('[SEND] Error sending packet: $e');
+      LoggingService.instance.log('[SEND] Error sending packet: $e');
       rethrow;
     }
   }

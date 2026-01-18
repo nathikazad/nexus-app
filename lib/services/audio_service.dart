@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'logging_service.dart';
 
 class AudioService {
   static final AudioService _instance = AudioService._internal();
@@ -44,7 +45,7 @@ class AudioService {
       _isInitialized = true;
       return true;
     } catch (e) {
-      debugPrint('Error initializing audio service: $e');
+      LoggingService.instance.log('Error initializing audio service: $e');
       return false;
     }
   }
@@ -84,13 +85,13 @@ class AudioService {
           }
         },
         onError: (error) {
-          debugPrint('Audio stream error: $error');
+          LoggingService.instance.log('Audio stream error: $error');
         },
       );
 
       return true;
     } catch (e) {
-      debugPrint('Error starting recording: $e');
+      LoggingService.instance.log('Error starting recording: $e');
       return false;
     }
   }
@@ -103,7 +104,7 @@ class AudioService {
       _isRecording = false;
       _audioDataChunks.clear();
     } catch (e) {
-      debugPrint('Error stopping recording: $e');
+      LoggingService.instance.log('Error stopping recording: $e');
     }
   }
 

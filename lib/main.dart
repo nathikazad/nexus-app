@@ -7,9 +7,13 @@ import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
 import 'screens/voice_assistant_screen.dart';
 import 'services/openai_service.dart';
+import 'services/logging_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize logging service first (before any logging occurs)
+  await LoggingService.instance.initialize();
   
   // Load environment variables
   await dotenv.load();

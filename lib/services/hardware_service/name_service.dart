@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../ble_service/ble_service.dart';
+import '../logging_service.dart';
 
 class NameService {
   final BLEService _bleService;
@@ -42,12 +43,12 @@ class NameService {
       if (data.isNotEmpty) {
         // Convert bytes to string (UTF-8)
         final name = String.fromCharCodes(data);
-        debugPrint('Device name read: "$name"');
+        LoggingService.instance.log('Device name read: "$name"');
         return name;
       }
       return null;
     } catch (e) {
-      debugPrint('Error reading device name: $e');
+      LoggingService.instance.log('Error reading device name: $e');
       return null;
     }
   }
@@ -58,13 +59,13 @@ class NameService {
   Future<bool> writeDeviceName(String name) async {
     final deviceNameCharacteristic = _bleService.deviceNameCharacteristic;
     if (!_bleService.isConnected || deviceNameCharacteristic == null) {
-      debugPrint('Cannot write device name: not connected or characteristic not available');
+      LoggingService.instance.log('Cannot write device name: not connected or characteristic not available');
       return false;
     }
 
     // Validate name length (max 19 chars)
     if (name.length >= 20) {
-      debugPrint('Device name too long: ${name.length} (max 19)');
+      LoggingService.instance.log('Device name too long: ${name.length} (max 19)');
       return false;
     }
 
@@ -72,10 +73,10 @@ class NameService {
       // Convert string to UTF-8 bytes
       final data = Uint8List.fromList(name.codeUnits);
       await deviceNameCharacteristic.write(data, withoutResponse: false);
-      debugPrint('Device name written: "$name"');
+      LoggingService.instance.log('Device name written: "$name"');
       return true;
     } catch (e) {
-      debugPrint('Error writing device name: $e');
+      LoggingService.instance.log('Error writing device name: $e');
       return false;
     }
   }

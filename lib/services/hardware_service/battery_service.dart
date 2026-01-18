@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../ble_service/ble_service.dart';
+import '../logging_service.dart';
 
 /// Battery data structure
 class BatteryData {
@@ -49,7 +50,7 @@ class BatteryService {
       //       }
       //     },
       //     onError: (e) {
-      //       debugPrint('BatteryService: Error in connection state stream: $e');
+      //       LoggingService.instance.log('BatteryService: Error in connection state stream: $e');
       //     },
       //   );
       // }
@@ -62,7 +63,7 @@ class BatteryService {
       _isInitialized = true;
       return true;
     } catch (e) {
-      debugPrint('Error initializing BatteryService: $e');
+      LoggingService.instance.log('Error initializing BatteryService: $e');
       return false;
     }
   }
@@ -117,7 +118,7 @@ class BatteryService {
         return batteryData;
       }
     } catch (e) {
-      debugPrint('Error reading battery: $e');
+      LoggingService.instance.log('Error reading battery: $e');
     }
     return null;
   }

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../util/file_transfer.dart';
+import '../logging_service.dart';
 
 /// Handles file TX/RX/CTRL characteristic communication for BLE
 class BLEFileTransport {
@@ -67,20 +68,20 @@ class BLEFileTransport {
     for (BluetoothCharacteristic char in service.characteristics) {
       if (char.uuid.toString().toLowerCase() == fileTxUuid.toLowerCase()) {
         _fileTxCharacteristic = char;
-        debugPrint('Found File TX characteristic');
+        LoggingService.instance.log('Found File TX characteristic');
       } else if (char.uuid.toString().toLowerCase() == fileRxUuid.toLowerCase()) {
         _fileRxCharacteristic = char;
-        debugPrint('Found File RX characteristic');
+        LoggingService.instance.log('Found File RX characteristic');
       } else if (char.uuid.toString().toLowerCase() == fileCtrlUuid.toLowerCase()) {
         _fileCtrlCharacteristic = char;
-        debugPrint('Found File CTRL characteristic');
+        LoggingService.instance.log('Found File CTRL characteristic');
       }
     }
     
     if (_fileTxCharacteristic == null || 
         _fileRxCharacteristic == null || 
         _fileCtrlCharacteristic == null) {
-      debugPrint('Failed to initialize file TX/RX/CTRL characteristics');
+      LoggingService.instance.log('Failed to initialize file TX/RX/CTRL characteristics');
       return false;
     }
     
@@ -101,12 +102,12 @@ class BLEFileTransport {
           }
         },
         onError: (error) {
-          debugPrint('File TX notification error: $error');
+          LoggingService.instance.log('File TX notification error: $error');
         },
       );
-      debugPrint('Subscribed to file TX notifications');
+      LoggingService.instance.log('Subscribed to file TX notifications');
     } catch (e) {
-      debugPrint('Error: Could not subscribe to file TX notifications: $e');
+      LoggingService.instance.log('Error: Could not subscribe to file TX notifications: $e');
       // This should not happen now that CCC descriptor exists, but handle gracefully
       return false;
     }
@@ -145,7 +146,7 @@ class BLEFileTransport {
       this.onDataReceived ??= onDataReceived;
     }
 
-    debugPrint('File transport initialized');
+    LoggingService.instance.log('File transport initialized');
     return true;
   }
   
@@ -185,7 +186,7 @@ class BLEFileTransport {
       throw Exception('Not connected');
     }
     
-    debugPrint('BLEFileTransport: Starting file receive for: $path');
+    LoggingService.instance.log('BLEFileTransport: Starting file receive for: $path');
     
     // Initialize receive state
     _receivedPackets = {};
@@ -209,7 +210,7 @@ class BLEFileTransport {
     final seq = packet[0] | (packet[1] << 8);
     final packetData = packet.sublist(2);
     
-    debugPrint('BLEFileTransport: Received packet seq=$seq, data=${packetData.length} bytes');
+    LoggingService.instance.log('BLEFileTransport: Received packet seq=$seq, data=${packetData.length} bytes');
     
     // Store packet
     _receivedPackets![seq] = packetData;
@@ -229,27 +230,27 @@ class BLEFileTransport {
         if (response != null && response.isNotEmpty) {
           final cmd = response[0];
           if (cmd == CMD_TRANSFER_COMPLETE) {
-            debugPrint('BLEFileTransport: Received TRANSFER_COMPLETE');
+            LoggingService.instance.log('BLEFileTransport: Received TRANSFER_COMPLETE');
             await _completeFileReceive();
             return;
           } else if (cmd == CMD_TRANSFER_ERROR) {
-            debugPrint('BLEFileTransport: Received TRANSFER_ERROR');
+            LoggingService.instance.log('BLEFileTransport: Received TRANSFER_ERROR');
             _handleTransferError();
             return;
           }
         }
       } catch (e) {
-        debugPrint('BLEFileTransport: Error polling control: $e');
+        LoggingService.instance.log('BLEFileTransport: Error polling control: $e');
       }
     }
     
     // Timeout - check if we have packets
     if (_receivedPackets != null) {
       if (_receivedPackets!.isNotEmpty) {
-        debugPrint('BLEFileTransport: Polling timeout, but have packets - completing transfer');
+        LoggingService.instance.log('BLEFileTransport: Polling timeout, but have packets - completing transfer');
         await _completeFileReceive();
       } else {
-        debugPrint('BLEFileTransport: Transfer timeout - no packets received');
+        LoggingService.instance.log('BLEFileTransport: Transfer timeout - no packets received');
         _handleTransferError();
       }
     }
@@ -258,27 +259,27 @@ class BLEFileTransport {
   /// Complete file receive: reassemble and call callback
   Future<void> _completeFileReceive() async {
     if (_receivedPackets == null || _receivedPackets!.isEmpty) {
-      debugPrint('BLEFileTransport: No packets to reassemble');
+      LoggingService.instance.log('BLEFileTransport: No packets to reassemble');
       _resetReceiveState();
       return;
     }
     
     // Find max sequence number
     final maxSeq = _receivedPackets!.keys.reduce((a, b) => a > b ? a : b);
-    debugPrint('BLEFileTransport: Reassembling file: maxSeq=$maxSeq, packets=${_receivedPackets!.length}');
+    LoggingService.instance.log('BLEFileTransport: Reassembling file: maxSeq=$maxSeq, packets=${_receivedPackets!.length}');
     
     // Reassemble file in order
     final fileData = <int>[];
     for (int seq = 0; seq <= maxSeq; seq++) {
       if (!_receivedPackets!.containsKey(seq)) {
-        debugPrint('BLEFileTransport: Missing packet $seq');
+        LoggingService.instance.log('BLEFileTransport: Missing packet $seq');
         _handleTransferError();
         return;
       }
       fileData.addAll(_receivedPackets![seq]!);
     }
     
-    debugPrint('BLEFileTransport: Reassembled file: ${fileData.length} bytes');
+    LoggingService.instance.log('BLEFileTransport: Reassembled file: ${fileData.length} bytes');
     
     // Write to temporary directory
     try {
@@ -286,7 +287,7 @@ class BLEFileTransport {
       final file = File('${directory.path}/${_receivingFileName ?? 'received_file'}');
       await file.writeAsBytes(fileData);
       
-      debugPrint('BLEFileTransport: File written to ${file.path}');
+      LoggingService.instance.log('BLEFileTransport: File written to ${file.path}');
       
       // Create FileEntry and call callback
       final fileEntry = FileEntry(
@@ -300,7 +301,7 @@ class BLEFileTransport {
         onFileReceived!(fileEntry);
       }
     } catch (e) {
-      debugPrint('BLEFileTransport: Error writing file: $e');
+      LoggingService.instance.log('BLEFileTransport: Error writing file: $e');
       _handleTransferError();
       return;
     }
@@ -310,7 +311,7 @@ class BLEFileTransport {
   
   /// Handle transfer error
   void _handleTransferError() {
-    debugPrint('BLEFileTransport: Transfer error');
+    LoggingService.instance.log('BLEFileTransport: Transfer error');
     _resetReceiveState();
     // Could call an error callback here if needed
   }
@@ -337,7 +338,7 @@ class BLEFileTransport {
     if (response != null && response.isNotEmpty) {
       _handleListResponse(response);
     } else {
-      debugPrint('ble file transport: No response received for LIST_FILES');
+      LoggingService.instance.log('ble file transport: No response received for LIST_FILES');
       onListFilesReceived?.call([]);
     }
   }
@@ -351,7 +352,7 @@ class BLEFileTransport {
       final result = await _fileCtrlCharacteristic!.read();
       return Uint8List.fromList(result);
     } catch (e) {
-      debugPrint('Error reading control: $e');
+      LoggingService.instance.log('Error reading control: $e');
       return null;
     }
   }
@@ -359,10 +360,10 @@ class BLEFileTransport {
   void _handleListResponse(Uint8List payload) {
     final fileList = _parseListResponse(payload);
     if (onListFilesReceived != null) {
-      debugPrint('ble file transport: Parsed ${fileList.length} files from LIST_RESPONSE');
+      LoggingService.instance.log('ble file transport: Parsed ${fileList.length} files from LIST_RESPONSE');
       onListFilesReceived!(fileList);
     } else {
-      debugPrint('ble file transport: No onListFilesReceived callback registered');
+      LoggingService.instance.log('ble file transport: No onListFilesReceived callback registered');
     }
   }
 
@@ -372,19 +373,19 @@ class BLEFileTransport {
     final files = <FileEntry>[];
 
     if (payload.length < 3) {
-      debugPrint('LIST_RESPONSE too short: ${payload.length}');
+      LoggingService.instance.log('LIST_RESPONSE too short: ${payload.length}');
       return files;
     }
 
     // Check command byte
     if (payload[0] != CMD_LIST_RESPONSE) {
-      debugPrint('Invalid LIST_RESPONSE command: 0x${payload[0].toRadixString(16)}');
+      LoggingService.instance.log('Invalid LIST_RESPONSE command: 0x${payload[0].toRadixString(16)}');
       return files;
     }
 
     // Parse count (2 bytes, big-endian)
     final count = (payload[1] << 8) | payload[2];
-    debugPrint('ble file transport: LIST_RESPONSE: $count files');
+    LoggingService.instance.log('ble file transport: LIST_RESPONSE: $count files');
 
     int offset = 3;
 
@@ -408,7 +409,7 @@ class BLEFileTransport {
       files.add(FileEntry(name: name, size: size, isDirectory: isDir != 0));
     }
 
-    debugPrint('Parsed ${files.length} files from LIST_RESPONSE');
+    LoggingService.instance.log('Parsed ${files.length} files from LIST_RESPONSE');
     return files;
   }
   
@@ -417,7 +418,7 @@ class BLEFileTransport {
     try {
       await _fileTxCharacteristic?.setNotifyValue(false);
     } catch (e) {
-      debugPrint('Error unsubscribing: $e');
+      LoggingService.instance.log('Error unsubscribing: $e');
     }
     _txNotificationSubscription?.cancel();
     _txNotificationSubscription = null;

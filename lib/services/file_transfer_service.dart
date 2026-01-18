@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../util/file_transfer.dart';
 import 'hardware_service/hardware_service.dart';
+import 'logging_service.dart';
 
 /// High-level file transfer service
 /// Provides async API for file operations, converting callbacks to Futures
@@ -45,7 +46,7 @@ class FileTransferService {
       _listFilesCompleter!.complete(fileList);
       _listFilesCompleter = null;
     } else {
-      debugPrint('FileTransferService: Received file list but no completer waiting');
+      LoggingService.instance.log('FileTransferService: Received file list but no completer waiting');
     }
   }
   
@@ -55,7 +56,7 @@ class FileTransferService {
       _fileReceivedCompleter!.complete(fileEntry);
       _fileReceivedCompleter = null;
     } else {
-      debugPrint('FileTransferService: Received file but no completer waiting');
+      LoggingService.instance.log('FileTransferService: Received file but no completer waiting');
     }
   }
   

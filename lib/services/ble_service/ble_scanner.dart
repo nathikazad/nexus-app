@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../logging_service.dart';
 
 /// BLE scanning utilities
 class BLEScanner {
@@ -14,13 +15,13 @@ class BLEScanner {
     Duration? timeout,
   }) async* {
     if (_isScanning) {
-      debugPrint('Scan already in progress');
+      LoggingService.instance.log('Scan already in progress');
       return;
     }
 
     try {
       _isScanning = true;
-      debugPrint('Scanning for devices with service UUID $serviceUuid...');
+      LoggingService.instance.log('Scanning for devices with service UUID $serviceUuid...');
 
       // Stop any existing scan first
       try {
@@ -46,7 +47,7 @@ class BLEScanner {
         }
       }
     } catch (e) {
-      debugPrint('Error scanning for devices: $e');
+      LoggingService.instance.log('Error scanning for devices: $e');
       yield [];
     } finally {
       _isScanning = false;
@@ -63,13 +64,13 @@ class BLEScanner {
     required String serviceUuid,
   }) async {
     if (_isScanning) {
-      debugPrint('Scan already in progress');
+      LoggingService.instance.log('Scan already in progress');
       return null;
     }
 
     try {
       _isScanning = true;
-      debugPrint('Scanning indefinitely for service UUID $serviceUuid...');
+      LoggingService.instance.log('Scanning indefinitely for service UUID $serviceUuid...');
 
       // Stop any existing scan first
       try {
@@ -103,7 +104,7 @@ class BLEScanner {
                     ? result.device.platformName
                     : result.device.advName);
 
-            debugPrint('Found device with service UUID: $name at ${result.device.remoteId}');
+            LoggingService.instance.log('Found device with service UUID: $name at ${result.device.remoteId}');
             deviceFound = true;
             scanSubscription?.cancel();
             FlutterBluePlus.stopScan();
@@ -115,14 +116,14 @@ class BLEScanner {
           }
         },
         onError: (error) {
-          debugPrint('Scan error: $error');
+          LoggingService.instance.log('Scan error: $error');
         },
       );
 
       return await completer.future;
     } catch (e) {
       _isScanning = false;
-      debugPrint('Error scanning: $e');
+      LoggingService.instance.log('Error scanning: $e');
       await FlutterBluePlus.stopScan();
       return null;
     }

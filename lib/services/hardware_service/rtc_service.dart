@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../ble_service/ble_service.dart';
+import '../logging_service.dart';
 
 /// RTC time structure
 class RTCTime {
@@ -154,7 +155,7 @@ class RTCService {
         return RTCTime.fromBytes(Uint8List.fromList(data));
       }
     } catch (e) {
-      debugPrint('Error reading RTC: $e');
+      LoggingService.instance.log('Error reading RTC: $e');
     }
     return null;
   }
@@ -166,14 +167,14 @@ class RTCService {
       return false;
     }
     // print time
-    debugPrint('RTC time to write: ${time.toString()}');
+    LoggingService.instance.log('RTC time to write: ${time.toString()}');
     try {
       final data = time.toBytes();
       await rtcCharacteristic.write(data, withoutResponse: false);
-      debugPrint('RTC time written: ${time.toString()}');
+      LoggingService.instance.log('RTC time written: ${time.toString()}');
       return true;
     } catch (e) {
-      debugPrint('Error writing RTC: $e');
+      LoggingService.instance.log('Error writing RTC: $e');
       return false;
     }
   }

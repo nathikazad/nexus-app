@@ -4,6 +4,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_audio_transport.dart';
 import 'ble_file_transport.dart';
 import 'ble_service.dart';
+import '../logging_service.dart';
 
 
 
@@ -35,7 +36,7 @@ class BLEConnector {
     required Future<void> Function() reinitializeAfterRestore,
   }) async {
     try {
-      debugPrint('Connecting to device...');
+      LoggingService.instance.log('Connecting to device...');
 
       await device.connect(
         timeout: const Duration(seconds: 15),
@@ -50,11 +51,11 @@ class BLEConnector {
 
       setConnected(true);
       emitConnectionState(true);
-      debugPrint('Connected!');
+      LoggingService.instance.log('Connected!');
 
       final targetService = await _discoverTargetService(device, BLEService.serviceUuid);
       if (targetService == null) {
-        debugPrint('Service not found: ${BLEService.serviceUuid}');
+        LoggingService.instance.log('Service not found: ${BLEService.serviceUuid}');
         await device.disconnect();
         setConnected(false);
         emitConnectionState(false);
@@ -67,17 +68,17 @@ class BLEConnector {
         BLEService.audioTxCharacteristicUuid,
         BLEService.audioRxCharacteristicUuid,
       )) {
-        debugPrint('Failed to initialize audio transport');
+        LoggingService.instance.log('Failed to initialize audio transport');
       }
 
-      debugPrint('Initializing file transport...');
+      LoggingService.instance.log('Initializing file transport...');
       if (!await fileTransport.initializeFileTransport(
         targetService,
         BLEService.fileTxCharacteristicUuid,
         BLEService.fileRxCharacteristicUuid,
         BLEService.fileCtrlCharacteristicUuid,
       )) {
-        debugPrint('Failed to initialize file transport');
+        LoggingService.instance.log('Failed to initialize file transport');
       }
 
       _assignCharacteristics(
@@ -94,19 +95,19 @@ class BLEConnector {
       try {
         final mtu = await device.mtu.first;
         updateMtu(mtu);
-        debugPrint('MTU size: $mtu bytes');
+        LoggingService.instance.log('MTU size: $mtu bytes');
       } catch (e) {
-        debugPrint('Error getting MTU: $e');
+        LoggingService.instance.log('Error getting MTU: $e');
       }
 
       device.mtu.listen((mtu) {
         updateMtu(mtu);
-        debugPrint('MTU updated: $mtu bytes');
+        LoggingService.instance.log('MTU updated: $mtu bytes');
       });
 
       final subscription = device.connectionState.listen((state) async {
         if (state == BluetoothConnectionState.disconnected) {
-          debugPrint('Device disconnected');
+          LoggingService.instance.log('Device disconnected');
           setConnected(false);
           emitConnectionState(false);
           await onDisconnected();
@@ -114,7 +115,7 @@ class BLEConnector {
           setConnected(true);
           emitConnectionState(true);
           if (shouldReinitialize()) {
-            debugPrint('Connection restored, reinitializing characteristics...');
+            LoggingService.instance.log('Connection restored, reinitializing characteristics...');
             await reinitializeAfterRestore();
           }
         }
@@ -122,7 +123,7 @@ class BLEConnector {
 
       return BLEConnectResult(true, subscription);
     } catch (e) {
-      debugPrint('Error connecting: $e');
+      LoggingService.instance.log('Error connecting: $e');
       setConnected(false);
       emitConnectionState(false);
       return BLEConnectResult(false, null);
@@ -147,10 +148,10 @@ class BLEConnector {
         orElse: () => BluetoothConnectionState.disconnected,
       );
 
-      debugPrint('Reinitializing characteristics after restore...');
+      LoggingService.instance.log('Reinitializing characteristics after restore...');
       final targetService = await _discoverTargetService(device, BLEService.serviceUuid);
       if (targetService == null) {
-        debugPrint('Service not found after restore: ${BLEService.serviceUuid}');
+        LoggingService.instance.log('Service not found after restore: ${BLEService.serviceUuid}');
         return;
       }
 
@@ -159,7 +160,7 @@ class BLEConnector {
         BLEService.audioTxCharacteristicUuid,
         BLEService.audioRxCharacteristicUuid,
       )) {
-        debugPrint('Failed to initialize audio TX/RX characteristics after restore');
+        LoggingService.instance.log('Failed to initialize audio TX/RX characteristics after restore');
         return;
       }
 
@@ -181,9 +182,9 @@ class BLEConnector {
         setFileCtrlCharacteristic,
       );
 
-      debugPrint('Successfully reinitialized after restore');
+      LoggingService.instance.log('Successfully reinitialized after restore');
     } catch (e) {
-      debugPrint('Error reinitializing after restore: $e');
+      LoggingService.instance.log('Error reinitializing after restore: $e');
     }
   }
 
@@ -192,7 +193,7 @@ class BLEConnector {
     String serviceUuid,
   ) async {
     final services = await device.discoverServices();
-    debugPrint('Discovered ${services.length} services');
+    LoggingService.instance.log('Discovered ${services.length} services');
     for (BluetoothService service in services) {
       if (service.uuid.toString().toLowerCase() == serviceUuid.toLowerCase()) {
         return service;
@@ -215,25 +216,25 @@ class BLEConnector {
       final uuid = char.uuid.toString().toLowerCase();
       if (uuid == BLEService.batteryCharacteristicUuid.toLowerCase()) {
         setBatteryCharacteristic(char);
-        debugPrint('Found Battery characteristic');
+        LoggingService.instance.log('Found Battery characteristic');
       } else if (uuid == BLEService.rtcCharacteristicUuid.toLowerCase()) {
         setRtcCharacteristic(char);
-        debugPrint('Found RTC characteristic');
+        LoggingService.instance.log('Found RTC characteristic');
       } else if (uuid == BLEService.hapticCharacteristicUuid.toLowerCase()) {
         setHapticCharacteristic(char);
-        debugPrint('Found Haptic characteristic');
+        LoggingService.instance.log('Found Haptic characteristic');
       } else if (uuid == BLEService.deviceNameCharacteristicUuid.toLowerCase()) {
         setDeviceNameCharacteristic(char);
-        debugPrint('Found Device Name characteristic');
+        LoggingService.instance.log('Found Device Name characteristic');
       } else if (uuid == BLEService.fileTxCharacteristicUuid.toLowerCase()) {
         setFileTxCharacteristic(char);
-        debugPrint('Found File TX characteristic');
+        LoggingService.instance.log('Found File TX characteristic');
       } else if (uuid == BLEService.fileRxCharacteristicUuid.toLowerCase()) {
         setFileRxCharacteristic(char);
-        debugPrint('Found File RX characteristic');
+        LoggingService.instance.log('Found File RX characteristic');
       } else if (uuid == BLEService.fileCtrlCharacteristicUuid.toLowerCase()) {
         setFileCtrlCharacteristic(char);
-        debugPrint('Found File CTRL characteristic');
+        LoggingService.instance.log('Found File CTRL characteristic');
       }
     }
   }

@@ -5,6 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:opus_dart/opus_dart.dart';
 import '../../util/audio.dart';
 import 'ble_queue.dart';
+import '../logging_service.dart';
 
 /// Handles audio RX/TX characteristic communication for BLE
 class BLEAudioTransport {
@@ -91,15 +92,15 @@ class BLEAudioTransport {
     for (BluetoothCharacteristic char in service.characteristics) {
       if (char.uuid.toString().toLowerCase() == audioTxUuid.toLowerCase()) {
         _audioTxCharacteristic = char;
-        debugPrint('Found Audio TX characteristic');
+        LoggingService.instance.log('Found Audio TX characteristic');
       } else if (char.uuid.toString().toLowerCase() == audioRxUuid.toLowerCase()) {
         _audioRxCharacteristic = char;
-        debugPrint('Found Audio RX characteristic');
+        LoggingService.instance.log('Found Audio RX characteristic');
       }
     }
     
     if (_audioTxCharacteristic == null || _audioRxCharacteristic == null) {
-      debugPrint('Failed to initialize audio TX/RX characteristics');
+      LoggingService.instance.log('Failed to initialize audio TX/RX characteristics');
       return false;
   }
   
@@ -113,13 +114,13 @@ class BLEAudioTransport {
       _notificationSubscription = _audioTxCharacteristic!.lastValueStream.listen(
         _handleAudioNotification,
         onError: (error) {
-          debugPrint('Notification error: $error');
+          LoggingService.instance.log('Notification error: $error');
         },
       );
-      debugPrint('Subscribed to audio notifications');
+      LoggingService.instance.log('Subscribed to audio notifications');
       return true;
     } catch (e) {
-      debugPrint('Error subscribing to notifications: $e');
+      LoggingService.instance.log('Error subscribing to notifications: $e');
       return false;
     }
   }
@@ -130,7 +131,7 @@ class BLEAudioTransport {
       try {
         await _audioTxCharacteristic!.setNotifyValue(false);
       } catch (e) {
-        debugPrint('Error unsubscribing: $e');
+        LoggingService.instance.log('Error unsubscribing: $e');
       }
     }
     _notificationSubscription?.cancel();
@@ -153,29 +154,29 @@ class BLEAudioTransport {
 
         // Handle flow control signals
         if (identifier == signalPause) {
-          debugPrint('[FLOW] Received PAUSE signal (0xFFFE) - pausing transmission');
+          LoggingService.instance.log('[FLOW] Received PAUSE signal (0xFFFE) - pausing transmission');
           _paused = true;
           continue;
         }
         if (identifier == signalResume) {
-          debugPrint('[FLOW] Received RESUME signal (0xFFFD) - resuming transmission');
+          LoggingService.instance.log('[FLOW] Received RESUME signal (0xFFFD) - resuming transmission');
           _paused = false;
           continue;
         }
 
         // Handle EOF
         if (identifier == signalEof) {
-          debugPrint('[UPLOAD] Received EOF');
+          LoggingService.instance.log('[UPLOAD] Received EOF');
           _eofController?.add(null);
           continue;
         }
 
         // Handle audio packet
         if (identifier == signalAudioPacket) {
-          debugPrint('[UPLOAD] Received AUDIO PACKET');
+          LoggingService.instance.log('[UPLOAD] Received AUDIO PACKET');
           // Read packet size (2 bytes, little-endian)
           if (offset + 2 > bytes.length) {
-            debugPrint('[WARNING] Incomplete packet size at offset $offset');
+            LoggingService.instance.log('[WARNING] Incomplete packet size at offset $offset');
             break;
           }
           
@@ -184,7 +185,7 @@ class BLEAudioTransport {
 
           // Check if we have complete packet
           if (offset + packetSize > bytes.length) {
-            debugPrint('[WARNING] Incomplete packet at offset $offset');
+            LoggingService.instance.log('[WARNING] Incomplete packet at offset $offset');
             break;
           }
 
@@ -195,7 +196,7 @@ class BLEAudioTransport {
           // Emit Opus packet to stream controller
           _opusPacketController?.add(opusData);
         } else {
-          debugPrint('[WARNING] Unknown packet identifier: 0x${identifier.toRadixString(16).padLeft(4, '0')}');
+          LoggingService.instance.log('[WARNING] Unknown packet identifier: 0x${identifier.toRadixString(16).padLeft(4, '0')}');
           // Try to recover by skipping to next potential packet
           if (offset + 2 <= bytes.length) {
             offset += 2;
@@ -205,7 +206,7 @@ class BLEAudioTransport {
         }
       }
     } catch (e) {
-      debugPrint('Error handling notification: $e');
+      LoggingService.instance.log('Error handling notification: $e');
     }
   }
   
@@ -248,11 +249,11 @@ class BLEAudioTransport {
     if (pcm24Callback != null && _pcm24Stream != null) {
       _pcm24ChunkSubscription = _pcm24Stream!.listen(
         (pcm24Chunk) {
-          debugPrint('BLEAudioTransport: Processed PCM24 chunk: ${pcm24Chunk.length} bytes');
+          LoggingService.instance.log('BLEAudioTransport: Processed PCM24 chunk: ${pcm24Chunk.length} bytes');
           pcm24Callback(pcm24Chunk);
         },
         onError: (e) {
-          debugPrint('BLEAudioTransport: Error in PCM24 stream: $e');
+          LoggingService.instance.log('BLEAudioTransport: Error in PCM24 stream: $e');
         },
       );
     }
@@ -260,11 +261,11 @@ class BLEAudioTransport {
     if (eofCallback != null && eofStream != null) {
       _eofSubscription = eofStream!.listen(
         (_) {
-          debugPrint('BLEAudioTransport: EOF received');
+          LoggingService.instance.log('BLEAudioTransport: EOF received');
           eofCallback();
         },
         onError: (e) {
-          debugPrint('BLEAudioTransport: Error in EOF stream: $e');
+          LoggingService.instance.log('BLEAudioTransport: Error in EOF stream: $e');
         },
       );
     }
@@ -290,7 +291,7 @@ class BLEAudioTransport {
   
   /// Send EOF to ESP32 (enqueues EOF packet after a brief delay to let in-flight batches finish)
   Future<void> sendEOFToEsp32() async {
-    debugPrint('[QUEUE] Enqueuing EOF signal. Total frames sent: $_framesSent');
+    LoggingService.instance.log('[QUEUE] Enqueuing EOF signal. Total frames sent: $_framesSent');
     await Future.delayed(const Duration(milliseconds: 100));
     enqueueEOF();
   }
@@ -334,7 +335,7 @@ class BLEAudioTransport {
         enqueuePacket(packet);
       }
     } catch (e) {
-      debugPrint('Error sending WAV to ESP32: $e');
+      LoggingService.instance.log('Error sending WAV to ESP32: $e');
       rethrow;
     }
   }
