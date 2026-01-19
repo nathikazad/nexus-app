@@ -25,6 +25,40 @@ class LoggingService {
 
   Stream<LogEntry> get logStream => _logStreamController.stream;
   List<LogEntry> get recentLogs => List.unmodifiable(_logs);
+  
+  /// Get the log file path (returns null if not initialized)
+  Future<String?> getLogFilePath() async {
+    if (!_isInitialized) {
+      return null;
+    }
+    if (_logFile == null) {
+      return null;
+    }
+    // Ensure any pending writes are flushed before sharing
+    await _flushWriteQueue();
+    return _logFile!.path;
+  }
+
+  /// Get all logs from the file (not just the in-memory buffer)
+  Future<List<LogEntry>> getAllLogs() async {
+    if (_logFile == null || !await _logFile!.exists()) {
+      return [];
+    }
+
+    try {
+      // First flush any pending writes
+      await _flushWriteQueue();
+
+      final content = await _logFile!.readAsString();
+      if (content.isEmpty) return [];
+
+      final List<dynamic> jsonList = jsonDecode(content);
+      return jsonList.map((json) => LogEntry.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Error reading all logs: $e');
+      return [];
+    }
+  }
 
   Future<void> initialize() async {
     if (_isInitialized) return;

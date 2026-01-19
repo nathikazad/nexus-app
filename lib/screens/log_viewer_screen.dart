@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/logging_service.dart';
 import '../models/log_entry.dart';
 
@@ -94,6 +96,43 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     }
   }
 
+  Future<void> _shareLogs() async {
+    try {
+      final logFilePath = await LoggingService.instance.getLogFilePath();
+      if (logFilePath == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Log file not available')),
+          );
+        }
+        return;
+      }
+
+      final logFile = File(logFilePath);
+      if (!await logFile.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Log file does not exist')),
+          );
+        }
+        return;
+      }
+
+      // Share the file via AirDrop (or other sharing options)
+      await Share.shareXFiles(
+        [XFile(logFilePath)],
+        subject: 'Nexus App Logs',
+        text: 'Logs exported from Nexus Voice Assistant',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sharing logs: $e')),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _logSubscription?.cancel();
@@ -127,6 +166,11 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
             icon: const Icon(Icons.delete_outline),
             tooltip: 'Clear logs',
             onPressed: _clearLogs,
+          ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Share logs (AirDrop)',
+            onPressed: _shareLogs,
           ),
         ],
       ),
