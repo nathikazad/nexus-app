@@ -42,6 +42,7 @@ class BLEConnector {
         timeout: const Duration(seconds: 15),
         autoConnect: true,
         mtu: null,
+        license: License.free, // No license required for open source usage
       );
 
       await device.connectionState.firstWhere(

@@ -119,10 +119,12 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       }
 
       // Share the file via AirDrop (or other sharing options)
-      await Share.shareXFiles(
-        [XFile(logFilePath)],
-        subject: 'Nexus App Logs',
-        text: 'Logs exported from Nexus Voice Assistant',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(logFilePath)],
+          subject: 'Nexus App Logs',
+          text: 'Logs exported from Nexus Voice Assistant',
+        ),
       );
     } catch (e) {
       if (mounted) {

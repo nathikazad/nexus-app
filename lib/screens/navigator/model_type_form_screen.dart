@@ -26,6 +26,13 @@ class _ModelTypeFormScreenState extends ConsumerState<ModelTypeFormScreen> {
     final controllerNotifier = ref.watch(modelTypeFormControllerProvider(widget.modelTypeId).notifier);
     final controllerState = ref.watch(modelTypeFormControllerProvider(widget.modelTypeId));
     
+    // Initialize controller with modelTypeId
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controllerNotifier.modelTypeId != widget.modelTypeId) {
+        controllerNotifier.initialize(widget.modelTypeId);
+      }
+    });
+    
     // Watch the provider to trigger loading when data is ready
     if (widget.modelTypeId != null) {
       final modelTypeAsync = ref.watch(modelTypeProvider(widget.modelTypeId!));

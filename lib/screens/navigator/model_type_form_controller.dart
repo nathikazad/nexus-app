@@ -15,16 +15,24 @@ mutation SetKgqlModelTypes(\$input: SetKgqlModelTypesInput!) {
 }
 ''';
 
-class ModelTypeFormController extends StateNotifier<ModelTypeFormState> {
-  final int? modelTypeId;
-  final Ref ref;
+class ModelTypeFormController extends Notifier<ModelTypeFormState> {
   bool _hasLoaded = false;
+  int? _modelTypeId;
 
-  ModelTypeFormController(this.ref, this.modelTypeId) : super(ModelTypeFormState()) {
+  @override
+  ModelTypeFormState build() {
+    // Return initial state - modelTypeId will be set via initialize()
+    return ModelTypeFormState();
+  }
+
+  void initialize(int? modelTypeId) {
+    _modelTypeId = modelTypeId;
     if (modelTypeId != null) {
       state = state.copyWith(isLoading: true);
     }
   }
+
+  int? get modelTypeId => _modelTypeId;
 
   void loadModelTypeData(ModelType data) {
     if (_hasLoaded) return;
@@ -231,11 +239,9 @@ class ModelTypeFormController extends StateNotifier<ModelTypeFormState> {
     }
   }
 
-  @override
   void dispose() {
     state.nameController.dispose();
     state.descriptionController.dispose();
-    super.dispose();
   }
 }
 
@@ -307,12 +313,10 @@ class ModelTypeFormState {
   }
 }
 
-final modelTypeFormControllerProvider = StateNotifierProvider.family<ModelTypeFormController, ModelTypeFormState, int?>(
-  (ref, modelTypeId) {
-    final controller = ModelTypeFormController(ref, modelTypeId);
-    ref.onDispose(() {
-      // Controllers are disposed in the controller's dispose method
-    });
+final modelTypeFormControllerProvider = NotifierProvider.family<ModelTypeFormController, ModelTypeFormState, int?>(
+  (int? modelTypeId) {
+    final controller = ModelTypeFormController();
+    controller.initialize(modelTypeId);
     return controller;
   },
 );
