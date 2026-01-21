@@ -111,7 +111,12 @@ class AudioService {
   Future<void> dispose() async {
     await stopRecording();
     await _audioStreamController?.close();
-    await _recorder.dispose();
+    try {
+      await _recorder.dispose();
+    } catch (e) {
+      // Recorder might already be disposed or not initialized
+      LoggingService.instance.log('Error disposing recorder (may already be disposed): $e');
+    }
     _isInitialized = false;
   }
 }

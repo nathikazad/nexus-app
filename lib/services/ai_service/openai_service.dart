@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/ai_service/agent_tool_service.dart';
+import 'package:nexus_voice_assistant/services/ai_service/interaction.dart';
+export 'package:nexus_voice_assistant/services/ai_service/interaction.dart';
 import 'package:nexus_voice_assistant/auth.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,32 +13,6 @@ import '../logging_service.dart';
 enum queryOrigin {
   App,
   Hardware,
-}
-
-class Interaction {
-  String userQuery;
-  String aiResponse;
-  final DateTime timestamp;
-  String? userAudioFilePath;
-  
-  Interaction({
-    required this.userQuery,
-    required this.aiResponse,
-    required this.timestamp,
-    this.userAudioFilePath,
-  });
-
-  void addToAiResponse(String word) {
-    aiResponse += word;
-  }
-
-  void addToUserQuery(String word) {
-    userQuery += word;
-  }
-
-  void setUserAudioFilePath(String filePath) {
-    userAudioFilePath = filePath;
-  }
 }
 
 /// Provider that manages OpenAI service lifecycle based on authentication status.
@@ -93,9 +69,7 @@ class OpenAIService {
   StreamController<Uint8List> _hardWareAudioController = StreamController<Uint8List>.broadcast();
   
   // Interaction management
-  final List<Interaction> _interactions = [Interaction(userQuery: '', aiResponse: '', timestamp: DateTime.now())];
-  final StreamController<List<Interaction>> _interactionsController = StreamController<List<Interaction>>.broadcast();
-  bool _responseDone = false;
+  final InteractionManager _interactionManager = InteractionManager();
 
   Stream<Map<String, dynamic>> get conversationStream => _conversationController.stream;
   Stream<Uint8List> get hardWareAudioOutStream => _hardWareAudioController.stream;
@@ -103,8 +77,8 @@ class OpenAIService {
   bool get isReconnecting => _isReconnecting;
   
   // Interaction getters
-  List<Interaction> get interactions => List.unmodifiable(_interactions);
-  Stream<List<Interaction>> get interactionsStream => _interactionsController.stream;
+  List<Interaction> get interactions => _interactionManager.interactions;
+  Stream<List<Interaction>> get interactionsStream => _interactionManager.interactionsStream;
 
   queryOrigin _queryOrigin = queryOrigin.App;
 
@@ -256,7 +230,7 @@ class OpenAIService {
           });
           
           // Update interactions internally
-          _handleConversationEvent({
+          _interactionManager.handleConversationEvent({
             'speaker': speaker,
             'word': word,
             'type': 'transcript',
@@ -309,7 +283,7 @@ class OpenAIService {
         });
         
         // Update interactions internally
-        _handleConversationEvent({'type': 'response_done'});
+        _interactionManager.handleConversationEvent({'type': 'response_done'});
         
         if (_queryOrigin == queryOrigin.Hardware) {
           HardwareService.instance.sendEOAudioToEsp32();
@@ -504,55 +478,14 @@ class OpenAIService {
   }
 
 
-  /// Handle conversation events and update interactions
-  void _handleConversationEvent(Map<String, dynamic> data) {
-    Interaction currentInteraction = _interactions.last;
-    String type = data['type']!;
-
-    if (type == 'transcript') {
-      String speaker = data['speaker']!;
-      String word = data['word']!;
-
-      if (speaker == 'AI') {
-        _responseDone = false;
-        currentInteraction.addToAiResponse(word);
-      } else {
-        currentInteraction.addToUserQuery(word);
-        if (_responseDone) {
-          _interactions.add(Interaction(
-            userQuery: '',
-            aiResponse: '',
-            timestamp: DateTime.now(),
-            userAudioFilePath: currentInteraction.userAudioFilePath,
-          ));
-        }
-      }
-      _interactionsController.add(_interactions);
-    } else if (type == 'response_done') {
-      _responseDone = true;
-      if (currentInteraction.userQuery.isNotEmpty) {
-        _interactions.add(Interaction(
-          userQuery: '',
-          aiResponse: '',
-          timestamp: DateTime.now(),
-          userAudioFilePath: currentInteraction.userAudioFilePath,
-        ));
-      }
-      _interactionsController.add(_interactions);
-    }
-  }
-
   /// Clear all interactions and start fresh
   void clearInteractions() {
-    _interactions.clear();
-    _interactions.add(Interaction(userQuery: '', aiResponse: '', timestamp: DateTime.now()));
-    _responseDone = false;
-    _interactionsController.add(_interactions);
+    _interactionManager.clearInteractions();
   }
 
   Future<void> dispose() async {
     await disconnect();
     await _conversationController.close();
-    await _interactionsController.close();
+    await _interactionManager.dispose();
   }
 }

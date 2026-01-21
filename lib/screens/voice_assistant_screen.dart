@@ -277,7 +277,11 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
     _scrollController.dispose();
     _textController.dispose();
     _audioPlayer.dispose();
-    _audioService.dispose();
+    // Don't dispose AudioService - it's a singleton and may be used elsewhere
+    // Just stop recording if active
+    if (_audioService.isRecording) {
+      _audioService.stopRecording();
+    }
     _audioStreamManager.dispose();
     super.dispose();
   }
