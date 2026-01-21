@@ -1,7 +1,7 @@
 name: nexus_voice_assistant
 description: A Flutter app that records audio and sends it to OpenAI Realtime API
 publish_to: 'none'
-version: 1.0.17+17
+version: 1.0.18+18
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -26,7 +25,7 @@ Future<void> onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
 
   final bleHelper = SimpleBleHelper();
-  bleHelper.setListener(_BackgroundBleListener(service));
+  bleHelper.setListener(_BackgroundBleListener(service, bleHelper));
   await bleHelper.initialize();
 
   service.on('ble.start').listen((event) async {
@@ -53,9 +52,10 @@ Future<void> onStart(ServiceInstance service) async {
 
 class _BackgroundBleListener implements IBleListener {
   final ServiceInstance service;
+  final SimpleBleHelper bleHelper;
   int packetCount = 0;
 
-  _BackgroundBleListener(this.service);
+  _BackgroundBleListener(this.service, this.bleHelper);
 
   @override
   void onConnectionStateChanged(BleConnectionState state) {
@@ -71,6 +71,9 @@ class _BackgroundBleListener implements IBleListener {
       'count': packetCount,
       'size': data.length,
     });
+    
+    // Send ACK back to the device
+    bleHelper.send(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
   }
 
   @override
