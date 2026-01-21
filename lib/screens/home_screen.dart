@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'voice_assistant_screen.dart';
 import 'hardware_screen.dart';
-import 'navigator_home_screen.dart';
+import 'navigator_screen.dart';
+import 'log_viewer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: const [
           HardwareScreen(),
           NavigatorHomeScreen(),
+          LogViewerScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -42,12 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.devices),
             label: 'Hardware',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.navigation),
             label: 'Navigator',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.description),
+            label: 'Logs',
           ),
         ],
       ),
