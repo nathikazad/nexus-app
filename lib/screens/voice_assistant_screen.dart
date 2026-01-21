@@ -3,61 +3,37 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../services/audio_service.dart';
-import '../services/openai_service.dart';
-import '../services/hardware_service/hardware_service.dart';
-import '../services/hardware_service/battery_service.dart';
-import '../services/file_transfer_service.dart';
-import '../widgets/audio_stream_manager.dart';
-import '../widgets/message_bubble.dart';
-import '../widgets/input_area.dart';
-import '../services/logging_service.dart';
-import 'hardware_screen.dart';
-import 'log_viewer_screen.dart';
+import 'package:nexus_voice_assistant/services/audio_service.dart';
+import 'package:nexus_voice_assistant/services/openai_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service.dart';
+import 'package:nexus_voice_assistant/widgets/audio_stream_manager.dart';
+import 'package:nexus_voice_assistant/widgets/message_bubble.dart';
+import 'package:nexus_voice_assistant/widgets/input_area.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
-class Interaction {
-  String userQuery;
-  String aiResponse;
-  final DateTime timestamp;
-  String? userAudioFilePath;
+class VoiceAssistantScreen extends ConsumerStatefulWidget {
+  final VoidCallback? onSwitchToHardwareTab;
   
-  Interaction({
-    required this.userQuery,
-    required this.aiResponse,
-    required this.timestamp,
-    this.userAudioFilePath,
-  });
-
-  void addToAiResponse(String word) {
-    aiResponse += word;
-  }
-
-  void addToUserQuery(String word) {
-    userQuery += word;
-  }
-
-  void setUserAudioFilePath(String filePath) {
-    userAudioFilePath = filePath;
-  }
-}
-
-class VoiceAssistantScreen extends StatefulWidget {
-  const VoiceAssistantScreen({super.key});
+  const VoiceAssistantScreen({super.key, this.onSwitchToHardwareTab});
 
   @override
-  State<VoiceAssistantScreen> createState() => _VoiceAssistantScreenState();
+  ConsumerState<VoiceAssistantScreen> createState() => _VoiceAssistantScreenState();
 }
 
-class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
+class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
-  final OpenAIService _openAIService = OpenAIService.instance;
+  late final OpenAIService _openAIService;
   final HardwareService _hardwareService = HardwareService.instance;
   final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
-  final List<Interaction> _interactions = [Interaction(userQuery: '', aiResponse: '', timestamp: DateTime.now())];
+  
+  // Get interactions from the service
+  List<Interaction> get _interactions => _openAIService.interactions;
 
   
   bool _isRecording = false;
@@ -70,12 +46,14 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   
   StreamSubscription<Uint8List>? _audioSubscription;
   StreamSubscription<Map<String, dynamic>>? _conversationSubscription;
+  StreamSubscription<List<Interaction>>? _interactionsSubscription;
   StreamSubscription<bool>? _bleConnectionSubscription;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with the last interaction or create a new one
+    // Get OpenAI service from provider
+    _openAIService = ref.read(openAIServiceProvider);
     
     _initializeServices();
     _setupAudioStreamManager();
@@ -111,58 +89,23 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       // Initialize HardwareService (which initializes BLE service)
       await _hardwareService.initialize();
       
-      // BLE connection state is now handled by _setupBLEConnectionListener()
-      bool responseDone = false;
-      // Listen to conversation stream
+      // Listen to interactions stream from the service
+      _interactionsSubscription = _openAIService.interactionsStream.listen((_) {
+        if (mounted) {
+          setState(() {});
+          _scrollToBottom();
+        }
+      });
+      
+      // Listen to conversation stream for audio handling
       _conversationSubscription = _openAIService.conversationStream.listen((data) {
-        Interaction currentInteraction = _interactions.last;
-        
         String type = data['type']!;
         
-        if (type == 'transcript') {
-          String speaker = data['speaker']!;
-          String word = data['word']!;
-
-          // print('speaker: $speaker, word: $word');
-          setState(() {
-            if (speaker == 'AI') {
-              responseDone = false;
-              // print('AI: ${currentInteraction.aiResponse + word}');
-              // Update the current interaction's AI response
-              currentInteraction.addToAiResponse(word);
-            } else {
-              // Update the current interaction's user query
-              currentInteraction.addToUserQuery(word);
-              if(responseDone) {
-                print('creating new interaction');
-                _interactions.add(Interaction(
-                  userQuery: '',
-                  aiResponse: '',
-                  timestamp: DateTime.now(),
-                  userAudioFilePath: currentInteraction.userAudioFilePath,
-                ));
-              }
-            }
-          });
-          _scrollToBottom();
-        } else if (type == 'audio' && data['speaker'] == 'AI') {
+        if (type == 'audio' && data['speaker'] == 'AI') {
           // Handle streamed audio from AI - only play if speaker is enabled
           if (_speakerEnabled) {
             Uint8List audioData = data['audio']!;
             _audioStreamManager.playStreamedAudio(audioData);
-          }
-        } else if (type == 'response_done') {
-
-          responseDone = true;
-          // Create new interaction for next turn
-          if(!currentInteraction.userQuery.isEmpty) {
-            print('creating new interaction');
-            _interactions.add(Interaction(
-              userQuery: '',
-              aiResponse: '',
-              timestamp: DateTime.now(),
-              userAudioFilePath: currentInteraction.userAudioFilePath,
-            ));
           }
         }
       });
@@ -170,6 +113,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     } catch (e) {
       _showErrorDialog('Failed to connect to OpenAI: $e');
     }
+  }
+  
+  void _clearInteractions() {
+    _openAIService.clearInteractions();
   }
 
   void _scrollToBottom() {
@@ -325,13 +272,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   void dispose() {
     _audioSubscription?.cancel();
     _conversationSubscription?.cancel();
+    _interactionsSubscription?.cancel();
     _bleConnectionSubscription?.cancel();
     _scrollController.dispose();
     _textController.dispose();
     _audioPlayer.dispose();
     _audioService.dispose();
-    _openAIService.dispose();
-    _hardwareService.dispose();
     _audioStreamManager.dispose();
     super.dispose();
   }
@@ -339,21 +285,37 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _VoiceAssistantAppBar(
-        isConnected: _isConnected,
-        isPlayingStreamedAudio: _audioStreamManager.isPlayingStreamedAudio,
-        onBluetoothIconTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const HardwareScreen()),
-          );
-        },
-        onLogIconTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const LogViewerScreen()),
-          );
-        },
+      appBar: AppBar(
+        title: const Text('Voice Assistant'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.clear_all),
+            tooltip: 'Clear conversation',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Clear Conversation'),
+                  content: const Text('Are you sure you want to clear all messages?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _clearInteractions();
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -671,62 +633,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   }
 }
 
-
-
-class _VoiceAssistantAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final bool isConnected;
-  final bool isPlayingStreamedAudio;
-  final VoidCallback? onBluetoothIconTap;
-  final VoidCallback? onLogIconTap;
-
-  const _VoiceAssistantAppBar({
-    required this.isConnected,
-    required this.isPlayingStreamedAudio,
-    this.onBluetoothIconTap,
-    this.onLogIconTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      title: const Text('Voice Assistant'),
-      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          child: Row(
-            children: [
-              // Streamed audio indicator
-              if (isPlayingStreamedAudio) ...[
-                const Icon(Icons.volume_up, color: Colors.blue, size: 16),
-                const SizedBox(width: 4),
-              ],
-              // Log icon
-              GestureDetector(
-                onTap: onLogIconTap,
-                child: const Icon(
-                  Icons.description,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onBluetoothIconTap,
-                child: Icon(
-                  isConnected ? Icons.bluetooth : Icons.bluetooth_disabled,
-                  color: isConnected ? Colors.blue : Colors.red,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-}
 
 class _MessagesList extends StatelessWidget {
   final List<Interaction> interactions;

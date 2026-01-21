@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../services/hardware_service/hardware_service.dart';
-import '../services/hardware_service/battery_service.dart';
-import '../services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 import 'device_selection_screen.dart';
 
 class HardwareScreen extends StatefulWidget {

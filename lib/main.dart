@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
 import 'dart:io';
-import 'screens/voice_assistant_screen.dart';
+import 'router.dart';
 import 'services/openai_service.dart';
 import 'services/logging_service.dart';
 import 'services/background_service.dart';
@@ -41,9 +42,8 @@ void main() async {
     await HardwareService.instance.initialize();
   }
   
-  // Initialize and connect OpenAI service
-  await OpenAIService.instance.initialize();
-  await OpenAIService.instance.connect();
+  // OpenAI service is now managed by openAIServiceProvider
+  // It will connect when user is authenticated and disconnect when unauthenticated
   
   // Start background service when BLE is connected (iOS needs this for background operation)
   if (!kIsWeb && Platform.isIOS) {
@@ -55,21 +55,31 @@ void main() async {
     });
   }
   
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    
+    // Watch openAIServiceProvider to manage its lifecycle based on auth status
+    // This ensures OpenAI connects when authenticated and disconnects when unauthenticated
+    ref.watch(openAIServiceProvider);
+    
+    return MaterialApp.router(
       title: 'Nexus Voice Assistant',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const VoiceAssistantScreen(),
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
   }

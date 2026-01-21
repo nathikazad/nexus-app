@@ -3,7 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_audio_transport.dart';
 import 'ble_file_transport.dart';
 import 'ble_service.dart';
-import '../logging_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 
 

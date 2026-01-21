@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../util/file_transfer.dart';
+import 'package:nexus_voice_assistant/util/file_transfer.dart';
 import 'hardware_service/hardware_service.dart';
 import 'logging_service.dart';
 

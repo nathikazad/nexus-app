@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import '../services/ble_service/ble_file_transport.dart';
-import '../services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/ble_service/ble_file_transport.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 class FileEntry {
   final String name;

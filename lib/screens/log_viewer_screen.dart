@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import '../services/logging_service.dart';
-import '../models/log_entry.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
+import 'package:nexus_voice_assistant/models/log_entry.dart';
 
 class LogViewerScreen extends StatefulWidget {
   const LogViewerScreen({super.key});

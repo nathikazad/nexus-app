@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import '../models/log_entry.dart';
+import 'package:nexus_voice_assistant/models/log_entry.dart';
 
 class LoggingService {
   static final LoggingService _instance = LoggingService._internal();

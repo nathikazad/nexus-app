@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import '../ble_service/ble_service.dart';
-import '../logging_service.dart';
+import 'package:nexus_voice_assistant/services/ble_service/ble_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 class HapticService {
   final BLEService _bleService;

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../logging_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 /// BLE scanning utilities
 class BLEScanner {

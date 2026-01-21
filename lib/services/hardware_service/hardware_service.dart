@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../ble_service/ble_service.dart';
-import 'battery_service.dart';
-import 'rtc_service.dart';
-import 'name_service.dart';
-import 'haptic_service.dart';
-import '../openai_service.dart';
-import '../logging_service.dart';
-import '../file_transfer_service.dart';
+import 'package:nexus_voice_assistant/services/ble_service/ble_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/name_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/haptic_service.dart';
+import 'package:nexus_voice_assistant/services/openai_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service.dart';
 
 class HardwareService {
   static final HardwareService _instance = HardwareService._internal();

@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:nexus_voice_assistant/services/ble_service/ble_service.dart';
-import '../services/hardware_service/hardware_service.dart';
-import '../services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 class DeviceSelectionScreen extends StatefulWidget {
   const DeviceSelectionScreen({super.key});

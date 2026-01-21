@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/agent_tool_service.dart';
+import 'package:nexus_voice_assistant/auth.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'logging_service.dart';
@@ -9,6 +11,69 @@ import 'logging_service.dart';
 enum queryOrigin {
   App,
   Hardware,
+}
+
+class Interaction {
+  String userQuery;
+  String aiResponse;
+  final DateTime timestamp;
+  String? userAudioFilePath;
+  
+  Interaction({
+    required this.userQuery,
+    required this.aiResponse,
+    required this.timestamp,
+    this.userAudioFilePath,
+  });
+
+  void addToAiResponse(String word) {
+    aiResponse += word;
+  }
+
+  void addToUserQuery(String word) {
+    userQuery += word;
+  }
+
+  void setUserAudioFilePath(String filePath) {
+    userAudioFilePath = filePath;
+  }
+}
+
+/// Provider that manages OpenAI service lifecycle based on authentication status.
+/// Connects when authenticated, disconnects when unauthenticated.
+final openAIServiceProvider = Provider<OpenAIService>((ref) {
+  final appStatus = ref.watch(appStatusProvider);
+  final service = OpenAIService.instance;
+  
+  LoggingService.instance.log('[OpenAI Provider] appStatus changed to: $appStatus');
+  
+  if (appStatus == AppStatus.authenticated) {
+    // Connect when authenticated
+    LoggingService.instance.log('[OpenAI Provider] User authenticated, initializing and connecting...');
+    _initAndConnect(service);
+  } else if (appStatus == AppStatus.unauthenticated) {
+    // Disconnect and clear interactions when unauthenticated
+    LoggingService.instance.log('[OpenAI Provider] User unauthenticated, disconnecting and clearing interactions...');
+    service.disconnect();
+    service.clearInteractions();
+  }
+  // When initializing, do nothing - wait for auth to complete
+  
+  ref.onDispose(() {
+    LoggingService.instance.log('[OpenAI Provider] Provider disposed, disconnecting...');
+    service.disconnect();
+  });
+  
+  return service;
+});
+
+Future<void> _initAndConnect(OpenAIService service) async {
+  if (!service.isConnected && !service.isReconnecting) {
+    final initSuccess = await service.initialize();
+    if (initSuccess) {
+      await service.connect();
+    }
+  }
 }
 
 class OpenAIService {
@@ -26,11 +91,20 @@ class OpenAIService {
   bool _shouldAutoReconnect = true; // Set to false during intentional disconnect
   StreamController<Map<String, dynamic>> _conversationController = StreamController<Map<String, dynamic>>.broadcast();
   StreamController<Uint8List> _hardWareAudioController = StreamController<Uint8List>.broadcast();
+  
+  // Interaction management
+  final List<Interaction> _interactions = [Interaction(userQuery: '', aiResponse: '', timestamp: DateTime.now())];
+  final StreamController<List<Interaction>> _interactionsController = StreamController<List<Interaction>>.broadcast();
+  bool _responseDone = false;
 
   Stream<Map<String, dynamic>> get conversationStream => _conversationController.stream;
   Stream<Uint8List> get hardWareAudioOutStream => _hardWareAudioController.stream;
   bool get isConnected => _isConnected;
   bool get isReconnecting => _isReconnecting;
+  
+  // Interaction getters
+  List<Interaction> get interactions => List.unmodifiable(_interactions);
+  Stream<List<Interaction>> get interactionsStream => _interactionsController.stream;
 
   queryOrigin _queryOrigin = queryOrigin.App;
 
@@ -174,8 +248,15 @@ class OpenAIService {
           String speaker = message.role == ItemRole.assistant ? 'AI' : 'You';
           String word = delta!.transcript!;
           
-          // Stream the speaker and word
+          // Stream the speaker and word (for backward compatibility)
           _conversationController.add({
+            'speaker': speaker,
+            'word': word,
+            'type': 'transcript',
+          });
+          
+          // Update interactions internally
+          _handleConversationEvent({
             'speaker': speaker,
             'word': word,
             'type': 'transcript',
@@ -226,6 +307,10 @@ class OpenAIService {
         _conversationController.add({
           'type': 'response_done',
         });
+        
+        // Update interactions internally
+        _handleConversationEvent({'type': 'response_done'});
+        
         if (_queryOrigin == queryOrigin.Hardware) {
           HardwareService.instance.sendEOAudioToEsp32();
         }
@@ -419,8 +504,55 @@ class OpenAIService {
   }
 
 
+  /// Handle conversation events and update interactions
+  void _handleConversationEvent(Map<String, dynamic> data) {
+    Interaction currentInteraction = _interactions.last;
+    String type = data['type']!;
+
+    if (type == 'transcript') {
+      String speaker = data['speaker']!;
+      String word = data['word']!;
+
+      if (speaker == 'AI') {
+        _responseDone = false;
+        currentInteraction.addToAiResponse(word);
+      } else {
+        currentInteraction.addToUserQuery(word);
+        if (_responseDone) {
+          _interactions.add(Interaction(
+            userQuery: '',
+            aiResponse: '',
+            timestamp: DateTime.now(),
+            userAudioFilePath: currentInteraction.userAudioFilePath,
+          ));
+        }
+      }
+      _interactionsController.add(_interactions);
+    } else if (type == 'response_done') {
+      _responseDone = true;
+      if (currentInteraction.userQuery.isNotEmpty) {
+        _interactions.add(Interaction(
+          userQuery: '',
+          aiResponse: '',
+          timestamp: DateTime.now(),
+          userAudioFilePath: currentInteraction.userAudioFilePath,
+        ));
+      }
+      _interactionsController.add(_interactions);
+    }
+  }
+
+  /// Clear all interactions and start fresh
+  void clearInteractions() {
+    _interactions.clear();
+    _interactions.add(Interaction(userQuery: '', aiResponse: '', timestamp: DateTime.now()));
+    _responseDone = false;
+    _interactionsController.add(_interactions);
+  }
+
   Future<void> dispose() async {
     await disconnect();
     await _conversationController.close();
+    await _interactionsController.close();
   }
 }

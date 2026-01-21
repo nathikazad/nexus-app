@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:opus_dart/opus_dart.dart';
-import '../services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 // ============================================================================
 // STREAM TRANSFORMER MODULE

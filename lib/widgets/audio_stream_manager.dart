@@ -5,7 +5,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
-import '../services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 class AudioStreamManager {
   final AudioPlayer _audioPlayer = AudioPlayer();
