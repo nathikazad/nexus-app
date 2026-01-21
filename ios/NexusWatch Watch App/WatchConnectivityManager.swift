@@ -14,6 +14,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var isReachable = false
     @Published var statusMessage = "Not connected"
     @Published var packetsSent = 0
+    @Published var receivedText = ""  // Text received from phone (AI response)
     
     private override init() {
         super.init()
@@ -134,6 +135,29 @@ extension WatchConnectivityManager: WCSessionDelegate {
             self.isReachable = session.isReachable
             self.statusMessage = session.isReachable ? "Connected" : "iPhone not reachable"
             print("[Watch] Reachability changed: \(session.isReachable)")
+        }
+    }
+    
+    // Handle messages from iPhone (AI responses)
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        print("[Watch] Received message from iPhone: \(message)")
+        
+        if let text = message["text"] as? String {
+            DispatchQueue.main.async {
+                // Append the word to the received text (streaming response)
+                if self.receivedText.isEmpty {
+                    self.receivedText = text
+                } else {
+                    self.receivedText += text
+                }
+                print("[Watch] Received text: \(text)")
+            }
+        }
+    }
+    
+    func clearReceivedText() {
+        DispatchQueue.main.async {
+            self.receivedText = ""
         }
     }
 }

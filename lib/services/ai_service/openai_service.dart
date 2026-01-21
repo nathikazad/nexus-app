@@ -6,6 +6,7 @@ import 'package:nexus_voice_assistant/services/ai_service/agent_tool_service.dar
 import 'package:nexus_voice_assistant/services/ai_service/interaction.dart';
 export 'package:nexus_voice_assistant/services/ai_service/interaction.dart';
 import 'package:nexus_voice_assistant/auth.dart';
+import 'package:nexus_voice_assistant/services/watch_bridge_service.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../logging_service.dart';
@@ -236,6 +237,9 @@ class OpenAIService {
             'word': word,
             'type': 'transcript',
           });
+          if (_queryOrigin == queryOrigin.Watch && speaker == 'AI') {
+            WatchBridgeService.instance.sendToWatch(word);
+          }
         }
         
         // Handle audio data from assistant

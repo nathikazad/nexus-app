@@ -12,49 +12,58 @@ struct ContentView: View {
     @StateObject private var audioRecorder = AudioRecorder()
     
     var body: some View {
-        VStack(spacing: 16) {
-            // Status indicator
-            HStack {
-                Circle()
-                    .fill(connectivityManager.isReachable ? Color.green : Color.red)
-                    .frame(width: 10, height: 10)
-                Text(connectivityManager.statusMessage)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            // Mic button
-            Button(action: toggleRecording) {
-                ZStack {
+        ScrollView {
+            VStack(spacing: 12) {
+                // Status indicator
+                HStack {
                     Circle()
-                        .fill(audioRecorder.isRecording ? Color.red : Color.blue)
-                        .frame(width: 80, height: 80)
-                    
-                    Image(systemName: audioRecorder.isRecording ? "stop.fill" : "mic.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(.white)
+                        .fill(connectivityManager.isReachable ? Color.green : Color.red)
+                        .frame(width: 10, height: 10)
+                    Text(connectivityManager.statusMessage)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Mic button
+                Button(action: toggleRecording) {
+                    ZStack {
+                        Circle()
+                            .fill(audioRecorder.isRecording ? Color.red : Color.blue)
+                            .frame(width: 70, height: 70)
+                        
+                        Image(systemName: audioRecorder.isRecording ? "stop.fill" : "mic.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(!connectivityManager.isReachable)
+                
+                // Recording status
+                if audioRecorder.isRecording {
+                    Text(audioRecorder.statusMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+                
+                // AI Response text
+                if !connectivityManager.receivedText.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("AI:")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text(connectivityManager.receivedText)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(8)
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
                 }
             }
-            .buttonStyle(.plain)
-            .disabled(!connectivityManager.isReachable)
-            
-            // Recording status
-            Text(audioRecorder.statusMessage)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            // Packet counter
-            if audioRecorder.isRecording || connectivityManager.packetsSent > 0 {
-                Text("Packets: \(connectivityManager.packetsSent)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
+            .padding()
         }
-        .padding()
         .onAppear {
             setupAudioCallback()
         }
@@ -72,6 +81,8 @@ struct ContentView: View {
             // Send EOF when recording stops
             connectivityManager.sendAudioEOF()
         } else {
+            // Clear previous response and start new recording
+            connectivityManager.clearReceivedText()
             connectivityManager.resetPacketCount()
             audioRecorder.startRecording()
         }
