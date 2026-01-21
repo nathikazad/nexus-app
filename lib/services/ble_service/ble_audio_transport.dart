@@ -127,15 +127,20 @@ class BLEAudioTransport {
   
   /// Unsubscribe from audio TX notifications
   Future<void> unsubscribeFromNotifications() async {
-    if (_audioTxCharacteristic != null) {
-      try {
-        await _audioTxCharacteristic!.setNotifyValue(false);
-      } catch (e) {
-        LoggingService.instance.log('Error unsubscribing: $e');
-      }
-    }
     _notificationSubscription?.cancel();
     _notificationSubscription = null;
+    
+    if (_audioTxCharacteristic != null) {
+      try {
+        // Only try to unsubscribe if device is still connected
+        if (_audioTxCharacteristic!.device.isConnected) {
+          await _audioTxCharacteristic!.setNotifyValue(false);
+        }
+      } catch (e) {
+        // Ignore errors when device is disconnected - this is expected
+        LoggingService.instance.log('Note: Could not unsubscribe (device may be disconnected)');
+      }
+    }
   }
   
   /// Handle incoming notifications from audio TX characteristic

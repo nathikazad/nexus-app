@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_audio_transport.dart';
 import 'ble_file_transport.dart';
@@ -33,6 +32,7 @@ class BLEConnector {
     required void Function(bool) emitConnectionState,
     required Future<void> Function() onDisconnected,
     required bool Function() shouldReinitialize,
+    required bool Function() isCurrentlyConnected,
     required Future<void> Function() reinitializeAfterRestore,
   }) async {
     try {
@@ -103,6 +103,18 @@ class BLEConnector {
       device.mtu.listen((mtu) {
         updateMtu(mtu);
         LoggingService.instance.log('MTU updated: $mtu bytes');
+        
+        // MTU update proves device is connected - sync state if out of sync
+        // This is a backup mechanism since connectionState stream can miss events after iOS background/resume
+        if (!isCurrentlyConnected()) {
+          LoggingService.instance.log('MTU received while marked disconnected - syncing connection state');
+          setConnected(true);
+          emitConnectionState(true);
+          if (shouldReinitialize()) {
+            LoggingService.instance.log('Connection restored via MTU, reinitializing characteristics...');
+            reinitializeAfterRestore();
+          }
+        }
       });
 
       final subscription = device.connectionState.listen((state) async {
@@ -143,10 +155,11 @@ class BLEConnector {
     required void Function(BluetoothCharacteristic?) setFileCtrlCharacteristic,
   }) async {
     try {
-      await device.connectionState.firstWhere(
-        (state) => state == BluetoothConnectionState.connected,
-        orElse: () => BluetoothConnectionState.disconnected,
-      );
+      // Check if device is actually connected before proceeding
+      if (!device.isConnected) {
+        LoggingService.instance.log('Reinitialize aborted: device is not connected');
+        return;
+      }
 
       LoggingService.instance.log('Reinitializing characteristics after restore...');
       final targetService = await _discoverTargetService(device, BLEService.serviceUuid);

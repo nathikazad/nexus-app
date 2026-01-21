@@ -5,9 +5,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
+import 'dart:io';
 import 'screens/voice_assistant_screen.dart';
 import 'services/openai_service.dart';
 import 'services/logging_service.dart';
+import 'services/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +30,12 @@ void main() async {
     await Permission.microphone.request();
   }
   
+  // Initialize background service (only needed for mobile platforms)
+  if (!kIsWeb) {
+    final backgroundService = BackgroundService();
+    await backgroundService.init();
+  }
+  
   // Initialize BLE service (only needed for mobile platforms)
   if (!kIsWeb) {
     await HardwareService.instance.initialize();
@@ -36,6 +44,16 @@ void main() async {
   // Initialize and connect OpenAI service
   await OpenAIService.instance.initialize();
   await OpenAIService.instance.connect();
+  
+  // Start background service when BLE is connected (iOS needs this for background operation)
+  if (!kIsWeb && Platform.isIOS) {
+    HardwareService.instance.connectionStateStream?.listen((isConnected) async {
+      if (isConnected) {
+        final backgroundService = BackgroundService();
+        await backgroundService.ensureRunning();
+      }
+    });
+  }
   
   runApp(const MyApp());
 }

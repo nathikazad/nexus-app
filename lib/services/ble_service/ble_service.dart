@@ -146,6 +146,14 @@ class BLEService {
     
     _isConnecting = true;
     while (!_isConnected && _isConnecting) {
+      // First check if device is already connected at OS level (important for iOS background mode)
+      final alreadyConnected = await _checkForAlreadyConnectedDevice();
+      if (alreadyConnected) {
+        LoggingService.instance.log('Reconnected to already-connected device');
+        _isConnecting = false;
+        break;
+      }
+      
       LoggingService.instance.log('Starting scan for ESP32 device...');
       final success = await scanAndConnect();
       
@@ -159,6 +167,33 @@ class BLEService {
       }
     }
     _isConnecting = false;
+  }
+
+  /// Check if device is already connected at OS level (iOS maintains BLE connections even when app is suspended)
+  Future<bool> _checkForAlreadyConnectedDevice() async {
+    try {
+      LoggingService.instance.log('Checking for already-connected devices at OS level...');
+      // Get devices connected at the system level with our service UUID
+      final serviceGuid = Guid(serviceUuid);
+      final connectedDevices = await FlutterBluePlus.systemDevices([serviceGuid]);
+      
+      for (final device in connectedDevices) {
+        try {
+          LoggingService.instance.log('Found system-connected device: ${device.platformName}');
+          _device = device;
+          final success = await _connectToDevice();
+          if (success) {
+            return true;
+          }
+        } catch (e) {
+          LoggingService.instance.log('Error reconnecting to device ${device.remoteId}: $e');
+        }
+      }
+    } catch (e) {
+      LoggingService.instance.log('Error checking for connected devices: $e');
+    }
+    LoggingService.instance.log('No already-connected device found');
+    return false;
   }
 
   /// Scan for devices and return a list of discovered devices
@@ -245,6 +280,7 @@ class BLEService {
         }
       },
       shouldReinitialize: () => !_characteristicsInitialized,
+      isCurrentlyConnected: () => _isConnected,
       reinitializeAfterRestore: _reinitializeAfterRestore,
     );
 

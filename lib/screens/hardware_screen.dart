@@ -323,7 +323,7 @@ class _HardwareScreenState extends State<HardwareScreen> {
   @override
   Widget build(BuildContext context) {
     // Use stored device name if available, otherwise fall back to advertising name
-    final displayName = _deviceName ?? _hardwareService.deviceName;
+    final displayName = _deviceName ?? _hardwareService.deviceName ?? 'Unknown';
     
     return Scaffold(
       appBar: AppBar(
@@ -346,55 +346,53 @@ class _HardwareScreenState extends State<HardwareScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Device name
-            if (displayName != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: _isConnected && !_isSettingDeviceName ? _editDeviceName : null,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-              Text(
-                          displayName,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
-                        ),
-                        if (_isSettingDeviceName) ...[
-                          const SizedBox(width: 8),
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (_isConnected) ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: _isPulsingHaptic
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.vibration, size: 20),
-                      onPressed: _isPulsingHaptic ? null : _pulseHaptic,
-                      tooltip: 'Vibrate',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ],
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _isConnected && !_isSettingDeviceName ? _editDeviceName : null,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+            Text(
+                        displayName,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
-              const SizedBox(height: 32),
-            ],
+                      ),
+                      if (_isSettingDeviceName) ...[
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (_isConnected) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: _isPulsingHaptic
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.vibration, size: 20),
+                    onPressed: _isPulsingHaptic ? null : _pulseHaptic,
+                    tooltip: 'Vibrate',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 32),
             // Battery percentage
             Text(
               'Battery',
