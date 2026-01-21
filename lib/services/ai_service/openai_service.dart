@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
-import 'package:nexus_voice_assistant/services/agent_tool_service.dart';
+import 'package:nexus_voice_assistant/services/ai_service/agent_tool_service.dart';
 import 'package:nexus_voice_assistant/auth.dart';
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'logging_service.dart';
+import '../logging_service.dart';
 
 enum queryOrigin {
   App,

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:nexus_voice_assistant/util/file_transfer.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 /// Handles file TX/RX/CTRL characteristic communication for BLE

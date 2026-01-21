@@ -6,7 +6,7 @@ import 'ble_audio_transport.dart';
 import 'ble_file_transport.dart';
 import 'ble_scanner.dart';
 import 'ble_connector.dart';
-import 'package:nexus_voice_assistant/util/file_transfer.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 class BLEService {

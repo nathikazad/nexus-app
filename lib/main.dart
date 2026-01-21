@@ -8,7 +8,7 @@ import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
 import 'dart:io';
 import 'router.dart';
-import 'services/openai_service.dart';
+import 'services/ai_service/openai_service.dart';
 import 'services/logging_service.dart';
 import 'services/background_service.dart';
 

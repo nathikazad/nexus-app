@@ -7,9 +7,9 @@ import 'package:nexus_voice_assistant/services/hardware_service/battery_service.
 import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/name_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/haptic_service.dart';
-import 'package:nexus_voice_assistant/services/openai_service.dart';
+import 'package:nexus_voice_assistant/services/ai_service/openai_service.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
-import 'package:nexus_voice_assistant/services/file_transfer_service.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer_service.dart';
 
 class HardwareService {
   static final HardwareService _instance = HardwareService._internal();

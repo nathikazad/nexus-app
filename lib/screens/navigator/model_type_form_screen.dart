@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexus_voice_assistant/providers/model_types_provider.dart';
+import 'package:nexus_voice_assistant/data_providers/model_types_provider.dart';
 import 'model_type_form_controller.dart';
 import 'widgets/model_type_basic_fields.dart';
 import 'widgets/attribute_definitions_section.dart';

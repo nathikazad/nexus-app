@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'logging_service.dart';
+import '../logging_service.dart';
 
 /// Calls an MCP tool and returns the result
 /// 

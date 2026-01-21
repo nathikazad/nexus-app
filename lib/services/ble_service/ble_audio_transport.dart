@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:opus_dart/opus_dart.dart';
-import 'package:nexus_voice_assistant/util/audio.dart';
+import 'package:nexus_voice_assistant/services/audio_service/audio.dart';
 import 'package:nexus_voice_assistant/services/ble_service/ble_queue.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 

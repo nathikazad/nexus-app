@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nexus_voice_assistant/models/ModelType.dart';
 import 'dart:convert';
-import 'package:nexus_voice_assistant/providers/models_provider.dart';
+import 'package:nexus_voice_assistant/data_providers/models_provider.dart';
 import 'package:nexus_voice_assistant/auth.dart';
 import 'package:nexus_voice_assistant/models/requests/SetModelRequest.dart';
 import 'package:nexus_voice_assistant/db.dart';

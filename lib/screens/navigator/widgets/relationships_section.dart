@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/models/ModelType.dart';
-import 'package:nexus_voice_assistant/providers/model_types_provider.dart';
+import 'package:nexus_voice_assistant/data_providers/model_types_provider.dart';
 
 import 'package:nexus_voice_assistant/screens/navigator/relationship_form_screen.dart';
 

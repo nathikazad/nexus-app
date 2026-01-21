@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:nexus_voice_assistant/util/file_transfer.dart';
-import 'hardware_service/hardware_service.dart';
-import 'logging_service.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer.dart';
+import '../hardware_service/hardware_service.dart';
+import '../logging_service.dart';
 
 /// High-level file transfer service
 /// Provides async API for file operations, converting callbacks to Futures

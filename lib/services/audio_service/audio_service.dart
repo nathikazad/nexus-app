@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'logging_service.dart';
+import '../logging_service.dart';
 
 class AudioService {
   static final AudioService _instance = AudioService._internal();

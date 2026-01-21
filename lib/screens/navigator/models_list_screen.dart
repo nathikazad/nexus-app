@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexus_voice_assistant/providers/models_provider.dart';
-import 'package:nexus_voice_assistant/providers/model_types_provider.dart';
+import 'package:nexus_voice_assistant/data_providers/models_provider.dart';
+import 'package:nexus_voice_assistant/data_providers/model_types_provider.dart';
 import 'package:nexus_voice_assistant/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/widgets/model_row.dart';
