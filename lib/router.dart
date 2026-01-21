@@ -5,8 +5,8 @@ import 'screens/login_page.dart';
 import 'screens/home_screen.dart';
 import 'screens/models_list_screen.dart';
 import 'screens/model_detail_screen.dart';
-import 'screens/model_type/model_type_form_screen.dart';
-import 'screens/model_type/model_type_selector_screen.dart';
+import 'screens/navigator/model_type_form_screen.dart';
+import 'screens/navigator/model_type_selector_screen.dart';
 import 'db.dart';
 import 'auth.dart';
 

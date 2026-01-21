@@ -6,7 +6,7 @@ import 'package:nexus_voice_assistant/models/ModelType.dart';
 import 'package:nexus_voice_assistant/auth.dart';
 import 'package:nexus_voice_assistant/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/widgets/error_widget.dart';
-import 'package:nexus_voice_assistant/screens/model_type/widgets/model_type_row.dart';
+import 'package:nexus_voice_assistant/screens/navigator/widgets/model_type_row.dart';
 import 'package:nexus_voice_assistant/widgets/expanding_fab_menu.dart';
 
 class NavigatorHomeScreen extends ConsumerStatefulWidget {

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/models/ModelType.dart';
 import 'package:nexus_voice_assistant/providers/model_types_provider.dart';
 
-import 'package:nexus_voice_assistant/screens/model_type/relationship_form_screen.dart';
+import 'package:nexus_voice_assistant/screens/navigator/relationship_form_screen.dart';
 
 class RelationshipsSection extends ConsumerWidget {
   final List<RelationshipType> relationshipTypes;
