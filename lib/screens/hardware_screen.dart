@@ -44,14 +44,14 @@ class _HardwareScreenState extends State<HardwareScreen> {
     _readRTCData();
     _readDeviceName();
     
-    // Refresh battery and RTC data every 1 second
-    _batteryRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _hardwareService.readBattery();
-    });
+    // // Refresh battery and RTC data every 1 second
+    // _batteryRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    //   _hardwareService.readBattery();
+    // });
     
-    _rtcRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _readRTCData();
-    });
+    // _rtcRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    //   _readRTCData();
+    // });
   }
 
   void _stopRefreshTimers() {

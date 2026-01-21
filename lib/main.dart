@@ -11,6 +11,7 @@ import 'router.dart';
 import 'services/ai_service/openai_service.dart';
 import 'services/logging_service.dart';
 import 'services/background_service.dart';
+import 'services/watch_bridge_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,11 @@ void main() async {
   // Initialize BLE service (only needed for mobile platforms)
   if (!kIsWeb) {
     await HardwareService.instance.initialize();
+  }
+  
+  // Initialize Watch Bridge service (iOS only)
+  if (!kIsWeb && Platform.isIOS) {
+    await WatchBridgeService.instance.initialize();
   }
   
   // OpenAI service is now managed by openAIServiceProvider
