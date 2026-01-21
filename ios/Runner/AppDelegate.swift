@@ -101,16 +101,72 @@ extension AppDelegate: WCSessionDelegate {
   }
   
   func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
-    print("[WatchBridge] Received message from Watch: \(message)")
+    print("[WatchBridge] Received message from Watch (with reply): \(message)")
     
+    // Check for typed messages first
+    if let type = message["type"] as? String {
+      switch type {
+      case "audioEOF":
+        let totalPackets = message["totalPackets"] as? Int ?? 0
+        print("[WatchBridge] Received audio EOF after \(totalPackets) packets")
+        sendAudioEOFToFlutter(totalPackets: totalPackets)
+        replyHandler(["status": "received"])
+        return
+      default:
+        break
+      }
+    }
+    
+    // Handle text messages
     if let text = message["text"] as? String {
-      // Forward the message to Flutter
       sendMessageToFlutter(text)
-      
-      // Send reply back to watch
       replyHandler(["status": "received"])
     } else {
       replyHandler(["status": "error", "message": "Invalid message format"])
+    }
+  }
+  
+  // Handle messages without reply handler (used for audio streaming)
+  func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+    guard let type = message["type"] as? String else { return }
+    
+    switch type {
+    case "audio":
+      if let audioData = message["data"] as? Data,
+         let sampleRate = message["sampleRate"] as? Int {
+        print("[WatchBridge] Received audio packet: \(audioData.count) bytes at \(sampleRate)Hz")
+        sendAudioDataToFlutter(audioData, sampleRate: sampleRate)
+      }
+      
+    case "audioEOF":
+      let totalPackets = message["totalPackets"] as? Int ?? 0
+      print("[WatchBridge] Received audio EOF after \(totalPackets) packets")
+      sendAudioEOFToFlutter(totalPackets: totalPackets)
+      
+    default:
+      print("[WatchBridge] Unknown message type: \(type)")
+    }
+  }
+  
+  private func sendAudioDataToFlutter(_ data: Data, sampleRate: Int) {
+    DispatchQueue.main.async {
+      // Convert Data to FlutterStandardTypedData for efficient transfer
+      let flutterData = FlutterStandardTypedData(bytes: data)
+      let payload: [String: Any] = [
+        "data": flutterData,
+        "sampleRate": sampleRate,
+        "size": data.count
+      ]
+      self.watchChannel?.invokeMethod("audioFromWatch", arguments: payload)
+    }
+  }
+  
+  private func sendAudioEOFToFlutter(totalPackets: Int) {
+    DispatchQueue.main.async {
+      let payload: [String: Any] = [
+        "totalPackets": totalPackets
+      ]
+      self.watchChannel?.invokeMethod("audioEOFFromWatch", arguments: payload)
     }
   }
 }

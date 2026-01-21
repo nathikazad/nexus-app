@@ -13,6 +13,7 @@ import '../logging_service.dart';
 enum queryOrigin {
   App,
   Hardware,
+  Watch,
 }
 
 /// Provider that manages OpenAI service lifecycle based on authentication status.

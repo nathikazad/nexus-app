@@ -816,6 +816,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NexusWatch;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NexusWatch needs microphone access to record voice commands.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.snow.aspire;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -861,6 +862,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NexusWatch;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NexusWatch needs microphone access to record voice commands.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.snow.aspire;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -904,6 +906,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NexusWatch;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NexusWatch needs microphone access to record voice commands.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.snow.aspire;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -9,54 +9,72 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
-    @State private var messageText = ""
+    @StateObject private var audioRecorder = AudioRecorder()
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // Status indicator
-                HStack {
+        VStack(spacing: 16) {
+            // Status indicator
+            HStack {
+                Circle()
+                    .fill(connectivityManager.isReachable ? Color.green : Color.red)
+                    .frame(width: 10, height: 10)
+                Text(connectivityManager.statusMessage)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Mic button
+            Button(action: toggleRecording) {
+                ZStack {
                     Circle()
-                        .fill(connectivityManager.isReachable ? Color.green : Color.red)
-                        .frame(width: 10, height: 10)
-                    Text(connectivityManager.statusMessage)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                
-                // Text field
-                TextField("Message", text: $messageText)
-                    .textFieldStyle(.plain)
-                    .padding(8)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                
-                // Send button
-                Button(action: sendMessage) {
-                    HStack {
-                        Image(systemName: "paperplane.fill")
-                        Text("Send")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(messageText.isEmpty || !connectivityManager.isReachable)
-                
-                // Last sent message
-                if !connectivityManager.lastSentMessage.isEmpty {
-                    Text("Last: \(connectivityManager.lastSentMessage)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .fill(audioRecorder.isRecording ? Color.red : Color.blue)
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: audioRecorder.isRecording ? "stop.fill" : "mic.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.white)
                 }
             }
-            .padding()
+            .buttonStyle(.plain)
+            .disabled(!connectivityManager.isReachable)
+            
+            // Recording status
+            Text(audioRecorder.statusMessage)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            // Packet counter
+            if audioRecorder.isRecording || connectivityManager.packetsSent > 0 {
+                Text("Packets: \(connectivityManager.packetsSent)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .onAppear {
+            setupAudioCallback()
         }
     }
     
-    private func sendMessage() {
-        guard !messageText.isEmpty else { return }
-        connectivityManager.sendMessage(messageText)
-        messageText = ""
+    private func setupAudioCallback() {
+        audioRecorder.onAudioData = { data in
+            connectivityManager.sendAudioData(data)
+        }
+    }
+    
+    private func toggleRecording() {
+        if audioRecorder.isRecording {
+            audioRecorder.stopRecording()
+            // Send EOF when recording stops
+            connectivityManager.sendAudioEOF()
+        } else {
+            connectivityManager.resetPacketCount()
+            audioRecorder.startRecording()
+        }
     }
 }
 

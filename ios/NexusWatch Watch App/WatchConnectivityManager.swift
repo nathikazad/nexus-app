@@ -12,8 +12,8 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
     
     @Published var isReachable = false
-    @Published var lastSentMessage = ""
     @Published var statusMessage = "Not connected"
+    @Published var packetsSent = 0
     
     private override init() {
         super.init()
@@ -41,7 +41,6 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 if let response = reply["status"] as? String {
                     self.statusMessage = "Sent! Response: \(response)"
-                    self.lastSentMessage = text
                     print("[Watch] Reply received: \(response)")
                 }
             }
@@ -51,6 +50,56 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 print("[Watch] Send error: \(error)")
             }
         })
+    }
+    
+    func sendAudioData(_ data: Data) {
+        guard WCSession.default.isReachable else {
+            return
+        }
+        
+        // Send audio data as message with Data payload
+        let message: [String: Any] = [
+            "type": "audio",
+            "data": data,
+            "sampleRate": 24000,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        // Use sendMessage for real-time streaming (no reply handler for speed)
+        WCSession.default.sendMessage(message, replyHandler: nil) { error in
+            print("[Watch] Audio send error: \(error.localizedDescription)")
+        }
+        
+        DispatchQueue.main.async {
+            self.packetsSent += 1
+        }
+    }
+    
+    func sendAudioEOF() {
+        guard WCSession.default.isReachable else {
+            print("[Watch] Cannot send EOF - iPhone not reachable")
+            return
+        }
+        
+        let message: [String: Any] = [
+            "type": "audioEOF",
+            "totalPackets": packetsSent,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        WCSession.default.sendMessage(message, replyHandler: { reply in
+            print("[Watch] EOF acknowledged: \(reply)")
+        }) { error in
+            print("[Watch] EOF send error: \(error.localizedDescription)")
+        }
+        
+        print("[Watch] Sent EOF after \(packetsSent) packets")
+    }
+    
+    func resetPacketCount() {
+        DispatchQueue.main.async {
+            self.packetsSent = 0
+        }
     }
 }
 
