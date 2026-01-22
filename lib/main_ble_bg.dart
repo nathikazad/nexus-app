@@ -130,15 +130,15 @@ class BleBackgroundService {
 
     await _service.configure(
       iosConfiguration: IosConfiguration(
-        autoStart: false,
+        autoStart: true,
         onForeground: onStart,
         onBackground: onIosBackground,
       ),
       androidConfiguration: AndroidConfiguration(
-        autoStart: false,
+        autoStart: true,
         onStart: onStart,
         isForegroundMode: true,
-        autoStartOnBoot: false,
+        autoStartOnBoot: true,
       ),
     );
 
@@ -229,7 +229,7 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
     text: 'ws://192.168.0.44:8080'
   );
 
-  String _bleStatus = 'disconnected';
+  String _bleStatus = 'scanning';
   int _packetCount = 0;
   int _lastPacketSize = 0;
   int _queuedPackets = 0;

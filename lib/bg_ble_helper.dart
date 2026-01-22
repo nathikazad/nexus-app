@@ -20,7 +20,6 @@ class BleConstants {
 // =============================================================================
 
 enum BleConnectionState {
-  disconnected,
   scanning,
   connecting,
   connected,
@@ -46,8 +45,9 @@ class SimpleBleHelper {
   BluetoothCharacteristic? _audioRxCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _notificationSubscription;
+  StreamSubscription<List<ScanResult>>? _scanSubscription;
   
-  BleConnectionState _state = BleConnectionState.disconnected;
+  BleConnectionState _state = BleConnectionState.scanning;
   IBleListener? _listener;
   
   bool _isScanning = false;
@@ -113,14 +113,13 @@ class SimpleBleHelper {
       // Wait for Bluetooth adapter to be on
       await FlutterBluePlus.adapterState
           .where((val) => val == BluetoothAdapterState.on)
-          .first
-          .timeout(const Duration(seconds: 5));
+          .first;
       
       // Start scanning with service filter
       final serviceGuid = Guid(BleConstants.serviceUuid);
       
       // Listen to scan results
-      final scanSubscription = FlutterBluePlus.scanResults.listen(
+      _scanSubscription = FlutterBluePlus.scanResults.listen(
         (results) async {
           for (ScanResult result in results) {
             if (result.device.platformName.isNotEmpty) {
@@ -140,32 +139,33 @@ class SimpleBleHelper {
         },
       );
       
-      // Start the scan
+      // Start the scan indefinitely (no timeout - will scan until device found or manually stopped)
       await FlutterBluePlus.startScan(
         withServices: [serviceGuid],
-        timeout: const Duration(seconds: 10),
       );
       
-      // Cleanup after scan completes
-      await scanSubscription.cancel();
-      _isScanning = false;
-      
-      if (_state == BleConnectionState.scanning) {
-        _log('Scan completed, no device found');
-        _setState(BleConnectionState.disconnected);
-      }
+      // Note: Scan will continue indefinitely until:
+      // 1. A device is found (handled in scan listener above)
+      // 2. stopScan() is called manually
+      // The scan subscription will remain active until one of these happens
     } catch (e) {
       _log('Scan error: $e');
+      await _scanSubscription?.cancel();
+      _scanSubscription = null;
       _isScanning = false;
-      _setState(BleConnectionState.disconnected);
       _listener?.onError('Scan error: $e');
+      // Auto-retry: restart scanning
+      await scanAndConnect();
     }
   }
   
   Future<void> stopScan() async {
     if (_isScanning) {
+      await _scanSubscription?.cancel();
+      _scanSubscription = null;
       await FlutterBluePlus.stopScan();
       _isScanning = false;
+      // State remains scanning (not connected, ready to scan again)
       _log('Scan stopped');
     }
   }
@@ -230,12 +230,6 @@ class SimpleBleHelper {
         }
       }
       
-      if (_audioTxCharacteristic == null) {
-        _log('Audio TX characteristic not found');
-        await disconnect();
-        return false;
-      }
-      
       // Subscribe to audio notifications
       await _subscribeToAudioNotifications();
       
@@ -251,8 +245,9 @@ class SimpleBleHelper {
       return true;
     } catch (e) {
       _log('Connection error: $e');
-      _setState(BleConnectionState.disconnected);
       _listener?.onError('Connection error: $e');
+      // Auto-retry: restart scanning
+      await scanAndConnect();
       return false;
     }
   }
@@ -300,7 +295,10 @@ class SimpleBleHelper {
     _notificationSubscription = null;
     _audioTxCharacteristic = null;
     _audioRxCharacteristic = null;
-    _setState(BleConnectionState.disconnected);
+    
+    // Auto-reconnect: restart scanning to find and connect to device again
+    _log('Device disconnected, restarting scan to reconnect...');
+    await scanAndConnect();
   }
   
   // ===========================================================================
@@ -324,6 +322,13 @@ class SimpleBleHelper {
   Future<bool> _checkForAlreadyConnectedDevice() async {
     try {
       _log('Checking for already-connected devices...');
+      
+      // Wait for Bluetooth adapter to be on first
+      await FlutterBluePlus.adapterState
+          .where((val) => val == BluetoothAdapterState.on)
+          .first
+          .timeout(const Duration(seconds: 5));
+      
       final serviceGuid = Guid(BleConstants.serviceUuid);
       final connectedDevices = await FlutterBluePlus.systemDevices([serviceGuid]);
       
@@ -358,8 +363,9 @@ class SimpleBleHelper {
       _audioTxCharacteristic = null;
       _audioRxCharacteristic = null;
       _packetCount = 0;
-      _setState(BleConnectionState.disconnected);
       _log('Disconnected');
+      // Auto-reconnect: restart scanning
+      await scanAndConnect();
     } catch (e) {
       _log('Error disconnecting: $e');
     }
