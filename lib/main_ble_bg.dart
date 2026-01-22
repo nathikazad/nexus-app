@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
 import 'bg_ble_helper.dart';
+import 'bg_socket_client.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +26,13 @@ Future<void> onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
 
   final bleHelper = SimpleBleHelper();
-  bleHelper.setListener(_BackgroundBleListener(service, bleHelper));
+  final socketClient = BackgroundSocketClient();
+  
+  // Configure socket URL (default, can be changed via event)
+  const defaultSocketUrl = 'ws://192.168.0.44:8080';
+  await socketClient.connect(defaultSocketUrl);
+  
+  bleHelper.setListener(_BackgroundBleListener(service, bleHelper, socketClient));
   await bleHelper.initialize();
 
   service.on('ble.start').listen((event) async {
@@ -38,7 +45,18 @@ Future<void> onStart(ServiceInstance service) async {
 
   service.on('stop').listen((event) async {
     await bleHelper.disconnect();
+    await socketClient.disconnect();
     service.stopSelf();
+  });
+
+  // Socket configuration events
+  service.on('socket.connect').listen((event) async {
+    final url = event?['url'] ?? defaultSocketUrl;
+    await socketClient.connect(url);
+  });
+
+  service.on('socket.disconnect').listen((event) async {
+    await socketClient.disconnect();
   });
 
   // Keep a small tick so we know the isolate is still alive in background.
@@ -53,9 +71,10 @@ Future<void> onStart(ServiceInstance service) async {
 class _BackgroundBleListener implements IBleListener {
   final ServiceInstance service;
   final SimpleBleHelper bleHelper;
+  final BackgroundSocketClient socketClient;
   int packetCount = 0;
 
-  _BackgroundBleListener(this.service, this.bleHelper);
+  _BackgroundBleListener(this.service, this.bleHelper, this.socketClient);
 
   @override
   void onConnectionStateChanged(BleConnectionState state) {
@@ -71,6 +90,14 @@ class _BackgroundBleListener implements IBleListener {
       'count': packetCount,
       'size': data.length,
     });
+    
+    // Forward packet to socket server
+    if (socketClient.isConnected) {
+      socketClient.sendPacket(data);
+      debugPrint("[BLE BG] Forwarded packet $packetCount to socket");
+    } else {
+      debugPrint("[BLE BG] Socket not connected, packet not forwarded");
+    }
     
     // Send ACK back to the device
     bleHelper.send(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
@@ -149,6 +176,14 @@ class BleBackgroundService {
     _service.invoke('stop');
   }
 
+  void connectSocket(String url) {
+    _service.invoke('socket.connect', {'url': url});
+  }
+
+  void disconnectSocket() {
+    _service.invoke('socket.disconnect');
+  }
+
   void dispose() {
     _statusController.close();
     _packetSizeController.close();
@@ -182,6 +217,9 @@ class BleBackgroundScreen extends StatefulWidget {
 class _BleBackgroundScreenState extends State<BleBackgroundScreen>
     with WidgetsBindingObserver {
   final BleBackgroundService _bgService = BleBackgroundService();
+  final TextEditingController _socketUrlController = TextEditingController(
+    text: 'ws://192.168.0.44:8080'
+  );
 
   String _bleStatus = 'disconnected';
   int _packetCount = 0;
@@ -225,6 +263,7 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
 
   @override
   void dispose() {
+    _socketUrlController.dispose();
     _bgService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -272,6 +311,22 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _socketUrlController,
+              decoration: const InputDecoration(
+                labelText: 'Socket Server URL',
+                hintText: 'ws://192.168.0.44:8080',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                _bgService.connectSocket(_socketUrlController.text);
+              },
+              child: const Text('Connect Socket'),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
