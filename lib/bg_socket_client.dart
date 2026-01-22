@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+class _QueuedPacket {
+  final Uint8List data;
+  final int? index;
+
+  _QueuedPacket(this.data, this.index);
+}
+
 class BackgroundSocketClient {
   WebSocketChannel? _channel;
   String? _url;
@@ -12,8 +19,13 @@ class BackgroundSocketClient {
   int _reconnectAttempts = 0;
   static const int maxReconnectAttempts = 5;
   static const Duration reconnectDelay = Duration(seconds: 3);
+  
+  // Packet queue for when socket is disconnected
+  final List<_QueuedPacket> _packetQueue = [];
+  static const int maxQueueSize = 1000; // Limit queue size to prevent memory issues
 
   bool get isConnected => _isConnected;
+  int get queuedPacketCount => _packetQueue.length;
 
   Future<bool> connect(String url) async {
     if (_isConnected && _url == url) {
@@ -45,6 +57,9 @@ class BackgroundSocketClient {
       _reconnectAttempts = 0;
       
       debugPrint("[Socket] Connected to $_url");
+      
+      // Send queued packets if any
+      _flushPacketQueue();
 
       // Listen for messages from server
       _channel!.stream.listen(
@@ -75,17 +90,78 @@ class BackgroundSocketClient {
     }
   }
 
-  void sendPacket(Uint8List data) {
+  void sendPacket(Uint8List data, {int? index}) {
+    // If not connected, queue the packet
     if (!_isConnected || _channel == null) {
-      debugPrint("[Socket] Cannot send: not connected");
+      _queuePacket(data, index);
       return;
     }
 
     try {
-      // Send as binary data
-      _channel!.sink.add(data);
+      _sendPacketData(data, index);
     } catch (e) {
       debugPrint("[Socket] Send error: $e");
+      // Queue the packet if send fails
+      _queuePacket(data, index);
+      _handleDisconnection();
+    }
+  }
+  
+  void _sendPacketData(Uint8List data, int? index) {
+    if (index != null) {
+      // Format: [4 bytes index (uint32 little-endian)] + [payload data]
+      final indexBytes = Uint8List(4);
+      final byteData = ByteData.view(indexBytes.buffer);
+      byteData.setUint32(0, index, Endian.little);
+      
+      // Combine index + payload
+      final combined = Uint8List(4 + data.length);
+      combined.setRange(0, 4, indexBytes);
+      combined.setRange(4, 4 + data.length, data);
+      
+      _channel!.sink.add(combined);
+    } else {
+      // Send as binary data without index
+      _channel!.sink.add(data);
+    }
+  }
+  
+  void _queuePacket(Uint8List data, int? index) {
+    // Limit queue size to prevent memory issues
+    if (_packetQueue.length >= maxQueueSize) {
+      debugPrint("[Socket] Queue full (${_packetQueue.length} packets), dropping oldest packet");
+      _packetQueue.removeAt(0);
+    }
+    
+    // Create a copy of the data to avoid issues if the original is modified
+    final dataCopy = Uint8List.fromList(data);
+    _packetQueue.add(_QueuedPacket(dataCopy, index));
+    
+    if (_packetQueue.length == 1) {
+      debugPrint("[Socket] Queueing packet (queue size: 1)");
+    } else if (_packetQueue.length % 100 == 0) {
+      debugPrint("[Socket] Queue size: ${_packetQueue.length} packets");
+    }
+  }
+  
+  void _flushPacketQueue() {
+    if (_packetQueue.isEmpty) {
+      return;
+    }
+    
+    final queueSize = _packetQueue.length;
+    debugPrint("[Socket] Flushing $queueSize queued packets...");
+    
+    try {
+      for (final packet in _packetQueue) {
+        _sendPacketData(packet.data, packet.index);
+      }
+      
+      debugPrint("[Socket] Successfully sent $queueSize queued packets");
+      _packetQueue.clear();
+    } catch (e) {
+      debugPrint("[Socket] Error flushing queue: $e");
+      // Keep remaining packets in queue for next connection attempt
       _handleDisconnection();
     }
   }
@@ -140,7 +216,16 @@ class BackgroundSocketClient {
     }
     
     _isConnected = false;
-    debugPrint("[Socket] Disconnected");
+    debugPrint("[Socket] Disconnected (${_packetQueue.length} packets in queue)");
+  }
+  
+  /// Clear the packet queue (useful for testing or when you want to drop queued packets)
+  void clearQueue() {
+    final count = _packetQueue.length;
+    _packetQueue.clear();
+    if (count > 0) {
+      debugPrint("[Socket] Cleared $count queued packets");
+    }
   }
 }
 

@@ -91,12 +91,12 @@ class _BackgroundBleListener implements IBleListener {
       'size': data.length,
     });
     
-    // Forward packet to socket server
+    // Forward packet to socket server with index (will queue if not connected)
+    socketClient.sendPacket(data, index: packetCount);
     if (socketClient.isConnected) {
-      socketClient.sendPacket(data);
-      debugPrint("[BLE BG] Forwarded packet $packetCount to socket");
+      debugPrint("[BLE BG] Forwarded packet $packetCount (index: $packetCount) to socket");
     } else {
-      debugPrint("[BLE BG] Socket not connected, packet not forwarded");
+      debugPrint("[BLE BG] Socket not connected, queued packet $packetCount (queue: ${socketClient.queuedPacketCount})");
     }
     
     // Send ACK back to the device
@@ -117,10 +117,12 @@ class BleBackgroundService {
   final StreamController<String> _statusController = StreamController<String>.broadcast();
   final StreamController<int> _packetSizeController = StreamController<int>.broadcast();
   final StreamController<int> _packetCountController = StreamController<int>.broadcast();
+  final StreamController<int> _queueSizeController = StreamController<int>.broadcast();
 
   Stream<String> get statusStream => _statusController.stream;
   Stream<int> get packetSizeStream => _packetSizeController.stream;
   Stream<int> get packetCountStream => _packetCountController.stream;
+  Stream<int> get queueSizeStream => _queueSizeController.stream;
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -162,6 +164,11 @@ class BleBackgroundService {
       final error = event?['error'] ?? 'Unknown error';
       _statusController.add('error: $error');
     });
+
+    _service.on('socket.queueSize').listen((event) {
+      final count = event?['count'] ?? 0;
+      _queueSizeController.add(count);
+    });
   }
 
   void startBle() {
@@ -188,6 +195,7 @@ class BleBackgroundService {
     _statusController.close();
     _packetSizeController.close();
     _packetCountController.close();
+    _queueSizeController.close();
   }
 }
 
@@ -224,6 +232,7 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
   String _bleStatus = 'disconnected';
   int _packetCount = 0;
   int _lastPacketSize = 0;
+  int _queuedPackets = 0;
   bool _serviceRunning = false;
 
   @override
@@ -252,6 +261,12 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
     _bgService.packetSizeStream.listen((size) {
       setState(() {
         _lastPacketSize = size;
+      });
+    });
+
+    _bgService.queueSizeStream.listen((count) {
+      setState(() {
+        _queuedPackets = count;
       });
     });
   }
@@ -308,6 +323,16 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
                     Text('Last packet size: $_lastPacketSize bytes'),
                     const SizedBox(height: 4),
                     Text('Service: ${_serviceRunning ? "Running" : "Stopped"}'),
+                    if (_queuedPackets > 0) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Queued packets: $_queuedPackets',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
