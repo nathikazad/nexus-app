@@ -65,10 +65,6 @@ class BackgroundSocketClient {
       _channel!.stream.listen(
         (message) {
           debugPrint("[Socket] Received: $message");
-          if (message == "ping") {
-            // Respond to ping
-            _channel?.sink.add([0x8A, 0x00]); // Pong frame
-          }
         },
         onError: (error) {
           debugPrint("[Socket] Error: $error");
