@@ -3,7 +3,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'auth.dart';
 
 class GraphQLConfig {
-  static const String defaultEndpoint = 'http://192.168.0.44:5001/graphql';
+  static const String defaultEndpoint = 'http://192.168.0.15:5001/graphql';
   static const String defaultUserId = '1';
 }
 

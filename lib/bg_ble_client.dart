@@ -364,12 +364,14 @@ class BleClient {
   
   /// Send data to the device (via Audio RX characteristic)
   Future<void> send(Uint8List data) async {
+    print('Sending data: ${data.length} bytes');
     if (!isConnected || _audioRxCharacteristic == null) {
       _log('Cannot send: not connected');
       return;
     }
     
     try {
+      print('Writing data: ${data.length} bytes');
       await _audioRxCharacteristic!.write(data, withoutResponse: true);
     } catch (e) {
       _log('Send error: $e');
@@ -385,25 +387,12 @@ class BleClient {
     
     try {
       final mtu = await _device!.mtu.first.timeout(const Duration(seconds: 2));
+      print('MTU: $mtu');
       return mtu - 3; // Subtract ATT overhead
     } catch (e) {
       _log('Could not get MTU, using default: $e');
       return 20; // Default: 23 - 3
     }
-  }
-  
-  /// Send a batch of data
-  Future<void> sendBatch(Uint8List batch) async {
-    await send(batch);
-  }
-  
-  /// Send EOF signal (0xFFFC)
-  Future<void> sendEof() async {
-    const int signalEof = 0xFFFC;
-    final eofPacket = Uint8List(2);
-    eofPacket[0] = signalEof & 0xFF;
-    eofPacket[1] = (signalEof >> 8) & 0xFF;
-    await send(eofPacket);
   }
   
   /// Dispose resources

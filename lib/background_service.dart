@@ -20,7 +20,7 @@ Future<void> startBackgroundService(ServiceInstance service) async {
   
   final bleClient = BleClient();
   final socketClient = SocketClient();
-  const defaultSocketUrl = 'ws://192.168.0.44:8080';
+  const defaultSocketUrl = 'ws://192.168.0.15:8080';
   
   await socketClient.connect(defaultSocketUrl);
   
@@ -60,10 +60,8 @@ Future<void> startBackgroundService(ServiceInstance service) async {
   // 3. SOCKET CONFIGURATION
   // ============================================================================
   
-  final effectiveMtu = await bleClient.getEffectiveMtu();
-  socketClient.effectiveMtu = effectiveMtu;
-  socketClient.sendBatchCallback = (batch) => bleClient.sendBatch(batch);
-  socketClient.sendEofCallback = () => bleClient.sendEof();
+  // Forward packets from server to BLE
+  socketClient.onPacketFromServer = (packet) => bleClient.send(packet);
   
   // ============================================================================
   // 4. SERVICE EVENT HANDLERS

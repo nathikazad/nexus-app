@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -25,10 +24,8 @@ class SocketClient {
   final List<_QueuedPacket> _packetQueue = [];
   static const int maxQueueSize = 1000; // Limit queue size to prevent memory issues
   
-  // Direct callback properties for Opus batch sending
-  Future<void> Function(Uint8List)? sendBatchCallback;
-  Future<void> Function()? sendEofCallback;
-  int effectiveMtu = 20; // Default MTU
+  // Callback to forward packets from server to BLE
+  Future<void> Function(Uint8List)? onPacketFromServer;
 
   bool get isConnected => _isConnected;
   int get queuedPacketCount => _packetQueue.length;
@@ -70,7 +67,19 @@ class SocketClient {
       // Listen for messages from server
       _channel!.stream.listen(
         (message) {
-          debugPrint("[Socket] Received: $message");
+          if (message is Uint8List) {
+            // Forward binary packets from server to BLE
+            debugPrint("[Socket] Received binary packet: ${message.length} bytes");
+            if (onPacketFromServer != null) {
+              onPacketFromServer!(message).catchError((e) {
+                debugPrint("[Socket] Error forwarding packet to BLE: $e");
+              });
+            } else {
+              debugPrint("[Socket] No onPacketFromServer callback");
+            }
+          } else {
+            debugPrint("[Socket] Received: $message");
+          }
         },
         onError: (error) {
           debugPrint("[Socket] Error: $error");
@@ -93,25 +102,6 @@ class SocketClient {
   }
 
   void sendPacket(Uint8List data, {int? index}) {
-    // Check for EOF signal (0xFFFC) - 2 bytes little-endian
-    if (data.length >= 2) {
-      final identifier = data[0] | (data[1] << 8);
-      const int signalEof = 0xFFFC;
-      
-      if (identifier == signalEof) {
-        debugPrint("[Socket] EOF signal detected, triggering Opus playback");
-        // Trigger Opus playback asynchronously
-        if (sendBatchCallback != null && sendEofCallback != null) {
-          sendOpusFileInBatches().catchError((e) {
-            debugPrint("[Socket] Error triggering Opus playback: $e");
-          });
-        } else {
-          debugPrint("[Socket] Opus callbacks not set, cannot trigger playback");
-        }
-        // Still forward EOF to socket server
-      }
-    }
-    
     // If not connected, queue the packet
     if (!_isConnected || _channel == null) {
       _queuePacket(data, index);
@@ -249,177 +239,5 @@ class SocketClient {
     }
   }
   
-  /// Parse Opus file format and return list of packets
-  /// Format: [OPUS][sample_rate][frame_size][len1][opus1][len2][opus2]...
-  Future<List<Uint8List>> _parseOpusFile() async {
-    try {
-      final ByteData data = await rootBundle.load('assets/ai.opus');
-      final Uint8List bytes = data.buffer.asUint8List();
-      
-      // Read header (12 bytes)
-      if (bytes.length < 12) {
-        debugPrint('[OPUS] File too short');
-        return [];
-      }
-      
-      // Check magic string
-      final magic = String.fromCharCodes(bytes.sublist(0, 4));
-      if (magic != 'OPUS') {
-        debugPrint('[OPUS] Invalid magic string: $magic');
-        return [];
-      }
-      
-      // Read sample rate and frame size (little-endian uint32)
-      final sampleRate = bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
-      final frameSize = bytes[8] | (bytes[9] << 8) | (bytes[10] << 16) | (bytes[11] << 24);
-      
-      debugPrint('[OPUS] Sample rate: $sampleRate, Frame size: $frameSize');
-      
-      // Parse frames
-      List<Uint8List> packets = [];
-      int offset = 12;
-      
-      while (offset + 2 <= bytes.length) {
-        // Read frame length (2 bytes, little-endian)
-        final frameLen = bytes[offset] | (bytes[offset + 1] << 8);
-        offset += 2;
-        
-        if (offset + frameLen > bytes.length) {
-          debugPrint('[OPUS] Incomplete frame at offset $offset');
-          break;
-        }
-        
-        // Extract opus data
-        final opusData = bytes.sublist(offset, offset + frameLen);
-        offset += frameLen;
-        
-        // Create packet: [length (2 bytes)] + [opus data]
-        final packet = Uint8List(2 + opusData.length);
-        packet[0] = opusData.length & 0xFF;
-        packet[1] = (opusData.length >> 8) & 0xFF;
-        packet.setRange(2, 2 + opusData.length, opusData);
-        
-        packets.add(packet);
-      }
-      
-      debugPrint('[OPUS] Parsed ${packets.length} packets');
-      return packets;
-    } catch (e) {
-      debugPrint('[OPUS] Error parsing file: $e');
-      return [];
-    }
-  }
-  
-  /// Send Opus file in batches via callbacks
-  Future<void> sendOpusFileInBatches() async {
-    if (sendBatchCallback == null || sendEofCallback == null) {
-      debugPrint('[OPUS] Callbacks not set, cannot send');
-      return;
-    }
-    
-    final sendBatch = sendBatchCallback!;
-    final sendEof = sendEofCallback!;
-    final mtu = effectiveMtu;
-    
-    try {
-      debugPrint('[OPUS] Starting to parse file');
-      
-      // Parse opus file
-      final packets = await _parseOpusFile();
-      if (packets.isEmpty) {
-        debugPrint('[OPUS] No packets to send');
-        return;
-      }
-      
-      const int repeatCount = 5;
-      debugPrint('[OPUS] Starting to send ${packets.length} packets (5 times)');
-      
-      // Batch packets up to MTU
-      List<Uint8List> batches = [];
-      Uint8List currentBatch = Uint8List(0);
-      
-      for (final packet in packets) {
-        // If adding this packet would exceed MTU and we have a batch, enqueue current batch
-        if (currentBatch.isNotEmpty && currentBatch.length + packet.length > mtu) {
-          batches.add(currentBatch);
-          currentBatch = Uint8List(0);
-        }
-        
-        // Add packet to current batch
-        if (currentBatch.isEmpty) {
-          currentBatch = Uint8List.fromList(packet);
-        } else {
-          final newBatch = Uint8List(currentBatch.length + packet.length);
-          newBatch.setRange(0, currentBatch.length, currentBatch);
-          newBatch.setRange(currentBatch.length, currentBatch.length + packet.length, packet);
-          currentBatch = newBatch;
-        }
-      }
-      
-      // Add final batch if not empty
-      if (currentBatch.isNotEmpty) {
-        batches.add(currentBatch);
-      }
-      
-      debugPrint('[OPUS] Created ${batches.length} batches');
-      
-      int totalSentBatches = 0;
-      final totalBatches = batches.length * repeatCount;
-      
-      // Send the file 5 times
-      for (int repeat = 0; repeat < repeatCount; repeat++) {
-        debugPrint('[OPUS] Sending iteration ${repeat + 1}/$repeatCount');
-        
-        // Send batches in bursts of 5 with delay
-        for (int i = 0; i < batches.length; i++) {
-          // Send batch via callback (connection check is handled inside sendBatch)
-          try {
-            await sendBatch(batches[i]);
-            totalSentBatches++;
-            debugPrint('[OPUS] Iteration ${repeat + 1}: Sent batch ${i + 1}/${batches.length}: ${batches[i].length} bytes');
-            
-            // Wait 100ms between batches
-            await Future.delayed(const Duration(milliseconds: 100));
-            
-            // After 5 batches, wait 500ms
-            if ((i + 1) % 10 == 0 && i + 1 < batches.length) {
-              debugPrint('[OPUS] Sent 5 batches, waiting 500ms...');
-              await Future.delayed(const Duration(milliseconds: 100));
-            }
-          } catch (e) {
-            debugPrint('[OPUS] Error sending batch: $e');
-            break;
-          }
-        }
-        
-        // Send EOF signal after each iteration (except the last one)
-        // if (repeat < repeatCount - 1) {
-        //   if (listener.isConnected()) {
-        //     try {
-        //       await Future.delayed(const Duration(milliseconds: 100));
-        //       await listener.onEofReady();
-        //       debugPrint('[OPUS] Sent EOF signal after iteration ${repeat + 1}');
-        //       await Future.delayed(const Duration(milliseconds: 200));
-        //     } catch (e) {
-        //       debugPrint('[OPUS] Error sending EOF: $e');
-        //     }
-        //   }
-        // }
-      }
-      
-      // Send final EOF signal after all iterations (connection check is handled inside sendEof)
-      try {
-        await Future.delayed(const Duration(milliseconds: 100));
-        await sendEof();
-        debugPrint('[OPUS] Sent final EOF signal');
-      } catch (e) {
-        debugPrint('[OPUS] Error sending final EOF: $e');
-      }
-      
-      debugPrint('[OPUS] Finished sending: $totalSentBatches/$totalBatches batches across $repeatCount iterations');
-    } catch (e) {
-      debugPrint('[OPUS] Error in send: $e');
-    }
-  }
 }
 

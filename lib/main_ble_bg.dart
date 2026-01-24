@@ -151,7 +151,7 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
     with WidgetsBindingObserver {
   final BleBackgroundService _bgService = BleBackgroundService();
   final TextEditingController _socketUrlController = TextEditingController(
-    text: 'ws://192.168.0.44:8080'
+    text: 'ws://192.168.0.15:8080'
   );
 
   String _bleStatus = 'scanning';
@@ -284,7 +284,7 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
               controller: _socketUrlController,
               decoration: const InputDecoration(
                 labelText: 'Socket Server URL',
-                hintText: 'ws://192.168.0.44:8080',
+                hintText: 'ws://192.168.0.15:8080',
                 border: OutlineInputBorder(),
               ),
             ),
