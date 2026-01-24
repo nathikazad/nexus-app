@@ -1,18 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
-import 'bg_ble_helper.dart';
-import 'bg_socket_client.dart';
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BleBackgroundApp());
-}
+import 'background_service.dart';
 
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
@@ -23,330 +15,12 @@ Future<bool> onIosBackground(ServiceInstance service) async {
 
 @pragma('vm:entry-point')
 Future<void> onStart(ServiceInstance service) async {
+  await startBackgroundService(service);
+}
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
-
-  final bleHelper = SimpleBleHelper();
-  final socketClient = BackgroundSocketClient();
-  
-  // Configure socket URL (default, can be changed via event)
-  const defaultSocketUrl = 'ws://192.168.0.44:8080';
-  await socketClient.connect(defaultSocketUrl);
-  
-  bleHelper.setListener(_BackgroundBleListener(service, bleHelper, socketClient));
-  await bleHelper.initialize();
-
-  service.on('ble.start').listen((event) async {
-    await bleHelper.scanAndConnect();
-  });
-
-  service.on('ble.stop').listen((event) async {
-    await bleHelper.disconnect();
-  });
-
-  service.on('stop').listen((event) async {
-    await bleHelper.disconnect();
-    await socketClient.disconnect();
-    service.stopSelf();
-  });
-
-  // Socket configuration events
-  service.on('socket.connect').listen((event) async {
-    final url = event?['url'] ?? defaultSocketUrl;
-    await socketClient.connect(url);
-  });
-
-  service.on('socket.disconnect').listen((event) async {
-    await socketClient.disconnect();
-  });
-
-  // Opus file sending event
-  service.on('send.opus').listen((event) async {
-    await _sendOpusFile(bleHelper, service);
-  });
-
-  // Keep a small tick so we know the isolate is still alive in background.
-  Timer.periodic(const Duration(seconds: 60), (_) {
-    debugPrint("[BLE BG] background tick");
-  });
-
-  // Auto-start BLE on service start.
-  await bleHelper.scanAndConnect();
-}
-
-/// Parse Opus file format and return list of packets
-/// Format: [OPUS][sample_rate][frame_size][len1][opus1][len2][opus2]...
-Future<List<Uint8List>> _parseOpusFile() async {
-  try {
-    final ByteData data = await rootBundle.load('assets/ai.opus');
-    final Uint8List bytes = data.buffer.asUint8List();
-    
-    // Read header (12 bytes)
-    if (bytes.length < 12) {
-      debugPrint('[OPUS] File too short');
-      return [];
-    }
-    
-    // Check magic string
-    final magic = String.fromCharCodes(bytes.sublist(0, 4));
-    if (magic != 'OPUS') {
-      debugPrint('[OPUS] Invalid magic string: $magic');
-      return [];
-    }
-    
-    // Read sample rate and frame size (little-endian uint32)
-    final sampleRate = bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
-    final frameSize = bytes[8] | (bytes[9] << 8) | (bytes[10] << 16) | (bytes[11] << 24);
-    
-    debugPrint('[OPUS] Sample rate: $sampleRate, Frame size: $frameSize');
-    
-    // Parse frames
-    List<Uint8List> packets = [];
-    int offset = 12;
-    
-    while (offset + 2 <= bytes.length) {
-      // Read frame length (2 bytes, little-endian)
-      final frameLen = bytes[offset] | (bytes[offset + 1] << 8);
-      offset += 2;
-      
-      if (offset + frameLen > bytes.length) {
-        debugPrint('[OPUS] Incomplete frame at offset $offset');
-        break;
-      }
-      
-      // Extract opus data
-      final opusData = bytes.sublist(offset, offset + frameLen);
-      offset += frameLen;
-      
-      // Create packet: [length (2 bytes)] + [opus data]
-      final packet = Uint8List(2 + opusData.length);
-      packet[0] = opusData.length & 0xFF;
-      packet[1] = (opusData.length >> 8) & 0xFF;
-      packet.setRange(2, 2 + opusData.length, opusData);
-      
-      packets.add(packet);
-    }
-    
-    debugPrint('[OPUS] Parsed ${packets.length} packets');
-    return packets;
-  } catch (e) {
-    debugPrint('[OPUS] Error parsing file: $e');
-    return [];
-  }
-}
-
-/// Send Opus file in batches
-Future<void> _sendOpusFile(SimpleBleHelper bleHelper, ServiceInstance service) async {
-  try {
-    if (!bleHelper.isConnected) {
-      debugPrint('[OPUS] Not connected, cannot send');
-      service.invoke('opus.status', {'status': 'error', 'message': 'Not connected'});
-      return;
-    }
-    
-    final rxCharacteristic = bleHelper.audioRxCharacteristic;
-    final device = bleHelper.device;
-    
-    if (rxCharacteristic == null || device == null) {
-      debugPrint('[OPUS] RX characteristic or device not available');
-      service.invoke('opus.status', {'status': 'error', 'message': 'Characteristic not available'});
-      return;
-    }
-    
-    // Store non-null reference for use throughout function
-    final rxChar = rxCharacteristic;
-    final dev = device;
-    
-    // Get MTU
-    int mtu = 23; // Default
-    try {
-      mtu = await dev.mtu.first.timeout(const Duration(seconds: 2));
-    } catch (e) {
-      debugPrint('[OPUS] Could not get MTU, using default: $e');
-    }
-    final effectiveMtu = mtu - 3; // Subtract ATT overhead
-    
-    debugPrint('[OPUS] Starting send, MTU: $mtu, Effective: $effectiveMtu');
-    service.invoke('opus.status', {'status': 'parsing'});
-    
-    // Parse opus file
-    final packets = await _parseOpusFile();
-    if (packets.isEmpty) {
-      debugPrint('[OPUS] No packets to send');
-      service.invoke('opus.status', {'status': 'error', 'message': 'No packets'});
-      return;
-    }
-    
-    debugPrint('[OPUS] Starting to send ${packets.length} packets (5 times)');
-    service.invoke('opus.status', {
-      'status': 'sending',
-      'total': packets.length * 5,
-      'totalIterations': 5,
-    });
-    
-    // Batch packets up to MTU
-    List<Uint8List> batches = [];
-    Uint8List currentBatch = Uint8List(0);
-    
-    for (final packet in packets) {
-      // If adding this packet would exceed MTU and we have a batch, enqueue current batch
-      if (currentBatch.isNotEmpty && currentBatch.length + packet.length > effectiveMtu) {
-        batches.add(currentBatch);
-        currentBatch = Uint8List(0);
-      }
-      
-      // Add packet to current batch
-      if (currentBatch.isEmpty) {
-        currentBatch = Uint8List.fromList(packet);
-      } else {
-        final newBatch = Uint8List(currentBatch.length + packet.length);
-        newBatch.setRange(0, currentBatch.length, currentBatch);
-        newBatch.setRange(currentBatch.length, currentBatch.length + packet.length, packet);
-        currentBatch = newBatch;
-      }
-    }
-    
-    // Add final batch if not empty
-    if (currentBatch.isNotEmpty) {
-      batches.add(currentBatch);
-    }
-    
-    debugPrint('[OPUS] Created ${batches.length} batches');
-    
-    const int repeatCount = 5;
-    int totalSentBatches = 0;
-    final totalBatches = batches.length * repeatCount;
-    
-    // Send the file 5 times
-    for (int repeat = 0; repeat < repeatCount; repeat++) {
-      debugPrint('[OPUS] Sending iteration ${repeat + 1}/$repeatCount');
-      service.invoke('opus.status', {
-        'status': 'sending',
-        'iteration': repeat + 1,
-        'totalIterations': repeatCount,
-        'total': totalBatches,
-      });
-      
-      // Send batches in bursts of 5 with delay
-      for (int i = 0; i < batches.length; i++) {
-        if (!bleHelper.isConnected) {
-          debugPrint('[OPUS] Disconnected during send');
-          break;
-        }
-        
-        // Send batch
-        try {
-          await rxChar.write(batches[i], withoutResponse: true);
-          totalSentBatches++;
-          debugPrint('[OPUS] Iteration ${repeat + 1}: Sent batch ${i + 1}/${batches.length}: ${batches[i].length} bytes');
-          service.invoke('opus.progress', {
-            'sent': totalSentBatches,
-            'total': totalBatches,
-            'iteration': repeat + 1,
-            'totalIterations': repeatCount,
-          });
-          
-          // Wait 100ms between batches
-          await Future.delayed(const Duration(milliseconds: 100));
-          
-          // After 5 batches, wait 500ms
-          if ((i + 1) % 5 == 0 && i + 1 < batches.length) {
-            debugPrint('[OPUS] Sent 5 batches, waiting 500ms...');
-            await Future.delayed(const Duration(milliseconds: 500));
-          }
-        } catch (e) {
-          debugPrint('[OPUS] Error sending batch: $e');
-          break;
-        }
-      }
-      
-      // Send EOF signal after each iteration (except the last one)
-      if (repeat < repeatCount - 1) {
-        if (bleHelper.isConnected) {
-          try {
-            await Future.delayed(const Duration(milliseconds: 100));
-            const int signalEof = 0xFFFC;
-            final eofPacket = Uint8List(2);
-            eofPacket[0] = signalEof & 0xFF;
-            eofPacket[1] = (signalEof >> 8) & 0xFF;
-            await rxChar.write(eofPacket, withoutResponse: true);
-            debugPrint('[OPUS] Sent EOF signal after iteration ${repeat + 1}');
-            await Future.delayed(const Duration(milliseconds: 200));
-          } catch (e) {
-            debugPrint('[OPUS] Error sending EOF: $e');
-          }
-        }
-      }
-    }
-    
-    // Send final EOF signal after all iterations
-    if (bleHelper.isConnected) {
-      try {
-        await Future.delayed(const Duration(milliseconds: 100));
-        const int signalEof = 0xFFFC;
-        final eofPacket = Uint8List(2);
-        eofPacket[0] = signalEof & 0xFF;
-        eofPacket[1] = (signalEof >> 8) & 0xFF;
-        await rxChar.write(eofPacket, withoutResponse: true);
-        debugPrint('[OPUS] Sent final EOF signal');
-      } catch (e) {
-        debugPrint('[OPUS] Error sending final EOF: $e');
-      }
-    }
-    
-    debugPrint('[OPUS] Finished sending: $totalSentBatches/$totalBatches batches across $repeatCount iterations');
-    service.invoke('opus.status', {
-      'status': 'done',
-      'sent': totalSentBatches,
-      'total': totalBatches,
-      'iterations': repeatCount,
-    });
-  } catch (e) {
-    debugPrint('[OPUS] Error in send: $e');
-    service.invoke('opus.status', {'status': 'error', 'message': e.toString()});
-  }
-}
-
-class _BackgroundBleListener implements IBleListener {
-  final ServiceInstance service;
-  final SimpleBleHelper bleHelper;
-  final BackgroundSocketClient socketClient;
-  int packetCount = 0;
-
-  _BackgroundBleListener(this.service, this.bleHelper, this.socketClient);
-
-  @override
-  void onConnectionStateChanged(BleConnectionState state) {
-    debugPrint("[BLE BG] Connection state: ${state.name}");
-    service.invoke('ble.status', {'status': state.name});
-  }
-
-  @override
-  void onAudioPacketReceived(Uint8List data) {
-    packetCount++;
-    debugPrint("[BLE BG] Packet $packetCount: ${data.length} bytes");
-    service.invoke('ble.packet', {
-      'count': packetCount,
-      'size': data.length,
-    });
-    
-    // Forward packet to socket server with index (will queue if not connected)
-    socketClient.sendPacket(data, index: packetCount);
-    if (socketClient.isConnected) {
-      debugPrint("[BLE BG] Forwarded packet $packetCount (index: $packetCount) to socket");
-    } else {
-      debugPrint("[BLE BG] Socket not connected, queued packet $packetCount (queue: ${socketClient.queuedPacketCount})");
-    }
-    
-    // Send ACK back to the device
-    bleHelper.send(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
-  }
-
-  @override
-  void onError(String error) {
-    debugPrint("[BLE BG] Error: $error");
-    service.invoke('ble.error', {'error': error});
-  }
+  runApp(const BleBackgroundApp());
 }
 
 class BleBackgroundService {
@@ -440,9 +114,6 @@ class BleBackgroundService {
     _service.invoke('socket.disconnect');
   }
 
-  void sendOpusFile() {
-    _service.invoke('send.opus');
-  }
 
   void dispose() {
     _statusController.close();
@@ -664,13 +335,6 @@ class _BleBackgroundScreenState extends State<BleBackgroundScreen>
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _bleStatus == 'connected' && _opusStatus != 'sending' && _opusStatus != 'parsing'
-                  ? () => _bgService.sendOpusFile()
-                  : null,
-              child: const Text('Send ai.opus'),
             ),
           ],
         ),
