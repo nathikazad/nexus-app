@@ -56,6 +56,8 @@ class SimpleBleHelper {
   BleConnectionState get state => _state;
   bool get isConnected => _state == BleConnectionState.connected;
   int get packetCount => _packetCount;
+  BluetoothDevice? get device => _device;
+  BluetoothCharacteristic? get audioRxCharacteristic => _audioRxCharacteristic;
   
   void setListener(IBleListener listener) {
     _listener = listener;
