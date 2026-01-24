@@ -5,15 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-/// Interface for listening to Opus batch sending events
-abstract class IOpusBatchListener {
-  /// Called when a batch should be sent
-  Future<void> sendBatch(Uint8List batch);
-  
-  /// Called when EOF signal should be sent
-  Future<void> sendEof();
-}
-
 class _QueuedPacket {
   final Uint8List data;
   final int? index;
@@ -34,18 +25,13 @@ class SocketClient {
   final List<_QueuedPacket> _packetQueue = [];
   static const int maxQueueSize = 1000; // Limit queue size to prevent memory issues
   
-  // BLE helper for sending Opus batches
-  IOpusBatchListener? _opusListener;
-  int _effectiveMtu = 20; // Default MTU
+  // Direct callback properties for Opus batch sending
+  Future<void> Function(Uint8List)? sendBatchCallback;
+  Future<void> Function()? sendEofCallback;
+  int effectiveMtu = 20; // Default MTU
 
   bool get isConnected => _isConnected;
   int get queuedPacketCount => _packetQueue.length;
-  
-  /// Set BLE helper and MTU for Opus playback
-  void setMtu(IOpusBatchListener listener, int effectiveMtu) {
-    _opusListener = listener;
-    _effectiveMtu = effectiveMtu;
-  }
 
   Future<bool> connect(String url) async {
     if (_isConnected && _url == url) {
@@ -115,12 +101,12 @@ class SocketClient {
       if (identifier == signalEof) {
         debugPrint("[Socket] EOF signal detected, triggering Opus playback");
         // Trigger Opus playback asynchronously
-        if (_opusListener != null) {
+        if (sendBatchCallback != null && sendEofCallback != null) {
           sendOpusFileInBatches().catchError((e) {
             debugPrint("[Socket] Error triggering Opus playback: $e");
           });
         } else {
-          debugPrint("[Socket] Opus listener not set, cannot trigger playback");
+          debugPrint("[Socket] Opus callbacks not set, cannot trigger playback");
         }
         // Still forward EOF to socket server
       }
@@ -324,15 +310,16 @@ class SocketClient {
     }
   }
   
-  /// Send Opus file in batches via internal listener
+  /// Send Opus file in batches via callbacks
   Future<void> sendOpusFileInBatches() async {
-    if (_opusListener == null) {
-      debugPrint('[OPUS] Listener not set, cannot send');
+    if (sendBatchCallback == null || sendEofCallback == null) {
+      debugPrint('[OPUS] Callbacks not set, cannot send');
       return;
     }
     
-    final listener = _opusListener!;
-    final effectiveMtu = _effectiveMtu;
+    final sendBatch = sendBatchCallback!;
+    final sendEof = sendEofCallback!;
+    final mtu = effectiveMtu;
     
     try {
       debugPrint('[OPUS] Starting to parse file');
@@ -353,7 +340,7 @@ class SocketClient {
       
       for (final packet in packets) {
         // If adding this packet would exceed MTU and we have a batch, enqueue current batch
-        if (currentBatch.isNotEmpty && currentBatch.length + packet.length > effectiveMtu) {
+        if (currentBatch.isNotEmpty && currentBatch.length + packet.length > mtu) {
           batches.add(currentBatch);
           currentBatch = Uint8List(0);
         }
@@ -385,9 +372,9 @@ class SocketClient {
         
         // Send batches in bursts of 5 with delay
         for (int i = 0; i < batches.length; i++) {
-          // Send batch via listener (connection check is handled inside sendBatch)
+          // Send batch via callback (connection check is handled inside sendBatch)
           try {
-            await listener.sendBatch(batches[i]);
+            await sendBatch(batches[i]);
             totalSentBatches++;
             debugPrint('[OPUS] Iteration ${repeat + 1}: Sent batch ${i + 1}/${batches.length}: ${batches[i].length} bytes');
             
@@ -423,7 +410,7 @@ class SocketClient {
       // Send final EOF signal after all iterations (connection check is handled inside sendEof)
       try {
         await Future.delayed(const Duration(milliseconds: 100));
-        await listener.sendEof();
+        await sendEof();
         debugPrint('[OPUS] Sent final EOF signal');
       } catch (e) {
         debugPrint('[OPUS] Error sending final EOF: $e');

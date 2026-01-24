@@ -26,16 +26,6 @@ enum BleConnectionState {
 }
 
 // =============================================================================
-// BLE LISTENER INTERFACE
-// =============================================================================
-
-abstract class IBleListener {
-  void onConnectionStateChanged(BleConnectionState state);
-  void onAudioPacketReceived(Uint8List data);
-  void onError(String error);
-}
-
-// =============================================================================
 // SIMPLE BLE HELPER - Minimal BLE implementation for background socket test
 // =============================================================================
 
@@ -48,7 +38,6 @@ class BleClient {
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   
   BleConnectionState _state = BleConnectionState.scanning;
-  IBleListener? _listener;
   
   bool _isScanning = false;
   int _packetCount = 0;
@@ -59,13 +48,14 @@ class BleClient {
   BluetoothDevice? get device => _device;
   BluetoothCharacteristic? get audioRxCharacteristic => _audioRxCharacteristic;
   
-  void setListener(IBleListener listener) {
-    _listener = listener;
-  }
+  // Direct callback properties for event handling
+  void Function(BleConnectionState)? onConnectionStateChanged;
+  void Function(Uint8List)? onAudioPacketReceived;
+  void Function(String)? onError;
   
   void _setState(BleConnectionState newState) {
     _state = newState;
-    _listener?.onConnectionStateChanged(newState);
+    onConnectionStateChanged?.call(newState);
   }
   
   void _log(String message) {
@@ -84,7 +74,7 @@ class BleClient {
       // Check if Bluetooth is available
       if (await FlutterBluePlus.isSupported == false) {
         _log('Bluetooth not supported');
-        _listener?.onError('Bluetooth not supported');
+        onError?.call('Bluetooth not supported');
         return false;
       }
       
@@ -92,7 +82,7 @@ class BleClient {
       return true;
     } catch (e) {
       _log('Error initializing BLE: $e');
-      _listener?.onError('Error initializing BLE: $e');
+      onError?.call('Error initializing BLE: $e');
       return false;
     }
   }
@@ -137,7 +127,7 @@ class BleClient {
         },
         onError: (e) {
           _log('Scan error: $e');
-          _listener?.onError('Scan error: $e');
+          onError?.call('Scan error: $e');
         },
       );
       
@@ -155,7 +145,7 @@ class BleClient {
       await _scanSubscription?.cancel();
       _scanSubscription = null;
       _isScanning = false;
-      _listener?.onError('Scan error: $e');
+      onError?.call('Scan error: $e');
       // Auto-retry: restart scanning
       await scanAndConnect();
     }
@@ -247,7 +237,7 @@ class BleClient {
       return true;
     } catch (e) {
       _log('Connection error: $e');
-      _listener?.onError('Connection error: $e');
+      onError?.call('Connection error: $e');
       // Auto-retry: restart scanning
       await scanAndConnect();
       return false;
@@ -275,21 +265,20 @@ class BleClient {
         },
         onError: (error) {
           _log('Notification error: $error');
-          _listener?.onError('Notification error: $error');
+          onError?.call('Notification error: $error');
         },
       );
       
       _log('Subscribed to audio notifications');
     } catch (e) {
       _log('Error subscribing to notifications: $e');
-      _listener?.onError('Error subscribing: $e');
+      onError?.call('Error subscribing: $e');
     }
   }
   
   void _handleAudioNotification(Uint8List data) {
-    // Simply forward the raw data to the listener
-    // The listener (socket) will handle the data
-    _listener?.onAudioPacketReceived(data);
+    // Forward the raw data via callback
+    onAudioPacketReceived?.call(data);
   }
   
   Future<void> _handleDisconnection() async {
@@ -420,7 +409,9 @@ class BleClient {
   /// Dispose resources
   Future<void> dispose() async {
     await disconnect();
-    _listener = null;
+    onConnectionStateChanged = null;
+    onAudioPacketReceived = null;
+    onError = null;
   }
 }
 
