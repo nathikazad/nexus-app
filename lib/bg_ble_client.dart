@@ -13,6 +13,12 @@ class BleConstants {
   static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static const String audioTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
   static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
+  static const String hapticCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ac";
+  static const String rtcCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab";
+  static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad";
+  static const String fileTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ae";
+  static const String fileRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26af";
+  static const String fileCtrlCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b0";
 }
 
 // =============================================================================
@@ -33,24 +39,30 @@ class BleClient {
   BluetoothDevice? _device;
   BluetoothCharacteristic? _audioTxCharacteristic;
   BluetoothCharacteristic? _audioRxCharacteristic;
+  BluetoothCharacteristic? _hapticCharacteristic;
+  BluetoothCharacteristic? _rtcCharacteristic;
+  BluetoothCharacteristic? _deviceNameCharacteristic;
+  BluetoothCharacteristic? _fileTxCharacteristic;
+  BluetoothCharacteristic? _fileRxCharacteristic;
+  BluetoothCharacteristic? _fileCtrlCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
+  StreamSubscription<List<int>>? _fileTxNotificationSubscription;
   
   BleConnectionState _state = BleConnectionState.scanning;
   
   bool _isScanning = false;
-  int _packetCount = 0;
   
   BleConnectionState get state => _state;
   bool get isConnected => _state == BleConnectionState.connected;
-  int get packetCount => _packetCount;
   BluetoothDevice? get device => _device;
   BluetoothCharacteristic? get audioRxCharacteristic => _audioRxCharacteristic;
   
   // Direct callback properties for event handling
   void Function(BleConnectionState)? onConnectionStateChanged;
   void Function(Uint8List)? onAudioPacketReceived;
+  void Function(Uint8List)? onFileTxDataReceived;
   void Function(String)? onError;
   
   void _setState(BleConnectionState newState) {
@@ -210,7 +222,7 @@ class BleClient {
         return false;
       }
       
-      // Find audio characteristics
+      // Find characteristics
       for (BluetoothCharacteristic char in targetService.characteristics) {
         final uuid = char.uuid.toString().toLowerCase();
         if (uuid == BleConstants.audioTxCharacteristicUuid.toLowerCase()) {
@@ -219,11 +231,32 @@ class BleClient {
         } else if (uuid == BleConstants.audioRxCharacteristicUuid.toLowerCase()) {
           _audioRxCharacteristic = char;
           _log('Found Audio RX characteristic');
+        } else if (uuid == BleConstants.hapticCharacteristicUuid.toLowerCase()) {
+          _hapticCharacteristic = char;
+          _log('Found Haptic characteristic');
+        } else if (uuid == BleConstants.rtcCharacteristicUuid.toLowerCase()) {
+          _rtcCharacteristic = char;
+          _log('Found RTC characteristic');
+        } else if (uuid == BleConstants.deviceNameCharacteristicUuid.toLowerCase()) {
+          _deviceNameCharacteristic = char;
+          _log('Found Device Name characteristic');
+        } else if (uuid == BleConstants.fileTxCharacteristicUuid.toLowerCase()) {
+          _fileTxCharacteristic = char;
+          _log('Found File TX characteristic');
+        } else if (uuid == BleConstants.fileRxCharacteristicUuid.toLowerCase()) {
+          _fileRxCharacteristic = char;
+          _log('Found File RX characteristic');
+        } else if (uuid == BleConstants.fileCtrlCharacteristicUuid.toLowerCase()) {
+          _fileCtrlCharacteristic = char;
+          _log('Found File CTRL characteristic');
         }
       }
       
       // Subscribe to audio notifications
       await _subscribeToAudioNotifications();
+      
+      // Subscribe to file TX notifications
+      await _subscribeToFileTxNotifications();
       
       // Listen for connection state changes
       _connectionSubscription = _device!.connectionState.listen((state) async {
@@ -258,7 +291,6 @@ class BleClient {
           if (value.isEmpty) return;
           
           final data = Uint8List.fromList(value);
-          _packetCount++;
           
           // Parse and forward audio data
           _handleAudioNotification(data);
@@ -281,11 +313,48 @@ class BleClient {
     onAudioPacketReceived?.call(data);
   }
   
+  Future<void> _subscribeToFileTxNotifications() async {
+    if (_fileTxCharacteristic == null) {
+      _log('Cannot subscribe: File TX characteristic not found');
+      return;
+    }
+    
+    try {
+      await _fileTxCharacteristic!.setNotifyValue(true);
+      
+      _fileTxNotificationSubscription = _fileTxCharacteristic!.lastValueStream.listen(
+        (value) {
+          if (value.isEmpty) return;
+          final data = Uint8List.fromList(value);
+          // Forward file TX data via callback
+          onFileTxDataReceived?.call(data);
+        },
+        onError: (error) {
+          _log('File TX notification error: $error');
+          onError?.call('File TX notification error: $error');
+        },
+      );
+      
+      _log('Subscribed to file TX notifications');
+    } catch (e) {
+      _log('Error subscribing to file TX notifications: $e');
+      onError?.call('Error subscribing to file TX: $e');
+    }
+  }
+  
   Future<void> _handleDisconnection() async {
     await _notificationSubscription?.cancel();
     _notificationSubscription = null;
+    await _fileTxNotificationSubscription?.cancel();
+    _fileTxNotificationSubscription = null;
     _audioTxCharacteristic = null;
     _audioRxCharacteristic = null;
+    _hapticCharacteristic = null;
+    _rtcCharacteristic = null;
+    _deviceNameCharacteristic = null;
+    _fileTxCharacteristic = null;
+    _fileRxCharacteristic = null;
+    _fileCtrlCharacteristic = null;
     
     // Auto-reconnect: restart scanning to find and connect to device again
     _log('Device disconnected, restarting scan to reconnect...');
@@ -343,6 +412,8 @@ class BleClient {
       await stopScan();
       await _notificationSubscription?.cancel();
       _notificationSubscription = null;
+      await _fileTxNotificationSubscription?.cancel();
+      _fileTxNotificationSubscription = null;
       await _connectionSubscription?.cancel();
       _connectionSubscription = null;
       
@@ -353,7 +424,12 @@ class BleClient {
       _device = null;
       _audioTxCharacteristic = null;
       _audioRxCharacteristic = null;
-      _packetCount = 0;
+      _hapticCharacteristic = null;
+      _rtcCharacteristic = null;
+      _deviceNameCharacteristic = null;
+      _fileTxCharacteristic = null;
+      _fileRxCharacteristic = null;
+      _fileCtrlCharacteristic = null;
       _log('Disconnected');
       // Auto-reconnect: restart scanning
       await scanAndConnect();
@@ -363,7 +439,7 @@ class BleClient {
   }
   
   /// Send data to the device (via Audio RX characteristic)
-  Future<void> send(Uint8List data) async {
+  Future<void> sendAudio(Uint8List data) async {
     print('Sending data: ${data.length} bytes');
     if (!isConnected || _audioRxCharacteristic == null) {
       _log('Cannot send: not connected');
@@ -376,6 +452,131 @@ class BleClient {
     } catch (e) {
       _log('Send error: $e');
       rethrow;
+    }
+  }
+  
+  /// Write haptic effect
+  Future<bool> writeHaptic(int effectId) async {
+    if (!isConnected || _hapticCharacteristic == null) {
+      _log('Cannot write haptic: not connected');
+      return false;
+    }
+    try {
+      await _hapticCharacteristic!.write(Uint8List.fromList([effectId]), withoutResponse: true);
+      return true;
+    } catch (e) {
+      _log('Error writing haptic: $e');
+      return false;
+    }
+  }
+  
+  /// Read RTC time
+  Future<Uint8List?> readRTC() async {
+    if (!isConnected || _rtcCharacteristic == null) {
+      _log('Cannot read RTC: not connected');
+      return null;
+    }
+    try {
+      final data = await _rtcCharacteristic!.read();
+      return Uint8List.fromList(data);
+    } catch (e) {
+      _log('Error reading RTC: $e');
+      return null;
+    }
+  }
+  
+  /// Write RTC time
+  Future<bool> writeRTC(Uint8List data) async {
+    if (!isConnected || _rtcCharacteristic == null) {
+      _log('Cannot write RTC: not connected');
+      return false;
+    }
+    try {
+      await _rtcCharacteristic!.write(data, withoutResponse: false);
+      return true;
+    } catch (e) {
+      _log('Error writing RTC: $e');
+      return false;
+    }
+  }
+  
+  /// Read device name
+  Future<String?> readDeviceName() async {
+    if (!isConnected || _deviceNameCharacteristic == null) {
+      _log('Cannot read device name: not connected');
+      return null;
+    }
+    try {
+      final data = await _deviceNameCharacteristic!.read();
+      if (data.isEmpty) return null;
+      return String.fromCharCodes(data);
+    } catch (e) {
+      _log('Error reading device name: $e');
+      return null;
+    }
+  }
+  
+  /// Write device name
+  Future<bool> writeDeviceName(String name) async {
+    if (!isConnected || _deviceNameCharacteristic == null) {
+      _log('Cannot write device name: not connected');
+      return false;
+    }
+    if (name.length >= 20) {
+      _log('Device name too long: ${name.length} (max 19)');
+      return false;
+    }
+    try {
+      await _deviceNameCharacteristic!.write(Uint8List.fromList(name.codeUnits), withoutResponse: false);
+      return true;
+    } catch (e) {
+      _log('Error writing device name: $e');
+      return false;
+    }
+  }
+  
+  /// Write file RX data
+  Future<bool> writeFileRx(Uint8List data) async {
+    if (!isConnected || _fileRxCharacteristic == null) {
+      _log('Cannot write file RX: not connected');
+      return false;
+    }
+    try {
+      await _fileRxCharacteristic!.write(data, withoutResponse: true);
+      return true;
+    } catch (e) {
+      _log('Error writing file RX: $e');
+      return false;
+    }
+  }
+  
+  /// Read file control
+  Future<Uint8List?> readFileCtrl() async {
+    if (!isConnected || _fileCtrlCharacteristic == null) {
+      _log('Cannot read file control: not connected');
+      return null;
+    }
+    try {
+      final data = await _fileCtrlCharacteristic!.read();
+      return Uint8List.fromList(data);
+    } catch (e) {
+      _log('Error reading file control: $e');
+      return null;
+    }
+  }
+  
+  /// Write file control
+  Future<bool> writeFileCtrl(Uint8List data) async {
+    if (!isConnected || _fileCtrlCharacteristic == null) {
+      _log('Cannot write file control: not connected');
+      return false;
+    }
+    try {
+      await _fileCtrlCharacteristic!.write(data, withoutResponse: true);
+      return true;
+    } catch (e) {
+      _log('Error writing file control: $e');
+      return false;
     }
   }
   
@@ -400,6 +601,7 @@ class BleClient {
     await disconnect();
     onConnectionStateChanged = null;
     onAudioPacketReceived = null;
+    onFileTxDataReceived = null;
     onError = null;
   }
 }

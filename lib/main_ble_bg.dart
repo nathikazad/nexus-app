@@ -69,9 +69,6 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
   );
 
   String _bleStatus = 'scanning';
-  int _packetCount = 0;
-  int _lastPacketSize = 0;
-  int _queuedPackets = 0;
   bool _serviceRunning = false;
   @override
   void initState() {
@@ -87,24 +84,6 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
     bgService.statusStream.listen((status) {
       setState(() {
         _bleStatus = status;
-      });
-    });
-
-    bgService.packetCountStream.listen((count) {
-      setState(() {
-        _packetCount = count;
-      });
-    });
-
-    bgService.packetSizeStream.listen((size) {
-      setState(() {
-        _lastPacketSize = size;
-      });
-    });
-
-    bgService.queueSizeStream.listen((count) {
-      setState(() {
-        _queuedPackets = count;
       });
     });
   }
@@ -159,21 +138,7 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
                   children: [
                     Text('BLE Status: $_bleStatus'),
                     const SizedBox(height: 8),
-                    Text('Packets: $_packetCount'),
-                    const SizedBox(height: 4),
-                    Text('Last packet size: $_lastPacketSize bytes'),
-                    const SizedBox(height: 4),
                     Text('Service: ${_serviceRunning ? "Running" : "Stopped"}'),
-                    if (_queuedPackets > 0) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Queued packets: $_queuedPackets',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -199,6 +164,23 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
             ElevatedButton(
               onPressed: _serviceRunning ? _stopService : _startService,
               child: Text(_serviceRunning ? 'Stop BLE' : 'Start BLE'),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () async {
+                final bgService = ref.read(bleBackgroundServiceProvider);
+                final success = await bgService.writeHaptic(16);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success 
+                        ? 'Haptic effect 16 triggered' 
+                        : 'Failed to trigger haptic'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Trigger Haptic (16)'),
             ),
           ],
         ),
