@@ -1,19 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
-import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
+import 'package:nexus_voice_assistant/bg_ble_client.dart';
 import 'device_selection_screen.dart';
 
-class HardwareScreen extends StatefulWidget {
+class HardwareScreen extends ConsumerStatefulWidget {
   const HardwareScreen({super.key});
 
   @override
-  State<HardwareScreen> createState() => _HardwareScreenState();
+  ConsumerState<HardwareScreen> createState() => _HardwareScreenState();
 }
 
-class _HardwareScreenState extends State<HardwareScreen> {
-  final HardwareService _hardwareService = HardwareService.instance;
+class _HardwareScreenState extends ConsumerState<HardwareScreen> {
+  late final HardwareService _hardwareService;
   
   int? _batteryPercentage;
   double? _voltage;
@@ -26,45 +27,59 @@ class _HardwareScreenState extends State<HardwareScreen> {
   bool _isPulsingHaptic = false;
   bool _isSettingDeviceName = false;
   
-  StreamSubscription<bool>? _connectionSubscription;
-  StreamSubscription<BatteryData>? _batterySubscription;
-  Timer? _batteryRefreshTimer;
-  Timer? _rtcRefreshTimer;
+  StreamSubscription<BleConnectionState>? _connectionSubscription;
+  Timer? _dataRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    _hardwareService = ref.read(hardwareServiceProvider);
     _setupListeners();
     _startRefreshTimers();
   }
 
-  void _startRefreshTimers() {
+  Future<void> _startRefreshTimers() async {
     // Read immediately
-    _hardwareService.readBattery();
-    _readRTCData();
-    _readDeviceName();
+    await _readBatteryData();
+    await _readRTCData();
+    await _readDeviceName();
     
-    // // Refresh battery and RTC data every 1 second
-    // _batteryRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-    //   _hardwareService.readBattery();
-    // });
-    
-    // _rtcRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-    //   _readRTCData();
-    // });
+    // Refresh battery and RTC data periodically
+    _dataRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      await _readBatteryData();
+      await _readRTCData();
+    });
+  }
+
+  Future<void> _readBatteryData() async {
+    if (!_isConnected) {
+      return;
+    }
+    try {
+      final batteryData = await _hardwareService.readBattery();
+      if (mounted && batteryData != null) {
+        setState(() {
+          _batteryPercentage = batteryData.percentage;
+          _voltage = batteryData.voltage;
+          _isCharging = batteryData.isCharging;
+        });
+      }
+    } catch (e) {
+      LoggingService.instance.log('Error reading battery data: $e');
+    }
   }
 
   void _stopRefreshTimers() {
-    _batteryRefreshTimer?.cancel();
-    _batteryRefreshTimer = null;
-    _rtcRefreshTimer?.cancel();
-    _rtcRefreshTimer = null;
+    _dataRefreshTimer?.cancel();
+    _dataRefreshTimer = null;
   }
 
   void _setupListeners() {
     // Listen to connection state
-    _connectionSubscription = _hardwareService.connectionStateStream?.listen((isConnected) {
+    _connectionSubscription = _hardwareService.statusStream.listen((status) {
       if (mounted) {
+        
+        final isConnected = status == BleConnectionState.connected;
         setState(() {
           _isConnected = isConnected;
           if (!isConnected) {
@@ -74,8 +89,11 @@ class _HardwareScreenState extends State<HardwareScreen> {
             _rtcTimeDisplay = null;
             _rtcTimezone = null;
             _deviceName = null;
+
+
             _stopRefreshTimers();
           } else {
+
             // Restart timers when connected
             _startRefreshTimers();
           }
@@ -83,16 +101,8 @@ class _HardwareScreenState extends State<HardwareScreen> {
       }
     });
     
-    // Listen to battery updates
-    _batterySubscription = _hardwareService.batteryStream?.listen((batteryData) {
-      if (mounted) {
-        setState(() {
-          _batteryPercentage = batteryData.percentage;
-          _voltage = batteryData.voltage;
-          _isCharging = batteryData.isCharging;
-        });
-      }
-    });
+    // Battery updates are handled via polling in _startRefreshTimers
+    // No battery stream available in new HardwareService
     
     // Set initial connection state
     setState(() {
@@ -299,10 +309,10 @@ class _HardwareScreenState extends State<HardwareScreen> {
   }
 
   @override
+  @override
   void dispose() {
     _stopRefreshTimers();
     _connectionSubscription?.cancel();
-    _batterySubscription?.cancel();
     super.dispose();
   }
 

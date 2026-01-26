@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
@@ -10,8 +9,10 @@ import 'dart:io';
 import 'router.dart';
 import 'services/ai_service/openai_service.dart';
 import 'services/logging_service.dart';
-import 'services/background_service.dart';
 import 'services/watch_bridge_service.dart';
+import 'background_service.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'dart:ui';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,40 +33,38 @@ void main() async {
     await Permission.microphone.request();
   }
   
-  // Initialize background service (only needed for mobile platforms)
-  if (!kIsWeb) {
-    final backgroundService = BackgroundService();
-    await backgroundService.init();
-  }
-  
-  // Initialize BLE service (only needed for mobile platforms)
-  if (!kIsWeb) {
-    await HardwareService.instance.initialize();
-  }
-  
   // Initialize Watch Bridge service (iOS only)
   if (!kIsWeb && Platform.isIOS) {
     await WatchBridgeService.instance.initialize();
   }
   
-  // OpenAI service is now managed by openAIServiceProvider
-  // It will connect when user is authenticated and disconnect when unauthenticated
-  
-  // Start background service when BLE is connected (iOS needs this for background operation)
-  if (!kIsWeb && Platform.isIOS) {
-    HardwareService.instance.connectionStateStream?.listen((isConnected) async {
-      if (isConnected) {
-        final backgroundService = BackgroundService();
-        await backgroundService.ensureRunning();
-      }
-    });
-  }
+  // Create provider container and initialize the background service
+  final container = ProviderContainer();
+  final bgService = container.read(bleBackgroundServiceProvider);
+  await bgService.init(
+    onStart: onStart,
+    onIosBackground: onIosBackground,
+  );
+  await bgService.start();
   
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    UncontrolledProviderScope(
+      container: container,
+      child: const MyApp(),
     ),
   );
+}
+
+@pragma('vm:entry-point')
+Future<bool> onIosBackground(ServiceInstance service) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+  return true;
+}
+
+@pragma('vm:entry-point')
+Future<void> onStart(ServiceInstance service) async {
+  await BleBackgroundService.startBackgroundService(service);
 }
 
 class MyApp extends ConsumerWidget {

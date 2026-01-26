@@ -1,151 +1,177 @@
-import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:nexus_voice_assistant/services/ble_service/ble_service.dart';
-import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nexus_voice_assistant/background_service.dart' show BleBackgroundService, bleBackgroundServiceProvider;
+import 'package:nexus_voice_assistant/bg_ble_client.dart' show BleConnectionState;
 import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
-import 'package:nexus_voice_assistant/services/hardware_service/name_service.dart';
-import 'package:nexus_voice_assistant/services/hardware_service/haptic_service.dart';
-import 'package:nexus_voice_assistant/services/ai_service/openai_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
-import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer_service.dart';
+
+/// Riverpod provider for HardwareService
+final hardwareServiceProvider = Provider<HardwareService>((ref) {
+  final bgService = ref.watch(bleBackgroundServiceProvider);
+  return HardwareService(bgService);
+});
 
 class HardwareService {
-  static final HardwareService _instance = HardwareService._internal();
-  
-  /// Singleton instance getter
-  static HardwareService get instance => _instance;
-  
-  factory HardwareService() => _instance;
+  final BleBackgroundService _bgService;
+  BleConnectionState _lastStatus = BleConnectionState.scanning;
+  String? _deviceName;
 
-  final BLEService _bleService;
-  final BatteryService _batteryService;
-  final RTCService _rtcService;
-  final NameService _nameService;
-  final HapticService _hapticService;
+  HardwareService(this._bgService) {
+    // Listen to status stream to track connection state
+    _bgService.statusStream.listen((status) {
+      _lastStatus = status;
+    });
+    
+    // Read device name once during initialization
+    _readDeviceName();
+  }
 
-  HardwareService._internal()
-      : _bleService = _sharedBleService,
-        _batteryService = BatteryService(_sharedBleService),
-        _rtcService = RTCService(_sharedBleService),
-        _nameService = NameService(_sharedBleService),
-        _hapticService = HapticService(_sharedBleService);
-  
-  // Shared BLEService instance for all services
-  static final BLEService _sharedBleService = BLEService();
-  
-  bool _isInitialized = false;
+  Stream<BleConnectionState> get statusStream => _bgService.statusStream;
+  bool get isConnected => _lastStatus == BleConnectionState.connected;
+  String? get deviceName => _deviceName;
 
-  Stream<BatteryData>? get batteryStream => _batteryService.batteryStream;
-  Stream<bool>? get connectionStateStream => _bleService.connectionStateStream;
-  bool get isConnected => _bleService.isConnected;
-  bool get isInitialized => _isInitialized;
-
-  // Device name getter
-  String? get deviceName => _nameService.deviceName;
-
-
-  Future<bool> initialize() async {
-    if (_isInitialized) return true;
-
+  Future<void> _readDeviceName() async {
     try {
-      // Wait for BLE service to be initialized (this also initializes audio transport)
-      await _bleService.initialize(
-        onPcm24ChunkReceived: (pcm24Chunk) {
-          OpenAIService.instance.sendAudio(pcm24Chunk, queryOrigin.Hardware);
-        },
-        onEofReceived: () {
-          OpenAIService.instance.createResponse();
-        },
-        openAiAudioOutStream: OpenAIService.instance.hardWareAudioOutStream,
-        onFileReceived: (fileEntry) {
-          FileTransferService.instance.onFileReceived(fileEntry);
-        },
-        onListFilesReceived: (fileNameList) {
-          LoggingService.instance.log('hardware service: Received ${fileNameList.length} files from LIST_RESPONSE');
-          FileTransferService.instance.onListFilesReceived(fileNameList);
-        }
-      );
-      
-      // Initialize battery service
-      await _batteryService.initialize();
-      
-      _isInitialized = true;
-      return true;
+      _deviceName = await readDeviceName();
     } catch (e) {
-      LoggingService.instance.log('Error initializing HardwareService: $e');
-      return false;
+      debugPrint('Error reading device name during init: $e');
     }
-  }
-
-  void sendFileRequest(String path) {
-    _bleService.sendFileRequest(path);
-  }
-
-  void sendListFilesRequest() {
-    _bleService.sendListFilesRequest();
-  }
-
-  /// Enqueue a packet to be sent. Packets are batched up to MTU size before being queued.
-  void enqueueOpusPacket(Uint8List packet) {
-        _bleService.enqueuePacket(packet);
-  }
-
-  /// Send EOF to ESP32
-  Future<void> sendEOAudioToEsp32() async {
-    await _bleService.sendEOFToEsp32();
-  }
-
-  /// Connect to a specific BLE device
-  Future<bool> connect(BluetoothDevice device) async {
-    return await _bleService.connectToDevice(device);
-  }
-
-  /// Read battery data from device (percentage, voltage, and charging status)
-  Future<BatteryData?> readBattery() async {
-    return await _batteryService.readBattery();
   }
 
   /// Read RTC time from device (includes timezone)
   Future<RTCTime?> readRTC() async {
-    return await _rtcService.readRTC();
+    final rtcData = await _bgService.readRTC();
+    if (rtcData == null) return null;
+    
+    try {
+      return RTCTime.fromBytes(rtcData);
+    } catch (e) {
+      debugPrint('Error parsing RTC data: $e');
+      return null;
+    }
   }
 
   /// Write RTC time to device
   Future<bool> writeRTC(RTCTime time) async {
-    return await _rtcService.writeRTC(time);
+    final data = time.toBytes();
+    debugPrint('RTC time to write: ${data.toString()}');
+    return await _bgService.writeRTC(data);
   }
 
   /// Set RTC time from current system time (preserves existing timezone)
   Future<bool> setRTCTimeNow() async {
-    return await _rtcService.setRTCTimeNow();
+    // Read current RTC to get timezone
+    final currentRTC = await readRTC();
+    final now = DateTime.now();
+    
+    // Preserve timezone from current RTC, or use default PST
+    final rtcTime = RTCTime.fromDateTime(
+      now,
+      timezoneHours: currentRTC?.timezoneHours ?? -8,
+      timezoneMinutes: currentRTC?.timezoneMinutes ?? 0,
+    );
+    debugPrint('RTC time to write: ${rtcTime.toString()}');
+    return await writeRTC(rtcTime);
   }
 
   /// Trigger haptic pulse with specified effect ID
   /// @param effectId Effect ID (0-123, where 0 = stop, 1-123 = predefined effects)
   /// @return true on success, false on failure
   Future<bool> triggerHapticPulse({int effectId = 16}) async {
-    return await _hapticService.triggerHapticPulse(effectId: effectId);
+    return await _bgService.writeHaptic(effectId);
   }
 
   /// Read device name from device
   /// @return Device name string, or null on failure
   Future<String?> readDeviceName() async {
-    return await _nameService.readDeviceName();
+    return await _bgService.readDeviceName();
   }
 
   /// Write device name to device
   /// @param name Device name to set (max 19 characters)
   /// @return true on success, false on failure
   Future<bool> writeDeviceName(String name) async {
-    return await _nameService.writeDeviceName(name);
+    return await _bgService.writeDeviceName(name);
   }
 
-  Future<void> dispose() async {
-    await _batteryService.dispose();
-    
-    _isInitialized = false;
+  /// Read battery data from device (percentage, voltage, and charging status)
+  Future<BatteryData?> readBattery() async {
+    final batteryData = await _bgService.readBattery();
+    if (batteryData == null) return null;
+
+    try {
+      if (batteryData.length >= 4) {
+        // Format: [voltage_msb, voltage_lsb, soc_percent, charging_status]
+        final voltageMsb = batteryData[0];
+        final voltageLsb = batteryData[1];
+        final socPercent = batteryData[2];
+        final chargingStatus = batteryData[3];
+        
+        // Calculate voltage: (msb << 8) | lsb, then divide by 1000 to get volts (raw is in mV)
+        final voltageRaw = (voltageMsb << 8) | voltageLsb;
+        final voltage = voltageRaw / 1000.0;
+        
+        // Charging status: 1 = charging, 0 = not charging
+        final isCharging = chargingStatus != 0;
+        
+        return BatteryData(
+          percentage: socPercent,
+          voltage: voltage,
+          isCharging: isCharging,
+        );
+      } else if (batteryData.length >= 3) {
+        // Backward compatibility: old format without charging status
+        final voltageMsb = batteryData[0];
+        final voltageLsb = batteryData[1];
+        final socPercent = batteryData[2];
+        
+        final voltageRaw = (voltageMsb << 8) | voltageLsb;
+        final voltage = voltageRaw / 1000.0;
+        
+        return BatteryData(
+          percentage: socPercent,
+          voltage: voltage,
+          isCharging: false,  // Default to not charging for old format
+        );
+      }
+    } catch (e) {
+      debugPrint('Error parsing battery data: $e');
+    }
+    return null;
   }
+
+  // ============================================================================
+  // FILE TRANSFER METHODS (COMMENTED OUT)
+  // ============================================================================
+
+  // /// Send file request command (triggers file receive with all logic in BLEFileTransport)
+  // Future<void> sendFileRequest(String path) async {
+  //   // TODO: Implement using background service file methods
+  //   // await _bgService.sendFileRequest(path);
+  // }
+
+  // /// Send list files request command
+  // Future<void> sendListFilesRequest({String? path}) async {
+  //   // TODO: Implement using background service file methods
+  //   // await _bgService.sendListFilesRequest(path: path);
+  // }
+
+  // /// Write file RX data
+  // Future<bool> writeFileRx(Uint8List data) async {
+  //   return await _bgService.writeFileRx(data);
+  // }
+
+  // /// Read file control
+  // Future<Uint8List?> readFileCtrl() async {
+  //   return await _bgService.readFileCtrl();
+  // }
+
+  // /// Write file control
+  // Future<bool> writeFileCtrl(Uint8List data) async {
+  //   return await _bgService.writeFileCtrl(data);
+  // }
+
+  // /// Get file TX stream
+  // Stream<Uint8List> get fileTxStream => _bgService.fileTxStream;
 }
-

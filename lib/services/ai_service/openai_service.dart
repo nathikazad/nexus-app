@@ -291,7 +291,7 @@ class OpenAIService {
         _interactionManager.handleConversationEvent({'type': 'response_done'});
         
         if (_queryOrigin == queryOrigin.Hardware) {
-          HardwareService.instance.sendEOAudioToEsp32();
+          // HardwareService.instance.sendEOAudioToEsp32();
         }
       } catch (e) {
         LoggingService.instance.log('[OpenAI] Error handling response done event: $e');

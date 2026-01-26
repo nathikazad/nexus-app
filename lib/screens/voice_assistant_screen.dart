@@ -26,7 +26,7 @@ class VoiceAssistantScreen extends ConsumerStatefulWidget {
 class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
   final AudioService _audioService = AudioService();
   late final OpenAIService _openAIService;
-  final HardwareService _hardwareService = HardwareService.instance;
+  // final HardwareService _hardwareService = HardwareService.instance;
   final AudioStreamManager _audioStreamManager = AudioStreamManager();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
@@ -62,18 +62,18 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
   
   void _setupBLEConnectionListener() {
     // Listen to BLE connection state changes (event-based, not polling)
-    _bleConnectionSubscription = _hardwareService.connectionStateStream?.listen((isConnected) {
-      if (mounted) {
-        setState(() {
-          _isConnected = isConnected;
-        });
-      }
-    });
+    // _bleConnectionSubscription = _hardwareService.connectionStateStream?.listen((isConnected) {
+    //   if (mounted) {
+    //     setState(() {
+    //       _isConnected = isConnected;
+    //     });
+    //   }
+    // });
     
-    // Set initial connection state
-    setState(() {
-      _isConnected = _hardwareService.isConnected;
-    });
+    // // Set initial connection state
+    // setState(() {
+    //   _isConnected = _hardwareService.isConnected;
+    // });
   }
 
   void _setupAudioStreamManager() {
@@ -87,7 +87,7 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
   Future<void> _initializeServices() async {
     try {
       // Initialize HardwareService (which initializes BLE service)
-      await _hardwareService.initialize();
+      // await _hardwareService.initialize();
       
       // Listen to interactions stream from the service
       _interactionsSubscription = _openAIService.interactionsStream.listen((_) {
@@ -377,264 +377,264 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
     );
   }
   
-  Future<void> _testLayer2() async {
-    LoggingService.instance.log('=== Layer 2 Test: Starting file list request ===');
+  // Future<void> _testLayer2() async {
+  //   LoggingService.instance.log('=== Layer 2 Test: Starting file list request ===');
     
-    if (!_isConnected) {
-      LoggingService.instance.log('Layer 2 Test: Not connected to Bluetooth device');
-      _showErrorDialog('Not connected to Bluetooth device');
-      return;
-    }
+  //   if (!_isConnected) {
+  //     LoggingService.instance.log('Layer 2 Test: Not connected to Bluetooth device');
+  //     _showErrorDialog('Not connected to Bluetooth device');
+  //     return;
+  //   }
     
-    LoggingService.instance.log('Layer 2 Test: Device is connected');
+  //   LoggingService.instance.log('Layer 2 Test: Device is connected');
     
-    try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+  //   try {
+  //     // Show loading dialog
+  //     showDialog(
+  //       context: context,
+  //       barrierDismissible: false,
+  //       builder: (context) => const Center(
+  //         child: CircularProgressIndicator(),
+  //       ),
+  //     );
       
-      // Request file list
-      final files = await FileTransferService.instance.listFiles();
+  //     // Request file list
+  //     final files = await FileTransferService.instance.listFiles();
       
-      // Close loading dialog
-      Navigator.of(context).pop();
+  //     // Close loading dialog
+  //     Navigator.of(context).pop();
       
-      // Show results dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Layer 2 Test - File List'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: files.isEmpty
-                ? const Text('No files found')
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: files.length,
-                    itemBuilder: (context, index) {
-                      final file = files[index];
-                      return ListTile(
-                        leading: Icon(
-                          file.isDirectory ? Icons.folder : Icons.insert_drive_file,
-                        ),
-                        title: Text(file.name),
-                        subtitle: Text(
-                          file.isDirectory 
-                              ? 'Directory' 
-                              : '${file.size} bytes',
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+  //     // Show results dialog
+  //     showDialog(
+  //       context: context,
+  //       builder: (context) => AlertDialog(
+  //         title: const Text('Layer 2 Test - File List'),
+  //         content: SizedBox(
+  //           width: double.maxFinite,
+  //           child: files.isEmpty
+  //               ? const Text('No files found')
+  //               : ListView.builder(
+  //                   shrinkWrap: true,
+  //                   itemCount: files.length,
+  //                   itemBuilder: (context, index) {
+  //                     final file = files[index];
+  //                     return ListTile(
+  //                       leading: Icon(
+  //                         file.isDirectory ? Icons.folder : Icons.insert_drive_file,
+  //                       ),
+  //                       title: Text(file.name),
+  //                       subtitle: Text(
+  //                         file.isDirectory 
+  //                             ? 'Directory' 
+  //                             : '${file.size} bytes',
+  //                       ),
+  //                     );
+  //                   },
+  //                 ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text('OK'),
+  //           ),
+  //         ],
+  //       ),
+  //     );
       
-      LoggingService.instance.log('Layer 2 Test: Successfully completed');
-    } catch (e, stackTrace) {
-      LoggingService.instance.log('Layer 2 Test: ERROR - $e');
-      LoggingService.instance.log('Layer 2 Test: Stack trace: $stackTrace');
+  //     LoggingService.instance.log('Layer 2 Test: Successfully completed');
+  //   } catch (e, stackTrace) {
+  //     LoggingService.instance.log('Layer 2 Test: ERROR - $e');
+  //     LoggingService.instance.log('Layer 2 Test: Stack trace: $stackTrace');
       
-      // Close loading dialog if still open
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      _showErrorDialog('Failed to list files: $e');
-    }
+  //     // Close loading dialog if still open
+  //     if (Navigator.of(context).canPop()) {
+  //       Navigator.of(context).pop();
+  //     }
+  //     _showErrorDialog('Failed to list files: $e');
+  //   }
     
-    LoggingService.instance.log('=== Layer 2 Test: Finished ===');
-  }
+  //   LoggingService.instance.log('=== Layer 2 Test: Finished ===');
+  // }
   
-  Future<void> _testLayer3() async {
-    LoggingService.instance.log('=== Layer 3 Test: Starting file receive (image1.jpg) ===');
+  // Future<void> _testLayer3() async {
+  //   LoggingService.instance.log('=== Layer 3 Test: Starting file receive (image1.jpg) ===');
     
-    if (!_isConnected) {
-      LoggingService.instance.log('Layer 3 Test: Not connected to Bluetooth device');
-      _showErrorDialog('Not connected to Bluetooth device');
-      return;
-    }
+  //   if (!_isConnected) {
+  //     LoggingService.instance.log('Layer 3 Test: Not connected to Bluetooth device');
+  //     _showErrorDialog('Not connected to Bluetooth device');
+  //     return;
+  //   }
     
-    LoggingService.instance.log('Layer 3 Test: Device is connected');
+  //   LoggingService.instance.log('Layer 3 Test: Device is connected');
     
-    try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+  //   try {
+  //     // Show loading dialog
+  //     showDialog(
+  //       context: context,
+  //       barrierDismissible: false,
+  //       builder: (context) => const Center(
+  //         child: CircularProgressIndicator(),
+  //       ),
+  //     );
       
-      // Request file
-      final fileEntry = await FileTransferService.instance.requestFile('image1.jpg');
+  //     // Request file
+  //     final fileEntry = await FileTransferService.instance.requestFile('image1.jpg');
       
-      // Close loading dialog
-      Navigator.of(context).pop();
+  //     // Close loading dialog
+  //     Navigator.of(context).pop();
       
-      // Show results dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Layer 3 Test - File Received'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('File: ${fileEntry.name}'),
-                Text('Size: ${fileEntry.size} bytes'),
-                const SizedBox(height: 16),
-                // Show image if it's an image file and path is available
-                if (fileEntry.path != null && 
-                    (fileEntry.name.toLowerCase().endsWith('.jpg') ||
-                     fileEntry.name.toLowerCase().endsWith('.jpeg') ||
-                     fileEntry.name.toLowerCase().endsWith('.png') ||
-                     fileEntry.name.toLowerCase().endsWith('.gif'))) ...[
-                  const Text('Preview:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Container(
-                    constraints: const BoxConstraints(
-                      maxHeight: 400,
-                      maxWidth: 300,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        File(fileEntry.path!),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Text('Failed to load image'),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ] else ...[
-                  const Text('File saved to temporary directory'),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+  //     // Show results dialog
+  //     showDialog(
+  //       context: context,
+  //       builder: (context) => AlertDialog(
+  //         title: const Text('Layer 3 Test - File Received'),
+  //         content: SingleChildScrollView(
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text('File: ${fileEntry.name}'),
+  //               Text('Size: ${fileEntry.size} bytes'),
+  //               const SizedBox(height: 16),
+  //               // Show image if it's an image file and path is available
+  //               if (fileEntry.path != null && 
+  //                   (fileEntry.name.toLowerCase().endsWith('.jpg') ||
+  //                    fileEntry.name.toLowerCase().endsWith('.jpeg') ||
+  //                    fileEntry.name.toLowerCase().endsWith('.png') ||
+  //                    fileEntry.name.toLowerCase().endsWith('.gif'))) ...[
+  //                 const Text('Preview:', style: TextStyle(fontWeight: FontWeight.bold)),
+  //                 const SizedBox(height: 8),
+  //                 Container(
+  //                   constraints: const BoxConstraints(
+  //                     maxHeight: 400,
+  //                     maxWidth: 300,
+  //                   ),
+  //                   decoration: BoxDecoration(
+  //                     border: Border.all(color: Colors.grey),
+  //                     borderRadius: BorderRadius.circular(8),
+  //                   ),
+  //                   child: ClipRRect(
+  //                     borderRadius: BorderRadius.circular(8),
+  //                     child: Image.file(
+  //                       File(fileEntry.path!),
+  //                       fit: BoxFit.contain,
+  //                       errorBuilder: (context, error, stackTrace) {
+  //                         return const Padding(
+  //                           padding: EdgeInsets.all(16.0),
+  //                           child: Text('Failed to load image'),
+  //                         );
+  //                       },
+  //                     ),
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 8),
+  //               ] else ...[
+  //                 const Text('File saved to temporary directory'),
+  //               ],
+  //             ],
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text('OK'),
+  //           ),
+  //         ],
+  //       ),
+  //     );
       
-      LoggingService.instance.log('Layer 3 Test: Successfully completed');
-    } catch (e, stackTrace) {
-      LoggingService.instance.log('Layer 3 Test: ERROR - $e');
-      LoggingService.instance.log('Stack trace: $stackTrace');
+  //     LoggingService.instance.log('Layer 3 Test: Successfully completed');
+  //   } catch (e, stackTrace) {
+  //     LoggingService.instance.log('Layer 3 Test: ERROR - $e');
+  //     LoggingService.instance.log('Stack trace: $stackTrace');
       
-      // Close loading dialog if still open
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+  //     // Close loading dialog if still open
+  //     if (Navigator.of(context).canPop()) {
+  //       Navigator.of(context).pop();
+  //     }
       
-      _showErrorDialog('Layer 3 Test failed: $e');
-    }
+  //     _showErrorDialog('Layer 3 Test failed: $e');
+  //   }
     
-    LoggingService.instance.log('=== Layer 3 Test: Finished ===');
-  }
+  //   LoggingService.instance.log('=== Layer 3 Test: Finished ===');
+  // }
   
-  Future<void> _downloadRadioWav() async {
-    LoggingService.instance.log('=== Download radio.wav: Starting ===');
+  // Future<void> _downloadRadioWav() async {
+  //   LoggingService.instance.log('=== Download radio.wav: Starting ===');
     
-    if (!_isConnected) {
-      LoggingService.instance.log('Download radio.wav: Not connected to Bluetooth device');
-      _showErrorDialog('Not connected to Bluetooth device');
-      return;
-    }
+  //   if (!_isConnected) {
+  //     LoggingService.instance.log('Download radio.wav: Not connected to Bluetooth device');
+  //     _showErrorDialog('Not connected to Bluetooth device');
+  //     return;
+  //   }
     
-    LoggingService.instance.log('Download radio.wav: Device is connected');
+  //   LoggingService.instance.log('Download radio.wav: Device is connected');
     
-    try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+  //   try {
+  //     // Show loading dialog
+  //     showDialog(
+  //       context: context,
+  //       barrierDismissible: false,
+  //       builder: (context) => const Center(
+  //         child: CircularProgressIndicator(),
+  //       ),
+  //     );
       
-      // Request radio.wav file
-      final fileEntry = await FileTransferService.instance.requestFile('radio.wav');
+  //     // Request radio.wav file
+  //     final fileEntry = await FileTransferService.instance.requestFile('radio.wav');
       
-      // Close loading dialog
-      Navigator.of(context).pop();
+  //     // Close loading dialog
+  //     Navigator.of(context).pop();
       
-      // Show success dialog with play option
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Download Complete'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('File: ${fileEntry.name}'),
-              Text('Size: ${fileEntry.size} bytes'),
-              const SizedBox(height: 16),
-              const Text(
-                'File downloaded successfully!',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          actions: [
-            if (fileEntry.path != null)
-              TextButton(
-                onPressed: () {
-                  _playAudio(fileEntry.path!);
-                },
-                child: const Text('Play'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
+  //     // Show success dialog with play option
+  //     showDialog(
+  //       context: context,
+  //       builder: (context) => AlertDialog(
+  //         title: const Text('Download Complete'),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text('File: ${fileEntry.name}'),
+  //             Text('Size: ${fileEntry.size} bytes'),
+  //             const SizedBox(height: 16),
+  //             const Text(
+  //               'File downloaded successfully!',
+  //               style: TextStyle(fontWeight: FontWeight.bold),
+  //             ),
+  //           ],
+  //         ),
+  //         actions: [
+  //           if (fileEntry.path != null)
+  //             TextButton(
+  //               onPressed: () {
+  //                 _playAudio(fileEntry.path!);
+  //               },
+  //               child: const Text('Play'),
+  //             ),
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text('Close'),
+  //           ),
+  //         ],
+  //       ),
+  //     );
       
-      LoggingService.instance.log('Download radio.wav: Successfully completed');
-    } catch (e, stackTrace) {
-      LoggingService.instance.log('Download radio.wav: ERROR - $e');
-      LoggingService.instance.log('Stack trace: $stackTrace');
+  //     LoggingService.instance.log('Download radio.wav: Successfully completed');
+  //   } catch (e, stackTrace) {
+  //     LoggingService.instance.log('Download radio.wav: ERROR - $e');
+  //     LoggingService.instance.log('Stack trace: $stackTrace');
       
-      // Close loading dialog if still open
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+  //     // Close loading dialog if still open
+  //     if (Navigator.of(context).canPop()) {
+  //       Navigator.of(context).pop();
+  //     }
       
-      _showErrorDialog('Failed to download radio.wav: $e');
-    }
+  //     _showErrorDialog('Failed to download radio.wav: $e');
+  //   }
     
-    LoggingService.instance.log('=== Download radio.wav: Finished ===');
-  }
+  //   LoggingService.instance.log('=== Download radio.wav: Finished ===');
+  // }
 }
 
 

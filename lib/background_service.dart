@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'bg_ble_client.dart';
+import 'bg_ble_client.dart' show BleClient, BleConnectionState;
 import 'bg_socket_client.dart';
 
 class BleBackgroundService {
@@ -97,19 +97,36 @@ class BleBackgroundService {
     // Unified BLE command handler
     service.on('ble.command').listen((event) async {
       final command = event?['command'] as String?;
+      final requestId = event?['requestId'] as int?;
       final data = event?['data'];
+      
+      // Helper to send response with request ID
+      void sendResult(Map<String, dynamic> result) {
+        result['command'] = command;
+        if (requestId != null) {
+          result['requestId'] = requestId;
+        }
+        service.invoke('ble.command.result', result);
+      }
       
       try {
         switch (command) {
           case 'writeHaptic':
             final effectId = data?['effectId'] as int? ?? 16;
             final success = await bleClient.writeHaptic(effectId);
-            service.invoke('ble.command.result', {'command': command, 'success': success});
+            sendResult({'success': success});
+            break;
+          case 'readBattery':
+            print('background service: Reading battery data');
+            final batteryData = await bleClient.readBattery();
+            sendResult({
+              'success': batteryData != null,
+              'data': batteryData?.toList(),
+            });
             break;
           case 'readRTC':
             final rtcData = await bleClient.readRTC();
-            service.invoke('ble.command.result', {
-              'command': command,
+            sendResult({
               'success': rtcData != null,
               'data': rtcData?.toList(),
             });
@@ -117,16 +134,15 @@ class BleBackgroundService {
           case 'writeRTC':
             final rtcBytes = data?['data'] as List<int>?;
             if (rtcBytes == null) {
-              service.invoke('ble.command.result', {'command': command, 'success': false});
+              sendResult({'success': false});
               return;
             }
             final success = await bleClient.writeRTC(Uint8List.fromList(rtcBytes));
-            service.invoke('ble.command.result', {'command': command, 'success': success});
+            sendResult({'success': success});
             break;
           case 'readDeviceName':
             final name = await bleClient.readDeviceName();
-            service.invoke('ble.command.result', {
-              'command': command,
+            sendResult({
               'success': name != null,
               'data': name,
             });
@@ -134,25 +150,24 @@ class BleBackgroundService {
           case 'writeDeviceName':
             final name = data?['name'] as String?;
             if (name == null) {
-              service.invoke('ble.command.result', {'command': command, 'success': false});
+              sendResult({'success': false});
               return;
             }
             final success = await bleClient.writeDeviceName(name);
-            service.invoke('ble.command.result', {'command': command, 'success': success});
+            sendResult({'success': success});
             break;
           case 'writeFileRx':
             final fileRxBytes = data?['data'] as List<int>?;
             if (fileRxBytes == null) {
-              service.invoke('ble.command.result', {'command': command, 'success': false});
+              sendResult({'success': false});
               return;
             }
             final success = await bleClient.writeFileRx(Uint8List.fromList(fileRxBytes));
-            service.invoke('ble.command.result', {'command': command, 'success': success});
+            sendResult({'success': success});
             break;
           case 'readFileCtrl':
             final fileCtrlData = await bleClient.readFileCtrl();
-            service.invoke('ble.command.result', {
-              'command': command,
+            sendResult({
               'success': fileCtrlData != null,
               'data': fileCtrlData?.toList(),
             });
@@ -160,17 +175,17 @@ class BleBackgroundService {
           case 'writeFileCtrl':
             final fileCtrlBytes = data?['data'] as List<int>?;
             if (fileCtrlBytes == null) {
-              service.invoke('ble.command.result', {'command': command, 'success': false});
+              sendResult({'success': false});
               return;
             }
             final success = await bleClient.writeFileCtrl(Uint8List.fromList(fileCtrlBytes));
-            service.invoke('ble.command.result', {'command': command, 'success': success});
+            sendResult({'success': success});
             break;
           default:
-            service.invoke('ble.command.result', {'command': command, 'success': false, 'error': 'Unknown command'});
+            sendResult({'success': false, 'error': 'Unknown command'});
         }
       } catch (e) {
-        service.invoke('ble.command.result', {'command': command, 'success': false, 'error': e.toString()});
+        sendResult({'success': false, 'error': e.toString()});
       }
     });
     
@@ -196,12 +211,15 @@ class BleBackgroundService {
 
   late FlutterBackgroundService _service;
   bool _isInitialized = false;
+  int _requestIdCounter = 0;
+  StreamSubscription? _commandResultSubscription;
+  final Map<int, Completer<Map<String, dynamic>?>> _pendingRequests = {};
 
-  final StreamController<String> _statusController = StreamController<String>.broadcast();
+  final StreamController<BleConnectionState> _statusController = StreamController<BleConnectionState>.broadcast();
   final StreamController<Uint8List> _fileTxDataController = StreamController<Uint8List>.broadcast();
 
 
-  Stream<String> get statusStream => _statusController.stream;
+  Stream<BleConnectionState> get statusStream => _statusController.stream;
   Stream<Uint8List> get fileTxStream => _fileTxDataController.stream;
 
   Future<void> init({
@@ -232,19 +250,39 @@ class BleBackgroundService {
     await _service.startService();
 
     _service.on('ble.status').listen((event) {
-      final status = event?['status'] ?? 'unknown';
-      _statusController.add(status);
+      final statusStr = event?['status'] as String? ?? 'scanning';
+      try {
+        final status = BleConnectionState.values.firstWhere(
+          (state) => state.name == statusStr,
+          orElse: () => BleConnectionState.scanning,
+        );
+        _statusController.add(status);
+      } catch (e) {
+        // Fallback to scanning if parsing fails
+        _statusController.add(BleConnectionState.scanning);
+      }
     });
 
     _service.on('ble.error').listen((event) {
       final error = event?['error'] ?? 'Unknown error';
-      _statusController.add('error: $error');
+      debugPrint("[BLE BG] Error: $error");
+      // Don't add error to status stream, keep current state
     });
 
     _service.on('ble.fileTx.data').listen((event) {
       final data = event?['data'] as List<int>?;
       if (data != null) {
         _fileTxDataController.add(Uint8List.fromList(data));
+      }
+    });
+
+    // Set up single shared subscription for command results
+    _commandResultSubscription?.cancel();
+    _commandResultSubscription = _service.on('ble.command.result').listen((event) {
+      final requestId = event?['requestId'] as int?;
+      if (requestId != null && _pendingRequests.containsKey(requestId)) {
+        final completer = _pendingRequests.remove(requestId);
+        completer?.complete(event);
       }
     });
   }
@@ -269,161 +307,165 @@ class BleBackgroundService {
     _service.invoke('socket.disconnect');
   }
 
+  /// Generic command sender with unique request IDs
+  Future<T?> _sendCommand<T>({
+    required String command,
+    Map<String, dynamic>? data,
+    required T? Function(Map<String, dynamic>?) responseParser,
+    T? Function()? timeoutValue,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final requestId = ++_requestIdCounter;
+    final completer = Completer<Map<String, dynamic>?>();
+    
+    // Register pending request BEFORE sending command to avoid race condition
+    _pendingRequests[requestId] = completer;
+    
+    final commandData = <String, dynamic>{
+      'command': command,
+      'requestId': requestId,
+    };
+    if (data != null) {
+      commandData['data'] = data;
+    }
+    
+    // Send command after subscription is ready
+    _service.invoke('ble.command', commandData);
+    
+    try {
+      final event = await completer.future.timeout(timeout, onTimeout: () {
+        _pendingRequests.remove(requestId);
+        return null;
+      });
+      
+      if (event == null) {
+        return timeoutValue?.call();
+      }
+      
+      // Verify command matches (safety check)
+      final eventCommand = event['command'] as String?;
+      if (eventCommand != command) {
+        debugPrint('[BLE BG] Command mismatch: expected $command, got $eventCommand');
+        return timeoutValue?.call();
+      }
+      
+      return responseParser(event);
+    } catch (e) {
+      _pendingRequests.remove(requestId);
+      debugPrint('[BLE BG] Error in _sendCommand: $e');
+      return timeoutValue?.call();
+    }
+  }
+
   /// Write haptic effect
   Future<bool> writeHaptic(int effectId) async {
-    final completer = Completer<bool>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'writeHaptic') {
-        completer.complete(event?['success'] ?? false);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'writeHaptic', 'data': {'effectId': effectId}});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return false;
-    });
+    return await _sendCommand<bool>(
+      command: 'writeHaptic',
+      data: {'effectId': effectId},
+      responseParser: (event) => event?['success'] as bool? ?? false,
+      timeoutValue: () => false,
+    ) ?? false;
+  }
+
+  /// Read battery data
+  Future<Uint8List?> readBattery() async {
+    return await _sendCommand<Uint8List>(
+      command: 'readBattery',
+      responseParser: (event) {
+        print('background service: Read battery data result: $event');
+        final dataList = event?['data'];
+        if (dataList is List) {
+          return Uint8List.fromList(List<int>.from(dataList));
+        }
+        return null;
+      },
+      timeoutValue: () => null,
+    );
   }
 
   /// Read RTC time
   Future<Uint8List?> readRTC() async {
-    final completer = Completer<Uint8List?>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'readRTC') {
-        final data = event?['data'] as List<int>?;
-        completer.complete(data != null ? Uint8List.fromList(data) : null);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'readRTC'});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return null;
-    });
+    return await _sendCommand<Uint8List>(
+      command: 'readRTC',
+      responseParser: (event) {
+        final dataList = event?['data'];
+        if (dataList is List) {
+          return Uint8List.fromList(List<int>.from(dataList));
+        }
+        return null;
+      },
+      timeoutValue: () => null,
+    );
   }
 
   /// Write RTC time
   Future<bool> writeRTC(Uint8List data) async {
-    final completer = Completer<bool>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'writeRTC') {
-        completer.complete(event?['success'] ?? false);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'writeRTC', 'data': {'data': data.toList()}});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return false;
-    });
+    debugPrint('background service: Writing RTC time: ${data.toString()}');
+    return await _sendCommand<bool>(
+      command: 'writeRTC',
+      data: {'data': data.toList()},
+      responseParser: (event) => event?['success'] as bool? ?? false,
+      timeoutValue: () => false,
+    ) ?? false;
   }
 
   /// Read device name
   Future<String?> readDeviceName() async {
-    final completer = Completer<String?>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'readDeviceName') {
-        completer.complete(event?['data'] as String?);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'readDeviceName'});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return null;
-    });
+    return await _sendCommand<String>(
+      command: 'readDeviceName',
+      responseParser: (event) => event?['data'] as String?,
+      timeoutValue: () => null,
+    );
   }
 
   /// Write device name
   Future<bool> writeDeviceName(String name) async {
-    final completer = Completer<bool>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'writeDeviceName') {
-        completer.complete(event?['success'] ?? false);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'writeDeviceName', 'data': {'name': name}});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return false;
-    });
+    return await _sendCommand<bool>(
+      command: 'writeDeviceName',
+      data: {'name': name},
+      responseParser: (event) => event?['success'] as bool? ?? false,
+      timeoutValue: () => false,
+    ) ?? false;
   }
 
   /// Write file RX data
   Future<bool> writeFileRx(Uint8List data) async {
-    final completer = Completer<bool>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'writeFileRx') {
-        completer.complete(event?['success'] ?? false);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'writeFileRx', 'data': {'data': data.toList()}});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return false;
-    });
+    return await _sendCommand<bool>(
+      command: 'writeFileRx',
+      data: {'data': data.toList()},
+      responseParser: (event) => event?['success'] as bool? ?? false,
+      timeoutValue: () => false,
+    ) ?? false;
   }
 
   /// Read file control
   Future<Uint8List?> readFileCtrl() async {
-    final completer = Completer<Uint8List?>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'readFileCtrl') {
-        final data = event?['data'] as List<int>?;
-        completer.complete(data != null ? Uint8List.fromList(data) : null);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'readFileCtrl'});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return null;
-    });
+    return await _sendCommand<Uint8List>(
+      command: 'readFileCtrl',
+      responseParser: (event) {
+        final dataList = event?['data'];
+        if (dataList is List) {
+          return Uint8List.fromList(List<int>.from(dataList));
+        }
+        return null;
+      },
+      timeoutValue: () => null,
+    );
   }
 
   /// Write file control
   Future<bool> writeFileCtrl(Uint8List data) async {
-    final completer = Completer<bool>();
-    late StreamSubscription subscription;
-    
-    subscription = _service.on('ble.command.result').listen((event) {
-      if (event?['command'] == 'writeFileCtrl') {
-        completer.complete(event?['success'] ?? false);
-        subscription.cancel();
-      }
-    });
-    
-    _service.invoke('ble.command', {'command': 'writeFileCtrl', 'data': {'data': data.toList()}});
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
-      subscription.cancel();
-      return false;
-    });
+    return await _sendCommand<bool>(
+      command: 'writeFileCtrl',
+      data: {'data': data.toList()},
+      responseParser: (event) => event?['success'] as bool? ?? false,
+      timeoutValue: () => false,
+    ) ?? false;
   }
 
   void dispose() {
+    _commandResultSubscription?.cancel();
+    _pendingRequests.clear();
     _statusController.close();
     _fileTxDataController.close();
   }

@@ -13,6 +13,7 @@ class BleConstants {
   static const String serviceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static const String audioTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
   static const String audioRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
+  static const String batteryCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa";
   static const String hapticCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ac";
   static const String rtcCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab";
   static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad";
@@ -39,6 +40,7 @@ class BleClient {
   BluetoothDevice? _device;
   BluetoothCharacteristic? _audioTxCharacteristic;
   BluetoothCharacteristic? _audioRxCharacteristic;
+  BluetoothCharacteristic? _batteryCharacteristic;
   BluetoothCharacteristic? _hapticCharacteristic;
   BluetoothCharacteristic? _rtcCharacteristic;
   BluetoothCharacteristic? _deviceNameCharacteristic;
@@ -231,6 +233,9 @@ class BleClient {
         } else if (uuid == BleConstants.audioRxCharacteristicUuid.toLowerCase()) {
           _audioRxCharacteristic = char;
           _log('Found Audio RX characteristic');
+        } else if (uuid == BleConstants.batteryCharacteristicUuid.toLowerCase()) {
+          _batteryCharacteristic = char;
+          _log('Found Battery characteristic');
         } else if (uuid == BleConstants.hapticCharacteristicUuid.toLowerCase()) {
           _hapticCharacteristic = char;
           _log('Found Haptic characteristic');
@@ -349,6 +354,7 @@ class BleClient {
     _fileTxNotificationSubscription = null;
     _audioTxCharacteristic = null;
     _audioRxCharacteristic = null;
+    _batteryCharacteristic = null;
     _hapticCharacteristic = null;
     _rtcCharacteristic = null;
     _deviceNameCharacteristic = null;
@@ -424,6 +430,7 @@ class BleClient {
       _device = null;
       _audioTxCharacteristic = null;
       _audioRxCharacteristic = null;
+      _batteryCharacteristic = null;
       _hapticCharacteristic = null;
       _rtcCharacteristic = null;
       _deviceNameCharacteristic = null;
@@ -452,6 +459,21 @@ class BleClient {
     } catch (e) {
       _log('Send error: $e');
       rethrow;
+    }
+  }
+  
+  /// Read battery data
+  Future<Uint8List?> readBattery() async {
+    if (!isConnected || _batteryCharacteristic == null) {
+      _log('Cannot read battery: not connected');
+      return null;
+    }
+    try {
+      final data = await _batteryCharacteristic!.read();
+      return Uint8List.fromList(data);
+    } catch (e) {
+      _log('Error reading battery: $e');
+      return null;
     }
   }
   
@@ -492,6 +514,7 @@ class BleClient {
       return false;
     }
     try {
+      print('Writing RTC time: ${data.toString()}');
       await _rtcCharacteristic!.write(data, withoutResponse: false);
       return true;
     } catch (e) {

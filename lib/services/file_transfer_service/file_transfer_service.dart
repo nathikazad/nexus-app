@@ -32,9 +32,9 @@ class FileTransferService {
     if (path != null) {
       // For now, HardwareService only has sendListFilesRequest() without path
       // We'll need to add path support or handle it differently
-      HardwareService.instance.sendListFilesRequest();
+      // HardwareService.instance.sendListFilesRequest();
     } else {
-      HardwareService.instance.sendListFilesRequest();
+      // HardwareService.instance.sendListFilesRequest();
     }
     
     return _listFilesCompleter!.future;
@@ -67,7 +67,7 @@ class FileTransferService {
     }
     
     _fileReceivedCompleter = Completer<FileEntry>();
-    HardwareService.instance.sendFileRequest(path);
+    // HardwareService.instance.sendFileRequest(path);
     
     return _fileReceivedCompleter!.future;
   }

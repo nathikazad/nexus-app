@@ -6,6 +6,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'background_service.dart';
+import 'bg_ble_client.dart';
 
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
@@ -68,7 +69,7 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
     text: 'ws://192.168.0.44:8002'
   );
 
-  String _bleStatus = 'scanning';
+  BleConnectionState _bleStatus = BleConnectionState.scanning;
   bool _serviceRunning = false;
   @override
   void initState() {
@@ -136,7 +137,7 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BLE Status: $_bleStatus'),
+                    Text('BLE Status: ${_bleStatus.name}'),
                     const SizedBox(height: 8),
                     Text('Service: ${_serviceRunning ? "Running" : "Stopped"}'),
                   ],

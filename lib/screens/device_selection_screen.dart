@@ -13,7 +13,7 @@ class DeviceSelectionScreen extends StatefulWidget {
 }
 
 class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
-  final HardwareService _hardwareService = HardwareService.instance;
+  // final HardwareService _hardwareService = HardwareService.instance;
   List<ScanResult> _devices = [];
   bool _isScanning = false;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
@@ -108,23 +108,23 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
       await FlutterBluePlus.stopScan();
 
       // Connect to device
-      final success = await _hardwareService.connect(result.device);
+      // final success = await _hardwareService.connect(result.device);
       
-      if (mounted) {
-        if (success) {
-          Navigator.of(context).pop(true); // Return true to indicate successful connection
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to connect to device')),
-          );
-          setState(() {
-            _isConnecting = false;
-            _selectedDeviceId = null;
-          });
-          // Restart scan
-          _startScan();
-        }
-      }
+      // if (mounted) {
+      //   if (success) {
+      //     Navigator.of(context).pop(true); // Return true to indicate successful connection
+      //   } else {
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       const SnackBar(content: Text('Failed to connect to device')),
+      //     );
+      //     setState(() {
+      //       _isConnecting = false;
+      //       _selectedDeviceId = null;
+      //     });
+      //     // Restart scan
+      //     _startScan();
+      //   }
+      // }
     } catch (e) {
       LoggingService.instance.log('Error connecting to device: $e');
       if (mounted) {
