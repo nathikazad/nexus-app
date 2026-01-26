@@ -132,12 +132,28 @@ class BleBackgroundService {
             });
             break;
           case 'writeRTC':
-            final rtcBytes = data?['data'] as List<int>?;
+            final rtcBytes = data?['data'];
+            
             if (rtcBytes == null) {
               sendResult({'success': false});
               return;
             }
-            final success = await bleClient.writeRTC(Uint8List.fromList(rtcBytes));
+            
+            // Handle List<dynamic> -> List<int> conversion
+            List<int>? intList;
+            if (rtcBytes is List) {
+              try {
+                intList = List<int>.from(rtcBytes);
+              } catch (e) {
+                sendResult({'success': false, 'error': 'Invalid data format'});
+                return;
+              }
+            } else {
+              sendResult({'success': false, 'error': 'Data is not a list'});
+              return;
+            }
+            
+            final success = await bleClient.writeRTC(Uint8List.fromList(intList));
             sendResult({'success': success});
             break;
           case 'readDeviceName':
@@ -345,14 +361,12 @@ class BleBackgroundService {
       // Verify command matches (safety check)
       final eventCommand = event['command'] as String?;
       if (eventCommand != command) {
-        debugPrint('[BLE BG] Command mismatch: expected $command, got $eventCommand');
         return timeoutValue?.call();
       }
       
       return responseParser(event);
     } catch (e) {
       _pendingRequests.remove(requestId);
-      debugPrint('[BLE BG] Error in _sendCommand: $e');
       return timeoutValue?.call();
     }
   }
@@ -400,7 +414,6 @@ class BleBackgroundService {
 
   /// Write RTC time
   Future<bool> writeRTC(Uint8List data) async {
-    debugPrint('background service: Writing RTC time: ${data.toString()}');
     return await _sendCommand<bool>(
       command: 'writeRTC',
       data: {'data': data.toList()},

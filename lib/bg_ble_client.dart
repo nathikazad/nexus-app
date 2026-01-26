@@ -514,7 +514,6 @@ class BleClient {
       return false;
     }
     try {
-      print('Writing RTC time: ${data.toString()}');
       await _rtcCharacteristic!.write(data, withoutResponse: false);
       return true;
     } catch (e) {
