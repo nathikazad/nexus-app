@@ -42,6 +42,13 @@ class Transcript {
     required this.messages,
   });
   
+  /// Creates a copy of this transcript with an additional message added
+  Transcript copyWithMessage(TranscriptMessage message) {
+    final newMessages = Map<String, TranscriptMessage>.from(messages);
+    newMessages[message.timestamp] = message;
+    return Transcript(id: id, messages: newMessages);
+  }
+  
   /// Gets all messages sorted by timestamp
   List<TranscriptMessage> get sortedMessages {
     final sortedKeys = messages.keys.toList()..sort();

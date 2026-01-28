@@ -120,7 +120,6 @@ class BleBackgroundService {
             sendResult({'success': success});
             break;
           case 'readBattery':
-            print('background service: Reading battery data');
             final batteryData = await bleClient.readBattery();
             sendResult({
               'success': batteryData != null,
@@ -389,7 +388,6 @@ class BleBackgroundService {
     return await _sendCommand<Uint8List>(
       command: 'readBattery',
       responseParser: (event) {
-        print('background service: Read battery data result: $event');
         final dataList = event?['data'];
         if (dataList is List) {
           return Uint8List.fromList(List<int>.from(dataList));
