@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer_service.dart';
 import 'package:nexus_voice_assistant/bg_ble_client.dart';
 import 'device_selection_screen.dart';
 
@@ -20,7 +21,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   double? _voltage;
   bool? _isCharging;
   String? _rtcTimeDisplay;
-  String? _rtcTimezone;
+  String? _rtcTimezone; // Will store formatted timezone (e.g., "-8")
   String? _deviceName;
   bool _isConnected = false;
   bool _isSettingRTC = false;
@@ -121,7 +122,9 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
       if (mounted && rtcTime != null) {
         setState(() {
           _rtcTimeDisplay = rtcTime.toDisplayString();
-          _rtcTimezone = rtcTime.getTimezoneString();
+          // Format timezone as just the hours (e.g., "-8" instead of "UTC-8:00")
+          final tzHours = rtcTime.timezoneHours;
+          _rtcTimezone = tzHours >= 0 ? '+$tzHours' : '$tzHours';
         });
       }
     } catch (e) {
@@ -403,65 +406,81 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
               ],
             ),
             const SizedBox(height: 32),
-            // Battery percentage
-            Text(
-              'Battery',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
+            // Battery and Voltage as separate columns on same row
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-            Text(
-              _isConnected && _batteryPercentage != null
-                  ? '$_batteryPercentage%'
-                  : '--',
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: _isConnected && _batteryPercentage != null
-                    ? _getBatteryColor(_batteryPercentage!)
-                    : Colors.grey,
-              ),
-                ),
-                if (_isConnected && _isCharging == true) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.battery_charging_full,
-                    color: Colors.green,
-                    size: 32,
+                // Battery column
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Battery',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isConnected && _batteryPercentage != null
+                                ? '$_batteryPercentage%'
+                                : '--',
+                            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _isConnected && _batteryPercentage != null
+                                  ? _getBatteryColor(_batteryPercentage!)
+                                  : Colors.grey,
+                            ),
+                          ),
+                          if (_isConnected && _isCharging == true) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.battery_charging_full,
+                              color: Colors.green,
+                              size: 24,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
+                // Voltage column
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Voltage',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _isConnected && _voltage != null
+                            ? '${_voltage!.toStringAsFixed(2)} V'
+                            : '-- V',
+                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: _isConnected && _voltage != null
+                              ? Colors.orange
+                              : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
             
             const SizedBox(height: 32),
             
-            // Voltage reading
-            Text(
-              'Voltage',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _isConnected && _voltage != null
-                  ? '${_voltage!.toStringAsFixed(2)} V'
-                  : '-- V',
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: _isConnected && _voltage != null
-                    ? Colors.orange
-                    : Colors.grey,
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // RTC Time
+            // RTC Time (date and time+zone+button as columns on same row)
             Text(
               'RTC Time',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -469,49 +488,120 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-            Text(
-              _isConnected && _rtcTimeDisplay != null ? _rtcTimeDisplay! : '--',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: _isConnected && _rtcTimeDisplay != null
-                    ? Colors.blue
-                    : Colors.grey,
-              ),
-                ),
-                if (_isConnected && _rtcTimeDisplay != null) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: _isSettingRTC
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.sync, size: 24),
-                    onPressed: _isSettingRTC ? null : _setRTCTime,
-                    tooltip: 'Sync with System Time',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Calculate font size based on screen width
+                final screenWidth = constraints.maxWidth;
+                final double fontSize = screenWidth /19;
+                
+                // Parse date and time from display string (format: "MM/DD/YY\nhh:mm am/pm")
+                String? datePart;
+                String? timePart;
+                if (_isConnected && _rtcTimeDisplay != null) {
+                  final parts = _rtcTimeDisplay!.split('\n');
+                  if (parts.length >= 2) {
+                    datePart = parts[0]; // "MM/DD/YY"
+                    timePart = parts[1]; // "hh:mm am/pm"
+                  } else {
+                    datePart = _rtcTimeDisplay;
+                    timePart = null;
+                  }
+                }
+                
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Date column
+                    Expanded(
+                      child: Text(
+                        datePart ?? '--',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold,
+                          color: _isConnected && datePart != null
+                              ? Colors.blue
+                              : Colors.grey,
+                        ),
+                      ),
+                    ),
+                    // Time + Zone + Button column
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              timePart != null && _rtcTimezone != null
+                                  ? '$timePart $_rtcTimezone'
+                                  : timePart ?? '--',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.bold,
+                                color: _isConnected && timePart != null
+                                    ? Colors.blue
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                          if (_isConnected && _rtcTimeDisplay != null) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: _isSettingRTC
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.sync, size: 20),
+                              onPressed: _isSettingRTC ? null : _setRTCTime,
+                              tooltip: 'Sync with System Time',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-            if (_isConnected && _rtcTimezone != null) ...[
-              const SizedBox(height: 4),
+            
+            
+            // File transfer buttons
+            if (_isConnected) ...[
+              const SizedBox(height: 48),
+              const Divider(),
+              const SizedBox(height: 16),
               Text(
-                _rtcTimezone!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                'File Operations',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.grey[600],
                 ),
               ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _isConnected ? _listFiles : null,
+                    icon: const Icon(Icons.folder),
+                    label: const Text('List Files'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _isConnected ? _requestFile : null,
+                    icon: const Icon(Icons.download),
+                    label: const Text('Request File'),
+                  ),
+                ],
+              ),
             ],
-            
             
             if (!_isConnected) ...[
               const SizedBox(height: 32),
@@ -528,6 +618,152 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
         ),
       ),
     );
+  }
+  
+  Future<void> _listFiles() async {
+    if (!_isConnected) return;
+    
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      final files = await FileTransferService.instance.listFiles();
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Files'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: files.isEmpty
+                  ? const Text('No files found')
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: files.length,
+                      itemBuilder: (context, index) {
+                        final file = files[index];
+                        return ListTile(
+                          leading: Icon(
+                            file.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                          ),
+                          title: Text(file.name),
+                          subtitle: Text(
+                            file.isDirectory 
+                                ? 'Directory' 
+                                : '${file.size} bytes',
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog if still open
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error listing files: $e')),
+        );
+      }
+    }
+  }
+  
+  Future<void> _requestFile() async {
+    if (!_isConnected) return;
+    
+    final TextEditingController fileNameController = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Request File'),
+          content: TextField(
+            controller: fileNameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'File Name',
+              hintText: 'Enter file name to request',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (value) {
+              Navigator.of(context).pop(value);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(fileNameController.text),
+              child: const Text('Request'),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (result != null && result.isNotEmpty && mounted) {
+      try {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+        
+        final fileEntry = await FileTransferService.instance.requestFile(result);
+        
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('File Received'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('File: ${fileEntry.name}'),
+                  Text('Size: ${fileEntry.size} bytes'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog if still open
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error requesting file: $e')),
+          );
+        }
+      }
+    }
   }
   
   Color _getBatteryColor(int percentage) {

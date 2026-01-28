@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'auth.dart';
 
 class GraphQLConfig {
-  static const String defaultEndpoint = 'http://192.168.0.15:5001/graphql';
+  static String get defaultEndpoint => kDebugMode 
+      ? 'http://192.168.0.15:5001/graphql'
+      : 'http://192.168.0.44:5001/graphql';
   static const String defaultUserId = '1';
 }
 
@@ -15,8 +18,30 @@ GraphQLClient createClient(String endpoint, String userId) {
     },
   );
   
+  // Extract WebSocket URL (replace http:// with ws://, https:// with wss://)
+  final wsUrl = endpoint
+      .replaceFirst('http://', 'ws://')
+      .replaceFirst('https://', 'wss://');
+  
+  // Create WebSocket link for subscriptions
+  final wsLink = WebSocketLink(
+    wsUrl,
+    config: SocketClientConfig(
+      autoReconnect: true,
+      inactivityTimeout: const Duration(seconds: 30),
+      initialPayload: {'x-user-id': userId},
+    ),
+  );
+  
+  // Split link: subscriptions go to WebSocket, everything else to HTTP
+  final link = Link.split(
+    (request) => request.isSubscription,
+    wsLink,
+    httpLink,
+  );
+  
   return GraphQLClient(
-    link: httpLink,
+    link: link,
     cache: GraphQLCache(),
   );
 }

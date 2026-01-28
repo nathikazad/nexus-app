@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +22,9 @@ class BleBackgroundService {
     
     final bleClient = BleClient();
     final socketClient = SocketClient();
-    const defaultSocketUrl = 'ws://192.168.0.44:8002';
+    final defaultSocketUrl = kDebugMode 
+        ? 'ws://192.168.0.15:8080'
+        : 'ws://192.168.0.44:8002';
     
     await socketClient.connect(defaultSocketUrl);
     
