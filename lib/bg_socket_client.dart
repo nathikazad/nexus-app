@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
@@ -187,6 +188,70 @@ class SocketClient {
       _channel!.sink.add(message);
     } catch (e) {
       debugPrint("[Socket] Send error: $e");
+      _handleDisconnection();
+    }
+  }
+
+  /// Send a text packet to the server.
+  /// Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [text_bytes (N bytes)]
+  /// Header type for TEXT_PACKET is 0x0002
+  void sendTextPacket(String text, int index) {
+    if (!_isConnected || _channel == null) {
+      debugPrint("[Socket] Cannot send text packet: not connected");
+      return;
+    }
+
+    try {
+      const int TEXT_PACKET = 0x0002;
+      final utf8Bytes = utf8.encode(text);
+      final packetSize = utf8Bytes.length;
+
+      // Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [text_bytes (N bytes)]
+      final packet = Uint8List(8 + packetSize);
+      final byteData = ByteData.view(packet.buffer);
+      
+      // Index (4 bytes, little-endian)
+      byteData.setUint32(0, index, Endian.little);
+      // Header type (2 bytes, little-endian)
+      byteData.setUint16(4, TEXT_PACKET, Endian.little);
+      // Packet size (2 bytes, little-endian)
+      byteData.setUint16(6, packetSize, Endian.little);
+      // Text data (UTF-8 encoded)
+      packet.setRange(8, 8 + packetSize, utf8Bytes);
+
+      _channel!.sink.add(packet);
+      debugPrint("[Socket] Sent text packet #$index: ${text.length} chars (${packetSize} bytes)");
+    } catch (e) {
+      debugPrint("[Socket] Error sending text packet: $e");
+      _handleDisconnection();
+    }
+  }
+
+  /// Send an EOF packet to the server.
+  /// Format: [index (4 bytes)] + [header_type (2 bytes)]
+  /// Header type for EOF is 0xFFFC
+  void sendEofPacket(int index) {
+    if (!_isConnected || _channel == null) {
+      debugPrint("[Socket] Cannot send EOF packet: not connected");
+      return;
+    }
+
+    try {
+      const int EOF_PACKET = 0xFFFC;
+
+      // Format: [index (4 bytes)] + [header_type (2 bytes)]
+      final packet = Uint8List(6);
+      final byteData = ByteData.view(packet.buffer);
+      
+      // Index (4 bytes, little-endian)
+      byteData.setUint32(0, index, Endian.little);
+      // Header type (2 bytes, little-endian)
+      byteData.setUint16(4, EOF_PACKET, Endian.little);
+
+      _channel!.sink.add(packet);
+      debugPrint("[Socket] Sent EOF packet #$index");
+    } catch (e) {
+      debugPrint("[Socket] Error sending EOF packet: $e");
       _handleDisconnection();
     }
   }

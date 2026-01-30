@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/data_providers/transcript_provider.dart';
 import 'package:nexus_voice_assistant/models/transcript_message.dart';
 import 'package:nexus_voice_assistant/widgets/message_bubble.dart';
+import 'package:nexus_voice_assistant/background_service.dart';
 
-class VoiceAssistantScreen extends StatefulWidget {
+class VoiceAssistantScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwitchToHardwareTab;
   
   const VoiceAssistantScreen({super.key, this.onSwitchToHardwareTab});
 
   @override
-  State<VoiceAssistantScreen> createState() => _VoiceAssistantScreenState();
+  ConsumerState<VoiceAssistantScreen> createState() => _VoiceAssistantScreenState();
 }
 
-class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
+class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   int? _currentTranscriptId;
@@ -120,11 +122,17 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
     _textController.clear();
 
     try {
-      await TranscriptService.addMessage(
-        transcriptId: _currentTranscriptId!,
-        sender: 'Human',
-        message: text,
-      );
+      // Send text to socket server
+      final bgService = ref.read(bleBackgroundServiceProvider);
+      bgService.sendTextToSocket(text);
+      bgService.sendEofToSocket(); // Signal end of text input
+      
+      // Also save to database
+      // await TranscriptService.addMessage(
+      //   transcriptId: _currentTranscriptId!,
+      //   sender: 'Human',
+      //   message: text,
+      // );
       
       // Don't reload transcript - the subscription will handle the new message
       // The message will appear via the subscription stream

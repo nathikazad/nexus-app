@@ -33,6 +33,7 @@ class BleBackgroundService {
     // ============================================================================
     
     int packetCount = 0;
+    int textPacketCount = 0;
     
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
@@ -88,6 +89,24 @@ class BleBackgroundService {
     
     service.on('socket.disconnect').listen((event) async {
       await socketClient.disconnect();
+    });
+    
+    // Socket text events
+    service.on('socket.sendText').listen((event) {
+      final text = event?['text'] as String?;
+      if (text != null && text.isNotEmpty) {
+        textPacketCount++;
+        socketClient.sendTextPacket(text, textPacketCount);
+        debugPrint("[BLE BG] Sent text packet #$textPacketCount: ${text.length} chars");
+      }
+    });
+    
+    service.on('socket.sendEof').listen((event) {
+      textPacketCount++;
+      socketClient.sendEofPacket(textPacketCount);
+      debugPrint("[BLE BG] Sent EOF packet #$textPacketCount");
+      // Reset counter after EOF for next turn
+      textPacketCount = 0;
     });
     
     // Service lifecycle events
@@ -323,6 +342,16 @@ class BleBackgroundService {
 
   void disconnectSocket() {
     _service.invoke('socket.disconnect');
+  }
+
+  /// Send text to the socket server
+  void sendTextToSocket(String text) {
+    _service.invoke('socket.sendText', {'text': text});
+  }
+
+  /// Send EOF packet to the socket server
+  void sendEofToSocket() {
+    _service.invoke('socket.sendEof');
   }
 
   /// Generic command sender with unique request IDs
