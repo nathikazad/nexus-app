@@ -23,8 +23,8 @@ class BleBackgroundService {
     final bleClient = BleClient();
     final socketClient = SocketClient();
     final defaultSocketUrl = kDebugMode 
-        ? 'ws://192.168.0.15:8080'
-        : 'ws://192.168.0.44:8002';
+        ? 'ws://10.0.0.95:8002 '
+        : 'ws://10.0.0.95:8002';
     
     await socketClient.connect(defaultSocketUrl);
     
@@ -34,7 +34,7 @@ class BleBackgroundService {
     
     int packetCount = 0;
     int textPacketCount = 0;
-    
+
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
       service.invoke('ble.status', {'status': state.name});
@@ -48,7 +48,7 @@ class BleBackgroundService {
         'size': data.length,
       });
       
-      // Forward packet to socket server with index (will queue if not connected)
+      // Forward packet to socket server (with index for server-side parsing)
       socketClient.sendPacket(data, index: packetCount);
       // Send ACK back to the device
       bleClient.sendAudio(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII

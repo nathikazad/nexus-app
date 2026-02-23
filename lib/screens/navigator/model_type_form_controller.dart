@@ -19,14 +19,22 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
   bool _hasLoaded = false;
   int? _modelTypeId;
 
+  // Setter to allow setting modelTypeId from provider factory
+  set modelTypeId(int? value) {
+    _modelTypeId = value;
+  }
+
   @override
   ModelTypeFormState build() {
-    // Return initial state - modelTypeId will be set via initialize()
-    return ModelTypeFormState();
+    // Return initial state with isLoading set if we're editing an existing model type
+    return ModelTypeFormState(
+      isLoading: _modelTypeId != null,
+    );
   }
 
   void initialize(int? modelTypeId) {
     _modelTypeId = modelTypeId;
+    // Now state is initialized, safe to update it
     if (modelTypeId != null) {
       state = state.copyWith(isLoading: true);
     }
@@ -316,7 +324,8 @@ class ModelTypeFormState {
 final modelTypeFormControllerProvider = NotifierProvider.family<ModelTypeFormController, ModelTypeFormState, int?>(
   (int? modelTypeId) {
     final controller = ModelTypeFormController();
-    controller.initialize(modelTypeId);
+    // Set modelTypeId before build() is called, so build() can use it
+    controller.modelTypeId = modelTypeId;
     return controller;
   },
 );

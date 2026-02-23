@@ -5,7 +5,7 @@ import 'auth.dart';
 
 class GraphQLConfig {
   static String get defaultEndpoint => kDebugMode 
-      ? 'http://192.168.0.15:5001/graphql'
+      ? 'http://10.0.0.95:5001/graphql'
       : 'http://192.168.0.44:5001/graphql';
   static const String defaultUserId = '1';
 }
