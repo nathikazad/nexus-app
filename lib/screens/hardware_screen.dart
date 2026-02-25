@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer_service.dart';
 import 'package:nexus_voice_assistant/bg_ble_client.dart';
@@ -26,6 +27,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   bool _isConnected = false;
   bool _isSettingRTC = false;
   bool _isPulsingHaptic = false;
+  bool _isTriggeringCamera = false;
   bool _isSettingDeviceName = false;
   
   StreamSubscription<BleConnectionState>? _connectionSubscription;
@@ -311,6 +313,41 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     }
   }
 
+  Future<void> _triggerCamera() async {
+    if (!_isConnected || _isTriggeringCamera) {
+      return;
+    }
+
+    setState(() {
+      _isTriggeringCamera = true;
+    });
+
+    try {
+      final success = await _hardwareService.sendCameraCommand(CameraCommand.capture);
+      if (mounted) {
+        if (success) {
+          // Silent success
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to trigger camera')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error triggering camera: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTriggeringCamera = false;
+        });
+      }
+    }
+  }
+
   @override
   @override
   void dispose() {
@@ -399,6 +436,19 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
                         : const Icon(Icons.vibration, size: 20),
                     onPressed: _isPulsingHaptic ? null : _pulseHaptic,
                     tooltip: 'Vibrate',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  IconButton(
+                    icon: _isTriggeringCamera
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.camera_alt, size: 20),
+                    onPressed: _isTriggeringCamera ? null : _triggerCamera,
+                    tooltip: 'Trigger camera',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),

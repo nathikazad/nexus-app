@@ -138,6 +138,15 @@ class BleBackgroundService {
             final success = await bleClient.writeHaptic(effectId);
             sendResult({'success': success});
             break;
+          case 'writeCamera':
+            final dataList = data?['data'] as List<int>?;
+            if (dataList == null || dataList.isEmpty) {
+              sendResult({'success': false});
+              return;
+            }
+            final success = await bleClient.writeCamera(Uint8List.fromList(dataList));
+            sendResult({'success': success});
+            break;
           case 'readBattery':
             final batteryData = await bleClient.readBattery();
             sendResult({
@@ -407,6 +416,17 @@ class BleBackgroundService {
     return await _sendCommand<bool>(
       command: 'writeHaptic',
       data: {'effectId': effectId},
+      responseParser: (event) => event?['success'] as bool? ?? false,
+      timeoutValue: () => false,
+    ) ?? false;
+  }
+
+  /// Write to camera characteristic.
+  /// [data] is the raw payload from [CameraCommand.toBytes].
+  Future<bool> writeCamera(Uint8List data) async {
+    return await _sendCommand<bool>(
+      command: 'writeCamera',
+      data: {'data': data.toList()},
       responseParser: (event) => event?['success'] as bool? ?? false,
       timeoutValue: () => false,
     ) ?? false;

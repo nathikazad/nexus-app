@@ -20,6 +20,7 @@ class BleConstants {
   static const String fileTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ae";
   static const String fileRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26af";
   static const String fileCtrlCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b0";
+  static const String cameraCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b1";
 }
 
 // =============================================================================
@@ -47,6 +48,7 @@ class BleClient {
   BluetoothCharacteristic? _fileTxCharacteristic;
   BluetoothCharacteristic? _fileRxCharacteristic;
   BluetoothCharacteristic? _fileCtrlCharacteristic;
+  BluetoothCharacteristic? _cameraCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
@@ -254,6 +256,9 @@ class BleClient {
         } else if (uuid == BleConstants.fileCtrlCharacteristicUuid.toLowerCase()) {
           _fileCtrlCharacteristic = char;
           _log('Found File CTRL characteristic');
+        } else if (uuid == BleConstants.cameraCharacteristicUuid.toLowerCase()) {
+          _cameraCharacteristic = char;
+          _log('Found Camera characteristic');
         }
       }
       
@@ -361,6 +366,7 @@ class BleClient {
     _fileTxCharacteristic = null;
     _fileRxCharacteristic = null;
     _fileCtrlCharacteristic = null;
+    _cameraCharacteristic = null;
     
     // Auto-reconnect: restart scanning to find and connect to device again
     _log('Device disconnected, restarting scan to reconnect...');
@@ -437,6 +443,7 @@ class BleClient {
       _fileTxCharacteristic = null;
       _fileRxCharacteristic = null;
       _fileCtrlCharacteristic = null;
+      _cameraCharacteristic = null;
       _log('Disconnected');
       // Auto-reconnect: restart scanning
       await scanAndConnect();
@@ -488,6 +495,23 @@ class BleClient {
       return true;
     } catch (e) {
       _log('Error writing haptic: $e');
+      return false;
+    }
+  }
+
+  /// Write to camera characteristic.
+  /// [data] is the raw payload (e.g. from [CameraCommand.toBytes]).
+  Future<bool> writeCamera(Uint8List data) async {
+    if (!isConnected || _cameraCharacteristic == null) {
+      _log('Cannot write camera: not connected or characteristic not available');
+      return false;
+    }
+    try {
+      await _cameraCharacteristic!.write(data, withoutResponse: true);
+      _log('Camera command written: ${data.length} bytes');
+      return true;
+    } catch (e) {
+      _log('Error writing camera: $e');
       return false;
     }
   }

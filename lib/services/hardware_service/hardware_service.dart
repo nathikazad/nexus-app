@@ -4,6 +4,7 @@ import 'package:nexus_voice_assistant/background_service.dart' show BleBackgroun
 import 'package:nexus_voice_assistant/bg_ble_client.dart' show BleConnectionState;
 import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 /// Riverpod provider for HardwareService
@@ -80,6 +81,14 @@ class HardwareService {
   /// @return true on success, false on failure
   Future<bool> triggerHapticPulse({int effectId = 16}) async {
     return await _bgService.writeHaptic(effectId);
+  }
+
+  /// Send a camera command to the device.
+  /// For [CameraCommand.setRecordPeriod], [period] must be 1-1000.
+  /// @return true on success, false on failure
+  Future<bool> sendCameraCommand(CameraCommand command, {int? period}) async {
+    final data = command.toBytes(period: period);
+    return await _bgService.writeCamera(data);
   }
 
   /// Read device name from device
