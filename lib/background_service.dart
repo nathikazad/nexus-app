@@ -139,12 +139,12 @@ class BleBackgroundService {
             sendResult({'success': success});
             break;
           case 'writeCamera':
-            final dataList = data?['data'] as List<int>?;
-            if (dataList == null || dataList.isEmpty) {
+            final rawData = data?['data'];
+            if (rawData is! List || rawData.isEmpty) {
               sendResult({'success': false});
               return;
             }
-            final success = await bleClient.writeCamera(Uint8List.fromList(dataList));
+            final success = await bleClient.writeCamera(Uint8List.fromList(List<int>.from(rawData)));
             sendResult({'success': success});
             break;
           case 'readBattery':
