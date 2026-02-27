@@ -34,6 +34,7 @@ class BleBackgroundService {
     
     int packetCount = 0;
     int textPacketCount = 0;
+    int imagePacketCount = 0;
 
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
@@ -235,8 +236,12 @@ class BleBackgroundService {
       }
     });
     
-    // File TX stream handler - separate channel for streaming data
+    // File TX stream handler - forward to socket with image header, and to main app for display
     bleClient.onFileTxDataReceived = (data) {
+      if (data.length >= 5 && data[0] == 0x00 && data[1] == 0x01) {
+        imagePacketCount++;
+        socketClient.sendImagePacket(data, imagePacketCount);
+      }
       service.invoke('ble.fileTx.data', {'data': data.toList()});
     };
     

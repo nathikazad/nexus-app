@@ -227,6 +227,41 @@ class SocketClient {
     }
   }
 
+  /// Send an image packet to the server.
+  /// Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [payload (N bytes)]
+  /// Header type for IMAGE_PACKET is 0x0003
+  /// Payload is raw BLE file TX packet: [0x00, 0x01, pkt_num, total_pkts, filename\0, chunk_data...]
+  void sendImagePacket(Uint8List data, int index) {
+    const int IMAGE_PACKET = 0x0003;
+    final packetSize = data.length;
+
+    // Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [payload]
+    final packet = Uint8List(8 + packetSize);
+    final byteData = ByteData.view(packet.buffer);
+
+    // Index (4 bytes, little-endian)
+    byteData.setUint32(0, index, Endian.little);
+    // Header type (2 bytes, little-endian)
+    byteData.setUint16(4, IMAGE_PACKET, Endian.little);
+    // Packet size (2 bytes, little-endian)
+    byteData.setUint16(6, packetSize, Endian.little);
+    // Payload (raw BLE file TX packet)
+    packet.setRange(8, 8 + packetSize, data);
+
+    if (!_isConnected || _channel == null) {
+      _queuePacket(packet, null); // index=null so full packet sent as-is when flushed
+      return;
+    }
+
+    try {
+      _channel!.sink.add(packet);
+    } catch (e) {
+      debugPrint("[Socket] Error sending image packet: $e");
+      _queuePacket(packet, null);
+      _handleDisconnection();
+    }
+  }
+
   /// Send an EOF packet to the server.
   /// Format: [index (4 bytes)] + [header_type (2 bytes)]
   /// Header type for EOF is 0xFFFC
