@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
+
 // =============================================================================
 // BLE CONSTANTS
 // =============================================================================
@@ -258,6 +260,17 @@ class BleClient {
         }
       }
       
+      // Sync RTC with current time as part of handshake (write directly - state not yet connected)
+      if (_rtcCharacteristic != null) {
+        try {
+          final rtcTime = RTCTime.fromDateTime(DateTime.now());
+          await _rtcCharacteristic!.write(rtcTime.toBytes(), withoutResponse: false);
+          _log('RTC synced: ${rtcTime.toString()}');
+        } catch (e) {
+          _log('RTC sync failed (non-fatal): $e');
+        }
+      }
+      
       // Subscribe to audio notifications
       await _subscribeToAudioNotifications();
       
@@ -378,7 +391,10 @@ class BleClient {
     // First check for already connected devices (iOS background mode)
     final alreadyConnected = await _checkForAlreadyConnectedDevice();
     if (alreadyConnected) {
+      _log('Already connected to device, returning true');
       return true;
+    } else {
+      _log('Not connected to device, starting scan');
     }
     
     // Otherwise, start scanning
