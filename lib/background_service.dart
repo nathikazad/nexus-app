@@ -316,10 +316,18 @@ class BleBackgroundService {
     });
 
     _service.on('ble.fileTx.data').listen((event) {
-      final data = event?['data'] as List<int>?;
-      if (data != null) {
-        _fileTxDataController.add(Uint8List.fromList(data));
-      }
+      final raw = event?['data'];
+      if (raw == null) return;
+      final data = raw is List ? List<int>.from(raw) : null;
+      if (data == null || data.length < 5) return;
+      // Packet: [0]=header, [1]=type, [2]=pkt_num, [3]=total_packets, [4+]=filename\0 + payload
+      if (data[0] != 0x00 || data[1] != 0x01) return;
+      final pktNum = data[2];
+      final totalPkts = data[3];
+      int end = 4;
+      while (end < data.length && data[end] != 0) end++;
+      final filename = String.fromCharCodes(data.sublist(4, end));
+      debugPrint('[File TX] $filename packet ${pktNum + 1}/$totalPkts');
     });
 
     // Set up single shared subscription for command results
