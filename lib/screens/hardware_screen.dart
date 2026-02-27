@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
-import 'package:nexus_voice_assistant/services/file_transfer_service/file_transfer_service.dart';
 import 'package:nexus_voice_assistant/bg_ble_client.dart';
 import 'device_selection_screen.dart';
 
@@ -622,37 +621,6 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
             ),
             
             
-            // File transfer buttons
-            if (_isConnected) ...[
-              const SizedBox(height: 48),
-              const Divider(),
-              const SizedBox(height: 16),
-              Text(
-                'File Operations',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _isConnected ? _listFiles : null,
-                    icon: const Icon(Icons.folder),
-                    label: const Text('List Files'),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: _isConnected ? _requestFile : null,
-                    icon: const Icon(Icons.download),
-                    label: const Text('Request File'),
-                  ),
-                ],
-              ),
-            ],
-            
             if (!_isConnected) ...[
               const SizedBox(height: 32),
               Text(
@@ -668,152 +636,6 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
         ),
       ),
     );
-  }
-  
-  Future<void> _listFiles() async {
-    if (!_isConnected) return;
-    
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-      
-      final files = await FileTransferService.instance.listFiles();
-      
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Files'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: files.isEmpty
-                  ? const Text('No files found')
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: files.length,
-                      itemBuilder: (context, index) {
-                        final file = files[index];
-                        return ListTile(
-                          leading: Icon(
-                            file.isDirectory ? Icons.folder : Icons.insert_drive_file,
-                          ),
-                          title: Text(file.name),
-                          subtitle: Text(
-                            file.isDirectory 
-                                ? 'Directory' 
-                                : '${file.size} bytes',
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading dialog if still open
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error listing files: $e')),
-        );
-      }
-    }
-  }
-  
-  Future<void> _requestFile() async {
-    if (!_isConnected) return;
-    
-    final TextEditingController fileNameController = TextEditingController();
-    
-    final result = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Request File'),
-          content: TextField(
-            controller: fileNameController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'File Name',
-              hintText: 'Enter file name to request',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (value) {
-              Navigator.of(context).pop(value);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(fileNameController.text),
-              child: const Text('Request'),
-            ),
-          ],
-        );
-      },
-    );
-    
-    if (result != null && result.isNotEmpty && mounted) {
-      try {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-        
-        final fileEntry = await FileTransferService.instance.requestFile(result);
-        
-        if (mounted) {
-          Navigator.of(context).pop(); // Close loading dialog
-          
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('File Received'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('File: ${fileEntry.name}'),
-                  Text('Size: ${fileEntry.size} bytes'),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          Navigator.of(context).pop(); // Close loading dialog if still open
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error requesting file: $e')),
-          );
-        }
-      }
-    }
   }
   
   Color _getBatteryColor(int percentage) {

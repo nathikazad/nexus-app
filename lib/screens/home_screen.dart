@@ -7,7 +7,6 @@ import 'hardware_screen.dart';
 import 'navigator_screen.dart';
 import 'log_viewer_screen.dart';
 import '../services/watch_bridge_service.dart';
-import '../services/ai_service/openai_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -45,18 +44,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
     
-    // Listen for audio packets from watch - send to OpenAI
-    _watchAudioSubscription = WatchBridgeService.instance.audioStream.listen((packet) {
-      final openAIService = ref.read(openAIServiceProvider);
-      openAIService.sendAudio(packet.data, queryOrigin.Watch);
-    });
+    // // Listen for audio packets from watch - send to OpenAI
+    // _watchAudioSubscription = WatchBridgeService.instance.audioStream.listen((packet) {
+    //   final openAIService = ref.read(openAIServiceProvider);
+    //   openAIService.sendAudio(packet.data, queryOrigin.Watch);
+    // });
     
-    // Listen for EOF from watch - trigger OpenAI response
-    _watchEOFSubscription = WatchBridgeService.instance.eofStream.listen((eof) {
-      print('[HomeScreen] 🏁 Watch EOF received, calling createResponse()');
-      final openAIService = ref.read(openAIServiceProvider);
-      openAIService.createResponse();
-    });
+    // // Listen for EOF from watch - trigger OpenAI response
+    // _watchEOFSubscription = WatchBridgeService.instance.eofStream.listen((eof) {
+    //   print('[HomeScreen] 🏁 Watch EOF received, calling createResponse()');
+    //   final openAIService = ref.read(openAIServiceProvider);
+    //   openAIService.createResponse();
+    // });
   }
 
   @override

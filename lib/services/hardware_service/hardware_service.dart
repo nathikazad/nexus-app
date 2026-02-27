@@ -2,10 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/background_service.dart' show BleBackgroundService, bleBackgroundServiceProvider;
 import 'package:nexus_voice_assistant/bg_ble_client.dart' show BleConnectionState;
-import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
-import 'package:nexus_voice_assistant/services/hardware_service/battery_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
-import 'package:nexus_voice_assistant/services/logging_service.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
+
+
+/// Battery data structure
+class BatteryData {
+  final int percentage;  // 0-100
+  final double voltage;  // Voltage in volts
+  final bool isCharging;  // Whether battery is charging
+
+  BatteryData({
+    required this.percentage,
+    required this.voltage,
+    required this.isCharging,
+  });
+}
 
 /// Riverpod provider for HardwareService
 final hardwareServiceProvider = Provider<HardwareService>((ref) {
@@ -150,37 +162,4 @@ class HardwareService {
     return null;
   }
 
-  // ============================================================================
-  // FILE TRANSFER METHODS (COMMENTED OUT)
-  // ============================================================================
-
-  // /// Send file request command (triggers file receive with all logic in BLEFileTransport)
-  // Future<void> sendFileRequest(String path) async {
-  //   // TODO: Implement using background service file methods
-  //   // await _bgService.sendFileRequest(path);
-  // }
-
-  // /// Send list files request command
-  // Future<void> sendListFilesRequest({String? path}) async {
-  //   // TODO: Implement using background service file methods
-  //   // await _bgService.sendListFilesRequest(path: path);
-  // }
-
-  // /// Write file RX data
-  // Future<bool> writeFileRx(Uint8List data) async {
-  //   return await _bgService.writeFileRx(data);
-  // }
-
-  // /// Read file control
-  // Future<Uint8List?> readFileCtrl() async {
-  //   return await _bgService.readFileCtrl();
-  // }
-
-  // /// Write file control
-  // Future<bool> writeFileCtrl(Uint8List data) async {
-  //   return await _bgService.writeFileCtrl(data);
-  // }
-
-  // /// Get file TX stream
-  // Stream<Uint8List> get fileTxStream => _bgService.fileTxStream;
 }

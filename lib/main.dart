@@ -7,7 +7,6 @@ import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
 import 'dart:io';
 import 'router.dart';
-import 'services/ai_service/openai_service.dart';
 import 'services/logging_service.dart';
 import 'services/watch_bridge_service.dart';
 import 'background_service.dart';
@@ -73,10 +72,6 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    
-    // Watch openAIServiceProvider to manage its lifecycle based on auth status
-    // This ensures OpenAI connects when authenticated and disconnects when unauthenticated
-    ref.watch(openAIServiceProvider);
     
     return MaterialApp.router(
       title: 'Nexus Voice Assistant',

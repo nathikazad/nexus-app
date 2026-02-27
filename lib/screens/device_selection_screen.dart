@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:nexus_voice_assistant/services/ble_service/ble_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 
@@ -29,7 +28,6 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   @override
   void dispose() {
     _scanSubscription?.cancel();
-    BLEService.stopScan();
     super.dispose();
   }
 
@@ -40,37 +38,6 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
       _isScanning = true;
       _devices = [];
     });
-
-    _scanSubscription = BLEService.scanForDevices(timeout: const Duration(seconds: 10)).listen(
-      (results) {
-        // Update device list, avoiding duplicates
-        final existingIds = _devices.map((d) => d.device.remoteId.toString()).toSet();
-        final newDevices = results.where((r) => !existingIds.contains(r.device.remoteId.toString())).toList();
-        
-        if (mounted) {
-          setState(() {
-            _devices.addAll(newDevices);
-            // Sort by RSSI (strongest signal first)
-            _devices.sort((a, b) => b.rssi.compareTo(a.rssi));
-          });
-        }
-      },
-      onError: (error) {
-        LoggingService.instance.log('Scan error: $error');
-        if (mounted) {
-          setState(() {
-            _isScanning = false;
-          });
-        }
-      },
-      onDone: () {
-        if (mounted) {
-          setState(() {
-            _isScanning = false;
-          });
-        }
-      },
-    );
   }
 
   String _formatDeviceName(ScanResult result) {

@@ -19,7 +19,6 @@ class BleConstants {
   static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad";
   static const String fileTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ae";
   static const String fileRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26af";
-  static const String fileCtrlCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b0";
   static const String cameraCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b1";
 }
 
@@ -253,9 +252,6 @@ class BleClient {
         } else if (uuid == BleConstants.fileRxCharacteristicUuid.toLowerCase()) {
           _fileRxCharacteristic = char;
           _log('Found File RX characteristic');
-        } else if (uuid == BleConstants.fileCtrlCharacteristicUuid.toLowerCase()) {
-          _fileCtrlCharacteristic = char;
-          _log('Found File CTRL characteristic');
         } else if (uuid == BleConstants.cameraCharacteristicUuid.toLowerCase()) {
           _cameraCharacteristic = char;
           _log('Found Camera characteristic');

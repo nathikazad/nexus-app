@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:nexus_voice_assistant/services/ble_service/ble_service.dart';
-import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 /// RTC time structure
 class RTCTime {
@@ -135,63 +133,3 @@ class RTCTime {
     return DateTime(2000 + year, month, date, hours, minutes, seconds);
   }
 }
-
-class RTCService {
-  final BLEService _bleService;
-
-  RTCService(this._bleService);
-
-  /// Read RTC time from device (includes timezone)
-  Future<RTCTime?> readRTC() async {
-    final rtcCharacteristic = _bleService.rtcCharacteristic;
-    if (!_bleService.isConnected || rtcCharacteristic == null) {
-      return null;
-    }
-
-    try {
-      final data = await rtcCharacteristic.read();
-      if (data.length >= 7) {
-        // Accept 7 bytes (backward compatibility) or 9 bytes (with timezone)
-        return RTCTime.fromBytes(Uint8List.fromList(data));
-      }
-    } catch (e) {
-      LoggingService.instance.log('Error reading RTC: $e');
-    }
-    return null;
-  }
-
-  /// Write RTC time to device
-  Future<bool> writeRTC(RTCTime time) async {
-    final rtcCharacteristic = _bleService.rtcCharacteristic;
-    if (!_bleService.isConnected || rtcCharacteristic == null) {
-      return false;
-    }
-    // print time
-    LoggingService.instance.log('RTC time to write: ${time.toString()}');
-    try {
-      final data = time.toBytes();
-      await rtcCharacteristic.write(data, withoutResponse: false);
-      LoggingService.instance.log('RTC time written: ${time.toString()}');
-      return true;
-    } catch (e) {
-      LoggingService.instance.log('Error writing RTC: $e');
-      return false;
-    }
-  }
-
-  /// Set RTC time from current system time (preserves existing timezone)
-  Future<bool> setRTCTimeNow() async {
-    // Read current RTC to get timezone
-    final currentRTC = await readRTC();
-    final now = DateTime.now();
-    
-    // Preserve timezone from current RTC, or use default PST
-    final rtcTime = RTCTime.fromDateTime(
-      now,
-      timezoneHours: currentRTC?.timezoneHours ?? -8,
-      timezoneMinutes: currentRTC?.timezoneMinutes ?? 0,
-    );
-    return await writeRTC(rtcTime);
-  }
-}
-
