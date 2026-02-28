@@ -51,6 +51,7 @@ class BleClient {
   BluetoothCharacteristic? _fileCtrlCharacteristic;
   BluetoothCharacteristic? _cameraCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
+  StreamSubscription? _globalConnectionSubscription;
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _fileTxNotificationSubscription;
@@ -95,6 +96,7 @@ class BleClient {
         return false;
       }
       
+      _listenForGlobalConnectionEvents();
       _log('BLE initialized');
       return true;
     } catch (e) {
@@ -104,6 +106,28 @@ class BleClient {
     }
   }
   
+  // ===========================================================================
+  // GLOBAL CONNECTION LISTENER
+  // ===========================================================================
+
+  void _listenForGlobalConnectionEvents() {
+    _globalConnectionSubscription?.cancel();
+    _globalConnectionSubscription = FlutterBluePlus.events.onConnectionStateChanged.listen(
+      (event) async {
+        if (event.connectionState == BluetoothConnectionState.connected) {
+          _log('Global event: device connected: ${event.device.platformName}');
+          if (isConnected) {
+            _log('Already handling a connection, ignoring');
+            return;
+          }
+          _device = event.device;
+          await stopScan();
+          await _connectToDevice();
+        }
+      },
+    );
+  }
+
   // ===========================================================================
   // SCANNING
   // ===========================================================================
@@ -193,20 +217,22 @@ class BleClient {
     _log('Connecting to ${_device!.platformName}...');
     
     try {
-      // Connect to device
-      await _device!.connect(
-        timeout: const Duration(seconds: 15),
-        autoConnect: true,
-        mtu: null,
-        license: License.free,
-      );
+      // Check if already connected at OS level (e.g. auto-reconnect)
+      final alreadyConnected = _device!.isConnected;
+      if (!alreadyConnected) {
+        await _device!.connect(
+          timeout: const Duration(seconds: 15),
+          autoConnect: true,
+          mtu: null,
+          license: License.free,
+        );
+        
+        await _device!.connectionState
+            .firstWhere((state) => state == BluetoothConnectionState.connected)
+            .timeout(const Duration(seconds: 15));
+      }
       
-      // Wait for connected state
-      await _device!.connectionState
-          .firstWhere((state) => state == BluetoothConnectionState.connected)
-          .timeout(const Duration(seconds: 15));
-      
-      _log('Connected to ${_device!.platformName}');
+      _log('Connected to ${_device!.platformName} (was already: $alreadyConnected)');
       
       // Discover services
       final services = await _device!.discoverServices();
@@ -656,6 +682,8 @@ class BleClient {
   
   /// Dispose resources
   Future<void> dispose() async {
+    await _globalConnectionSubscription?.cancel();
+    _globalConnectionSubscription = null;
     await disconnect();
     onConnectionStateChanged = null;
     onAudioPacketReceived = null;
