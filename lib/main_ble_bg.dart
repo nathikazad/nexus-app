@@ -69,7 +69,7 @@ class _BleBackgroundScreenState extends ConsumerState<BleBackgroundScreen>
     text: 'ws://192.168.0.44:8002'
   );
 
-  BleConnectionState _bleStatus = BleConnectionState.scanning;
+  BleConnectionState _bleStatus = BleConnectionState.idle;
   bool _serviceRunning = false;
   @override
   void initState() {

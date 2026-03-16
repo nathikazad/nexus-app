@@ -43,14 +43,17 @@ class BleBackgroundService {
     
     bleClient.onAudioPacketReceived = (data) {
       packetCount++;
-      debugPrint("[BLE BG] Packet $packetCount: ${data.length} bytes");
+      // Byte 2 is 1-byte packet_index from ESP32 (format: [0x01][0x00][packet_index][size:2][opus])
+      final packetIndex = data.length >= 3 ? data[2] : 0;
+      debugPrint("[BLE BG] Packet $packetCount (packet_index=$packetIndex): ${data.length} bytes");
       service.invoke('ble.packet', {
         'count': packetCount,
+        'packet_index': packetIndex,
         'size': data.length,
       });
       
-      // Forward packet to socket server (with index for server-side parsing)
-      socketClient.sendPacket(data, index: packetCount);
+      // Forward raw BLE payload to socket server (no app index)
+      socketClient.sendPacket(data);
       // Send ACK back to the device
       bleClient.sendAudio(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
     };
@@ -305,12 +308,12 @@ class BleBackgroundService {
       try {
         final status = BleConnectionState.values.firstWhere(
           (state) => state.name == statusStr,
-          orElse: () => BleConnectionState.scanning,
+          orElse: () => BleConnectionState.idle,
         );
         _statusController.add(status);
       } catch (e) {
         // Fallback to scanning if parsing fails
-        _statusController.add(BleConnectionState.scanning);
+        _statusController.add(BleConnectionState.idle);
       }
     });
 

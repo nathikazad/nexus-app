@@ -27,7 +27,7 @@ final hardwareServiceProvider = Provider<HardwareService>((ref) {
 
 class HardwareService {
   final BleBackgroundService _bgService;
-  BleConnectionState _lastStatus = BleConnectionState.scanning;
+  BleConnectionState _lastStatus = BleConnectionState.idle;
   String? _deviceName;
 
   HardwareService(this._bgService) {

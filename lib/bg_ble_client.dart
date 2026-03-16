@@ -25,10 +25,20 @@ class BleConstants {
 }
 
 // =============================================================================
-// BLE CONNECTION STATE
+// BLE CONNECTION STATE MACHINE
 // =============================================================================
+//
+// State transitions:
+//   idle -> scanning (startScan)
+//   scanning -> idle (stopScan)
+//   scanning -> connecting (device found)
+//   connecting -> connected (success)
+//   connecting -> scanning (failure, retry)
+//   connected -> scanning (disconnect + reconnect)
+//
 
 enum BleConnectionState {
+  idle,
   scanning,
   connecting,
   connected,
@@ -56,9 +66,7 @@ class BleClient {
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _fileTxNotificationSubscription;
   
-  BleConnectionState _state = BleConnectionState.scanning;
-  
-  bool _isScanning = false;
+  BleConnectionState _state = BleConnectionState.idle;
   
   BleConnectionState get state => _state;
   bool get isConnected => _state == BleConnectionState.connected;
@@ -116,7 +124,8 @@ class BleClient {
       (event) async {
         if (event.connectionState == BluetoothConnectionState.connected) {
           _log('Global event: device connected: ${event.device.platformName}');
-          if (isConnected) {
+          // TODO: Maybe we should reconnect to the device.
+          if (_state == BleConnectionState.connected || _state == BleConnectionState.connecting) {
             _log('Already handling a connection, ignoring');
             return;
           }
@@ -133,13 +142,12 @@ class BleClient {
   // ===========================================================================
   
   Future<void> startScan() async {
-    if (_isScanning) {
+    if (_state == BleConnectionState.scanning) {
       _log('Already scanning');
       return;
     }
     
     _setState(BleConnectionState.scanning);
-    _isScanning = true;
     _log('Starting scan for Nexus device...');
     
     try {
@@ -185,7 +193,7 @@ class BleClient {
       _log('Scan error: $e');
       await _scanSubscription?.cancel();
       _scanSubscription = null;
-      _isScanning = false;
+      _setState(BleConnectionState.idle);
       onError?.call('Scan error: $e');
       // Auto-retry: restart scanning
       await scanAndConnect();
@@ -193,12 +201,11 @@ class BleClient {
   }
   
   Future<void> stopScan() async {
-    if (_isScanning) {
+    if (_state == BleConnectionState.scanning) {
       await _scanSubscription?.cancel();
       _scanSubscription = null;
       await FlutterBluePlus.stopScan();
-      _isScanning = false;
-      // State remains scanning (not connected, ready to scan again)
+      _setState(BleConnectionState.idle);
       _log('Scan stopped');
     }
   }
@@ -212,7 +219,10 @@ class BleClient {
       _log('No device to connect to');
       return false;
     }
-    
+    if (_state == BleConnectionState.connecting) {
+      _log('Connection already in progress, ignoring');
+      return isConnected;
+    }
     _setState(BleConnectionState.connecting);
     _log('Connecting to ${_device!.platformName}...');
     
@@ -249,6 +259,7 @@ class BleClient {
       
       if (targetService == null) {
         _log('Service not found: ${BleConstants.serviceUuid}');
+        _setState(BleConnectionState.idle);
         await disconnect();
         return false;
       }
@@ -316,6 +327,7 @@ class BleClient {
     } catch (e) {
       _log('Connection error: $e');
       onError?.call('Connection error: $e');
+      _setState(BleConnectionState.idle);
       // Auto-retry: restart scanning
       await scanAndConnect();
       return false;
@@ -331,7 +343,7 @@ class BleClient {
     try {
       await _audioTxCharacteristic!.setNotifyValue(true);
       
-      _notificationSubscription = _audioTxCharacteristic!.lastValueStream.listen(
+      _notificationSubscription = _audioTxCharacteristic!.onValueReceived.listen(
         (value) {
           if (value.isEmpty) return;
           
