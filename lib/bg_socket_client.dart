@@ -69,7 +69,11 @@ class SocketClient {
       _channel!.stream.listen(
         (message) {
           if (message is Uint8List) {
-            // Forward binary packets from server to BLE
+            // Intercept DEVICE_REQUEST packets - handle and respond, don't forward to BLE
+            if (_handleDeviceRequestIfNeeded(message)) {
+              return;
+            }
+            // Forward other binary packets from server to BLE
             debugPrint("[Socket] Received binary packet: ${message.length} bytes");
             if (onPacketFromServer != null) {
               onPacketFromServer!(message).catchError((e) {
@@ -258,6 +262,67 @@ class SocketClient {
     } catch (e) {
       debugPrint("[Socket] Error sending image packet: $e");
       _queuePacket(packet, null);
+      _handleDisconnection();
+    }
+  }
+
+  static const int _DEVICE_REQUEST = 0x0004;
+  static const int _DEVICE_RESPONSE = 0x0005;
+
+  /// Handle DEVICE_REQUEST from server. Returns true if handled (don't forward to BLE).
+  bool _handleDeviceRequestIfNeeded(Uint8List message) {
+    if (message.length < 12) return false;
+    final byteData = ByteData.view(
+        message.buffer, message.offsetInBytes, message.lengthInBytes);
+    final headerType = byteData.getUint16(4, Endian.little);
+    if (headerType != _DEVICE_REQUEST) return false;
+
+    final requestId = byteData.getUint32(6, Endian.little);
+    final payloadSize = byteData.getUint16(10, Endian.little);
+    if (message.length < 12 + payloadSize) return false;
+
+    final payloadStr = utf8.decode(message.sublist(12, 12 + payloadSize));
+    try {
+      final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
+      final action = payload['action'] as String?;
+      if (action == 'get_gps') {
+        // Fake GPS: always return same coordinates (SF)
+        final result = jsonEncode({
+          'lat': 37.7749,
+          'lng': -122.4194,
+          'accuracy': 10.0,
+        });
+        sendDeviceResponsePacket(requestId, result);
+        debugPrint("[Socket] Handled get_gps request, sent fake GPS");
+        return true;
+      }
+    } catch (e) {
+      debugPrint("[Socket] Error handling device request: $e");
+    }
+    return false;
+  }
+
+  /// Send DEVICE_RESPONSE to server.
+  /// Format: [index 4B][header 2B][request_id 4B][payload_size 2B][payload]
+  void sendDeviceResponsePacket(int requestId, String payload) {
+    if (!_isConnected || _channel == null) {
+      debugPrint("[Socket] Cannot send device response: not connected");
+      return;
+    }
+    try {
+      final payloadBytes = utf8.encode(payload);
+      final packetSize = payloadBytes.length;
+      final packet = Uint8List(12 + packetSize);
+      final byteData = ByteData.view(packet.buffer);
+      byteData.setUint32(0, 0, Endian.little); // index
+      byteData.setUint16(4, _DEVICE_RESPONSE, Endian.little);
+      byteData.setUint32(6, requestId, Endian.little);
+      byteData.setUint16(10, packetSize, Endian.little);
+      packet.setRange(12, 12 + packetSize, payloadBytes);
+      _channel!.sink.add(packet);
+      debugPrint("[Socket] Sent DEVICE_RESPONSE for request $requestId");
+    } catch (e) {
+      debugPrint("[Socket] Error sending device response: $e");
       _handleDisconnection();
     }
   }
