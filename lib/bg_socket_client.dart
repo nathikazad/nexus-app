@@ -28,6 +28,9 @@ class SocketClient {
   // Callback to forward packets from server to BLE
   Future<void> Function(Uint8List)? onPacketFromServer;
 
+  /// Callback to handle device requests (e.g. take_photo). Returns response payload or null.
+  Future<String?> Function(int requestId, String action, Map<String, dynamic> params)? onDeviceRequest;
+
   bool get isConnected => _isConnected;
   int get queuedPacketCount => _packetQueue.length;
 
@@ -67,10 +70,10 @@ class SocketClient {
 
       // Listen for messages from server
       _channel!.stream.listen(
-        (message) {
+        (message) async {
           if (message is Uint8List) {
             // Intercept DEVICE_REQUEST packets - handle and respond, don't forward to BLE
-            if (_handleDeviceRequestIfNeeded(message)) {
+            if (await _handleDeviceRequestIfNeeded(message)) {
               return;
             }
             // Forward other binary packets from server to BLE
@@ -270,7 +273,7 @@ class SocketClient {
   static const int _DEVICE_RESPONSE = 0x0005;
 
   /// Handle DEVICE_REQUEST from server. Returns true if handled (don't forward to BLE).
-  bool _handleDeviceRequestIfNeeded(Uint8List message) {
+  Future<bool> _handleDeviceRequestIfNeeded(Uint8List message) async {
     if (message.length < 12) return false;
     final byteData = ByteData.view(
         message.buffer, message.offsetInBytes, message.lengthInBytes);
@@ -285,6 +288,8 @@ class SocketClient {
     try {
       final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
       final action = payload['action'] as String?;
+      if (action == null) return false;
+
       if (action == 'get_gps') {
         // Fake GPS: always return same coordinates (SF)
         final result = jsonEncode({
@@ -295,6 +300,15 @@ class SocketClient {
         sendDeviceResponsePacket(requestId, result);
         debugPrint("[Socket] Handled get_gps request, sent fake GPS");
         return true;
+      }
+
+      if (action == 'take_photo' && onDeviceRequest != null) {
+        final result = await onDeviceRequest!(requestId, action, payload);
+        if (result != null) {
+          sendDeviceResponsePacket(requestId, result);
+          debugPrint("[Socket] Handled take_photo request via onDeviceRequest");
+          return true;
+        }
       }
     } catch (e) {
       debugPrint("[Socket] Error handling device request: $e");

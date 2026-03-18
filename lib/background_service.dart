@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -9,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'bg_ble_client.dart' show BleClient, BleConnectionState;
 import 'bg_socket_client.dart';
+import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 
 class BleBackgroundService {
   /// Start the background service (called from onStart entry point)
@@ -71,6 +73,20 @@ class BleBackgroundService {
     
     // Forward packets from server to BLE
     socketClient.onPacketFromServer = (packet) => bleClient.sendAudio(packet);
+
+    // Handle device requests (e.g. take_photo)
+    socketClient.onDeviceRequest = (requestId, action, params) async {
+      if (action == 'take_photo') {
+        try {
+          final success = await bleClient.writeCamera(CameraCommand.capture.toBytes());
+          return jsonEncode({'success': success});
+        } catch (e) {
+          debugPrint("[BLE BG] take_photo error: $e");
+          return jsonEncode({'success': false, 'error': e.toString()});
+        }
+      }
+      return null;
+    };
     
     // ============================================================================
     // 4. SERVICE EVENT HANDLERS
