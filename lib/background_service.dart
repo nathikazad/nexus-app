@@ -37,6 +37,7 @@ class BleBackgroundService {
     int packetCount = 0;
     int textPacketCount = 0;
     int imagePacketCount = 0;
+    int audioPacketCount = 0;
 
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
@@ -54,8 +55,9 @@ class BleBackgroundService {
         'size': data.length,
       });
       
-      // Forward raw BLE payload to socket server (no app index)
-      socketClient.sendPacket(data);
+      // Forward BLE payload with 4B index (consistent with text/image/EOF)
+      audioPacketCount++;
+      socketClient.sendPacket(data, index: audioPacketCount);
       // Send ACK back to the device
       bleClient.sendAudio(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
     };

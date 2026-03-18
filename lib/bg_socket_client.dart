@@ -128,17 +128,14 @@ class SocketClient {
   
   void _sendPacketData(Uint8List data, int? index) {
     if (index != null) {
-      // Format: [4 bytes index (uint32 little-endian)] + [payload data]
-      final indexBytes = Uint8List(4);
-      final byteData = ByteData.view(indexBytes.buffer);
-      byteData.setUint32(0, index, Endian.little);
-      
-      // Combine index + payload
-      final combined = Uint8List(4 + data.length);
-      combined.setRange(0, 4, indexBytes);
-      combined.setRange(4, 4 + data.length, data);
-      
-      _channel!.sink.add(combined);
+      // Format: [header_type 2B][index 4B] + [payload]. OPUS_AUDIO_PACKET = 0x0001
+      const int OPUS_AUDIO_PACKET = 0x0001;
+      final packet = Uint8List(6 + data.length);
+      final byteData = ByteData.view(packet.buffer);
+      byteData.setUint16(0, OPUS_AUDIO_PACKET, Endian.little);
+      byteData.setUint32(2, index, Endian.little);
+      packet.setRange(6, 6 + data.length, data);
+      _channel!.sink.add(packet);
     } else {
       // Send as binary data without index
       _channel!.sink.add(data);
@@ -200,7 +197,7 @@ class SocketClient {
   }
 
   /// Send a text packet to the server.
-  /// Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [text_bytes (N bytes)]
+  /// Format: [header_type 2B][index 4B][packet_size 2B][text_bytes (N bytes)]
   /// Header type for TEXT_PACKET is 0x0002
   void sendTextPacket(String text, int index) {
     if (!_isConnected || _channel == null) {
@@ -213,17 +210,12 @@ class SocketClient {
       final utf8Bytes = utf8.encode(text);
       final packetSize = utf8Bytes.length;
 
-      // Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [text_bytes (N bytes)]
+      // Format: [header_type 2B][index 4B][packet_size 2B][text_bytes (N bytes)]
       final packet = Uint8List(8 + packetSize);
       final byteData = ByteData.view(packet.buffer);
-      
-      // Index (4 bytes, little-endian)
-      byteData.setUint32(0, index, Endian.little);
-      // Header type (2 bytes, little-endian)
-      byteData.setUint16(4, TEXT_PACKET, Endian.little);
-      // Packet size (2 bytes, little-endian)
+      byteData.setUint16(0, TEXT_PACKET, Endian.little);
+      byteData.setUint32(2, index, Endian.little);
       byteData.setUint16(6, packetSize, Endian.little);
-      // Text data (UTF-8 encoded)
       packet.setRange(8, 8 + packetSize, utf8Bytes);
 
       _channel!.sink.add(packet);
@@ -235,24 +227,19 @@ class SocketClient {
   }
 
   /// Send an image packet to the server.
-  /// Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [payload (N bytes)]
+  /// Format: [header_type 2B][index 4B][packet_size 2B][payload (N bytes)]
   /// Header type for IMAGE_PACKET is 0x0003
   /// Payload is raw BLE file TX packet: [0x00, 0x01, pkt_num, total_pkts, filename\0, chunk_data...]
   void sendImagePacket(Uint8List data, int index) {
     const int IMAGE_PACKET = 0x0003;
     final packetSize = data.length;
 
-    // Format: [index (4 bytes)] + [header_type (2 bytes)] + [packet_size (2 bytes)] + [payload]
+    // Format: [header_type 2B][index 4B][packet_size 2B][payload]
     final packet = Uint8List(8 + packetSize);
     final byteData = ByteData.view(packet.buffer);
-
-    // Index (4 bytes, little-endian)
-    byteData.setUint32(0, index, Endian.little);
-    // Header type (2 bytes, little-endian)
-    byteData.setUint16(4, IMAGE_PACKET, Endian.little);
-    // Packet size (2 bytes, little-endian)
+    byteData.setUint16(0, IMAGE_PACKET, Endian.little);
+    byteData.setUint32(2, index, Endian.little);
     byteData.setUint16(6, packetSize, Endian.little);
-    // Payload (raw BLE file TX packet)
     packet.setRange(8, 8 + packetSize, data);
 
     if (!_isConnected || _channel == null) {
@@ -317,7 +304,7 @@ class SocketClient {
   }
 
   /// Send DEVICE_RESPONSE to server.
-  /// Format: [index 4B][header 2B][request_id 4B][payload_size 2B][payload]
+  /// Format: [header 2B][index 4B][request_id 4B][payload_size 2B][payload]
   void sendDeviceResponsePacket(int requestId, String payload) {
     if (!_isConnected || _channel == null) {
       debugPrint("[Socket] Cannot send device response: not connected");
@@ -328,8 +315,8 @@ class SocketClient {
       final packetSize = payloadBytes.length;
       final packet = Uint8List(12 + packetSize);
       final byteData = ByteData.view(packet.buffer);
-      byteData.setUint32(0, 0, Endian.little); // index
-      byteData.setUint16(4, _DEVICE_RESPONSE, Endian.little);
+      byteData.setUint16(0, _DEVICE_RESPONSE, Endian.little);
+      byteData.setUint32(2, 0, Endian.little); // index
       byteData.setUint32(6, requestId, Endian.little);
       byteData.setUint16(10, packetSize, Endian.little);
       packet.setRange(12, 12 + packetSize, payloadBytes);
@@ -342,7 +329,7 @@ class SocketClient {
   }
 
   /// Send an EOF packet to the server.
-  /// Format: [index (4 bytes)] + [header_type (2 bytes)]
+  /// Format: [header_type 2B][index (4 bytes)]
   /// Header type for EOF is 0xFFFC
   void sendEofPacket(int index) {
     if (!_isConnected || _channel == null) {
@@ -353,14 +340,11 @@ class SocketClient {
     try {
       const int EOF_PACKET = 0xFFFC;
 
-      // Format: [index (4 bytes)] + [header_type (2 bytes)]
+      // Format: [header_type 2B][index 4B]
       final packet = Uint8List(6);
       final byteData = ByteData.view(packet.buffer);
-      
-      // Index (4 bytes, little-endian)
-      byteData.setUint32(0, index, Endian.little);
-      // Header type (2 bytes, little-endian)
-      byteData.setUint16(4, EOF_PACKET, Endian.little);
+      byteData.setUint16(0, EOF_PACKET, Endian.little);
+      byteData.setUint32(2, index, Endian.little);
 
       _channel!.sink.add(packet);
       debugPrint("[Socket] Sent EOF packet #$index");
