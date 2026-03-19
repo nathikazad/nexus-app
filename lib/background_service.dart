@@ -176,6 +176,22 @@ class BleBackgroundService {
               'data': batteryData?.toList(),
             });
             break;
+          case 'readCameraStatus':
+            final st = await bleClient.readCameraStatus();
+            if (st == null) {
+              sendResult({'success': false});
+            } else {
+              final (isRec, period) = st;
+              sendResult({
+                'success': true,
+                'data': [
+                  isRec ? 1 : 0,
+                  period & 0xff,
+                  (period >> 8) & 0xff,
+                ],
+              });
+            }
+            break;
           case 'readRTC':
             final rtcData = await bleClient.readRTC();
             sendResult({
@@ -476,6 +492,24 @@ class BleBackgroundService {
           return Uint8List.fromList(List<int>.from(dataList));
         }
         return null;
+      },
+      timeoutValue: () => null,
+    );
+  }
+
+  /// Read camera record status (is recording, period seconds). Null on failure.
+  Future<(bool isRecording, int periodSec)?> readCameraStatus() async {
+    return await _sendCommand<(bool isRecording, int periodSec)>(
+      command: 'readCameraStatus',
+      responseParser: (event) {
+        if (event?['success'] != true) return null;
+        final dataList = event?['data'];
+        if (dataList is! List || dataList.length < 3) return null;
+        final flags = dataList[0] as int;
+        final lo = dataList[1] as int;
+        final hi = dataList[2] as int;
+        final period = lo | (hi << 8);
+        return ((flags & 1) != 0, period.clamp(1, 1000));
       },
       timeoutValue: () => null,
     );

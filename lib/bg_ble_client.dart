@@ -21,7 +21,8 @@ class BleConstants {
   static const String deviceNameCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ad";
   static const String fileTxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ae";
   static const String fileRxCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26af";
-  static const String cameraCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b1";
+  static const String cameraCmdCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b1";
+  static const String cameraStatusCharacteristicUuid = "beb5483e-36e1-4688-b7f5-ea07361b26b2";
 }
 
 // =============================================================================
@@ -59,7 +60,8 @@ class BleClient {
   BluetoothCharacteristic? _fileTxCharacteristic;
   BluetoothCharacteristic? _fileRxCharacteristic;
   BluetoothCharacteristic? _fileCtrlCharacteristic;
-  BluetoothCharacteristic? _cameraCharacteristic;
+  BluetoothCharacteristic? _cameraCmdCharacteristic;
+  BluetoothCharacteristic? _cameraStatusCharacteristic;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription? _globalConnectionSubscription;
   StreamSubscription<List<int>>? _notificationSubscription;
@@ -291,9 +293,12 @@ class BleClient {
         } else if (uuid == BleConstants.fileRxCharacteristicUuid.toLowerCase()) {
           _fileRxCharacteristic = char;
           _log('Found File RX characteristic');
-        } else if (uuid == BleConstants.cameraCharacteristicUuid.toLowerCase()) {
-          _cameraCharacteristic = char;
-          _log('Found Camera characteristic');
+        } else if (uuid == BleConstants.cameraCmdCharacteristicUuid.toLowerCase()) {
+          _cameraCmdCharacteristic = char;
+          _log('Found Camera CMD characteristic');
+        } else if (uuid == BleConstants.cameraStatusCharacteristicUuid.toLowerCase()) {
+          _cameraStatusCharacteristic = char;
+          _log('Found Camera Status characteristic');
         }
       }
       
@@ -413,8 +418,9 @@ class BleClient {
     _fileTxCharacteristic = null;
     _fileRxCharacteristic = null;
     _fileCtrlCharacteristic = null;
-    _cameraCharacteristic = null;
-    
+    _cameraCmdCharacteristic = null;
+    _cameraStatusCharacteristic = null;
+
     // Auto-reconnect: restart scanning to find and connect to device again
     _log('Device disconnected, restarting scan to reconnect...');
     await scanAndConnect();
@@ -493,7 +499,8 @@ class BleClient {
       _fileTxCharacteristic = null;
       _fileRxCharacteristic = null;
       _fileCtrlCharacteristic = null;
-      _cameraCharacteristic = null;
+      _cameraCmdCharacteristic = null;
+      _cameraStatusCharacteristic = null;
       _log('Disconnected');
       // Auto-reconnect: restart scanning
       await scanAndConnect();
@@ -549,20 +556,43 @@ class BleClient {
     }
   }
 
-  /// Write to camera characteristic.
+  /// Write to camera CMD characteristic.
   /// [data] is the raw payload (e.g. from [CameraCommand.toBytes]).
   Future<bool> writeCamera(Uint8List data) async {
-    if (!isConnected || _cameraCharacteristic == null) {
+    if (!isConnected || _cameraCmdCharacteristic == null) {
       _log('Cannot write camera: not connected or characteristic not available');
       return false;
     }
     try {
-      await _cameraCharacteristic!.write(data, withoutResponse: true);
+      await _cameraCmdCharacteristic!.write(data, withoutResponse: true);
       _log('Camera command written: ${data.length} bytes');
       return true;
     } catch (e) {
       _log('Error writing camera: $e');
       return false;
+    }
+  }
+
+  /// Camera record status: [flags][period_lo][period_hi]
+  static (bool isRecording, int periodSec) parseCameraStatus(Uint8List data) {
+    if (data.length < 3) return (false, 60);
+    final isRecording = (data[0] & 1) != 0;
+    final periodSec = data[1] | (data[2] << 8);
+    return (isRecording, periodSec.clamp(1, 1000));
+  }
+
+  /// Read camera status (is recording, period in seconds).
+  Future<(bool isRecording, int periodSec)?> readCameraStatus() async {
+    if (!isConnected || _cameraStatusCharacteristic == null) {
+      _log('Cannot read camera status: not connected or characteristic not available');
+      return null;
+    }
+    try {
+      final data = await _cameraStatusCharacteristic!.read();
+      return parseCameraStatus(Uint8List.fromList(data));
+    } catch (e) {
+      _log('Error reading camera status: $e');
+      return null;
     }
   }
   

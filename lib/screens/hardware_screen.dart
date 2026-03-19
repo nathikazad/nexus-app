@@ -5,6 +5,7 @@ import 'package:nexus_voice_assistant/services/hardware_service/hardware_service
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 import 'package:nexus_voice_assistant/bg_ble_client.dart';
+import 'package:nexus_voice_assistant/widgets/camera_section.dart';
 import 'device_selection_screen.dart';
 
 class HardwareScreen extends ConsumerStatefulWidget {
@@ -28,7 +29,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   bool _isPulsingHaptic = false;
   bool _isTriggeringCamera = false;
   bool _isSettingDeviceName = false;
-  
+
   StreamSubscription<BleConnectionState>? _connectionSubscription;
   Timer? _dataRefreshTimer;
 
@@ -45,8 +46,8 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     await _readBatteryData();
     await _readRTCData();
     await _readDeviceName();
-    
-    // Refresh battery and RTC data periodically
+
+    // Refresh battery and RTC periodically (photo record polls inside [PhotoRecordSection])
     _dataRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
       await _readBatteryData();
       await _readRTCData();
@@ -91,7 +92,6 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
             _rtcTimeDisplay = null;
             _rtcTimezone = null;
             _deviceName = null;
-
 
             _stopRefreshTimers();
           } else {
@@ -348,7 +348,6 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   }
 
   @override
-  @override
   void dispose() {
     _stopRefreshTimers();
     _connectionSubscription?.cancel();
@@ -435,19 +434,6 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
                         : const Icon(Icons.vibration, size: 20),
                     onPressed: _isPulsingHaptic ? null : _pulseHaptic,
                     tooltip: 'Vibrate',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  IconButton(
-                    icon: _isTriggeringCamera
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.camera_alt, size: 20),
-                    onPressed: _isTriggeringCamera ? null : _triggerCamera,
-                    tooltip: 'Trigger camera',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -619,8 +605,30 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
                 );
               },
             ),
-            
-            
+
+            const SizedBox(height: 24),
+            CameraSection(
+              isConnected: _isConnected,
+              titleTrailing: _isConnected
+                  ? IconButton(
+                      icon: _isTriggeringCamera
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.camera_alt, size: 22),
+                      onPressed: _isTriggeringCamera ? null : _triggerCamera,
+                      tooltip: 'Trigger camera',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    )
+                  : null,
+            ),
+
             if (!_isConnected) ...[
               const SizedBox(height: 32),
               Text(

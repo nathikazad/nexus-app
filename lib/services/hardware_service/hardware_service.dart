@@ -6,6 +6,17 @@ import 'package:nexus_voice_assistant/services/hardware_service/camera_command.d
 import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
 
 
+/// Auto photo-record status from device (GATT read).
+class CameraRecordStatus {
+  final bool isRecording;
+  final int periodSec;
+
+  CameraRecordStatus({
+    required this.isRecording,
+    required this.periodSec,
+  });
+}
+
 /// Battery data structure
 class BatteryData {
   final int percentage;  // 0-100
@@ -101,6 +112,13 @@ class HardwareService {
   Future<bool> sendCameraCommand(CameraCommand command, {int? period}) async {
     final data = command.toBytes(period: period);
     return await _bgService.writeCamera(data);
+  }
+
+  /// Read auto photo-record status (poll; device does not notify).
+  Future<CameraRecordStatus?> readCameraRecordStatus() async {
+    final st = await _bgService.readCameraStatus();
+    if (st == null) return null;
+    return CameraRecordStatus(isRecording: st.$1, periodSec: st.$2);
   }
 
   /// Read device name from device
