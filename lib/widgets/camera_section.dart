@@ -32,8 +32,6 @@ int _nearestPhotoRecordPeriodOption(int deviceSec) {
   return best;
 }
 
-const Duration _kStatusAfterCommandDelay = Duration(seconds: 3);
-const Duration _kStatusPollInterval = Duration(seconds: 30);
 
 /// BLE-connected auto photo-record controls: status, interval dropdown, start/stop.
 ///
@@ -55,22 +53,31 @@ class CameraSection extends ConsumerStatefulWidget {
   ConsumerState<CameraSection> createState() => CameraSectionState();
 }
 
-class CameraSectionState extends ConsumerState<CameraSection> {
+class CameraSectionState extends ConsumerState<CameraSection>
+    with WidgetsBindingObserver {
   bool? _recording;
   int? _periodSec;
   int _selectedPeriodSec = 60;
   bool _busy = false;
 
-  Timer? _pollTimer;
-  Timer? _postCmdTimer;
+  StreamSubscription<CameraRecordStatus>? _cameraStatusSubscription;
 
   HardwareService get _hardware => ref.read(hardwareServiceProvider);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.isConnected) {
       _onBecameConnected();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && widget.isConnected) {
+      unawaited(_readInitialStatus());
     }
   }
 
@@ -86,25 +93,20 @@ class CameraSectionState extends ConsumerState<CameraSection> {
 
   @override
   void dispose() {
-    _cancelTimers();
+    WidgetsBinding.instance.removeObserver(this);
+    _cameraStatusSubscription?.cancel();
     super.dispose();
   }
 
-  void _cancelTimers() {
-    _pollTimer?.cancel();
-    _pollTimer = null;
-    _postCmdTimer?.cancel();
-    _postCmdTimer = null;
-  }
-
   void _onBecameConnected() {
-    _cancelTimers();
-    unawaited(_readStatus());
-    _pollTimer = Timer.periodic(_kStatusPollInterval, (_) => _readStatus());
+    _cameraStatusSubscription?.cancel();
+    _cameraStatusSubscription = _hardware.cameraStatusStream.listen(_onCameraStatus);
+    unawaited(_readInitialStatus());
   }
 
   void _onBecameDisconnected() {
-    _cancelTimers();
+    _cameraStatusSubscription?.cancel();
+    _cameraStatusSubscription = null;
     if (mounted) {
       setState(() {
         _recording = null;
@@ -113,30 +115,25 @@ class CameraSectionState extends ConsumerState<CameraSection> {
     }
   }
 
-  /// Re-read status shortly after a record command (start/stop/interval).
-  void _scheduleStatusRefreshAfterCommand() {
-    if (!widget.isConnected || !mounted) return;
-    _postCmdTimer?.cancel();
-    _postCmdTimer = Timer(_kStatusAfterCommandDelay, () {
-      _postCmdTimer = null;
-      if (mounted) unawaited(_readStatus());
+  void _onCameraStatus(CameraRecordStatus status) {
+    if (!mounted) return;
+    setState(() {
+      _recording = status.isRecording;
+      _periodSec = status.periodSec;
+      _selectedPeriodSec = kPhotoRecordPeriodOptions.contains(status.periodSec)
+          ? status.periodSec
+          : _nearestPhotoRecordPeriodOption(status.periodSec);
     });
   }
 
-  Future<void> _readStatus() async {
+  Future<void> _readInitialStatus() async {
     if (!widget.isConnected) return;
     try {
       final status = await _hardware.readCameraRecordStatus();
       if (!mounted || status == null) return;
-      setState(() {
-        _recording = status.isRecording;
-        _periodSec = status.periodSec;
-        _selectedPeriodSec = kPhotoRecordPeriodOptions.contains(status.periodSec)
-            ? status.periodSec
-            : _nearestPhotoRecordPeriodOption(status.periodSec);
-      });
+      _onCameraStatus(status);
     } catch (e) {
-      LoggingService.instance.log('PhotoRecordSection: read status failed: $e');
+      LoggingService.instance.log('PhotoRecordSection: initial read failed: $e');
     }
   }
 
@@ -144,12 +141,10 @@ class CameraSectionState extends ConsumerState<CameraSection> {
     if (!widget.isConnected || _busy) return;
     setState(() => _busy = true);
     try {
-      LoggingService.instance.log('PhotoRecord: sending setRecordPeriod(${_selectedPeriodSec})');
       final periodOk = await _hardware.sendCameraCommand(
         CameraCommand.setRecordPeriod,
         period: _selectedPeriodSec,
       );
-      LoggingService.instance.log('PhotoRecord: setRecordPeriod result=$periodOk');
       if (!periodOk) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -158,9 +153,7 @@ class CameraSectionState extends ConsumerState<CameraSection> {
         }
         return;
       }
-      LoggingService.instance.log('PhotoRecord: sending startRecord');
       final startOk = await _hardware.sendCameraCommand(CameraCommand.startRecord);
-      LoggingService.instance.log('PhotoRecord: startRecord result=$startOk');
       if (mounted && !startOk) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to start photo record')),
@@ -174,7 +167,6 @@ class CameraSectionState extends ConsumerState<CameraSection> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
-      _scheduleStatusRefreshAfterCommand();
     }
   }
 
@@ -196,7 +188,6 @@ class CameraSectionState extends ConsumerState<CameraSection> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
-      _scheduleStatusRefreshAfterCommand();
     }
   }
 
@@ -224,7 +215,6 @@ class CameraSectionState extends ConsumerState<CameraSection> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
-      _scheduleStatusRefreshAfterCommand();
     }
   }
 

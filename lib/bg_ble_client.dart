@@ -67,6 +67,7 @@ class BleClient {
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _fileTxNotificationSubscription;
+  StreamSubscription<List<int>>? _cameraStatusNotificationSubscription;
   
   BleConnectionState _state = BleConnectionState.idle;
   
@@ -79,6 +80,7 @@ class BleClient {
   void Function(BleConnectionState)? onConnectionStateChanged;
   void Function(Uint8List)? onAudioPacketReceived;
   void Function(Uint8List)? onFileTxDataReceived;
+  void Function(bool isRecording, int periodSec)? onCameraStatusReceived;
   void Function(String)? onError;
   
   void _setState(BleConnectionState newState) {
@@ -319,6 +321,9 @@ class BleClient {
       // Subscribe to file TX notifications
       await _subscribeToFileTxNotifications();
       
+      // Subscribe to camera status notifications
+      await _subscribeToCameraStatusNotifications();
+      
       // Listen for connection state changes
       _connectionSubscription = _device!.connectionState.listen((state) async {
         if (state == BluetoothConnectionState.disconnected) {
@@ -404,11 +409,41 @@ class BleClient {
     }
   }
   
+  Future<void> _subscribeToCameraStatusNotifications() async {
+    if (_cameraStatusCharacteristic == null) {
+      _log('Cannot subscribe: Camera Status characteristic not found');
+      return;
+    }
+    
+    try {
+      await _cameraStatusCharacteristic!.setNotifyValue(true);
+      
+      _cameraStatusNotificationSubscription = _cameraStatusCharacteristic!.lastValueStream.listen(
+        (value) {
+          if (value.isEmpty) return;
+          final (isRecording, periodSec) = BleClient.parseCameraStatus(Uint8List.fromList(value));
+          onCameraStatusReceived?.call(isRecording, periodSec);
+        },
+        onError: (error) {
+          _log('Camera status notification error: $error');
+          onError?.call('Camera status notification error: $error');
+        },
+      );
+      
+      _log('Subscribed to camera status notifications');
+    } catch (e) {
+      _log('Error subscribing to camera status notifications: $e');
+      onError?.call('Error subscribing to camera status: $e');
+    }
+  }
+  
   Future<void> _handleDisconnection() async {
     await _notificationSubscription?.cancel();
     _notificationSubscription = null;
     await _fileTxNotificationSubscription?.cancel();
     _fileTxNotificationSubscription = null;
+    await _cameraStatusNotificationSubscription?.cancel();
+    _cameraStatusNotificationSubscription = null;
     _audioTxCharacteristic = null;
     _audioRxCharacteristic = null;
     _batteryCharacteristic = null;

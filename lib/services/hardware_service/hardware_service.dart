@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/background_service.dart' show BleBackgroundService, bleBackgroundServiceProvider;
@@ -40,6 +42,7 @@ class HardwareService {
   final BleBackgroundService _bgService;
   BleConnectionState _lastStatus = BleConnectionState.idle;
   String? _deviceName;
+  final StreamController<CameraRecordStatus> _cameraStatusController = StreamController<CameraRecordStatus>.broadcast();
 
   HardwareService(this._bgService) {
     // Listen to status stream to track connection state
@@ -47,11 +50,27 @@ class HardwareService {
       _lastStatus = status;
     });
     
+    // Listen to device.push for camera status updates
+    _bgService.devicePushStream.listen((event) {
+      if (event['type'] == 'camera') {
+        final data = event['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          final isRecording = data['isRecording'] as bool? ?? false;
+          final periodSec = (data['periodSec'] as int?)?.clamp(1, 1000) ?? 60;
+          _cameraStatusController.add(CameraRecordStatus(
+            isRecording: isRecording,
+            periodSec: periodSec,
+          ));
+        }
+      }
+    });
+    
     // Read device name once during initialization
     _readDeviceName();
   }
 
   Stream<BleConnectionState> get statusStream => _bgService.statusStream;
+  Stream<CameraRecordStatus> get cameraStatusStream => _cameraStatusController.stream;
   bool get isConnected => _lastStatus == BleConnectionState.connected;
   String? get deviceName => _deviceName;
 

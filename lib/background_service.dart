@@ -67,6 +67,13 @@ class BleBackgroundService {
       service.invoke('ble.error', {'error': error});
     };
     
+    bleClient.onCameraStatusReceived = (isRecording, periodSec) {
+      service.invoke('device.push', {
+        'type': 'camera',
+        'data': {'isRecording': isRecording, 'periodSec': periodSec},
+      });
+    };
+    
     await bleClient.initialize();
     
     // ============================================================================
@@ -305,10 +312,11 @@ class BleBackgroundService {
 
   final StreamController<BleConnectionState> _statusController = StreamController<BleConnectionState>.broadcast();
   final StreamController<Uint8List> _fileTxDataController = StreamController<Uint8List>.broadcast();
-
+  final StreamController<Map<String, dynamic>> _devicePushController = StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<BleConnectionState> get statusStream => _statusController.stream;
   Stream<Uint8List> get fileTxStream => _fileTxDataController.stream;
+  Stream<Map<String, dynamic>> get devicePushStream => _devicePushController.stream;
 
   Future<void> init({
     required Future<void> Function(ServiceInstance) onStart,
@@ -370,6 +378,12 @@ class BleBackgroundService {
       while (end < data.length && data[end] != 0) end++;
       final filename = String.fromCharCodes(data.sublist(4, end));
       debugPrint('[File TX] $filename packet ${pktNum + 1}/$totalPkts');
+    });
+
+    _service.on('device.push').listen((event) {
+      if (event is Map<String, dynamic>) {
+        _devicePushController.add(event);
+      }
     });
 
     // Set up single shared subscription for command results
@@ -599,6 +613,7 @@ class BleBackgroundService {
     _pendingRequests.clear();
     _statusController.close();
     _fileTxDataController.close();
+    _devicePushController.close();
   }
 }
 
