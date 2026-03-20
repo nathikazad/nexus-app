@@ -56,7 +56,6 @@ class CameraSection extends ConsumerStatefulWidget {
 class CameraSectionState extends ConsumerState<CameraSection>
     with WidgetsBindingObserver {
   bool? _recording;
-  int? _periodSec;
   int _selectedPeriodSec = 60;
   bool _busy = false;
 
@@ -110,7 +109,6 @@ class CameraSectionState extends ConsumerState<CameraSection>
     if (mounted) {
       setState(() {
         _recording = null;
-        _periodSec = null;
       });
     }
   }
@@ -119,7 +117,6 @@ class CameraSectionState extends ConsumerState<CameraSection>
     if (!mounted) return;
     setState(() {
       _recording = status.isRecording;
-      _periodSec = status.periodSec;
       _selectedPeriodSec = kPhotoRecordPeriodOptions.contains(status.periodSec)
           ? status.periodSec
           : _nearestPhotoRecordPeriodOption(status.periodSec);
@@ -220,109 +217,66 @@ class CameraSectionState extends ConsumerState<CameraSection>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final canInteract = widget.isConnected && !_busy;
+    final isRecording = _recording == true;
 
-    return Column(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                'Photo record',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              if (widget.titleTrailing != null) ...[
-                const SizedBox(width: 4),
-                widget.titleTrailing!,
-              ],
-            ],
+        if (widget.titleTrailing != null) ...[
+          widget.titleTrailing!,
+          const SizedBox(width: 8),
+        ],
+        IconButton(
+          onPressed: canInteract
+              ? (isRecording ? _stop : _start)
+              : null,
+          icon: Icon(
+            isRecording ? Icons.pause : Icons.play_arrow,
+            size: 22,
+            color: Colors.grey[800],
+          ),
+          tooltip: isRecording ? 'Stop photo record' : 'Start photo record',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 72,
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+              isDense: true,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                isExpanded: true,
+                value: kPhotoRecordPeriodOptions.contains(_selectedPeriodSec)
+                    ? _selectedPeriodSec
+                    : _nearestPhotoRecordPeriodOption(_selectedPeriodSec),
+                items: kPhotoRecordPeriodOptions
+                    .map(
+                    (s) => DropdownMenuItem<int>(
+                      value: s,
+                      child: Text('$s', softWrap: false, overflow: TextOverflow.visible),
+                    ),
+                    )
+                    .toList(),
+              onChanged: canInteract ? _onPeriodChanged : null,
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          !widget.isConnected
-              ? '--'
-              : _recording == null || _periodSec == null
-                  ? '--'
-                  : '${_recording! ? 'On' : 'Off'} · every ${_periodSec!} s',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: widget.isConnected &&
-                    _recording != null &&
-                    _periodSec != null
-                ? Colors.teal
-                : Colors.grey,
-          ),
         ),
-        if (widget.isConnected) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Interval',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.grey[700],
-            ),
+        if (_busy) ...[
+          const SizedBox(width: 8),
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 280),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    isExpanded: true,
-                    value: kPhotoRecordPeriodOptions.contains(_selectedPeriodSec)
-                        ? _selectedPeriodSec
-                        : _nearestPhotoRecordPeriodOption(_selectedPeriodSec),
-                    items: kPhotoRecordPeriodOptions
-                        .map(
-                          (s) => DropdownMenuItem<int>(
-                            value: s,
-                            child: Text('$s seconds'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _busy ? null : _onPeriodChanged,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FilledButton.icon(
-                onPressed: !_busy && (_recording != true) ? _start : null,
-                icon: const Icon(Icons.play_arrow, size: 20),
-                label: const Text('Start'),
-              ),
-              const SizedBox(width: 16),
-              FilledButton.tonalIcon(
-                onPressed: !_busy && (_recording == true) ? _stop : null,
-                icon: const Icon(Icons.stop, size: 20),
-                label: const Text('Stop'),
-              ),
-            ],
-          ),
-          if (_busy) ...[
-            const SizedBox(height: 8),
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ],
         ],
       ],
     );
