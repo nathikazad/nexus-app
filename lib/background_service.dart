@@ -83,18 +83,49 @@ class BleBackgroundService {
     // Forward packets from server to BLE
     socketClient.onPacketFromServer = (packet) => bleClient.sendAudio(packet);
 
-    // Handle device requests (e.g. take_photo)
+    // Handle device requests (e.g. take_photo, camera record)
     socketClient.onDeviceRequest = (requestId, action, params) async {
-      if (action == 'take_photo') {
-        try {
-          final success = await bleClient.writeCamera(CameraCommand.capture.toBytes());
-          return jsonEncode({'success': success});
-        } catch (e) {
-          debugPrint("[BLE BG] take_photo error: $e");
-          return jsonEncode({'success': false, 'error': e.toString()});
+      try {
+        switch (action) {
+          case 'take_photo':
+            final success = await bleClient.writeCamera(CameraCommand.capture.toBytes());
+            return jsonEncode({'success': success});
+          case 'get_camera_status':
+            final st = await bleClient.readCameraStatus();
+            if (st == null) return jsonEncode({'success': false});
+            final (isRecording, periodSec) = st;
+            return jsonEncode({
+              'success': true,
+              'isRecording': isRecording,
+              'periodSec': periodSec,
+            });
+          case 'start_record':
+            final periodSec = (params['periodSec'] as num?)?.toInt() ?? 60;
+            final periodOk = await bleClient.writeCamera(
+              CameraCommand.setRecordPeriod.toBytes(period: periodSec.clamp(1, 1000)),
+            );
+            if (!periodOk) return jsonEncode({'success': false});
+            final startOk = await bleClient.writeCamera(CameraCommand.startRecord.toBytes());
+            return jsonEncode({'success': startOk});
+          case 'stop_record':
+            final success = await bleClient.writeCamera(CameraCommand.stopRecord.toBytes());
+            return jsonEncode({'success': success});
+          case 'set_record_period':
+            final periodSec = (params['periodSec'] as num?)?.toInt();
+            if (periodSec == null || periodSec < 1 || periodSec > 1000) {
+              return jsonEncode({'success': false, 'error': 'periodSec required (1-1000)'});
+            }
+            final success = await bleClient.writeCamera(
+              CameraCommand.setRecordPeriod.toBytes(period: periodSec),
+            );
+            return jsonEncode({'success': success});
+          default:
+            return null;
         }
+      } catch (e) {
+        debugPrint("[BLE BG] Device request $action error: $e");
+        return jsonEncode({'success': false, 'error': e.toString()});
       }
-      return null;
     };
     
     // ============================================================================

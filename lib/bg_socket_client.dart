@@ -289,11 +289,18 @@ class SocketClient {
         return true;
       }
 
-      if (action == 'take_photo' && onDeviceRequest != null) {
+      const deviceActions = [
+        'take_photo',
+        'get_camera_status',
+        'start_record',
+        'stop_record',
+        'set_record_period',
+      ];
+      if (deviceActions.contains(action) && onDeviceRequest != null) {
         final result = await onDeviceRequest!(requestId, action, payload);
         if (result != null) {
           sendDeviceResponsePacket(requestId, result);
-          debugPrint("[Socket] Handled take_photo request via onDeviceRequest");
+          debugPrint("[Socket] Handled $action request via onDeviceRequest");
           return true;
         }
       }
