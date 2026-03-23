@@ -295,6 +295,8 @@ class SocketClient {
         'start_record',
         'stop_record',
         'set_record_period',
+        'get_battery',
+        'vibrate',
       ];
       if (deviceActions.contains(action) && onDeviceRequest != null) {
         final result = await onDeviceRequest!(requestId, action, payload);

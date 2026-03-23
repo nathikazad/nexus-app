@@ -119,6 +119,24 @@ class BleBackgroundService {
               CameraCommand.setRecordPeriod.toBytes(period: periodSec),
             );
             return jsonEncode({'success': success});
+          case 'get_battery':
+            final raw = await bleClient.readBattery();
+            final parsed = raw != null ? BleClient.parseBatteryStatus(raw) : null;
+            if (parsed == null) {
+              return jsonEncode({'success': false, 'error': 'battery unavailable'});
+            }
+            final (:voltageMv, :percent, :charging) = parsed;
+            return jsonEncode({
+              'success': true,
+              'voltageMv': voltageMv,
+              'percent': percent,
+              'charging': charging,
+            });
+          case 'vibrate':
+            final effectId =
+                ((params['effectId'] as num?)?.toInt() ?? 16).clamp(0, 123);
+            final success = await bleClient.writeHaptic(effectId);
+            return jsonEncode({'success': success});
           default:
             return null;
         }

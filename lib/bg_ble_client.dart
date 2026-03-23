@@ -561,7 +561,7 @@ class BleClient {
     }
   }
   
-  /// Read battery data
+  /// Read battery raw bytes from GATT (see [parseBatteryStatus]).
   Future<Uint8List?> readBattery() async {
     if (!isConnected || _batteryCharacteristic == null) {
       _log('Cannot read battery: not connected');
@@ -574,6 +574,16 @@ class BleClient {
       _log('Error reading battery: $e');
       return null;
     }
+  }
+
+  /// MAX17048-packed BLE value: [voltage_hi][voltage_lo][soc_percent][charging 0|1]
+  static ({int voltageMv, int percent, bool charging})? parseBatteryStatus(
+      Uint8List data) {
+    if (data.length < 4) return null;
+    final voltageMv = (data[0] << 8) | data[1];
+    final percent = data[2];
+    final charging = data[3] != 0;
+    return (voltageMv: voltageMv, percent: percent, charging: charging);
   }
   
   /// Write haptic effect
