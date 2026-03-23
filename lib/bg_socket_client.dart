@@ -335,9 +335,8 @@ class SocketClient {
     }
   }
 
-  /// Send an EOF packet to the server.
-  /// Format: [header_type 2B][index (4 bytes)]
-  /// Header type for EOF is 0xFFFC
+  /// Send an audio / voice EOF packet (end of mic turn, ForceEndpoint on server).
+  /// Format: [header_type 2B][index 4B]. Header type 0xFFFC.
   void sendEofPacket(int index) {
     if (!_isConnected || _channel == null) {
       debugPrint("[Socket] Cannot send EOF packet: not connected");
@@ -354,9 +353,33 @@ class SocketClient {
       byteData.setUint32(2, index, Endian.little);
 
       _channel!.sink.add(packet);
-      debugPrint("[Socket] Sent EOF packet #$index");
+      debugPrint("[Socket] Sent audio EOF packet #$index");
     } catch (e) {
       debugPrint("[Socket] Error sending EOF packet: $e");
+      _handleDisconnection();
+    }
+  }
+
+  /// Send a text-only EOF (end of typed message). Does not trigger voice/STT.
+  /// Format: [header_type 2B][index 4B]. Header type 0x0006 (TEXT_EOF).
+  void sendTextEofPacket(int index) {
+    if (!_isConnected || _channel == null) {
+      debugPrint("[Socket] Cannot send text EOF packet: not connected");
+      return;
+    }
+
+    try {
+      const int TEXT_EOF_PACKET = 0x0006;
+
+      final packet = Uint8List(6);
+      final byteData = ByteData.view(packet.buffer);
+      byteData.setUint16(0, TEXT_EOF_PACKET, Endian.little);
+      byteData.setUint32(2, index, Endian.little);
+
+      _channel!.sink.add(packet);
+      debugPrint("[Socket] Sent TEXT_EOF packet #$index");
+    } catch (e) {
+      debugPrint("[Socket] Error sending TEXT_EOF packet: $e");
       _handleDisconnection();
     }
   }

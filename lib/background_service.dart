@@ -163,8 +163,8 @@ class BleBackgroundService {
     
     service.on('socket.sendEof').listen((event) {
       textPacketCount++;
-      socketClient.sendEofPacket(textPacketCount);
-      debugPrint("[BLE BG] Sent EOF packet #$textPacketCount");
+      socketClient.sendTextEofPacket(textPacketCount);
+      debugPrint("[BLE BG] Sent TEXT_EOF packet #$textPacketCount");
       // Reset counter after EOF for next turn
       textPacketCount = 0;
     });
