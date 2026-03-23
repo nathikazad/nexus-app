@@ -335,27 +335,27 @@ class SocketClient {
     }
   }
 
-  /// Send an audio / voice EOF packet (end of mic turn, ForceEndpoint on server).
+  /// Send an AUDIO_EOF packet (end of mic / voice turn, ForceEndpoint on server).
   /// Format: [header_type 2B][index 4B]. Header type 0xFFFC.
-  void sendEofPacket(int index) {
+  void sendAudioEofPacket(int index) {
     if (!_isConnected || _channel == null) {
-      debugPrint("[Socket] Cannot send EOF packet: not connected");
+      debugPrint("[Socket] Cannot send AUDIO_EOF packet: not connected");
       return;
     }
 
     try {
-      const int EOF_PACKET = 0xFFFC;
+      const int AUDIO_EOF_PACKET = 0xFFFC;
 
       // Format: [header_type 2B][index 4B]
       final packet = Uint8List(6);
       final byteData = ByteData.view(packet.buffer);
-      byteData.setUint16(0, EOF_PACKET, Endian.little);
+      byteData.setUint16(0, AUDIO_EOF_PACKET, Endian.little);
       byteData.setUint32(2, index, Endian.little);
 
       _channel!.sink.add(packet);
-      debugPrint("[Socket] Sent audio EOF packet #$index");
+      debugPrint("[Socket] Sent AUDIO_EOF packet #$index");
     } catch (e) {
-      debugPrint("[Socket] Error sending EOF packet: $e");
+      debugPrint("[Socket] Error sending AUDIO_EOF packet: $e");
       _handleDisconnection();
     }
   }
