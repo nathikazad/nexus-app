@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'bg_ble_client.dart' show BleClient, BleConnectionState;
 import 'bg_socket_client.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
+import 'package:nexus_voice_assistant/services/logging_service.dart';
 
 class BleBackgroundService {
   /// Start the background service (called from onStart entry point)
@@ -73,7 +74,11 @@ class BleBackgroundService {
         'data': {'isRecording': isRecording, 'periodSec': periodSec},
       });
     };
-    
+
+    bleClient.onDiagnosticLog = (message) {
+      service.invoke('ble.debugLog', {'message': message});
+    };
+
     await bleClient.initialize();
     
     // ============================================================================
@@ -420,6 +425,13 @@ class BleBackgroundService {
         // Fallback to scanning if parsing fails
         lastKnownBleStatus = BleConnectionState.idle;
         _statusController.add(BleConnectionState.idle);
+      }
+    });
+
+    _service.on('ble.debugLog').listen((event) {
+      final message = event?['message'] as String?;
+      if (message != null && message.isNotEmpty) {
+        LoggingService.instance.log('[BLE] $message');
       }
     });
 

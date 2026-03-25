@@ -82,16 +82,25 @@ class BleClient {
   void Function(Uint8List)? onFileTxDataReceived;
   void Function(bool isRecording, int periodSec)? onCameraStatusReceived;
   void Function(String)? onError;
-  
+
+  /// Curated connection lifecycle lines (scanning, found, connected, disconnected).
+  /// Bridged to [LoggingService] on the main isolate via the background service.
+  void Function(String message)? onDiagnosticLog;
+
   void _setState(BleConnectionState newState) {
     _state = newState;
     onConnectionStateChanged?.call(newState);
   }
-  
+
   void _log(String message) {
     debugPrint("[BLE] $message");
   }
-  
+
+  void _diagnosticLog(String message) {
+    _log(message);
+    onDiagnosticLog?.call(message);
+  }
+
   // ===========================================================================
   // INITIALIZATION
   // ===========================================================================
@@ -152,7 +161,7 @@ class BleClient {
     }
     
     _setState(BleConnectionState.scanning);
-    _log('Starting scan for Nexus device...');
+    _diagnosticLog('Starting scan for Nexus device...');
     
     try {
       // Wait for Bluetooth adapter to be on
@@ -168,7 +177,7 @@ class BleClient {
         (results) async {
           for (ScanResult result in results) {
             if (result.device.platformName.isNotEmpty) {
-              _log('Found device: ${result.device.platformName}');
+              _diagnosticLog('Found device: ${result.device.platformName}');
               
               // Auto-connect to first matching device
               await stopScan();
@@ -246,7 +255,7 @@ class BleClient {
             .timeout(const Duration(seconds: 15));
       }
       
-      _log('Connected to ${_device!.platformName} (was already: $alreadyConnected)');
+      _diagnosticLog('Connected to ${_device!.platformName} (was already: $alreadyConnected)');
       
       // Discover services
       final services = await _device!.discoverServices();
@@ -327,7 +336,7 @@ class BleClient {
       // Listen for connection state changes
       _connectionSubscription = _device!.connectionState.listen((state) async {
         if (state == BluetoothConnectionState.disconnected) {
-          _log('Device disconnected');
+          _diagnosticLog('Device disconnected');
           await _handleDisconnection();
         }
       });
@@ -457,7 +466,7 @@ class BleClient {
     _cameraStatusCharacteristic = null;
 
     // Auto-reconnect: restart scanning to find and connect to device again
-    _log('Device disconnected, restarting scan to reconnect...');
+    _diagnosticLog('Device disconnected, restarting scan to reconnect...');
     await scanAndConnect();
   }
   
@@ -470,10 +479,10 @@ class BleClient {
     // First check for already connected devices (iOS background mode)
     final alreadyConnected = await _checkForAlreadyConnectedDevice();
     if (alreadyConnected) {
-      _log('Already connected to device, returning true');
+      _diagnosticLog('Already connected to device, returning true');
       return true;
     } else {
-      _log('Not connected to device, starting scan');
+      _diagnosticLog('Not connected to device, starting scan');
     }
     
     // Otherwise, start scanning
