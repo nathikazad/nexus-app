@@ -27,6 +27,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   bool _isConnected = false;
   bool _isSettingRTC = false;
   bool _isPulsingHaptic = false;
+  bool _isPowerCycling = false;
   bool _isTriggeringCamera = false;
   bool _isSettingDeviceName = false;
 
@@ -312,6 +313,46 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     }
   }
 
+  Future<void> _powerCycleDevice() async {
+    if (!_isConnected || _isPowerCycling) {
+      return;
+    }
+
+    setState(() {
+      _isPowerCycling = true;
+    });
+
+    try {
+      final success =
+          await _hardwareService.sendCameraCommand(CameraCommand.powerCycle);
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Power cycle sent — device will restart'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to send power cycle')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending power cycle: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPowerCycling = false;
+        });
+      }
+    }
+  }
+
   Future<void> _triggerCamera() async {
     if (!_isConnected || _isTriggeringCamera) {
       return;
@@ -434,6 +475,19 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
                         : const Icon(Icons.vibration, size: 20),
                     onPressed: _isPulsingHaptic ? null : _pulseHaptic,
                     tooltip: 'Vibrate',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  IconButton(
+                    icon: _isPowerCycling
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.restart_alt, size: 20),
+                    onPressed: _isPowerCycling ? null : _powerCycleDevice,
+                    tooltip: 'Power cycle',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),

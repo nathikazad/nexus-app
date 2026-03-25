@@ -601,6 +601,12 @@ class BleClient {
     }
   }
 
+  /// Cold reboot via camera CMD characteristic (firmware opcode 5).
+  /// Same byte sequence as [CameraCommand.powerCycle] in `camera_command.dart`.
+  Future<bool> writePowerCycle() async {
+    return writeCamera(Uint8List.fromList([5]));
+  }
+
   /// Write to camera CMD characteristic.
   /// [data] is the raw payload (e.g. from [CameraCommand.toBytes]).
   Future<bool> writeCamera(Uint8List data) async {

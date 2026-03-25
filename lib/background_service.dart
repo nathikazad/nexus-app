@@ -137,6 +137,10 @@ class BleBackgroundService {
                 ((params['effectId'] as num?)?.toInt() ?? 16).clamp(0, 123);
             final success = await bleClient.writeHaptic(effectId);
             return jsonEncode({'success': success});
+          case 'power_cycle':
+            final success =
+                await bleClient.writeCamera(CameraCommand.powerCycle.toBytes());
+            return jsonEncode({'success': success});
           default:
             return null;
         }
@@ -153,6 +157,10 @@ class BleBackgroundService {
     // BLE control events
     service.on('ble.start').listen((event) async {
       await bleClient.scanAndConnect();
+    });
+
+    service.on('ble.syncStatus').listen((event) {
+      service.invoke('ble.status', {'status': bleClient.state.name});
     });
     
     service.on('ble.stop').listen((event) async {
@@ -363,6 +371,11 @@ class BleBackgroundService {
   final StreamController<Uint8List> _fileTxDataController = StreamController<Uint8List>.broadcast();
   final StreamController<Map<String, dynamic>> _devicePushController = StreamController<Map<String, dynamic>>.broadcast();
 
+  /// Last BLE state from the background isolate. Updated on every [statusStream] event.
+  /// Use this for [isConnected] checks: broadcast streams do not replay, so subscribers
+  /// that attach after `connected` was already emitted would otherwise see [idle] forever.
+  BleConnectionState lastKnownBleStatus = BleConnectionState.idle;
+
   Stream<BleConnectionState> get statusStream => _statusController.stream;
   Stream<Uint8List> get fileTxStream => _fileTxDataController.stream;
   Stream<Map<String, dynamic>> get devicePushStream => _devicePushController.stream;
@@ -401,12 +414,18 @@ class BleBackgroundService {
           (state) => state.name == statusStr,
           orElse: () => BleConnectionState.idle,
         );
+        lastKnownBleStatus = status;
         _statusController.add(status);
       } catch (e) {
         // Fallback to scanning if parsing fails
+        lastKnownBleStatus = BleConnectionState.idle;
         _statusController.add(BleConnectionState.idle);
       }
     });
+
+    // Re-emit current state from the isolate so late subscribers are not stuck on [idle]
+    // after missing earlier `ble.status` events (broadcast stream has no replay).
+    _service.invoke('ble.syncStatus');
 
     _service.on('ble.error').listen((event) {
       final error = event?['error'] ?? 'Unknown error';

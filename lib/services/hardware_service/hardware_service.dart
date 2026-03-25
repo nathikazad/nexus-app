@@ -40,16 +40,10 @@ final hardwareServiceProvider = Provider<HardwareService>((ref) {
 
 class HardwareService {
   final BleBackgroundService _bgService;
-  BleConnectionState _lastStatus = BleConnectionState.idle;
   String? _deviceName;
   final StreamController<CameraRecordStatus> _cameraStatusController = StreamController<CameraRecordStatus>.broadcast();
 
   HardwareService(this._bgService) {
-    // Listen to status stream to track connection state
-    _bgService.statusStream.listen((status) {
-      _lastStatus = status;
-    });
-    
     // Listen to device.push for camera status updates
     _bgService.devicePushStream.listen((event) {
       if (event['type'] == 'camera') {
@@ -71,7 +65,7 @@ class HardwareService {
 
   Stream<BleConnectionState> get statusStream => _bgService.statusStream;
   Stream<CameraRecordStatus> get cameraStatusStream => _cameraStatusController.stream;
-  bool get isConnected => _lastStatus == BleConnectionState.connected;
+  bool get isConnected => _bgService.lastKnownBleStatus == BleConnectionState.connected;
   String? get deviceName => _deviceName;
 
   Future<void> _readDeviceName() async {

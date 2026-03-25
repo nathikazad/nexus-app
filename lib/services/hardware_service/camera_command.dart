@@ -13,7 +13,10 @@ enum CameraCommand {
 
   /// Set record period in seconds.
   /// Requires [period] parameter (1-1000).
-  setRecordPeriod(4);
+  setRecordPeriod(4),
+
+  /// Cold reboot / power cycle (firmware camera CMD opcode 5).
+  powerCycle(5);
 
   const CameraCommand(this.value);
   final int value;
@@ -25,6 +28,7 @@ enum CameraCommand {
       case CameraCommand.capture:
       case CameraCommand.startRecord:
       case CameraCommand.stopRecord:
+      case CameraCommand.powerCycle:
         return Uint8List.fromList([value]);
       case CameraCommand.setRecordPeriod:
         if (period == null || period < 1 || period > 1000) {
