@@ -2,24 +2,34 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'auth.dart';
+import 'cf_access.dart';
 
 class GraphQLConfig {
   static String get defaultEndpoint => kDebugMode 
       ? 'http://10.0.0.95:5001/graphql'
-      : 'http://192.168.0.44:5001/graphql';
+      : 'https://graphql.supacharger.ai/graphql';
   static const String defaultUserId = '1';
 }
 
 GraphQLClient createClient(String endpoint, String userId) {
+  // Upgrade saved http:// endpoints to https:// for Cloudflare tunnel hostnames
+  var ep = endpoint;
+  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
+    ep = ep.replaceFirst('http://', 'https://');
+  }
+  final attachCf = CfAccess.shouldAttachHeaders(ep);
+  final cf = attachCf ? CfAccess.headers : const <String, String>{};
+
   final httpLink = HttpLink(
-    endpoint,
+    ep,
     defaultHeaders: {
       'x-user-id': userId,
+      ...cf,
     },
   );
   
   // Extract WebSocket URL (replace http:// with ws://, https:// with wss://)
-  final wsUrl = endpoint
+  final wsUrl = ep
       .replaceFirst('http://', 'ws://')
       .replaceFirst('https://', 'wss://');
   
@@ -30,6 +40,7 @@ GraphQLClient createClient(String endpoint, String userId) {
       autoReconnect: true,
       inactivityTimeout: const Duration(seconds: 30),
       initialPayload: {'x-user-id': userId},
+      headers: attachCf ? cf : null,
     ),
   );
   

@@ -15,6 +15,7 @@ class _QueuedPacket {
 class SocketClient {
   WebSocketChannel? _channel;
   String? _url;
+  Map<String, String>? _accessHeaders;
   bool _isConnected = false;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
@@ -34,7 +35,8 @@ class SocketClient {
   bool get isConnected => _isConnected;
   int get queuedPacketCount => _packetQueue.length;
 
-  Future<bool> connect(String url) async {
+  Future<bool> connect(String url, {Map<String, String>? headers}) async {
+    _accessHeaders = headers;
     if (_isConnected && _url == url) {
       debugPrint("[Socket] Already connected to $url");
       return true;
@@ -55,6 +57,7 @@ class SocketClient {
       
       _channel = IOWebSocketChannel.connect(
         _url!,
+        headers: _accessHeaders,
         pingInterval: const Duration(seconds: 20),
         connectTimeout: const Duration(seconds: 10),
       );

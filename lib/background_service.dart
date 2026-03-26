@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'bg_ble_client.dart' show BleClient, BleConnectionState;
 import 'bg_socket_client.dart';
+import 'cf_access.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
 
@@ -26,10 +27,15 @@ class BleBackgroundService {
     final bleClient = BleClient();
     final socketClient = SocketClient();
     final defaultSocketUrl = kDebugMode 
-        ? 'ws://10.0.0.95:8002 '
-        : 'ws://10.0.0.95:8002';
+        ? 'ws://10.0.0.95:8002'
+        : 'wss://sock.supacharger.ai';
     
-    await socketClient.connect(defaultSocketUrl);
+    await socketClient.connect(
+      defaultSocketUrl,
+      headers: CfAccess.shouldAttachHeaders(defaultSocketUrl)
+          ? CfAccess.headers
+          : null,
+    );
     
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -174,8 +180,12 @@ class BleBackgroundService {
     
     // Socket control events
     service.on('socket.connect').listen((event) async {
-      final url = event?['url'] ?? defaultSocketUrl;
-      await socketClient.connect(url);
+      final url = event?['url'] as String? ?? defaultSocketUrl;
+      await socketClient.connect(
+        url,
+        headers:
+            CfAccess.shouldAttachHeaders(url) ? CfAccess.headers : null,
+      );
     });
     
     service.on('socket.disconnect').listen((event) async {
