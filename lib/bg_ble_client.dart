@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
+import 'package:nexus_voice_assistant/services/paired_device_storage.dart';
 
 // =============================================================================
 // BLE CONSTANTS
@@ -30,12 +32,13 @@ class BleConstants {
 // =============================================================================
 //
 // State transitions:
-//   idle -> scanning (startScan)
-//   scanning -> idle (stopScan)
+//   idle -> scanning (startScan — first-time discovery only)
+//   idle -> connecting (reconnect via autoConnect)
+//   scanning -> idle (stopScan / error)
 //   scanning -> connecting (device found)
 //   connecting -> connected (success)
-//   connecting -> scanning (failure, retry)
-//   connected -> scanning (disconnect + reconnect)
+//   connecting -> idle (failure — autoConnect stays registered with OS)
+//   connected -> connecting (disconnect + autoConnect reconnect)
 //
 
 enum BleConnectionState {
@@ -70,6 +73,25 @@ class BleClient {
   StreamSubscription<List<int>>? _cameraStatusNotificationSubscription;
   
   BleConnectionState _state = BleConnectionState.idle;
+
+  /// When set (or loaded from [PairedDeviceStorage]), only that peripheral is used.
+  String? _preferredRemoteId;
+
+  /// Overrides in-memory preference (e.g. from background isolate message).
+  void setPreferredRemoteId(String? id) {
+    _preferredRemoteId = id;
+  }
+
+  /// Reload [PairedDeviceStorage] into [_preferredRemoteId].
+  Future<void> reloadPreferredFromStorage() async {
+    _preferredRemoteId = await PairedDeviceStorage.getPairedRemoteId();
+  }
+
+  bool _matchesPreferred(BluetoothDevice device) {
+    final pref = _preferredRemoteId;
+    if (pref == null || pref.isEmpty) return false;
+    return device.remoteId.str == pref;
+  }
   
   BleConnectionState get state => _state;
   bool get isConnected => _state == BleConnectionState.connected;
@@ -136,15 +158,19 @@ class BleClient {
     _globalConnectionSubscription = FlutterBluePlus.events.onConnectionStateChanged.listen(
       (event) async {
         if (event.connectionState == BluetoothConnectionState.connected) {
+          await reloadPreferredFromStorage();
+          if (!_matchesPreferred(event.device)) {
+            _log('Global connect ignored (not the paired device)');
+            return;
+          }
           _log('Global event: device connected: ${event.device.platformName}');
-          // TODO: Maybe we should reconnect to the device.
           if (_state == BleConnectionState.connected || _state == BleConnectionState.connecting) {
             _log('Already handling a connection, ignoring');
             return;
           }
           _device = event.device;
           await stopScan();
-          await _connectToDevice();
+          await _setupConnectedDevice();
         }
       },
     );
@@ -159,9 +185,14 @@ class BleClient {
       _log('Already scanning');
       return;
     }
-    
+    await reloadPreferredFromStorage();
+    if (_preferredRemoteId == null || _preferredRemoteId!.isEmpty) {
+      _diagnosticLog('Cannot scan: no paired device ID. Select a device in the app first.');
+      return;
+    }
+
     _setState(BleConnectionState.scanning);
-    _diagnosticLog('Starting scan for Nexus device...');
+    _diagnosticLog('Starting scan for paired Nexus device...');
     
     try {
       // Wait for Bluetooth adapter to be on
@@ -176,15 +207,20 @@ class BleClient {
       _scanSubscription = FlutterBluePlus.scanResults.listen(
         (results) async {
           for (ScanResult result in results) {
-            if (result.device.platformName.isNotEmpty) {
-              _diagnosticLog('Found device: ${result.device.platformName}');
-              
-              // Auto-connect to first matching device
-              await stopScan();
-              _device = result.device;
-              await _connectToDevice();
-              return;
+            if (!_matchesPreferred(result.device)) {
+              continue;
             }
+            final name = result.device.platformName.isNotEmpty
+                ? result.device.platformName
+                : result.device.advName;
+            if (name.isEmpty) {
+              continue;
+            }
+            _diagnosticLog('Found paired device: $name');
+            await stopScan();
+            _device = result.device;
+            await _connectToDevice();
+            return;
           }
         },
         onError: (e) {
@@ -208,8 +244,6 @@ class BleClient {
       _scanSubscription = null;
       _setState(BleConnectionState.idle);
       onError?.call('Scan error: $e');
-      // Auto-retry: restart scanning
-      await scanAndConnect();
     }
   }
   
@@ -226,7 +260,28 @@ class BleClient {
   // ===========================================================================
   // CONNECTION
   // ===========================================================================
-  
+
+  void _cancelConnectionSubscription() {
+    _connectionSubscription?.cancel();
+    _connectionSubscription = null;
+  }
+
+  void _clearCharacteristics() {
+    _audioTxCharacteristic = null;
+    _audioRxCharacteristic = null;
+    _batteryCharacteristic = null;
+    _hapticCharacteristic = null;
+    _rtcCharacteristic = null;
+    _deviceNameCharacteristic = null;
+    _fileTxCharacteristic = null;
+    _fileRxCharacteristic = null;
+    _fileCtrlCharacteristic = null;
+    _cameraCmdCharacteristic = null;
+    _cameraStatusCharacteristic = null;
+  }
+
+  /// Attempt a direct connect with a short timeout. Used when the device was
+  /// just seen (scan result / user pick) and is expected to be in range now.
   Future<bool> _connectToDevice() async {
     if (_device == null) {
       _log('No device to connect to');
@@ -238,9 +293,8 @@ class BleClient {
     }
     _setState(BleConnectionState.connecting);
     _log('Connecting to ${_device!.platformName}...');
-    
+
     try {
-      // Check if already connected at OS level (e.g. auto-reconnect)
       final alreadyConnected = _device!.isConnected;
       if (!alreadyConnected) {
         await _device!.connect(
@@ -249,19 +303,71 @@ class BleClient {
           mtu: null,
           license: License.free,
         );
-        
+
         await _device!.connectionState
             .firstWhere((state) => state == BluetoothConnectionState.connected)
             .timeout(const Duration(seconds: 15));
       }
-      
-      _diagnosticLog('Connected to ${_device!.platformName} (was already: $alreadyConnected)');
-      
-      // Discover services
+
+      return await _setupConnectedDevice();
+    } catch (e) {
+      _log('Connection error: $e');
+      onError?.call('Connection error: $e');
+      _setState(BleConnectionState.idle);
+      return false;
+    }
+  }
+
+  /// Register an autoConnect intent and return immediately. The OS will
+  /// reconnect when the peripheral is back in range; the global connection
+  /// listener calls [_setupConnectedDevice] at that point.
+  /// No active scanning — works in iOS background and Low Power Mode.
+  Future<void> _reconnectToPairedDevice() async {
+    if (_preferredRemoteId == null || _preferredRemoteId!.isEmpty) return;
+
+    if (await _checkForAlreadyConnectedDevice()) return;
+
+    _diagnosticLog('Registering autoConnect for paired device...');
+    _setState(BleConnectionState.connecting);
+
+    try {
+      _device = BluetoothDevice.fromId(_preferredRemoteId!);
+      await _device!.connect(autoConnect: true, license: License.free);
+      // autoConnect resolves when actually connected
+      await _setupConnectedDevice();
+    } catch (e) {
+      _log('autoConnect failed: $e');
+      _setState(BleConnectionState.idle);
+      // The autoConnect intent may still be registered at the native level.
+      // The global connection listener is the safety net — don't scan.
+    }
+  }
+
+  /// Post-connection setup: bonding, service discovery, notification subscriptions.
+  /// Called after the device is already connected at the OS level (either from
+  /// [_connectToDevice], [_reconnectToPairedDevice], or the global listener).
+  Future<bool> _setupConnectedDevice() async {
+    if (_device == null) {
+      _log('No device for setup');
+      return false;
+    }
+
+    _setState(BleConnectionState.connecting);
+    _diagnosticLog('Connected to ${_device!.platformName}, setting up...');
+
+    try {
+      if (Platform.isAndroid) {
+        try {
+          await _device!.createBond(timeout: 90);
+          _log('Bonding complete (Android)');
+        } catch (e) {
+          _log('createBond (non-fatal): $e');
+        }
+      }
+
       final services = await _device!.discoverServices();
       _log('Discovered ${services.length} services');
-      
-      // Find our service
+
       BluetoothService? targetService;
       for (BluetoothService service in services) {
         if (service.uuid.toString().toLowerCase() == BleConstants.serviceUuid.toLowerCase()) {
@@ -269,15 +375,14 @@ class BleClient {
           break;
         }
       }
-      
+
       if (targetService == null) {
         _log('Service not found: ${BleConstants.serviceUuid}');
         _setState(BleConnectionState.idle);
-        await disconnect();
+        await disconnect(intentional: true);
         return false;
       }
-      
-      // Find characteristics
+
       for (BluetoothCharacteristic char in targetService.characteristics) {
         final uuid = char.uuid.toString().toLowerCase();
         if (uuid == BleConstants.audioTxCharacteristicUuid.toLowerCase()) {
@@ -312,8 +417,7 @@ class BleClient {
           _log('Found Camera Status characteristic');
         }
       }
-      
-      // Sync RTC with current time as part of handshake (write directly - state not yet connected)
+
       if (_rtcCharacteristic != null) {
         try {
           final rtcTime = RTCTime.fromDateTime(DateTime.now());
@@ -323,32 +427,26 @@ class BleClient {
           _log('RTC sync failed (non-fatal): $e');
         }
       }
-      
-      // Subscribe to audio notifications
+
       await _subscribeToAudioNotifications();
-      
-      // Subscribe to file TX notifications
       await _subscribeToFileTxNotifications();
-      
-      // Subscribe to camera status notifications
       await _subscribeToCameraStatusNotifications();
-      
-      // Listen for connection state changes
+
+      _cancelConnectionSubscription();
       _connectionSubscription = _device!.connectionState.listen((state) async {
         if (state == BluetoothConnectionState.disconnected) {
           _diagnosticLog('Device disconnected');
           await _handleDisconnection();
         }
       });
-      
+
       _setState(BleConnectionState.connected);
+      await PairedDeviceStorage.setPairedRemoteId(_device!.remoteId.str);
       return true;
     } catch (e) {
-      _log('Connection error: $e');
-      onError?.call('Connection error: $e');
+      _log('Setup error: $e');
+      onError?.call('Setup error: $e');
       _setState(BleConnectionState.idle);
-      // Auto-retry: restart scanning
-      await scanAndConnect();
       return false;
     }
   }
@@ -447,53 +545,79 @@ class BleClient {
   }
   
   Future<void> _handleDisconnection() async {
+    _cancelConnectionSubscription();
     await _notificationSubscription?.cancel();
     _notificationSubscription = null;
     await _fileTxNotificationSubscription?.cancel();
     _fileTxNotificationSubscription = null;
     await _cameraStatusNotificationSubscription?.cancel();
     _cameraStatusNotificationSubscription = null;
-    _audioTxCharacteristic = null;
-    _audioRxCharacteristic = null;
-    _batteryCharacteristic = null;
-    _hapticCharacteristic = null;
-    _rtcCharacteristic = null;
-    _deviceNameCharacteristic = null;
-    _fileTxCharacteristic = null;
-    _fileRxCharacteristic = null;
-    _fileCtrlCharacteristic = null;
-    _cameraCmdCharacteristic = null;
-    _cameraStatusCharacteristic = null;
+    _clearCharacteristics();
 
-    // Auto-reconnect: restart scanning to find and connect to device again
-    _diagnosticLog('Device disconnected, restarting scan to reconnect...');
-    await scanAndConnect();
+    await reloadPreferredFromStorage();
+    if (_preferredRemoteId != null && _preferredRemoteId!.isNotEmpty) {
+      _diagnosticLog('Device disconnected, registering autoConnect...');
+      await _reconnectToPairedDevice();
+    } else {
+      _diagnosticLog('Device disconnected (no paired device id; idle)');
+      _setState(BleConnectionState.idle);
+    }
   }
   
   // ===========================================================================
   // PUBLIC METHODS
   // ===========================================================================
   
-  /// Scan and connect to Nexus device
-  Future<bool> scanAndConnect() async {
-    // First check for already connected devices (iOS background mode)
+  /// Connect to the saved [PairedDeviceStorage] device.
+  ///
+  /// Tries a direct connect first (device may be in range). On failure, falls
+  /// through to [_reconnectToPairedDevice] which registers an autoConnect intent
+  /// with the OS — no active scanning.
+  ///
+  /// [overrideRemoteId] is used when the caller just persisted the id (e.g. main isolate
+  /// wrote SharedPreferences) but this isolate has not yet read it — avoids a race where
+  /// [reloadPreferredFromStorage] clears the id set by [setPreferredRemoteId].
+  Future<bool> scanAndConnect({String? overrideRemoteId}) async {
+    if (overrideRemoteId != null && overrideRemoteId.isNotEmpty) {
+      _preferredRemoteId = overrideRemoteId;
+    } else {
+      await reloadPreferredFromStorage();
+    }
+    if (_preferredRemoteId == null || _preferredRemoteId!.isEmpty) {
+      _diagnosticLog('No paired device ID. Select your Nexus in the hardware screen.');
+      return false;
+    }
+
     final alreadyConnected = await _checkForAlreadyConnectedDevice();
     if (alreadyConnected) {
-      _diagnosticLog('Already connected to device, returning true');
+      _diagnosticLog('Already connected to paired device');
       return true;
-    } else {
-      _diagnosticLog('Not connected to device, starting scan');
     }
-    
-    // Otherwise, start scanning
-    await startScan();
+    _diagnosticLog('Connecting to paired device...');
+
+    try {
+      _device = BluetoothDevice.fromId(_preferredRemoteId!);
+      final ok = await _connectToDevice();
+      if (ok) {
+        return true;
+      }
+    } catch (e) {
+      _log('Direct connect from saved id failed: $e');
+      _device = null;
+    }
+
+    // Device not in range right now — register autoConnect and wait for OS reconnect.
+    await _reconnectToPairedDevice();
     return isConnected;
   }
   
   /// Check for already connected devices (important for iOS background mode)
   Future<bool> _checkForAlreadyConnectedDevice() async {
     try {
-      _log('Checking for already-connected devices...');
+      if (_preferredRemoteId == null || _preferredRemoteId!.isEmpty) {
+        return false;
+      }
+      _log('Checking for already-connected paired device...');
       
       // Wait for Bluetooth adapter to be on first
       await FlutterBluePlus.adapterState
@@ -505,7 +629,10 @@ class BleClient {
       final connectedDevices = await FlutterBluePlus.systemDevices([serviceGuid]);
       
       for (final device in connectedDevices) {
-        _log('Found system-connected device: ${device.platformName}');
+        if (!_matchesPreferred(device)) {
+          continue;
+        }
+        _log('Found system-connected paired device: ${device.platformName}');
         _device = device;
         final success = await _connectToDevice();
         if (success) {
@@ -518,36 +645,38 @@ class BleClient {
     return false;
   }
   
-  /// Disconnect from device
-  Future<void> disconnect() async {
+  /// Disconnect from device.
+  ///
+  /// When [intentional] is true (explicit user/caller action like "stop" or
+  /// "forget device"), no automatic reconnection is attempted.
+  /// When false (e.g. service teardown that should reconnect), falls through
+  /// to [_reconnectToPairedDevice].
+  Future<void> disconnect({bool intentional = false}) async {
     try {
       await stopScan();
+      _cancelConnectionSubscription();
       await _notificationSubscription?.cancel();
       _notificationSubscription = null;
       await _fileTxNotificationSubscription?.cancel();
       _fileTxNotificationSubscription = null;
-      await _connectionSubscription?.cancel();
-      _connectionSubscription = null;
-      
+      await _cameraStatusNotificationSubscription?.cancel();
+      _cameraStatusNotificationSubscription = null;
+
       if (_device != null && isConnected) {
         await _device!.disconnect();
       }
-      
+
       _device = null;
-      _audioTxCharacteristic = null;
-      _audioRxCharacteristic = null;
-      _batteryCharacteristic = null;
-      _hapticCharacteristic = null;
-      _rtcCharacteristic = null;
-      _deviceNameCharacteristic = null;
-      _fileTxCharacteristic = null;
-      _fileRxCharacteristic = null;
-      _fileCtrlCharacteristic = null;
-      _cameraCmdCharacteristic = null;
-      _cameraStatusCharacteristic = null;
-      _log('Disconnected');
-      // Auto-reconnect: restart scanning
-      await scanAndConnect();
+      _clearCharacteristics();
+      _setState(BleConnectionState.idle);
+      _log('Disconnected (intentional=$intentional)');
+
+      if (!intentional) {
+        await reloadPreferredFromStorage();
+        if (_preferredRemoteId != null && _preferredRemoteId!.isNotEmpty) {
+          await _reconnectToPairedDevice();
+        }
+      }
     } catch (e) {
       _log('Error disconnecting: $e');
     }
@@ -786,7 +915,7 @@ class BleClient {
   Future<void> dispose() async {
     await _globalConnectionSubscription?.cancel();
     _globalConnectionSubscription = null;
-    await disconnect();
+    await disconnect(intentional: true);
     onConnectionStateChanged = null;
     onAudioPacketReceived = null;
     onFileTxDataReceived = null;

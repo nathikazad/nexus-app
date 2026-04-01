@@ -6,7 +6,7 @@ import 'cf_access.dart';
 
 class GraphQLConfig {
   static String get defaultEndpoint => kDebugMode 
-      ? 'http://10.0.0.95:5001/graphql'
+      ? 'http://10.0.0.156:5001/graphql'
       : 'https://graphql.supacharger.ai/graphql';
   static const String defaultUserId = '1';
 }

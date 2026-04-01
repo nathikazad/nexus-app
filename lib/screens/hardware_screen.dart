@@ -30,6 +30,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   bool _isPowerCycling = false;
   bool _isTriggeringCamera = false;
   bool _isSettingDeviceName = false;
+  String? _pairedRemoteId;
 
   StreamSubscription<BleConnectionState>? _connectionSubscription;
   Timer? _dataRefreshTimer;
@@ -40,6 +41,14 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     _hardwareService = ref.read(hardwareServiceProvider);
     _setupListeners();
     _startRefreshTimers();
+    _loadPairedRemoteId();
+  }
+
+  Future<void> _loadPairedRemoteId() async {
+    final id = await _hardwareService.getPairedRemoteId();
+    if (mounted) {
+      setState(() => _pairedRemoteId = id);
+    }
   }
 
   Future<void> _startRefreshTimers() async {
@@ -402,10 +411,41 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     );
     
     if (result == true && mounted) {
-      // Device connected successfully, refresh UI
+      await _loadPairedRemoteId();
       setState(() {
         _isConnected = _hardwareService.isConnected;
       });
+    }
+  }
+
+  Future<void> _forgetPairedDevice() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Forget this Nexus?'),
+        content: const Text(
+          'This phone will stop connecting to the saved device. '
+          'The peripheral may still expect its bonded phone until you reset it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Forget'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _hardwareService.forgetPairedDevice();
+    if (mounted) {
+      await _loadPairedRemoteId();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved device cleared')),
+      );
     }
   }
 
@@ -434,8 +474,44 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Device name
+            if (_pairedRemoteId != null && _pairedRemoteId!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.link),
+                    title: const Text('Paired device'),
+                    subtitle: Text(
+                      _pairedRemoteId!,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    trailing: TextButton(
+                      onPressed: _forgetPairedDevice,
+                      child: const Text('Forget'),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Card(
+                  color: Colors.amber.shade50,
+                  child: ListTile(
+                    leading: const Icon(Icons.warning_amber_rounded),
+                    title: const Text('No device paired'),
+                    subtitle: const Text(
+                      'Tap the Bluetooth icon in the app bar to choose your Nexus.',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.bluetooth_searching),
+                      onPressed: _selectDevice,
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 8),
+            // Device name
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,

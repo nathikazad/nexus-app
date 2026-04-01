@@ -27,7 +27,7 @@ class BleBackgroundService {
     final bleClient = BleClient();
     final socketClient = SocketClient();
     final defaultSocketUrl = kDebugMode 
-        ? 'ws://10.0.0.95:8002'
+        ? 'ws://10.0.0.156:8002'
         : 'wss://sock.supacharger.ai';
     
     await socketClient.connect(
@@ -170,12 +170,24 @@ class BleBackgroundService {
       await bleClient.scanAndConnect();
     });
 
+    service.on('ble.applyPairedRemoteId').listen((event) async {
+      final id = event?['remoteId'] as String?;
+      if (id == null || id.isEmpty) return;
+      bleClient.setPreferredRemoteId(id);
+      await bleClient.scanAndConnect(overrideRemoteId: id);
+    });
+
+    service.on('ble.clearPairedRemoteId').listen((event) async {
+      bleClient.setPreferredRemoteId(null);
+      await bleClient.disconnect(intentional: true);
+    });
+
     service.on('ble.syncStatus').listen((event) {
       service.invoke('ble.status', {'status': bleClient.state.name});
     });
     
     service.on('ble.stop').listen((event) async {
-      await bleClient.disconnect();
+      await bleClient.disconnect(intentional: true);
     });
     
     // Socket control events
@@ -212,7 +224,7 @@ class BleBackgroundService {
     
     // Service lifecycle events
     service.on('stop').listen((event) async {
-      await bleClient.disconnect();
+      await bleClient.disconnect(intentional: true);
       await socketClient.disconnect();
       service.stopSelf();
     });
@@ -489,6 +501,16 @@ class BleBackgroundService {
 
   void startBle() {
     _service.invoke('ble.start');
+  }
+
+  /// Pushes the saved [remoteId] to the background isolate and reconnects.
+  void applyPairedRemoteId(String remoteId) {
+    _service.invoke('ble.applyPairedRemoteId', {'remoteId': remoteId});
+  }
+
+  /// Clears pairing storage on the isolate and disconnects (no auto-reconnect).
+  void clearPairedRemoteId() {
+    _service.invoke('ble.clearPairedRemoteId');
   }
 
   void stopBle() {

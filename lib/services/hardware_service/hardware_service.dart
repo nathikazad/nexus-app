@@ -6,6 +6,7 @@ import 'package:nexus_voice_assistant/background_service.dart' show BleBackgroun
 import 'package:nexus_voice_assistant/bg_ble_client.dart' show BleConnectionState;
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/rtc_service.dart';
+import 'package:nexus_voice_assistant/services/paired_device_storage.dart';
 
 
 /// Auto photo-record status from device (GATT read).
@@ -67,6 +68,21 @@ class HardwareService {
   Stream<CameraRecordStatus> get cameraStatusStream => _cameraStatusController.stream;
   bool get isConnected => _bgService.lastKnownBleStatus == BleConnectionState.connected;
   String? get deviceName => _deviceName;
+
+  /// Saved BLE peripheral id ([BluetoothDevice.remoteId]), or null until the user picks a device.
+  Future<String?> getPairedRemoteId() => PairedDeviceStorage.getPairedRemoteId();
+
+  /// Persists the chosen device and starts background connect (call after UI selection).
+  Future<void> savePairedRemoteIdAndConnect(String remoteId) async {
+    await PairedDeviceStorage.setPairedRemoteId(remoteId);
+    _bgService.applyPairedRemoteId(remoteId);
+  }
+
+  /// Clears storage and stops BLE reconnect to any peripheral.
+  Future<void> forgetPairedDevice() async {
+    await PairedDeviceStorage.clearPairedRemoteId();
+    _bgService.clearPairedRemoteId();
+  }
 
   Future<void> _readDeviceName() async {
     try {
