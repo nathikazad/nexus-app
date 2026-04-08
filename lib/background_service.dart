@@ -30,13 +30,13 @@ class BleBackgroundService {
     final prefs = await SharedPreferences.getInstance();
     final sockUrl = prefs.getString(PrefsKeys.sockWsUrl) ??
         resolve(BackendPreset.defaultPreset).sockWs;
+    final userId = prefs.getString(PrefsKeys.userId) ?? '1';
+    final socketHeaders = <String, String>{
+      'X-User-Id': userId,
+      if (CfAccess.shouldAttachHeaders(sockUrl)) ...CfAccess.headers,
+    };
 
-    await socketClient.connect(
-      sockUrl,
-      headers: CfAccess.shouldAttachHeaders(sockUrl)
-          ? CfAccess.headers
-          : null,
-    );
+    await socketClient.connect(sockUrl, headers: socketHeaders);
     
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -194,11 +194,13 @@ class BleBackgroundService {
     // Socket control events
     service.on('socket.connect').listen((event) async {
       final url = event?['url'] as String? ?? sockUrl;
-      await socketClient.connect(
-        url,
-        headers:
-            CfAccess.shouldAttachHeaders(url) ? CfAccess.headers : null,
-      );
+      final freshPrefs = await SharedPreferences.getInstance();
+      final uid = freshPrefs.getString(PrefsKeys.userId) ?? '1';
+      final headers = <String, String>{
+        'X-User-Id': uid,
+        if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
+      };
+      await socketClient.connect(url, headers: headers);
     });
     
     service.on('socket.disconnect').listen((event) async {
