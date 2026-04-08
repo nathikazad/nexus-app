@@ -22,6 +22,8 @@ dependencies:
   platform_info: ^5.0.0
   audioplayers: ^6.0.0
   http: ^1.6.0
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
   flutter_dotenv: ^6.0.0
   flutter_blue_plus: ^2.1.0
   flutter_background_service: ^5.0.5

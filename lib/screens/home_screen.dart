@@ -6,6 +6,7 @@ import 'voice_assistant_screen.dart';
 import 'hardware_screen.dart';
 import 'navigator_screen.dart';
 import 'log_viewer_screen.dart';
+import 'data_screen.dart';
 import '../services/watch_bridge_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -108,9 +109,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           HardwareScreen(),
           NavigatorHomeScreen(),
           LogViewerScreen(),
+          DataScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
@@ -129,6 +132,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.description),
             label: 'Logs',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder_open),
+            label: 'Data',
           ),
         ],
       ),
