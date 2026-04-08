@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Cloudflare Access service token for [supacharger.ai] tunnel routes.
 class CfAccess {
   CfAccess._();
@@ -17,7 +15,6 @@ class CfAccess {
   static bool endpointNeedsCfAccess(String url) =>
       url.contains('supacharger.ai');
 
-  /// Attach [headers] only in release/profile — never in debug (local dev).
-  static bool shouldAttachHeaders(String url) =>
-      !kDebugMode && endpointNeedsCfAccess(url);
+  /// Attach [headers] for supacharger.ai in all build modes (debug pi-wan needs CF).
+  static bool shouldAttachHeaders(String url) => endpointNeedsCfAccess(url);
 }

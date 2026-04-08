@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'backend_presets.dart';
 import 'bg_ble_client.dart' show BleClient, BleConnectionState;
 import 'bg_socket_client.dart';
 import 'cf_access.dart';
@@ -26,13 +27,13 @@ class BleBackgroundService {
     
     final bleClient = BleClient();
     final socketClient = SocketClient();
-    final defaultSocketUrl = kDebugMode 
-        ? 'ws://10.0.0.156:8002'
-        : 'wss://sock.supacharger.ai';
-    
+    final prefs = await SharedPreferences.getInstance();
+    final sockUrl = prefs.getString(PrefsKeys.sockWsUrl) ??
+        resolve(BackendPreset.defaultPreset).sockWs;
+
     await socketClient.connect(
-      defaultSocketUrl,
-      headers: CfAccess.shouldAttachHeaders(defaultSocketUrl)
+      sockUrl,
+      headers: CfAccess.shouldAttachHeaders(sockUrl)
           ? CfAccess.headers
           : null,
     );
@@ -192,7 +193,7 @@ class BleBackgroundService {
     
     // Socket control events
     service.on('socket.connect').listen((event) async {
-      final url = event?['url'] as String? ?? defaultSocketUrl;
+      final url = event?['url'] as String? ?? sockUrl;
       await socketClient.connect(
         url,
         headers:

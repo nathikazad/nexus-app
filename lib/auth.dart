@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// User model containing authentication information
+import 'backend_presets.dart';
+
+/// User model: [preset] drives all resolved URLs via [resolve].
 class User {
   final String userId;
-  final String endpoint;
+  final BackendPreset preset;
 
-  User({required this.userId, required this.endpoint});
+  User({required this.userId, required this.preset});
 
   @override
   bool operator ==(Object other) =>
@@ -14,32 +16,45 @@ class User {
       other is User &&
           runtimeType == other.runtimeType &&
           userId == other.userId &&
-          endpoint == other.endpoint;
+          preset == other.preset;
 
   @override
-  int get hashCode => userId.hashCode ^ endpoint.hashCode;
+  int get hashCode => userId.hashCode ^ preset.hashCode;
 }
 
 /// AuthController manages user authentication state.
 /// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
-  static const String _userIdKey = 'auth_user_id';
-  static const String _endpointKey = 'auth_endpoint';
-
   @override
   Future<User?> build() async {
     await Future.delayed(const Duration(seconds: 1));
     print('[AuthController] build() - Initializing auth state');
-    
-    // Load saved credentials from SharedPreferences
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString(_userIdKey);
-      final endpoint = prefs.getString(_endpointKey);
-      
-      if (userId != null && endpoint != null && userId.isNotEmpty && endpoint.isNotEmpty) {
-        print('[AuthController] Found saved credentials: userId=$userId, endpoint=$endpoint');
-        return User(userId: userId, endpoint: endpoint);
+      final userId = prefs.getString(PrefsKeys.userId);
+      final presetKey = prefs.getString(PrefsKeys.backendPreset);
+
+      BackendPreset? preset = BackendPreset.fromKey(presetKey);
+
+      // Migration: old installs had userId + endpoint but no preset key
+      if (userId != null &&
+          userId.isNotEmpty &&
+          preset == null &&
+          prefs.getString(PrefsKeys.endpoint) != null) {
+        preset = BackendPreset.defaultPreset;
+        final urls = resolve(preset);
+        await prefs.setString(PrefsKeys.backendPreset, preset.key);
+        await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
+        await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
+        print('[AuthController] Migrated legacy prefs to preset=${preset.key}');
+      }
+
+      if (userId != null &&
+          userId.isNotEmpty &&
+          preset != null) {
+        print('[AuthController] Found saved credentials: userId=$userId, preset=${preset.key}');
+        return User(userId: userId, preset: preset);
       } else {
         print('[AuthController] No saved credentials found');
         return null;
@@ -50,59 +65,48 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
-  /// Logs in a user with the given userId and endpoint.
-  /// Saves credentials to SharedPreferences and updates state.
+  /// Logs in with [userId] and [preset]. Persists resolved URLs to SharedPreferences.
   /// Returns null if login was successful, error message String otherwise.
-  Future<String?> login(String userId, String endpoint) async {
-    //delay for 2 seconds
-    print('[AuthController] login() - Logging in user: $userId, endpoint: $endpoint');
+  Future<String?> login(String userId, BackendPreset preset) async {
+    print('[AuthController] login() - Logging in user: $userId, preset: ${preset.key}');
     state = const AsyncValue.loading();
-    
+
     try {
-      // Validate inputs
-      if (userId.isEmpty || endpoint.isEmpty) {
-        throw Exception('User ID and endpoint are required');
+      if (userId.isEmpty) {
+        throw Exception('User ID is required');
       }
-      
-      // Validate endpoint URL
-      if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
-        throw Exception('Endpoint must start with http:// or https://');
-      }
-      
-      // Save to SharedPreferences
+
+      final urls = resolve(preset);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userIdKey, userId);
-      await prefs.setString(_endpointKey, endpoint);
-      
-      // Update state
-      final user = User(userId: userId, endpoint: endpoint);
+      await prefs.setString(PrefsKeys.userId, userId);
+      await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
+      await prefs.setString(PrefsKeys.backendPreset, preset.key);
+      await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
+
+      final user = User(userId: userId, preset: preset);
       state = AsyncValue.data(user);
       print('[AuthController] Login successful');
-      return null; // null means success
+      return null;
     } catch (e, stackTrace) {
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       print('[AuthController] Login error: $errorMessage');
       state = AsyncValue.error(e, stackTrace);
-      return errorMessage; // Return error message
+      return errorMessage;
     }
   }
 
-  /// Logs out the current user.
   /// Clears SharedPreferences and updates state to null.
   Future<void> logout() async {
-    
     print('[AuthController] logout() - Logging out user');
     state = const AsyncValue.loading();
     try {
-      // Clear SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_userIdKey);
-      await prefs.remove(_endpointKey);
-      
-      // Update state
+      await prefs.remove(PrefsKeys.userId);
+      await prefs.remove(PrefsKeys.endpoint);
+      await prefs.remove(PrefsKeys.backendPreset);
+      await prefs.remove(PrefsKeys.sockWsUrl);
+
       state = const AsyncValue.data(null);
-      //delay for 2 seconds
-      
       print('[AuthController] Logout successful');
     } catch (e, stackTrace) {
       print('[AuthController] Logout error: $e');
@@ -111,49 +115,52 @@ class AuthController extends AsyncNotifier<User?> {
   }
 }
 
-
-
 /// Provider for the AuthController.
 final authProvider = AsyncNotifierProvider<AuthController, User?>((() {
   return AuthController();
 }), name: 'authProvider');
 
-/// Provider that returns the current user's ID, or null if not logged in.
-/// Derived from authProvider.
+/// Current user's ID, or null if not logged in.
 final userIdProvider = Provider<String?>((ref) {
   final authState = ref.watch(authProvider);
   return authState.value?.userId;
 }, name: 'userIdProvider');
 
-/// Provider that returns the current endpoint, or null if not logged in.
-/// Derived from authProvider.
+/// Resolved GraphQL HTTP endpoint from the current preset, or null.
 final endpointProvider = Provider<String?>((ref) {
-  final authState = ref.watch(authProvider);
-  return authState.value?.endpoint;
+  final user = ref.watch(authProvider).value;
+  if (user == null) return null;
+  return resolve(user.preset).graphqlHttp;
 }, name: 'endpointProvider');
+
+/// Resolved sock WebSocket URL from the current preset, or null.
+final sockWsUrlProvider = Provider<String?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) return null;
+  return resolve(user.preset).sockWs;
+}, name: 'sockWsUrlProvider');
+
+/// Resolved image HTTP base URL from the current preset, or null.
+final imageBaseUrlProvider = Provider<String?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) return null;
+  return resolve(user.preset).imageHttp;
+}, name: 'imageBaseUrlProvider');
 
 /// AppStatus enum representing the three possible states of the app.
 enum AppStatus {
-  /// App is still initializing (loading auth state)
   initializing,
-  
-  /// User is authenticated
   authenticated,
-  
-  /// User is not authenticated
   unauthenticated,
 }
 
-/// Provider that returns the current AppStatus based on the auth state.
-/// Provides a stable status that prevents router flicker.
+/// Stable status that prevents router flicker.
 final appStatusProvider = Provider<AppStatus>((ref) {
   final authState = ref.watch(authProvider);
-  
+
   return authState.when(
     data: (user) => user == null ? AppStatus.unauthenticated : AppStatus.authenticated,
     loading: () => AppStatus.initializing,
     error: (_, __) => AppStatus.unauthenticated,
   );
 }, name: 'appStatusProvider');
-
-

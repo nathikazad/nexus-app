@@ -1,6 +1,7 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'package:nexus_voice_assistant/backend_presets.dart';
 import 'package:nexus_voice_assistant/db.dart';
 import 'package:nexus_voice_assistant/models/transcript_message.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,14 +37,11 @@ subscription SubscribeToTranscriptMessages(\$transcriptId: Int) {
 
 /// Class for managing transcript operations
 class TranscriptService {
-  static const String _userIdKey = 'auth_user_id';
-  static const String _endpointKey = 'auth_endpoint';
-
   /// Get the GraphQL client and userId from SharedPreferences
   static Future<({GraphQLClient client, int userId})> _getClientAndUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    final userIdStr = prefs.getString(_userIdKey);
-    final endpoint = prefs.getString(_endpointKey);
+    final userIdStr = prefs.getString(PrefsKeys.userId);
+    final endpoint = prefs.getString(PrefsKeys.endpoint);
 
     if (userIdStr == null || endpoint == null) {
       throw Exception('User not authenticated. Please log in first.');

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/auth.dart';
+import 'package:nexus_voice_assistant/backend_presets.dart';
+import 'package:nexus_voice_assistant/background_service.dart';
 import 'package:nexus_voice_assistant/db.dart';
 
-/// Login page with fields for userId and endpoint.
+/// Login page with userId and backend preset dropdown.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -14,34 +16,35 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _userIdController = TextEditingController();
-  final _endpointController = TextEditingController();
+
+  BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   @override
   void initState() {
     super.initState();
-    // Set default endpoint
     _userIdController.text = GraphQLConfig.defaultUserId;
-    _endpointController.text = GraphQLConfig.defaultEndpoint;
   }
 
   @override
   void dispose() {
     _userIdController.dispose();
-    _endpointController.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final userId = _userIdController.text.trim();
-      final endpoint = _endpointController.text.trim();
-      
-      final errorMessage = await ref.read(authProvider.notifier).login(userId, endpoint);
-      
-      // If login succeeded (null), router will automatically redirect to home
-      if (errorMessage == null) return;
-      
-      // Show error message if login failed
+
+      final errorMessage =
+          await ref.read(authProvider.notifier).login(userId, _selectedPreset);
+
+      if (errorMessage == null) {
+        final urls = resolve(_selectedPreset);
+        ref.read(bleBackgroundServiceProvider).disconnectSocket();
+        ref.read(bleBackgroundServiceProvider).connectSocket(urls.sockWs);
+        return;
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -95,25 +98,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _endpointController,
+                DropdownButtonFormField<BackendPreset>(
+                  value: _selectedPreset,
                   decoration: const InputDecoration(
-                    labelText: 'GraphQL Endpoint',
-                    hintText: 'http://localhost:5001/graphql',
+                    labelText: 'Backend',
                     border: OutlineInputBorder(),
-                    helperText: 'The URL of your GraphQL server',
+                    helperText: 'GraphQL, socket, and image URLs for this environment',
                   ),
-                  keyboardType: TextInputType.url,
-                  enabled: !isLoading,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Endpoint is required';
-                    }
-                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                      return 'Endpoint must start with http:// or https://';
-                    }
-                    return null;
-                  },
+                  items: BackendPreset.values
+                      .map(
+                        (p) => DropdownMenuItem<BackendPreset>(
+                          value: p,
+                          child: Text(p.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: isLoading
+                      ? null
+                      : (BackendPreset? value) {
+                          if (value != null) {
+                            setState(() => _selectedPreset = value);
+                          }
+                        },
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
@@ -146,4 +152,3 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 }
-

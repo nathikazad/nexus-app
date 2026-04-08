@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:nexus_voice_assistant/data_providers/model_types_provider.dart';
 import 'package:nexus_voice_assistant/auth.dart';
+import 'package:nexus_voice_assistant/backend_presets.dart';
 import 'package:nexus_voice_assistant/models/ModelType.dart';
 
 // Custom AuthController for testing that returns user immediately
@@ -10,7 +11,7 @@ class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {
     // Return user immediately without SharedPreferences delay
-    return User(userId: '1', endpoint: 'http://localhost:5001/graphql');
+    return User(userId: '1', preset: BackendPreset.piLan);
   }
 }
 
@@ -18,7 +19,7 @@ void main() {
   test('Print output of GetAllModelTypes query and verify expected model types', () async {
     print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('🧪 TEST: Printing output of GetAllModelTypes query');
-    print('   Connecting to: http://localhost:5001/graphql');
+    print('   Connecting to: ${resolve(BackendPreset.piLan).graphqlHttp}');
     print('   User ID: 1');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
@@ -233,7 +234,7 @@ void main() {
   test('Test modelTypeProvider with ID lookup and verify both providers work', () async {
     print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('🧪 TEST: Testing modelTypeProvider with ID lookup');
-    print('   Connecting to: http://localhost:5001/graphql');
+    print('   Connecting to: ${resolve(BackendPreset.piLan).graphqlHttp}');
     print('   User ID: 1');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 

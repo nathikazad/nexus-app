@@ -6,6 +6,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
 import 'dart:io';
+import 'auth.dart';
+import 'backend_presets.dart';
 import 'router.dart';
 import 'services/logging_service.dart';
 import 'services/watch_bridge_service.dart';
@@ -66,13 +68,26 @@ Future<void> onStart(ServiceInstance service) async {
   await BleBackgroundService.startBackgroundService(service);
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
+      if (next.hasValue && next.value != null) {
+        final user = next.value!;
+        final urls = resolve(user.preset);
+        ref.read(bleBackgroundServiceProvider).connectSocket(urls.sockWs);
+      }
+    });
+
     final router = ref.watch(routerProvider);
-    
+
     return MaterialApp.router(
       title: 'Nexus Voice Assistant',
       theme: ThemeData(

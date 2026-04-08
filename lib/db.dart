@@ -1,13 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'auth.dart';
+import 'backend_presets.dart';
 import 'cf_access.dart';
 
 class GraphQLConfig {
-  static String get defaultEndpoint => kDebugMode 
-      ? 'http://10.0.0.156:5001/graphql'
-      : 'https://graphql.supacharger.ai/graphql';
+  static String get defaultEndpoint =>
+      resolve(BackendPreset.defaultPreset).graphqlHttp;
   static const String defaultUserId = '1';
 }
 

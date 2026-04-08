@@ -5,6 +5,7 @@ import 'package:nexus_voice_assistant/models/ModelType.dart';
 import 'dart:convert';
 import 'package:nexus_voice_assistant/data_providers/models_provider.dart';
 import 'package:nexus_voice_assistant/auth.dart';
+import 'package:nexus_voice_assistant/backend_presets.dart';
 import 'package:nexus_voice_assistant/models/requests/SetModelRequest.dart';
 import 'package:nexus_voice_assistant/db.dart';
 
@@ -13,7 +14,7 @@ class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {
     // Return user immediately without SharedPreferences delay
-    return User(userId: '1', endpoint: 'http://localhost:5001/graphql');
+    return User(userId: '1', preset: BackendPreset.piLan);
   }
 }
 
@@ -21,7 +22,7 @@ void main() {
   test('Create Person model with age and Company relation, then update and delete', () async {
     print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('🧪 TEST: Create, update, and delete model attributes/relations');
-    print('   Connecting to: http://localhost:5001/graphql');
+    print('   Connecting to: ${resolve(BackendPreset.piLan).graphqlHttp}');
     print('   User ID: 1');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
