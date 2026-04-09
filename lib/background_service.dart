@@ -82,6 +82,22 @@ class BleBackgroundService {
       });
     };
 
+    bleClient.onBatteryReceived = (data) {
+      final parsed = BleClient.parseBatteryStatus(data);
+      if (parsed == null) return;
+      final (:voltageMv, :percent, :charging, :timeIso, :timezone) = parsed;
+      final push = <String, dynamic>{
+        'type': 'battery',
+        'percent': percent,
+        'voltageMv': voltageMv,
+        'charging': charging,
+      };
+      if (timeIso != null) push['time'] = timeIso;
+      if (timezone != null) push['timezone'] = timezone;
+      service.invoke('device.push', push);
+      socketClient.sendText(jsonEncode(push));
+    };
+
     bleClient.onDiagnosticLog = (message) {
       service.invoke('ble.debugLog', {'message': message});
     };
@@ -137,13 +153,16 @@ class BleBackgroundService {
             if (parsed == null) {
               return jsonEncode({'success': false, 'error': 'battery unavailable'});
             }
-            final (:voltageMv, :percent, :charging) = parsed;
-            return jsonEncode({
+            final (:voltageMv, :percent, :charging, :timeIso, :timezone) = parsed;
+            final out = <String, dynamic>{
               'success': true,
               'voltageMv': voltageMv,
               'percent': percent,
               'charging': charging,
-            });
+            };
+            if (timeIso != null) out['time'] = timeIso;
+            if (timezone != null) out['timezone'] = timezone;
+            return jsonEncode(out);
           case 'vibrate':
             final effectId =
                 ((params['effectId'] as num?)?.toInt() ?? 16).clamp(0, 123);

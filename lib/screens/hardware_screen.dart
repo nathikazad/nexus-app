@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nexus_voice_assistant/background_service.dart' show bleBackgroundServiceProvider;
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
@@ -33,6 +34,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   String? _pairedRemoteId;
 
   StreamSubscription<BleConnectionState>? _connectionSubscription;
+  StreamSubscription<Map<String, dynamic>>? _devicePushSubscription;
   Timer? _dataRefreshTimer;
 
   @override
@@ -57,9 +59,8 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     await _readRTCData();
     await _readDeviceName();
 
-    // Refresh battery and RTC periodically (photo record polls inside [PhotoRecordSection])
+    // Refresh RTC periodically; battery updates via BLE notify -> device.push (photo record polls inside [PhotoRecordSection])
     _dataRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
-      await _readBatteryData();
       await _readRTCData();
     });
   }
@@ -112,10 +113,21 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
         });
       }
     });
-    
-    // Battery updates are handled via polling in _startRefreshTimers
-    // No battery stream available in new HardwareService
-    
+
+    _devicePushSubscription =
+        ref.read(bleBackgroundServiceProvider).devicePushStream.listen((event) {
+      if (event['type'] != 'battery' || !mounted) return;
+      final percent = event['percent'] as int?;
+      final voltageMv = event['voltageMv'] as int?;
+      final charging = event['charging'] as bool?;
+      if (percent == null || voltageMv == null || charging == null) return;
+      setState(() {
+        _batteryPercentage = percent;
+        _voltage = voltageMv / 1000.0;
+        _isCharging = charging;
+      });
+    });
+
     // Set initial connection state
     setState(() {
       _isConnected = _hardwareService.isConnected;
@@ -401,6 +413,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   void dispose() {
     _stopRefreshTimers();
     _connectionSubscription?.cancel();
+    _devicePushSubscription?.cancel();
     super.dispose();
   }
 

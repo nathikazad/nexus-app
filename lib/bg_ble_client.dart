@@ -71,6 +71,7 @@ class BleClient {
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _fileTxNotificationSubscription;
   StreamSubscription<List<int>>? _cameraStatusNotificationSubscription;
+  StreamSubscription<List<int>>? _batteryNotificationSubscription;
   
   BleConnectionState _state = BleConnectionState.idle;
 
@@ -103,6 +104,7 @@ class BleClient {
   void Function(Uint8List)? onAudioPacketReceived;
   void Function(Uint8List)? onFileTxDataReceived;
   void Function(bool isRecording, int periodSec)? onCameraStatusReceived;
+  void Function(Uint8List)? onBatteryReceived;
   void Function(String)? onError;
 
   /// Curated connection lifecycle lines (scanning, found, connected, disconnected).
@@ -431,6 +433,7 @@ class BleClient {
       await _subscribeToAudioNotifications();
       await _subscribeToFileTxNotifications();
       await _subscribeToCameraStatusNotifications();
+      await _subscribeToBatteryNotifications();
 
       _cancelConnectionSubscription();
       _connectionSubscription = _device!.connectionState.listen((state) async {
@@ -543,7 +546,34 @@ class BleClient {
       onError?.call('Error subscribing to camera status: $e');
     }
   }
-  
+
+  Future<void> _subscribeToBatteryNotifications() async {
+    if (_batteryCharacteristic == null) {
+      _log('Cannot subscribe: Battery characteristic not found');
+      return;
+    }
+
+    try {
+      await _batteryCharacteristic!.setNotifyValue(true);
+
+      _batteryNotificationSubscription = _batteryCharacteristic!.lastValueStream.listen(
+        (value) {
+          if (value.isEmpty) return;
+          onBatteryReceived?.call(Uint8List.fromList(value));
+        },
+        onError: (error) {
+          _log('Battery notification error: $error');
+          onError?.call('Battery notification error: $error');
+        },
+      );
+
+      _log('Subscribed to battery notifications');
+    } catch (e) {
+      _log('Error subscribing to battery notifications: $e');
+      onError?.call('Error subscribing to battery: $e');
+    }
+  }
+
   Future<void> _handleDisconnection() async {
     _cancelConnectionSubscription();
     await _notificationSubscription?.cancel();
@@ -552,6 +582,8 @@ class BleClient {
     _fileTxNotificationSubscription = null;
     await _cameraStatusNotificationSubscription?.cancel();
     _cameraStatusNotificationSubscription = null;
+    await _batteryNotificationSubscription?.cancel();
+    _batteryNotificationSubscription = null;
     _clearCharacteristics();
 
     await reloadPreferredFromStorage();
@@ -661,6 +693,8 @@ class BleClient {
       _fileTxNotificationSubscription = null;
       await _cameraStatusNotificationSubscription?.cancel();
       _cameraStatusNotificationSubscription = null;
+      await _batteryNotificationSubscription?.cancel();
+      _batteryNotificationSubscription = null;
 
       if (_device != null && isConnected) {
         await _device!.disconnect();
@@ -714,14 +748,54 @@ class BleClient {
     }
   }
 
-  /// MAX17048-packed BLE value: [voltage_hi][voltage_lo][soc_percent][charging 0|1]
-  static ({int voltageMv, int percent, bool charging})? parseBatteryStatus(
-      Uint8List data) {
+  /// Firmware v2: 12 bytes — [0..3] battery, [4..9] local wall (sec,min,hour,date,month,year 0–99),
+  /// [10..11] timezone offset hours/minutes (signed).
+  static ({
+    int voltageMv,
+    int percent,
+    bool charging,
+    String? timeIso,
+    String? timezone,
+  })? parseBatteryStatus(Uint8List data) {
     if (data.length < 4) return null;
     final voltageMv = (data[0] << 8) | data[1];
     final percent = data[2];
     final charging = data[3] != 0;
-    return (voltageMv: voltageMv, percent: percent, charging: charging);
+    String? timeIso;
+    String? timezone;
+    if (data.length >= 12) {
+      final sec = data[4];
+      final min = data[5];
+      final hour = data[6];
+      final date = data[7];
+      final month = data[8];
+      final year = 2000 + data[9];
+      final tzH = data[10] > 127 ? data[10] - 256 : data[10];
+      final tzM = data[11] > 127 ? data[11] - 256 : data[11];
+      final off = _formatIsoOffset(tzH, tzM);
+      timeIso =
+          '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${date.toString().padLeft(2, '0')}'
+          'T${hour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}'
+          '$off';
+      final sign = tzH >= 0 ? '+' : '-';
+      final ah = tzH.abs();
+      final am = tzM.abs();
+      timezone = 'UTC$sign${ah.toString().padLeft(2, '0')}:${am.toString().padLeft(2, '0')}';
+    }
+    return (
+      voltageMv: voltageMv,
+      percent: percent,
+      charging: charging,
+      timeIso: timeIso,
+      timezone: timezone,
+    );
+  }
+
+  static String _formatIsoOffset(int tzH, int tzM) {
+    final sign = tzH >= 0 ? '+' : '-';
+    final ah = tzH.abs();
+    final am = tzM.abs();
+    return '$sign${ah.toString().padLeft(2, '0')}:${am.toString().padLeft(2, '0')}';
   }
   
   /// Write haptic effect
