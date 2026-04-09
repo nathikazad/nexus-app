@@ -30,7 +30,7 @@ class ImageEntry {
     required this.url,
     required this.filename,
     required this.minutesSinceMidnight,
-    this.idInSource,
+    this.currentApp,
   });
 
   final String url;
@@ -39,8 +39,8 @@ class ImageEntry {
   /// Fractional minutes since local midnight (seconds included as fraction).
   final double minutesSinceMidnight;
 
-  /// App name (from `timeline_events.id_in_source`), if available.
-  final String? idInSource;
+  /// Frontmost app name from `payload.current_app` (desktop screenshots), if present.
+  final String? currentApp;
 }
 
 /// Parses `name` query from [url] and returns minutes since midnight, or null.
@@ -151,12 +151,12 @@ Future<List<ImageEntry>> fetchImagesForDay(
     final name = Uri.parse(url).queryParameters['name'] ?? '';
     final m = minutesFromImageFilename(url);
     if (m == null) continue;
-    final idInSource = item['id_in_source'] as String?;
+    final currentApp = item['current_app'] as String?;
     out.add(ImageEntry(
       url: url,
       filename: name,
       minutesSinceMidnight: m,
-      idInSource: idInSource,
+      currentApp: currentApp,
     ));
   }
   return out;

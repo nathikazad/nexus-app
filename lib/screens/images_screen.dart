@@ -391,11 +391,11 @@ class _ImagesScreenState extends ConsumerState<ImagesScreen> {
                               );
                             },
                           ),
-                          if (_entryForSlider(_sliderValue)?.idInSource !=
+                          if (_entryForSlider(_sliderValue)?.currentApp !=
                               null) ...[
                             const SizedBox(height: 4),
                             Text(
-                              _entryForSlider(_sliderValue)!.idInSource!,
+                              _entryForSlider(_sliderValue)!.currentApp!,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
