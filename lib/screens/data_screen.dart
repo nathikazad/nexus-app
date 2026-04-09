@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'battery_screen.dart';
 import 'images_screen.dart';
 
 /// Entry point for data browsing: necklace/desktop images and (future) expenses.
@@ -36,6 +37,18 @@ class DataScreen extends StatelessWidget {
                 MaterialPageRoute<void>(
                   builder: (context) =>
                       const ImagesScreen(source: 'desktop'),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.battery_full),
+            title: const Text('Necklace battery'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const BatteryScreen(),
                 ),
               );
             },
