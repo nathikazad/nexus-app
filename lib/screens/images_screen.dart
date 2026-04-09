@@ -391,7 +391,21 @@ class _ImagesScreenState extends ConsumerState<ImagesScreen> {
                               );
                             },
                           ),
-                          const SizedBox(height: 8),
+                          if (_entryForSlider(_sliderValue)?.idInSource !=
+                              null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              _entryForSlider(_sliderValue)!.idInSource!,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: Colors.grey.shade700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          const SizedBox(height: 4),
                           Text(
                             _entryForSlider(_sliderValue)?.filename ?? '',
                             style: Theme.of(context).textTheme.bodySmall,

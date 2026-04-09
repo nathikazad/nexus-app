@@ -30,6 +30,7 @@ class ImageEntry {
     required this.url,
     required this.filename,
     required this.minutesSinceMidnight,
+    this.idInSource,
   });
 
   final String url;
@@ -37,27 +38,20 @@ class ImageEntry {
 
   /// Fractional minutes since local midnight (seconds included as fraction).
   final double minutesSinceMidnight;
+
+  /// App name (from `timeline_events.id_in_source`), if available.
+  final String? idInSource;
 }
 
 /// Parses `name` query from [url] and returns minutes since midnight, or null.
-double? minutesFromImageFilename(String url, String source) {
+/// Desktop and necklace both use `YYMMDDHHmmss` as the filename stem.
+double? minutesFromImageFilename(String url) {
   final name = Uri.parse(url).queryParameters['name'];
   if (name == null || name.isEmpty) return null;
   final stem = name.contains('.')
       ? name.substring(0, name.lastIndexOf('.'))
       : name;
 
-  if (source == 'desktop') {
-    final head = stem.split('_').first;
-    if (head.length < 14 || !_allDigits(head.substring(0, 14))) return null;
-    final hh = int.tryParse(head.substring(8, 10));
-    final mm = int.tryParse(head.substring(10, 12));
-    final ss = int.tryParse(head.substring(12, 14));
-    if (hh == null || mm == null || ss == null) return null;
-    return hh * 60.0 + mm + ss / 60.0;
-  }
-
-  // necklace: YYMMDDHHmmss (12 digits at start)
   if (stem.length < 12 || !_allDigits(stem.substring(0, 12))) return null;
   final hh = int.tryParse(stem.substring(6, 8));
   final mm = int.tryParse(stem.substring(8, 10));
@@ -144,19 +138,26 @@ Future<List<ImageEntry>> fetchImagesForDay(
     throw ImageServiceException('Invalid JSON for /images/day');
   }
 
-  final raw = decoded['urls'];
+  final raw = decoded['images'];
   if (raw is! List) {
     return [];
   }
 
   final out = <ImageEntry>[];
   for (final item in raw) {
-    if (item is! String) continue;
-    final url = item;
+    if (item is! Map<String, dynamic>) continue;
+    final url = item['url'];
+    if (url is! String) continue;
     final name = Uri.parse(url).queryParameters['name'] ?? '';
-    final m = minutesFromImageFilename(url, source);
+    final m = minutesFromImageFilename(url);
     if (m == null) continue;
-    out.add(ImageEntry(url: url, filename: name, minutesSinceMidnight: m));
+    final idInSource = item['id_in_source'] as String?;
+    out.add(ImageEntry(
+      url: url,
+      filename: name,
+      minutesSinceMidnight: m,
+      idInSource: idInSource,
+    ));
   }
   return out;
 }
