@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +23,14 @@ class _BatteryScreenState extends ConsumerState<BatteryScreen> {
   late DateTime _selected;
   bool _loadingDay = false;
   List<BatteryPoint> _points = [];
+  Timer? _pollTimer;
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return _selected.year == now.year &&
+        _selected.month == now.month &&
+        _selected.day == now.day;
+  }
 
   @override
   void initState() {
@@ -28,6 +38,41 @@ class _BatteryScreenState extends ConsumerState<BatteryScreen> {
     final now = DateTime.now();
     _selected = DateTime(now.year, now.month, now.day);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDates());
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  void _startPolling() {
+    _stopPolling();
+    if (!_isToday) return;
+    _pollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _pollForNewPoints();
+    });
+  }
+
+  Future<void> _pollForNewPoints() async {
+    if (!mounted || !_isToday) return;
+    final base = ref.read(imageBaseUrlProvider);
+    final uid = ref.read(userIdProvider);
+    if (base == null || uid == null || uid.isEmpty) return;
+    try {
+      final fresh = await fetchBatteryDay(base, uid, _selected);
+      if (!mounted) return;
+      if (fresh.length > _points.length) {
+        setState(() {
+          _points = fresh;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadDates() async {
@@ -90,8 +135,10 @@ class _BatteryScreenState extends ConsumerState<BatteryScreen> {
         _points = pts;
         _loadingDay = false;
       });
+      _startPolling();
     } catch (e) {
       if (!mounted) return;
+      _stopPolling();
       setState(() {
         _points = [];
         _loadingDay = false;

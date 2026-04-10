@@ -8,10 +8,11 @@ abstract final class PrefsKeys {
   static const sockWsUrl = 'auth_sock_ws_url';
 }
 
-/// Three fixed backend environments; all URLs derive from [resolve].
+/// Fixed backend environments; all URLs derive from [resolve].
 enum BackendPreset {
   laptop('laptop', 'Laptop'),
   piLan('pi_lan', 'Pi (LAN)'),
+  piTailscale('pi_tailscale', 'Pi (Tailscale)'),
   piWan('pi_wan', 'Pi (WAN)');
 
   const BackendPreset(this.key, this.label);
@@ -27,7 +28,7 @@ enum BackendPreset {
     return null;
   }
 
-  static const BackendPreset defaultPreset = piLan;
+  static const BackendPreset defaultPreset = piTailscale;
 }
 
 class BackendUrls {
@@ -55,6 +56,12 @@ BackendUrls resolve(BackendPreset p) {
         graphqlHttp: 'http://10.0.0.156:5001/graphql',
         sockWs: 'ws://10.0.0.156:8002',
         imageHttp: 'http://10.0.0.156:8001',
+      );
+    case BackendPreset.piTailscale:
+      return const BackendUrls(
+        graphqlHttp: 'http://100.108.43.37:5001/graphql',
+        sockWs: 'ws://100.108.43.37:8002',
+        imageHttp: 'http://100.108.43.37:8001',
       );
     case BackendPreset.piWan:
       return const BackendUrls(
