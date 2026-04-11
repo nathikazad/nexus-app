@@ -43,13 +43,21 @@ class BackendUrls {
   final String imageHttp;
 }
 
+/// URLs for integration tests with PGDB on the same machine as the test runner.
+/// [BackendPreset.laptop] resolves to the LAN dev host (`10.0.0.90`); tests use this.
+const kIntegrationTestBackendUrls = BackendUrls(
+  graphqlHttp: 'http://127.0.0.1:5001/graphql',
+  sockWs: 'ws://127.0.0.1:8002',
+  imageHttp: 'http://127.0.0.1:8001',
+);
+
 BackendUrls resolve(BackendPreset p) {
   switch (p) {
     case BackendPreset.laptop:
       return const BackendUrls(
-        graphqlHttp: 'http://127.0.0.1:5001/graphql',
-        sockWs: 'ws://127.0.0.1:8002',
-        imageHttp: 'http://127.0.0.1:8001',
+        graphqlHttp: 'http://10.0.0.90:5001/graphql',
+        sockWs: 'ws://10.0.0.90:8002',
+        imageHttp: 'http://10.0.0.90:8001',
       );
     case BackendPreset.piLan:
       return const BackendUrls(

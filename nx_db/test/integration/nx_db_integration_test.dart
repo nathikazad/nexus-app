@@ -15,25 +15,26 @@ import 'package:nx_db/src/data_providers/models_provider.dart';
 
 /// Set `RUN_NX_DB_INTEGRATION=true` to run live GraphQL tests against a running PGDB.
 ///
-/// Targets **local desktop** dev by default: [`BackendPreset.laptop`] → `http://127.0.0.1:5001/graphql`
+/// Targets **localhost PGDB** by default: [`kIntegrationTestBackendUrls.graphqlHttp`]
 /// (same seed data story as [`servers/pgdb/docs/llm-reference/seed-data.md`](../../../../servers/pgdb/docs/llm-reference/seed-data.md),
-/// typically `user_id=1`).
+/// typically `user_id=1`). The app [`BackendPreset.laptop`](../../lib/src/backend_presets.dart) uses LAN `10.0.0.90`.
 ///
 /// Optional overrides:
-/// - `NX_DB_INTEGRATION_GRAPHQL_HTTP` — full GraphQL URL if not using the laptop preset host/port.
+/// - `NX_DB_INTEGRATION_GRAPHQL_HTTP` — full GraphQL URL if not using localhost.
 /// - `NX_DB_INTEGRATION_USER_ID` — `x-user-id` (default `1`).
 bool get _runIntegration => Platform.environment['RUN_NX_DB_INTEGRATION'] == 'true';
 
 GraphQLClient _integrationClient() {
   final fromEnv = Platform.environment['NX_DB_INTEGRATION_GRAPHQL_HTTP'];
-  final graphqlHttp =
-      (fromEnv != null && fromEnv.isNotEmpty) ? fromEnv : resolve(BackendPreset.laptop).graphqlHttp;
+  final graphqlHttp = (fromEnv != null && fromEnv.isNotEmpty)
+      ? fromEnv
+      : kIntegrationTestBackendUrls.graphqlHttp;
   final userId = Platform.environment['NX_DB_INTEGRATION_USER_ID'] ?? '1';
   return createClient(graphqlHttp, userId);
 }
 
 void main() {
-  group('IN13 integration (RUN_NX_DB_INTEGRATION=true, desktop/laptop preset)', () {
+  group('IN13 integration (RUN_NX_DB_INTEGRATION=true, localhost PGDB)', () {
     late GraphQLClient client;
 
     setUpAll(() {

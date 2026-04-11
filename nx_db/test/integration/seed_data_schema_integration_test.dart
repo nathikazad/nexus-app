@@ -70,8 +70,9 @@ bool get _runIntegration => Platform.environment['RUN_NX_DB_INTEGRATION'] == 'tr
 
 GraphQLClient _client() {
   final fromEnv = Platform.environment['NX_DB_INTEGRATION_GRAPHQL_HTTP'];
-  final graphqlHttp =
-      (fromEnv != null && fromEnv.isNotEmpty) ? fromEnv : resolve(BackendPreset.laptop).graphqlHttp;
+  final graphqlHttp = (fromEnv != null && fromEnv.isNotEmpty)
+      ? fromEnv
+      : kIntegrationTestBackendUrls.graphqlHttp;
   final userId = Platform.environment['NX_DB_INTEGRATION_USER_ID'] ?? '1';
   return createClient(graphqlHttp, userId);
 }

@@ -23,7 +23,7 @@ void main() {
   group('Seed schema (seed-data.md) — Expense app', () {
     test('Expense type: cost, Company relation, Category/Judgment/Essentiality', () async {
       final container = ProviderContainer(
-        overrides: [authProvider.overrideWith(() => TestAuthController())],
+        overrides: expenseIntegrationOverrides,
       );
       addTearDown(container.dispose);
 
@@ -44,7 +44,7 @@ void main() {
 
     test('Category tag tree includes seed root nodes', () async {
       final container = ProviderContainer(
-        overrides: [authProvider.overrideWith(() => TestAuthController())],
+        overrides: expenseIntegrationOverrides,
       );
       addTearDown(container.dispose);
 
@@ -64,7 +64,7 @@ void main() {
 
     test('expense_schema helpers: primary amount is cost', () async {
       final container = ProviderContainer(
-        overrides: [authProvider.overrideWith(() => TestAuthController())],
+        overrides: expenseIntegrationOverrides,
       );
       addTearDown(container.dispose);
 
@@ -76,7 +76,7 @@ void main() {
 
     test('expenseSummaryProvider: count > 0 and sum over cost', () async {
       final container = ProviderContainer(
-        overrides: [authProvider.overrideWith(() => TestAuthController())],
+        overrides: expenseIntegrationOverrides,
       );
       addTearDown(container.dispose);
 
@@ -90,7 +90,7 @@ void main() {
 
     test('demo expense names from seed table appear in list', () async {
       final container = ProviderContainer(
-        overrides: [authProvider.overrideWith(() => TestAuthController())],
+        overrides: expenseIntegrationOverrides,
       );
       addTearDown(container.dispose);
 
@@ -115,7 +115,7 @@ void main() {
 
     test('at least one expense has tag assignments (struct includes tags)', () async {
       final container = ProviderContainer(
-        overrides: [authProvider.overrideWith(() => TestAuthController())],
+        overrides: expenseIntegrationOverrides,
       );
       addTearDown(container.dispose);
 

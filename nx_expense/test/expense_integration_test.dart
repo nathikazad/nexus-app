@@ -16,9 +16,7 @@ void main() {
       'I9.1 Expense schema load — attributes non-empty',
       () async {
         final container = ProviderContainer(
-          overrides: [
-            authProvider.overrideWith(() => TestAuthController()),
-          ],
+          overrides: expenseIntegrationOverrides,
         );
         addTearDown(container.dispose);
 
@@ -35,9 +33,7 @@ void main() {
       'I9.2 Tag systems present',
       () async {
         final container = ProviderContainer(
-          overrides: [
-            authProvider.overrideWith(() => TestAuthController()),
-          ],
+          overrides: expenseIntegrationOverrides,
         );
         addTearDown(container.dispose);
 
@@ -53,9 +49,7 @@ void main() {
       'I9.3 List expenses — seed DB returns rows',
       () async {
         final container = ProviderContainer(
-          overrides: [
-            authProvider.overrideWith(() => TestAuthController()),
-          ],
+          overrides: expenseIntegrationOverrides,
         );
         addTearDown(container.dispose);
 

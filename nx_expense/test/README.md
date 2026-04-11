@@ -18,7 +18,7 @@ flutter test test/expense_providers_test.dart
 
 ## Integration tests
 
-Shared auth for live GraphQL: [`test/support/integration_auth.dart`](support/integration_auth.dart) (`TestAuthController`, user **`1`**, [`BackendPreset.laptop`](../../nx_db/lib/src/backend_presets.dart) → **`http://127.0.0.1:5001/graphql`**).
+Shared auth for live GraphQL: [`test/support/integration_auth.dart`](support/integration_auth.dart) — user **`1`**, [`BackendPreset.laptop`](../../nx_db/lib/src/backend_presets.dart) for the user object, with **[`expenseIntegrationOverrides`](support/integration_auth.dart)** so HTTP/WebSocket/image URLs use **[`kIntegrationTestBackendUrls`](../../nx_db/lib/src/backend_presets.dart)** (`127.0.0.1`, same ports as dev). The shipped app **Laptop** preset targets **`10.0.0.90`** instead.
 
 | File | Role |
 |------|------|
@@ -29,7 +29,7 @@ These use **live** `getKgqlModelType` / `getKgqlModels` / aggregates via `nx_db`
 
 **Requirements**
 
-- PostGraphile / PGDB stack listening on that URL (or override preset in code if your dev setup differs).
+- PostGraphile / PGDB on **localhost** at the ports in [`kIntegrationTestBackendUrls`](../../nx_db/lib/src/backend_presets.dart), or set a custom URL via code/env if your setup differs.
 - Sample data loaded so `Expense` model type and rows exist.
 
 **Run**
