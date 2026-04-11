@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nx_db/src/models/requests/SetModelRequest.dart' as sm;
 
+import '../app_theme.dart';
 import '../expense_schema.dart';
 import '../providers/expense_providers.dart';
+import '../reference_layout.dart';
 import '../widgets/relation_picker.dart';
 import '../widgets/tag_picker.dart';
 
-/// Create (`expenseId == null`) or edit.
+/// Create (`expenseId == null`) or edit. Layout matches reference Screen 4.
 class ExpenseFormScreen extends ConsumerStatefulWidget {
   const ExpenseFormScreen({super.key, this.expenseId});
 
@@ -115,73 +118,156 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
               });
             }
 
+            final title = widget.expenseId == null ? 'New Expense' : 'Edit Expense';
+
             return Scaffold(
+              backgroundColor: Colors.white,
               appBar: AppBar(
-                title: Text(widget.expenseId == null ? 'New expense' : 'Edit expense'),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                  onPressed: () => context.pop(),
+                ),
+                centerTitle: true,
+                title: Text(title, style: refAppBarTitleBase()),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(1),
+                  child: Divider(height: 1, color: AppColors.slate100),
+                ),
               ),
               body: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : ListView(
-                      padding: const EdgeInsets.all(16),
+                  : Column(
                       children: [
-                        TextField(
-                          controller: _name,
-                          decoration: const InputDecoration(
-                            labelText: 'Name',
-                            border: OutlineInputBorder(),
+                        Expanded(
+                          child: ColoredBox(
+                            color: const Color(0x4DF8FAFC),
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 20, RefLayout.px5, 120),
+                              children: [
+                                _refLabel('Name *'),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _name,
+                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                                  decoration: _refInputDeco(hint: 'E.g., Groceries'),
+                                ),
+                                const SizedBox(height: 16),
+                                _refLabel('Description'),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _desc,
+                                  maxLines: 3,
+                                  style: GoogleFonts.inter(fontSize: 14),
+                                  decoration: _refInputDeco(hint: 'Add details...'),
+                                ),
+                                const SizedBox(height: 24),
+                                Text('Attributes', style: refSectionTitle(context)),
+                                const SizedBox(height: 12),
+                                Builder(
+                                  builder: (context) {
+                                    final ads = (schema.attributes ?? const <AttributeDefinition>[])
+                                        .where((ad) => ad.key != null && _attr.containsKey(ad.key))
+                                        .toList();
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                                        border: Border.all(color: AppColors.slate100),
+                                        boxShadow: refCardShadow,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          for (var i = 0; i < ads.length; i++) ...[
+                                            _attrField(ads[i], _attr[ads[i].key]!),
+                                            if (i < ads.length - 1)
+                                              const Divider(height: 1, color: AppColors.slate50),
+                                          ],
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 24),
+                                Text('Tags', style: refSectionTitle(context)),
+                                const SizedBox(height: 12),
+                                Builder(
+                                  builder: (context) {
+                                    final systems = schema.tagSystems ?? const <TagSystem>[];
+                                    if (systems.isEmpty) {
+                                      return Text(
+                                        'No tag systems',
+                                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
+                                      );
+                                    }
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                                        border: Border.all(color: AppColors.slate100),
+                                        boxShadow: refCardShadow,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          for (var i = 0; i < systems.length; i++) ...[
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              child: TagPickerRow(
+                                                system: systems[i],
+                                                value: _tags[systems[i].name] ?? [],
+                                                onChanged: (v) => setState(() => _tags[systems[i].name] = v),
+                                              ),
+                                            ),
+                                            if (i < systems.length - 1)
+                                              const Divider(height: 1, color: AppColors.slate50),
+                                          ],
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 24),
+                                Text('Relations', style: refSectionTitle(context)),
+                                const SizedBox(height: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                                    border: Border.all(color: AppColors.slate100),
+                                    boxShadow: refCardShadow,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Column(
+                                    children: [
+                                      for (final rt in schema.relations ?? const <RelationshipType>[]) ...[
+                                        if (rt.link is String && (rt.link as String).isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            child: RelationPickerRow(
+                                              targetModelTypeName: rt.link as String,
+                                              valueIds: _relations[rt.link as String] ?? [],
+                                              onChanged: (ids) =>
+                                                  setState(() => _relations[rt.link as String] = ids),
+                                            ),
+                                          ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _desc,
-                          decoration: const InputDecoration(
-                            labelText: 'Description',
-                            border: OutlineInputBorder(),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 28),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            border: Border(top: BorderSide(color: AppColors.slate100)),
                           ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 16),
-                        Text('Attributes', style: Theme.of(context).textTheme.titleMedium),
-                        for (final ad in schema.attributes ?? const <AttributeDefinition>[]) ...[
-                          if (ad.key != null && _attr.containsKey(ad.key))
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: _attrField(ad, _attr[ad.key]!),
-                            ),
-                        ],
-                        const SizedBox(height: 16),
-                        Text('Tags', style: Theme.of(context).textTheme.titleMedium),
-                        for (final ts in schema.tagSystems ?? const <TagSystem>[]) ...[
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: TagPickerRow(
-                                system: ts,
-                                value: _tags[ts.name] ?? [],
-                                onChanged: (v) => setState(() => _tags[ts.name] = v),
-                              ),
-                            ),
+                          child: FilledButton(
+                            onPressed: () => _submit(schema),
+                            child: Text('Save Expense', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
                           ),
-                        ],
-                        const SizedBox(height: 16),
-                        Text('Relations', style: Theme.of(context).textTheme.titleMedium),
-                        for (final rt in schema.relations ?? const <RelationshipType>[]) ...[
-                          if (rt.link is String && (rt.link as String).isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: RelationPickerRow(
-                                targetModelTypeName: rt.link as String,
-                                valueIds: _relations[rt.link as String] ?? [],
-                                onChanged: (ids) =>
-                                    setState(() => _relations[rt.link as String] = ids),
-                              ),
-                            ),
-                        ],
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: () => _submit(schema),
-                          child: const Text('Save'),
                         ),
                       ],
                     ),
@@ -192,24 +278,101 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     );
   }
 
+  Widget _refLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: AppColors.slate500,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  InputDecoration _refInputDeco({required String hint}) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.slate200),
+      ),
+    );
+  }
+
   Widget _attrField(AttributeDefinition ad, TextEditingController c) {
     final vt = ad.valueType ?? 'string';
     if (vt == 'boolean') {
-      return SwitchListTile(
-        title: Text(ad.key ?? ''),
-        value: c.text == 'true',
-        onChanged: (v) => setState(() => c.text = v ? 'true' : 'false'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                ad.key ?? '',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
+              ),
+            ),
+            Switch(
+              value: c.text == 'true',
+              activeTrackColor: AppColors.teal600,
+              onChanged: (v) => setState(() => c.text = v ? 'true' : 'false'),
+            ),
+          ],
+        ),
       );
     }
-    return TextField(
-      controller: c,
-      decoration: InputDecoration(
-        labelText: ad.key,
-        border: const OutlineInputBorder(),
+    if (vt == 'number') {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                ad.key ?? '',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
+              ),
+            ),
+            SizedBox(
+              width: 120,
+              child: TextField(
+                controller: c,
+                textAlign: TextAlign.right,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.slate900),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: r'$ ',
+                  prefixStyle: GoogleFonts.inter(color: AppColors.slate400, fontWeight: FontWeight.w500),
+                  isDense: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            ad.key ?? '',
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: c,
+            decoration: _refInputDeco(hint: ''),
+          ),
+        ],
       ),
-      keyboardType: vt == 'number'
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
     );
   }
 

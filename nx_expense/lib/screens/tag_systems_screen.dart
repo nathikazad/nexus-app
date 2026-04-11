@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
+import '../app_theme.dart';
 import '../expense_schema.dart';
 import '../providers/expense_providers.dart';
+import '../reference_layout.dart';
 
+/// Reference Screen 6: Tag Systems.
 class TagSystemsScreen extends ConsumerWidget {
   const TagSystemsScreen({super.key});
 
@@ -19,29 +23,128 @@ class TagSystemsScreen extends ConsumerWidget {
       data: (schema) {
         final systems = schema.tagSystems ?? const <TagSystem>[];
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Tag systems'),
-          ),
-          body: ListView.builder(
-            itemCount: systems.length,
-            itemBuilder: (context, i) {
-              final ts = systems[i];
-              return ListTile(
-                title: Text(ts.name),
-                subtitle: Text(
-                  '${ts.selectionMode} · ${ts.isHierarchical ? "tree" : "flat"} · ${countTagNodes(ts)} nodes',
+          backgroundColor: Colors.white,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.pt12, RefLayout.px5, RefLayout.pb4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
+                        onPressed: () {
+                          if (context.canPop()) context.pop();
+                        },
+                      ),
+                      Expanded(child: Text('Tag Systems', style: refAppBarTitleLarge())),
+                    ],
+                  ),
                 ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/tag-system/form/${ts.id}'),
-              );
-            },
+              ),
+              const Divider(height: 1, color: AppColors.slate100),
+              Expanded(
+                child: ColoredBox(
+                  color: AppColors.slate50.withValues(alpha: 0.5),
+                  child: systems.isEmpty
+                      ? ListView(
+                          padding: const EdgeInsets.all(RefLayout.px5),
+                          children: [
+                            _placeholderRow('Category', 'exclusive · tree · 24 nodes'),
+                            _placeholderRow('Priority', 'exclusive · flat · 3 nodes'),
+                            _placeholderRow('Project', 'multiple · flat · 8 nodes'),
+                          ],
+                        )
+                      : ListView.separated(
+                          itemCount: systems.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.slate100),
+                          itemBuilder: (context, i) {
+                            final ts = systems[i];
+                            return Material(
+                              color: Colors.white,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 8),
+                                title: Text(
+                                  ts.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.slate900,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${ts.selectionMode} · ${ts.isHierarchical ? "tree" : "flat"} · ${countTagNodes(ts)} nodes',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.slate400,
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+                                onTap: () => context.push('/tag-system/form/${ts.id}'),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => context.push('/tag-system/form'),
-            child: const Icon(Icons.add),
+          floatingActionButton: Container(
+            decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: refFabShadow),
+            child: FloatingActionButton(
+              onPressed: () => context.push('/tag-system/form'),
+              backgroundColor: AppColors.teal600,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              child: const Icon(Icons.add_circle_outline, size: 28),
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _placeholderRow(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
+import '../app_theme.dart';
 import '../providers/expense_providers.dart';
+import '../reference_layout.dart';
 
 class TagSystemFormScreen extends ConsumerStatefulWidget {
   const TagSystemFormScreen({super.key, this.tagSystemId});
@@ -81,27 +84,27 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       return;
     }
     _name.text = ts.name;
-      _exclusive = ts.selectionMode.toLowerCase() == 'exclusive';
-      _hierarchical = ts.isHierarchical;
-      if (ts.isHierarchical) {
-        _hierRoots
-          ..clear()
-          ..addAll(ts.nodes.map(_NodeForm.fromTag));
-        if (_hierRoots.isEmpty) _hierRoots.add(_NodeForm());
-      } else {
-        void flat(TagNode n) {
-          _flatCtrls.add(TextEditingController(text: n.name));
-          for (final c in n.children ?? const <TagNode>[]) {
-            flat(c);
-          }
+    _exclusive = ts.selectionMode.toLowerCase() == 'exclusive';
+    _hierarchical = ts.isHierarchical;
+    if (ts.isHierarchical) {
+      _hierRoots
+        ..clear()
+        ..addAll(ts.nodes.map(_NodeForm.fromTag));
+      if (_hierRoots.isEmpty) _hierRoots.add(_NodeForm());
+    } else {
+      void flat(TagNode n) {
+        _flatCtrls.add(TextEditingController(text: n.name));
+        for (final c in n.children ?? const <TagNode>[]) {
+          flat(c);
         }
-
-        _flatCtrls.clear();
-        for (final n in ts.nodes) {
-          flat(n);
-        }
-        if (_flatCtrls.isEmpty) _flatCtrls.add(TextEditingController());
       }
+
+      _flatCtrls.clear();
+      for (final n in ts.nodes) {
+        flat(n);
+      }
+      if (_flatCtrls.isEmpty) _flatCtrls.add(TextEditingController());
+    }
     _didInit = true;
   }
 
@@ -115,92 +118,112 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       data: (schema) {
         _ensureFromSchema(schema);
         return Scaffold(
+          backgroundColor: Colors.white,
           appBar: AppBar(
-            title: Text(widget.tagSystemId == null ? 'New tag system' : 'Edit tag system'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+              onPressed: () => context.pop(),
+            ),
+            centerTitle: true,
+            title: Text(
+              widget.tagSystemId == null ? 'New Tag System' : 'Edit Tag System',
+              style: refAppBarTitleBase(),
+            ),
             actions: [
               if (widget.tagSystemId != null)
                 IconButton(
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(Icons.delete_outline, color: Color(0xFFF87171), size: 22),
                   onPressed: _loading ? null : () => _delete(schema),
                 ),
             ],
+            bottom: const PreferredSize(
+              preferredSize: Size.fromHeight(1),
+              child: Divider(height: 1, color: AppColors.slate100),
+            ),
           ),
           body: _loading
               ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.all(16),
+              : Column(
                   children: [
-                    TextField(
-                      controller: _name,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: true, label: Text('Exclusive')),
-                        ButtonSegment(value: false, label: Text('Multiple')),
-                      ],
-                      selected: {_exclusive},
-                      onSelectionChanged: (s) =>
-                          setState(() => _exclusive = s.isEmpty ? _exclusive : s.first),
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      title: const Text('Hierarchical'),
-                      value: _hierarchical,
-                      onChanged: (v) => setState(() => _hierarchical = v),
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Nodes', style: Theme.of(context).textTheme.titleMedium),
-                    if (_hierarchical) ...[
-                      for (var i = 0; i < _hierRoots.length; i++)
-                        _buildHier(_hierRoots[i], 0),
-                      TextButton.icon(
-                        onPressed: () => setState(() => _hierRoots.add(_NodeForm())),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add root'),
-                      ),
-                    ] else ...[
-                      for (var i = 0; i < _flatCtrls.length; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _flatCtrls[i],
-                                  decoration: InputDecoration(
-                                    labelText: 'Node ${i + 1}',
-                                    border: const OutlineInputBorder(),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(RefLayout.px5, 20, RefLayout.px5, 24),
+                        children: [
+                          _fieldLabel('Name'),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _name,
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.slate200),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.slate200),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _fieldLabel('Selection Mode'),
+                          const SizedBox(height: 8),
+                          _selectionModePill(),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.slate200),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Hierarchical (Tree)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.slate700,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.remove_circle_outline),
-                                onPressed: () {
-                                  if (_flatCtrls.length <= 1) return;
-                                  setState(() {
-                                    _flatCtrls[i].dispose();
-                                    _flatCtrls.removeAt(i);
-                                  });
-                                },
-                              ),
-                            ],
+                                Switch(
+                                  value: _hierarchical,
+                                  activeTrackColor: AppColors.teal600,
+                                  inactiveTrackColor: AppColors.slate200,
+                                  onChanged: (v) => setState(() => _hierarchical = v),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      TextButton.icon(
-                        onPressed: () => setState(() => _flatCtrls.add(TextEditingController())),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add node'),
+                          const SizedBox(height: 32),
+                          if (_hierarchical) ...[
+                            _nodesStructureHeader(),
+                            const SizedBox(height: 12),
+                            _hierarchicalNodeTree(),
+                          ] else ...[
+                            _nodesStructureHeader(),
+                            const SizedBox(height: 12),
+                            ..._flatNodeList(),
+                          ],
+                        ],
                       ),
-                    ],
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _loading ? null : () => _save(schema),
-                      child: const Text('Save'),
+                    ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 28),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(top: BorderSide(color: AppColors.slate100)),
+                      ),
+                      child: FilledButton(
+                        onPressed: _loading ? null : () => _save(schema),
+                        child: Text('Save System', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                      ),
                     ),
                   ],
                 ),
@@ -209,33 +232,386 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
     );
   }
 
-  Widget _buildHier(_NodeForm node, int depth) {
-    return Padding(
-      padding: EdgeInsets.only(left: depth * 16.0, top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  /// Reference: text-xs font-semibold text-slate-500 uppercase tracking-wider
+  Widget _fieldLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: AppColors.slate500,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  /// Reference Screen 7: p-1 bg-slate-100 rounded-xl, white pill on selected half.
+  Widget _selectionModePill() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.slate100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
         children: [
-          Row(
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => setState(() => _exclusive = true),
+                borderRadius: BorderRadius.circular(8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: _exclusive ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: _exclusive
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Exclusive',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: _exclusive ? AppColors.slate900 : AppColors.slate500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => setState(() => _exclusive = false),
+                borderRadius: BorderRadius.circular(8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: !_exclusive ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: !_exclusive
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Multiple',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: !_exclusive ? AppColors.slate900 : AppColors.slate500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Reference: row with "Nodes Structure" (slate-400) + Add Root (teal).
+  Widget _nodesStructureHeader() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            'NODES STRUCTURE',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+              color: AppColors.slate400,
+            ),
+          ),
+        ),
+        if (_hierarchical)
+          TextButton.icon(
+            onPressed: () => setState(() => _hierRoots.add(_NodeForm())),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.teal600,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.teal600),
+            label: Text(
+              'Add Root',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.teal600,
+              ),
+            ),
+          )
+        else
+          TextButton.icon(
+            onPressed: () => setState(() => _flatCtrls.add(TextEditingController())),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.teal600,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.teal600),
+            label: Text(
+              'Add node',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.teal600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Reference: border-l-2 border-slate-100 ml-2 pl-2, tree rows with arrow + inputs + icons.
+  Widget _hierarchicalNodeTree() {
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.only(left: 8),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: AppColors.slate100, width: 2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < _hierRoots.length; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: i < _hierRoots.length - 1 ? 8 : 0),
+              child: _buildTreeNode(
+                _hierRoots[i],
+                isRoot: true,
+                rootIndex: i,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTreeNode(
+    _NodeForm node, {
+    required bool isRoot,
+    int? rootIndex,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.arrow_right, color: AppColors.slate300, size: 20),
+            Expanded(
+              child: TextField(
+                controller: node.name,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate900,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_circle_outline, color: AppColors.slate300, size: 22),
+              onPressed: () => setState(() => node.children.add(_NodeForm())),
+            ),
+            IconButton(
+              icon: Icon(Icons.cancel_outlined, color: AppColors.slate300, size: 22),
+              onPressed: () {
+                if (!isRoot || rootIndex == null) return;
+                if (_hierRoots.length <= 1) return;
+                setState(() {
+                  _hierRoots[rootIndex].dispose();
+                  _hierRoots.removeAt(rootIndex);
+                });
+              },
+            ),
+          ],
+        ),
+        if (node.children.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 24, top: 8),
+            child: Container(
+              padding: const EdgeInsets.only(left: 8),
+              decoration: const BoxDecoration(
+                border: Border(left: BorderSide(color: AppColors.slate100, width: 2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var j = 0; j < node.children.length; j++)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: j < node.children.length - 1 ? 8 : 0),
+                      child: _buildChildNode(node, node.children[j], j),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildChildNode(_NodeForm parent, _NodeForm child, int childIndex) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 2,
+                    margin: const EdgeInsets.only(right: 4),
+                    color: AppColors.slate100,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TextField(
+                controller: child.name,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate900,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_circle_outline, color: AppColors.slate300, size: 22),
+              onPressed: () => setState(() => child.children.add(_NodeForm())),
+            ),
+            IconButton(
+              icon: Icon(Icons.cancel_outlined, color: AppColors.slate300, size: 22),
+              onPressed: () => setState(() {
+                child.dispose();
+                parent.children.removeAt(childIndex);
+              }),
+            ),
+          ],
+        ),
+        if (child.children.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 24, top: 8),
+            child: Container(
+              padding: const EdgeInsets.only(left: 8),
+              decoration: const BoxDecoration(
+                border: Border(left: BorderSide(color: AppColors.slate100, width: 2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var k = 0; k < child.children.length; k++)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: k < child.children.length - 1 ? 8 : 0),
+                      child: _buildChildNode(child, child.children[k], k),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  List<Widget> _flatNodeList() {
+    return [
+      for (var i = 0; i < _flatCtrls.length; i++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
             children: [
               Expanded(
                 child: TextField(
-                  controller: node.name,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(),
+                  controller: _flatCtrls[i],
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.slate200),
+                    ),
                   ),
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => setState(() => node.children.add(_NodeForm())),
+                icon: Icon(Icons.cancel_outlined, color: AppColors.slate300, size: 22),
+                onPressed: () {
+                  if (_flatCtrls.length <= 1) return;
+                  setState(() {
+                    _flatCtrls[i].dispose();
+                    _flatCtrls.removeAt(i);
+                  });
+                },
               ),
             ],
           ),
-          for (final c in node.children) _buildHier(c, depth + 1),
-        ],
-      ),
-    );
+        ),
+    ];
   }
 
   Future<void> _save(ModelType schema) async {

@@ -262,29 +262,6 @@ final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) asy
   return ExpenseSummary(count: count, sumTotal: sum);
 });
 
-/// Per numeric attribute key → sum for dashboard cards (respects date range).
-final dashboardNumberSumsProvider =
-    FutureProvider<List<({String key, num value})>>((ref) async {
-  final client = ref.watch(graphqlClientProvider);
-  final schema = await ref.watch(expenseSchemaProvider.future);
-  final filterKgql = _dashboardFilterKgql(ref);
-  final keys = (schema.attributes ?? const <AttributeDefinition>[])
-      .where((a) => a.valueType == 'number' && (a.key ?? '').isNotEmpty)
-      .map((a) => a.key!)
-      .toList();
-  final out = <({String key, num value})>[];
-  for (final k in keys) {
-    final m = await getKgqlAggregate(
-      client,
-      filterKgql,
-      {'metric': 'sum', 'key': k, 'group': null},
-    );
-    final v = m['aggregated_value'] as num? ?? 0;
-    out.add((key: k, value: v));
-  }
-  return out;
-});
-
 /// Sum grouped by calendar day (`created_at` window). Uses dashboard date range when set.
 final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final client = ref.watch(graphqlClientProvider);

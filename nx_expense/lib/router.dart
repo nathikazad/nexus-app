@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 
+import 'app_theme.dart';
+import 'reference_layout.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/expense_detail_screen.dart';
 import 'screens/expense_form_screen.dart';
 import 'screens/expense_list_screen.dart';
+import 'screens/expense_login_screen.dart';
 import 'screens/tag_browser_screen.dart';
 import 'screens/tag_system_form_screen.dart';
 import 'screens/tag_systems_screen.dart';
@@ -35,24 +38,44 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(),
+        builder: (context, state) => const ExpenseLoginScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
+          final showFab = navigationShell.currentIndex == 0;
           return Scaffold(
+            extendBody: true,
             body: navigationShell,
+            floatingActionButton: showFab
+                ? Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: refFabShadow,
+                    ),
+                    child: FloatingActionButton(
+                      onPressed: () => context.push('/expense/form'),
+                      backgroundColor: AppColors.teal600,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: const CircleBorder(),
+                      child: const Icon(Icons.add_circle_outline, size: 28),
+                    ),
+                  )
+                : null,
+            floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
             bottomNavigationBar: NavigationBar(
               selectedIndex: navigationShell.currentIndex,
               onDestinationSelected: navigationShell.goBranch,
               destinations: const [
                 NavigationDestination(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  selectedIcon: Icon(Icons.receipt_long),
+                  icon: Icon(Icons.account_balance_wallet_outlined),
+                  selectedIcon: Icon(Icons.account_balance_wallet),
                   label: 'Expenses',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart),
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
                   label: 'Dashboard',
                 ),
               ],
