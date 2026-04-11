@@ -7,6 +7,7 @@ import 'app_theme.dart';
 abstract final class RefLayout {
   static const double px5 = 20;
   static const double pt12 = 48;
+  static const double appBarTop = 12;
   static const double pb4 = 16;
   static const double pb3 = 12;
   static const double pb24 = 96;

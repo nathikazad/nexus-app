@@ -6,7 +6,7 @@
     <title>Expense Tracker UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* Hiding scrollbars for app-like feel while maintaining scrollability */
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -22,30 +22,37 @@
                 <div class="w-16 h-16 bg-teal-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
                     <iconify-icon icon="solar:wallet-money-linear" class="text-3xl"></iconify-icon>
                 </div>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">EXPNS.</h1>
-                <p class="text-sm text-slate-500 mt-2">Track your spending effortlessly.</p>
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Nx Expense</h1>
+                <p class="text-sm text-slate-500 mt-2">Track your spending privately.</p>
             </div>
-            
+
             <form class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Email or Username</label>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">User ID</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <iconify-icon icon="solar:user-linear"></iconify-icon>
                         </div>
-                        <input type="text" value="alex@example.com" class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50 focus:bg-white transition-colors" placeholder="Enter email">
+                        <input type="text" value="1" class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50 focus:bg-white transition-colors" placeholder="Enter user ID">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Password</label>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Backend</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <iconify-icon icon="solar:lock-password-linear"></iconify-icon>
+                            <iconify-icon icon="solar:server-linear"></iconify-icon>
                         </div>
-                        <input type="password" value="••••••••" class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50 focus:bg-white transition-colors" placeholder="Enter password">
+                        <select class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50 focus:bg-white transition-colors appearance-none">
+                            <option>Production</option>
+                            <option>Local</option>
+                            <option>Custom</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                            <iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon>
+                        </div>
                     </div>
                 </div>
-                
+
                 <button type="button" class="w-full bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors mt-4">
                     Log In
                 </button>
@@ -56,41 +63,61 @@
     <!-- Screen 2: Expense List (Main) -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex justify-between items-center bg-white z-10 relative">
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
             <div class="flex gap-4 text-slate-400">
+                <button class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></button>
                 <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon></button>
                 <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></button>
             </div>
         </div>
-        
-        <!-- Summary -->
-        <div class="px-5 pb-3">
-            <p class="text-sm text-slate-500 font-medium">12 expenses · $1,240.00 total</p>
+
+        <!-- Month/Year Selector -->
+        <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+            <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0 hover:bg-slate-200 transition-colors">
+                2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+            </button>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Jan</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Feb</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Mar</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Apr</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">May</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Jun</button>
+            </div>
         </div>
 
-        <!-- Filters -->
-        <div class="px-5 pb-4 flex gap-2 overflow-x-auto no-scrollbar relative z-10 bg-white">
-            <button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white shrink-0 shadow-sm border border-slate-900">All</button>
-            <button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Food</button>
-            <button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Transport</button>
-            <button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Entertainment</button>
+        <!-- Summary + Filter/Sort icons -->
+        <div class="px-5 pb-3 pt-1 flex items-center justify-between">
+            <p class="text-sm text-slate-500 font-medium">12 expenses &middot; $1,240.00</p>
+            <div class="flex items-center gap-3">
+                <button class="text-slate-400 hover:text-teal-600 transition-colors relative">
+                    <iconify-icon icon="solar:filter-linear" class="text-lg"></iconify-icon>
+                </button>
+                <button class="text-slate-400 hover:text-teal-600 transition-colors">
+                    <iconify-icon icon="solar:sort-from-top-to-bottom-linear" class="text-lg"></iconify-icon>
+                </button>
+            </div>
         </div>
 
         <!-- List -->
-        <div class="flex-1 overflow-y-auto px-5 pb-24 space-y-3 no-scrollbar bg-slate-50/50 pt-2">
+        <div class="flex-1 overflow-y-auto px-5 pb-24 space-y-2 no-scrollbar bg-slate-50/50 pt-2">
+            <!-- Date Section Header -->
+            <div class="pt-2 pb-1">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 15, 2026</p>
+            </div>
+
             <!-- Card 1 -->
             <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
                 <div class="flex justify-between items-start mb-1">
                     <h3 class="text-sm font-semibold text-slate-900">Starbucks Coffee</h3>
                     <span class="text-sm font-semibold text-teal-600">$4.50</span>
                 </div>
-                <p class="text-xs text-slate-400 mb-3">Mar 15, 2026</p>
-                <div class="flex flex-wrap gap-1.5 mb-3">
+                <p class="text-xs text-slate-500 font-medium mt-1">Starbucks Corp</p>
+                <div class="flex flex-wrap gap-1.5 mt-2.5 mb-1">
                     <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Category: Food</span>
                     <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Priority: Low</span>
                 </div>
-                <p class="text-xs text-slate-500 font-medium"><span class="text-slate-400">Vendor:</span> Starbucks Corp</p>
             </div>
 
             <!-- Card 2 -->
@@ -99,11 +126,15 @@
                     <h3 class="text-sm font-semibold text-slate-900">Uber Ride</h3>
                     <span class="text-sm font-semibold text-teal-600">$24.00</span>
                 </div>
-                <p class="text-xs text-slate-400 mb-3">Mar 14, 2026</p>
-                <div class="flex flex-wrap gap-1.5 mb-3">
+                <p class="text-xs text-slate-500 font-medium mt-1">Uber Technologies</p>
+                <div class="flex flex-wrap gap-1.5 mt-2.5 mb-1">
                     <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Category: Transport</span>
                 </div>
-                <p class="text-xs text-slate-500 font-medium"><span class="text-slate-400">Vendor:</span> Uber Technologies</p>
+            </div>
+
+            <!-- Date Section Header -->
+            <div class="pt-3 pb-1">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 10, 2026</p>
             </div>
 
             <!-- Card 3 -->
@@ -112,12 +143,11 @@
                     <h3 class="text-sm font-semibold text-slate-900">Monthly Groceries</h3>
                     <span class="text-sm font-semibold text-teal-600">$185.50</span>
                 </div>
-                <p class="text-xs text-slate-400 mb-3">Mar 10, 2026</p>
-                <div class="flex flex-wrap gap-1.5 mb-3">
+                <p class="text-xs text-slate-500 font-medium mt-1">Whole Foods</p>
+                <div class="flex flex-wrap gap-1.5 mt-2.5 mb-1">
                     <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Category: Food</span>
                     <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Priority: High</span>
                 </div>
-                <p class="text-xs text-slate-500 font-medium"><span class="text-slate-400">Vendor:</span> Whole Foods</p>
             </div>
         </div>
 
@@ -139,10 +169,307 @@
         </div>
     </div>
 
+    <!-- Screen 2a: Expense List — Filter Bottom Sheet open -->
+    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
+            <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
+            <div class="flex gap-4 text-slate-400">
+                <button class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></button>
+                <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon></button>
+                <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></button>
+            </div>
+        </div>
+
+        <!-- Month/Year Selector -->
+        <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+            <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0">
+                2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+            </button>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Mar</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Apr</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">May</button>
+            </div>
+        </div>
+
+        <!-- Summary + Filter/Sort icons (filter icon is teal = active) -->
+        <div class="px-5 pb-3 pt-1 flex items-center justify-between">
+            <p class="text-sm text-slate-500 font-medium">5 expenses &middot; $420.00</p>
+            <div class="flex items-center gap-3">
+                <button class="text-teal-600 relative">
+                    <iconify-icon icon="solar:filter-bold" class="text-lg"></iconify-icon>
+                    <!-- Active badge -->
+                    <span class="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-teal-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center">2</span>
+                </button>
+                <button class="text-slate-400 hover:text-teal-600 transition-colors">
+                    <iconify-icon icon="solar:sort-from-top-to-bottom-linear" class="text-lg"></iconify-icon>
+                </button>
+            </div>
+        </div>
+
+        <!-- Active filter chips (dismissible) -->
+        <div class="px-5 pb-3 flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 text-teal-700 rounded-lg text-xs font-medium border border-teal-200 shrink-0">
+                Category: Food
+                <button class="text-teal-400 hover:text-teal-700"><iconify-icon icon="solar:close-circle-linear" class="text-sm"></iconify-icon></button>
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 text-teal-700 rounded-lg text-xs font-medium border border-teal-200 shrink-0">
+                Min $50
+                <button class="text-teal-400 hover:text-teal-700"><iconify-icon icon="solar:close-circle-linear" class="text-sm"></iconify-icon></button>
+            </span>
+            <button class="text-xs font-medium text-slate-400 hover:text-red-500 shrink-0 ml-1">Clear all</button>
+        </div>
+
+        <!-- Dimmed list behind sheet -->
+        <div class="flex-1 bg-slate-50/50 opacity-40 px-5 pt-2 space-y-2">
+            <div class="pt-2 pb-1"><p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 15, 2026</p></div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100"><div class="flex justify-between"><h3 class="text-sm font-semibold text-slate-900">Starbucks Coffee</h3><span class="text-sm font-semibold text-teal-600">$54.50</span></div></div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex items-center px-6 pb-4 pt-2 z-20">
+            <button class="flex-1 flex flex-col items-center justify-center gap-1.5 text-teal-600">
+                <iconify-icon icon="solar:wallet-money-linear" class="text-[22px]"></iconify-icon>
+                <span class="text-xs font-semibold">Expenses</span>
+            </button>
+            <button class="flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400">
+                <iconify-icon icon="solar:widget-5-linear" class="text-[22px]"></iconify-icon>
+                <span class="text-xs font-medium">Dashboard</span>
+            </button>
+        </div>
+
+        <!-- Filter Bottom Sheet Overlay -->
+        <div class="absolute inset-0 bg-slate-900/40 z-30 flex flex-col justify-end">
+            <div class="bg-white w-full h-[75%] rounded-t-3xl shadow-2xl flex flex-col">
+                <!-- Handle -->
+                <div class="flex justify-center pt-3 pb-2">
+                    <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                </div>
+                <!-- Header -->
+                <div class="px-5 py-2 flex justify-between items-center border-b border-slate-100">
+                    <h2 class="text-base font-semibold text-slate-900">Filters</h2>
+                    <div class="flex items-center gap-4">
+                        <button class="text-xs font-medium text-slate-400 hover:text-red-500">Reset</button>
+                        <button class="text-sm font-semibold text-teal-600 hover:text-teal-700">Apply</button>
+                    </div>
+                </div>
+
+                <!-- Filter content (scrollable) -->
+                <div class="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
+
+                    <!-- Tag System: Category (hierarchical) -->
+                    <div>
+                        <button class="w-full flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Category</h3>
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400"></iconify-icon>
+                        </button>
+                        <div class="space-y-1 border-l-2 border-slate-100 ml-1 pl-3">
+                            <!-- Root: Food (selected) -->
+                            <label class="flex items-center gap-3 py-2 cursor-pointer">
+                                <input type="checkbox" checked class="appearance-none w-5 h-5 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[3px] after:left-[6px] after:w-[5px] after:h-[9px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                <span class="text-sm font-semibold text-slate-900">Food</span>
+                            </label>
+                            <!-- Children (indented) -->
+                            <div class="ml-5 space-y-1 border-l-2 border-slate-100 pl-3">
+                                <label class="flex items-center gap-3 py-1.5 cursor-pointer">
+                                    <input type="checkbox" checked class="appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[5px] after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                    <span class="text-sm text-slate-700">Fast Food</span>
+                                </label>
+                                <label class="flex items-center gap-3 py-1.5 cursor-pointer">
+                                    <input type="checkbox" checked class="appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[5px] after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                    <span class="text-sm text-slate-700">Groceries</span>
+                                </label>
+                                <label class="flex items-center gap-3 py-1.5 cursor-pointer">
+                                    <input type="checkbox" class="appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[5px] after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                    <span class="text-sm text-slate-700">Restaurants</span>
+                                </label>
+                            </div>
+                            <!-- Root: Transport (collapsed) -->
+                            <label class="flex items-center gap-3 py-2 cursor-pointer">
+                                <input type="checkbox" class="appearance-none w-5 h-5 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[3px] after:left-[6px] after:w-[5px] after:h-[9px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                <span class="text-sm font-semibold text-slate-900">Transport</span>
+                                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-sm ml-auto"></iconify-icon>
+                            </label>
+                            <!-- Root: Housing (collapsed) -->
+                            <label class="flex items-center gap-3 py-2 cursor-pointer">
+                                <input type="checkbox" class="appearance-none w-5 h-5 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[3px] after:left-[6px] after:w-[5px] after:h-[9px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                <span class="text-sm font-semibold text-slate-900">Housing</span>
+                                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-sm ml-auto"></iconify-icon>
+                            </label>
+                            <!-- Root: Entertainment -->
+                            <label class="flex items-center gap-3 py-2 cursor-pointer">
+                                <input type="checkbox" class="appearance-none w-5 h-5 rounded border-2 border-slate-300 checked:bg-teal-600 checked:border-teal-600 relative after:content-[''] after:absolute after:top-[3px] after:left-[6px] after:w-[5px] after:h-[9px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:opacity-0 checked:after:opacity-100 transition-all">
+                                <span class="text-sm font-semibold text-slate-900">Entertainment</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="border-t border-slate-100"></div>
+
+                    <!-- Tag System: Priority (flat) -->
+                    <div>
+                        <button class="w-full flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Priority</h3>
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400"></iconify-icon>
+                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <span class="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600 inline-block transition-colors">Low</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <span class="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600 inline-block transition-colors">Medium</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <span class="px-3 py-1.5 rounded-lg text-xs font-medium border border-teal-600 bg-teal-600 text-white inline-block transition-colors">High</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="border-t border-slate-100"></div>
+
+                    <!-- Amount filter -->
+                    <div>
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Amount</h3>
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1">
+                                <label class="block text-xs text-slate-400 mb-1.5">Min</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+                                    <input type="number" value="50" class="w-full pl-7 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none">
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs text-slate-400 mb-1.5">Max</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+                                    <input type="number" placeholder="No limit" class="w-full pl-7 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none placeholder:text-slate-300">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 2b: Expense List — Sort Bottom Sheet open -->
+    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
+            <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
+            <div class="flex gap-4 text-slate-400">
+                <button class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></button>
+                <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon></button>
+                <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></button>
+            </div>
+        </div>
+
+        <!-- Month/Year Selector -->
+        <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+            <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0">
+                2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+            </button>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Mar</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Apr</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">May</button>
+            </div>
+        </div>
+
+        <!-- Summary + Filter/Sort icons (sort icon is teal = active) -->
+        <div class="px-5 pb-3 pt-1 flex items-center justify-between">
+            <p class="text-sm text-slate-500 font-medium">12 expenses &middot; $1,240.00</p>
+            <div class="flex items-center gap-3">
+                <button class="text-slate-400 hover:text-teal-600 transition-colors">
+                    <iconify-icon icon="solar:filter-linear" class="text-lg"></iconify-icon>
+                </button>
+                <button class="text-teal-600">
+                    <iconify-icon icon="solar:sort-from-top-to-bottom-bold" class="text-lg"></iconify-icon>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dimmed list behind sheet -->
+        <div class="flex-1 bg-slate-50/50 opacity-40 px-5 pt-2 space-y-2">
+            <div class="pt-2 pb-1"><p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 15, 2026</p></div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100"><div class="flex justify-between"><h3 class="text-sm font-semibold text-slate-900">Monthly Groceries</h3><span class="text-sm font-semibold text-teal-600">$185.50</span></div></div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100"><div class="flex justify-between"><h3 class="text-sm font-semibold text-slate-900">Uber Ride</h3><span class="text-sm font-semibold text-teal-600">$24.00</span></div></div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex items-center px-6 pb-4 pt-2 z-20">
+            <button class="flex-1 flex flex-col items-center justify-center gap-1.5 text-teal-600">
+                <iconify-icon icon="solar:wallet-money-linear" class="text-[22px]"></iconify-icon>
+                <span class="text-xs font-semibold">Expenses</span>
+            </button>
+            <button class="flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400">
+                <iconify-icon icon="solar:widget-5-linear" class="text-[22px]"></iconify-icon>
+                <span class="text-xs font-medium">Dashboard</span>
+            </button>
+        </div>
+
+        <!-- Sort Bottom Sheet Overlay -->
+        <div class="absolute inset-0 bg-slate-900/40 z-30 flex flex-col justify-end">
+            <div class="bg-white w-full rounded-t-3xl shadow-2xl flex flex-col">
+                <!-- Handle -->
+                <div class="flex justify-center pt-3 pb-2">
+                    <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                </div>
+                <!-- Header -->
+                <div class="px-5 py-2 border-b border-slate-100">
+                    <h2 class="text-base font-semibold text-slate-900">Sort by</h2>
+                </div>
+
+                <!-- Sort options: two rows; Asc/Desc on the right; only one of the four choices at a time -->
+                <div class="p-2 pb-8 space-y-1">
+                    <div class="flex items-center justify-between gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <iconify-icon icon="solar:calendar-linear" class="text-slate-400 text-lg shrink-0"></iconify-icon>
+                            <span class="text-sm font-medium text-slate-900">Date</span>
+                        </div>
+                        <div class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 shrink-0" role="group" aria-label="Sort date by">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sortSheet" value="date-asc" class="peer sr-only">
+                                <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Asc</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sortSheet" value="date-desc" checked class="peer sr-only">
+                                <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Desc</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <iconify-icon icon="solar:wallet-money-linear" class="text-slate-400 text-lg shrink-0"></iconify-icon>
+                            <span class="text-sm font-medium text-slate-900">Amount</span>
+                        </div>
+                        <div class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 shrink-0" role="group" aria-label="Sort amount by">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sortSheet" value="amount-asc" class="peer sr-only">
+                                <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Asc</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sortSheet" value="amount-desc" class="peer sr-only">
+                                <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Desc</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Screen 3: Expense Detail -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex justify-between items-center border-b border-slate-100">
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
                 <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
             </button>
@@ -196,7 +523,7 @@
                         <div>
                             <span class="block text-xs text-slate-400 mb-1.5 ml-1">Category</span>
                             <div class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200/60">
-                                Food <span class="text-slate-400">›</span> Fast Food
+                                Food <span class="text-slate-400">&rsaquo;</span> Fast Food
                             </div>
                         </div>
                         <div>
@@ -239,7 +566,7 @@
     <!-- Screen 4: Expense Form (with Bottom Sheet overlay) -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
                 <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
             </button>
@@ -248,7 +575,7 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar pb-32 bg-slate-50/30">
-            
+
             <!-- Basics -->
             <div class="space-y-4">
                 <div>
@@ -383,9 +710,10 @@
     <!-- Screen 5: Dashboard -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex justify-between items-center bg-white z-10 relative">
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
             <div class="flex gap-4 text-slate-400">
+                <button class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></button>
                 <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></button>
             </div>
         </div>
@@ -395,25 +723,18 @@
             <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0 hover:bg-slate-200 transition-colors">
                 2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
             </button>
-            <div class="flex gap-2 overflow-x-auto no-scrollbar">
+            <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
                 <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Jan</button>
                 <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Feb</button>
-                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Mar</button>
-                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Apr</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Mar</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Apr</button>
                 <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">May</button>
                 <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Jun</button>
             </div>
         </div>
 
-        <!-- Custom Range Button -->
-        <div class="px-5 pb-3 relative z-10">
-            <button class="text-xs font-semibold text-slate-400 hover:text-teal-600 transition-colors">
-                Select Range
-            </button>
-        </div>
-
         <div class="flex-1 overflow-y-auto px-5 pb-24 space-y-6 no-scrollbar pt-2 bg-slate-50/30">
-            
+
             <!-- Top Stats -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
@@ -426,86 +747,128 @@
                 </div>
             </div>
 
-            <!-- Additional Stats -->
-            <div class="flex flex-wrap gap-3">
-                <div class="bg-white border border-slate-100 px-4 py-3 rounded-xl shadow-sm flex-1 min-w-[140px]">
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Tips Paid</p>
-                    <p class="text-base font-semibold text-slate-900">$85.00</p>
-                </div>
-                <div class="bg-white border border-slate-100 px-4 py-3 rounded-xl shadow-sm flex-1 min-w-[140px]">
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Avg/Expense</p>
-                    <p class="text-base font-semibold text-slate-900">$103.33</p>
-                </div>
-            </div>
-
             <!-- Bar Chart (CSS) -->
             <div class="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
                 <h3 class="text-sm font-semibold text-slate-900 mb-6">Spend by Day</h3>
                 <div class="h-32 flex items-end justify-between gap-1.5 px-1 relative">
-                    <!-- Guidelines -->
-                    <div class="absolute w-full h-full border-b border-slate-100 bottom-0 z-0"></div>
-                    <div class="absolute w-full h-full border-b border-slate-100 bottom-1/2 z-0"></div>
-                    <div class="absolute w-full h-full border-b border-slate-100 top-0 z-0"></div>
-                    
+                    <!-- Grid lines at 25% and 75% -->
+                    <div class="absolute w-full border-b border-slate-100" style="bottom: 75%;"></div>
+                    <div class="absolute w-full border-b border-slate-100" style="bottom: 25%;"></div>
+
+                    <!-- Overlaid Y-axis labels at 25% and 75% grid lines -->
+                    <div class="absolute left-0 text-[9px] font-medium text-slate-400 z-20" style="bottom: 75%; transform: translateY(50%);">$930</div>
+                    <div class="absolute left-0 text-[9px] font-medium text-slate-400 z-20" style="bottom: 25%; transform: translateY(50%);">$310</div>
+
                     <!-- Bars -->
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[20%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[20%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[45%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[45%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[10%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[10%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[80%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[80%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[30%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[30%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[60%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[60%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-t-sm h-[15%] relative z-10 group">
+                    <div class="w-full rounded-t-sm h-[15%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
                 </div>
-                <div class="flex justify-between mt-3 text-xs text-slate-400 font-medium px-1">
-                    <span>Mar 1</span>
-                    <span>Mar 15</span>
-                    <span>Mar 30</span>
+                <!-- Only 3 x-axis labels: first, middle, last -->
+                <div class="flex justify-between mt-3 text-[10px] text-slate-400 font-medium px-1">
+                    <span>Apr 1</span>
+                    <span>Apr 15</span>
+                    <span>Apr 30</span>
+                </div>
+                <!-- Tooltip mock (shown on hover/tap) -->
+                <div class="mt-2 inline-flex items-center bg-slate-900 text-white px-3 py-2 rounded-[10px] text-xs">
+                    <div>
+                        <div class="text-slate-300 text-[11px]">Apr 10, 2026</div>
+                        <div class="font-bold text-sm">$248.00</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Pie Chart 1: Category -->
+            <!-- Pie Chart 1: Category (Hierarchical with drill-down) -->
             <div class="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
-                <h3 class="text-sm font-semibold text-slate-900 mb-6">Spend by Category</h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-sm font-semibold text-slate-900">Spend by Category</h3>
+                    <div class="flex items-center gap-1.5">
+                        <!-- $/% toggle button -->
+                        <button class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:bg-slate-200 transition-colors">$</button>
+                    </div>
+                </div>
                 <div class="flex items-center gap-6">
                     <div class="w-24 h-24 rounded-full shrink-0 shadow-inner" style="background: conic-gradient(#0f766e 0% 45%, #14b8a6 45% 75%, #5eead4 75% 90%, #ccfbf1 90% 100%);"></div>
                     <div class="space-y-2 flex-1">
-                        <div class="flex items-center justify-between text-xs font-medium">
+                        <div class="flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-slate-50 -mx-1 px-1 py-0.5 rounded">
                             <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#0f766e]"></div><span class="text-slate-700">Housing</span></div>
-                            <span class="text-slate-900">45%</span>
+                            <div class="flex items-center gap-1"><span class="text-slate-900">45%</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-sm"></iconify-icon></div>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-medium">
+                        <div class="flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-slate-50 -mx-1 px-1 py-0.5 rounded">
                             <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#14b8a6]"></div><span class="text-slate-700">Food</span></div>
-                            <span class="text-slate-900">30%</span>
+                            <div class="flex items-center gap-1"><span class="text-slate-900">30%</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-sm"></iconify-icon></div>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-medium">
+                        <div class="flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-slate-50 -mx-1 px-1 py-0.5 rounded">
                             <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#5eead4]"></div><span class="text-slate-700">Transport</span></div>
-                            <span class="text-slate-900">15%</span>
+                            <div class="flex items-center gap-1"><span class="text-slate-900">15%</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-sm"></iconify-icon></div>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-medium">
-                            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#ccfbf1]"></div><span class="text-slate-700">Other</span></div>
-                            <span class="text-slate-900">10%</span>
+                        <div class="flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-slate-50 -mx-1 px-1 py-0.5 rounded">
+                            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#ccfbf1]"></div><span class="text-slate-700">Entertainment</span></div>
+                            <div class="flex items-center gap-1"><span class="text-slate-900">10%</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-sm"></iconify-icon></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Pie Chart 2: Vendor -->
+            <!-- Pie Chart 1b: Category drilled into Food (shows breadcrumb + back) -->
             <div class="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
-                <h3 class="text-sm font-semibold text-slate-900 mb-6">Spend by Vendor</h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-sm font-semibold text-slate-900">Spend by Category &rsaquo; Food</h3>
+                    <div class="flex items-center gap-1.5">
+                        <!-- Back button -->
+                        <button class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
+                            <iconify-icon icon="solar:arrow-left-linear" class="text-sm"></iconify-icon>
+                        </button>
+                        <!-- $/% toggle -->
+                        <button class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:bg-slate-200 transition-colors">%</button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="w-24 h-24 rounded-full shrink-0 shadow-inner" style="background: conic-gradient(#0f766e 0% 50%, #14b8a6 50% 80%, #5eead4 80% 100%);"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="flex items-center justify-between text-xs font-medium">
+                            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#0f766e]"></div><span class="text-slate-700">Fast Food</span></div>
+                            <span class="text-slate-900">$186.00</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs font-medium">
+                            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#14b8a6]"></div><span class="text-slate-700">Groceries</span></div>
+                            <span class="text-slate-900">$112.00</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs font-medium">
+                            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm bg-[#5eead4]"></div><span class="text-slate-700">Other</span></div>
+                            <span class="text-slate-900">$74.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pie Chart 2: Vendor (relation-based, no drill-down) -->
+            <div class="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-sm font-semibold text-slate-900">Spend by Vendor</h3>
+                    <div class="flex items-center gap-1.5">
+                        <button class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:bg-slate-200 transition-colors">$</button>
+                    </div>
+                </div>
                 <div class="flex items-center gap-6">
                     <div class="w-24 h-24 rounded-full shrink-0 shadow-inner" style="background: conic-gradient(#334155 0% 40%, #475569 40% 70%, #94a3b8 70% 90%, #e2e8f0 90% 100%);"></div>
                     <div class="space-y-2 flex-1">
@@ -544,10 +907,56 @@
         </div>
     </div>
 
+    <!-- Screen 5b: Dashboard Empty State -->
+    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
+            <h1 class="text-xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+            <div class="flex gap-4 text-slate-400">
+                <button class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></button>
+                <button class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></button>
+            </div>
+        </div>
+
+        <!-- Month/Year Selector -->
+        <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+            <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0 hover:bg-slate-200 transition-colors">
+                2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+            </button>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Jan</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Feb</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Mar</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Apr</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">May</button>
+                <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Jun</button>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="flex-1 flex flex-col items-center justify-center px-8">
+            <iconify-icon icon="solar:document-text-linear" class="text-5xl text-slate-300 mb-3"></iconify-icon>
+            <p class="text-base font-semibold text-slate-400">No expenses found</p>
+            <p class="text-sm text-slate-400 mt-1">Add some expenses to see your dashboard</p>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex items-center px-6 pb-4 pt-2 z-20">
+            <button class="flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                <iconify-icon icon="solar:wallet-money-linear" class="text-[22px]"></iconify-icon>
+                <span class="text-xs font-medium">Expenses</span>
+            </button>
+            <button class="flex-1 flex flex-col items-center justify-center gap-1.5 text-teal-600">
+                <iconify-icon icon="solar:widget-5-linear" class="text-[22px]"></iconify-icon>
+                <span class="text-xs font-semibold">Dashboard</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Screen 6: Tag Systems List -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex items-center border-b border-slate-100 bg-white relative z-10">
+        <div class="px-5 pt-3 pb-4 flex items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2 mr-2">
                 <iconify-icon icon="solar:hamburger-menu-linear" class="text-xl"></iconify-icon>
             </button>
@@ -556,11 +965,11 @@
 
         <div class="flex-1 overflow-y-auto bg-slate-50/50 no-scrollbar">
             <div class="divide-y divide-slate-100">
-                
+
                 <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-900 mb-0.5">Category</h3>
-                        <p class="text-xs text-slate-400 font-medium">exclusive · tree · 24 nodes</p>
+                        <p class="text-xs text-slate-400 font-medium">exclusive &middot; tree &middot; 24 nodes</p>
                     </div>
                     <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-lg"></iconify-icon>
                 </button>
@@ -568,7 +977,7 @@
                 <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-900 mb-0.5">Priority</h3>
-                        <p class="text-xs text-slate-400 font-medium">exclusive · flat · 3 nodes</p>
+                        <p class="text-xs text-slate-400 font-medium">exclusive &middot; flat &middot; 3 nodes</p>
                     </div>
                     <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-lg"></iconify-icon>
                 </button>
@@ -576,7 +985,7 @@
                 <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-900 mb-0.5">Project</h3>
-                        <p class="text-xs text-slate-400 font-medium">multiple · flat · 8 nodes</p>
+                        <p class="text-xs text-slate-400 font-medium">multiple &middot; flat &middot; 8 nodes</p>
                     </div>
                     <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-lg"></iconify-icon>
                 </button>
@@ -593,7 +1002,7 @@
     <!-- Screen 7: Tag System Form -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
                 <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
             </button>
@@ -604,7 +1013,7 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-5 space-y-8 no-scrollbar pb-32">
-            
+
             <div class="space-y-6">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name</label>
@@ -646,7 +1055,7 @@
                         <button class="text-slate-300 hover:text-teal-600"><iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon></button>
                         <button class="text-slate-300 hover:text-red-500"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>
                     </div>
-                    
+
                     <!-- Child Nodes -->
                     <div class="space-y-2 border-l-2 border-slate-100 ml-6 pl-2">
                         <div class="flex items-center gap-2 group">
@@ -686,7 +1095,7 @@
     <!-- Screen 8: Tag Browser Screen -->
     <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
-        <div class="px-5 pt-12 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
                 <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
             </button>
@@ -698,7 +1107,7 @@
 
         <div class="flex-1 overflow-y-auto no-scrollbar">
             <div class="divide-y divide-slate-100">
-                
+
                 <!-- Open Accordion Item -->
                 <div>
                     <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">

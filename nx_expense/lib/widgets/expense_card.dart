@@ -30,11 +30,9 @@ class ExpenseCard extends StatelessWidget {
       if (v is String) amount = num.tryParse(v);
     }
 
-    String? vendorKey;
     String? vendorNames;
     if (model.relations != null && model.relations!.isNotEmpty) {
       final first = model.relations!.entries.first;
-      vendorKey = first.key;
       vendorNames = first.value.map((m) => m.name).join(', ');
     }
 
@@ -78,15 +76,27 @@ class ExpenseCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (model.createdAt != null) ...[
+                if (vendorNames != null && vendorNames.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    formatModelDate(model.createdAt),
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400),
+                    vendorNames,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate500,
+                    ),
+                  ),
+                ] else if (model.relations != null && model.relations!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    model.relations!.entries
+                        .map((e) => e.value.map((m) => m.name).join(', '))
+                        .join(' \u00b7 '),
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate500),
                   ),
                 ],
                 if (model.tags != null && model.tags!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -95,35 +105,6 @@ class ExpenseCard extends StatelessWidget {
                         for (final node in e.value)
                           ExpenseTagChip(label: '${e.key}: $node'),
                     ],
-                  ),
-                ],
-                if (vendorKey != null &&
-                    vendorNames != null &&
-                    vendorNames.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  RichText(
-                    text: TextSpan(
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate500,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: '$vendorKey: ',
-                          style: GoogleFonts.inter(color: AppColors.slate400),
-                        ),
-                        TextSpan(text: vendorNames),
-                      ],
-                    ),
-                  ),
-                ] else if (model.relations != null && model.relations!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    model.relations!.entries
-                        .map((e) => '${e.key}: ${e.value.map((m) => m.name).join(", ")}')
-                        .join(' · '),
-                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.slate500),
                   ),
                 ],
               ],

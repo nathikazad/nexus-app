@@ -30,7 +30,7 @@ class TagSystemsScreen extends ConsumerWidget {
               SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.pt12, RefLayout.px5, RefLayout.pb4),
+                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.appBarTop, RefLayout.px5, RefLayout.pb4),
                   child: Row(
                     children: [
                       IconButton(

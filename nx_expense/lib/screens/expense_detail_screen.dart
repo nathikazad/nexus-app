@@ -212,59 +212,6 @@ class _DetailBody extends ConsumerWidget {
                         },
                       ),
                       const SizedBox(height: 32),
-                      Text('Tags', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      if (model.tags == null || model.tags!.isEmpty)
-                        _placeholderTags()
-                      else
-                        for (final sys in schema.tagSystems ?? const <TagSystem>[]) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    sys.name,
-                                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  if ((model.tags![sys.name] ?? []).isEmpty)
-                                    Text('None', style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500))
-                                  else
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        for (final node in model.tags![sys.name]!)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.slate100,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
-                                            ),
-                                            child: Text(
-                                              () {
-                                                final path = tagBreadcrumbPath(sys, node);
-                                                return path != null && path.length > 1 ? path.join(' › ') : node;
-                                              }(),
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: AppColors.slate700,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      const SizedBox(height: 20),
                       Text('Relations', style: refSectionTitle(context)),
                       const SizedBox(height: 12),
                       if (model.relations == null || model.relations!.isEmpty)
@@ -328,6 +275,59 @@ class _DetailBody extends ConsumerWidget {
                               ),
                             ),
                           ),
+                      const SizedBox(height: 20),
+                      Text('Tags', style: refSectionTitle(context)),
+                      const SizedBox(height: 12),
+                      if (model.tags == null || model.tags!.isEmpty)
+                        _placeholderTags()
+                      else
+                        for (final sys in schema.tagSystems ?? const <TagSystem>[]) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    sys.name,
+                                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  if ((model.tags![sys.name] ?? []).isEmpty)
+                                    Text('None', style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500))
+                                  else
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        for (final node in model.tags![sys.name]!)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.slate100,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
+                                            ),
+                                            child: Text(
+                                              () {
+                                                final path = tagBreadcrumbPath(sys, node);
+                                                return path != null && path.length > 1 ? path.join(' › ') : node;
+                                              }(),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: AppColors.slate700,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                     ],
                   ),
                 ),

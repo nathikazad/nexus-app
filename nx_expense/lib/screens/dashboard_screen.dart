@@ -65,7 +65,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.pt12, RefLayout.px5, RefLayout.pb4),
+                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.appBarTop, RefLayout.px5, RefLayout.pb4),
                   child: Row(
                     children: [
                       Expanded(child: Text('Dashboard', style: refAppBarTitleLarge())),
@@ -171,7 +171,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     // Month pills
                     Expanded(
                       child: SizedBox(
-                        height: 32,
+                        height: 40,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: 12,
@@ -188,7 +188,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 _applyMonthRange();
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                                 decoration: BoxDecoration(
                                   color: isSelected ? AppColors.teal600 : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
@@ -278,20 +278,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                         const SizedBox(height: 24),
                         for (final ts in schema.tagSystems ?? const <TagSystem>[]) ...[
-                          Consumer(
-                            builder: (context, ref, _) {
-                              final agg = ref.watch(spendByTagSystemProvider(ts.name));
-                              return agg.when(
-                                data: (raw) {
-                                  final entries = parseGroupedChartEntries(raw);
-                                  if (entries.isEmpty) return const SizedBox.shrink();
-                                  return _PieChartCard(title: 'Spend by ${ts.name}', entries: entries);
-                                },
-                                loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
-                                error: (_, __) => const SizedBox.shrink(),
-                              );
-                            },
-                          ),
+                          _TagPieChart(tagSystem: ts),
                           const SizedBox(height: 24),
                         ],
                         for (final relName in allRelationTargetTypeNames(schema)) ...[
@@ -324,12 +311,119 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
+/// Drill-down pie chart for tag systems.
+/// For hierarchical systems: starts at root level, tap a slice to drill into
+/// its children. Breadcrumb trail shows path; tap to go back.
+/// For flat systems: just shows the pie chart with no drill-down.
+class _TagPieChart extends ConsumerStatefulWidget {
+  const _TagPieChart({required this.tagSystem});
+  final TagSystem tagSystem;
+
+  @override
+  ConsumerState<_TagPieChart> createState() => _TagPieChartState();
+}
+
+class _TagPieChartState extends ConsumerState<_TagPieChart> {
+  /// Stack of drilled-into node names. Empty = root level.
+  final List<String> _breadcrumbs = [];
+
+  /// Check if a node name has children in the tag system tree.
+  bool _hasChildren(String nodeName) {
+    TagNode? find(List<TagNode> nodes) {
+      for (final n in nodes) {
+        if (n.name == nodeName) return n;
+        if (n.children != null) {
+          final r = find(n.children!);
+          if (r != null) return r;
+        }
+      }
+      return null;
+    }
+    final node = find(widget.tagSystem.nodes);
+    return node?.children != null && node!.children!.isNotEmpty;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ts = widget.tagSystem;
+    final isHierarchical = ts.isHierarchical;
+    final parentNode = _breadcrumbs.isNotEmpty ? _breadcrumbs.last : null;
+
+    // At root: group by level 1 (root categories). When drilled in: group by
+    // leaf within the filtered parent — the API returns direct children since
+    // we filter to the parent with include_descendants.
+    final int? level = isHierarchical && _breadcrumbs.isEmpty ? 1 : null;
+
+    final agg = ref.watch(spendByTagSystemProvider((
+      systemName: ts.name,
+      parentNode: parentNode,
+      level: level,
+    )));
+
+    return agg.when(
+      data: (raw) {
+        var entries = parseGroupedChartEntries(raw);
+        if (entries.isEmpty) return const SizedBox.shrink();
+
+        // Rename entries tagged directly to the parent node to "Other".
+        if (parentNode != null) {
+          entries = entries
+              .map((e) => e.key == parentNode ? MapEntry('Other', e.value) : e)
+              .toList();
+        }
+
+        // Build title with breadcrumbs
+        final titleParts = [ts.name, ..._breadcrumbs];
+        final title = titleParts.join(' › ');
+
+        return _PieChartCard(
+          title: 'Spend by $title',
+          entries: entries,
+          onSliceTap: isHierarchical
+              ? (sliceName) {
+                  if (_hasChildren(sliceName)) {
+                    setState(() => _breadcrumbs.add(sliceName));
+                  }
+                }
+              : null,
+          headerTrailing: isHierarchical && _breadcrumbs.isNotEmpty
+              ? GestureDetector(
+                  onTap: () => setState(() => _breadcrumbs.removeLast()),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.arrow_back, size: 16, color: AppColors.slate500),
+                    ),
+                  ),
+                )
+              : null,
+        );
+      },
+      loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
 /// Pie chart with circle on left + legend rows on right, matching the HTML reference.
 class _PieChartCard extends StatefulWidget {
-  const _PieChartCard({required this.title, required this.entries});
+  const _PieChartCard({
+    required this.title,
+    required this.entries,
+    this.headerTrailing,
+    this.onSliceTap,
+  });
 
   final String title;
   final List<MapEntry<String, double>> entries;
+  final Widget? headerTrailing;
+  /// Called when a legend row / pie slice is tapped (for drill-down).
+  final void Function(String sliceName)? onSliceTap;
 
   @override
   State<_PieChartCard> createState() => _PieChartCardState();
@@ -373,6 +467,10 @@ class _PieChartCardState extends State<_PieChartCard> {
                   ),
                 ),
               ),
+              if (widget.headerTrailing != null) ...[
+                widget.headerTrailing!,
+                const SizedBox(width: 6),
+              ],
               GestureDetector(
                 onTap: () => setState(() => _showDollars = !_showDollars),
                 child: Container(
@@ -426,33 +524,41 @@ class _PieChartCardState extends State<_PieChartCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     for (var i = 0; i < entries.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: _palette[i % _palette.length],
-                                borderRadius: BorderRadius.circular(2),
+                      GestureDetector(
+                        onTap: widget.onSliceTap != null ? () => widget.onSliceTap!(entries[i].key) : null,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: _palette[i % _palette.length],
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                entries[i].key,
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate700),
-                                overflow: TextOverflow.ellipsis,
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  entries[i].key,
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate700),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            Text(
-                              _showDollars
-                                  ? formatMoney(entries[i].value)
-                                  : (total > 0 ? '${(entries[i].value / total * 100).round()}%' : '—'),
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate900),
-                            ),
-                          ],
+                              Text(
+                                _showDollars
+                                    ? formatMoney(entries[i].value)
+                                    : (total > 0 ? '${(entries[i].value / total * 100).round()}%' : '—'),
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate900),
+                              ),
+                              if (widget.onSliceTap != null) ...[
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right, size: 14, color: AppColors.slate300),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                   ],
