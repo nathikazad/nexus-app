@@ -1,0 +1,4 @@
+# See test/README.md
+tags:
+  integration:
+    description: "Live GraphQL; requires RUN_EXPENSE_INTEGRATION=true and local PGDB (laptop preset)"
