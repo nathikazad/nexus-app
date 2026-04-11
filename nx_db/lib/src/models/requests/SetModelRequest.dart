@@ -33,6 +33,9 @@ class SetModelRequest {
   /// Array of trait names to assign to the model
   final List<String>? traits;
 
+  /// Tag assignments for `set_kgql_models` (optional).
+  final List<SetModelTag>? tags;
+
   SetModelRequest({
     this.id,
     this.modelType,
@@ -41,6 +44,7 @@ class SetModelRequest {
     this.attributes,
     this.relations,
     this.traits,
+    this.tags,
   });
 
   /// Converts to JSON map for GraphQL mutation
@@ -75,8 +79,31 @@ class SetModelRequest {
       json['traits'] = traits;
     }
 
+    if (tags != null) {
+      json['tags'] = tags!.map((t) => t.toJson()).toList();
+    }
+
     return json;
   }
+}
+
+/// Tag payload for `set_kgql_models` → `tags` array.
+class SetModelTag {
+  final String system;
+  final List<String> nodes;
+  final bool clear;
+
+  SetModelTag({
+    required this.system,
+    required this.nodes,
+    this.clear = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'system': system,
+        'nodes': nodes,
+        if (clear) 'clear': true,
+      };
 }
 
 /// Model attribute for create/update/delete operations

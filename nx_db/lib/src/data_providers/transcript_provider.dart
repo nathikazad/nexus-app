@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -34,6 +35,31 @@ subscription SubscribeToTranscriptMessages(\$transcriptId: Int) {
   }
 }
 ''';
+
+/// Parses `getCurrentTranscript` payload (string, `json` wrapper, or map) to [Transcript].
+@visibleForTesting
+Transcript? parseTranscriptFromGraphqlResponse(dynamic transcriptData) {
+  if (transcriptData is String) {
+    try {
+      transcriptData = json.decode(transcriptData) as Map<String, dynamic>;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  if (transcriptData is Map<String, dynamic> && transcriptData.containsKey('json')) {
+    transcriptData = transcriptData['json'];
+    if (transcriptData is String) {
+      transcriptData = json.decode(transcriptData) as Map<String, dynamic>;
+    }
+  }
+
+  if (transcriptData == null || transcriptData is! Map<String, dynamic>) {
+    return null;
+  }
+
+  return Transcript.fromJson(transcriptData);
+}
 
 /// Class for managing transcript operations
 class TranscriptService {
@@ -84,33 +110,12 @@ class TranscriptService {
         throw result.exception!;
       }
 
-      // Extract transcript data
-      var transcriptData = result.data?['getCurrentTranscript'];
-
-      // Parse JSON string if needed
-      if (transcriptData is String) {
-        try {
-          transcriptData = json.decode(transcriptData) as Map<String, dynamic>;
-        } catch (e) {
-          print('⚠️ Failed to parse transcript JSON string: $e');
-          return null;
-        }
-      }
-
-      // If it's wrapped in a json field, extract it
-      if (transcriptData is Map<String, dynamic> && transcriptData.containsKey('json')) {
-        transcriptData = transcriptData['json'];
-        if (transcriptData is String) {
-          transcriptData = json.decode(transcriptData) as Map<String, dynamic>;
-        }
-      }
-
-      if (transcriptData == null || transcriptData is! Map<String, dynamic>) {
+      final transcriptData = result.data?['getCurrentTranscript'];
+      final parsed = parseTranscriptFromGraphqlResponse(transcriptData);
+      if (parsed == null) {
         print('⚠️ No transcript data returned');
-        return null;
       }
-
-      return Transcript.fromJson(transcriptData);
+      return parsed;
     } catch (e, stackTrace) {
       print('❌ Error in TranscriptService.getTranscript: $e');
       print('Stack trace: $stackTrace');

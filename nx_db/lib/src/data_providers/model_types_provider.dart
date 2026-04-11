@@ -104,6 +104,7 @@ final modelTypeProvider = FutureProvider.family<ModelType?, int>((ref, modelType
           'traits': true,
           'attributes': true,
           'relations': true,
+          'tag_systems': true,
         },
       },
     },

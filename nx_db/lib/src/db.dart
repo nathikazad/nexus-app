@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'auth.dart';
@@ -10,21 +11,35 @@ class GraphQLConfig {
   static const String defaultUserId = '1';
 }
 
-GraphQLClient createClient(String endpoint, String userId) {
-  // Upgrade saved http:// endpoints to https:// for Cloudflare tunnel hostnames
+/// Upgrades `http://` to `https://` for Cloudflare tunnel hostnames.
+@visibleForTesting
+String normalizeHttpEndpointForCf(String endpoint) {
   var ep = endpoint;
   if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
     ep = ep.replaceFirst('http://', 'https://');
   }
+  return ep;
+}
+
+/// Headers passed to [HttpLink] for GraphQL HTTP (matches [createClient]).
+@visibleForTesting
+Map<String, String> buildHttpLinkDefaultHeaders(String endpoint, String userId) {
+  final attachCf = CfAccess.shouldAttachHeaders(endpoint);
+  final cf = attachCf ? CfAccess.headers : const <String, String>{};
+  return {
+    'x-user-id': userId,
+    ...cf,
+  };
+}
+
+GraphQLClient createClient(String endpoint, String userId) {
+  final ep = normalizeHttpEndpointForCf(endpoint);
   final attachCf = CfAccess.shouldAttachHeaders(ep);
   final cf = attachCf ? CfAccess.headers : const <String, String>{};
 
   final httpLink = HttpLink(
     ep,
-    defaultHeaders: {
-      'x-user-id': userId,
-      ...cf,
-    },
+    defaultHeaders: buildHttpLinkDefaultHeaders(ep, userId),
   );
 
   // Extract WebSocket URL (replace http:// with ws://, https:// with wss://)

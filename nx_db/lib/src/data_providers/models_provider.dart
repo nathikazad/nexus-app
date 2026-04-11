@@ -50,16 +50,6 @@ final modelsProvider = FutureProvider.family<List<Model>, int>((ref, modelTypeId
   final result = await client.query(queryOptions);
 
   if (result.hasException) {
-    print('❌ GraphQL Error in getModelsByModelTypeId (modelTypeId: $modelTypeId):');
-    print('Exception: ${result.exception}');
-    if (result.exception?.graphqlErrors != null) {
-      for (var error in result.exception!.graphqlErrors) {
-        print('  - ${error.message}');
-        if (error.extensions != null) {
-          print('    Extensions: ${error.extensions}');
-        }
-      }
-    }
     throw result.exception!;
   }
 
@@ -124,16 +114,6 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
   final result = await client.query(queryOptions);
 
   if (result.hasException) {
-    print('❌ GraphQL Error in getModelById (id: $modelId):');
-    print('Exception: ${result.exception}');
-    if (result.exception?.graphqlErrors != null) {
-      for (var error in result.exception!.graphqlErrors) {
-        print('  - ${error.message}');
-        if (error.extensions != null) {
-          print('    Extensions: ${error.extensions}');
-        }
-      }
-    }
     throw result.exception!;
   }
 
@@ -149,7 +129,6 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
 
   // Should return exactly one model (the one we queried by ID)
   if (jsonArray.isEmpty) {
-    print('⚠️ Model with ID $modelId not found');
     return null;
   }
 
@@ -172,59 +151,42 @@ Future<int> createModel(
   // Convert request to JSON
   final requestJson = request.toJson();
 
-  try {
-    // Call set_kgql_models mutation
-    // PostGraphile wraps JSON functions in input/output structure
-    final result = await client.mutate(
-      MutationOptions(
-        document: gql(setKgqlModelsMutation),
-        variables: {
-          'input': {
-            'data': requestJson,
-          },
+  // Call set_kgql_models mutation
+  // PostGraphile wraps JSON functions in input/output structure
+  final result = await client.mutate(
+    MutationOptions(
+      document: gql(setKgqlModelsMutation),
+      variables: {
+        'input': {
+          'data': requestJson,
         },
-      ),
-    );
+      },
+    ),
+  );
 
-    if (result.hasException) {
-      print('❌ Mutation Error in setKgqlModels:');
-      print('Exception: ${result.exception}');
-      if (result.exception?.graphqlErrors != null) {
-        for (var error in result.exception!.graphqlErrors) {
-          print('  - ${error.message}');
-          if (error.extensions != null) {
-            print('    Extensions: ${error.extensions}');
-          }
-        }
-      }
-      throw result.exception!;
-    }
-
-    // Extract the created/updated model ID
-    // PostGraphile returns JSON result in a 'json' field
-    final responseData = result.data?['setKgqlModels'] as Map<String, dynamic>?;
-    if (responseData == null) {
-      throw Exception('No data returned from setKgqlModels mutation');
-    }
-
-    // The JSON result is in the 'json' field
-    final jsonResult = responseData['json'];
-    final jsonData = jsonResult is String
-        ? json.decode(jsonResult) as Map<String, dynamic>
-        : jsonResult as Map<String, dynamic>;
-
-    final modelId = jsonData['id'] as int?;
-    if (modelId == null) {
-      throw Exception('No ID returned from setKgqlModels mutation');
-    }
-
-    return modelId;
-  } catch (e, stackTrace) {
-    print('❌ Error in createModel:');
-    print('Exception: $e');
-    print('Stack trace: $stackTrace');
-    rethrow;
+  if (result.hasException) {
+    throw result.exception!;
   }
+
+  // Extract the created/updated model ID
+  // PostGraphile returns JSON result in a 'json' field
+  final responseData = result.data?['setKgqlModels'] as Map<String, dynamic>?;
+  if (responseData == null) {
+    throw Exception('No data returned from setKgqlModels mutation');
+  }
+
+  // The JSON result is in the 'json' field
+  final jsonResult = responseData['json'];
+  final jsonData = jsonResult is String
+      ? json.decode(jsonResult) as Map<String, dynamic>
+      : jsonResult as Map<String, dynamic>;
+
+  final modelId = jsonData['id'] as int?;
+  if (modelId == null) {
+    throw Exception('No ID returned from setKgqlModels mutation');
+  }
+
+  return modelId;
 }
 
 /// Updates an existing model using set_kgql_models.

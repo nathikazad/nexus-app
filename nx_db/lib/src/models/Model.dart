@@ -16,6 +16,9 @@ class Model {
   final Map<String, List<Model>>? relations;
   final List<Relation>? relationsList;
 
+  /// Tag assignments when `tags: true` is in struct — system name → assigned node names.
+  final Map<String, List<String>>? tags;
+
   Model({
     required this.id,
     required this.name,
@@ -27,6 +30,7 @@ class Model {
     this.attributesList,
     this.relations,
     this.relationsList,
+    this.tags,
   });
 
   /// Creates a Model from a JSON map (typically from GraphQL response)
@@ -63,7 +67,17 @@ class Model {
       final attrKeys = <String, dynamic>{};
       json.forEach((key, value) {
         // Skip known model fields
-        if (!['id', 'name', 'description', 'model_type_id', 'created_at', 'updated_at', 'relations', 'attributes'].contains(key)) {
+        if (![
+          'id',
+          'name',
+          'description',
+          'model_type_id',
+          'created_at',
+          'updated_at',
+          'relations',
+          'attributes',
+          'tags',
+        ].contains(key)) {
           // Check if it's not a relation (relations are capitalized and contain arrays of models)
           if (value is! List) {
             attrKeys[key] = value;
@@ -115,6 +129,18 @@ class Model {
       }).whereType<Relation>().toList();
     }
 
+    Map<String, List<String>>? tags;
+    final tagsJson = json['tags'];
+    if (tagsJson is Map) {
+      tags = tagsJson.map((k, v) {
+        final key = k as String;
+        if (v is List) {
+          return MapEntry(key, v.map((e) => e.toString()).toList());
+        }
+        return MapEntry(key, <String>[]);
+      });
+    }
+
     return Model(
       id: json['id'] as int,
       name: json['name'] as String,
@@ -126,6 +152,7 @@ class Model {
       attributesList: attributesList,
       relations: relations,
       relationsList: relationsList,
+      tags: tags,
     );
   }
 
@@ -142,6 +169,7 @@ class Model {
       if (attributesList != null) 'attributes': attributesList!.map((a) => a.toJson()).toList(),
       if (relations != null) ...relations!,
       if (relationsList != null) 'relations': relationsList!.map((r) => r.toJson()).toList(),
+      if (tags != null) 'tags': tags,
     };
   }
 

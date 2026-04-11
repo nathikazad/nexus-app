@@ -29,6 +29,9 @@ class SetModelTypeRequest {
   /// Direct array format - no 'create' wrapper
   final List<RelationshipType>? relationshipTypes;
 
+  /// Tag systems (optional) — create / update / delete via `set_kgql_model_types`.
+  final List<SetTagSystemRequest>? tagSystems;
+
   SetModelTypeRequest({
     this.id,
     required this.name,
@@ -37,6 +40,7 @@ class SetModelTypeRequest {
     this.parent,
     this.attributeDefinitions,
     this.relationshipTypes,
+    this.tagSystems,
   });
 
   /// Converts to JSON map for GraphQL mutation
@@ -66,7 +70,63 @@ class SetModelTypeRequest {
       json['relationship_types'] = relationshipTypes!.map((rt) => rt.toJson()).toList();
     }
 
+    if (tagSystems != null) {
+      json['tag_systems'] = tagSystems!.map((t) => t.toJson()).toList();
+    }
+
     return json;
+  }
+}
+
+/// Tag system payload for `set_kgql_model_types` → `tag_systems`.
+class SetTagSystemRequest {
+  final int? id;
+  final String? name;
+  final bool? isHierarchical;
+  final String? selectionMode;
+  final List<SetTagNodeRequest>? nodes;
+  final bool delete;
+
+  SetTagSystemRequest({
+    this.id,
+    this.name,
+    this.isHierarchical,
+    this.selectionMode,
+    this.nodes,
+    this.delete = false,
+  });
+
+  Map<String, dynamic> toJson() {
+    if (delete) {
+      if (id == null) {
+        throw Exception('id is required when delete is true');
+      }
+      return {'id': id, 'delete': true};
+    }
+    final m = <String, dynamic>{};
+    if (id != null) m['id'] = id;
+    if (name != null) m['name'] = name;
+    if (isHierarchical != null) m['is_hierarchical'] = isHierarchical;
+    if (selectionMode != null) m['selection_mode'] = selectionMode;
+    if (nodes != null) {
+      m['nodes'] = nodes!.map((n) => n.toJson()).toList();
+    }
+    return m;
+  }
+}
+
+class SetTagNodeRequest {
+  final String name;
+  final List<SetTagNodeRequest>? children;
+
+  SetTagNodeRequest({required this.name, this.children});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      if (children != null && children!.isNotEmpty)
+        'children': children!.map((c) => c.toJson()).toList(),
+    };
   }
 }
 

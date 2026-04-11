@@ -16,3 +16,8 @@ dependencies:
   graphql: ^5.1.1
   shared_preferences: ^2.2.2
   json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4

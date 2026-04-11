@@ -25,9 +25,16 @@ class User {
 /// AuthController manages user authentication state.
 /// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
+  AuthController({this.initialDelay = const Duration(seconds: 1)});
+
+  /// Artificial delay before reading prefs (tests use [Duration.zero]).
+  final Duration initialDelay;
+
   @override
   Future<User?> build() async {
-    await Future.delayed(const Duration(seconds: 1));
+    if (initialDelay > Duration.zero) {
+      await Future.delayed(initialDelay);
+    }
     print('[AuthController] build() - Initializing auth state');
 
     try {

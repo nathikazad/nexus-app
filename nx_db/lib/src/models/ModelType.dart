@@ -1,3 +1,5 @@
+import 'TagSystem.dart';
+
 /// Model class representing a ModelType from the GraphQL API
 /// Supports nested structure from get_kgql_model_type (parent, children, traits)
 class ModelType {
@@ -17,6 +19,9 @@ class ModelType {
   final List<AttributeDefinition>? attributes;
   final List<RelationshipType>? relations;
 
+  /// Tag systems from `get_kgql_model_type` → `tag_systems` (null if not requested / absent).
+  final List<TagSystem>? tagSystems;
+
   ModelType({
     required this.id,
     required this.name,
@@ -29,6 +34,7 @@ class ModelType {
     this.traits,
     this.attributes,
     this.relations,
+    this.tagSystems,
   });
 
   /// Creates a ModelType from a JSON map (typically from GraphQL response)
@@ -128,6 +134,14 @@ class ModelType {
       }).whereType<RelationshipType>().toList();
     }
 
+    List<TagSystem>? tagSystems;
+    final tagSystemsJson = json['tag_systems'] ?? json['tagSystems'];
+    if (tagSystemsJson is List) {
+      tagSystems = tagSystemsJson
+          .map((e) => TagSystem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    }
+
     return ModelType(
       id: json['id'] as int,
       name: json['name'] as String,
@@ -140,6 +154,7 @@ class ModelType {
       traits: traits,
       attributes: attributes,
       relations: relations,
+      tagSystems: tagSystems,
     );
   }
 
@@ -157,6 +172,7 @@ class ModelType {
       if (traits != null) 'traits': traits!.map((t) => t.toJson()).toList(),
       if (attributes != null) 'attributes': attributes!.map((a) => a.toJson()).toList(),
       if (relations != null) 'relations': relations!.map((r) => r.toJson()).toList(),
+      if (tagSystems != null) 'tag_systems': tagSystems!.map((t) => t.toJson()).toList(),
     };
   }
 
