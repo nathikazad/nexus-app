@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/nx_db.dart';
@@ -99,6 +99,47 @@ List<Model> _parseModels(dynamic jsonResult) {
   }).whereType<Model>().toList();
 }
 
+/// UI filter state (tag chips). `null` = show all expenses.
+class ExpenseListFilterNotifier extends Notifier<ExpenseFilter?> {
+  @override
+  ExpenseFilter? build() => null;
+
+  void setFilter(ExpenseFilter? value) => state = value;
+}
+
+final expenseListFilterProvider =
+    NotifierProvider<ExpenseListFilterNotifier, ExpenseFilter?>(ExpenseListFilterNotifier.new);
+
+/// Same as [expenseListProvider] but uses [expenseListFilterProvider] and sorts by `created_at` desc.
+final expenseListForUiProvider = FutureProvider<List<Model>>((ref) async {
+  final filter = ref.watch(expenseListFilterProvider);
+  final list = await ref.watch(expenseListProvider(filter).future);
+  return sortModelsByCreatedAtDesc(list);
+});
+
+/// Optional date range for dashboard aggregates only.
+class DashboardDateRangeNotifier extends Notifier<DateTimeRange?> {
+  @override
+  DateTimeRange? build() => null;
+
+  void setRange(DateTimeRange? value) => state = value;
+}
+
+final dashboardDateRangeProvider =
+    NotifierProvider<DashboardDateRangeNotifier, DateTimeRange?>(DashboardDateRangeNotifier.new);
+
+Map<String, dynamic> _dashboardFilterKgql(Ref ref) {
+  final range = ref.watch(dashboardDateRangeProvider);
+  final base = <String, dynamic>{'model_type': kExpenseModelTypeName};
+  if (range != null) {
+    base['filters'] = [
+      {'key': 'created_at', 'op': '>=', 'value': range.start.toIso8601String()},
+      {'key': 'created_at', 'op': '<=', 'value': range.end.toIso8601String()},
+    ];
+  }
+  return base;
+}
+
 /// Lists Expense models using the dynamic struct from the schema.
 final expenseListProvider =
     FutureProvider.family<List<Model>, ExpenseFilter?>((ref, filter) async {
@@ -168,7 +209,7 @@ class ExpenseSummary {
   const ExpenseSummary({required this.count, this.sumTotal});
 }
 
-/// Count + optional sum on the first number attribute.
+/// Count + optional sum on the first number attribute (global, no date filter).
 final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   final client = ref.watch(graphqlClientProvider);
   final schema = await ref.watch(expenseSchemaProvider.future);
@@ -194,7 +235,57 @@ final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   return ExpenseSummary(count: count, sumTotal: sum);
 });
 
-/// Sum grouped by calendar day (`created_at` window).
+/// Dashboard summary — respects [dashboardDateRangeProvider].
+final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+  final client = ref.watch(graphqlClientProvider);
+  final schema = await ref.watch(expenseSchemaProvider.future);
+  final key = primaryNumberAttributeKey(schema);
+  final filterKgql = _dashboardFilterKgql(ref);
+
+  final countMap = await getKgqlAggregate(
+    client,
+    filterKgql,
+    {'metric': 'count', 'key': null, 'group': null},
+  );
+  final count = (countMap['aggregated_value'] as num?)?.toInt() ?? 0;
+
+  num? sum;
+  if (key != null) {
+    final sumMap = await getKgqlAggregate(
+      client,
+      filterKgql,
+      {'metric': 'sum', 'key': key, 'group': null},
+    );
+    sum = sumMap['aggregated_value'] as num?;
+  }
+
+  return ExpenseSummary(count: count, sumTotal: sum);
+});
+
+/// Per numeric attribute key → sum for dashboard cards (respects date range).
+final dashboardNumberSumsProvider =
+    FutureProvider<List<({String key, num value})>>((ref) async {
+  final client = ref.watch(graphqlClientProvider);
+  final schema = await ref.watch(expenseSchemaProvider.future);
+  final filterKgql = _dashboardFilterKgql(ref);
+  final keys = (schema.attributes ?? const <AttributeDefinition>[])
+      .where((a) => a.valueType == 'number' && (a.key ?? '').isNotEmpty)
+      .map((a) => a.key!)
+      .toList();
+  final out = <({String key, num value})>[];
+  for (final k in keys) {
+    final m = await getKgqlAggregate(
+      client,
+      filterKgql,
+      {'metric': 'sum', 'key': k, 'group': null},
+    );
+    final v = m['aggregated_value'] as num? ?? 0;
+    out.add((key: k, value: v));
+  }
+  return out;
+});
+
+/// Sum grouped by calendar day (`created_at` window). Uses dashboard date range when set.
 final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final client = ref.watch(graphqlClientProvider);
   final schema = await ref.watch(expenseSchemaProvider.future);
@@ -203,7 +294,7 @@ final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
   return getKgqlAggregate(
     client,
-    {'model_type': kExpenseModelTypeName},
+    _dashboardFilterKgql(ref),
     {
       'metric': 'sum',
       'key': key,
@@ -222,7 +313,7 @@ final spendByTagSystemProvider =
 
   return getKgqlAggregate(
     client,
-    {'model_type': kExpenseModelTypeName},
+    _dashboardFilterKgql(ref),
     {
       'metric': 'sum',
       'key': key,
@@ -241,7 +332,7 @@ final spendByRelationProvider =
 
   return getKgqlAggregate(
     client,
-    {'model_type': kExpenseModelTypeName},
+    _dashboardFilterKgql(ref),
     {
       'metric': 'sum',
       'key': key,

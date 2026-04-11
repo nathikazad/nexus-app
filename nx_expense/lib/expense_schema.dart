@@ -93,3 +93,52 @@ class FilterChipDescriptor {
     required this.label,
   });
 }
+
+/// Primary attribute value for display (from [Model.attributes] map).
+dynamic attributeValue(Model model, String key) {
+  final a = model.attributes;
+  if (a == null) return null;
+  return a[key];
+}
+
+/// Sort newest [createdAt] first (ISO strings compare lexicographically for UTC).
+List<Model> sortModelsByCreatedAtDesc(List<Model> models) {
+  final out = [...models];
+  out.sort((a, b) {
+    final ca = a.createdAt ?? '';
+    final cb = b.createdAt ?? '';
+    return cb.compareTo(ca);
+  });
+  return out;
+}
+
+/// Breadcrumb path from root to a leaf [nodeName] in a hierarchical [TagSystem].
+List<String>? tagBreadcrumbPath(TagSystem system, String nodeName) {
+  List<String>? walk(List<TagNode> nodes, List<String> prefix) {
+    for (final n in nodes) {
+      final path = [...prefix, n.name];
+      if (n.name == nodeName) return path;
+      final ch = n.children;
+      if (ch != null && ch.isNotEmpty) {
+        final sub = walk(ch, path);
+        if (sub != null) return sub;
+      }
+    }
+    return null;
+  }
+
+  return walk(system.nodes, []);
+}
+
+int countTagNodes(TagSystem ts) {
+  int n = 0;
+  void walk(List<TagNode> nodes) {
+    for (final x in nodes) {
+      n++;
+      if (x.children != null) walk(x.children!);
+    }
+  }
+
+  walk(ts.nodes);
+  return n;
+}

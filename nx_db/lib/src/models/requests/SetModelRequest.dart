@@ -36,6 +36,9 @@ class SetModelRequest {
   /// Tag assignments for `set_kgql_models` (optional).
   final List<SetModelTag>? tags;
 
+  /// When true, deletes the model ([id] required). Other fields ignored.
+  final bool delete;
+
   SetModelRequest({
     this.id,
     this.modelType,
@@ -45,10 +48,18 @@ class SetModelRequest {
     this.relations,
     this.traits,
     this.tags,
+    this.delete = false,
   });
 
   /// Converts to JSON map for GraphQL mutation
   Map<String, dynamic> toJson() {
+    if (delete) {
+      if (id == null) {
+        throw Exception('delete requires id');
+      }
+      return {'id': id, 'delete': true};
+    }
+
     final json = <String, dynamic>{};
 
     if (id != null) {
