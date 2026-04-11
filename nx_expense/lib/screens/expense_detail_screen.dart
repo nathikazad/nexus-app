@@ -66,6 +66,13 @@ class _DetailBody extends ConsumerWidget {
       if (v is String) headerAmount = num.tryParse(v);
     }
 
+    // Collect non-primary attributes that have values
+    final attrDefs = (schema.attributes ?? const <AttributeDefinition>[])
+        .where((a) => a.key != null && a.key != primaryKey)
+        .toList();
+
+    final tagSystems = schema.tagSystems ?? const <TagSystem>[];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -97,6 +104,7 @@ class _DetailBody extends ConsumerWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
+                // Header: amount + date
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 40),
@@ -107,7 +115,7 @@ class _DetailBody extends ConsumerWidget {
                   child: Column(
                     children: [
                       Text(
-                        headerAmount != null ? formatMoney(headerAmount) : r'$45.00',
+                        headerAmount != null ? formatMoney(headerAmount) : '—',
                         style: GoogleFonts.inter(
                           fontSize: 40,
                           fontWeight: FontWeight.w600,
@@ -120,12 +128,13 @@ class _DetailBody extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.slate400),
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 14, color: AppColors.slate400),
                           const SizedBox(width: 6),
                           Text(
                             model.createdAt != null
                                 ? formatModelDateTime(model.createdAt)
-                                : 'Mar 15, 2026, 2:30 PM',
+                                : '—',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -137,203 +146,97 @@ class _DetailBody extends ConsumerWidget {
                     ],
                   ),
                 ),
+
                 Padding(
                   padding: const EdgeInsets.all(RefLayout.px5),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Description', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      Text(
-                        (model.description != null && model.description!.isNotEmpty)
-                            ? model.description!
-                            : 'Coffee meeting with client regarding the new Q3 marketing campaign deliverables and timelines.',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          height: 1.6,
-                          color: AppColors.slate700,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Text('Attributes', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      Builder(
-                        builder: (context) {
-                          final attrs = (schema.attributes ?? const <AttributeDefinition>[])
-                              .where((a) => a.key != null && a.key != primaryKey)
-                              .toList();
-                          if (attrs.isEmpty) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                                border: Border.all(color: AppColors.slate100),
-                                boxShadow: refCardShadow,
-                              ),
-                              child: Column(
-                                children: [
-                                  _AttrRow(
-                                    label: 'Receipt',
-                                    value: 'Yes',
-                                    showDivider: true,
-                                  ),
-                                  _AttrRow(
-                                    label: 'Tax Deductible',
-                                    value: 'Yes',
-                                    showDivider: true,
-                                  ),
-                                  _AttrRow(
-                                    label: 'Payment Method',
-                                    value: 'Amex *3045',
-                                    showDivider: false,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                              border: Border.all(color: AppColors.slate100),
-                              boxShadow: refCardShadow,
-                            ),
-                            child: Column(
-                              children: [
-                                for (var i = 0; i < attrs.length; i++)
-                                  _AttrRow(
-                                    label: attrs[i].key!,
-                                    value: _formatAttr(model, attrs[i].key!),
-                                    showDivider: i < attrs.length - 1,
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                      Text('Relations', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      if (model.relations == null || model.relations!.isEmpty)
-                        _placeholderRelationRow()
-                      else
-                        for (final e in model.relations!.entries)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Material(
-                              color: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: const BorderSide(color: AppColors.slate100),
-                              ),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {},
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Color(0xFFCCFBF1),
-                                        ),
-                                        child: const Icon(Icons.storefront_outlined, size: 18, color: AppColors.teal600),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              e.key.toUpperCase(),
-                                              style: GoogleFonts.inter(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w500,
-                                                letterSpacing: 0.8,
-                                                color: AppColors.slate400,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              e.value.map((m) => m.name).join(', '),
-                                              style: GoogleFonts.inter(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.slate900,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const Icon(Icons.chevron_right, color: AppColors.slate300),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
+                      // Description
+                      if (model.description != null &&
+                          model.description!.isNotEmpty) ...[
+                        Text('Description', style: refSectionTitle(context)),
+                        const SizedBox(height: 12),
+                        Text(
+                          model.description!,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            height: 1.6,
+                            color: AppColors.slate700,
                           ),
-                      const SizedBox(height: 20),
-                      Text('Tags', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      if (model.tags == null || model.tags!.isEmpty)
-                        _placeholderTags()
-                      else
-                        for (final sys in schema.tagSystems ?? const <TagSystem>[]) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+
+                      // Attributes
+                      if (attrDefs.isNotEmpty) ...[
+                        Text('Attributes', style: refSectionTitle(context)),
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.circular(RefLayout.rounded2xl),
+                            border: Border.all(color: AppColors.slate100),
+                            boxShadow: refCardShadow,
+                          ),
+                          child: Column(
+                            children: [
+                              for (var i = 0; i < attrDefs.length; i++)
+                                _AttrRow(
+                                  label: attrDefs[i].key!,
+                                  value: _formatAttr(model, attrDefs[i].key!),
+                                  showDivider: i < attrDefs.length - 1,
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+
+                      // Tags — only show systems that have assigned nodes
+                      if (_hasAnyTags(tagSystems)) ...[
+                        Text('Tags', style: refSectionTitle(context)),
+                        const SizedBox(height: 12),
+                        for (final sys in tagSystems)
+                          if ((model.tags?[sys.name] ?? []).isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     sys.name,
-                                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400),
+                                    style: GoogleFonts.inter(
+                                        fontSize: 12, color: AppColors.slate400),
                                   ),
                                   const SizedBox(height: 6),
-                                  if ((model.tags![sys.name] ?? []).isEmpty)
-                                    Text('None', style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500))
-                                  else
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        for (final node in model.tags![sys.name]!)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.slate100,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
-                                            ),
-                                            child: Text(
-                                              () {
-                                                final path = tagBreadcrumbPath(sys, node);
-                                                return path != null && path.length > 1 ? path.join(' › ') : node;
-                                              }(),
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: AppColors.slate700,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
+                                  _buildTagValues(sys),
                                 ],
                               ),
                             ),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // Relations
+                      if (model.relations != null &&
+                          model.relations!.isNotEmpty) ...[
+                        Text('Relations', style: refSectionTitle(context)),
+                        const SizedBox(height: 12),
+                        for (final e in model.relations!.entries)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _relationRow(e.key, e.value),
                           ),
-                        ],
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
           ),
+
+          // Delete button
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
@@ -343,15 +246,20 @@ class _DetailBody extends ConsumerWidget {
             ),
             child: OutlinedButton.icon(
               icon: const Icon(Icons.delete_outline),
-              label: Text('Delete Expense', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('Delete Expense',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               onPressed: () async {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Delete expense?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Delete')),
                     ],
                   ),
                 );
@@ -360,13 +268,12 @@ class _DetailBody extends ConsumerWidget {
                 try {
                   await createModel(ref.container, req);
                   ref.invalidate(expenseListForUiProvider);
-                  ref.invalidate(expenseSummaryProvider);
-                  if (context.mounted) {
-                    context.go('/expenses');
-                  }
+                  ref.invalidate(expenseListSummaryProvider);
+                  if (context.mounted) context.go('/expenses');
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text('$e')));
                   }
                 }
               },
@@ -381,95 +288,104 @@ class _DetailBody extends ConsumerWidget {
     final v = attributeValue(model, key);
     if (v == null) return '—';
     if (v is bool) return v ? 'Yes' : 'No';
+    if (v is num) return formatMoney(v);
     return v.toString();
   }
 
-  Widget _placeholderTags() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  bool _hasAnyTags(List<TagSystem> systems) {
+    for (final sys in systems) {
+      if ((model.tags?[sys.name] ?? []).isNotEmpty) return true;
+    }
+    return false;
+  }
+
+  Widget _buildTagValues(TagSystem sys) {
+    final nodes = model.tags?[sys.name] ?? [];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Text('Category', style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400)),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.slate100,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
-          ),
-          child: Text.rich(
-            TextSpan(
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate700),
-              children: [
-                const TextSpan(text: 'Food '),
-                TextSpan(text: '›', style: GoogleFonts.inter(color: AppColors.slate400)),
-                const TextSpan(text: ' Fast Food'),
-              ],
+        for (final node in nodes)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.slate100,
+              borderRadius: BorderRadius.circular(8),
+              border:
+                  Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
+            ),
+            child: Text(
+              () {
+                final path = tagBreadcrumbPath(sys, node);
+                return path != null && path.length > 1
+                    ? path.join(' \u203A ')
+                    : node;
+              }(),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.slate700,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Text('Priority', style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400)),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.slate100,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
-          ),
-          child: Text(
-            'Medium',
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate700),
-          ),
-        ),
       ],
     );
   }
 
-  Widget _placeholderRelationRow() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: refCardShadow,
+  Widget _relationRow(String relName, List<Model> relModels) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.slate100),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFCCFBF1),
-            ),
-            child: const Icon(Icons.storefront_outlined, size: 18, color: AppColors.teal600),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'VENDOR',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.8,
-                    color: AppColors.slate400,
-                  ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {},
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFCCFBF1),
                 ),
-                Text(
-                  'Starbucks',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate900),
+                child: const Icon(Icons.storefront_outlined,
+                    size: 18, color: AppColors.teal600),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      relName.toUpperCase(),
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.8,
+                        color: AppColors.slate400,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      relModels.map((m) => m.name).join(', '),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.slate300),
+            ],
           ),
-          const Icon(Icons.chevron_right, color: AppColors.slate300),
-        ],
+        ),
       ),
     );
   }
@@ -498,7 +414,10 @@ class _AttrRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate500),
                 ),
               ),
               const SizedBox(width: 12),
@@ -506,7 +425,10 @@ class _AttrRow extends StatelessWidget {
                 child: Text(
                   value,
                   textAlign: TextAlign.right,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate900),
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900),
                 ),
               ),
             ],

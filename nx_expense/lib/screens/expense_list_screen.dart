@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../app_theme.dart';
+import '../expense_schema.dart';
 import '../format.dart';
 import '../providers/expense_providers.dart';
 import '../reference_layout.dart';
@@ -63,7 +64,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 
     final ExpenseFilter effectiveFilter = filter ?? const ExpenseFilter();
     final filterActive = filter != null && !effectiveFilter.isEmpty;
-    final sortActive = sortMode != ExpenseSortMode.dateDesc;
+    final sortActive = sortMode != ExpenseSortMode.dateAsc;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -297,7 +298,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => _showFilterSheet(context, schema),
+                      onTap: () => _showFilterSheet(context, ref, schema),
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
@@ -373,6 +374,9 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                             tagFilters: tags.isEmpty ? null : tags,
                             minAmount: effectiveFilter.minAmount,
                             maxAmount: effectiveFilter.maxAmount,
+                            relationFilters: effectiveFilter.relationFilters,
+                            relationFilterLabels:
+                                effectiveFilter.relationFilterLabels,
                           ));
                     },
                     onRemoveMinAmount: () {
@@ -381,6 +385,9 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                           .setFilter(ExpenseFilter(
                             tagFilters: effectiveFilter.tagFilters,
                             maxAmount: effectiveFilter.maxAmount,
+                            relationFilters: effectiveFilter.relationFilters,
+                            relationFilterLabels:
+                                effectiveFilter.relationFilterLabels,
                           ));
                     },
                     onRemoveMaxAmount: () {
@@ -389,6 +396,38 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                           .setFilter(ExpenseFilter(
                             tagFilters: effectiveFilter.tagFilters,
                             minAmount: effectiveFilter.minAmount,
+                            relationFilters: effectiveFilter.relationFilters,
+                            relationFilterLabels:
+                                effectiveFilter.relationFilterLabels,
+                          ));
+                    },
+                    onRemoveRelation: (relType, modelId) {
+                      final rels = Map<String, Set<int>>.from(
+                          effectiveFilter.relationFilters ?? {});
+                      rels[relType]?.remove(modelId);
+                      if (rels[relType]?.isEmpty ?? false) rels.remove(relType);
+                      final labels = <String, Map<int, String>>{};
+                      final existing = effectiveFilter.relationFilterLabels;
+                      if (existing != null) {
+                        for (final e in existing.entries) {
+                          if (e.key == relType) {
+                            final m = Map<int, String>.from(e.value)
+                              ..remove(modelId);
+                            if (m.isNotEmpty) labels[e.key] = m;
+                          } else {
+                            labels[e.key] = Map<int, String>.from(e.value);
+                          }
+                        }
+                      }
+                      ref
+                          .read(expenseListFilterProvider.notifier)
+                          .setFilter(ExpenseFilter(
+                            tagFilters: effectiveFilter.tagFilters,
+                            minAmount: effectiveFilter.minAmount,
+                            maxAmount: effectiveFilter.maxAmount,
+                            relationFilters: rels.isEmpty ? null : rels,
+                            relationFilterLabels:
+                                labels.isEmpty ? null : labels,
                           ));
                     },
                   ),
@@ -496,8 +535,29 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 
   // ──────────────────────── Filter Bottom Sheet ────────────────────────
 
-  void _showFilterSheet(BuildContext context, ModelType schema) {
+  Future<void> _showFilterSheet(
+      BuildContext context, WidgetRef ref, ModelType schema) async {
     final currentFilter = ref.read(expenseListFilterProvider);
+
+    // Load all relation targets (Company, etc.) before opening — AsyncValue.whenData
+    // only runs if data is already cached, so the sheet was opening with empty lists.
+    final relationNames = allRelationTargetTypeNames(schema);
+    final allRelModels = <String, List<Model>>{};
+    try {
+      for (final name in relationNames) {
+        allRelModels[name] =
+            await ref.read(relatedModelsProvider(name).future);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load companies: $e')),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -506,6 +566,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
       builder: (_) => _FilterSheet(
         schema: schema,
         initial: currentFilter,
+        allRelationModels: allRelModels,
         onApply: (f) {
           ref.read(expenseListFilterProvider.notifier).setFilter(
                 f == null || f.isEmpty ? null : f,
@@ -549,6 +610,7 @@ class _ActiveFilterChips extends StatelessWidget {
     required this.onRemoveTag,
     required this.onRemoveMinAmount,
     required this.onRemoveMaxAmount,
+    required this.onRemoveRelation,
   });
 
   final ExpenseFilter filter;
@@ -557,6 +619,7 @@ class _ActiveFilterChips extends StatelessWidget {
   final void Function(int index) onRemoveTag;
   final VoidCallback onRemoveMinAmount;
   final VoidCallback onRemoveMaxAmount;
+  final void Function(String relType, int modelId) onRemoveRelation;
 
   @override
   Widget build(BuildContext context) {
@@ -590,6 +653,16 @@ class _ActiveFilterChips extends StatelessWidget {
                 onRemoveMaxAmount,
               ),
             ),
+          if (filter.relationFilters != null)
+            for (final entry in filter.relationFilters!.entries)
+              for (final id in entry.value)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _chipWidget(
+                    '${entry.key}: ${filter.relationFilterLabels?[entry.key]?[id] ?? '#$id'}',
+                    () => onRemoveRelation(entry.key, id),
+                  ),
+                ),
           GestureDetector(
             onTap: onClearAll,
             child: Center(
@@ -612,9 +685,9 @@ class _ActiveFilterChips extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDFA), // teal-50
+        color: const Color(0xFFF0FDFA),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF99F6E4)), // teal-200
+        border: Border.all(color: const Color(0xFF99F6E4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -652,11 +725,13 @@ class _FilterSheet extends StatefulWidget {
   const _FilterSheet({
     required this.schema,
     required this.initial,
+    required this.allRelationModels,
     required this.onApply,
   });
 
   final ModelType schema;
   final ExpenseFilter? initial;
+  final Map<String, List<Model>> allRelationModels;
   final void Function(ExpenseFilter?) onApply;
 
   @override
@@ -664,19 +739,28 @@ class _FilterSheet extends StatefulWidget {
 }
 
 class _FilterSheetState extends State<_FilterSheet> {
-  // Tag selections: system name → set of selected node names
   late Map<String, Set<String>> _tagSelections;
   final _minController = TextEditingController();
   final _maxController = TextEditingController();
-
-  // Track which hierarchical systems have expanded root nodes
   final Map<String, Set<String>> _expandedNodes = {};
+
+  // Relation selections: relation type name → set of selected model IDs
+  late Map<String, Set<int>> _relationSelections;
+  // Relation search: relation type name → current search query
+  final Map<String, String> _relationSearchQueries = {};
+  // Relation search: text controllers per relation type
+  final Map<String, TextEditingController> _relationSearchControllers = {};
+  // Relation search: relation type name → selected model names (for chip display)
+  final Map<String, Map<int, String>> _relationSelectedNames = {};
+
+  // Section collapse state — all collapsed by default
+  final Set<String> _expandedSections = {};
 
   @override
   void initState() {
     super.initState();
     _tagSelections = {};
-    // Populate from existing filter
+    _relationSelections = {};
     final existing = widget.initial;
     if (existing?.tagFilters != null) {
       for (final tf in existing!.tagFilters!) {
@@ -691,12 +775,42 @@ class _FilterSheetState extends State<_FilterSheet> {
     if (existing?.maxAmount != null) {
       _maxController.text = existing!.maxAmount!.toStringAsFixed(0);
     }
+    if (existing?.relationFilters != null) {
+      for (final entry in existing!.relationFilters!.entries) {
+        _relationSelections[entry.key] = Set.from(entry.value);
+        // Try to resolve names from allRelationModels
+        final models = widget.allRelationModels[entry.key] ?? [];
+        final names = <int, String>{};
+        for (final id in entry.value) {
+          final m = models.where((m) => m.id == id).firstOrNull;
+          if (m != null) names[id] = m.name;
+        }
+        _relationSelectedNames[entry.key] = names;
+      }
+    }
+    // Auto-expand sections that have active selections
+    for (final ts in widget.schema.tagSystems ?? const <TagSystem>[]) {
+      if ((_tagSelections[ts.name] ?? {}).isNotEmpty) {
+        _expandedSections.add('tag:${ts.name}');
+      }
+    }
+    if (_minController.text.isNotEmpty || _maxController.text.isNotEmpty) {
+      _expandedSections.add('amount');
+    }
+    for (final entry in _relationSelections.entries) {
+      if (entry.value.isNotEmpty) {
+        _expandedSections.add('rel:${entry.key}');
+      }
+    }
   }
 
   @override
   void dispose() {
     _minController.dispose();
     _maxController.dispose();
+    for (final c in _relationSearchControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -705,6 +819,9 @@ class _FilterSheetState extends State<_FilterSheet> {
       _tagSelections.clear();
       _minController.clear();
       _maxController.clear();
+      _relationSelections.clear();
+      _relationSelectedNames.clear();
+      _relationSearchQueries.clear();
     });
   }
 
@@ -723,10 +840,34 @@ class _FilterSheetState extends State<_FilterSheet> {
     final minAmt = double.tryParse(_minController.text);
     final maxAmt = double.tryParse(_maxController.text);
 
+    Map<String, Set<int>>? relFilters;
+    Map<String, Map<int, String>>? relLabels;
+    if (_relationSelections.isNotEmpty) {
+      relFilters = Map.from(_relationSelections);
+      relFilters.removeWhere((_, ids) => ids.isEmpty);
+      if (relFilters.isEmpty) relFilters = null;
+      if (relFilters != null) {
+        relLabels = {};
+        for (final entry in relFilters.entries) {
+          final names = _relationSelectedNames[entry.key];
+          if (names == null) continue;
+          final m = <int, String>{};
+          for (final id in entry.value) {
+            final n = names[id];
+            if (n != null) m[id] = n;
+          }
+          if (m.isNotEmpty) relLabels[entry.key] = m;
+        }
+        if (relLabels.isEmpty) relLabels = null;
+      }
+    }
+
     final filter = ExpenseFilter(
       tagFilters: tagFilters.isEmpty ? null : tagFilters,
       minAmount: minAmt,
       maxAmount: maxAmt,
+      relationFilters: relFilters,
+      relationFilterLabels: relLabels,
     );
 
     widget.onApply(filter);
@@ -736,6 +877,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     final tagSystems = widget.schema.tagSystems ?? const <TagSystem>[];
+    final relationNames = allRelationTargetTypeNames(widget.schema);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -759,8 +901,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           // Header
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
               children: [
                 Text(
@@ -777,10 +918,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                   child: Text(
                     'Reset',
                     style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate400,
-                    ),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate400),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -789,10 +929,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                   child: Text(
                     'Apply',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.teal600,
-                    ),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.teal600),
                   ),
                 ),
               ],
@@ -802,22 +941,35 @@ class _FilterSheetState extends State<_FilterSheet> {
           // Scrollable content
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
-                for (var i = 0; i < tagSystems.length; i++) ...[
-                  if (i > 0)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(height: 1, color: AppColors.slate100),
-                    ),
-                  _buildTagSystemSection(tagSystems[i]),
-                ],
-                if (tagSystems.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Divider(height: 1, color: AppColors.slate100),
+                // Tag system sections
+                for (final ts in tagSystems)
+                  _collapsibleSection(
+                    key: 'tag:${ts.name}',
+                    title: ts.name,
+                    selectedCount: (_tagSelections[ts.name] ?? {}).length,
+                    child: ts.isHierarchical
+                        ? _buildHierarchicalContent(ts)
+                        : _buildFlatContent(ts),
                   ),
-                _buildAmountSection(),
+                // Amount section
+                _collapsibleSection(
+                  key: 'amount',
+                  title: 'Amount',
+                  selectedCount: (_minController.text.isNotEmpty ? 1 : 0) +
+                      (_maxController.text.isNotEmpty ? 1 : 0),
+                  child: _buildAmountContent(),
+                ),
+                // Relation sections
+                for (final relName in relationNames)
+                  _collapsibleSection(
+                    key: 'rel:$relName',
+                    title: relName,
+                    selectedCount:
+                        (_relationSelections[relName] ?? {}).length,
+                    child: _buildRelationContent(relName),
+                  ),
               ],
             ),
           ),
@@ -826,47 +978,98 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _buildTagSystemSection(TagSystem ts) {
-    final selected = _tagSelections[ts.name] ?? {};
+  // ─── Collapsible section wrapper ───
 
-    if (ts.isHierarchical) {
-      return _buildHierarchicalSection(ts, selected);
-    } else {
-      return _buildFlatSection(ts, selected);
-    }
+  Widget _collapsibleSection({
+    required String key,
+    required String title,
+    required int selectedCount,
+    required Widget child,
+  }) {
+    final isExpanded = _expandedSections.contains(key);
+    return Column(
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedSections.remove(key);
+              } else {
+                _expandedSections.add(key);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Row(
+              children: [
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                    color: AppColors.slate400,
+                  ),
+                ),
+                if (selectedCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.teal600,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$selectedCount',
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  size: 20,
+                  color: AppColors.slate400,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: child,
+          ),
+        const Divider(height: 1, color: AppColors.slate100),
+      ],
+    );
   }
 
-  // ─── Hierarchical tag system ───
+  // ─── Hierarchical tag system content ───
 
-  Widget _buildHierarchicalSection(TagSystem ts, Set<String> selected) {
+  Widget _buildHierarchicalContent(TagSystem ts) {
+    final selected = _tagSelections[ts.name] ?? {};
     final expanded = _expandedNodes.putIfAbsent(ts.name, () => {});
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          ts.name.toUpperCase(),
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-            color: AppColors.slate400,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: const BoxDecoration(
-            border: Border(left: BorderSide(color: AppColors.slate100, width: 2)),
-          ),
-          padding: const EdgeInsets.only(left: 12),
-          child: Column(
-            children: [
-              for (final node in ts.nodes)
-                _buildTreeNode(ts, node, selected, expanded, depth: 0),
-            ],
-          ),
-        ),
-      ],
+    return Container(
+      decoration: const BoxDecoration(
+        border:
+            Border(left: BorderSide(color: AppColors.slate100, width: 2)),
+      ),
+      padding: const EdgeInsets.only(left: 12),
+      child: Column(
+        children: [
+          for (final node in ts.nodes)
+            _buildTreeNode(ts, node, selected, expanded, depth: 0),
+        ],
+      ),
     );
   }
 
@@ -889,22 +1092,12 @@ class _FilterSheetState extends State<_FilterSheet> {
           behavior: HitTestBehavior.opaque,
           onTap: () {
             setState(() {
-              if (isExclusive) {
-                // Exclusive: clear others in this system, toggle this one
-                final sel = _tagSelections.putIfAbsent(ts.name, () => {});
-                if (isSelected) {
-                  sel.remove(node.name);
-                } else {
-                  sel.clear();
-                  sel.add(node.name);
-                }
+              final sel = _tagSelections.putIfAbsent(ts.name, () => {});
+              if (isSelected) {
+                sel.remove(node.name);
               } else {
-                final sel = _tagSelections.putIfAbsent(ts.name, () => {});
-                if (isSelected) {
-                  sel.remove(node.name);
-                } else {
-                  sel.add(node.name);
-                }
+                if (isExclusive) sel.clear();
+                sel.add(node.name);
               }
             });
           },
@@ -953,8 +1146,8 @@ class _FilterSheetState extends State<_FilterSheet> {
           Container(
             margin: const EdgeInsets.only(left: 20),
             decoration: const BoxDecoration(
-              border:
-                  Border(left: BorderSide(color: AppColors.slate100, width: 2)),
+              border: Border(
+                  left: BorderSide(color: AppColors.slate100, width: 2)),
             ),
             padding: const EdgeInsets.only(left: 12),
             child: Column(
@@ -969,169 +1162,292 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  // ─── Flat tag system ───
+  // ─── Flat tag system content ───
 
-  Widget _buildFlatSection(TagSystem ts, Set<String> selected) {
+  Widget _buildFlatContent(TagSystem ts) {
+    final selected = _tagSelections[ts.name] ?? {};
     final isExclusive = ts.selectionMode == 'exclusive';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Text(
-          ts.name.toUpperCase(),
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-            color: AppColors.slate400,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final node in ts.nodes)
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    final sel =
-                        _tagSelections.putIfAbsent(ts.name, () => {});
-                    if (selected.contains(node.name)) {
-                      sel.remove(node.name);
-                    } else {
-                      if (isExclusive) sel.clear();
-                      sel.add(node.name);
-                    }
-                  });
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: selected.contains(node.name)
-                        ? AppColors.teal600
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: selected.contains(node.name)
-                          ? AppColors.teal600
-                          : AppColors.slate200,
-                    ),
-                  ),
-                  child: Text(
-                    node.name,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: selected.contains(node.name)
-                          ? Colors.white
-                          : AppColors.slate600,
-                    ),
-                  ),
+        for (final node in ts.nodes)
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                final sel = _tagSelections.putIfAbsent(ts.name, () => {});
+                if (selected.contains(node.name)) {
+                  sel.remove(node.name);
+                } else {
+                  if (isExclusive) sel.clear();
+                  sel.add(node.name);
+                }
+              });
+            },
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected.contains(node.name)
+                    ? AppColors.teal600
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected.contains(node.name)
+                      ? AppColors.teal600
+                      : AppColors.slate200,
                 ),
               ),
-          ],
-        ),
+              child: Text(
+                node.name,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: selected.contains(node.name)
+                      ? Colors.white
+                      : AppColors.slate600,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  // ─── Amount section ───
+  // ─── Amount content ───
 
-  Widget _buildAmountSection() {
+  Widget _buildAmountContent() {
     final fieldStyle = GoogleFonts.inter(
       fontSize: 14,
       fontWeight: FontWeight.w500,
       color: AppColors.slate900,
     );
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Min',
+                  style: GoogleFonts.inter(
+                      fontSize: 12, color: AppColors.slate400)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _minController,
+                keyboardType: TextInputType.number,
+                style: fieldStyle,
+                decoration: InputDecoration(
+                  prefixText: '\$ ',
+                  prefixStyle: GoogleFonts.inter(
+                      fontSize: 14, color: AppColors.slate400),
+                  hintText: '0',
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Max',
+                  style: GoogleFonts.inter(
+                      fontSize: 12, color: AppColors.slate400)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _maxController,
+                keyboardType: TextInputType.number,
+                style: fieldStyle,
+                decoration: InputDecoration(
+                  prefixText: '\$ ',
+                  prefixStyle: GoogleFonts.inter(
+                      fontSize: 14, color: AppColors.slate400),
+                  hintText: 'No limit',
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Relation search + chips content ───
+
+  Widget _buildRelationContent(String relName) {
+    final allModels = widget.allRelationModels[relName] ?? [];
+    final selectedIds = _relationSelections[relName] ?? {};
+    final selectedNames = _relationSelectedNames[relName] ?? {};
+    final query =
+        (_relationSearchQueries[relName] ?? '').toLowerCase();
+    final searchController = _relationSearchControllers.putIfAbsent(
+        relName, () => TextEditingController());
+
+    // Candidates: not yet selected, sorted by name for browsing.
+    final candidates = allModels
+        .where((m) => !selectedIds.contains(m.id))
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // Empty field: show first batch so users can pick without typing; typing narrows the list.
+    final suggestions = query.isEmpty
+        ? candidates.take(20).toList()
+        : candidates
+            .where((m) => m.name.toLowerCase().contains(query))
+            .take(20)
+            .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'AMOUNT',
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-            color: AppColors.slate400,
+        // Search field
+        TextField(
+          controller: searchController,
+          onChanged: (v) => setState(() {
+            _relationSearchQueries[relName] = v;
+          }),
+          style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
+          decoration: InputDecoration(
+            hintText: 'Search ${relName.toLowerCase()}...',
+            hintStyle:
+                GoogleFonts.inter(fontSize: 14, color: AppColors.slate300),
+            prefixIcon: const Icon(Icons.search,
+                size: 20, color: AppColors.slate400),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.slate200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.slate200),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Min',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.slate400)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _minController,
-                    keyboardType: TextInputType.number,
-                    style: fieldStyle,
-                    decoration: InputDecoration(
-                      prefixText: '\$ ',
-                      prefixStyle: GoogleFonts.inter(
-                          fontSize: 14, color: AppColors.slate400),
-                      hintText: '0',
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.slate200),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.slate200),
+
+        // Search suggestions
+        if (suggestions.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.slate200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < suggestions.length; i++) ...[
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        final ids = _relationSelections.putIfAbsent(
+                            relName, () => {});
+                        ids.add(suggestions[i].id);
+                        final names = _relationSelectedNames.putIfAbsent(
+                            relName, () => {});
+                        names[suggestions[i].id] = suggestions[i].name;
+                        _relationSearchQueries[relName] = '';
+                        searchController.clear();
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              suggestions[i].name,
+                              style: GoogleFonts.inter(
+                                  fontSize: 14, color: AppColors.slate700),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
+                  if (i < suggestions.length - 1)
+                    const Divider(height: 1, color: AppColors.slate100),
                 ],
-              ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Max',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.slate400)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _maxController,
-                    keyboardType: TextInputType.number,
-                    style: fieldStyle,
-                    decoration: InputDecoration(
-                      prefixText: '\$ ',
-                      prefixStyle: GoogleFonts.inter(
-                          fontSize: 14, color: AppColors.slate400),
-                      hintText: 'No limit',
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.slate200),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.slate200),
-                      ),
+          ),
+
+        // Selected chips
+        if (selectedIds.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final id in selectedIds)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDFA),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF99F6E4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          selectedNames[id] ?? '#$id',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.teal700,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _relationSelections[relName]?.remove(id);
+                              _relationSelectedNames[relName]?.remove(id);
+                            });
+                          },
+                          child: const Icon(Icons.close,
+                              size: 14, color: AppColors.teal500),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
       ],
     );
   }
