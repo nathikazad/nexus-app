@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -6,6 +7,12 @@ import 'package:nx_db/nx_db.dart';
 import 'package:nx_expense/providers/expense_providers.dart';
 
 class _MockGraphQLClient extends Mock implements GraphQLClient {}
+
+DateTimeRange _testMonth(int year, int month) {
+  final start = DateTime(year, month);
+  final end = DateTime(year, month + 1).subtract(const Duration(days: 1));
+  return DateTimeRange(start: start, end: end);
+}
 
 QueryResult _qr(Map<String, dynamic>? data) {
   return QueryResult(
@@ -91,7 +98,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final list = await container.read(expenseListProvider(null).future);
+      final list = await container.read(
+        expenseListProvider((filter: null, dateRange: _testMonth(2024, 6))).future,
+      );
       expect(list.length, 1);
       expect(list.first.modelTypeId, 9);
       expect(list.first.name, 'Coffee');
@@ -119,13 +128,14 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(
-        expenseListProvider(
-          const ExpenseFilter(
+        expenseListProvider((
+          filter: const ExpenseFilter(
             tagFilters: [
               {'system': 'Category', 'node': 'Coffee', 'include_descendants': true},
             ],
           ),
-        ).future,
+          dateRange: _testMonth(2024, 6),
+        )).future,
       );
 
       expect(captured.length, 2);
@@ -225,7 +235,11 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(spendByTagSystemProvider('Category').future);
+      await container.read(spendByTagSystemProvider((
+        systemName: 'Category',
+        parentNode: null,
+        level: null,
+      )).future);
 
       expect(agg!['group'], {'key': 'tag:Category'});
     });

@@ -33,13 +33,14 @@ class TagSystemsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.appBarTop, RefLayout.px5, RefLayout.pb4),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
-                        onPressed: () {
-                          if (context.canPop()) context.pop();
-                        },
-                      ),
-                      Expanded(child: Text('Tag Systems', style: refAppBarTitleLarge())),
+                      if (context.canPop())
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                          onPressed: () => context.pop(),
+                        ),
+                      Expanded(child: Text('Tag systems', style: refAppBarTitleLarge())),
                     ],
                   ),
                 ),

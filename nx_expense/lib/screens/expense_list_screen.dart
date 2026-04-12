@@ -11,6 +11,8 @@ import '../format.dart';
 import '../providers/expense_providers.dart';
 import '../reference_layout.dart';
 import '../widgets/expense_card.dart';
+import '../widgets/expense_app_end_drawer.dart';
+import '../widgets/expense_date_range_bar.dart';
 
 class ExpenseListScreen extends ConsumerStatefulWidget {
   const ExpenseListScreen({super.key});
@@ -20,33 +22,6 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
 }
 
 class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
-  static const _monthLabels = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
-  late int _selectedMonth;
-  late int _selectedYear;
-  bool _isCustomRange = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _selectedMonth = now.month;
-    _selectedYear = now.year;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyMonthRange());
-  }
-
-  void _applyMonthRange() {
-    final start = DateTime(_selectedYear, _selectedMonth);
-    final end = DateTime(_selectedYear, _selectedMonth + 1)
-        .subtract(const Duration(days: 1));
-    ref
-        .read(expenseListDateRangeProvider.notifier)
-        .setRange(DateTimeRange(start: start, end: end));
-  }
-
   Future<void> _refresh() async {
     ref.invalidate(expenseSchemaProvider);
     ref.invalidate(expenseListForUiProvider);
@@ -60,7 +35,6 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
     final summaryAsync = ref.watch(expenseListSummaryProvider);
     final filter = ref.watch(expenseListFilterProvider);
     final sortMode = ref.watch(expenseListSortProvider);
-    final range = ref.watch(expenseListDateRangeProvider);
 
     final ExpenseFilter effectiveFilter = filter ?? const ExpenseFilter();
     final filterActive = filter != null && !effectiveFilter.isEmpty;
@@ -68,6 +42,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      endDrawer: const ExpenseAppEndDrawer(),
       body: schemaAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: SelectableText('Schema: $e')),
@@ -86,190 +61,15 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                       Expanded(
                           child:
                               Text('Expenses', style: refAppBarTitleLarge())),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: Icon(
-                          Icons.calendar_today_outlined,
-                          color: _isCustomRange
-                              ? AppColors.teal600
-                              : AppColors.slate400,
-                          size: 22,
-                        ),
-                        onPressed: () async {
-                          final now = DateTime.now();
-                          final picked = await showDateRangePicker(
-                            context: context,
-                            firstDate: DateTime(now.year - 2),
-                            lastDate: DateTime(now.year + 1),
-                            initialDateRange: range ??
-                                DateTimeRange(
-                                  start:
-                                      now.subtract(const Duration(days: 30)),
-                                  end: now,
-                                ),
-                          );
-                          if (picked != null) {
-                            setState(() => _isCustomRange = true);
-                            ref
-                                .read(expenseListDateRangeProvider.notifier)
-                                .setRange(picked);
-                          }
-                        },
-                      ),
+                      const ExpenseDateRangeCalendarButton(),
                       const SizedBox(width: 4),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: const Icon(Icons.settings_outlined,
-                            color: AppColors.slate400, size: 22),
-                        onPressed: () => context.push('/tag-systems'),
-                      ),
-                      const SizedBox(width: 4),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: const Icon(Icons.logout,
-                            color: AppColors.slate400, size: 22),
-                        onPressed: () async {
-                          await ref.read(authProvider.notifier).logout();
-                          if (context.mounted) context.go('/login');
-                        },
-                      ),
+                      const ExpenseAppMenuButton(),
                     ],
                   ),
                 ),
               ),
 
-              // Year + month selector
-              Padding(
-                padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 12),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final years =
-                            List.generate(5, (i) => now.year - 2 + i);
-                        final picked = await showModalBottomSheet<int>(
-                          context: context,
-                          builder: (_) => SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (final y in years)
-                                  ListTile(
-                                    title: Text('$y',
-                                        style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.w600)),
-                                    selected: y == _selectedYear,
-                                    selectedColor: AppColors.teal600,
-                                    onTap: () => Navigator.pop(context, y),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                        if (picked != null && picked != _selectedYear) {
-                          setState(() {
-                            _selectedYear = picked;
-                            _isCustomRange = false;
-                          });
-                          _applyMonthRange();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: AppColors.slate100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '$_selectedYear',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate900,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            const Icon(Icons.keyboard_arrow_down,
-                                size: 18, color: AppColors.slate500),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SizedBox(
-                        height: 40,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: 12,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 6),
-                          itemBuilder: (context, i) {
-                            final month = i + 1;
-                            final isSelected =
-                                !_isCustomRange && month == _selectedMonth;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedMonth = month;
-                                  _isCustomRange = false;
-                                });
-                                _applyMonthRange();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppColors.teal600
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? AppColors.teal600
-                                        : AppColors.slate200,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: AppColors.teal600
-                                                .withValues(alpha: 0.3),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 1),
-                                          )
-                                        ]
-                                      : null,
-                                ),
-                                child: Text(
-                                  _monthLabels[i],
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : AppColors.slate600,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const ExpenseDateRangeBar(bottomPadding: 12),
 
               // Summary line + filter/sort icons
               Padding(

@@ -1,6 +1,7 @@
 @Tags(['integration'])
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
@@ -54,7 +55,15 @@ void main() {
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
-        final list = await container.read(expenseListProvider(null).future);
+        final list = await container.read(
+          expenseListProvider((
+            filter: null,
+            dateRange: DateTimeRange(
+              start: DateTime(2000, 1, 1),
+              end: DateTime(2030, 12, 31),
+            ),
+          )).future,
+        );
         expect(list.length, greaterThan(0));
       },
       skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,

@@ -1,6 +1,7 @@
 @Tags(['integration'])
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
@@ -9,6 +10,13 @@ import 'package:nx_expense/providers/expense_providers.dart';
 import 'package:test/test.dart' show Tags;
 
 import 'support/integration_auth.dart';
+
+DateTimeRange _wideExpenseRange() {
+  return DateTimeRange(
+    start: DateTime(2000, 1, 1),
+    end: DateTime(2030, 12, 31),
+  );
+}
 
 /// Assertions aligned with [servers/pgdb/docs/llm-reference/seed-data.md]
 /// (`setup_model_types`, `setup_expense_tag_systems`, demo Expense rows).
@@ -95,7 +103,9 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(authProvider.future);
-      final list = await container.read(expenseListProvider(null).future);
+      final list = await container.read(
+        expenseListProvider((filter: null, dateRange: _wideExpenseRange())).future,
+      );
       final names = list.map((m) => m.name).toSet();
 
       // seed-data.md § Expenses (demo graph)
@@ -120,7 +130,9 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(authProvider.future);
-      final list = await container.read(expenseListProvider(null).future);
+      final list = await container.read(
+        expenseListProvider((filter: null, dateRange: _wideExpenseRange())).future,
+      );
 
       var anyTags = false;
       for (final m in list) {

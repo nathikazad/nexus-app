@@ -164,22 +164,28 @@ class ExpenseListSortNotifier extends Notifier<ExpenseSortMode> {
 final expenseListSortProvider =
     NotifierProvider<ExpenseListSortNotifier, ExpenseSortMode>(ExpenseListSortNotifier.new);
 
-/// Optional date range for expense list.
-class ExpenseListDateRangeNotifier extends Notifier<DateTimeRange?> {
-  @override
-  DateTimeRange? build() => null;
-
-  void setRange(DateTimeRange? value) => state = value;
+DateTimeRange _calendarMonthRange(DateTime forDay) {
+  final start = DateTime(forDay.year, forDay.month);
+  final end = DateTime(forDay.year, forDay.month + 1).subtract(const Duration(days: 1));
+  return DateTimeRange(start: start, end: end);
 }
 
-final expenseListDateRangeProvider =
-    NotifierProvider<ExpenseListDateRangeNotifier, DateTimeRange?>(ExpenseListDateRangeNotifier.new);
+/// Shared date window for expense list, dashboard aggregates, and charts.
+class ExpenseDateRangeNotifier extends Notifier<DateTimeRange> {
+  @override
+  DateTimeRange build() => _calendarMonthRange(DateTime.now());
+
+  void setRange(DateTimeRange value) => state = value;
+}
+
+final expenseDateRangeProvider =
+    NotifierProvider<ExpenseDateRangeNotifier, DateTimeRange>(ExpenseDateRangeNotifier.new);
 
 /// Same as [expenseListProvider] but uses [expenseListFilterProvider],
-/// [expenseListSortProvider], and [expenseListDateRangeProvider].
+/// [expenseListSortProvider], and [expenseDateRangeProvider].
 final expenseListForUiProvider = FutureProvider<List<Model>>((ref) async {
   final filter = ref.watch(expenseListFilterProvider);
-  final dateRange = ref.watch(expenseListDateRangeProvider);
+  final dateRange = ref.watch(expenseDateRangeProvider);
   final sortMode = ref.watch(expenseListSortProvider);
 
   final list = await ref.watch(expenseListProvider((filter: filter, dateRange: dateRange)).future);
@@ -266,32 +272,20 @@ final expenseListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   return ExpenseSummary(count: list.length, sumTotal: sum);
 });
 
-/// Optional date range for dashboard aggregates only.
-class DashboardDateRangeNotifier extends Notifier<DateTimeRange?> {
-  @override
-  DateTimeRange? build() => null;
-
-  void setRange(DateTimeRange? value) => state = value;
-}
-
-final dashboardDateRangeProvider =
-    NotifierProvider<DashboardDateRangeNotifier, DateTimeRange?>(DashboardDateRangeNotifier.new);
-
 Map<String, dynamic> _dashboardFilterKgql(Ref ref) {
-  final range = ref.watch(dashboardDateRangeProvider);
-  final base = <String, dynamic>{'model_type': kExpenseModelTypeName};
-  if (range != null) {
-    base['filters'] = [
+  final range = ref.watch(expenseDateRangeProvider);
+  return <String, dynamic>{
+    'model_type': kExpenseModelTypeName,
+    'filters': [
       {'key': 'created_at', 'op': '>=', 'value': range.start.toIso8601String()},
       {'key': 'created_at', 'op': '<=', 'value': range.end.toIso8601String()},
-    ];
-  }
-  return base;
+    ],
+  };
 }
 
 /// Lists Expense models using the dynamic struct from the schema.
 final expenseListProvider =
-    FutureProvider.family<List<Model>, ({ExpenseFilter? filter, DateTimeRange? dateRange})>((ref, params) async {
+    FutureProvider.family<List<Model>, ({ExpenseFilter? filter, DateTimeRange dateRange})>((ref, params) async {
   final schema = await ref.watch(expenseSchemaProvider.future);
   final struct = buildExpenseStruct(schema);
   final client = ref.watch(graphqlClientProvider);
@@ -300,15 +294,11 @@ final expenseListProvider =
     'model_type': kExpenseModelTypeName,
     if (params.filter?.tagFilters != null && params.filter!.tagFilters!.isNotEmpty)
       'tag_filters': params.filter!.tagFilters,
+    'filters': [
+      {'key': 'created_at', 'op': '>=', 'value': params.dateRange.start.toIso8601String()},
+      {'key': 'created_at', 'op': '<=', 'value': params.dateRange.end.toIso8601String()},
+    ],
   };
-
-  if (params.dateRange != null) {
-    final filters = <Map<String, dynamic>>[
-      {'key': 'created_at', 'op': '>=', 'value': params.dateRange!.start.toIso8601String()},
-      {'key': 'created_at', 'op': '<=', 'value': params.dateRange!.end.toIso8601String()},
-    ];
-    filterMap['filters'] = filters;
-  }
 
   final result = await client.query(
     QueryOptions(
@@ -393,7 +383,7 @@ final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   return ExpenseSummary(count: count, sumTotal: sum);
 });
 
-/// Dashboard summary — respects [dashboardDateRangeProvider].
+/// Dashboard summary — respects [expenseDateRangeProvider].
 final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   final client = ref.watch(graphqlClientProvider);
   final schema = await ref.watch(expenseSchemaProvider.future);

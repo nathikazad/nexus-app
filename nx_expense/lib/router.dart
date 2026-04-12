@@ -102,6 +102,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: '/tag-systems',
+        builder: (context, state) => const TagSystemsScreen(),
+      ),
+      GoRoute(
         path: '/expense/form/:id',
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
@@ -136,10 +140,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           final name = Uri.decodeComponent(state.pathParameters['systemName']!);
           return TagBrowserScreen(systemName: name);
         },
-      ),
-      GoRoute(
-        path: '/tag-systems',
-        builder: (context, state) => const TagSystemsScreen(),
       ),
     ],
   );

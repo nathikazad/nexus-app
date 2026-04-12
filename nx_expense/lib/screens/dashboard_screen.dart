@@ -2,7 +2,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
@@ -12,49 +11,22 @@ import '../expense_schema.dart';
 import '../format.dart';
 import '../providers/expense_providers.dart';
 import '../reference_layout.dart';
+import '../widgets/expense_app_end_drawer.dart';
+import '../widgets/expense_date_range_bar.dart';
 import '../widgets/stat_card.dart';
 
-class DashboardScreen extends ConsumerStatefulWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  static const _monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  late int _selectedMonth; // 1-12
-  late int _selectedYear;
-  bool _isCustomRange = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _selectedMonth = now.month;
-    _selectedYear = now.year;
-    // Set initial range to current month after first frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _applyMonthRange();
-    });
-  }
-
-  void _applyMonthRange() {
-    final start = DateTime(_selectedYear, _selectedMonth);
-    final end = DateTime(_selectedYear, _selectedMonth + 1).subtract(const Duration(days: 1));
-    ref.read(dashboardDateRangeProvider.notifier).setRange(DateTimeRange(start: start, end: end));
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final schemaAsync = ref.watch(expenseSchemaProvider);
     final summaryAsync = ref.watch(dashboardExpenseSummaryProvider);
     final dayAsync = ref.watch(spendByDayProvider);
-    final range = ref.watch(dashboardDateRangeProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
+      endDrawer: const ExpenseAppEndDrawer(),
       body: schemaAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -69,153 +41,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Row(
                     children: [
                       Expanded(child: Text('Dashboard', style: refAppBarTitleLarge())),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: Icon(
-                          Icons.calendar_today_outlined,
-                          color: _isCustomRange ? AppColors.teal600 : AppColors.slate400,
-                          size: 22,
-                        ),
-                        onPressed: () async {
-                          final now = DateTime.now();
-                          final picked = await showDateRangePicker(
-                            context: context,
-                            firstDate: DateTime(now.year - 2),
-                            lastDate: DateTime(now.year + 1),
-                            initialDateRange: range ??
-                                DateTimeRange(
-                                  start: now.subtract(const Duration(days: 30)),
-                                  end: now,
-                                ),
-                          );
-                          if (picked != null) {
-                            setState(() => _isCustomRange = true);
-                            ref.read(dashboardDateRangeProvider.notifier).setRange(picked);
-                          }
-                        },
-                      ),
+                      const ExpenseDateRangeCalendarButton(),
                       const SizedBox(width: 4),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: const Icon(Icons.logout, color: AppColors.slate400, size: 22),
-                        onPressed: () async {
-                          await ref.read(authProvider.notifier).logout();
-                          if (context.mounted) context.go('/login');
-                        },
-                      ),
+                      const ExpenseAppMenuButton(),
                     ],
                   ),
                 ),
               ),
-              // Year button + Month chips row
-              Padding(
-                padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 8),
-                child: Row(
-                  children: [
-                    // Year dropdown button
-                    GestureDetector(
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final years = List.generate(5, (i) => now.year - 2 + i);
-                        final picked = await showModalBottomSheet<int>(
-                          context: context,
-                          builder: (_) => SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (final y in years)
-                                  ListTile(
-                                    title: Text('$y', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                                    selected: y == _selectedYear,
-                                    selectedColor: AppColors.teal600,
-                                    onTap: () => Navigator.pop(context, y),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                        if (picked != null && picked != _selectedYear) {
-                          setState(() {
-                            _selectedYear = picked;
-                            _isCustomRange = false;
-                          });
-                          _applyMonthRange();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: AppColors.slate100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '$_selectedYear',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate900,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.slate500),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Month pills
-                    Expanded(
-                      child: SizedBox(
-                        height: 40,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: 12,
-                          separatorBuilder: (_, __) => const SizedBox(width: 6),
-                          itemBuilder: (context, i) {
-                            final month = i + 1;
-                            final isSelected = !_isCustomRange && month == _selectedMonth;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedMonth = month;
-                                  _isCustomRange = false;
-                                });
-                                _applyMonthRange();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.teal600 : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected ? AppColors.teal600 : AppColors.slate200,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [BoxShadow(color: AppColors.teal600.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 1))]
-                                      : null,
-                                ),
-                                child: Text(
-                                  _monthLabels[i],
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected ? Colors.white : AppColors.slate600,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const ExpenseDateRangeBar(),
               Expanded(
                 child: summaryAsync.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
