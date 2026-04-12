@@ -6,7 +6,7 @@ import 'package:nx_db/nx_db.dart';
 
 import '../app_theme.dart';
 
-/// Panel from the right: Settings (tag systems) and Log out.
+/// Panel from the right: Tags (tag systems) and Log out.
 class ExpenseAppEndDrawer extends ConsumerWidget {
   const ExpenseAppEndDrawer({super.key});
 
@@ -31,8 +31,8 @@ class ExpenseAppEndDrawer extends ConsumerWidget {
             ),
             const Divider(height: 1, color: AppColors.slate100),
             ListTile(
-              leading: const Icon(Icons.settings_outlined, color: AppColors.slate600, size: 22),
-              title: Text('Settings', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.label_outlined, color: AppColors.slate600, size: 22),
+              title: Text('Tags', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.of(context).pop();
                 context.push('/tag-systems');

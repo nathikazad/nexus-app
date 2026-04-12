@@ -13,8 +13,8 @@ query GetKgqlModels(\$filter: JSON!, \$struct: JSON!) {
 }
 ''';
 
-const String _getExpenseModelTypeQuery = '''
-query GetExpenseModelType(\$input: JSON!) {
+const String _getKgqlModelTypeQuery = '''
+query GetKgqlModelType(\$input: JSON!) {
   getKgqlModelType(input: \$input)
 }
 ''';
@@ -24,7 +24,7 @@ final expenseSchemaProvider = FutureProvider<ModelType>((ref) async {
   final client = ref.watch(graphqlClientProvider);
   final result = await client.query(
     QueryOptions(
-      document: gql(_getExpenseModelTypeQuery),
+      document: gql(_getKgqlModelTypeQuery),
       variables: {
         'input': {
           'model_types': [kExpenseModelTypeName],
@@ -61,6 +61,56 @@ final expenseSchemaProvider = FutureProvider<ModelType>((ref) async {
 
   if (jsonArray.isEmpty) {
     throw StateError('Model type "$kExpenseModelTypeName" not found');
+  }
+
+  return ModelType.fromJson(
+    jsonArray.first as Map<String, dynamic>,
+    recursive: true,
+  );
+});
+
+/// Cached Transfer model type (attributes, relations).
+final transferSchemaProvider = FutureProvider<ModelType>((ref) async {
+  final client = ref.watch(graphqlClientProvider);
+  final result = await client.query(
+    QueryOptions(
+      document: gql(_getKgqlModelTypeQuery),
+      variables: {
+        'input': {
+          'model_types': [kTransferModelTypeName],
+          'struct': {
+            'id': true,
+            'name': true,
+            'type_kind': true,
+            'description': true,
+            'parent': true,
+            'children': true,
+            'traits': true,
+            'attributes': true,
+            'relations': true,
+            'tag_systems': true,
+          },
+        },
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) {
+    throw result.exception!;
+  }
+
+  final raw = result.data?['getKgqlModelType'];
+  if (raw == null) {
+    throw StateError('getKgqlModelType returned null');
+  }
+
+  final jsonArray = raw is String
+      ? json.decode(raw) as List<dynamic>
+      : raw as List<dynamic>;
+
+  if (jsonArray.isEmpty) {
+    throw StateError('Model type "$kTransferModelTypeName" not found');
   }
 
   return ModelType.fromJson(
@@ -316,6 +366,60 @@ final expenseListProvider =
   }
 
   return _parseModels(result.data?['getKgqlModels']);
+});
+
+/// List Transfer models for [expenseDateRangeProvider].
+final transferListProvider = FutureProvider<List<Model>>((ref) async {
+  final schema = await ref.watch(transferSchemaProvider.future);
+  final struct = buildTransferStruct(schema);
+  final client = ref.watch(graphqlClientProvider);
+  final dateRange = ref.watch(expenseDateRangeProvider);
+
+  final result = await client.query(
+    QueryOptions(
+      document: gql(_getKgqlModelsQuery),
+      variables: {
+        'filter': {
+          'model_type': kTransferModelTypeName,
+          'filters': [
+            {'key': 'created_at', 'op': '>=', 'value': dateRange.start.toIso8601String()},
+            {'key': 'created_at', 'op': '<=', 'value': dateRange.end.toIso8601String()},
+          ],
+        },
+        'struct': struct,
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) {
+    throw result.exception!;
+  }
+
+  return _parseModels(result.data?['getKgqlModels']);
+});
+
+/// Transfers sorted newest first (same window as expenses).
+final transferListForUiProvider = FutureProvider<List<Model>>((ref) async {
+  final list = await ref.watch(transferListProvider.future);
+  final sorted = [...list];
+  sorted.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+  return sorted;
+});
+
+/// Count + signed sum of transfer amounts for the list.
+final transferListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+  final list = await ref.watch(transferListForUiProvider.future);
+  final schema = await ref.watch(transferSchemaProvider.future);
+  final key = primaryNumberAttributeKey(schema);
+  num? sum;
+  if (key != null) {
+    sum = 0;
+    for (final m in list) {
+      sum = sum! + _numAttr(m, key);
+    }
+  }
+  return ExpenseSummary(count: list.length, sumTotal: sum);
 });
 
 /// Single expense by numeric id.

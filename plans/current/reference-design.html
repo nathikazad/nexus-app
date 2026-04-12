@@ -11,12 +11,17 @@
         /* Hiding scrollbars for app-like feel while maintaining scrollability */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Positioning context so absolute footers/FABs stay inside each frame */
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
 
     <!-- Screen 1: Login -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <div class="flex-1 flex flex-col justify-center px-8">
             <div class="text-center mb-12">
                 <div class="w-16 h-16 bg-teal-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
@@ -61,7 +66,7 @@
     </div>
 
     <!-- Screen 2: Expense List (Main) -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
@@ -170,7 +175,7 @@
     </div>
 
     <!-- Screen 2a: Expense List — Filter Bottom Sheet open -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
@@ -354,13 +359,71 @@
                         </div>
                     </div>
 
+                    <!-- Divider -->
+                    <div class="border-t border-slate-100"></div>
+
+                    <!-- Relation: Company -->
+                    <div>
+                        <button class="w-full flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Company</h3>
+                                <span class="w-4 h-4 bg-teal-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">1</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400"></iconify-icon>
+                        </button>
+                        <!-- Search input -->
+                        <div class="relative mb-3">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <iconify-icon icon="solar:magnifier-linear" class="text-sm"></iconify-icon>
+                            </div>
+                            <input type="text" class="block w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Search companies...">
+                        </div>
+                        <!-- Selected chips -->
+                        <div class="flex flex-wrap gap-1.5 mb-3">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 text-teal-700 rounded-lg text-xs font-medium border border-teal-200">
+                                Starbucks Corp
+                                <button class="text-teal-400 hover:text-teal-700"><iconify-icon icon="solar:close-circle-linear" class="text-sm"></iconify-icon></button>
+                            </span>
+                        </div>
+                        <!-- Candidate list -->
+                        <div class="bg-white border border-slate-100 rounded-xl overflow-hidden max-h-32 overflow-y-auto no-scrollbar">
+                            <button class="w-full px-3 py-2.5 text-left text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors border-b border-slate-50">Uber Technologies</button>
+                            <button class="w-full px-3 py-2.5 text-left text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors border-b border-slate-50">Whole Foods</button>
+                            <button class="w-full px-3 py-2.5 text-left text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors">Amazon Inc</button>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="border-t border-slate-100"></div>
+
+                    <!-- Relation: Project -->
+                    <div>
+                        <button class="w-full flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Project</h3>
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400"></iconify-icon>
+                        </button>
+                        <!-- Search input -->
+                        <div class="relative mb-3">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <iconify-icon icon="solar:magnifier-linear" class="text-sm"></iconify-icon>
+                            </div>
+                            <input type="text" class="block w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Search projects...">
+                        </div>
+                        <!-- No selection yet — just show candidates -->
+                        <div class="bg-white border border-slate-100 rounded-xl overflow-hidden max-h-32 overflow-y-auto no-scrollbar">
+                            <button class="w-full px-3 py-2.5 text-left text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors border-b border-slate-50">Q3 Marketing</button>
+                            <button class="w-full px-3 py-2.5 text-left text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors border-b border-slate-50">Office Renovation</button>
+                            <button class="w-full px-3 py-2.5 text-left text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors">R&D Initiative</button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Screen 2b: Expense List — Sort Bottom Sheet open -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
@@ -467,7 +530,7 @@
     </div>
 
     <!-- Screen 3: Expense Detail -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
@@ -563,8 +626,133 @@
         </div>
     </div>
 
+    <!-- Screen 3b: Edit Expense -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Edit Expense</h1>
+            <div class="w-8"></div>
+        </div>
+
+        <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-6 no-scrollbar bg-slate-50/30">
+
+            <!-- Basics -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name <span class="text-red-400">*</span></label>
+                    <input type="text" value="Starbucks Coffee" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Description</label>
+                    <textarea rows="3" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm resize-none font-medium">Coffee meeting with client regarding the new Q3 marketing campaign deliverables and timelines.</textarea>
+                </div>
+            </div>
+
+            <!-- Attributes -->
+            <div>
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Attributes</h3>
+                <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                    <!-- Amount -->
+                    <div class="p-4 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-700">Amount</label>
+                        <div class="relative w-32">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                            <input type="number" value="45.00" class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-right focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-semibold text-slate-900">
+                        </div>
+                    </div>
+                    <!-- Boolean: Receipt -->
+                    <div class="p-4 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-700">Receipt</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 shadow-inner"></div>
+                        </label>
+                    </div>
+                    <!-- Boolean: Tax Deductible -->
+                    <div class="p-4 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-700">Tax Deductible</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 shadow-inner"></div>
+                        </label>
+                    </div>
+                    <!-- Text: Payment Method -->
+                    <div class="p-4">
+                        <label class="text-sm font-medium text-slate-700 block mb-2">Payment Method</label>
+                        <input type="text" value="Amex *3045" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-medium text-slate-900">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags -->
+            <div>
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Tags</h3>
+                <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                    <!-- Category (selected) -->
+                    <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                        <div>
+                            <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Category</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-sm text-slate-900 font-semibold">Food</span>
+                                <span class="text-slate-400 text-xs">&rsaquo;</span>
+                                <span class="text-sm text-slate-900 font-semibold">Fast Food</span>
+                            </div>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                    </button>
+                    <!-- Priority (selected) -->
+                    <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                        <div>
+                            <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Priority</span>
+                            <span class="text-sm text-slate-900 font-semibold">Medium</span>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Relations -->
+            <div>
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Relations</h3>
+                <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                    <!-- Company (selected) -->
+                    <div class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left cursor-pointer">
+                        <div>
+                            <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Company</span>
+                            <span class="text-sm text-slate-900 font-semibold">Starbucks Corp</span>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                    </div>
+                    <!-- Project (not set) -->
+                    <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                        <div>
+                            <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Project</span>
+                            <span class="text-sm text-slate-400 font-medium">Select Project</span>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom: Save + Delete -->
+        <div class="shrink-0 w-full p-5 bg-white border-t border-slate-100 z-10 pb-8 space-y-3">
+            <button class="w-full bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors">
+                Save Changes
+            </button>
+            <button class="w-full py-2.5 rounded-xl border-2 border-red-100 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
+                <iconify-icon icon="solar:trash-bin-trash-linear" class="text-lg"></iconify-icon>
+                Delete Expense
+            </button>
+        </div>
+    </div>
+
     <!-- Screen 4: Expense Form (with Bottom Sheet overlay) -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
@@ -708,7 +896,7 @@
     </div>
 
     <!-- Screen 5: Dashboard -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
@@ -760,25 +948,25 @@
                     <div class="absolute left-0 text-[9px] font-medium text-slate-400 z-20" style="bottom: 25%; transform: translateY(50%);">$310</div>
 
                     <!-- Bars -->
-                    <div class="w-full rounded-t-sm h-[20%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[20%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full rounded-t-sm h-[45%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[45%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full rounded-t-sm h-[10%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[10%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full rounded-t-sm h-[80%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[80%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full rounded-t-sm h-[30%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[30%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full rounded-t-sm h-[60%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[60%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
-                    <div class="w-full rounded-t-sm h-[15%] relative z-10 group">
+                    <div class="flex-1 min-w-0 rounded-t-sm h-[15%] relative z-10 group">
                         <div class="absolute bottom-0 w-full bg-teal-500 rounded-t-sm h-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
                 </div>
@@ -908,7 +1096,7 @@
     </div>
 
     <!-- Screen 5b: Dashboard Empty State -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
             <h1 class="text-xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
@@ -954,7 +1142,7 @@
     </div>
 
     <!-- Screen 6: Tag Systems List -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2 mr-2">
@@ -1000,7 +1188,7 @@
     </div>
 
     <!-- Screen 7: Tag System Form -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
@@ -1093,7 +1281,7 @@
     </div>
 
     <!-- Screen 8: Tag Browser Screen -->
-    <div class="w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
         <!-- App Bar -->
         <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
             <button class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">

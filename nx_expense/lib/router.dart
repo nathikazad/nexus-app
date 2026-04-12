@@ -10,6 +10,7 @@ import 'screens/expense_detail_screen.dart';
 import 'screens/expense_form_screen.dart';
 import 'screens/expense_list_screen.dart';
 import 'screens/expense_login_screen.dart';
+import 'screens/transfers_list_screen.dart';
 import 'screens/tag_browser_screen.dart';
 import 'screens/tag_system_form_screen.dart';
 import 'screens/tag_systems_screen.dart';
@@ -42,7 +43,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          final showFab = navigationShell.currentIndex == 0;
+          final showFab = navigationShell.currentIndex == 0; // Expenses tab only
           return Scaffold(
             extendBody: true,
             body: navigationShell,
@@ -74,9 +75,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   label: 'Expenses',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
-                  label: 'Dashboard',
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(Icons.bar_chart),
+                  label: 'Stats',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.swap_horiz_outlined),
+                  selectedIcon: Icon(Icons.swap_horiz),
+                  label: 'Transfers',
                 ),
               ],
             ),
@@ -96,6 +102,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/dashboard',
                 builder: (context, state) => const DashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/transfers',
+                builder: (context, state) => const TransfersListScreen(),
               ),
             ],
           ),

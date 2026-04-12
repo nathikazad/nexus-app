@@ -2,6 +2,7 @@ import 'package:nx_db/nx_db.dart';
 
 /// Hardcoded model type name — everything else is schema-driven.
 const String kExpenseModelTypeName = 'Expense';
+const String kTransferModelTypeName = 'Transfer';
 
 /// Builds the `struct` for `get_kgql_models` from an Expense [ModelType] (§2.2).
 Map<String, dynamic> buildExpenseStruct(ModelType schema) {
@@ -28,6 +29,45 @@ Map<String, dynamic> buildExpenseStruct(ModelType schema) {
   }
 
   return struct;
+}
+
+/// Builds the `struct` for `get_kgql_models` for Transfer (amount, date, `to`, `Company`, …).
+Map<String, dynamic> buildTransferStruct(ModelType schema) {
+  final struct = <String, dynamic>{
+    'id': true,
+    'name': true,
+    'description': true,
+    'created_at': true,
+  };
+
+  for (final ad in schema.attributes ?? const <AttributeDefinition>[]) {
+    final k = ad.key;
+    if (k != null && k.isNotEmpty) {
+      struct[k] = true;
+    }
+  }
+
+  for (final rel in schema.relations ?? const <RelationshipType>[]) {
+    final link = rel.link;
+    if (link is String && link.isNotEmpty) {
+      struct[link] = {'id': true, 'name': true};
+    }
+  }
+
+  return struct;
+}
+
+/// Row title: Cash when `to` is Cash; otherwise linked Company name or model name.
+String transferDisplayTitle(Model model) {
+  final to = attributeValue(model, 'to');
+  if (to is String && to.toLowerCase() == 'cash') {
+    return 'Cash';
+  }
+  final companies = model.relations?['Company'];
+  if (companies != null && companies.isNotEmpty) {
+    return companies.first.name;
+  }
+  return model.name;
 }
 
 /// First `number` attribute key in definition order (primary amount field).

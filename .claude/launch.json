@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "reference-design",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8765", "-d", "/Users/nathikazad/Projects/Nexus/mobile/plans/current"],
+      "port": 8765
+    }
+  ]
+}

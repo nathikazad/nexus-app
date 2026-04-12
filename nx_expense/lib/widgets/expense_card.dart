@@ -103,7 +103,7 @@ class ExpenseCard extends StatelessWidget {
                     children: [
                       for (final e in model.tags!.entries)
                         for (final node in e.value)
-                          ExpenseTagChip(label: '${e.key}: $node'),
+                          ExpenseTagChip(label: node),
                     ],
                   ),
                 ],

@@ -40,7 +40,7 @@ class DashboardScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.appBarTop, RefLayout.px5, RefLayout.pb4),
                   child: Row(
                     children: [
-                      Expanded(child: Text('Dashboard', style: refAppBarTitleLarge())),
+                      Expanded(child: Text('Stats', style: refAppBarTitleLarge())),
                       const ExpenseDateRangeCalendarButton(),
                       const SizedBox(width: 4),
                       const ExpenseAppMenuButton(),
