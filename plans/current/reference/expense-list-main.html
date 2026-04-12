@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense List (Main) — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
+                <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
+                <div class="flex gap-4 text-slate-400">
+                    <a href="dashboard.html" class="hover:text-teal-600 transition-colors" title="Dashboard (month)"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></a>
+                    <a href="tag-systems-list.html" class="hover:text-slate-900 transition-colors" title="Tag systems"><iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon></a>
+                    <a href="login.html" class="hover:text-slate-900 transition-colors" title="Log out"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></a>
+                </div>
+            </div>
+    
+            <!-- Month/Year Selector -->
+            <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+                <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0 hover:bg-slate-200 transition-colors">
+                    2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+                </button>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Jan</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Feb</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Mar</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Apr</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">May</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0 hover:bg-slate-50 transition-colors">Jun</button>
+                </div>
+            </div>
+    
+            <!-- Summary + Filter/Sort icons -->
+            <div class="px-5 pb-3 pt-1 flex items-center justify-between">
+                <p class="text-sm text-slate-500 font-medium">12 expenses &middot; $1,240.00</p>
+                <div class="flex items-center gap-3">
+                    <a href="expense-list-filter-bottom-sheet-open.html" class="text-slate-400 hover:text-teal-600 transition-colors relative" title="Filters">
+                        <iconify-icon icon="solar:filter-linear" class="text-lg"></iconify-icon>
+                    </a>
+                    <a href="expense-list-sort-bottom-sheet-open.html" class="text-slate-400 hover:text-teal-600 transition-colors" title="Sort">
+                        <iconify-icon icon="solar:sort-from-top-to-bottom-linear" class="text-lg"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+    
+            <!-- List -->
+            <div class="flex-1 overflow-y-auto px-5 pb-24 space-y-2 no-scrollbar bg-slate-50/50 pt-2">
+                <!-- Date Section Header -->
+                <div class="pt-2 pb-1">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 15, 2026</p>
+                </div>
+    
+                <!-- Card 1 -->
+                <a href="expense-detail.html" class="block bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                    <div class="flex justify-between items-start mb-1">
+                        <h3 class="text-sm font-semibold text-slate-900">Starbucks Coffee</h3>
+                        <span class="text-sm font-semibold text-teal-600">$4.50</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium mt-1">Starbucks Corp</p>
+                    <div class="flex flex-wrap gap-1.5 mt-2.5 mb-1">
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Category: Food</span>
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Priority: Low</span>
+                    </div>
+                </a>
+    
+                <!-- Card 2 -->
+                <a href="expense-detail.html" class="block bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                    <div class="flex justify-between items-start mb-1">
+                        <h3 class="text-sm font-semibold text-slate-900">Uber Ride</h3>
+                        <span class="text-sm font-semibold text-teal-600">$24.00</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium mt-1">Uber Technologies</p>
+                    <div class="flex flex-wrap gap-1.5 mt-2.5 mb-1">
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Category: Transport</span>
+                    </div>
+                </a>
+    
+                <!-- Date Section Header -->
+                <div class="pt-3 pb-1">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 10, 2026</p>
+                </div>
+    
+                <!-- Card 3 -->
+                <a href="expense-detail.html" class="block bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                    <div class="flex justify-between items-start mb-1">
+                        <h3 class="text-sm font-semibold text-slate-900">Monthly Groceries</h3>
+                        <span class="text-sm font-semibold text-teal-600">$185.50</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium mt-1">Whole Foods</p>
+                    <div class="flex flex-wrap gap-1.5 mt-2.5 mb-1">
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Category: Food</span>
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium tracking-wide">Priority: High</span>
+                    </div>
+                </a>
+            </div>
+    
+            <!-- FAB -->
+            <a href="expense-form-with-bottom-sheet-overlay.html" class="absolute bottom-24 right-5 w-14 h-14 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-[0_8px_20px_-6px_rgba(13,148,136,0.6)] hover:bg-teal-700 transition-colors z-20">
+                <iconify-icon icon="solar:add-circle-linear" class="text-2xl"></iconify-icon>
+            </a>
+    
+            <!-- Bottom Nav -->
+            <div class="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex items-center px-6 pb-4 pt-2 z-20">
+                <a href="expense-list-main.html" class="flex-1 flex flex-col items-center justify-center gap-1.5 text-teal-600">
+                    <iconify-icon icon="solar:wallet-money-linear" class="text-[22px]"></iconify-icon>
+                    <span class="text-xs font-semibold">Expenses</span>
+                </a>
+                <a href="dashboard.html" class="flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                    <iconify-icon icon="solar:widget-5-linear" class="text-[22px]"></iconify-icon>
+                    <span class="text-xs font-medium">Dashboard</span>
+                </a>
+            </div>
+        </div>
+
+</body>
+</html>

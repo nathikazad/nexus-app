@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag Systems List — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex items-center border-b border-slate-100 bg-white relative z-10">
+                <a href="expense-list-main.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2 mr-2" title="Back to expenses">
+                    <iconify-icon icon="solar:hamburger-menu-linear" class="text-xl"></iconify-icon>
+                </a>
+                <h1 class="text-xl font-semibold tracking-tight text-slate-900">Tag Systems</h1>
+            </div>
+    
+            <div class="flex-1 overflow-y-auto bg-slate-50/50 no-scrollbar">
+                <div class="divide-y divide-slate-100">
+    
+                    <a href="tag-browser-screen.html" class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-900 mb-0.5">Category</h3>
+                            <p class="text-xs text-slate-400 font-medium">exclusive &middot; tree &middot; 24 nodes</p>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-lg"></iconify-icon>
+                    </a>
+    
+                    <a href="tag-system-form.html" class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-900 mb-0.5">Priority</h3>
+                            <p class="text-xs text-slate-400 font-medium">exclusive &middot; flat &middot; 3 nodes</p>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-lg"></iconify-icon>
+                    </a>
+    
+                    <a href="tag-system-form.html" class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-900 mb-0.5">Project</h3>
+                            <p class="text-xs text-slate-400 font-medium">multiple &middot; flat &middot; 8 nodes</p>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-lg"></iconify-icon>
+                    </a>
+    
+                </div>
+            </div>
+    
+            <!-- FAB -->
+            <a href="tag-system-form.html" class="absolute bottom-8 right-5 w-14 h-14 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-[0_8px_20px_-6px_rgba(13,148,136,0.6)] hover:bg-teal-700 transition-colors z-20">
+                <iconify-icon icon="solar:add-circle-linear" class="text-2xl"></iconify-icon>
+            </a>
+        </div>
+
+</body>
+</html>

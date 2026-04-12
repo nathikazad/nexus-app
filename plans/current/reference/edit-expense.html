@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Expense — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+                <a href="expense-detail.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                    <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+                </a>
+                <h1 class="text-base font-semibold tracking-tight text-slate-900">Edit Expense</h1>
+                <div class="w-8"></div>
+            </div>
+    
+            <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-6 no-scrollbar bg-slate-50/30">
+    
+                <!-- Basics -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name <span class="text-red-400">*</span></label>
+                        <input type="text" value="Starbucks Coffee" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Description</label>
+                        <textarea rows="3" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm resize-none font-medium">Coffee meeting with client regarding the new Q3 marketing campaign deliverables and timelines.</textarea>
+                    </div>
+                </div>
+    
+                <!-- Attributes -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Attributes</h3>
+                    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                        <!-- Amount -->
+                        <div class="p-4 flex items-center justify-between">
+                            <label class="text-sm font-medium text-slate-700">Amount</label>
+                            <div class="relative w-32">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                                <input type="number" value="45.00" class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-right focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-semibold text-slate-900">
+                            </div>
+                        </div>
+                        <!-- Boolean: Receipt -->
+                        <div class="p-4 flex items-center justify-between">
+                            <label class="text-sm font-medium text-slate-700">Receipt</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 shadow-inner"></div>
+                            </label>
+                        </div>
+                        <!-- Boolean: Tax Deductible -->
+                        <div class="p-4 flex items-center justify-between">
+                            <label class="text-sm font-medium text-slate-700">Tax Deductible</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 shadow-inner"></div>
+                            </label>
+                        </div>
+                        <!-- Text: Payment Method -->
+                        <div class="p-4">
+                            <label class="text-sm font-medium text-slate-700 block mb-2">Payment Method</label>
+                            <input type="text" value="Amex *3045" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-medium text-slate-900">
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Tags -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Tags</h3>
+                    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                        <!-- Category (selected) -->
+                        <a href="tag-browser-screen.html" class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Category</span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-sm text-slate-900 font-semibold">Food</span>
+                                    <span class="text-slate-400 text-xs">&rsaquo;</span>
+                                    <span class="text-sm text-slate-900 font-semibold">Fast Food</span>
+                                </div>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </a>
+                        <!-- Priority (selected) -->
+                        <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Priority</span>
+                                <span class="text-sm text-slate-900 font-semibold">Medium</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+    
+                <!-- Relations -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Relations</h3>
+                    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                        <!-- Company (selected) -->
+                        <div class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left cursor-pointer">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Company</span>
+                                <span class="text-sm text-slate-900 font-semibold">Starbucks Corp</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </div>
+                        <!-- Project (not set) -->
+                        <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Project</span>
+                                <span class="text-sm text-slate-400 font-medium">Select Project</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+    
+            </div>
+    
+            <!-- Bottom: Save + Delete -->
+            <div class="shrink-0 w-full p-5 bg-white border-t border-slate-100 z-10 pb-8 space-y-3">
+                <a href="expense-detail.html" class="block w-full text-center bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors">
+                    Save Changes
+                </a>
+                <a href="expense-list-main.html" class="w-full py-2.5 rounded-xl border-2 border-red-100 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
+                    <iconify-icon icon="solar:trash-bin-trash-linear" class="text-lg"></iconify-icon>
+                    Delete Expense
+                </a>
+            </div>
+        </div>
+
+</body>
+</html>

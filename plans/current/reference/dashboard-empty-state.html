@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Empty State — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
+                <h1 class="text-xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+                <div class="flex gap-4 text-slate-400">
+                    <a href="dashboard.html" class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></a>
+                    <a href="login.html" class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></a>
+                </div>
+            </div>
+    
+            <!-- Month/Year Selector -->
+            <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+                <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0 hover:bg-slate-200 transition-colors">
+                    2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+                </button>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Jan</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Feb</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Mar</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Apr</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">May</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Jun</button>
+                </div>
+            </div>
+    
+            <!-- Empty State -->
+            <div class="flex-1 flex flex-col items-center justify-center px-8">
+                <iconify-icon icon="solar:document-text-linear" class="text-5xl text-slate-300 mb-3"></iconify-icon>
+                <p class="text-base font-semibold text-slate-400">No expenses found</p>
+                <p class="text-sm text-slate-400 mt-1">Add some expenses to see your dashboard</p>
+            </div>
+    
+            <!-- Bottom Nav -->
+            <div class="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex items-center px-6 pb-4 pt-2 z-20">
+                <a href="expense-list-main.html" class="flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                    <iconify-icon icon="solar:wallet-money-linear" class="text-[22px]"></iconify-icon>
+                    <span class="text-xs font-medium">Expenses</span>
+                </a>
+                <a href="dashboard-empty-state.html" class="flex-1 flex flex-col items-center justify-center gap-1.5 text-teal-600">
+                    <iconify-icon icon="solar:widget-5-linear" class="text-[22px]"></iconify-icon>
+                    <span class="text-xs font-semibold">Dashboard</span>
+                </a>
+            </div>
+        </div>
+
+</body>
+</html>

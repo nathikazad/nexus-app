@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense List — Sort Bottom Sheet open — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white z-10 relative">
+                <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
+                <div class="flex gap-4 text-slate-400">
+                    <a href="dashboard.html" class="hover:text-teal-600 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></a>
+                    <a href="tag-systems-list.html" class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon></a>
+                    <a href="login.html" class="hover:text-slate-900 transition-colors"><iconify-icon icon="solar:logout-2-linear" class="text-xl"></iconify-icon></a>
+                </div>
+            </div>
+    
+            <!-- Month/Year Selector -->
+            <div class="px-5 pb-2 flex items-center gap-3 relative z-10">
+                <button class="flex items-center gap-1 text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0">
+                    2026 <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-500"></iconify-icon>
+                </button>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar min-h-10 items-center">
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">Mar</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white shrink-0 shadow-sm border border-teal-600">Apr</button>
+                    <button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0">May</button>
+                </div>
+            </div>
+    
+            <!-- Summary + Filter/Sort icons (sort icon is teal = active) -->
+            <div class="px-5 pb-3 pt-1 flex items-center justify-between">
+                <p class="text-sm text-slate-500 font-medium">12 expenses &middot; $1,240.00</p>
+                <div class="flex items-center gap-3">
+                    <a href="expense-list-filter-bottom-sheet-open.html" class="text-slate-400 hover:text-teal-600 transition-colors">
+                        <iconify-icon icon="solar:filter-linear" class="text-lg"></iconify-icon>
+                    </a>
+                    <a href="expense-list-main.html" class="text-teal-600" title="Close sort">
+                        <iconify-icon icon="solar:sort-from-top-to-bottom-bold" class="text-lg"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+    
+            <!-- Dimmed list behind sheet -->
+            <div class="flex-1 bg-slate-50/50 opacity-40 px-5 pt-2 space-y-2">
+                <div class="pt-2 pb-1"><p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Apr 15, 2026</p></div>
+                <a href="expense-detail.html" class="block bg-white p-4 rounded-2xl border border-slate-100"><div class="flex justify-between"><h3 class="text-sm font-semibold text-slate-900">Monthly Groceries</h3><span class="text-sm font-semibold text-teal-600">$185.50</span></div></a>
+                <a href="expense-detail.html" class="block bg-white p-4 rounded-2xl border border-slate-100"><div class="flex justify-between"><h3 class="text-sm font-semibold text-slate-900">Uber Ride</h3><span class="text-sm font-semibold text-teal-600">$24.00</span></div></a>
+            </div>
+    
+            <!-- Bottom Nav -->
+            <div class="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex items-center px-6 pb-4 pt-2 z-20">
+                <a href="expense-list-main.html" class="flex-1 flex flex-col items-center justify-center gap-1.5 text-teal-600">
+                    <iconify-icon icon="solar:wallet-money-linear" class="text-[22px]"></iconify-icon>
+                    <span class="text-xs font-semibold">Expenses</span>
+                </a>
+                <a href="dashboard.html" class="flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                    <iconify-icon icon="solar:widget-5-linear" class="text-[22px]"></iconify-icon>
+                    <span class="text-xs font-medium">Dashboard</span>
+                </a>
+            </div>
+    
+            <!-- Sort Bottom Sheet Overlay -->
+            <div class="absolute inset-0 z-30 flex flex-col justify-end pointer-events-none">
+                <a href="expense-list-main.html" class="absolute inset-0 z-20 bg-slate-900/40 pointer-events-auto" aria-label="Close sort"></a>
+                <div class="relative z-30 bg-white w-full rounded-t-3xl shadow-2xl flex flex-col pointer-events-auto">
+                    <!-- Handle -->
+                    <div class="flex justify-center pt-3 pb-2">
+                        <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                    </div>
+                    <!-- Header -->
+                    <div class="px-5 py-2 border-b border-slate-100">
+                        <h2 class="text-base font-semibold text-slate-900">Sort by</h2>
+                    </div>
+    
+                    <!-- Sort options: two rows; Asc/Desc on the right; only one of the four choices at a time -->
+                    <div class="p-2 pb-8 space-y-1">
+                        <div class="flex items-center justify-between gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <iconify-icon icon="solar:calendar-linear" class="text-slate-400 text-lg shrink-0"></iconify-icon>
+                                <span class="text-sm font-medium text-slate-900">Date</span>
+                            </div>
+                            <div class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 shrink-0" role="group" aria-label="Sort date by">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="sortSheet" value="date-asc" class="peer sr-only">
+                                    <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Asc</span>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="sortSheet" value="date-desc" checked class="peer sr-only">
+                                    <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Desc</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <iconify-icon icon="solar:wallet-money-linear" class="text-slate-400 text-lg shrink-0"></iconify-icon>
+                                <span class="text-sm font-medium text-slate-900">Amount</span>
+                            </div>
+                            <div class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 shrink-0" role="group" aria-label="Sort amount by">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="sortSheet" value="amount-asc" class="peer sr-only">
+                                    <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Asc</span>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="sortSheet" value="amount-desc" class="peer sr-only">
+                                    <span class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 peer-checked:bg-teal-600 peer-checked:text-white transition-colors">Desc</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+</body>
+</html>

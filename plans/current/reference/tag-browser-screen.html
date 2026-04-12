@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag Browser Screen — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+                <a href="tag-systems-list.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                    <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+                </a>
+                <h1 class="text-base font-semibold tracking-tight text-slate-900">Categories</h1>
+                <button class="text-slate-400 hover:text-teal-600 transition-colors -mr-2 p-2">
+                    <iconify-icon icon="solar:magnifier-linear" class="text-xl"></iconify-icon>
+                </button>
+            </div>
+    
+            <div class="flex-1 overflow-y-auto no-scrollbar">
+                <div class="divide-y divide-slate-100">
+    
+                    <!-- Open Accordion Item -->
+                    <div>
+                        <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                            <div class="flex items-center gap-3">
+                                <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400 text-lg"></iconify-icon>
+                                <span class="text-sm font-semibold text-slate-900">Food</span>
+                            </div>
+                            <span class="text-xs text-slate-400 font-medium">8 items</span>
+                        </button>
+                        <!-- Children -->
+                        <div class="bg-slate-50/50 border-y border-slate-100 py-1">
+                            <button class="w-full pl-12 pr-5 py-3 flex items-center justify-between hover:bg-slate-100 transition-colors text-left">
+                                <span class="text-sm font-medium text-slate-700">Fast Food</span>
+                                <span class="text-xs text-slate-400">2 items</span>
+                            </button>
+                            <button class="w-full pl-12 pr-5 py-3 flex items-center justify-between hover:bg-slate-100 transition-colors text-left">
+                                <span class="text-sm font-medium text-slate-700">Groceries</span>
+                                <span class="text-xs text-slate-400">4 items</span>
+                            </button>
+                            <button class="w-full pl-12 pr-5 py-3 flex items-center justify-between hover:bg-slate-100 transition-colors text-left">
+                                <span class="text-sm font-medium text-slate-700">Restaurants</span>
+                                <span class="text-xs text-slate-400">2 items</span>
+                            </button>
+                        </div>
+                    </div>
+    
+                    <!-- Closed Accordion Item -->
+                    <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                        <div class="flex items-center gap-3">
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-400 text-lg"></iconify-icon>
+                            <span class="text-sm font-semibold text-slate-900">Transport</span>
+                        </div>
+                        <span class="text-xs text-slate-400 font-medium">3 items</span>
+                    </button>
+    
+                    <!-- Closed Accordion Item -->
+                    <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                        <div class="flex items-center gap-3">
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-400 text-lg"></iconify-icon>
+                            <span class="text-sm font-semibold text-slate-900">Housing</span>
+                        </div>
+                        <span class="text-xs text-slate-400 font-medium">5 items</span>
+                    </button>
+    
+                     <!-- Closed Accordion Item -->
+                     <button class="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+                        <div class="flex items-center gap-3">
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-400 text-lg"></iconify-icon>
+                            <span class="text-sm font-semibold text-slate-900">Entertainment</span>
+                        </div>
+                        <span class="text-xs text-slate-400 font-medium">12 items</span>
+                    </button>
+    
+                </div>
+            </div>
+        </div>
+
+</body>
+</html>

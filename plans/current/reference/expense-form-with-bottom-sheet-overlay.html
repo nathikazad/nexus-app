@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Form (with Bottom Sheet overlay) — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+            <!-- App Bar -->
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+                <a href="expense-list-main.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                    <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+                </a>
+                <h1 class="text-base font-semibold tracking-tight text-slate-900">New Expense</h1>
+                <div class="w-8"></div> <!-- Spacer for centering -->
+            </div>
+    
+            <div class="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar pb-32 bg-slate-50/30">
+    
+                <!-- Basics -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name <span class="text-red-400">*</span></label>
+                        <input type="text" value="New Equipment" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm font-medium" placeholder="E.g., Groceries">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Description</label>
+                        <textarea rows="3" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm resize-none font-medium" placeholder="Add details..."></textarea>
+                    </div>
+                </div>
+    
+                <!-- Attributes -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Attributes</h3>
+                    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                        <!-- Number Field -->
+                        <div class="p-4 flex items-center justify-between">
+                            <label class="text-sm font-medium text-slate-700">Amount</label>
+                            <div class="relative w-32">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                                <input type="number" value="150.00" class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-right focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-semibold text-slate-900">
+                            </div>
+                        </div>
+                        <!-- Boolean Toggle -->
+                        <div class="p-4 flex items-center justify-between">
+                            <label class="text-sm font-medium text-slate-700">Recurring</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 shadow-inner"></div>
+                            </label>
+                        </div>
+                        <!-- Text Field -->
+                        <div class="p-4">
+                            <label class="text-sm font-medium text-slate-700 block mb-2">Payment Method</label>
+                            <input type="text" placeholder="e.g. Visa ending in 1234" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-medium text-slate-900">
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Tags -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Tags</h3>
+                    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-50">
+                        <!-- Tag Row 1 (Placeholder) -->
+                        <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Category</span>
+                                <span class="text-sm text-slate-400 font-medium">Select Category</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </button>
+                        <!-- Tag Row 2 (Selected) -->
+                        <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Priority</span>
+                                <span class="text-sm text-slate-900 font-semibold">High</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+    
+                <!-- Relations -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Relations</h3>
+                    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                        <button class="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                            <div>
+                                <span class="block text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Vendor</span>
+                                <span class="text-sm text-slate-400 font-medium">Select Vendor</span>
+                            </div>
+                            <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+    
+            </div>
+    
+            <!-- Save Button -->
+            <div class="absolute bottom-0 w-full p-5 bg-white border-t border-slate-100 z-10 pb-8">
+                <a href="expense-list-main.html" class="block w-full text-center bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors">
+                    Save Expense
+                </a>
+            </div>
+    
+            <!-- Overlay: Bottom Sheet for Tag Selection (Category) -->
+            <div class="absolute inset-0 z-30 flex flex-col justify-end pointer-events-none">
+                <a href="expense-list-main.html" class="absolute inset-0 z-20 bg-slate-900/40 pointer-events-auto" aria-label="Close"></a>
+                <div class="relative z-30 bg-white w-full h-[70%] rounded-t-3xl shadow-2xl flex flex-col pointer-events-auto">
+                    <div class="flex justify-center pt-3 pb-2">
+                        <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                    </div>
+                    <div class="px-5 py-2 flex justify-between items-center border-b border-slate-100">
+                        <h2 class="text-base font-semibold text-slate-900">Select Category</h2>
+                        <a href="expense-list-main.html" class="text-slate-400 hover:text-slate-900 text-sm font-medium">Done</a>
+                    </div>
+                    <div class="p-4 border-b border-slate-100">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <iconify-icon icon="solar:magnifier-linear"></iconify-icon>
+                            </div>
+                            <input type="text" class="block w-full pl-9 pr-3 py-2.5 bg-slate-100 border-transparent rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Search categories...">
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-2 no-scrollbar">
+                        <label class="flex items-center justify-between p-4 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                            <span class="text-sm font-medium text-slate-900">Food</span>
+                            <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+                        </label>
+                        <!-- Indented Child -->
+                        <label class="flex items-center justify-between p-4 pl-8 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                            <span class="text-sm font-medium text-slate-700">Fast Food</span>
+                            <input type="radio" name="category" checked class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+                        </label>
+                        <label class="flex items-center justify-between p-4 pl-8 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                            <span class="text-sm font-medium text-slate-700">Groceries</span>
+                            <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+                        </label>
+                        <label class="flex items-center justify-between p-4 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                            <span class="text-sm font-medium text-slate-900">Transport</span>
+                            <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+                        </label>
+                        <label class="flex items-center justify-between p-4 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                            <span class="text-sm font-medium text-slate-900">Housing</span>
+                            <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+</body>
+</html>
