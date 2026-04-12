@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:nx_db/nx_db.dart';
 
 /// Hardcoded model type name — everything else is schema-driven.
@@ -139,6 +140,68 @@ dynamic attributeValue(Model model, String key) {
   final a = model.attributes;
   if (a == null) return null;
   return a[key];
+}
+
+/// Deduplicate [ids] in first-seen order. The API may list the same related model twice
+/// (e.g. multiple relationship types), which would otherwise duplicate `link` payloads on save.
+List<int> dedupeIntIdsPreserveOrder(List<int> ids) {
+  final seen = <int>{};
+  return [for (final id in ids) if (seen.add(id)) id];
+}
+
+/// Deduplicate [models] by [Model.id] in first-seen order (same as [dedupeIntIdsPreserveOrder] for lists).
+List<Model> dedupeModelsById(List<Model> models) {
+  final seen = <int>{};
+  return [for (final m in models) if (seen.add(m.id)) m];
+}
+
+/// Equality for pending `ModelRelation.create` maps (e.g. name / description).
+bool relationPendingCreateEquals(Map<String, dynamic>? a, Map<String, dynamic>? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null) return a == b;
+  if (a.length != b.length) return false;
+  for (final e in a.entries) {
+    if (b[e.key] != e.value) return false;
+  }
+  return true;
+}
+
+/// Whether current relation picks match the snapshot taken after load (same link id sets, same creates).
+///
+/// Used with [shouldOmitRelationsOnExpenseUpdate] so updates do not re-send unchanged `relations`;
+/// `set_kgql_models` treats `link` on update as additive and can duplicate edges.
+bool relationStateMatchesSnapshotForUpdate({
+  required Map<String, List<int>> linkIdsByType,
+  required Map<String, Map<String, dynamic>?> createsByType,
+  required Map<String, Set<int>> snapshotLinkIdsByType,
+  required Map<String, Map<String, dynamic>?> snapshotCreatesByType,
+}) {
+  for (final k in linkIdsByType.keys) {
+    final curIds = dedupeIntIdsPreserveOrder(linkIdsByType[k] ?? []).toSet();
+    final snapIds = snapshotLinkIdsByType[k] ?? <int>{};
+    if (!setEquals(curIds, snapIds)) return false;
+    if (!relationPendingCreateEquals(createsByType[k], snapshotCreatesByType[k])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// On expense **update**, omit `relations` in the save request when nothing changed.
+bool shouldOmitRelationsOnExpenseUpdate({
+  required int? expenseId,
+  required Map<String, List<int>> linkIdsByType,
+  required Map<String, Map<String, dynamic>?> createsByType,
+  required Map<String, Set<int>> snapshotLinkIdsByType,
+  required Map<String, Map<String, dynamic>?> snapshotCreatesByType,
+}) {
+  if (expenseId == null) return false;
+  return relationStateMatchesSnapshotForUpdate(
+    linkIdsByType: linkIdsByType,
+    createsByType: createsByType,
+    snapshotLinkIdsByType: snapshotLinkIdsByType,
+    snapshotCreatesByType: snapshotCreatesByType,
+  );
 }
 
 /// Sort newest [createdAt] first (ISO strings compare lexicographically for UTC).

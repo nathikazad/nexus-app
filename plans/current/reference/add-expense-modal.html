@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Expense (modal) — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-col items-center gap-4" style="font-family: 'Inter', sans-serif;">
+
+    <p class="text-sm text-slate-600 max-w-md text-center">
+        Opened from the FAB on <a href="expense-list-main.html" class="text-teal-700 font-medium hover:underline">Expense List</a>.
+        <strong>Create</strong> saves the expense (amount defaults to <strong>$0</strong>, no tags, no company), then navigates to
+        <a href="edit-expense.html" class="text-teal-700 font-medium hover:underline">Edit Expense</a> for the rest.
+    </p>
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- Dimmed list (underlay) -->
+        <div class="absolute inset-0 flex flex-col pointer-events-none opacity-50">
+            <div class="px-5 pt-3 pb-4 flex justify-between items-center bg-white">
+                <h1 class="text-xl font-semibold tracking-tight">Expenses</h1>
+                <div class="flex gap-4 text-slate-400">
+                    <iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon>
+                    <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+                </div>
+            </div>
+            <div class="flex-1 bg-slate-50/50 px-5 pt-2 space-y-2">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider pt-2">Apr 15, 2026</p>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-sm font-semibold text-slate-900">Starbucks Coffee</h3>
+                        <span class="text-sm font-semibold text-teal-600">$4.50</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scrim -->
+        <div class="absolute inset-0 bg-slate-900/40 z-20" aria-hidden="true"></div>
+
+        <!-- Centered dialog (matches Flutter Dialog + dimmed barrier) -->
+        <div class="absolute inset-0 z-30 flex items-center justify-center p-6 pointer-events-none">
+            <div class="pointer-events-auto w-full max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100">
+                <div class="px-4 pt-3 pb-1 flex items-start gap-2">
+                    <h2 class="flex-1 text-center text-base font-semibold tracking-tight text-slate-900 pt-1">New Expense</h2>
+                    <a href="expense-list-main.html" class="text-slate-400 hover:text-slate-900 p-2 -mr-2 -mt-1 rounded-lg hover:bg-slate-50 transition-colors" title="Close" aria-label="Close">
+                        <iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon>
+                    </a>
+                </div>
+                <div class="px-5 pb-5 pt-2 space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name <span class="text-red-400">*</span></label>
+                        <input type="text" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm font-medium" placeholder="E.g., Groceries" value="">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Description</label>
+                        <textarea rows="3" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm resize-none font-medium" placeholder="Add details..."></textarea>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">Amount, tags, and company are set on the next screen.</p>
+                    <a href="edit-expense.html" class="block w-full text-center bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors">
+                        Create
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

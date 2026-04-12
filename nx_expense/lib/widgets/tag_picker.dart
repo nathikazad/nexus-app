@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
+import '../app_theme.dart';
+import '../expense_schema.dart';
+import '../reference_layout.dart';
 import 'tag_tree_tile.dart';
 
 /// Returns selected node names per system rules (one for exclusive, many for multiple).
@@ -16,6 +20,7 @@ Future<List<String>?> showTagPickerSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
+    backgroundColor: Colors.white,
     builder: (ctx) {
       return _TagPickerBody(
         system: system,
@@ -46,11 +51,18 @@ class _TagPickerBody extends StatefulWidget {
 
 class _TagPickerBodyState extends State<_TagPickerBody> {
   late Set<String> _sel;
+  final _search = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _sel = {...widget.initial};
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   void _toggle(String name) {
@@ -67,47 +79,264 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
     });
   }
 
-  Widget _flat() {
-    final nodes = widget.system.nodes;
-    final flat = <TagNode>[];
-    void collect(List<TagNode> ns) {
+  void _clearExclusive() {
+    setState(() => _sel = {});
+  }
+
+  List<TagNode> _flattenNodes(List<TagNode> roots) {
+    final out = <TagNode>[];
+    void walk(List<TagNode> ns) {
       for (final n in ns) {
-        flat.add(n);
-        if (n.children != null) collect(n.children!);
+        out.add(n);
+        if (n.children != null) walk(n.children!);
       }
     }
 
-    collect(nodes);
+    walk(roots);
+    return out;
+  }
 
-    if (widget.exclusive) {
+  String _searchPlaceholder() {
+    final n = widget.system.name;
+    return 'Search ${n.toLowerCase()}...';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = MediaQuery.sizeOf(context).height * 0.88;
+    final q = _search.text.trim().toLowerCase();
+
+    return SafeArea(
+      child: SizedBox(
+        height: maxH,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 12),
+              child: Row(
+                children: [
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Select ${widget.system.name}',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, _sel.toList()),
+                    child: Text(
+                      'Done',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.teal600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.slate100),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 12),
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
+                decoration: InputDecoration(
+                  hintText: _searchPlaceholder(),
+                  hintStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.slate400, size: 20),
+                  filled: true,
+                  fillColor: AppColors.slate100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.slate100),
+            Expanded(
+              child: widget.exclusive && !widget.hierarchical
+                  ? _buildFlatExclusive(q)
+                  : widget.exclusive && widget.hierarchical
+                      ? _buildHierarchicalExclusive(q)
+                      : _buildMultiple(q),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFlatExclusive(String q) {
+    final flat = _flattenNodes(widget.system.nodes);
+    final filtered = q.isEmpty
+        ? flat
+        : flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+
+    return ListView(
+      children: [
+        _noneRowExclusive(),
+        for (var i = 0; i < filtered.length; i++)
+          _radioRow(
+            label: filtered[i].name,
+            labelStyle: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.slate900,
+            ),
+            selected: _sel.contains(filtered[i].name),
+            onTap: () => _toggle(filtered[i].name),
+            showDivider: i < filtered.length - 1,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHierarchicalExclusive(String q) {
+    if (q.isNotEmpty) {
+      final flat = _flattenNodes(widget.system.nodes);
+      final filtered = flat.where((n) => n.name.toLowerCase().contains(q)).toList();
       return ListView(
-        shrinkWrap: true,
         children: [
-          for (final n in flat)
-            RadioListTile<String>(
-              value: n.name,
-              groupValue: _sel.isEmpty ? null : _sel.first,
-              onChanged: (v) {
-                if (v != null) setState(() => _sel = {v});
-              },
-              title: Text(n.name),
+          _noneRowExclusive(),
+          for (var i = 0; i < filtered.length; i++)
+            _radioRow(
+              label: filtered[i].name,
+              labelStyle: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.slate700,
+              ),
+              selected: _sel.contains(filtered[i].name),
+              onTap: () => _toggle(filtered[i].name),
+              showDivider: i < filtered.length - 1,
             ),
         ],
       );
     }
 
     return ListView(
-      shrinkWrap: true,
+      children: [
+        _noneRowExclusive(),
+        for (final root in widget.system.nodes)
+          TagTreeTile(
+            node: root,
+            selected: _sel,
+            onTapNode: (name) => setState(() => _sel = {name}),
+          ),
+      ],
+    );
+  }
+
+  Widget _noneRowExclusive() {
+    final on = _sel.isEmpty;
+    return _radioRow(
+      label: 'None',
+      labelStyle: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontStyle: FontStyle.italic,
+        color: AppColors.slate400,
+      ),
+      selected: on,
+      onTap: _clearExclusive,
+      showDivider: true,
+    );
+  }
+
+  Widget _radioRow({
+    required String label,
+    required TextStyle labelStyle,
+    required bool selected,
+    required VoidCallback onTap,
+    required bool showDivider,
+  }) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 14),
+              child: Row(
+                children: [
+                  Expanded(child: Text(label, style: labelStyle)),
+                  _TagRadioCircle(selected: selected),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDivider) const Divider(height: 1, color: AppColors.slate50),
+      ],
+    );
+  }
+
+  Widget _buildMultiple(String q) {
+    if (widget.hierarchical) {
+      final flat = _flattenNodes(widget.system.nodes);
+      if (q.isNotEmpty) {
+        final filtered = flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+        return ListView(
+          children: [
+            for (var i = 0; i < filtered.length; i++)
+              _checkboxRow(
+                label: filtered[i].name,
+                checked: _sel.contains(filtered[i].name),
+                onTap: () => _toggle(filtered[i].name),
+                showDivider: i < filtered.length - 1,
+              ),
+          ],
+        );
+      }
+      return ListView(
+        children: [
+          for (final root in widget.system.nodes)
+            TagTreeTile(
+              node: root,
+              selected: _sel,
+              multiSelect: true,
+              onTapNode: (name) => _toggle(name),
+            ),
+        ],
+      );
+    }
+
+    final flat = _flattenNodes(widget.system.nodes);
+    final filtered = q.isEmpty
+        ? flat
+        : flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 16),
       children: [
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final n in flat)
+            for (final n in filtered)
               FilterChip(
-                label: Text(n.name),
+                label: Text(n.name, style: GoogleFonts.inter(fontSize: 13)),
                 selected: _sel.contains(n.name),
                 onSelected: (_) => _toggle(n.name),
+                selectedColor: AppColors.teal100,
+                checkmarkColor: AppColors.teal600,
               ),
           ],
         ),
@@ -115,74 +344,71 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final maxH = MediaQuery.sizeOf(context).height * 0.85;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          height: maxH,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.system.name,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                widget.exclusive ? 'Choose one' : 'Choose any',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: widget.hierarchical
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (final root in widget.system.nodes)
-                              TagTreeTile(
-                                node: root,
-                                selected: _sel,
-                                onTapNode: (name) {
-                                  if (widget.exclusive) {
-                                    setState(() => _sel = {name});
-                                  } else {
-                                    _toggle(name);
-                                  }
-                                },
-                                multiSelect: !widget.exclusive,
-                              ),
-                          ],
-                        )
-                      : _flat(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
+  Widget _checkboxRow({
+    required String label,
+    required bool checked,
+    required VoidCallback onTap,
+    required bool showDivider,
+  }) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 14),
+              child: Row(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate900,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, _sel.toList()),
-                    child: const Text('Done'),
+                  Checkbox(
+                    value: checked,
+                    activeColor: AppColors.teal600,
+                    onChanged: (_) => onTap(),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
+        ),
+        if (showDivider) const Divider(height: 1, color: AppColors.slate50),
+      ],
+    );
+  }
+}
+
+class _TagRadioCircle extends StatelessWidget {
+  const _TagRadioCircle({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(
+          color: selected ? AppColors.teal600 : AppColors.slate300,
+          width: selected ? 5 : 1,
         ),
       ),
     );
   }
 }
 
-/// Compact row that opens the picker sheet.
+/// Compact row that opens the picker sheet (list row: label + value + chevron).
 class TagPickerRow extends StatelessWidget {
   const TagPickerRow({
     super.key,
@@ -195,21 +421,61 @@ class TagPickerRow extends StatelessWidget {
   final List<String> value;
   final ValueChanged<List<String>> onChanged;
 
+  String _valueLabel() {
+    if (value.isEmpty) return 'Select ${system.name}';
+    return value.map((node) {
+      final path = tagBreadcrumbPath(system, node);
+      return (path != null && path.length > 1) ? path.join(' \u203A ') : node;
+    }).join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () async {
-        final res = await showTagPickerSheet(
-          context,
-          system: system,
-          initial: value,
-        );
-        if (res != null) onChanged(res);
-      },
-      icon: const Icon(Icons.label_outline),
-      label: Text(
-        value.isEmpty ? 'Select ${system.name}' : value.join(', '),
-        overflow: TextOverflow.ellipsis,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          final res = await showTagPickerSheet(
+            context,
+            system: system,
+            initial: value,
+          );
+          if (res != null) onChanged(res);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(
+                  system.name,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.slate700,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  _valueLabel(),
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: value.isEmpty ? AppColors.slate400 : AppColors.slate900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+            ],
+          ),
+        ),
       ),
     );
   }

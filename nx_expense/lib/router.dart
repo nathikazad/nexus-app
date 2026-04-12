@@ -6,6 +6,7 @@ import 'package:nx_db/nx_db.dart';
 import 'app_theme.dart';
 import 'reference_layout.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/add_expense_screen.dart';
 import 'screens/expense_detail_screen.dart';
 import 'screens/expense_form_screen.dart';
 import 'screens/expense_list_screen.dart';
@@ -54,7 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                       boxShadow: refFabShadow,
                     ),
                     child: FloatingActionButton(
-                      onPressed: () => context.push('/expense/form'),
+                      onPressed: () => showAddExpenseModal(context),
                       backgroundColor: AppColors.teal600,
                       foregroundColor: Colors.white,
                       elevation: 0,

@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'dart:convert';
+
 import '../db.dart';
 import '../models/ModelType.dart';
 import '../models/requests/SetModelTypeRequest.dart';
+import 'kgql_fetch.dart';
 
 const String getAllModelTypesQuery = '''
 query GetAllModelTypes {
@@ -21,12 +24,6 @@ query GetAllModelTypes {
 }
 ''';
 
-
-const String getModelTypeByIdQuery = '''
-query GetModelTypeById(\$input: JSON!) {
-  getKgqlModelType(input: \$input)
-}
-''';
 
 const String setKgqlModelTypesMutation = '''
 mutation SetKgqlModelTypes(\$input: SetKgqlModelTypesInput!) {
@@ -90,7 +87,7 @@ final modelTypeProvider = FutureProvider.family<ModelType?, int>((ref, modelType
 
   // Query directly by ID using get_kgql_model_type (supports integer IDs)
   final queryOptions = QueryOptions(
-    document: gql(getModelTypeByIdQuery),
+    document: gql(kgqlGetKgqlModelTypeQuery),
     variables: {
       'input': {
         'model_types': [modelTypeId], // Pass ID as integer in array

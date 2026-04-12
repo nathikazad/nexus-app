@@ -1,21 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'dart:convert';
 import '../db.dart';
 import '../models/Model.dart';
 import '../models/requests/SetModelRequest.dart';
-
-const String getModelsByModelTypeIdQuery = '''
-query GetModelsByModelTypeId(\$filter: JSON!, \$struct: JSON!) {
-  getKgqlModels(filter: \$filter, struct: \$struct)
-}
-''';
-
-const String getModelByIdQuery = '''
-query GetModelById(\$filter: JSON!, \$struct: JSON!) {
-  getKgqlModels(filter: \$filter, struct: \$struct)
-}
-''';
+import 'kgql_fetch.dart';
 
 const String setKgqlModelsMutation = '''
 mutation SetKgqlModels(\$input: SetKgqlModelsInput!) {
@@ -30,7 +20,7 @@ final modelsProvider = FutureProvider.family<List<Model>, int>((ref, modelTypeId
 
 
   final queryOptions = QueryOptions(
-    document: gql(getModelsByModelTypeIdQuery),
+    document: gql(kgqlGetKgqlModelsQuery),
     variables: {
       'filter': {
         'model_type': modelTypeId, // Use model type name, not ID
@@ -53,23 +43,7 @@ final modelsProvider = FutureProvider.family<List<Model>, int>((ref, modelTypeId
     throw result.exception!;
   }
 
-  // PostGraphile returns raw JSON directly (not wrapped)
-  final jsonResult = result.data?['getKgqlModels'];
-  if (jsonResult == null) {
-    return [];
-  }
-
-  final jsonArray = jsonResult is String
-      ? json.decode(jsonResult) as List<dynamic>
-      : jsonResult as List<dynamic>;
-
-  // Parse models from JSON array
-  final models = jsonArray.map((modelJson) {
-    if (modelJson is Map<String, dynamic>) {
-      return Model.fromJson(modelJson);
-    }
-    return null;
-  }).whereType<Model>().toList();
+  final models = parseKgqlModelsResult(result.data?['getKgqlModels']);
 
   // Filter by modelTypeId as a safety check (should already be filtered by model_type name)
   return models.where((model) => model.modelTypeId == modelTypeId).toList();
@@ -79,7 +53,7 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
   final client = ref.watch(graphqlClientProvider);
 
   final queryOptions = QueryOptions(
-    document: gql(getModelByIdQuery),
+    document: gql(kgqlGetKgqlModelsQuery),
     variables: {
       'filter': {
         'filters': [
@@ -117,23 +91,12 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
     throw result.exception!;
   }
 
-  // PostGraphile returns raw JSON directly (not wrapped)
-  final jsonResult = result.data?['getKgqlModels'];
-  if (jsonResult == null) {
+  final list = parseKgqlModelsResult(result.data?['getKgqlModels']);
+  if (list.isEmpty) {
     return null;
   }
 
-  final jsonArray = jsonResult is String
-      ? json.decode(jsonResult) as List<dynamic>
-      : jsonResult as List<dynamic>;
-
-  // Should return exactly one model (the one we queried by ID)
-  if (jsonArray.isEmpty) {
-    return null;
-  }
-
-  final modelJson = jsonArray[0] as Map<String, dynamic>;
-  return Model.fromJson(modelJson);
+  return list.first;
 });
 
 /// Creates a new model using set_kgql_models.

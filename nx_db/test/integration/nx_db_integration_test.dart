@@ -60,7 +60,7 @@ void main() {
     test('IN13.2 live getKgqlModels no parse exception', () async {
       final result = await client.query(
         QueryOptions(
-          document: gql(getModelsByModelTypeIdQuery),
+          document: gql(kgqlGetKgqlModelsQuery),
           variables: {
             'filter': {'model_type': 'Expense'},
             'struct': {'id': true, 'name': true},

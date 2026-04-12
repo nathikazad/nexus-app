@@ -1,123 +1,16 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../expense_schema.dart';
 
-const String _getKgqlModelsQuery = '''
-query GetKgqlModels(\$filter: JSON!, \$struct: JSON!) {
-  getKgqlModels(filter: \$filter, struct: \$struct)
-}
-''';
-
-const String _getKgqlModelTypeQuery = '''
-query GetKgqlModelType(\$input: JSON!) {
-  getKgqlModelType(input: \$input)
-}
-''';
-
 /// Cached Expense model type with attributes, relations, and tag systems.
-final expenseSchemaProvider = FutureProvider<ModelType>((ref) async {
-  final client = ref.watch(graphqlClientProvider);
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_getKgqlModelTypeQuery),
-      variables: {
-        'input': {
-          'model_types': [kExpenseModelTypeName],
-          'struct': {
-            'id': true,
-            'name': true,
-            'type_kind': true,
-            'description': true,
-            'parent': true,
-            'children': true,
-            'traits': true,
-            'attributes': true,
-            'relations': true,
-            'tag_systems': true,
-          },
-        },
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
-  );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  final raw = result.data?['getKgqlModelType'];
-  if (raw == null) {
-    throw StateError('getKgqlModelType returned null');
-  }
-
-  final jsonArray = raw is String
-      ? json.decode(raw) as List<dynamic>
-      : raw as List<dynamic>;
-
-  if (jsonArray.isEmpty) {
-    throw StateError('Model type "$kExpenseModelTypeName" not found');
-  }
-
-  return ModelType.fromJson(
-    jsonArray.first as Map<String, dynamic>,
-    recursive: true,
-  );
-});
+final expenseSchemaProvider =
+    modelTypeByNameProvider(kExpenseModelTypeName);
 
 /// Cached Transfer model type (attributes, relations).
-final transferSchemaProvider = FutureProvider<ModelType>((ref) async {
-  final client = ref.watch(graphqlClientProvider);
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_getKgqlModelTypeQuery),
-      variables: {
-        'input': {
-          'model_types': [kTransferModelTypeName],
-          'struct': {
-            'id': true,
-            'name': true,
-            'type_kind': true,
-            'description': true,
-            'parent': true,
-            'children': true,
-            'traits': true,
-            'attributes': true,
-            'relations': true,
-            'tag_systems': true,
-          },
-        },
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
-  );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  final raw = result.data?['getKgqlModelType'];
-  if (raw == null) {
-    throw StateError('getKgqlModelType returned null');
-  }
-
-  final jsonArray = raw is String
-      ? json.decode(raw) as List<dynamic>
-      : raw as List<dynamic>;
-
-  if (jsonArray.isEmpty) {
-    throw StateError('Model type "$kTransferModelTypeName" not found');
-  }
-
-  return ModelType.fromJson(
-    jsonArray.first as Map<String, dynamic>,
-    recursive: true,
-  );
-});
+final transferSchemaProvider =
+    modelTypeByNameProvider(kTransferModelTypeName);
 
 /// `struct` JSON derived from [expenseSchemaProvider] for list/detail queries.
 final expenseStructProvider = Provider<Map<String, dynamic>>((ref) {
@@ -177,19 +70,6 @@ enum ExpenseSortMode {
 
   const ExpenseSortMode(this.label);
   final String label;
-}
-
-List<Model> _parseModels(dynamic jsonResult) {
-  if (jsonResult == null) return [];
-  final jsonArray = jsonResult is String
-      ? json.decode(jsonResult) as List<dynamic>
-      : jsonResult as List<dynamic>;
-  return jsonArray.map((e) {
-    if (e is Map<String, dynamic>) {
-      return Model.fromJson(e);
-    }
-    return null;
-  }).whereType<Model>().toList();
 }
 
 /// UI filter state (tag chips). `null` = show all expenses.
@@ -350,22 +230,7 @@ final expenseListProvider =
     ],
   };
 
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_getKgqlModelsQuery),
-      variables: {
-        'filter': filterMap,
-        'struct': struct,
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
-  );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  return _parseModels(result.data?['getKgqlModels']);
+  return fetchKgqlModels(client, filter: filterMap, struct: struct);
 });
 
 /// List Transfer models for [expenseDateRangeProvider].
@@ -375,28 +240,17 @@ final transferListProvider = FutureProvider<List<Model>>((ref) async {
   final client = ref.watch(graphqlClientProvider);
   final dateRange = ref.watch(expenseDateRangeProvider);
 
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_getKgqlModelsQuery),
-      variables: {
-        'filter': {
-          'model_type': kTransferModelTypeName,
-          'filters': [
-            {'key': 'created_at', 'op': '>=', 'value': dateRange.start.toIso8601String()},
-            {'key': 'created_at', 'op': '<=', 'value': dateRange.end.toIso8601String()},
-          ],
-        },
-        'struct': struct,
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
+  return fetchKgqlModels(
+    client,
+    filter: {
+      'model_type': kTransferModelTypeName,
+      'filters': [
+        {'key': 'created_at', 'op': '>=', 'value': dateRange.start.toIso8601String()},
+        {'key': 'created_at', 'op': '<=', 'value': dateRange.end.toIso8601String()},
+      ],
+    },
+    struct: struct,
   );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  return _parseModels(result.data?['getKgqlModels']);
 });
 
 /// Transfers sorted newest first (same window as expenses).
@@ -428,29 +282,12 @@ final expenseDetailProvider = FutureProvider.family<Model?, int>((ref, id) async
   final struct = buildExpenseStruct(schema);
   final client = ref.watch(graphqlClientProvider);
 
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_getKgqlModelsQuery),
-      variables: {
-        'filter': {
-          'model_type': kExpenseModelTypeName,
-          'filters': [
-            {'key': 'id', 'op': '=', 'value': id.toString()},
-          ],
-        },
-        'struct': struct,
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
+  return fetchKgqlModelById(
+    client,
+    modelTypeName: kExpenseModelTypeName,
+    id: id,
+    struct: struct,
   );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  final list = _parseModels(result.data?['getKgqlModels']);
-  if (list.isEmpty) return null;
-  return list.first;
 });
 
 @immutable
@@ -581,31 +418,4 @@ final spendByRelationProvider =
 });
 
 /// All models of a given type (for relation pickers).
-final relatedModelsProvider =
-    FutureProvider.family<List<Model>, String>((ref, modelTypeName) async {
-  final client = ref.watch(graphqlClientProvider);
-
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_getKgqlModelsQuery),
-      variables: {
-        'filter': {'model_type': modelTypeName},
-        'struct': {
-          'id': true,
-          'name': true,
-          'description': true,
-          'model_type_id': true,
-          'created_at': true,
-          'updated_at': true,
-        },
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
-  );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  return _parseModels(result.data?['getKgqlModels']);
-});
+final relatedModelsProvider = relatedModelsByTypeNameProvider;

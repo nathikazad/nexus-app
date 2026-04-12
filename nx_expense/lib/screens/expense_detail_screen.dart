@@ -226,7 +226,7 @@ class _DetailBody extends ConsumerWidget {
                         for (final e in model.relations!.entries)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: _relationRow(e.key, e.value),
+                            child: _relationRow(context, e.key, e.value),
                           ),
                       ],
                     ],
@@ -332,58 +332,62 @@ class _DetailBody extends ConsumerWidget {
     );
   }
 
-  Widget _relationRow(String relName, List<Model> relModels) {
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
+  Widget _relationRow(BuildContext context, String relName, List<Model> relModels) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.slate100),
+        border: Border.all(color: AppColors.slate100),
+        boxShadow: refCardShadow,
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFCCFBF1),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/expense/form/$expenseId'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFCCFBF1),
+                  ),
+                  child: const Icon(Icons.storefront_outlined,
+                      size: 18, color: AppColors.teal600),
                 ),
-                child: const Icon(Icons.storefront_outlined,
-                    size: 18, color: AppColors.teal600),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      relName.toUpperCase(),
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.8,
-                        color: AppColors.slate400,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        relName.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.8,
+                          color: AppColors.slate400,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
+                      const SizedBox(height: 2),
                     Text(
-                      relModels.map((m) => m.name).join(', '),
+                      dedupeModelsById(relModels).map((m) => m.name).join(', '),
                       style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slate900,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate900,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.slate300),
-            ],
+                const Icon(Icons.chevron_right, color: AppColors.slate300),
+              ],
+            ),
           ),
         ),
       ),

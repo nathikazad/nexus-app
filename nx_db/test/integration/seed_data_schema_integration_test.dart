@@ -134,7 +134,7 @@ Future<List<ModelType>> _fetchModelTypeRoots(GraphQLClient client) async {
 Future<ModelType?> _fetchModelTypeById(GraphQLClient client, int id) async {
   final result = await client.query(
     QueryOptions(
-      document: gql(getModelTypeByIdQuery),
+      document: gql(kgqlGetKgqlModelTypeQuery),
       variables: {
         'input': {
           'model_types': [id],
@@ -230,7 +230,7 @@ void main() {
     test('Expense models: rows parse; at least one has cost', () async {
       final result = await client.query(
         QueryOptions(
-          document: gql(getModelsByModelTypeIdQuery),
+          document: gql(kgqlGetKgqlModelsQuery),
           variables: {
             'filter': {'model_type': 'Expense'},
             'struct': {

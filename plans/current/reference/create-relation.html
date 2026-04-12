@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Relation — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <!-- Create New Company -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <a href="select-relation.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">New Company</h1>
+            <div class="w-8"></div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar bg-slate-50/30">
+            <!-- Name -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name <span class="text-red-400">*</span></label>
+                <input type="text" value="Acme Corp" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm font-medium" placeholder="Company name" autofocus>
+            </div>
+
+            <!-- Description (optional) -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Description</label>
+                <textarea rows="3" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm resize-none font-medium" placeholder="Optional notes..."></textarea>
+            </div>
+
+            <!-- Hint -->
+            <div class="flex items-start gap-2.5 p-3.5 bg-teal-50 rounded-xl border border-teal-100">
+                <iconify-icon icon="solar:info-circle-linear" class="text-teal-600 text-lg shrink-0 mt-0.5"></iconify-icon>
+                <p class="text-xs text-teal-700 leading-relaxed">This will create a new Company and automatically assign it to this expense.</p>
+            </div>
+        </div>
+
+        <!-- Bottom: Create & Select -->
+        <div class="shrink-0 p-5 pb-8 bg-white border-t border-slate-100">
+            <a href="edit-expense.html" class="block w-full text-center bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors">
+                Create & Select
+            </a>
+        </div>
+    </div>
+
+    <!-- Create New Project -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <a href="select-relation.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">New Project</h1>
+            <div class="w-8"></div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar bg-slate-50/30">
+            <!-- Name -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Name <span class="text-red-400">*</span></label>
+                <input type="text" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm font-medium" placeholder="Project name" autofocus>
+            </div>
+
+            <!-- Description (optional) -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Description</label>
+                <textarea rows="3" class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white shadow-sm resize-none font-medium" placeholder="Optional notes..."></textarea>
+            </div>
+
+            <!-- Hint -->
+            <div class="flex items-start gap-2.5 p-3.5 bg-teal-50 rounded-xl border border-teal-100">
+                <iconify-icon icon="solar:info-circle-linear" class="text-teal-600 text-lg shrink-0 mt-0.5"></iconify-icon>
+                <p class="text-xs text-teal-700 leading-relaxed">This will create a new Project and automatically assign it to this expense.</p>
+            </div>
+        </div>
+
+        <!-- Bottom: Create & Select -->
+        <div class="shrink-0 p-5 pb-8 bg-white border-t border-slate-100">
+            <a href="edit-expense.html" class="block w-full text-center bg-teal-600 text-white rounded-xl py-3.5 text-sm font-semibold shadow-sm hover:bg-teal-700 transition-colors">
+                Create & Select
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

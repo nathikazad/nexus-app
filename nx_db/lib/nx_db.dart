@@ -17,6 +17,8 @@ export 'src/models/requests/SetModelRequest.dart' hide ModelAttribute;
 export 'src/models/requests/SetModelTypeRequest.dart';
 
 // Data providers
+export 'src/data_providers/kgql_fetch.dart';
+export 'src/data_providers/kgql_providers.dart';
 export 'src/data_providers/models_provider.dart';
 export 'src/data_providers/model_types_provider.dart';
 export 'src/data_providers/aggregate_provider.dart';

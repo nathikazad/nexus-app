@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Tag — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <!-- Select Category (hierarchical, exclusive) — "Fast Food" currently selected -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <a href="edit-expense.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Select Category</h1>
+            <a href="edit-expense.html" class="text-teal-600 hover:text-teal-700 text-sm font-semibold -mr-2 p-2">Done</a>
+        </div>
+
+        <!-- Search -->
+        <div class="px-5 py-3 border-b border-slate-100 bg-white">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <iconify-icon icon="solar:magnifier-linear"></iconify-icon>
+                </div>
+                <input type="text" class="block w-full pl-9 pr-3 py-2.5 bg-slate-100 border-transparent rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Search categories...">
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="flex-1 overflow-y-auto no-scrollbar">
+            <!-- None option (to remove current tag) -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100">
+                <span class="text-sm font-medium text-slate-400 italic">None</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <!-- Root: Food -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-semibold text-slate-900">Food</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <!-- Children of Food (indented) -->
+            <label class="flex items-center justify-between pl-10 pr-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-700">Fast Food</span>
+                <input type="radio" name="category" checked class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between pl-10 pr-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-700">Groceries</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between pl-10 pr-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-700">Restaurants</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <!-- Root: Transport -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-semibold text-slate-900">Transport</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between pl-10 pr-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-700">Ride Share</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between pl-10 pr-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-700">Public Transit</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <!-- Root: Housing -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-semibold text-slate-900">Housing</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <!-- Root: Entertainment -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <span class="text-sm font-semibold text-slate-900">Entertainment</span>
+                <input type="radio" name="category" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+        </div>
+    </div>
+
+    <!-- Select Priority (flat, exclusive) — nothing selected yet (showing add flow) -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <a href="edit-expense.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Select Priority</h1>
+            <a href="edit-expense.html" class="text-teal-600 hover:text-teal-700 text-sm font-semibold -mr-2 p-2">Done</a>
+        </div>
+
+        <!-- No search bar needed for flat/short lists -->
+
+        <!-- List -->
+        <div class="flex-1 overflow-y-auto no-scrollbar">
+            <!-- None option -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100">
+                <span class="text-sm font-medium text-slate-400 italic">None</span>
+                <input type="radio" name="priority" checked class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Low</span>
+                <input type="radio" name="priority" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Medium</span>
+                <input type="radio" name="priority" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <span class="text-sm font-medium text-slate-900">High</span>
+                <input type="radio" name="priority" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+        </div>
+    </div>
+
+</body>
+</html>

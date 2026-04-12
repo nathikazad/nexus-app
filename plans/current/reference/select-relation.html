@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Relation — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup {
+            position: relative;
+            isolation: isolate;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <!-- Select Company — "Starbucks Corp" currently selected -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <a href="edit-expense.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Select Company</h1>
+            <a href="edit-expense.html" class="text-teal-600 hover:text-teal-700 text-sm font-semibold -mr-2 p-2">Done</a>
+        </div>
+
+        <!-- Search -->
+        <div class="px-5 py-3 border-b border-slate-100 bg-white">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <iconify-icon icon="solar:magnifier-linear"></iconify-icon>
+                </div>
+                <input type="text" class="block w-full pl-9 pr-3 py-2.5 bg-slate-100 border-transparent rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Search companies...">
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="flex-1 overflow-y-auto no-scrollbar">
+            <!-- None option (to unlink) -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100">
+                <span class="text-sm font-medium text-slate-400 italic">None</span>
+                <input type="radio" name="company" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Amazon Inc</span>
+                <input type="radio" name="company" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Starbucks Corp</span>
+                <input type="radio" name="company" checked class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Uber Technologies</span>
+                <input type="radio" name="company" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Whole Foods</span>
+                <input type="radio" name="company" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <span class="text-sm font-medium text-slate-900">WeWork</span>
+                <input type="radio" name="company" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+        </div>
+
+        <!-- Sticky bottom: Create New -->
+        <div class="shrink-0 p-5 pb-8 bg-white border-t border-slate-100">
+            <a href="create-relation.html" class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold hover:border-teal-400 hover:text-teal-600 transition-colors">
+                <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
+                Create New Company
+            </a>
+        </div>
+    </div>
+
+    <!-- Select Project — nothing selected (showing the "add" flow) -->
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <!-- App Bar -->
+        <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100 bg-white relative z-10">
+            <a href="edit-expense.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Select Project</h1>
+            <a href="edit-expense.html" class="text-teal-600 hover:text-teal-700 text-sm font-semibold -mr-2 p-2">Done</a>
+        </div>
+
+        <!-- Search -->
+        <div class="px-5 py-3 border-b border-slate-100 bg-white">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <iconify-icon icon="solar:magnifier-linear"></iconify-icon>
+                </div>
+                <input type="text" class="block w-full pl-9 pr-3 py-2.5 bg-slate-100 border-transparent rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Search projects...">
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="flex-1 overflow-y-auto no-scrollbar">
+            <!-- None option -->
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100">
+                <span class="text-sm font-medium text-slate-400 italic">None</span>
+                <input type="radio" name="project" checked class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Q3 Marketing</span>
+                <input type="radio" name="project" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50">
+                <span class="text-sm font-medium text-slate-900">Office Renovation</span>
+                <input type="radio" name="project" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <span class="text-sm font-medium text-slate-900">R&D Initiative</span>
+                <input type="radio" name="project" class="appearance-none w-5 h-5 rounded-full border border-slate-300 checked:border-[5px] checked:border-teal-600 transition-all bg-white">
+            </label>
+        </div>
+
+        <!-- Sticky bottom: Create New -->
+        <div class="shrink-0 p-5 pb-8 bg-white border-t border-slate-100">
+            <a href="create-relation.html" class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold hover:border-teal-400 hover:text-teal-600 transition-colors">
+                <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
+                Create New Project
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

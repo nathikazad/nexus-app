@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nx_expense/expense_schema.dart';
+import 'package:nx_expense/widgets/relation_picker.dart';
 
 void main() {
   group('buildExpenseStruct', () {
@@ -163,6 +164,142 @@ void main() {
       final d = filterChipDescriptors(mt);
       expect(d.length, 2);
       expect(d.map((e) => e.label).toSet(), {'Food', 'Travel'});
+    });
+  });
+
+  group('dedupeIntIdsPreserveOrder (regression)', () {
+    test('R1 removes consecutive duplicate ids', () {
+      expect(dedupeIntIdsPreserveOrder([1, 1, 2, 1]), [1, 2]);
+    });
+
+    test('R2 preserves first-seen order', () {
+      expect(dedupeIntIdsPreserveOrder([3, 1, 3, 2]), [3, 1, 2]);
+    });
+
+    test('R3 empty', () {
+      expect(dedupeIntIdsPreserveOrder([]), isEmpty);
+    });
+  });
+
+  group('dedupeModelsById (regression)', () {
+    test('R4 drops duplicate model ids', () {
+      final a = Model(id: 1, name: 'A', modelTypeId: 1);
+      final b = Model(id: 1, name: 'A2', modelTypeId: 1);
+      final out = dedupeModelsById([a, b]);
+      expect(out.length, 1);
+      expect(out.first.name, 'A');
+    });
+  });
+
+  group('relationPendingCreateEquals (regression)', () {
+    test('R5 null matches', () {
+      expect(relationPendingCreateEquals(null, null), true);
+      expect(relationPendingCreateEquals({'a': 1}, null), false);
+    });
+
+    test('R6 map equality', () {
+      expect(
+        relationPendingCreateEquals(
+          {'name': 'Co', 'description': 'x'},
+          {'name': 'Co', 'description': 'x'},
+        ),
+        true,
+      );
+      expect(
+        relationPendingCreateEquals({'name': 'Co'}, {'name': 'Other'}),
+        false,
+      );
+    });
+  });
+
+  group('relationStateMatchesSnapshotForUpdate (regression)', () {
+    test('R7 matches when link sets equal (different Set instances)', () {
+      expect(
+        relationStateMatchesSnapshotForUpdate(
+          linkIdsByType: {'Company': [10, 20]},
+          createsByType: {'Company': null},
+          snapshotLinkIdsByType: {
+            'Company': {20, 10},
+          },
+          snapshotCreatesByType: {'Company': null},
+        ),
+        true,
+      );
+    });
+
+    test('R8 fails when link id differs', () {
+      expect(
+        relationStateMatchesSnapshotForUpdate(
+          linkIdsByType: {'Company': [10]},
+          createsByType: {'Company': null},
+          snapshotLinkIdsByType: {'Company': {99}},
+          snapshotCreatesByType: {'Company': null},
+        ),
+        false,
+      );
+    });
+
+    test('R9 duplicate ids in current list still matches snapshot set', () {
+      expect(
+        relationStateMatchesSnapshotForUpdate(
+          linkIdsByType: {'Company': [10, 10, 20]},
+          createsByType: {'Company': null},
+          snapshotLinkIdsByType: {'Company': {10, 20}},
+          snapshotCreatesByType: {'Company': null},
+        ),
+        true,
+      );
+    });
+
+    test('R10 create payload change fails', () {
+      expect(
+        relationStateMatchesSnapshotForUpdate(
+          linkIdsByType: {'Company': []},
+          createsByType: {
+            'Company': {'name': 'NewCo'},
+          },
+          snapshotLinkIdsByType: {'Company': <int>{}},
+          snapshotCreatesByType: {'Company': null},
+        ),
+        false,
+      );
+    });
+  });
+
+  group('shouldOmitRelationsOnExpenseUpdate (regression)', () {
+    test('R11 create flow never omits', () {
+      expect(
+        shouldOmitRelationsOnExpenseUpdate(
+          expenseId: null,
+          linkIdsByType: {'Company': [1]},
+          createsByType: {'Company': null},
+          snapshotLinkIdsByType: {'Company': {1}},
+          snapshotCreatesByType: {'Company': null},
+        ),
+        false,
+      );
+    });
+
+    test('R12 update omits when snapshot matches', () {
+      expect(
+        shouldOmitRelationsOnExpenseUpdate(
+          expenseId: 42,
+          linkIdsByType: {'Company': [1]},
+          createsByType: {'Company': null},
+          snapshotLinkIdsByType: {'Company': {1}},
+          snapshotCreatesByType: {'Company': null},
+        ),
+        true,
+      );
+    });
+  });
+
+  group('RelationPickResult (regression)', () {
+    test('R13 link vs create', () {
+      final link = RelationPickLink([1, 2]);
+      final create = RelationPickCreate({'name': 'X'});
+      expect(link.ids, [1, 2]);
+      expect(create.create, {'name': 'X'});
     });
   });
 }

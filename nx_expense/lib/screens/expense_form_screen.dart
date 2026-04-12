@@ -28,6 +28,12 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   final Map<String, TextEditingController> _attr = {};
   final Map<String, List<String>> _tags = {};
   final Map<String, List<int>> _relations = {};
+  /// Pending `ModelRelation.create` payload per relation target type key (`link` string).
+  final Map<String, Map<String, dynamic>?> _relationCreates = {};
+  /// After seeding an existing expense: baseline for omitting `relations` on save when unchanged.
+  /// `set_kgql_models` **adds** links on update; re-sending the same `link` can duplicate edges.
+  Map<String, Set<int>> _relationSnapshotIds = {};
+  Map<String, Map<String, dynamic>?> _relationSnapshotCreates = {};
   bool _loading = false;
   bool _seeded = false;
 
@@ -54,6 +60,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       final link = rt.link;
       if (link is String && link.isNotEmpty) {
         _relations.putIfAbsent(link, () => []);
+        _relationCreates.putIfAbsent(link, () => null);
       }
     }
   }
@@ -82,9 +89,36 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     }
     if (m.relations != null) {
       for (final e in m.relations!.entries) {
-        _relations[e.key] = e.value.map((x) => x.id).toList();
+        _relations[e.key] = dedupeIntIdsPreserveOrder(
+          e.value.map((x) => x.id).toList(),
+        );
+        _relationCreates[e.key] = null;
       }
     }
+    _captureRelationSnapshot();
+  }
+
+  void _captureRelationSnapshot() {
+    _relationSnapshotIds = {
+      for (final e in _relations.entries)
+        e.key: dedupeIntIdsPreserveOrder([...e.value]).toSet(),
+    };
+    _relationSnapshotCreates = {
+      for (final e in _relationCreates.entries)
+        e.key: e.value == null ? null : Map<String, dynamic>.from(e.value!),
+    };
+  }
+
+  void _onRelationPicked(String relKey, RelationPickResult r) {
+    setState(() {
+      if (r is RelationPickLink) {
+        _relations[relKey] = dedupeIntIdsPreserveOrder([...r.ids]);
+        _relationCreates[relKey] = null;
+      } else if (r is RelationPickCreate) {
+        _relations[relKey] = [];
+        _relationCreates[relKey] = r.create;
+      }
+    });
   }
 
   @override
@@ -120,7 +154,23 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
             final title = widget.expenseId == null ? 'New Expense' : 'Edit Expense';
 
-            return Scaffold(
+            final saveLabel = widget.expenseId == null ? 'Save Expense' : 'Save Changes';
+
+            return Theme(
+              data: Theme.of(context).copyWith(
+                switchTheme: SwitchThemeData(
+                  thumbColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) return Colors.white;
+                    return AppColors.slate400;
+                  }),
+                  trackColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) return AppColors.teal600;
+                    return AppColors.slate200;
+                  }),
+                  trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                ),
+              ),
+              child: Scaffold(
               backgroundColor: Colors.white,
               appBar: AppBar(
                 leading: IconButton(
@@ -209,13 +259,11 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                       child: Column(
                                         children: [
                                           for (var i = 0; i < systems.length; i++) ...[
-                                            Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              child: TagPickerRow(
-                                                system: systems[i],
-                                                value: _tags[systems[i].name] ?? [],
-                                                onChanged: (v) => setState(() => _tags[systems[i].name] = v),
-                                              ),
+                                            TagPickerRow(
+                                              system: systems[i],
+                                              value: _tags[systems[i].name] ?? [],
+                                              onChanged: (v) =>
+                                                  setState(() => _tags[systems[i].name] = v),
                                             ),
                                             if (i < systems.length - 1)
                                               const Divider(height: 1, color: AppColors.slate50),
@@ -236,21 +284,34 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                     boxShadow: refCardShadow,
                                   ),
                                   padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: Column(
-                                    children: [
-                                      for (final rt in schema.relations ?? const <RelationshipType>[]) ...[
-                                        if (rt.link is String && (rt.link as String).isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                                            child: RelationPickerRow(
-                                              targetModelTypeName: rt.link as String,
-                                              valueIds: _relations[rt.link as String] ?? [],
-                                              onChanged: (ids) =>
-                                                  setState(() => _relations[rt.link as String] = ids),
-                                            ),
+                                  child: Builder(
+                                    builder: (context) {
+                                      final rels = schema.relations ?? const <RelationshipType>[];
+                                      final rows = <Widget>[];
+                                      for (var i = 0; i < rels.length; i++) {
+                                        final rt = rels[i];
+                                        final link = rt.link;
+                                        if (link is! String || link.isEmpty) continue;
+                                        rows.add(
+                                          RelationPickerRow(
+                                            targetModelTypeName: link,
+                                            valueIds: _relations[link] ?? [],
+                                            pendingCreate: _relationCreates[link],
+                                            allowMultiple: (rt.multiplicity ?? 'many') != 'one',
+                                            onPicked: (r) => _onRelationPicked(link, r),
                                           ),
-                                      ],
-                                    ],
+                                        );
+                                        final hasMore = rels
+                                            .skip(i + 1)
+                                            .any((r) => r.link is String && (r.link as String).isNotEmpty);
+                                        if (hasMore) {
+                                          rows.add(
+                                            const Divider(height: 1, color: AppColors.slate50),
+                                          );
+                                        }
+                                      }
+                                      return Column(children: rows);
+                                    },
                                   ),
                                 ),
                               ],
@@ -264,13 +325,63 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                             color: Colors.white,
                             border: Border(top: BorderSide(color: AppColors.slate100)),
                           ),
-                          child: FilledButton(
-                            onPressed: () => _submit(schema),
-                            child: Text('Save Expense', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (widget.expenseId != null) ...[
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  label: Text(
+                                    'Delete Expense',
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                  onPressed: () async {
+                                    final ok = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Delete expense?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () => Navigator.pop(ctx, true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (ok != true || !context.mounted) return;
+                                    final req = sm.SetModelRequest(id: widget.expenseId, delete: true);
+                                    try {
+                                      await createModel(ref.container, req);
+                                      ref.invalidate(expenseListForUiProvider);
+                                      ref.invalidate(expenseListSummaryProvider);
+                                      if (context.mounted) context.go('/expenses');
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(content: Text('$e')));
+                                      }
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              FilledButton(
+                                onPressed: () => _submit(schema),
+                                child: Text(
+                                  saveLabel,
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
+              ),
             );
           },
         );
@@ -319,7 +430,6 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
             ),
             Switch(
               value: c.text == 'true',
-              activeTrackColor: AppColors.teal600,
               onChanged: (v) => setState(() => c.text = v ? 'true' : 'false'),
             ),
           ],
@@ -407,10 +517,27 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
       final relPayload = <sm.ModelRelation>[];
       for (final e in _relations.entries) {
-        if (e.value.isNotEmpty) {
-          relPayload.add(sm.ModelRelation(modelType: e.key, link: e.value));
+        final create = _relationCreates[e.key];
+        if (create != null && create.isNotEmpty) {
+          relPayload.add(sm.ModelRelation(
+            modelType: e.key,
+            create: [create],
+          ));
+        } else if (e.value.isNotEmpty) {
+          relPayload.add(sm.ModelRelation(
+            modelType: e.key,
+            link: dedupeIntIdsPreserveOrder(e.value),
+          ));
         }
       }
+
+      final omitRelationsOnUpdate = shouldOmitRelationsOnExpenseUpdate(
+        expenseId: widget.expenseId,
+        linkIdsByType: _relations,
+        createsByType: _relationCreates,
+        snapshotLinkIdsByType: _relationSnapshotIds,
+        snapshotCreatesByType: _relationSnapshotCreates,
+      );
 
       final req = sm.SetModelRequest(
         id: widget.expenseId,
@@ -419,12 +546,20 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         description: _desc.text.trim().isEmpty ? null : _desc.text.trim(),
         attributes: attrs.isEmpty ? null : attrs,
         tags: tagPayload.isEmpty ? null : tagPayload,
-        relations: relPayload.isEmpty ? null : relPayload,
+        relations: omitRelationsOnUpdate
+            ? null
+            : (relPayload.isEmpty ? null : relPayload),
       );
 
       await createModel(ref.container, req);
       ref.invalidate(expenseListForUiProvider);
       ref.invalidate(expenseSummaryProvider);
+      for (final rt in schema.relations ?? const <RelationshipType>[]) {
+        final link = rt.link;
+        if (link is String && link.isNotEmpty) {
+          ref.invalidate(relatedModelsProvider(link));
+        }
+      }
       if (widget.expenseId != null) {
         ref.invalidate(expenseDetailProvider(widget.expenseId!));
       }

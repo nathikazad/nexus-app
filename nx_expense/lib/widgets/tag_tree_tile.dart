@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
-/// Expandable row for hierarchical tag picking.
+import '../app_theme.dart';
+import '../reference_layout.dart';
+
+/// Expandable row for hierarchical tag picking (mockup-style radio rows).
 class TagTreeTile extends StatefulWidget {
   const TagTreeTile({
     super.key,
@@ -30,37 +34,70 @@ class _TagTreeTileState extends State<TagTreeTile> {
     final isSel = widget.selected.contains(widget.node.name);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            if (hasKids)
-              IconButton(
-                icon: Icon(_expanded ? Icons.expand_more : Icons.chevron_right),
-                onPressed: () => setState(() => _expanded = !_expanded),
-              )
-            else
-              const SizedBox(width: 48),
-            Expanded(
-              child: ListTile(
-                dense: true,
-                leading: widget.multiSelect
-                    ? Checkbox(
-                        value: isSel,
-                        onChanged: (_) => widget.onTapNode(widget.node.name),
-                      )
-                    : Icon(isSel ? Icons.radio_button_checked : Icons.radio_button_off),
-                title: Text(widget.node.name),
-                onTap: () => widget.onTapNode(widget.node.name),
+        Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: () {
+              if (widget.multiSelect) {
+                widget.onTapNode(widget.node.name);
+              } else {
+                widget.onTapNode(widget.node.name);
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: hasKids ? 0 : 20,
+                right: RefLayout.px5,
+                top: 14,
+                bottom: 14,
+              ),
+              child: Row(
+                children: [
+                  if (hasKids)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: Icon(
+                        _expanded ? Icons.expand_more : Icons.chevron_right,
+                        color: AppColors.slate400,
+                        size: 22,
+                      ),
+                      onPressed: () => setState(() => _expanded = !_expanded),
+                    )
+                  else
+                    const SizedBox(width: 36),
+                  Expanded(
+                    child: Text(
+                      widget.node.name,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: hasKids ? FontWeight.w600 : FontWeight.w500,
+                        color: hasKids ? AppColors.slate900 : AppColors.slate700,
+                      ),
+                    ),
+                  ),
+                  if (widget.multiSelect)
+                    Checkbox(
+                      value: isSel,
+                      activeColor: AppColors.teal600,
+                      onChanged: (_) => widget.onTapNode(widget.node.name),
+                    )
+                  else
+                    _TagRadioCircle(selected: isSel),
+                ],
               ),
             ),
-          ],
+          ),
         ),
+        const Divider(height: 1, color: AppColors.slate50),
         if (hasKids && _expanded)
           Padding(
             padding: const EdgeInsets.only(left: 16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final c in children)
                   TagTreeTile(
@@ -73,6 +110,28 @@ class _TagTreeTileState extends State<TagTreeTile> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _TagRadioCircle extends StatelessWidget {
+  const _TagRadioCircle({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(
+          color: selected ? AppColors.teal600 : AppColors.slate300,
+          width: selected ? 5 : 1,
+        ),
+      ),
     );
   }
 }
