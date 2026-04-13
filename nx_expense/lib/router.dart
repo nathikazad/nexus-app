@@ -13,6 +13,7 @@ import 'screens/expense/expense_form_screen.dart';
 import 'screens/expense/expense_list_screen.dart';
 import 'screens/auth/expense_login_screen.dart';
 import 'screens/transfers/transfers_list_screen.dart';
+import 'screens/teller/teller_list_screen.dart';
 import 'screens/tag/tag_browser_screen.dart';
 import 'screens/tag/tag_system_form_screen.dart';
 import 'screens/tag/tag_systems_screen.dart';
@@ -174,6 +175,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tag-systems',
         builder: (context, state) => const TagSystemsScreen(),
+      ),
+      GoRoute(
+        path: '/teller',
+        builder: (context, state) => const TellerListScreen(),
       ),
       GoRoute(
         path: '/expense/form/:id',
