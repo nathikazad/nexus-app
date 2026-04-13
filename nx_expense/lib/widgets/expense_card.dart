@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../app_theme.dart';
-import '../reference_layout.dart';
-import '../expense_schema.dart';
-import '../format.dart';
+import '../layout.dart';
+import '../util/expense_schema.dart';
+import '../util/format.dart';
 import 'tag_chip.dart';
 
 class ExpenseCard extends StatelessWidget {

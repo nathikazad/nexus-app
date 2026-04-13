@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_expense/expense_schema.dart';
+import 'package:nx_expense/util/expense_schema.dart';
 import 'package:nx_expense/widgets/relation_picker.dart';
 
 void main() {

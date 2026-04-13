@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
 
-import '../expense_list_search.dart';
-import '../expense_schema.dart';
+import '../util/expense_schema.dart';
+
+
 
 /// Cached Expense model type with attributes, relations, and tag systems.
 final expenseSchemaProvider =
@@ -208,6 +209,23 @@ class ExpenseListSearchFieldExpandedNotifier extends Notifier<bool> {
 final expenseListSearchFieldExpandedProvider =
     NotifierProvider<ExpenseListSearchFieldExpandedNotifier, bool>(
         ExpenseListSearchFieldExpandedNotifier.new);
+
+
+/// Client-side filter: [query] must be lowercased trimmed substring match on
+/// [Model.name] or [Model.description] only.
+List<Model> filterExpenseModelsBySearch(List<Model> models, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return models;
+
+  bool matches(Model m) {
+    if (m.name.toLowerCase().contains(q)) return true;
+    final d = m.description;
+    if (d != null && d.isNotEmpty && d.toLowerCase().contains(q)) return true;
+    return false;
+  }
+
+  return models.where(matches).toList();
+}
 
 /// Same rows as the list UI: [expenseListForUiProvider] narrowed by search query.
 final expenseListDisplayedProvider = FutureProvider<List<Model>>((ref) async {

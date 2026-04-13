@@ -5,9 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
-import '../../reference_layout.dart';
-import '../../expense_schema.dart';
-import '../../format.dart';
+import '../../layout.dart';
+import '../../util/expense_schema.dart';
+import '../../util/format.dart';
 import '../../providers/expense_providers.dart';
 
 class ExpenseDetailScreen extends ConsumerWidget {
@@ -21,11 +21,13 @@ class ExpenseDetailScreen extends ConsumerWidget {
     final modelAsync = ref.watch(expenseDetailProvider(expenseId));
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         return modelAsync.when(
-          loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (e, _) => Scaffold(
             appBar: AppBar(),
             body: Center(child: SelectableText('$e')),
@@ -37,7 +39,11 @@ class ExpenseDetailScreen extends ConsumerWidget {
                 body: const Center(child: Text('Expense not found')),
               );
             }
-            return _DetailBody(schema: schema, model: model, expenseId: expenseId);
+            return _DetailBody(
+              schema: schema,
+              model: model,
+              expenseId: expenseId,
+            );
           },
         );
       },
@@ -77,7 +83,11 @@ class _DetailBody extends ConsumerWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.slate400,
+            size: 22,
+          ),
           onPressed: () => context.pop(),
         ),
         centerTitle: true,
@@ -89,7 +99,11 @@ class _DetailBody extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => context.push('/expense/form/$expenseId'),
           ),
         ],
@@ -109,7 +123,9 @@ class _DetailBody extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppColors.slate100)),
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.slate100),
+                    ),
                     color: Color(0x4DF8FAFC),
                   ),
                   child: Column(
@@ -128,8 +144,11 @@ class _DetailBody extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.calendar_today_outlined,
-                              size: 14, color: AppColors.slate400),
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 14,
+                            color: AppColors.slate400,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             model.createdAt != null
@@ -175,8 +194,9 @@ class _DetailBody extends ConsumerWidget {
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius:
-                                BorderRadius.circular(RefLayout.rounded2xl),
+                            borderRadius: BorderRadius.circular(
+                              RefLayout.rounded2xl,
+                            ),
                             border: Border.all(color: AppColors.slate100),
                             boxShadow: refCardShadow,
                           ),
@@ -208,10 +228,12 @@ class _DetailBody extends ConsumerWidget {
                                   Text(
                                     sys.name,
                                     style: GoogleFonts.inter(
-                                        fontSize: 12, color: AppColors.slate400),
+                                      fontSize: 12,
+                                      color: AppColors.slate400,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
-                                  _buildTagValues(sys),
+                                  _buildTagValues(context, sys),
                                 ],
                               ),
                             ),
@@ -224,10 +246,11 @@ class _DetailBody extends ConsumerWidget {
                         Text('Relations', style: refSectionTitle(context)),
                         const SizedBox(height: 12),
                         for (final e in model.relations!.entries)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _relationRow(context, e.key, e.value),
-                          ),
+                          for (final relM in dedupeModelsById(e.value))
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _relationRow(context, e.key, relM),
+                            ),
                       ],
                     ],
                   ),
@@ -246,8 +269,10 @@ class _DetailBody extends ConsumerWidget {
             ),
             child: OutlinedButton.icon(
               icon: const Icon(Icons.delete_outline),
-              label: Text('Delete Expense',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text(
+                'Delete Expense',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
               onPressed: () async {
                 final ok = await showDialog<bool>(
                   context: context,
@@ -255,11 +280,13 @@ class _DetailBody extends ConsumerWidget {
                     title: const Text('Delete expense?'),
                     actions: [
                       TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancel')),
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
                       FilledButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Delete')),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Delete'),
+                      ),
                     ],
                   ),
                 );
@@ -272,8 +299,9 @@ class _DetailBody extends ConsumerWidget {
                   if (context.mounted) context.go('/expenses');
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text('$e')));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('$e')));
                   }
                 }
               },
@@ -299,32 +327,45 @@ class _DetailBody extends ConsumerWidget {
     return false;
   }
 
-  Widget _buildTagValues(TagSystem sys) {
+  Widget _buildTagValues(BuildContext context, TagSystem sys) {
     final nodes = model.tags?[sys.name] ?? [];
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         for (final node in nodes)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.slate100,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push(
+                '/expenses/by-tag/${Uri.encodeComponent(sys.name)}/${Uri.encodeComponent(node)}',
+              ),
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
-            ),
-            child: Text(
-              () {
-                final path = tagBreadcrumbPath(sys, node);
-                return path != null && path.length > 1
-                    ? path.join(' \u203A ')
-                    : node;
-              }(),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.slate700,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.slate200.withValues(alpha: 0.6),
+                  ),
+                ),
+                child: Text(
+                  () {
+                    final path = tagBreadcrumbPath(sys, node);
+                    return path != null && path.length > 1
+                        ? path.join(' \u203A ')
+                        : node;
+                  }(),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.slate700,
+                  ),
+                ),
               ),
             ),
           ),
@@ -332,7 +373,7 @@ class _DetailBody extends ConsumerWidget {
     );
   }
 
-  Widget _relationRow(BuildContext context, String relName, List<Model> relModels) {
+  Widget _relationRow(BuildContext context, String relName, Model relModel) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -344,7 +385,9 @@ class _DetailBody extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push('/expense/form/$expenseId'),
+          onTap: () => context.push(
+            '/expenses/by-relation/${Uri.encodeComponent(relName)}/${relModel.id}/${Uri.encodeComponent(relModel.name)}',
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -356,8 +399,11 @@ class _DetailBody extends ConsumerWidget {
                     shape: BoxShape.circle,
                     color: Color(0xFFCCFBF1),
                   ),
-                  child: const Icon(Icons.storefront_outlined,
-                      size: 18, color: AppColors.teal600),
+                  child: const Icon(
+                    Icons.storefront_outlined,
+                    size: 18,
+                    color: AppColors.teal600,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -374,9 +420,9 @@ class _DetailBody extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                    Text(
-                      dedupeModelsById(relModels).map((m) => m.name).join(', '),
-                      style: GoogleFonts.inter(
+                      Text(
+                        relModel.name,
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.slate900,
@@ -419,9 +465,10 @@ class _AttrRow extends StatelessWidget {
                 child: Text(
                   label,
                   style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate500),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.slate500,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -430,9 +477,10 @@ class _AttrRow extends StatelessWidget {
                   value,
                   textAlign: TextAlign.right,
                   style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.slate900),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate900,
+                  ),
                 ),
               ),
             ],

@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../app_theme.dart';
-import '../expense_schema.dart';
+import '../util/expense_schema.dart';
 import '../providers/expense_providers.dart';
-import '../reference_layout.dart';
+import '../layout.dart';
 
 /// Result of the relation picker: link to existing model IDs, or create a new related model.
 sealed class RelationPickResult {

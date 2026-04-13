@@ -5,9 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
-import '../../expense_schema.dart';
+import '../../util/expense_schema.dart';
 import '../../providers/expense_providers.dart';
-import '../../reference_layout.dart';
+import '../../layout.dart';
 
 /// Reference Screen 8: hierarchical tag browser (accordion).
 class TagBrowserScreen extends ConsumerWidget {

@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 
 import 'app_theme.dart';
-import 'reference_layout.dart';
+import 'providers/expense_providers.dart';
+import 'layout.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/expense/add_expense_screen.dart';
 import 'screens/expense/expense_detail_screen.dart';
@@ -15,7 +16,40 @@ import 'screens/transfers/transfers_list_screen.dart';
 import 'screens/tag/tag_browser_screen.dart';
 import 'screens/tag/tag_system_form_screen.dart';
 import 'screens/tag/tag_systems_screen.dart';
-import 'providers/expense_providers.dart';
+
+/// Deep-linked expense list with its own filter/sort/search/selection state.
+Widget scopedExpenseListScreen({
+  required String title,
+  required ExpenseFilter initialFilter,
+}) {
+  return ProviderScope(
+    overrides: [
+      expenseListFilterProvider.overrideWith(ExpenseListFilterNotifier.new),
+      expenseListSortProvider.overrideWith(ExpenseListSortNotifier.new),
+      expenseListSearchQueryProvider.overrideWith(
+        ExpenseListSearchQueryNotifier.new,
+      ),
+      expenseListSearchFieldExpandedProvider.overrideWith(
+        ExpenseListSearchFieldExpandedNotifier.new,
+      ),
+      expenseListSelectionModeProvider.overrideWith(
+        ExpenseListSelectionModeNotifier.new,
+      ),
+      expenseListSelectedIdsProvider.overrideWith(
+        ExpenseListSelectedIdsNotifier.new,
+      ),
+    ],
+    child: ExpenseListScreen(
+      title: title,
+      initialFilter: initialFilter,
+      showFilterIcon: false,
+      showDateRange: false,
+      showSearch: false,
+      showSelect: false,
+      showDrawer: false,
+    ),
+  );
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -157,6 +191,48 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final name = Uri.decodeComponent(state.pathParameters['systemName']!);
           return TagBrowserScreen(systemName: name);
+        },
+      ),
+      GoRoute(
+        path: '/expenses/by-tag/:systemName/:tagNode',
+        builder: (context, state) {
+          final systemName = Uri.decodeComponent(
+            state.pathParameters['systemName']!,
+          );
+          final tagNode = Uri.decodeComponent(state.pathParameters['tagNode']!);
+          return scopedExpenseListScreen(
+            title: '$systemName: $tagNode',
+            initialFilter: ExpenseFilter(
+              tagFilters: [
+                {
+                  'system': systemName,
+                  'node': tagNode,
+                  'include_descendants': true,
+                },
+              ],
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/expenses/by-relation/:relName/:relId/:relDisplayName',
+        builder: (context, state) {
+          final relName = Uri.decodeComponent(state.pathParameters['relName']!);
+          final relId = int.parse(state.pathParameters['relId']!);
+          final relDisplayName = Uri.decodeComponent(
+            state.pathParameters['relDisplayName']!,
+          );
+          return scopedExpenseListScreen(
+            title: '$relName: $relDisplayName',
+            initialFilter: ExpenseFilter(
+              relationFilters: {
+                relName: {relId},
+              },
+              relationFilterLabels: {
+                relName: {relId: relDisplayName},
+              },
+            ),
+          );
         },
       ),
     ],

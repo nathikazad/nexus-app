@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../app_theme.dart';
-import '../expense_schema.dart';
-import '../reference_layout.dart';
+import '../util/expense_schema.dart';
+import '../layout.dart';
 import 'tag_tree_tile.dart';
 
 /// Returns selected node names per system rules (one for exclusive, many for multiple).

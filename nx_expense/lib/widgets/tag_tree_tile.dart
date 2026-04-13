@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../app_theme.dart';
-import '../reference_layout.dart';
+import '../layout.dart';
 
 /// Expandable row for hierarchical tag picking (mockup-style radio rows).
 class TagTreeTile extends StatefulWidget {

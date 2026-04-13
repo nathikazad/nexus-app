@@ -5,12 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
-import '../../aggregate_ui.dart';
 import '../../app_theme.dart';
-import '../../expense_schema.dart';
-import '../../format.dart';
+import '../../util/expense_schema.dart';
+import '../../util/format.dart';
 import '../../providers/expense_providers.dart';
-import '../../reference_layout.dart';
+import '../../layout.dart';
 import '../../widgets/expense_app_end_drawer.dart';
 import '../../widgets/expense_date_range_bar.dart';
 import '../../widgets/stat_card.dart';
@@ -276,7 +275,9 @@ class _PieChartCardState extends State<_PieChartCard> {
   @override
   Widget build(BuildContext context) {
     final entries = widget.entries;
-    final total = entries.fold<double>(0, (a, b) => a + b.value);
+    // Pie sections must be positive; amounts are signed (expenses negative, refunds positive).
+    final totalAbs = entries.fold<double>(0, (a, b) => a + b.value.abs());
+    if (totalAbs <= 0) return const SizedBox.shrink();
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -339,7 +340,7 @@ class _PieChartCardState extends State<_PieChartCard> {
                     sections: [
                       for (var i = 0; i < entries.length; i++)
                         PieChartSectionData(
-                          value: entries[i].value,
+                          value: entries[i].value.abs(),
                           title: '',
                           radius: 48,
                           color: _palette[i % _palette.length],
@@ -383,7 +384,7 @@ class _PieChartCardState extends State<_PieChartCard> {
                               Text(
                                 _showDollars
                                     ? formatMoney(entries[i].value)
-                                    : (total > 0 ? '${(entries[i].value / total * 100).round()}%' : '—'),
+                                    : '${(entries[i].value.abs() / totalAbs * 100).round()}%',
                                 style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate900),
                               ),
                               if (widget.onSliceTap != null) ...[
@@ -434,7 +435,8 @@ class _DayBarChart extends StatelessWidget {
     if (entries.isEmpty) return const SizedBox.shrink();
 
     final n = entries.length;
-    final maxY = entries.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    // Bar geometry uses magnitude; amounts may be signed (negative spend, positive refunds).
+    final maxY = entries.map((e) => e.value.abs()).reduce((a, b) => a > b ? a : b);
     // Show only first, middle, last labels to avoid crowding.
     final labelIndices = <int>{0, n ~/ 2, n - 1};
     // Dynamic bar width based on entry count.
@@ -480,7 +482,7 @@ class _DayBarChart extends StatelessWidget {
                             GoogleFonts.inter(fontSize: 11, color: AppColors.slate300, fontWeight: FontWeight.w500),
                             children: [
                               TextSpan(
-                                text: formatMoney(rod.toY),
+                                text: formatMoney(entries[i].value),
                                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
                               ),
                             ],
@@ -494,7 +496,7 @@ class _DayBarChart extends StatelessWidget {
                           x: i,
                           barRods: [
                             BarChartRodData(
-                              toY: entries[i].value,
+                              toY: entries[i].value.abs(),
                               color: AppColors.teal500,
                               width: barWidth,
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),

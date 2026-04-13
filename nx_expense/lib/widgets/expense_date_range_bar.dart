@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../app_theme.dart';
 import '../providers/expense_providers.dart';
-import '../reference_layout.dart';
+import '../layout.dart';
 
 /// Returns true if [r] is exactly one calendar month (local date arithmetic).
 bool isFullCalendarMonthRange(DateTimeRange r) {

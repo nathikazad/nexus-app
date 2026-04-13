@@ -5,10 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
-import '../../expense_schema.dart';
-import '../../format.dart';
+import '../../util/expense_schema.dart';
+import '../../util/format.dart';
 import '../../providers/expense_providers.dart';
-import '../../reference_layout.dart';
+import '../../layout.dart';
 import '../../widgets/expense_app_end_drawer.dart';
 import '../../widgets/expense_date_range_bar.dart';
 
