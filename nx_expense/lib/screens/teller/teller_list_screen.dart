@@ -10,6 +10,7 @@ import '../../providers/teller_providers.dart';
 import '../../util/format.dart';
 import '../../widgets/expense_app_end_drawer.dart';
 import '../../widgets/expense_date_range_bar.dart';
+import '../../desktop/desktop_nav.dart';
 import 'teller_transaction_detail_screen.dart';
 
 class TellerListScreen extends ConsumerWidget {
@@ -111,7 +112,7 @@ class TellerListScreen extends ConsumerWidget {
                         ),
                       );
                     }
-                    final items = _buildDateGroupedItems(rows);
+                    final items = _buildDateGroupedItems(ref, rows);
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
                         RefLayout.px5,
@@ -132,7 +133,10 @@ class TellerListScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildDateGroupedItems(List<TellerTransactionRow> rows) {
+  List<Widget> _buildDateGroupedItems(
+    WidgetRef ref,
+    List<TellerTransactionRow> rows,
+  ) {
     final items = <Widget>[];
     String? lastDate;
     for (final r in rows) {
@@ -159,7 +163,17 @@ class TellerListScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: _TellerCard(
             row: r,
-            onTap: (ctx) => _openTellerDetail(ctx, r),
+            onTap: (ctx) {
+              if (isDesktopLayout(ctx)) {
+                ref.read(selectedTellerRowProvider.notifier).state = r;
+              } else {
+                Navigator.of(ctx).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TellerTransactionDetailScreen(row: r),
+                  ),
+                );
+              }
+            },
           ),
         ),
       );
@@ -170,15 +184,6 @@ class TellerListScreen extends ConsumerWidget {
   static String _dateLabel(DateTime t) {
     final d = t.toLocal();
     return DateFormat('MMM d, y').format(d);
-  }
-
-  void _openTellerDetail(BuildContext context, TellerTransactionRow row) {
-    Navigator.push<void>(
-      context,
-      MaterialPageRoute<void>(
-        builder: (_) => TellerTransactionDetailScreen(row: row),
-      ),
-    );
   }
 }
 

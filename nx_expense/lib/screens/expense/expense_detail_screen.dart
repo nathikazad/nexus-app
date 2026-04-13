@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
+import '../../desktop/desktop_nav.dart';
+import '../../desktop/panel_chrome.dart';
 import '../../layout.dart';
 import '../../util/expense_schema.dart';
 import '../../util/format.dart';
@@ -83,40 +85,7 @@ class _DetailBody extends ConsumerWidget {
     final tagSystems = schema.tagSystems ?? const <TagSystem>[];
     final tellerAsync = ref.watch(expenseTimelineLinksProvider(expenseId));
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: AppColors.slate400,
-            size: 22,
-          ),
-          onPressed: () => context.pop(),
-        ),
-        centerTitle: true,
-        title: Text(
-          model.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: refAppBarTitleBase(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.edit_outlined,
-              color: AppColors.slate400,
-              size: 22,
-            ),
-            onPressed: () => context.push('/expense/form/$expenseId'),
-          ),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppColors.slate100),
-        ),
-      ),
-      body: Column(
+    final detailBody = Column(
         children: [
           Expanded(
             child: ListView(
@@ -237,7 +206,7 @@ class _DetailBody extends ConsumerWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  _buildTagValues(context, sys),
+                                  _buildTagValues(context, ref, sys),
                                 ],
                               ),
                             ),
@@ -262,7 +231,7 @@ class _DetailBody extends ConsumerWidget {
                                     for (final relM in dedupeModelsById(e.value))
                                       Padding(
                                         padding: const EdgeInsets.only(bottom: 10),
-                                        child: _relationRow(context, e.key, relM),
+                                        child: _relationRow(context, ref, e.key, relM),
                                       ),
                                   ],
                                 ),
@@ -283,7 +252,7 @@ class _DetailBody extends ConsumerWidget {
                               ))
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
-                                  child: _transferCell(context, relM),
+                                  child: _transferCell(context, ref, relM),
                                 ),
                             ],
                           ),
@@ -354,13 +323,21 @@ class _DetailBody extends ConsumerWidget {
                                             color: Colors.transparent,
                                             child: InkWell(
                                               onTap: () {
-                                                Navigator.of(context).push<void>(
-                                                  MaterialPageRoute<void>(
-                                                    builder: (_) => TellerTransactionDetailScreen(
-                                                      row: link.toTellerTransactionRow(),
+                                                final row = link.toTellerTransactionRow();
+                                                if (isDesktopLayout(context)) {
+                                                  ref.read(panel3StateProvider.notifier).state =
+                                                      Panel3State(
+                                                    type: Panel3Type.teller,
+                                                    tellerRow: row,
+                                                  );
+                                                } else {
+                                                  Navigator.of(context).push<void>(
+                                                    MaterialPageRoute<void>(
+                                                      builder: (_) =>
+                                                          TellerTransactionDetailScreen(row: row),
                                                     ),
-                                                  ),
-                                                );
+                                                  );
+                                                }
                                               },
                                               borderRadius: BorderRadius.circular(
                                                 RefLayout.rounded2xl,
@@ -476,7 +453,7 @@ class _DetailBody extends ConsumerWidget {
                   await createModel(ref.container, req);
                   ref.invalidate(expenseListForUiProvider);
                   ref.invalidate(expenseListSummaryProvider);
-                  if (context.mounted) context.go('/expenses');
+                  if (context.mounted) navAfterExpenseDelete(context, ref);
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(
@@ -488,7 +465,67 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
         ],
+    );
+
+    if (isDesktopLayout(context)) {
+      return PanelChrome(
+        title: model.name,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.slate400,
+            size: 22,
+          ),
+          onPressed: () => navExpenseDetailBack(context, ref),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: AppColors.slate400,
+              size: 22,
+            ),
+            onPressed: () => context.push('/expense/form/$expenseId'),
+          ),
+        ],
+        body: detailBody,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.slate400,
+            size: 22,
+          ),
+          onPressed: () => navExpenseDetailBack(context, ref),
+        ),
+        centerTitle: true,
+        title: Text(
+          model.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: refAppBarTitleBase(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: AppColors.slate400,
+              size: 22,
+            ),
+            onPressed: () => context.push('/expense/form/$expenseId'),
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.slate100),
+        ),
       ),
+      body: detailBody,
     );
   }
 
@@ -507,7 +544,7 @@ class _DetailBody extends ConsumerWidget {
     return false;
   }
 
-  Widget _buildTagValues(BuildContext context, TagSystem sys) {
+  Widget _buildTagValues(BuildContext context, WidgetRef ref, TagSystem sys) {
     final nodes = model.tags?[sys.name] ?? [];
     return Wrap(
       spacing: 8,
@@ -517,8 +554,11 @@ class _DetailBody extends ConsumerWidget {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => context.push(
-                '/expenses/by-tag/${Uri.encodeComponent(sys.name)}/${Uri.encodeComponent(node)}',
+              onTap: () => navToTagExpenses(
+                context,
+                ref,
+                systemName: sys.name,
+                tagNode: node,
               ),
               borderRadius: BorderRadius.circular(8),
               child: Container(
@@ -553,7 +593,7 @@ class _DetailBody extends ConsumerWidget {
     );
   }
 
-  Widget _transferCell(BuildContext context, Model relM) {
+  Widget _transferCell(BuildContext context, WidgetRef ref, Model relM) {
     final title = transferDisplayTitle(relM);
     final amt = transferAmountAttribute(relM);
     final dateStr = transferCellDateLabel(relM);
@@ -568,7 +608,7 @@ class _DetailBody extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push('/transfer/${relM.id}'),
+          onTap: () => navToTransferDetail(context, ref, relM.id),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -616,7 +656,12 @@ class _DetailBody extends ConsumerWidget {
     );
   }
 
-  Widget _relationRow(BuildContext context, String relName, Model relModel) {
+  Widget _relationRow(
+    BuildContext context,
+    WidgetRef ref,
+    String relName,
+    Model relModel,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -628,8 +673,12 @@ class _DetailBody extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push(
-            '/expenses/by-relation/${Uri.encodeComponent(relName)}/${relModel.id}/${Uri.encodeComponent(relModel.name)}',
+          onTap: () => navToRelationExpenses(
+            context,
+            ref,
+            relName: relName,
+            relId: relModel.id,
+            displayName: relModel.name,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

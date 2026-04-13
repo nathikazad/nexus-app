@@ -6,14 +6,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
+import '../../desktop/desktop_nav.dart';
 import '../../providers/expense_providers.dart';
 import '../../layout.dart';
 
 class TagSystemFormScreen extends ConsumerStatefulWidget {
-  const TagSystemFormScreen({super.key, this.tagSystemId});
+  const TagSystemFormScreen({super.key, this.tagSystemId, this.embedded = false});
 
   /// `null` = create.
   final int? tagSystemId;
+
+  /// Desktop shell right pane: back/save clears panel instead of route pop.
+  final bool embedded;
 
   @override
   ConsumerState<TagSystemFormScreen> createState() => _TagSystemFormScreenState();
@@ -123,7 +127,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-              onPressed: () => context.pop(),
+              onPressed: () => _leaveForm(context, ref),
             ),
             centerTitle: true,
             title: Text(
@@ -653,13 +657,21 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       ref.invalidate(expenseStructProvider);
       ref.invalidate(expenseListForUiProvider);
       ref.invalidate(expenseSummaryProvider);
-      if (mounted) context.pop();
+      if (mounted) _leaveForm(context, ref);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _leaveForm(BuildContext context, WidgetRef ref) {
+    if (widget.embedded) {
+      navTagSystemFormBack(context, ref);
+    } else {
+      context.pop();
     }
   }
 
@@ -690,7 +702,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       ref.invalidate(expenseStructProvider);
       ref.invalidate(expenseListForUiProvider);
       ref.invalidate(expenseSummaryProvider);
-      if (mounted) context.pop();
+      if (mounted) _leaveForm(context, ref);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));

@@ -14,6 +14,7 @@ import '../../layout.dart';
 import '../../widgets/expense_card.dart';
 import '../../widgets/expense_app_end_drawer.dart';
 import '../../widgets/expense_date_range_bar.dart';
+import '../../desktop/desktop_nav.dart';
 import 'expense_list_bulk_actions.dart';
 import 'expense_list_filter_sheet.dart';
 import 'expense_list_sort_sheet.dart';
@@ -712,7 +713,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
               if (selectionMode) {
                 ref.read(expenseListSelectedIdsProvider.notifier).toggle(m.id);
               } else {
-                context.push('/expense/${m.id}');
+                navToExpenseDetail(context, ref, m.id);
               }
             },
           ),

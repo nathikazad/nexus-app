@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 
 import 'app_theme.dart';
+import 'desktop/desktop_nav.dart';
+import 'desktop/desktop_shell.dart';
 import 'providers/expense_providers.dart';
 import 'layout.dart';
+import 'scoped_expense_list.dart';
 import 'screens/expense/expense_dashboard_screen.dart';
 import 'screens/expense/add_expense_screen.dart';
 import 'screens/expense/expense_detail_screen.dart';
@@ -20,58 +23,6 @@ import 'screens/teller/teller_link_picker_screen.dart';
 import 'screens/tag/tag_browser_screen.dart';
 import 'screens/tag/tag_system_form_screen.dart';
 import 'screens/tag/tag_systems_screen.dart';
-
-/// Deep-linked expense list with its own filter/sort/search/selection state.
-Widget scopedExpenseListScreen({
-  required String title,
-  required ExpenseFilter initialFilter,
-}) {
-  return ProviderScope(
-    overrides: [
-      expenseListFilterProvider.overrideWith(ExpenseListFilterNotifier.new),
-      expenseListSortProvider.overrideWith(ExpenseListSortNotifier.new),
-      expenseListSearchQueryProvider.overrideWith(
-        ExpenseListSearchQueryNotifier.new,
-      ),
-      expenseListSearchFieldExpandedProvider.overrideWith(
-        ExpenseListSearchFieldExpandedNotifier.new,
-      ),
-      expenseListSelectionModeProvider.overrideWith(
-        ExpenseListSelectionModeNotifier.new,
-      ),
-      expenseListSelectedIdsProvider.overrideWith(
-        ExpenseListSelectedIdsNotifier.new,
-      ),
-      expenseDateRangeProvider.overrideWith(
-        ScopedFilteredExpenseDateRangeNotifier.new,
-      ),
-      // List pipeline must be overridden too: unscoped providers read the root
-      // filter, so chips (scoped) and rows (root) disagreed.
-      expenseListForUiProvider.overrideWith(
-        (ref) => buildExpenseListForUi(ref),
-      ),
-      expenseListDisplayedProvider.overrideWith(
-        (ref) => buildExpenseListDisplayed(ref),
-      ),
-      expenseListSummaryProvider.overrideWith(
-        (ref) => buildExpenseListSummary(ref),
-      ),
-      expenseListSelectionSummaryProvider.overrideWith(
-        buildExpenseListSelectionSummary,
-      ),
-    ],
-    child: ExpenseListScreen(
-      title: title,
-      initialFilter: initialFilter,
-      showFilterIcon: false,
-      showDateRange: true,
-      showSearch: true,
-      showSelect: false,
-      showDrawer: false,
-      showActiveFilterChips: false,
-    ),
-  );
-}
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -102,9 +53,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           final selecting = ref.watch(expenseListSelectionModeProvider);
-          final showFab = navigationShell.currentIndex == 0 && !selecting;
+          final showFab =
+              navigationShell.currentIndex == 0 && !selecting;
+
+          if (isDesktopLayout(context)) {
+            // [navigationShell] must stay mounted for go_router; [DesktopShell]
+            // provides its own Scaffold, FAB, and multi-panel layout.
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Offstage(
+                  offstage: true,
+                  child: navigationShell,
+                ),
+                const Positioned.fill(
+                  child: DesktopShell(),
+                ),
+              ],
+            );
+          }
+
           return Scaffold(
-            // false: body stops above bottom nav so list/footer UIs aren't drawn under tabs.
             extendBody: false,
             body: navigationShell,
             floatingActionButton: showFab

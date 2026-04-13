@@ -11,6 +11,7 @@ import '../../providers/expense_providers.dart';
 import '../../layout.dart';
 import '../../widgets/expense_app_end_drawer.dart';
 import '../../widgets/expense_date_range_bar.dart';
+import '../../desktop/desktop_nav.dart';
 
 class TransfersListScreen extends ConsumerWidget {
   const TransfersListScreen({super.key});
@@ -111,7 +112,7 @@ class TransfersListScreen extends ConsumerWidget {
                             ),
                           );
                         }
-                        final items = _buildDateGroupedItems(models, schema);
+                        final items = _buildDateGroupedItems(context, ref, models, schema);
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(
                             RefLayout.px5,
@@ -134,7 +135,12 @@ class TransfersListScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildDateGroupedItems(List<Model> models, ModelType schema) {
+  List<Widget> _buildDateGroupedItems(
+    BuildContext context,
+    WidgetRef ref,
+    List<Model> models,
+    ModelType schema,
+  ) {
     final items = <Widget>[];
     String? lastDate;
     final amountKey = primaryNumberAttributeKey(schema);
@@ -164,6 +170,7 @@ class TransfersListScreen extends ConsumerWidget {
           child: _TransferCard(
             title: transferDisplayTitle(m),
             amount: amountKey != null ? _num(m, amountKey) : null,
+            onOpen: () => navToTransferDetailDirect(context, ref, m.id),
           ),
         ),
       );
@@ -189,44 +196,56 @@ class TransfersListScreen extends ConsumerWidget {
 }
 
 class _TransferCard extends StatelessWidget {
-  const _TransferCard({required this.title, required this.amount});
+  const _TransferCard({
+    required this.title,
+    required this.amount,
+    required this.onOpen,
+  });
 
   final String title;
   final num? amount;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
         borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: refCardShadow,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.slate900,
-              ),
-            ),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+            border: Border.all(color: AppColors.slate100),
+            boxShadow: refCardShadow,
           ),
-          if (amount != null)
-            Text(
-              formatMoney(amount),
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.teal600,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate900,
+                  ),
+                ),
               ),
-            ),
-        ],
+              if (amount != null)
+                Text(
+                  formatMoney(amount),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.teal600,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

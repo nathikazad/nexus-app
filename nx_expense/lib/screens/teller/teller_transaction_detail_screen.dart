@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
 import '../../data/teller_timeline_api.dart';
+import '../../desktop/desktop_nav.dart';
+import '../../desktop/panel_chrome.dart';
 import '../../layout.dart';
 import '../../util/expense_schema.dart';
 
 /// Full-screen Teller transaction detail (read-only).
-class TellerTransactionDetailScreen extends StatelessWidget {
+class TellerTransactionDetailScreen extends ConsumerWidget {
   const TellerTransactionDetailScreen({super.key, required this.row});
 
   final TellerTransactionRow row;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = row.payload;
     final details = p['details'];
     Map<String, dynamic>? dmap;
@@ -26,6 +28,48 @@ class TellerTransactionDetailScreen extends StatelessWidget {
     final processing = dmap?['processing_status']?.toString();
     final cpName = _counterpartyNameFromPayload(p);
 
+    final listBody = ListView(
+      padding: EdgeInsets.fromLTRB(
+        RefLayout.px5,
+        16,
+        RefLayout.px5,
+        24 + MediaQuery.paddingOf(context).bottom,
+      ),
+      children: [
+        _DetailRow(label: 'Date', value: _payloadDate(p) ?? row.time.toLocal().toIso8601String().split('T').first),
+        _DetailRow(label: 'Description', value: (p['description'] as String?)?.trim() ?? '—'),
+        _DetailRow(label: 'Type', value: p['type']?.toString() ?? '—'),
+        _DetailRow(label: 'Status', value: p['status']?.toString() ?? '—'),
+        _DetailRow(label: 'Id', value: p['id']?.toString() ?? '—'),
+        _DetailRow(label: 'processing_status', value: processing ?? '—'),
+        _DetailRow(label: 'counterparty.name', value: cpName ?? '—'),
+        if (row.linkedModels.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Text(
+            'Linked',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.slate900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...row.linkedModels.map((m) => _LinkedModelTile(model: m)),
+        ],
+      ],
+    );
+
+    if (isDesktopLayout(context)) {
+      return PanelChrome(
+        title: 'Teller transaction',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+          onPressed: () => navTellerTxDetailBack(context, ref, row),
+        ),
+        body: listBody,
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -33,7 +77,7 @@ class TellerTransactionDetailScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-          onPressed: () => context.pop(),
+          onPressed: () => navTellerTxDetailBack(context, ref, row),
         ),
         centerTitle: true,
         title: Text(
@@ -45,31 +89,7 @@ class TellerTransactionDetailScreen extends StatelessWidget {
           child: Divider(height: 1, color: AppColors.slate100),
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(RefLayout.px5, 16, RefLayout.px5, 24 + MediaQuery.paddingOf(context).bottom),
-        children: [
-          _DetailRow(label: 'Date', value: _payloadDate(p) ?? row.time.toLocal().toIso8601String().split('T').first),
-          _DetailRow(label: 'Description', value: (p['description'] as String?)?.trim() ?? '—'),
-          _DetailRow(label: 'Type', value: p['type']?.toString() ?? '—'),
-          _DetailRow(label: 'Status', value: p['status']?.toString() ?? '—'),
-          _DetailRow(label: 'Id', value: p['id']?.toString() ?? '—'),
-          _DetailRow(label: 'processing_status', value: processing ?? '—'),
-          _DetailRow(label: 'counterparty.name', value: cpName ?? '—'),
-          if (row.linkedModels.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text(
-              'Linked',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.slate900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...row.linkedModels.map((m) => _LinkedModelTile(model: m)),
-          ],
-        ],
-      ),
+      body: listBody,
     );
   }
 
@@ -128,13 +148,13 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _LinkedModelTile extends StatelessWidget {
+class _LinkedModelTile extends ConsumerWidget {
   const _LinkedModelTile({required this.model});
 
   final LinkedTellerModel model;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isExpense = model.modelTypeName == kExpenseModelTypeName;
     final subtitle = '${model.modelTypeName} · #${model.id}';
 
@@ -189,12 +209,7 @@ class _LinkedModelTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          final id = model.id;
-          final router = GoRouter.of(context);
-          router.pop();
-          router.push('/expense/$id');
-        },
+        onTap: () => navToExpenseFromTellerLink(context, ref, model.id),
         borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
         child: child,
       ),
