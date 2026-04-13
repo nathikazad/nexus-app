@@ -494,6 +494,20 @@ final expenseDetailProvider = FutureProvider.family<Model?, int>((
   );
 });
 
+/// Single transfer by numeric id (full struct for detail screen).
+final transferDetailProvider = FutureProvider.family<Model?, int>((ref, id) async {
+  final schema = await ref.watch(transferSchemaProvider.future);
+  final struct = buildTransferStruct(schema);
+  final client = ref.watch(graphqlClientProvider);
+
+  return fetchKgqlModelById(
+    client,
+    modelTypeName: kTransferModelTypeName,
+    id: id,
+    struct: struct,
+  );
+});
+
 /// `model_timeline_event_links` for an Expense model (e.g. Teller imports).
 final expenseTimelineLinksProvider =
     FutureProvider.family<List<ExpenseTellerLink>, int>((ref, modelId) async {

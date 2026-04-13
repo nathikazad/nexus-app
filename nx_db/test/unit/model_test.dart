@@ -166,5 +166,32 @@ void main() {
       });
       expect(m.relations!['Company']!.first.relations?['Person']?.first.name, 'L2');
     });
+
+    test('MD1.12 description as list (root model)', () {
+      final m = Model.fromJson({
+        'id': 1,
+        'name': 'E',
+        'model_type_id': 9,
+        'description': ['line one', 'line two'],
+      });
+      expect(m.description, 'line one\nline two');
+    });
+
+    test('MD1.13 description as list on nested relation model', () {
+      final m = Model.fromJson({
+        'id': 1,
+        'name': 'Expense',
+        'model_type_id': 9,
+        'Transfer': [
+          {
+            'id': 2,
+            'name': 'Wire',
+            'model_type_id': 5,
+            'description': ['Memo a', 'Memo b'],
+          },
+        ],
+      });
+      expect(m.relations!['Transfer']!.first.description, 'Memo a\nMemo b');
+    });
   });
 }

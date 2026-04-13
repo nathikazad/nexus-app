@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:nx_db/nx_db.dart';
 
+import 'format.dart';
+
 /// Hardcoded model type name — everything else is schema-driven.
 const String kExpenseModelTypeName = 'Expense';
 const String kTransferModelTypeName = 'Transfer';
@@ -25,7 +27,20 @@ Map<String, dynamic> buildExpenseStruct(ModelType schema) {
   for (final rel in schema.relations ?? const <RelationshipType>[]) {
     final link = rel.link;
     if (link is String && link.isNotEmpty) {
-      struct[link] = {'id': true, 'name': true};
+      if (link == kTransferModelTypeName) {
+        struct[link] = {
+          'id': true,
+          'name': true,
+          'description': true,
+          'created_at': true,
+          'amount': true,
+          'date': true,
+          'to': true,
+          'Company': {'id': true, 'name': true},
+        };
+      } else {
+        struct[link] = {'id': true, 'name': true};
+      }
     }
   }
 
@@ -69,6 +84,20 @@ String transferDisplayTitle(Model model) {
     return companies.first.name;
   }
   return model.name;
+}
+
+/// Transfer `amount` attribute when present on an embedded or full [Model].
+num? transferAmountAttribute(Model model) {
+  final raw = attributeValue(model, 'amount');
+  if (raw is num) return raw;
+  return num.tryParse('$raw');
+}
+
+/// Prefers `date` attribute, otherwise `created_at` (for list/detail cells).
+String transferCellDateLabel(Model model) {
+  final raw = attributeValue(model, 'date');
+  if (raw is String && raw.isNotEmpty) return formatModelDate(raw);
+  return formatModelDate(model.createdAt);
 }
 
 /// First `number` attribute key in definition order (primary amount field).

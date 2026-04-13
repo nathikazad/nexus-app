@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../app_theme.dart';
+import '../screens/transfers/transfer_relation_picker_screen.dart';
 import '../util/expense_schema.dart';
 import '../providers/expense_providers.dart';
 import '../layout.dart';
@@ -86,7 +88,7 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Colors.white,
-      builder: (ctx) => _CreateRelationSheet(
+      builder: (ctx) => CreateRelationSheet(
         targetModelTypeName: widget.targetModelTypeName,
       ),
     );
@@ -361,16 +363,17 @@ class _RelationRadioCircle extends StatelessWidget {
   }
 }
 
-class _CreateRelationSheet extends StatefulWidget {
-  const _CreateRelationSheet({required this.targetModelTypeName});
+/// Minimal "create related model" form (name + description) for relation pickers.
+class CreateRelationSheet extends StatefulWidget {
+  const CreateRelationSheet({super.key, required this.targetModelTypeName});
 
   final String targetModelTypeName;
 
   @override
-  State<_CreateRelationSheet> createState() => _CreateRelationSheetState();
+  State<CreateRelationSheet> createState() => _CreateRelationSheetState();
 }
 
-class _CreateRelationSheetState extends State<_CreateRelationSheet> {
+class _CreateRelationSheetState extends State<CreateRelationSheet> {
   final _name = TextEditingController();
   final _desc = TextEditingController();
 
@@ -473,6 +476,20 @@ class _CreateRelationSheetState extends State<_CreateRelationSheet> {
   }
 }
 
+/// Opens [CreateRelationSheet] in a modal; returns the create payload or null if dismissed.
+Future<Map<String, dynamic>?> showCreateRelationSheetForType(
+  BuildContext context, {
+  required String targetModelTypeName,
+}) {
+  return showModalBottomSheet<Map<String, dynamic>?>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    builder: (ctx) => CreateRelationSheet(targetModelTypeName: targetModelTypeName),
+  );
+}
+
 /// List row that opens the relation picker.
 class RelationPickerRow extends ConsumerWidget {
   const RelationPickerRow({
@@ -523,6 +540,17 @@ class RelationPickerRow extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
+          if (targetModelTypeName == kTransferModelTypeName) {
+            final res = await context.push<RelationPickResult>(
+              '/pick-transfer-relation',
+              extra: TransferRelationPickerExtra(
+                allowMultiple: allowMultiple,
+                initialIds: valueIds,
+              ),
+            );
+            if (res != null) onPicked(res);
+            return;
+          }
           final res = await showRelationPickerSheet(
             context,
             targetModelTypeName: targetModelTypeName,

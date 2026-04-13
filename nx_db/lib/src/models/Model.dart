@@ -1,3 +1,19 @@
+/// Coerces `description` (and similar) when the API returns a [String], a [List]
+/// of lines (e.g. Teller / transaction payloads), or other scalar JSON.
+String? _parseOptionalStringField(dynamic value) {
+  if (value == null) return null;
+  if (value is String) return value;
+  if (value is List) {
+    final parts = value
+        .map((e) => e == null ? '' : e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return null;
+    return parts.join('\n');
+  }
+  return value.toString();
+}
+
 /// Model class representing a Model from the GraphQL API
 /// Supports structure from get_kgql_models
 class Model {
@@ -144,7 +160,7 @@ class Model {
     return Model(
       id: json['id'] as int,
       name: json['name'] as String,
-      description: json['description'] as String?,
+      description: _parseOptionalStringField(json['description']),
       modelTypeId: json['model_type_id'] as int? ?? json['modelTypeId'] as int? ?? 0,
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
       updatedAt: json['updated_at'] as String? ?? json['updatedAt'] as String?,
@@ -222,7 +238,7 @@ class ModelAttribute {
     return ModelAttribute(
       id: json['id'] as int? ?? json['attribute_id'] as int? ?? 0,
       key: json['key'] as String? ?? '',
-      value: json['value'] as String?,
+      value: _parseOptionalStringField(json['value']),
     );
   }
 
@@ -256,8 +272,8 @@ class Relation {
       relationId: json['relation_id'] as int? ?? json['relationId'] as int? ?? json['id'] as int? ?? 0,
       modelId: json['model_id'] as int? ?? json['modelId'] as int? ?? 0,
       modelType: json['model_type'] as String? ?? json['modelType'] as String? ?? 'Unknown',
-      name: json['name'] as String?,
-      description: json['description'] as String?,
+      name: _parseOptionalStringField(json['name']),
+      description: _parseOptionalStringField(json['description']),
     );
   }
 

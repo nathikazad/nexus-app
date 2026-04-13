@@ -244,30 +244,52 @@ class _DetailBody extends ConsumerWidget {
                         const SizedBox(height: 20),
                       ],
 
-                      // Relations — one heading per target type (e.g. Company), model name only in the cell
+                      // Relations — one heading per target type (not Transfer; see below)
                       if (model.relations != null && model.relations!.isNotEmpty)
                         for (final e in model.relations!.entries)
-                          if (dedupeModelsById(e.value).isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    formatAttributeLabel(e.key),
-                                    style: refSectionTitle(context),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  for (final relM in dedupeModelsById(e.value))
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
-                                      child: _relationRow(context, e.key, relM),
+                          if (e.key != kTransferModelTypeName)
+                            if (dedupeModelsById(e.value).isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      formatAttributeLabel(e.key),
+                                      style: refSectionTitle(context),
                                     ),
-                                ],
+                                    const SizedBox(height: 12),
+                                    for (final relM in dedupeModelsById(e.value))
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: _relationRow(context, e.key, relM),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
 
-                      // Teller (bank) transactions — below Relations
+                      if (model.relations?[kTransferModelTypeName] != null &&
+                          dedupeModelsById(model.relations![kTransferModelTypeName]!)
+                              .isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text('Transfer', style: refSectionTitle(context)),
+                              const SizedBox(height: 12),
+                              for (final relM in dedupeModelsById(
+                                model.relations![kTransferModelTypeName]!,
+                              ))
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _transferCell(context, relM),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                      // Teller (bank) transactions — below Relations / Transfer
                       Padding(
                         padding: const EdgeInsets.only(top: 32),
                         child: tellerAsync.when(
@@ -528,6 +550,69 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _transferCell(BuildContext context, Model relM) {
+    final title = transferDisplayTitle(relM);
+    final amt = transferAmountAttribute(relM);
+    final dateStr = transferCellDateLabel(relM);
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.slate100),
+        boxShadow: refCardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/transfer/${relM.id}'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        dateStr,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.slate400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  amt != null ? formatMoney(amt) : '—',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.teal600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

@@ -12,6 +12,8 @@ import 'screens/expense/expense_detail_screen.dart';
 import 'screens/expense/expense_form_screen.dart';
 import 'screens/expense/expense_list_screen.dart';
 import 'screens/auth/expense_login_screen.dart';
+import 'screens/transfers/transfer_detail_screen.dart';
+import 'screens/transfers/transfer_relation_picker_screen.dart';
 import 'screens/transfers/transfers_list_screen.dart';
 import 'screens/teller/teller_list_screen.dart';
 import 'screens/teller/teller_link_picker_screen.dart';
@@ -191,6 +193,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/expense/form',
         builder: (context, state) => const ExpenseFormScreen(),
+      ),
+      GoRoute(
+        path: '/pick-transfer-relation',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! TransferRelationPickerExtra) {
+            return const Scaffold(
+              body: Center(child: Text('Invalid navigation')),
+            );
+          }
+          return TransferRelationPickerScreen(
+            allowMultiple: extra.allowMultiple,
+            initialIds: extra.initialIds,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/transfer/:id',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return TransferDetailScreen(transferId: id);
+        },
       ),
       GoRoute(
         path: '/expense/:expenseId/link-teller',

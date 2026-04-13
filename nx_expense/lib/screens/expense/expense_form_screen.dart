@@ -288,12 +288,17 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                   padding: const EdgeInsets.symmetric(vertical: 4),
                                   child: Builder(
                                     builder: (context) {
-                                      final rels = schema.relations ?? const <RelationshipType>[];
+                                      final relsAll = schema.relations ?? const <RelationshipType>[];
+                                      final rels = relsAll.where((rt) {
+                                        final link = rt.link;
+                                        return link is String &&
+                                            link.isNotEmpty &&
+                                            link != kTransferModelTypeName;
+                                      }).toList();
                                       final rows = <Widget>[];
                                       for (var i = 0; i < rels.length; i++) {
                                         final rt = rels[i];
-                                        final link = rt.link;
-                                        if (link is! String || link.isEmpty) continue;
+                                        final link = rt.link as String;
                                         rows.add(
                                           RelationPickerRow(
                                             targetModelTypeName: link,
@@ -303,10 +308,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                             onPicked: (r) => _onRelationPicked(link, r),
                                           ),
                                         );
-                                        final hasMore = rels
-                                            .skip(i + 1)
-                                            .any((r) => r.link is String && (r.link as String).isNotEmpty);
-                                        if (hasMore) {
+                                        if (i < rels.length - 1) {
                                           rows.add(
                                             const Divider(height: 1, color: AppColors.slate50),
                                           );
@@ -315,6 +317,45 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                       return Column(children: rows);
                                     },
                                   ),
+                                ),
+                                Builder(
+                                  builder: (context) {
+                                    RelationshipType? transferRt;
+                                    for (final rt in schema.relations ?? const <RelationshipType>[]) {
+                                      final link = rt.link;
+                                      if (link is String && link == kTransferModelTypeName) {
+                                        transferRt = rt;
+                                        break;
+                                      }
+                                    }
+                                    if (transferRt == null) return const SizedBox.shrink();
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const SizedBox(height: 24),
+                                        Text('Transfer', style: refSectionTitle(context)),
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                                            border: Border.all(color: AppColors.slate100),
+                                            boxShadow: refCardShadow,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 4),
+                                          child: RelationPickerRow(
+                                            targetModelTypeName: kTransferModelTypeName,
+                                            valueIds: _relations[kTransferModelTypeName] ?? [],
+                                            pendingCreate: _relationCreates[kTransferModelTypeName],
+                                            allowMultiple:
+                                                (transferRt.multiplicity ?? 'many') != 'one',
+                                            onPicked: (r) =>
+                                                _onRelationPicked(kTransferModelTypeName, r),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                                 if (widget.expenseId != null) ...[
                                   const SizedBox(height: 24),
