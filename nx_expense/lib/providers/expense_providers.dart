@@ -4,15 +4,11 @@ import 'package:nx_db/nx_db.dart';
 
 import '../util/expense_schema.dart';
 
-
-
 /// Cached Expense model type with attributes, relations, and tag systems.
-final expenseSchemaProvider =
-    modelTypeByNameProvider(kExpenseModelTypeName);
+final expenseSchemaProvider = modelTypeByNameProvider(kExpenseModelTypeName);
 
 /// Cached Transfer model type (attributes, relations).
-final transferSchemaProvider =
-    modelTypeByNameProvider(kTransferModelTypeName);
+final transferSchemaProvider = modelTypeByNameProvider(kTransferModelTypeName);
 
 /// `struct` JSON derived from [expenseSchemaProvider] for list/detail queries.
 final expenseStructProvider = Provider<Map<String, dynamic>>((ref) {
@@ -29,6 +25,7 @@ class ExpenseFilter {
   final List<Map<String, dynamic>>? tagFilters;
   final double? minAmount;
   final double? maxAmount;
+
   /// Relation filters: relation type name → set of model IDs to include.
   final Map<String, Set<int>>? relationFilters;
 
@@ -47,7 +44,8 @@ class ExpenseFilter {
       (tagFilters == null || tagFilters!.isEmpty) &&
       minAmount == null &&
       maxAmount == null &&
-      (relationFilters == null || relationFilters!.values.every((s) => s.isEmpty));
+      (relationFilters == null ||
+          relationFilters!.values.every((s) => s.isEmpty));
 
   int get activeCount {
     int c = 0;
@@ -83,7 +81,9 @@ class ExpenseListFilterNotifier extends Notifier<ExpenseFilter?> {
 }
 
 final expenseListFilterProvider =
-    NotifierProvider<ExpenseListFilterNotifier, ExpenseFilter?>(ExpenseListFilterNotifier.new);
+    NotifierProvider<ExpenseListFilterNotifier, ExpenseFilter?>(
+      ExpenseListFilterNotifier.new,
+    );
 
 /// Sort state for expense list.
 class ExpenseListSortNotifier extends Notifier<ExpenseSortMode> {
@@ -94,11 +94,16 @@ class ExpenseListSortNotifier extends Notifier<ExpenseSortMode> {
 }
 
 final expenseListSortProvider =
-    NotifierProvider<ExpenseListSortNotifier, ExpenseSortMode>(ExpenseListSortNotifier.new);
+    NotifierProvider<ExpenseListSortNotifier, ExpenseSortMode>(
+      ExpenseListSortNotifier.new,
+    );
 
 DateTimeRange _calendarMonthRange(DateTime forDay) {
   final start = DateTime(forDay.year, forDay.month);
-  final end = DateTime(forDay.year, forDay.month + 1).subtract(const Duration(days: 1));
+  final end = DateTime(
+    forDay.year,
+    forDay.month + 1,
+  ).subtract(const Duration(days: 1));
   return DateTimeRange(start: start, end: end);
 }
 
@@ -111,16 +116,40 @@ class ExpenseDateRangeNotifier extends Notifier<DateTimeRange> {
 }
 
 final expenseDateRangeProvider =
-    NotifierProvider<ExpenseDateRangeNotifier, DateTimeRange>(ExpenseDateRangeNotifier.new);
+    NotifierProvider<ExpenseDateRangeNotifier, DateTimeRange>(
+      ExpenseDateRangeNotifier.new,
+    );
+
+/// Default range for tag/relation deep-linked lists: Jan 1, 2025 through end of
+/// today (local), so opening that screen shows a wide window without changing
+/// the main tab’s month.
+DateTimeRange kScopedFilteredExpenseDateRange() {
+  final now = DateTime.now();
+  return DateTimeRange(
+    start: DateTime(2025, 1, 1),
+    end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999),
+  );
+}
+
+class ScopedFilteredExpenseDateRangeNotifier extends ExpenseDateRangeNotifier {
+  @override
+  DateTimeRange build() => kScopedFilteredExpenseDateRange();
+}
 
 /// Same as [expenseListProvider] but uses [expenseListFilterProvider],
 /// [expenseListSortProvider], and [expenseDateRangeProvider].
-final expenseListForUiProvider = FutureProvider<List<Model>>((ref) async {
+///
+/// Exposed so nested [ProviderScope] overrides can reuse the same logic while
+/// resolving [expenseListFilterProvider] (and downstream providers) from the
+/// scoped container.
+Future<List<Model>> buildExpenseListForUi(Ref ref) async {
   final filter = ref.watch(expenseListFilterProvider);
   final dateRange = ref.watch(expenseDateRangeProvider);
   final sortMode = ref.watch(expenseListSortProvider);
 
-  final list = await ref.watch(expenseListProvider((filter: filter, dateRange: dateRange)).future);
+  final list = await ref.watch(
+    expenseListProvider((filter: filter, dateRange: dateRange)).future,
+  );
 
   // Client-side amount filtering (attribute-based, not available server-side).
   final schema = await ref.watch(expenseSchemaProvider.future);
@@ -177,7 +206,11 @@ final expenseListForUiProvider = FutureProvider<List<Model>>((ref) async {
       }
   }
   return sorted;
-});
+}
+
+final expenseListForUiProvider = FutureProvider<List<Model>>(
+  (ref) => buildExpenseListForUi(ref),
+);
 
 double _numAttr(Model m, String key) {
   final raw = m.attributes?[key];
@@ -197,7 +230,9 @@ class ExpenseListSearchQueryNotifier extends Notifier<String> {
 }
 
 final expenseListSearchQueryProvider =
-    NotifierProvider<ExpenseListSearchQueryNotifier, String>(ExpenseListSearchQueryNotifier.new);
+    NotifierProvider<ExpenseListSearchQueryNotifier, String>(
+      ExpenseListSearchQueryNotifier.new,
+    );
 
 class ExpenseListSearchFieldExpandedNotifier extends Notifier<bool> {
   @override
@@ -208,8 +243,8 @@ class ExpenseListSearchFieldExpandedNotifier extends Notifier<bool> {
 
 final expenseListSearchFieldExpandedProvider =
     NotifierProvider<ExpenseListSearchFieldExpandedNotifier, bool>(
-        ExpenseListSearchFieldExpandedNotifier.new);
-
+      ExpenseListSearchFieldExpandedNotifier.new,
+    );
 
 /// Client-side filter: [query] must be lowercased trimmed substring match on
 /// [Model.name] or [Model.description] only.
@@ -228,14 +263,18 @@ List<Model> filterExpenseModelsBySearch(List<Model> models, String query) {
 }
 
 /// Same rows as the list UI: [expenseListForUiProvider] narrowed by search query.
-final expenseListDisplayedProvider = FutureProvider<List<Model>>((ref) async {
+Future<List<Model>> buildExpenseListDisplayed(Ref ref) async {
   final list = await ref.watch(expenseListForUiProvider.future);
   final q = ref.watch(expenseListSearchQueryProvider);
   return filterExpenseModelsBySearch(list, q);
-});
+}
+
+final expenseListDisplayedProvider = FutureProvider<List<Model>>(
+  (ref) => buildExpenseListDisplayed(ref),
+);
 
 /// Count + total for the **same rows** shown in the list (filters, sort, **and search**).
-final expenseListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+Future<ExpenseSummary> buildExpenseListSummary(Ref ref) async {
   final list = await ref.watch(expenseListDisplayedProvider.future);
   final schema = await ref.watch(expenseSchemaProvider.future);
   final key = primaryNumberAttributeKey(schema);
@@ -249,7 +288,11 @@ final expenseListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   }
 
   return ExpenseSummary(count: list.length, sumTotal: sum);
-});
+}
+
+final expenseListSummaryProvider = FutureProvider<ExpenseSummary>(
+  (ref) => buildExpenseListSummary(ref),
+);
 
 // ── Multi-select (rows = [expenseListDisplayedProvider]) ─────────────────────
 
@@ -273,13 +316,17 @@ class ExpenseListSelectedIdsNotifier extends Notifier<Set<int>> {
   void clear() => state = {};
 
   void pruneToVisible(Set<int> visible) {
-    state = {for (final id in state) if (visible.contains(id)) id};
+    state = {
+      for (final id in state)
+        if (visible.contains(id)) id,
+    };
   }
 }
 
 final expenseListSelectedIdsProvider =
     NotifierProvider<ExpenseListSelectedIdsNotifier, Set<int>>(
-        ExpenseListSelectedIdsNotifier.new);
+      ExpenseListSelectedIdsNotifier.new,
+    );
 
 class ExpenseListSelectionModeNotifier extends Notifier<bool> {
   @override
@@ -294,24 +341,22 @@ class ExpenseListSelectionModeNotifier extends Notifier<bool> {
 }
 
 final expenseListSelectionModeProvider =
-    NotifierProvider<ExpenseListSelectionModeNotifier, bool>(ExpenseListSelectionModeNotifier.new);
+    NotifierProvider<ExpenseListSelectionModeNotifier, bool>(
+      ExpenseListSelectionModeNotifier.new,
+    );
 
 /// When selection mode is on: count + sum of **selected** amounts among displayed rows.
-final expenseListSelectionSummaryProvider = Provider<ExpenseSummary?>((ref) {
+ExpenseSummary? buildExpenseListSelectionSummary(Ref ref) {
   if (!ref.watch(expenseListSelectionModeProvider)) return null;
   final displayed = ref.watch(expenseListDisplayedProvider);
   final selected = ref.watch(expenseListSelectedIdsProvider);
-  final list = displayed.maybeWhen(
-    data: (l) => l,
-    orElse: () => null,
-  );
+  final list = displayed.maybeWhen(data: (l) => l, orElse: () => null);
   if (list == null) {
     return ExpenseSummary(count: selected.length, sumTotal: null);
   }
-  final schema = ref.watch(expenseSchemaProvider).maybeWhen(
-        data: (s) => s,
-        orElse: () => null,
-      );
+  final schema = ref
+      .watch(expenseSchemaProvider)
+      .maybeWhen(data: (s) => s, orElse: () => null);
   final key = schema != null ? primaryNumberAttributeKey(schema) : null;
   num? sum;
   if (key != null) {
@@ -323,7 +368,11 @@ final expenseListSelectionSummaryProvider = Provider<ExpenseSummary?>((ref) {
     }
   }
   return ExpenseSummary(count: selected.length, sumTotal: sum);
-});
+}
+
+final expenseListSelectionSummaryProvider = Provider<ExpenseSummary?>(
+  (ref) => buildExpenseListSelectionSummary(ref),
+);
 
 Map<String, dynamic> _dashboardFilterKgql(Ref ref) {
   final range = ref.watch(expenseDateRangeProvider);
@@ -338,23 +387,35 @@ Map<String, dynamic> _dashboardFilterKgql(Ref ref) {
 
 /// Lists Expense models using the dynamic struct from the schema.
 final expenseListProvider =
-    FutureProvider.family<List<Model>, ({ExpenseFilter? filter, DateTimeRange dateRange})>((ref, params) async {
-  final schema = await ref.watch(expenseSchemaProvider.future);
-  final struct = buildExpenseStruct(schema);
-  final client = ref.watch(graphqlClientProvider);
+    FutureProvider.family<
+      List<Model>,
+      ({ExpenseFilter? filter, DateTimeRange dateRange})
+    >((ref, params) async {
+      final schema = await ref.watch(expenseSchemaProvider.future);
+      final struct = buildExpenseStruct(schema);
+      final client = ref.watch(graphqlClientProvider);
 
-  final filterMap = <String, dynamic>{
-    'model_type': kExpenseModelTypeName,
-    if (params.filter?.tagFilters != null && params.filter!.tagFilters!.isNotEmpty)
-      'tag_filters': params.filter!.tagFilters,
-    'filters': [
-      {'key': 'created_at', 'op': '>=', 'value': params.dateRange.start.toIso8601String()},
-      {'key': 'created_at', 'op': '<=', 'value': params.dateRange.end.toIso8601String()},
-    ],
-  };
+      final filterMap = <String, dynamic>{
+        'model_type': kExpenseModelTypeName,
+        if (params.filter?.tagFilters != null &&
+            params.filter!.tagFilters!.isNotEmpty)
+          'tag_filters': params.filter!.tagFilters,
+        'filters': [
+          {
+            'key': 'created_at',
+            'op': '>=',
+            'value': params.dateRange.start.toIso8601String(),
+          },
+          {
+            'key': 'created_at',
+            'op': '<=',
+            'value': params.dateRange.end.toIso8601String(),
+          },
+        ],
+      };
 
-  return fetchKgqlModels(client, filter: filterMap, struct: struct);
-});
+      return fetchKgqlModels(client, filter: filterMap, struct: struct);
+    });
 
 /// List Transfer models for [expenseDateRangeProvider].
 final transferListProvider = FutureProvider<List<Model>>((ref) async {
@@ -368,8 +429,16 @@ final transferListProvider = FutureProvider<List<Model>>((ref) async {
     filter: {
       'model_type': kTransferModelTypeName,
       'filters': [
-        {'key': 'created_at', 'op': '>=', 'value': dateRange.start.toIso8601String()},
-        {'key': 'created_at', 'op': '<=', 'value': dateRange.end.toIso8601String()},
+        {
+          'key': 'created_at',
+          'op': '>=',
+          'value': dateRange.start.toIso8601String(),
+        },
+        {
+          'key': 'created_at',
+          'op': '<=',
+          'value': dateRange.end.toIso8601String(),
+        },
       ],
     },
     struct: struct,
@@ -400,7 +469,10 @@ final transferListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
 });
 
 /// Single expense by numeric id.
-final expenseDetailProvider = FutureProvider.family<Model?, int>((ref, id) async {
+final expenseDetailProvider = FutureProvider.family<Model?, int>((
+  ref,
+  id,
+) async {
   final schema = await ref.watch(expenseSchemaProvider.future);
   final struct = buildExpenseStruct(schema);
   final client = ref.watch(graphqlClientProvider);
@@ -448,26 +520,28 @@ final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
 });
 
 /// Dashboard summary — respects [expenseDateRangeProvider].
-final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((
+  ref,
+) async {
   final client = ref.watch(graphqlClientProvider);
   final schema = await ref.watch(expenseSchemaProvider.future);
   final key = primaryNumberAttributeKey(schema);
   final filterKgql = _dashboardFilterKgql(ref);
 
-  final countMap = await getKgqlAggregate(
-    client,
-    filterKgql,
-    {'metric': 'count', 'key': null, 'group': null},
-  );
+  final countMap = await getKgqlAggregate(client, filterKgql, {
+    'metric': 'count',
+    'key': null,
+    'group': null,
+  });
   final count = (countMap['aggregated_value'] as num?)?.toInt() ?? 0;
 
   num? sum;
   if (key != null) {
-    final sumMap = await getKgqlAggregate(
-      client,
-      filterKgql,
-      {'metric': 'sum', 'key': key, 'group': null},
-    );
+    final sumMap = await getKgqlAggregate(client, filterKgql, {
+      'metric': 'sum',
+      'key': key,
+      'group': null,
+    });
     sum = sumMap['aggregated_value'] as num?;
   }
 
@@ -481,64 +555,66 @@ final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final key = primaryNumberAttributeKey(schema);
   if (key == null) return {};
 
-  return getKgqlAggregate(
-    client,
-    _dashboardFilterKgql(ref),
-    {
-      'metric': 'sum',
-      'key': key,
-      'group': {'key': 'created_at', 'window': 'day'},
-    },
-  );
+  return getKgqlAggregate(client, _dashboardFilterKgql(ref), {
+    'metric': 'sum',
+    'key': key,
+    'group': {'key': 'created_at', 'window': 'day'},
+  });
 });
 
 /// Sum grouped by tag system with optional drill-down.
 /// [parentNode]: if set, filter to this node's descendants before grouping.
 /// [level]: group at this hierarchy level (1 = root, null = leaf).
 final spendByTagSystemProvider =
-    FutureProvider.family<Map<String, dynamic>, ({String systemName, String? parentNode, int? level})>((ref, params) async {
-  final client = ref.watch(graphqlClientProvider);
-  final schema = await ref.watch(expenseSchemaProvider.future);
-  final key = primaryNumberAttributeKey(schema);
-  if (key == null) return {};
+    FutureProvider.family<
+      Map<String, dynamic>,
+      ({String systemName, String? parentNode, int? level})
+    >((ref, params) async {
+      final client = ref.watch(graphqlClientProvider);
+      final schema = await ref.watch(expenseSchemaProvider.future);
+      final key = primaryNumberAttributeKey(schema);
+      if (key == null) return {};
 
-  final filter = Map<String, dynamic>.from(_dashboardFilterKgql(ref));
-  if (params.parentNode != null) {
-    final existing = filter['tag_filters'] as List? ?? [];
-    filter['tag_filters'] = [
-      ...existing,
-      {'system': params.systemName, 'node': params.parentNode, 'include_descendants': true},
-    ];
-  }
+      final filter = Map<String, dynamic>.from(_dashboardFilterKgql(ref));
+      if (params.parentNode != null) {
+        final existing = filter['tag_filters'] as List? ?? [];
+        filter['tag_filters'] = [
+          ...existing,
+          {
+            'system': params.systemName,
+            'node': params.parentNode,
+            'include_descendants': true,
+          },
+        ];
+      }
 
-  final group = <String, dynamic>{'key': 'tag:${params.systemName}'};
-  if (params.level != null) group['level'] = params.level;
+      final group = <String, dynamic>{'key': 'tag:${params.systemName}'};
+      if (params.level != null) group['level'] = params.level;
 
-  return getKgqlAggregate(client, filter, {
-    'metric': 'sum',
-    'key': key,
-    'group': group,
-  });
-});
+      return getKgqlAggregate(client, filter, {
+        'metric': 'sum',
+        'key': key,
+        'group': group,
+      });
+    });
 
 /// Sum grouped by related model name for a relation target type.
 final spendByRelationProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, targetTypeName) async {
-  final client = ref.watch(graphqlClientProvider);
-  final schema = await ref.watch(expenseSchemaProvider.future);
-  final key = primaryNumberAttributeKey(schema);
-  if (key == null) return {};
+    FutureProvider.family<Map<String, dynamic>, String>((
+      ref,
+      targetTypeName,
+    ) async {
+      final client = ref.watch(graphqlClientProvider);
+      final schema = await ref.watch(expenseSchemaProvider.future);
+      final key = primaryNumberAttributeKey(schema);
+      if (key == null) return {};
 
-  return getKgqlAggregate(
-    client,
-    _dashboardFilterKgql(ref),
-    {
-      'metric': 'sum',
-      'key': key,
-      'group': {'key': '$targetTypeName.name'},
-    },
-  );
-});
+      return getKgqlAggregate(client, _dashboardFilterKgql(ref), {
+        'metric': 'sum',
+        'key': key,
+        'group': {'key': '$targetTypeName.name'},
+      });
+    });
 
 /// All models of a given type (for relation pickers).
 final relatedModelsProvider = relatedModelsByTypeNameProvider;

@@ -29,13 +29,18 @@ class ExpenseDateRangeBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final range = ref.watch(expenseDateRangeProvider);
-    final isCustom = !isFullCalendarMonthRange(range);
     final displayMonth = range.start.month;
     final displayYear = range.start.year;
 
     void applyMonth(int month, int year) {
       final start = DateTime(year, month);
       final end = DateTime(year, month + 1).subtract(const Duration(days: 1));
+      ref.read(expenseDateRangeProvider.notifier).setRange(DateTimeRange(start: start, end: end));
+    }
+
+    void applyYear(int year) {
+      final start = DateTime(year, 1, 1);
+      final end = DateTime(year, 12, 31, 23, 59, 59, 999);
       ref.read(expenseDateRangeProvider.notifier).setRange(DateTimeRange(start: start, end: end));
     }
 
@@ -65,7 +70,7 @@ class ExpenseDateRangeBar extends ConsumerWidget {
                 ),
               );
               if (picked != null && picked != displayYear) {
-                applyMonth(displayMonth, picked);
+                applyYear(picked);
               }
             },
             child: Container(
@@ -101,7 +106,8 @@ class ExpenseDateRangeBar extends ConsumerWidget {
                 separatorBuilder: (_, __) => const SizedBox(width: 6),
                 itemBuilder: (context, i) {
                   final month = i + 1;
-                  final isSelected = !isCustom && month == displayMonth;
+                  final isSingleMonth = isFullCalendarMonthRange(range);
+                  final isSelected = isSingleMonth && month == displayMonth;
                   return GestureDetector(
                     onTap: () => applyMonth(month, displayYear),
                     child: Container(

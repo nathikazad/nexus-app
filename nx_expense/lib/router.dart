@@ -38,15 +38,33 @@ Widget scopedExpenseListScreen({
       expenseListSelectedIdsProvider.overrideWith(
         ExpenseListSelectedIdsNotifier.new,
       ),
+      expenseDateRangeProvider.overrideWith(
+        ScopedFilteredExpenseDateRangeNotifier.new,
+      ),
+      // List pipeline must be overridden too: unscoped providers read the root
+      // filter, so chips (scoped) and rows (root) disagreed.
+      expenseListForUiProvider.overrideWith(
+        (ref) => buildExpenseListForUi(ref),
+      ),
+      expenseListDisplayedProvider.overrideWith(
+        (ref) => buildExpenseListDisplayed(ref),
+      ),
+      expenseListSummaryProvider.overrideWith(
+        (ref) => buildExpenseListSummary(ref),
+      ),
+      expenseListSelectionSummaryProvider.overrideWith(
+        buildExpenseListSelectionSummary,
+      ),
     ],
     child: ExpenseListScreen(
       title: title,
       initialFilter: initialFilter,
       showFilterIcon: false,
-      showDateRange: false,
-      showSearch: false,
+      showDateRange: true,
+      showSearch: true,
       showSelect: false,
       showDrawer: false,
+      showActiveFilterChips: false,
     ),
   );
 }
@@ -201,7 +219,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
           final tagNode = Uri.decodeComponent(state.pathParameters['tagNode']!);
           return scopedExpenseListScreen(
-            title: '$systemName: $tagNode',
+            title: tagNode,
             initialFilter: ExpenseFilter(
               tagFilters: [
                 {
@@ -223,7 +241,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             state.pathParameters['relDisplayName']!,
           );
           return scopedExpenseListScreen(
-            title: '$relName: $relDisplayName',
+            title: relDisplayName,
             initialFilter: ExpenseFilter(
               relationFilters: {
                 relName: {relId},

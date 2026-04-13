@@ -28,6 +28,7 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
     this.showSearch = true,
     this.showSelect = true,
     this.showDrawer = true,
+    this.showActiveFilterChips = true,
   });
 
   final String? title;
@@ -37,6 +38,8 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
   final bool showSearch;
   final bool showSelect;
   final bool showDrawer;
+  /// When false, the horizontal filter chip row (and "Clear all") is hidden.
+  final bool showActiveFilterChips;
 
   @override
   ConsumerState<ExpenseListScreen> createState() => _ExpenseListScreenState();
@@ -113,11 +116,6 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
     final filterActive = filter != null && !effectiveFilter.isEmpty;
     final sortActive = sortMode != ExpenseSortMode.dateAsc;
     final searchIconActive = searchExpanded || searchQuery.isNotEmpty;
-
-    debugPrint(
-      '[ExpenseList] build: selecting=$selecting selectedCount=${selectedIds.length} '
-      'showBulkBar=${selecting && selectedIds.isNotEmpty}',
-    );
 
     final appBarTitle = widget.title ?? 'Expenses';
 
@@ -455,7 +453,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                   ),
                 ),
 
-              if (filterActive)
+              if (widget.showActiveFilterChips && filterActive)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     RefLayout.px5,
