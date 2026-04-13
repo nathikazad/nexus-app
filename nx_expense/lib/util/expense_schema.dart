@@ -44,6 +44,14 @@ Map<String, dynamic> buildExpenseStruct(ModelType schema) {
     }
   }
 
+  // Generic relations node: provides relation_id → model_id mapping for
+  // delta-based updates (add new links / delete removed edges).
+  struct['relations'] = {
+    'relation_id': true,
+    'model_id': true,
+    'model_type': true,
+  };
+
   return struct;
 }
 

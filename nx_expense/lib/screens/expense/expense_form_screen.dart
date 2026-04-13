@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,8 +33,10 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   final Map<String, List<int>> _relations = {};
   /// Pending `ModelRelation.create` payload per relation target type key (`link` string).
   final Map<String, Map<String, dynamic>?> _relationCreates = {};
-  /// After seeding an existing expense: baseline for omitting `relations` on save when unchanged.
-  /// `set_kgql_models` **adds** links on update; re-sending the same `link` can duplicate edges.
+  /// Maps relation type → (model ID → relation edge ID) from the generic `relations` node.
+  /// Used to issue `ModelRelation(id: edgeId, delete: true)` for removed links.
+  final Map<String, Map<int, int>> _relationEdgeIds = {};
+  /// Snapshot of linked model IDs per type at load time — used to compute add/remove deltas.
   Map<String, Set<int>> _relationSnapshotIds = {};
   Map<String, Map<String, dynamic>?> _relationSnapshotCreates = {};
   bool _loading = false;
@@ -95,6 +98,14 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
           e.value.map((x) => x.id).toList(),
         );
         _relationCreates[e.key] = null;
+      }
+    }
+    // Build modelId → relationEdgeId mapping from the generic `relations` node.
+    if (m.relationsList != null) {
+      for (final rel in m.relationsList!) {
+        _relationEdgeIds
+            .putIfAbsent(rel.modelType, () => {})
+            [rel.modelId] = rel.relationId;
       }
     }
     _captureRelationSnapshot();
@@ -565,28 +576,60 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       }
 
       final relPayload = <sm.ModelRelation>[];
+      final isUpdate = widget.expenseId != null;
+
       for (final e in _relations.entries) {
-        final create = _relationCreates[e.key];
+        final type = e.key;
+        final create = _relationCreates[type];
+
+        // Pending "create" always wins — send it regardless of snapshot.
         if (create != null && create.isNotEmpty) {
           relPayload.add(sm.ModelRelation(
-            modelType: e.key,
+            modelType: type,
             create: [create],
           ));
-        } else if (e.value.isNotEmpty) {
-          relPayload.add(sm.ModelRelation(
-            modelType: e.key,
-            link: dedupeIntIdsPreserveOrder(e.value),
-          ));
+          continue;
+        }
+
+        final curIds = dedupeIntIdsPreserveOrder(e.value).toSet();
+        final snapIds = _relationSnapshotIds[type] ?? <int>{};
+
+        if (isUpdate) {
+          // Per-type delta: only touch types that actually changed.
+          if (setEquals(curIds, snapIds) &&
+              relationPendingCreateEquals(
+                _relationCreates[type], _relationSnapshotCreates[type])) {
+            continue; // unchanged — skip entirely
+          }
+
+          // Delete removed edges (requires relation edge ID).
+          final removed = snapIds.difference(curIds);
+          final edgeMap = _relationEdgeIds[type] ?? {};
+          for (final modelId in removed) {
+            final edgeId = edgeMap[modelId];
+            if (edgeId != null) {
+              relPayload.add(sm.ModelRelation(id: edgeId, delete: true));
+            }
+          }
+
+          // Add only newly added links (not ones that already exist).
+          final added = curIds.difference(snapIds);
+          if (added.isNotEmpty) {
+            relPayload.add(sm.ModelRelation(
+              modelType: type,
+              link: added.toList(),
+            ));
+          }
+        } else {
+          // Create mode: send all links.
+          if (curIds.isNotEmpty) {
+            relPayload.add(sm.ModelRelation(
+              modelType: type,
+              link: curIds.toList(),
+            ));
+          }
         }
       }
-
-      final omitRelationsOnUpdate = shouldOmitRelationsOnExpenseUpdate(
-        expenseId: widget.expenseId,
-        linkIdsByType: _relations,
-        createsByType: _relationCreates,
-        snapshotLinkIdsByType: _relationSnapshotIds,
-        snapshotCreatesByType: _relationSnapshotCreates,
-      );
 
       final req = sm.SetModelRequest(
         id: widget.expenseId,
@@ -595,9 +638,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         description: _desc.text.trim().isEmpty ? null : _desc.text.trim(),
         attributes: attrs.isEmpty ? null : attrs,
         tags: tagPayload.isEmpty ? null : tagPayload,
-        relations: omitRelationsOnUpdate
-            ? null
-            : (relPayload.isEmpty ? null : relPayload),
+        relations: relPayload.isEmpty ? null : relPayload,
       );
 
       await createModel(ref.container, req);
