@@ -6,7 +6,7 @@ import 'package:nx_db/nx_db.dart';
 import 'app_theme.dart';
 import 'providers/expense_providers.dart';
 import 'layout.dart';
-import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/expense/expense_dashboard_screen.dart';
 import 'screens/expense/add_expense_screen.dart';
 import 'screens/expense/expense_detail_screen.dart';
 import 'screens/expense/expense_form_screen.dart';

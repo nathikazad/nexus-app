@@ -10,7 +10,7 @@ import '../../util/expense_schema.dart';
 import '../../providers/expense_providers.dart';
 import '../../layout.dart';
 
-/// Centered modal: name + description only, then [ExpenseFormScreen] for the rest.
+/// Centered modal: name + cost, then [ExpenseFormScreen] for the rest.
 void showAddExpenseModal(BuildContext context) {
   showDialog<void>(
     context: context,
@@ -29,13 +29,13 @@ class _AddExpenseModal extends ConsumerStatefulWidget {
 
 class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
   final _name = TextEditingController();
-  final _desc = TextEditingController();
+  final _cost = TextEditingController();
   bool _loading = false;
 
   @override
   void dispose() {
     _name.dispose();
-    _desc.dispose();
+    _cost.dispose();
     super.dispose();
   }
 
@@ -84,14 +84,13 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
                   autofocus: true,
                 ),
                 const SizedBox(height: 16),
-                _refLabel('Description'),
+                _refLabel('Cost *'),
                 const SizedBox(height: 6),
                 TextField(
-                  controller: _desc,
-                  maxLines: 3,
-                  style: GoogleFonts.inter(fontSize: 14),
-                  decoration: _refInputDeco(hint: 'Add details...'),
-                  textCapitalization: TextCapitalization.sentences,
+                  controller: _cost,
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _refInputDeco(hint: '0.00'),
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
@@ -142,20 +141,33 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
       );
       return;
     }
+    final costRaw = _cost.text.trim().replaceFirst(RegExp(r'^\$\s*'), '');
+    if (costRaw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cost is required')),
+      );
+      return;
+    }
+    final costNum = num.tryParse(costRaw);
+    if (costNum == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid cost')),
+      );
+      return;
+    }
     setState(() => _loading = true);
     try {
       final schema = await ref.read(expenseSchemaProvider.future);
       final amountKey = primaryNumberAttributeKey(schema);
       final attrs = <sm.ModelAttribute>[];
       if (amountKey != null) {
-        attrs.add(sm.ModelAttribute(key: amountKey, value: 0));
+        attrs.add(sm.ModelAttribute(key: amountKey, value: costNum));
       }
       attrs.add(sm.ModelAttribute(key: kExpenseIgnoreAttributeKey, value: false));
 
       final req = sm.SetModelRequest(
         modelType: kExpenseModelTypeName,
         name: _name.text.trim(),
-        description: _desc.text.trim().isEmpty ? null : _desc.text.trim(),
         attributes: attrs.isEmpty ? null : attrs,
       );
       final id = await createModel(ref.container, req);
