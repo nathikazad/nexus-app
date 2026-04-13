@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
 
+import '../expense_list_search.dart';
 import '../expense_schema.dart';
 
 /// Cached Expense model type with attributes, relations, and tag systems.
@@ -183,11 +184,41 @@ double _numAttr(Model m, String key) {
   return double.tryParse('$raw') ?? 0;
 }
 
-/// Count + total for the **same rows** shown in the list (date, tags, amount min/max,
-/// relation filters, sort). Derived from [expenseListForUiProvider] so the header stays
-/// in sync when filters change.
-final expenseListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+// ── Search (client-side name + description on [expenseListForUiProvider]) ─────
+
+class ExpenseListSearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setQuery(String q) => state = q;
+
+  void clear() => state = '';
+}
+
+final expenseListSearchQueryProvider =
+    NotifierProvider<ExpenseListSearchQueryNotifier, String>(ExpenseListSearchQueryNotifier.new);
+
+class ExpenseListSearchFieldExpandedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setExpanded(bool v) => state = v;
+}
+
+final expenseListSearchFieldExpandedProvider =
+    NotifierProvider<ExpenseListSearchFieldExpandedNotifier, bool>(
+        ExpenseListSearchFieldExpandedNotifier.new);
+
+/// Same rows as the list UI: [expenseListForUiProvider] narrowed by search query.
+final expenseListDisplayedProvider = FutureProvider<List<Model>>((ref) async {
   final list = await ref.watch(expenseListForUiProvider.future);
+  final q = ref.watch(expenseListSearchQueryProvider);
+  return filterExpenseModelsBySearch(list, q);
+});
+
+/// Count + total for the **same rows** shown in the list (filters, sort, **and search**).
+final expenseListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+  final list = await ref.watch(expenseListDisplayedProvider.future);
   final schema = await ref.watch(expenseSchemaProvider.future);
   final key = primaryNumberAttributeKey(schema);
 
@@ -200,6 +231,80 @@ final expenseListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   }
 
   return ExpenseSummary(count: list.length, sumTotal: sum);
+});
+
+// ── Multi-select (rows = [expenseListDisplayedProvider]) ─────────────────────
+
+class ExpenseListSelectedIdsNotifier extends Notifier<Set<int>> {
+  @override
+  Set<int> build() => {};
+
+  void toggle(int id) {
+    final next = {...state};
+    if (next.contains(id)) {
+      next.remove(id);
+    } else {
+      next.add(id);
+    }
+    state = next;
+    debugPrint('[ExpenseListSelectedIds] toggle id=$id -> size=${next.length}');
+  }
+
+  void selectAll(Iterable<int> ids) => state = ids.toSet();
+
+  void clear() => state = {};
+
+  void pruneToVisible(Set<int> visible) {
+    state = {for (final id in state) if (visible.contains(id)) id};
+  }
+}
+
+final expenseListSelectedIdsProvider =
+    NotifierProvider<ExpenseListSelectedIdsNotifier, Set<int>>(
+        ExpenseListSelectedIdsNotifier.new);
+
+class ExpenseListSelectionModeNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setSelecting(bool v) {
+    state = v;
+    if (!v) {
+      ref.read(expenseListSelectedIdsProvider.notifier).clear();
+    }
+  }
+}
+
+final expenseListSelectionModeProvider =
+    NotifierProvider<ExpenseListSelectionModeNotifier, bool>(ExpenseListSelectionModeNotifier.new);
+
+/// When selection mode is on: count + sum of **selected** amounts among displayed rows.
+final expenseListSelectionSummaryProvider = Provider<ExpenseSummary?>((ref) {
+  if (!ref.watch(expenseListSelectionModeProvider)) return null;
+  final displayed = ref.watch(expenseListDisplayedProvider);
+  final selected = ref.watch(expenseListSelectedIdsProvider);
+  final list = displayed.maybeWhen(
+    data: (l) => l,
+    orElse: () => null,
+  );
+  if (list == null) {
+    return ExpenseSummary(count: selected.length, sumTotal: null);
+  }
+  final schema = ref.watch(expenseSchemaProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => null,
+      );
+  final key = schema != null ? primaryNumberAttributeKey(schema) : null;
+  num? sum;
+  if (key != null) {
+    sum = 0;
+    for (final m in list) {
+      if (selected.contains(m.id)) {
+        sum = sum! + _numAttr(m, key);
+      }
+    }
+  }
+  return ExpenseSummary(count: selected.length, sumTotal: sum);
 });
 
 Map<String, dynamic> _dashboardFilterKgql(Ref ref) {

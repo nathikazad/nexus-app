@@ -15,6 +15,7 @@ import 'screens/transfers_list_screen.dart';
 import 'screens/tag_browser_screen.dart';
 import 'screens/tag_system_form_screen.dart';
 import 'screens/tag_systems_screen.dart';
+import 'providers/expense_providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -44,9 +45,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          final showFab = navigationShell.currentIndex == 0; // Expenses tab only
+          final selecting = ref.watch(expenseListSelectionModeProvider);
+          final showFab = navigationShell.currentIndex == 0 && !selecting;
           return Scaffold(
-            extendBody: true,
+            // false: body stops above bottom nav so list/footer UIs aren't drawn under tabs.
+            extendBody: false,
             body: navigationShell,
             floatingActionButton: showFab
                 ? Container(

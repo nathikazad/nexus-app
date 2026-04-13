@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../app_theme.dart';
+import '../bulk_expense_apply.dart';
 import '../expense_schema.dart';
 import '../format.dart';
 import '../providers/expense_providers.dart';
@@ -13,6 +14,8 @@ import '../reference_layout.dart';
 import '../widgets/expense_card.dart';
 import '../widgets/expense_app_end_drawer.dart';
 import '../widgets/expense_date_range_bar.dart';
+import '../widgets/relation_picker.dart';
+import '../widgets/tag_picker.dart';
 
 class ExpenseListScreen extends ConsumerStatefulWidget {
   const ExpenseListScreen({super.key});
@@ -22,23 +25,72 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
 }
 
 class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _refresh() async {
     ref.invalidate(expenseSchemaProvider);
     ref.invalidate(expenseListForUiProvider);
     ref.invalidate(expenseListSummaryProvider);
   }
 
+  void _clearSearchField() {
+    _searchController.clear();
+    ref.read(expenseListSearchQueryProvider.notifier).clear();
+    ref.read(expenseListSearchFieldExpandedProvider.notifier).setExpanded(false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final schemaAsync = ref.watch(expenseSchemaProvider);
-    final listAsync = ref.watch(expenseListForUiProvider);
+    final listAsync = ref.watch(expenseListDisplayedProvider);
     final summaryAsync = ref.watch(expenseListSummaryProvider);
     final filter = ref.watch(expenseListFilterProvider);
     final sortMode = ref.watch(expenseListSortProvider);
+    final selecting = ref.watch(expenseListSelectionModeProvider);
+    final selectedIds = ref.watch(expenseListSelectedIdsProvider);
+    final searchExpanded = ref.watch(expenseListSearchFieldExpandedProvider);
+    final searchQuery = ref.watch(expenseListSearchQueryProvider);
+    final selSummary = ref.watch(expenseListSelectionSummaryProvider);
+
+    ref.listen(expenseListDisplayedProvider, (previous, next) {
+      next.maybeWhen(
+        data: (models) {
+          final vis = models.map((m) => m.id).toSet();
+          final before = ref.read(expenseListSelectedIdsProvider);
+          ref.read(expenseListSelectedIdsProvider.notifier).pruneToVisible(vis);
+          final after = ref.read(expenseListSelectedIdsProvider);
+          if (before.length != after.length) {
+            debugPrint(
+              '[ExpenseList] pruneToVisible: visibleIds=${vis.length} '
+              'selected ${before.length} -> ${after.length}',
+            );
+          }
+        },
+        orElse: () {},
+      );
+    });
 
     final ExpenseFilter effectiveFilter = filter ?? const ExpenseFilter();
     final filterActive = filter != null && !effectiveFilter.isEmpty;
     final sortActive = sortMode != ExpenseSortMode.dateAsc;
+    final searchIconActive = searchExpanded || searchQuery.isNotEmpty;
+
+    debugPrint(
+      '[ExpenseList] build: selecting=$selecting selectedCount=${selectedIds.length} '
+      'showBulkBar=${selecting && selectedIds.isNotEmpty}',
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -47,6 +99,10 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: SelectableText('Schema: $e')),
         data: (schema) {
+          // Shell uses extendBody: false — body ends above bottom nav.
+          final mq = MediaQuery.of(context);
+          final bulkActionBottom = mq.viewPadding.bottom + 6;
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -56,101 +112,261 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                       RefLayout.px5, RefLayout.appBarTop, RefLayout.px5, RefLayout.pb4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child:
-                              Text('Expenses', style: refAppBarTitleLarge())),
-                      const ExpenseDateRangeCalendarButton(),
-                      const SizedBox(width: 4),
-                      const ExpenseAppMenuButton(),
-                    ],
-                  ),
+                  child: selecting
+                      ? Row(
+                          children: [
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                  minWidth: 40, minHeight: 40),
+                              icon: const Icon(Icons.close,
+                                  color: AppColors.slate400, size: 26),
+                              onPressed: () => ref
+                                  .read(expenseListSelectionModeProvider
+                                      .notifier)
+                                  .setSelecting(false),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '${selectedIds.length} selected',
+                                textAlign: TextAlign.center,
+                                style: refAppBarTitleBase(),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: listAsync.maybeWhen(
+                                data: (models) {
+                                  final vis =
+                                      models.map((m) => m.id).toSet();
+                                  return () {
+                                    if (selectedIds.length == vis.length &&
+                                        vis.isNotEmpty) {
+                                      ref
+                                          .read(expenseListSelectedIdsProvider
+                                              .notifier)
+                                          .clear();
+                                    } else {
+                                      ref
+                                          .read(expenseListSelectedIdsProvider
+                                              .notifier)
+                                          .selectAll(vis);
+                                    }
+                                  };
+                                },
+                                orElse: () => null,
+                              ),
+                              child: Text(
+                                listAsync.maybeWhen(
+                                  data: (models) {
+                                    final vis =
+                                        models.map((m) => m.id).toSet();
+                                    if (selectedIds.length == vis.length &&
+                                        vis.isNotEmpty) {
+                                      return 'Deselect all';
+                                    }
+                                    return 'Select all';
+                                  },
+                                  orElse: () => 'Select all',
+                                ),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.teal600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                                child: Text('Expenses',
+                                    style: refAppBarTitleLarge())),
+                            const ExpenseDateRangeCalendarButton(),
+                            const SizedBox(width: 4),
+                            const ExpenseAppMenuButton(),
+                          ],
+                        ),
                 ),
               ),
 
-              const ExpenseDateRangeBar(bottomPadding: 12),
+              if (!selecting)
+                const ExpenseDateRangeBar(bottomPadding: 12),
 
-              // Summary line + filter/sort icons
+              // Summary line + search / select / filter / sort
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                     RefLayout.px5, 0, RefLayout.px5, 4),
                 child: Row(
                   children: [
                     Expanded(
-                      child: summaryAsync.when(
-                        data: (s) => Text(
-                          s.sumTotal != null
-                              ? '${s.count} \u00b7 ${formatMoney(s.sumTotal)}'
-                              : '${s.count}',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.slate500,
-                          ),
-                        ),
-                        loading: () => Text(
-                          '...',
-                          style: GoogleFonts.inter(
-                              fontSize: 14, color: AppColors.slate500),
-                        ),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _showFilterSheet(context, ref, schema),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Icon(
-                            filterActive
-                                ? Icons.filter_alt
-                                : Icons.filter_alt_outlined,
-                            color: filterActive
-                                ? AppColors.teal600
-                                : AppColors.slate400,
-                            size: 20,
-                          ),
-                          if (filterActive)
-                            Positioned(
-                              top: -4,
-                              right: -6,
-                              child: Container(
-                                width: 14,
-                                height: 14,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.teal600,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${effectiveFilter.activeCount}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
+                      child: selecting
+                          ? (selSummary != null
+                              ? Text(
+                                  selSummary.sumTotal != null
+                                      ? '${selSummary.count} of ${listAsync.maybeWhen(data: (m) => m.length, orElse: () => 0)} \u00b7 ${formatMoney(selSummary.sumTotal)}'
+                                      : '${selSummary.count} of ${listAsync.maybeWhen(data: (m) => m.length, orElse: () => 0)}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.slate500,
                                   ),
+                                )
+                              : const SizedBox.shrink())
+                          : summaryAsync.when(
+                              data: (s) => Text(
+                                s.sumTotal != null
+                                    ? '${s.count} \u00b7 ${formatMoney(s.sumTotal)}'
+                                    : '${s.count}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.slate500,
                                 ),
                               ),
+                              loading: () => Text(
+                                '...',
+                                style: GoogleFonts.inter(
+                                    fontSize: 14, color: AppColors.slate500),
+                              ),
+                              error: (_, __) => const SizedBox.shrink(),
                             ),
-                        ],
-                      ),
                     ),
-                    const SizedBox(width: 14),
-                    GestureDetector(
-                      onTap: () => _showSortSheet(context),
-                      child: Icon(
-                        sortActive ? Icons.sort : Icons.sort,
-                        color: sortActive
-                            ? AppColors.teal600
-                            : AppColors.slate400,
-                        size: 20,
+                    if (!selecting) ...[
+                      GestureDetector(
+                        onTap: () {
+                          final next = !searchExpanded;
+                          ref
+                              .read(expenseListSearchFieldExpandedProvider
+                                  .notifier)
+                              .setExpanded(next);
+                          if (next) {
+                            _searchController.text =
+                                ref.read(expenseListSearchQueryProvider);
+                          }
+                        },
+                        child: Icon(
+                          Icons.search,
+                          color: searchIconActive
+                              ? AppColors.teal600
+                              : AppColors.slate400,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      GestureDetector(
+                        onTap: () => ref
+                            .read(expenseListSelectionModeProvider.notifier)
+                            .setSelecting(true),
+                        child: Icon(
+                          Icons.checklist_outlined,
+                          color: AppColors.slate400,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                    ],
+                    Opacity(
+                      opacity: selecting ? 0.45 : 1,
+                      child: IgnorePointer(
+                        ignoring: selecting,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () =>
+                                  _showFilterSheet(context, ref, schema),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(
+                                    filterActive
+                                        ? Icons.filter_alt
+                                        : Icons.filter_alt_outlined,
+                                    color: filterActive
+                                        ? AppColors.teal600
+                                        : AppColors.slate400,
+                                    size: 20,
+                                  ),
+                                  if (filterActive)
+                                    Positioned(
+                                      top: -4,
+                                      right: -6,
+                                      child: Container(
+                                        width: 14,
+                                        height: 14,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.teal600,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${effectiveFilter.activeCount}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            GestureDetector(
+                              onTap: () => _showSortSheet(context),
+                              child: Icon(
+                                Icons.sort,
+                                color: sortActive
+                                    ? AppColors.teal600
+                                    : AppColors.slate400,
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
+
+              if (!selecting && searchExpanded)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      RefLayout.px5, 0, RefLayout.px5, 8),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (v) => ref
+                        .read(expenseListSearchQueryProvider.notifier)
+                        .setQuery(v),
+                    style: GoogleFonts.inter(
+                        fontSize: 14, color: AppColors.slate900),
+                    decoration: InputDecoration(
+                      hintText: 'Search transactions…',
+                      hintStyle: GoogleFonts.inter(
+                          fontSize: 14, color: AppColors.slate400),
+                      prefixIcon: const Icon(Icons.search,
+                          size: 20, color: AppColors.slate400),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.close,
+                            size: 20, color: AppColors.slate400),
+                        onPressed: _clearSearchField,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.slate100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                ),
 
               // Active filter chips
               if (filterActive)
@@ -237,47 +453,101 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
               Expanded(
                 child: ColoredBox(
                   color: AppColors.slate50.withValues(alpha: 0.5),
-                  child: RefreshIndicator(
-                    onRefresh: _refresh,
-                    color: AppColors.teal600,
-                    child: listAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(
-                          child: Text('Error: $e',
-                              style: GoogleFonts.inter(
-                                  fontSize: 13, color: AppColors.slate500))),
-                      data: (models) {
-                        if (models.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.receipt_long_outlined,
-                                    size: 48, color: AppColors.slate300),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No expenses found',
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      RefreshIndicator(
+                        onRefresh: _refresh,
+                        color: AppColors.teal600,
+                        child: listAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, _) => Center(
+                              child: Text('Error: $e',
                                   style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.slate400,
-                                  ),
+                                      fontSize: 13,
+                                      color: AppColors.slate500))),
+                          data: (models) {
+                            if (models.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.receipt_long_outlined,
+                                        size: 48, color: AppColors.slate300),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No expenses found',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.slate400,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              );
+                            }
+                            final bottomPad = selecting &&
+                                    selectedIds.isNotEmpty
+                                ? bulkActionBottom + 56
+                                : RefLayout.pb24;
+                            final items = _buildDateGroupedItems(
+                              models,
+                              schema,
+                              selectionMode: selecting,
+                              selectedIds: selectedIds,
+                            );
+                            return ListView.builder(
+                              padding: EdgeInsets.fromLTRB(
+                                  RefLayout.px5, 8, RefLayout.px5, bottomPad),
+                              itemCount: items.length,
+                              itemBuilder: (context, i) => items[i],
+                            );
+                          },
+                        ),
+                      ),
+                      if (selecting && selectedIds.isNotEmpty)
+                        Positioned(
+                          left: RefLayout.px5,
+                          right: RefLayout.px5,
+                          bottom: bulkActionBottom,
+                          child: Material(
+                            elevation: 6,
+                            borderRadius: BorderRadius.circular(16),
+                            color: AppColors.teal600,
+                            child: InkWell(
+                              onTap: () => _showBulkApplyMenu(context, schema),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.label_outline,
+                                        color: Colors.white, size: 22),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Apply tag, company, or attribute',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          );
-                        }
-                        // Build grouped list with date headers
-                        final items = _buildDateGroupedItems(models, schema);
-                        return ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(
-                              RefLayout.px5, 8, RefLayout.px5, RefLayout.pb24),
-                          itemCount: items.length,
-                          itemBuilder: (context, i) => items[i],
-                        );
-                      },
-                    ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -289,7 +559,11 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   }
 
   List<Widget> _buildDateGroupedItems(
-      List<Model> models, ModelType schema) {
+    List<Model> models,
+    ModelType schema, {
+    required bool selectionMode,
+    required Set<int> selectedIds,
+  }) {
     final items = <Widget>[];
     String? lastDate;
 
@@ -316,11 +590,269 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
         child: ExpenseCard(
           model: m,
           schema: schema,
-          onTap: () => context.push('/expense/${m.id}'),
+          selectionMode: selectionMode,
+          selected: selectedIds.contains(m.id),
+          onTap: () {
+            if (selectionMode) {
+              ref.read(expenseListSelectedIdsProvider.notifier).toggle(m.id);
+            } else {
+              context.push('/expense/${m.id}');
+            }
+          },
         ),
       ));
     }
     return items;
+  }
+
+  Future<void> _showBulkApplyMenu(BuildContext context, ModelType schema) async {
+    final n = ref.read(expenseListSelectedIdsProvider).length;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 4),
+                  child: Text(
+                    'Apply to $n expenses',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate400,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 8),
+                  child: Text(
+                    'Choose what to set',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.label_outline,
+                      color: AppColors.teal600),
+                  title: const Text('Tag'),
+                  subtitle: Text(
+                    'Category, priority, or any tag system',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppColors.slate500),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _bulkPickTag(context, schema);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.business_outlined,
+                      color: AppColors.slate600),
+                  title: const Text('Company or project'),
+                  subtitle: Text(
+                    'Link to an existing record',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppColors.slate500),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _bulkPickRelation(context, schema);
+                  },
+                ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.tune, color: AppColors.slate600),
+                  title: const Text('Attribute'),
+                  subtitle: Text(
+                    'Pick a tag system, then a value',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppColors.slate500),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _bulkPickTag(context, schema);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _bulkPickTag(BuildContext context, ModelType schema) async {
+    final systems = schema.tagSystems ?? [];
+    if (systems.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No tag systems defined')),
+        );
+      }
+      return;
+    }
+
+    TagSystem? pick;
+    if (systems.length == 1) {
+      pick = systems.first;
+    } else {
+      pick = await showModalBottomSheet<TagSystem>(
+        context: context,
+        showDragHandle: true,
+        backgroundColor: Colors.white,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final ts in systems)
+                ListTile(
+                  title: Text(ts.name),
+                  onTap: () => Navigator.pop(ctx, ts),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (pick == null || !context.mounted) return;
+
+    final nodes = await showTagPickerSheet(
+      context,
+      system: pick,
+      initial: const [],
+    );
+    if (nodes == null || !context.mounted) return;
+
+    final ids = ref.read(expenseListSelectedIdsProvider).toList();
+    if (ids.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    final result = await bulkApplyTag(
+      ref: ref,
+      ids: ids,
+      systemName: pick.name,
+      nodes: nodes,
+    );
+
+    if (!context.mounted) return;
+
+    for (final id in ids) {
+      ref.invalidate(expenseDetailProvider(id));
+    }
+    ref.invalidate(expenseListForUiProvider);
+    ref.invalidate(expenseListSummaryProvider);
+    ref.read(expenseListSelectionModeProvider.notifier).setSelecting(false);
+
+    if (result.hasFailures) {
+      messenger.showSnackBar(
+        SnackBar(
+            content: Text(
+                'Updated with ${result.failures.length} error(s). ${result.failures.values.first}')),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Tags updated')),
+      );
+    }
+  }
+
+  Future<void> _bulkPickRelation(BuildContext context, ModelType schema) async {
+    final relNames = allRelationTargetTypeNames(schema).toList();
+    if (relNames.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No relation types defined')),
+        );
+      }
+      return;
+    }
+
+    String? target;
+    if (relNames.length == 1) {
+      target = relNames.first;
+    } else {
+      target = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        backgroundColor: Colors.white,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final n in relNames)
+                ListTile(
+                  title: Text(n),
+                  onTap: () => Navigator.pop(ctx, n),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (target == null || !context.mounted) return;
+
+    final res = await showRelationPickerSheet(
+      context,
+      targetModelTypeName: target,
+      initialIds: const [],
+      allowMultiple: false,
+    );
+    if (res == null || !context.mounted) return;
+    if (res is RelationPickCreate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Creating new records in bulk is not supported')),
+      );
+      return;
+    }
+    final link = res as RelationPickLink;
+    final ids = ref.read(expenseListSelectedIdsProvider).toList();
+    if (ids.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    final result = await bulkApplyRelation(
+      ref: ref,
+      ids: ids,
+      targetTypeName: target,
+      linkIds: link.ids,
+    );
+
+    if (!context.mounted) return;
+
+    for (final id in ids) {
+      ref.invalidate(expenseDetailProvider(id));
+    }
+    ref.invalidate(relatedModelsProvider(target));
+    ref.invalidate(expenseListForUiProvider);
+    ref.invalidate(expenseListSummaryProvider);
+    ref.read(expenseListSelectionModeProvider.notifier).setSelecting(false);
+
+    if (result.hasFailures) {
+      messenger.showSnackBar(
+        SnackBar(
+            content: Text(
+                'Updated with ${result.failures.length} error(s). ${result.failures.values.first}')),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Relations updated')),
+      );
+    }
   }
 
   static String _dateLabel(String? iso) {

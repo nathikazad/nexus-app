@@ -14,11 +14,15 @@ class ExpenseCard extends StatelessWidget {
     required this.model,
     required this.schema,
     required this.onTap,
+    this.selectionMode = false,
+    this.selected = false,
   });
 
   final Model model;
   final ModelType schema;
   final VoidCallback onTap;
+  final bool selectionMode;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,10 @@ class ExpenseCard extends StatelessWidget {
       vendorNames = first.value.map((m) => m.name).join(', ');
     }
 
+    final borderColor =
+        selectionMode && selected ? AppColors.teal600 : AppColors.slate100;
+    final borderWidth = selectionMode && selected ? 2.0 : 1.0;
+
     return Material(
         color: Colors.transparent,
         child: InkWell(
@@ -45,7 +53,7 @@ class ExpenseCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-              border: Border.all(color: AppColors.slate100),
+              border: Border.all(color: borderColor, width: borderWidth),
               boxShadow: refCardShadow,
             ),
             padding: const EdgeInsets.all(16),
@@ -55,6 +63,30 @@ class ExpenseCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (selectionMode) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10, top: 2),
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: selected ? AppColors.teal600 : Colors.white,
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.teal600
+                                    : AppColors.slate300,
+                                width: 2,
+                              ),
+                            ),
+                            child: selected
+                                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
                     Expanded(
                       child: Text(
                         model.name,
