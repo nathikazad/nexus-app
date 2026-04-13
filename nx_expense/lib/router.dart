@@ -14,6 +14,7 @@ import 'screens/expense/expense_list_screen.dart';
 import 'screens/auth/expense_login_screen.dart';
 import 'screens/transfers/transfers_list_screen.dart';
 import 'screens/teller/teller_list_screen.dart';
+import 'screens/teller/teller_link_picker_screen.dart';
 import 'screens/tag/tag_browser_screen.dart';
 import 'screens/tag/tag_system_form_screen.dart';
 import 'screens/tag/tag_systems_screen.dart';
@@ -190,6 +191,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/expense/form',
         builder: (context, state) => const ExpenseFormScreen(),
+      ),
+      GoRoute(
+        path: '/expense/:expenseId/link-teller',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['expenseId']!);
+          return TellerLinkPickerScreen(expenseId: id);
+        },
       ),
       GoRoute(
         path: '/expense/:id',

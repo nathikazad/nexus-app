@@ -4,6 +4,25 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 const String kTellerTimelineEventType = 'teller_transaction';
 const String kTellerTimelineSource = 'teller';
 
+/// One-line label for a Teller payload (counterparty or description).
+String tellerTransactionTitleLine(Map<String, dynamic> payload) {
+  final details = payload['details'];
+  if (details is Map) {
+    final cp = details['counterparty'];
+    if (cp is Map && cp['name'] != null) {
+      final s = cp['name'].toString().trim();
+      if (s.isNotEmpty) return s;
+    }
+  }
+  final desc = (payload['description'] as String?)?.trim() ?? '';
+  final first = desc.split('\n').first;
+  final cleaned = first.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (cleaned.isNotEmpty) {
+    return cleaned.length > 120 ? '${cleaned.substring(0, 120)}…' : cleaned;
+  }
+  return 'Teller transaction';
+}
+
 const String tellerTimelineEventsQuery = '''
 query TellerTimelineEvents(\$cond: TimelineEventCondition!) {
   allTimelineEvents(first: 50000, condition: \$cond, orderBy: [TIME_DESC]) {

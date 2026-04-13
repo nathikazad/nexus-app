@@ -9,6 +9,8 @@ import '../../layout.dart';
 import '../../util/expense_schema.dart';
 import '../../util/format.dart';
 import '../../providers/expense_providers.dart';
+import '../../util/teller_display.dart';
+import '../teller/teller_transaction_detail_screen.dart';
 
 class ExpenseDetailScreen extends ConsumerWidget {
   const ExpenseDetailScreen({super.key, required this.expenseId});
@@ -78,6 +80,7 @@ class _DetailBody extends ConsumerWidget {
         .toList();
 
     final tagSystems = schema.tagSystems ?? const <TagSystem>[];
+    final tellerAsync = ref.watch(expenseTimelineLinksProvider(expenseId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -240,18 +243,166 @@ class _DetailBody extends ConsumerWidget {
                         const SizedBox(height: 20),
                       ],
 
-                      // Relations
-                      if (model.relations != null &&
-                          model.relations!.isNotEmpty) ...[
-                        Text('Relations', style: refSectionTitle(context)),
-                        const SizedBox(height: 12),
+                      // Relations — one heading per target type (e.g. Company), model name only in the cell
+                      if (model.relations != null && model.relations!.isNotEmpty)
                         for (final e in model.relations!.entries)
-                          for (final relM in dedupeModelsById(e.value))
+                          if (dedupeModelsById(e.value).isNotEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _relationRow(context, e.key, relM),
+                              padding: const EdgeInsets.only(bottom: 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    formatAttributeLabel(e.key),
+                                    style: refSectionTitle(context),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  for (final relM in dedupeModelsById(e.value))
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: _relationRow(context, e.key, relM),
+                                    ),
+                                ],
+                              ),
                             ),
-                      ],
+
+                      // Teller (bank) transactions — below Relations
+                      Padding(
+                        padding: const EdgeInsets.only(top: 32),
+                        child: tellerAsync.when(
+                          loading: () => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text('Teller', style: refSectionTitle(context)),
+                              const SizedBox(height: 12),
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          error: (e, _) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text('Teller', style: refSectionTitle(context)),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Could not load Teller links.',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate400),
+                              ),
+                            ],
+                          ),
+                          data: (links) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text('Teller', style: refSectionTitle(context)),
+                                const SizedBox(height: 12),
+                                if (links.isEmpty)
+                                  Text(
+                                    'No linked Teller transactions.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: AppColors.slate400,
+                                    ),
+                                  )
+                                else
+                                  for (final link in links)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Builder(
+                                        builder: (context) {
+                                          final amt = num.tryParse(
+                                            link.payload['amount']?.toString().trim() ?? '',
+                                          );
+                                          final dateStr = tellerDetailDateLabel(
+                                            link.payload,
+                                            link.eventTime,
+                                          );
+                                          return Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: () {
+                                                Navigator.of(context).push<void>(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) => TellerTransactionDetailScreen(
+                                                      row: link.toTellerTransactionRow(),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              borderRadius: BorderRadius.circular(
+                                                RefLayout.rounded2xl,
+                                              ),
+                                              child: Ink(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(
+                                                    RefLayout.rounded2xl,
+                                                  ),
+                                                  border: Border.all(color: AppColors.slate100),
+                                                  boxShadow: refCardShadow,
+                                                ),
+                                                padding: const EdgeInsets.all(16),
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            tellerDetailHeadline(link.payload),
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: 14,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: AppColors.slate900,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 6),
+                                                          Text(
+                                                            dateStr,
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: 12,
+                                                              color: AppColors.slate400,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 4),
+                                                          Text(
+                                                            formatMoney(amt),
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: 14,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: AppColors.teal600,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      Icons.chevron_right,
+                                                      color: AppColors.slate400,
+                                                      size: 22,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -389,49 +540,20 @@ class _DetailBody extends ConsumerWidget {
             '/expenses/by-relation/${Uri.encodeComponent(relName)}/${relModel.id}/${Uri.encodeComponent(relModel.name)}',
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFFCCFBF1),
-                  ),
-                  child: const Icon(
-                    Icons.storefront_outlined,
-                    size: 18,
-                    color: AppColors.teal600,
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        relName.toUpperCase(),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.8,
-                          color: AppColors.slate400,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        relModel.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate900,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    relModel.name,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900,
+                    ),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: AppColors.slate300),
+                const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
               ],
             ),
           ),
@@ -491,3 +613,4 @@ class _AttrRow extends StatelessWidget {
     );
   }
 }
+

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
 
+import '../data/expense_timeline_api.dart';
 import '../util/expense_schema.dart';
 
 /// Cached Expense model type with attributes, relations, and tag systems.
@@ -491,6 +492,13 @@ final expenseDetailProvider = FutureProvider.family<Model?, int>((
     id: id,
     struct: struct,
   );
+});
+
+/// `model_timeline_event_links` for an Expense model (e.g. Teller imports).
+final expenseTimelineLinksProvider =
+    FutureProvider.family<List<ExpenseTellerLink>, int>((ref, modelId) async {
+  final client = ref.watch(graphqlClientProvider);
+  return fetchExpenseTimelineLinks(client, modelId);
 });
 
 @immutable

@@ -9,6 +9,7 @@ import '../../app_theme.dart';
 import '../../util/expense_schema.dart';
 import '../../providers/expense_providers.dart';
 import '../../layout.dart';
+import '../../widgets/expense_teller_links_section.dart';
 import '../../widgets/relation_picker.dart';
 import '../../widgets/tag_picker.dart';
 
@@ -314,6 +315,10 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                     },
                                   ),
                                 ),
+                                if (widget.expenseId != null) ...[
+                                  const SizedBox(height: 24),
+                                  ExpenseTellerLinksFormSection(expenseId: widget.expenseId!),
+                                ],
                               ],
                             ),
                           ),
@@ -562,6 +567,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       }
       if (widget.expenseId != null) {
         ref.invalidate(expenseDetailProvider(widget.expenseId!));
+        ref.invalidate(expenseTimelineLinksProvider(widget.expenseId!));
       }
       if (mounted) context.pop();
     } catch (e) {
