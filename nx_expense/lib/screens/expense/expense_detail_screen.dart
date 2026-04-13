@@ -555,45 +555,81 @@ class _DetailBody extends ConsumerWidget {
       runSpacing: 8,
       children: [
         for (final node in nodes)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => navToTagExpenses(
-                context,
-                ref,
-                systemName: sys.name,
-                tagNode: node,
-              ),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.slate100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.slate200.withValues(alpha: 0.6),
-                  ),
-                ),
-                child: Text(
-                  () {
-                    final path = tagBreadcrumbPath(sys, node);
-                    return path != null && path.length > 1
-                        ? path.join(' \u203A ')
-                        : node;
-                  }(),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate700,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          _buildTagAssignmentChip(context, ref, sys, node),
       ],
+    );
+  }
+
+  Widget _buildTagAssignmentChip(
+    BuildContext context,
+    WidgetRef ref,
+    TagSystem sys,
+    String node,
+  ) {
+    final path = tagBreadcrumbPath(sys, node);
+    final chipTextStyle = GoogleFonts.inter(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: AppColors.slate700,
+    );
+    final sepStyle = chipTextStyle.copyWith(color: AppColors.slate400);
+    final decoration = BoxDecoration(
+      color: AppColors.slate100,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(
+        color: AppColors.slate200.withValues(alpha: 0.6),
+      ),
+    );
+
+    if (path != null && path.length > 1) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: decoration,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < path.length; i++) ...[
+              if (i > 0) Text(' \u203A ', style: sepStyle),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => navToTagExpenses(
+                    context,
+                    ref,
+                    systemName: sys.name,
+                    tagNode: path[i],
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    child: Text(path[i], style: chipTextStyle),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    final label =
+        path != null && path.isNotEmpty ? path.join(' \u203A ') : node;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => navToTagExpenses(
+          context,
+          ref,
+          systemName: sys.name,
+          tagNode: node,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: decoration,
+          child: Text(label, style: chipTextStyle),
+        ),
+      ),
     );
   }
 

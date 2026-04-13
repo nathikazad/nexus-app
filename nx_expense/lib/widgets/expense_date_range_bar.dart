@@ -74,13 +74,15 @@ class ExpenseDateRangeBar extends ConsumerWidget {
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: AppColors.slate100,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     '$displayYear',
@@ -111,7 +113,9 @@ class ExpenseDateRangeBar extends ConsumerWidget {
                   return GestureDetector(
                     onTap: () => applyMonth(month, displayYear),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      height: 32,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: isSelected ? AppColors.teal600 : Colors.white,
                         borderRadius: BorderRadius.circular(20),

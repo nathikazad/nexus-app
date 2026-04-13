@@ -48,7 +48,7 @@ Widget scopedExpenseListScreen({
       showFilterIcon: false,
       showDateRange: true,
       showSearch: true,
-      showSelect: false,
+      showSelect: true,
       showDrawer: false,
       showActiveFilterChips: false,
       onExpenseTap: onExpenseTap,
