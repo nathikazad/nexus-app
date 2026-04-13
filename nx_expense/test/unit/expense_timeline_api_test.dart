@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_expense/data/expense_timeline_api.dart';
+import 'package:nx_expense/data/teller_timeline_api.dart';
 
 void main() {
   group('parseExpenseTimelineLinks', () {
@@ -30,6 +31,7 @@ void main() {
                 'timelineEventByEventTimeAndEventId': {
                   'time': '2026-03-15T14:30:00.000Z',
                   'id': 'evt-abc',
+                  'eventType': kTellerTimelineEventType,
                   'payload': {'amount': '10', 'description': 'Coffee'},
                 },
               },
@@ -45,6 +47,9 @@ void main() {
       expect(l.payload['amount'], '10');
       expect(l.payload['description'], 'Coffee');
       expect(l.eventTime.toUtc().year, 2026);
+      expect(l.eventType, kTellerTimelineEventType);
+      expect(l.isTellerTimelineEvent, isTrue);
+      expect(l.isBillImageEvent, isFalse);
     });
 
     test('skips node without timeline event or time', () {
@@ -98,6 +103,7 @@ void main() {
         eventTime: t,
         eventId: 'ev',
         payload: const {'amount': '5'},
+        eventType: kTellerTimelineEventType,
       );
       final row = link.toTellerTransactionRow();
       expect(row.time, t);

@@ -95,7 +95,8 @@ class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLin
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
           ),
           data: (links) {
-            if (links.isEmpty) {
+            final tellerLinks = links.where((l) => l.isTellerTimelineEvent).toList();
+            if (tellerLinks.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
@@ -107,7 +108,7 @@ class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLin
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final link in links)
+                for (final link in tellerLinks)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Container(

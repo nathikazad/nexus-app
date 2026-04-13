@@ -10,6 +10,7 @@ import '../../util/expense_schema.dart';
 import '../../util/format.dart';
 import '../../providers/expense_providers.dart';
 import '../../util/teller_display.dart';
+import '../../widgets/expense_bills_section.dart';
 import '../teller/teller_transaction_detail_screen.dart';
 
 class ExpenseDetailScreen extends ConsumerWidget {
@@ -299,12 +300,14 @@ class _DetailBody extends ConsumerWidget {
                             ],
                           ),
                           data: (links) {
+                            final tellerLinks =
+                                links.where((l) => l.isTellerTimelineEvent).toList();
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text('Teller', style: refSectionTitle(context)),
                                 const SizedBox(height: 12),
-                                if (links.isEmpty)
+                                if (tellerLinks.isEmpty)
                                   Text(
                                     'No linked Teller transactions.',
                                     style: GoogleFonts.inter(
@@ -313,7 +316,7 @@ class _DetailBody extends ConsumerWidget {
                                     ),
                                   )
                                 else
-                                  for (final link in links)
+                                  for (final link in tellerLinks)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
                                       child: Builder(
@@ -402,6 +405,10 @@ class _DetailBody extends ConsumerWidget {
                             );
                           },
                         ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 32),
+                        child: ExpenseBillsSection(expenseId: expenseId),
                       ),
                     ],
                   ),

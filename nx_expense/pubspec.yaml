@@ -38,6 +38,9 @@ dependencies:
   nx_db:
     path: ../nx_db
   graphql_flutter: ^5.1.2
+  http: ^1.2.2
+  http_parser: ^4.1.0
+  image_picker: ^1.1.2
 
 dependency_overrides:
   connectivity_plus: 6.1.4

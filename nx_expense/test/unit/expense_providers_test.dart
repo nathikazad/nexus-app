@@ -336,6 +336,7 @@ void main() {
                   'timelineEventByEventTimeAndEventId': {
                     'time': '2026-04-01T12:00:00.000Z',
                     'id': 'evt-99',
+                    'eventType': 'teller_transaction',
                     'payload': {'amount': '12.00', 'description': 'Test'},
                   },
                 },

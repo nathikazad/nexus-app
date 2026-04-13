@@ -31,7 +31,10 @@ class TellerLinkPickerScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Links: $e')),
         data: (existingLinks) {
-          final linkedIds = existingLinks.map((e) => e.eventId).toSet();
+          final linkedIds = existingLinks
+              .where((e) => e.isTellerTimelineEvent)
+              .map((e) => e.eventId)
+              .toSet();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

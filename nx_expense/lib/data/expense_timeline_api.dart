@@ -4,19 +4,33 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import 'teller_timeline_api.dart';
 
-/// One `model_timeline_event_links` row with the joined Teller payload.
+/// PostGraphile `timeline_events.event_type` for bill photos from the expense app.
+const String kExpenseImageTimelineEventType = 'image';
+
+/// One `model_timeline_event_links` row with the joined timeline payload (Teller or image).
 class ExpenseTellerLink {
   const ExpenseTellerLink({
     required this.linkId,
     required this.eventTime,
     required this.eventId,
     required this.payload,
+    this.eventType,
   });
 
   final String linkId;
   final DateTime eventTime;
   final String eventId;
   final Map<String, dynamic> payload;
+
+  /// From `timeline_events.event_type` when present; null treated as Teller for older rows.
+  final String? eventType;
+
+  /// Rows shown in the Teller UI (legacy rows without [eventType] count as Teller).
+  bool get isTellerTimelineEvent =>
+      eventType == null || eventType == kTellerTimelineEventType;
+
+  /// Bill photo rows (`event_type == image`).
+  bool get isBillImageEvent => eventType == kExpenseImageTimelineEventType;
 
   /// Row for [TellerTransactionDetailScreen] (linked models not loaded from this query).
   TellerTransactionRow toTellerTransactionRow() {
@@ -76,12 +90,15 @@ List<ExpenseTellerLink> parseExpenseTimelineLinks(dynamic data) {
             : <String, dynamic>{};
     final lid = raw['id'];
     if (lid == null) continue;
+    final etRaw = te['eventType'];
+    final eventType = etRaw is String ? etRaw : null;
     out.add(
       ExpenseTellerLink(
         linkId: lid.toString(),
         eventTime: t,
         eventId: eventId,
         payload: pmap,
+        eventType: eventType,
       ),
     );
   }
