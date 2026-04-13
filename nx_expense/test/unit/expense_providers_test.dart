@@ -322,5 +322,39 @@ void main() {
       expect(s2['note'], true);
       expect(s1, isNot(equals(s2)));
     });
+
+    test('P7.10 expenseTimelineLinksProvider — parses links from modelById', () async {
+      final mock = _MockGraphQLClient();
+      when(() => mock.query(any())).thenAnswer((_) async {
+        return _qr({
+          'modelById': {
+            'id': 100,
+            'modelTimelineEventLinksByModelId': {
+              'nodes': [
+                {
+                  'id': 55,
+                  'timelineEventByEventTimeAndEventId': {
+                    'time': '2026-04-01T12:00:00.000Z',
+                    'id': 'evt-99',
+                    'payload': {'amount': '12.00', 'description': 'Test'},
+                  },
+                },
+              ],
+            },
+          },
+        });
+      });
+
+      final container = ProviderContainer(
+        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+      );
+      addTearDown(container.dispose);
+
+      final links = await container.read(expenseTimelineLinksProvider(100).future);
+      expect(links.length, 1);
+      expect(links.single.linkId, '55');
+      expect(links.single.eventId, 'evt-99');
+      expect(links.single.payload['amount'], '12.00');
+    });
   });
 }

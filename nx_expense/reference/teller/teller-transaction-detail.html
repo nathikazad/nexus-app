@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teller transaction — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup { position: relative; isolation: isolate; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <div class="px-5 pt-3 pb-3 flex justify-between items-center border-b border-slate-100">
+            <a href="teller-list.html" class="text-slate-400 hover:text-slate-900 -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-base font-semibold text-slate-900">Teller transaction</h1>
+            <div class="w-8"></div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-3">
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Date</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">2026-04-10</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Description</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">Starbucks — Card purchase</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Type</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">debit</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">posted</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Id</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">tx-8821</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">processing_status</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">—</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">counterparty.name</p>
+                <p class="text-sm font-medium text-slate-900 mt-0.5">Starbucks</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

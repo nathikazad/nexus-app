@@ -21,7 +21,7 @@
     <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
             <!-- App Bar -->
             <div class="px-5 pt-3 pb-4 flex justify-between items-center border-b border-slate-100">
-                <a href="expense-list-main.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
+                <a href="../list/expense-list-main.html" class="text-slate-400 hover:text-slate-900 transition-colors -ml-2 p-2">
                     <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
                 </a>
                 <h1 class="text-base font-semibold tracking-tight text-slate-900 truncate px-4">Starbucks Coffee</h1>
@@ -102,12 +102,27 @@
                             <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300"></iconify-icon>
                         </div>
                     </section>
+
+                    <!-- Teller (below Relations) -->
+                    <section>
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Teller</h3>
+                        <a href="../teller/teller-transaction-detail.html" class="block p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Starbucks</p>
+                                    <p class="text-xs text-slate-400 mt-1.5">Mar 14, 2026</p>
+                                    <p class="text-sm font-semibold text-teal-600 mt-1">$6.45</p>
+                                </div>
+                                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-300 text-xl shrink-0 mt-0.5"></iconify-icon>
+                            </div>
+                        </a>
+                    </section>
                 </div>
             </div>
     
             <!-- Delete Button -->
             <div class="p-5 pb-8 border-t border-slate-50 bg-white z-10">
-                <a href="expense-list-main.html" class="w-full py-3.5 rounded-xl border-2 border-red-100 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
+                <a href="../list/expense-list-main.html" class="w-full py-3.5 rounded-xl border-2 border-red-100 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
                     <iconify-icon icon="solar:trash-bin-trash-linear" class="text-lg"></iconify-icon>
                     Delete Expense
                 </a>

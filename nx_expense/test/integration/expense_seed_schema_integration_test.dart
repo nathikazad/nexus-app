@@ -9,7 +9,7 @@ import 'package:nx_expense/util/expense_schema.dart';
 import 'package:nx_expense/providers/expense_providers.dart';
 import 'package:test/test.dart' show Tags;
 
-import 'support/integration_auth.dart';
+import '../support/integration_auth.dart';
 
 DateTimeRange _wideExpenseRange() {
   return DateTimeRange(

@@ -1,6 +1,6 @@
 # Testing plan — search, multi-select, bulk apply (regression prevention)
 
-This document lists **test types and cases** to lock in behavior described in [`select-search-feature-ui.md`](select-search-feature-ui.md) and [`implementation.md`](implementation.md). Implement tests as the feature lands; existing patterns live under `nx_expense/test/` (`expense_providers_test.dart`, `expense_card_widget_test.dart`, mocktail + `ProviderContainer` overrides).
+This document lists **test types and cases** to lock in behavior described in [`select-search-feature-ui.md`](select-search-feature-ui.md) and [`implementation.md`](implementation.md). Implement tests as the feature lands; existing patterns live under `nx_expense/test/unit/` (`expense_providers_test.dart`), `test/widget/` (`expense_card_widget_test.dart`), mocktail + `ProviderContainer` overrides.
 
 ---
 
@@ -22,13 +22,13 @@ This document lists **test types and cases** to lock in behavior described in [`
 | Null / missing description | `description == null` or `''` — only name participates; no crash. |
 | Unicode / accents | Optional: document whether you normalize; at minimum no crash on non-ASCII. |
 
-These tests **do not** need GraphQL — build `Model` instances inline (see `expense_card_widget_test.dart`).
+These tests **do not** need GraphQL — build `Model` instances inline (see `test/widget/expense_card_widget_test.dart`).
 
 ---
 
 ## 2. Provider / state (Riverpod)
 
-**Best location:** extend `test/expense_providers_test.dart` or add `test/expense_list_display_selection_test.dart`.
+**Best location:** extend `test/unit/expense_providers_test.dart` or add `test/unit/expense_list_display_selection_test.dart`.
 
 Use **`ProviderContainer`** + **`overrides`** to supply fake `expenseListForUiProvider` data (list of `Model`) and avoid real GraphQL for the new derived logic.
 
@@ -102,7 +102,7 @@ May require **`Consumer`** + `ProviderScope` with a stub `expenseListSelectionMo
 
 ## 5. Widget tests — `ExpenseCard` (or wrapper)
 
-**Best location:** extend `test/expense_card_widget_test.dart` or add `test/expense_card_selection_test.dart`.
+**Best location:** extend `test/widget/expense_card_widget_test.dart` or add `test/widget/expense_card_selection_test.dart`.
 
 | Case | Expectation |
 |------|-------------|
@@ -139,7 +139,7 @@ If you add **`filterModelsBySearchQuery`** or **`mergeBulkTagRequest`** in `lib/
 
 ## 8. Integration / E2E (optional)
 
-**Best location:** `integration_test/` or extend `test/expense_integration_test.dart` if you already have a harness.
+**Best location:** `integration_test/` or extend `test/integration/expense_integration_test.dart` if you already have a harness.
 
 - Login flow, open list, search, select two, open bulk apply — **only** if CI can run against a test backend or recorded GraphQL.
 

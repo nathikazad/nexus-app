@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_expense/aggregate_ui.dart';
+import 'package:nx_expense/util/expense_schema.dart';
 
 void main() {
   test('parseDaySpendEntries reads backend "key" bucket (group by day)', () {

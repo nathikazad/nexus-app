@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teller — Nx Expense UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .phone-mockup { position: relative; isolation: isolate; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-900 min-h-screen p-8 flex flex-wrap gap-10 justify-center items-start" style="font-family: 'Inter', sans-serif;">
+
+    <div class="phone-mockup w-[375px] h-[812px] bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden relative flex flex-col shrink-0">
+        <div class="px-5 pt-3 pb-3 flex justify-between items-center border-b border-slate-100">
+            <a href="../list/expense-list-main.html" class="text-slate-400 hover:text-slate-900 -ml-2 p-2">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </a>
+            <h1 class="text-lg font-semibold text-slate-900">Teller</h1>
+            <div class="flex items-center gap-1">
+                <span class="p-2 text-slate-400"><iconify-icon icon="solar:calendar-linear" class="text-xl"></iconify-icon></span>
+                <span class="p-2 text-slate-400"><iconify-icon icon="solar:menu-dots-linear" class="text-xl"></iconify-icon></span>
+            </div>
+        </div>
+
+        <div class="px-5 py-2 border-b border-slate-50 bg-slate-50/50">
+            <div class="flex rounded-xl bg-slate-100/80 p-1 text-xs font-medium text-slate-500 justify-center">
+                <span class="px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-sm">Apr 1 – Apr 30, 2026</span>
+            </div>
+        </div>
+
+        <div class="px-5 py-2 text-sm text-slate-500 font-medium">12 · $4,250.00</div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar bg-slate-50/50 px-5 pb-6">
+            <p class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase pt-2 pb-2">Apr 12, 2026</p>
+            <a href="teller-transaction-detail.html" class="block mb-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                <div class="flex justify-between gap-3">
+                    <span class="text-sm font-semibold text-slate-900 leading-snug">ACME CORP PAYROLL</span>
+                    <span class="text-sm font-semibold text-teal-600 shrink-0">$2,400.00</span>
+                </div>
+            </a>
+            <p class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase pt-2 pb-2">Apr 10, 2026</p>
+            <a href="teller-transaction-detail.html" class="block mb-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                <div class="flex justify-between gap-3">
+                    <span class="text-sm font-semibold text-slate-900 leading-snug">Starbucks — Card purchase</span>
+                    <span class="text-sm font-semibold text-teal-600 shrink-0">$6.45</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

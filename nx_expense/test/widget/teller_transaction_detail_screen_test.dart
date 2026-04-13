@@ -1,0 +1,41 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nx_expense/data/teller_timeline_api.dart';
+import 'package:nx_expense/screens/teller/teller_transaction_detail_screen.dart';
+
+void main() {
+  testWidgets('TellerTransactionDetailScreen shows app bar and payload fields', (tester) async {
+    final row = TellerTransactionRow(
+      time: DateTime.utc(2026, 3, 15, 14, 30),
+      eventId: 'e1',
+      payload: {
+        'date': '2026-03-15',
+        'description': 'Coffee shop',
+        'amount': '4.50',
+        'type': 'debit',
+        'status': 'posted',
+        'id': 'tx-99',
+      },
+      linkedModels: const [],
+    );
+
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => TellerTransactionDetailScreen(row: row),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Teller transaction'), findsOneWidget);
+    expect(find.text('Coffee shop'), findsOneWidget);
+    expect(find.text('debit'), findsOneWidget);
+    expect(find.text('posted'), findsOneWidget);
+    expect(find.text('tx-99'), findsOneWidget);
+  });
+}
