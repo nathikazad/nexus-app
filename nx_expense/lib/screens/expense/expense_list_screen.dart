@@ -30,6 +30,8 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
     this.showSelect = true,
     this.showDrawer = true,
     this.showActiveFilterChips = true,
+    /// When set (e.g. desktop panel 3 scoped list), taps open without changing column 2.
+    this.onExpenseTap,
   });
 
   final String? title;
@@ -41,6 +43,7 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
   final bool showDrawer;
   /// When false, the horizontal filter chip row (and "Clear all") is hidden.
   final bool showActiveFilterChips;
+  final void Function(int expenseId)? onExpenseTap;
 
   @override
   ConsumerState<ExpenseListScreen> createState() => _ExpenseListScreenState();
@@ -712,6 +715,8 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
             onTap: () {
               if (selectionMode) {
                 ref.read(expenseListSelectedIdsProvider.notifier).toggle(m.id);
+              } else if (widget.onExpenseTap != null) {
+                widget.onExpenseTap!(m.id);
               } else {
                 navToExpenseDetail(context, ref, m.id);
               }

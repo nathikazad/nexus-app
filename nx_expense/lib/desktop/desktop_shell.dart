@@ -165,8 +165,6 @@ class _ExpensesPanels extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedId = ref.watch(selectedExpenseIdProvider);
-    final panel3 = ref.watch(panel3StateProvider);
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -186,7 +184,7 @@ class _ExpensesPanels extends ConsumerWidget {
         const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
         SizedBox(
           width: 380,
-          child: _ExpensePanel3(state: panel3),
+          child: _ExpensePanel3(),
         ),
       ],
     );
@@ -194,17 +192,39 @@ class _ExpensesPanels extends ConsumerWidget {
 }
 
 class _ExpensePanel3 extends ConsumerWidget {
-  const _ExpensePanel3({required this.state});
-
-  final Panel3State state;
+  const _ExpensePanel3();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final stack = ref.watch(panel3StackProvider);
+    if (stack.isEmpty) {
+      return const ColoredBox(
+        color: Colors.white,
+        child: SizedBox.expand(),
+      );
+    }
+
+    final top = stack.last;
+    return SizedBox.expand(
+      child: _buildPanel3Content(context, ref, top),
+    );
+  }
+
+  Widget _buildPanel3Content(
+    BuildContext context,
+    WidgetRef ref,
+    Panel3State state,
+  ) {
     switch (state.type) {
       case Panel3Type.none:
         return const ColoredBox(
           color: Colors.white,
           child: SizedBox.expand(),
+        );
+      case Panel3Type.expenseDetail:
+        return ExpenseDetailScreen(
+          key: ValueKey('p3-expense-${state.id}'),
+          expenseId: state.id!,
         );
       case Panel3Type.transfer:
         return TransferDetailScreen(
@@ -228,6 +248,7 @@ class _ExpensePanel3 extends ConsumerWidget {
               relName: {relId: relDisplayName},
             },
           ),
+          onExpenseTap: (id) => navToExpenseDetailFromPanel3(context, ref, id),
         );
       case Panel3Type.tagExpenses:
         final systemName = state.label!;
@@ -243,6 +264,7 @@ class _ExpensePanel3 extends ConsumerWidget {
               },
             ],
           ),
+          onExpenseTap: (id) => navToExpenseDetailFromPanel3(context, ref, id),
         );
     }
   }

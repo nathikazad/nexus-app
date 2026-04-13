@@ -8,6 +8,7 @@ import 'screens/expense/expense_list_screen.dart';
 Widget scopedExpenseListScreen({
   required String title,
   required ExpenseFilter initialFilter,
+  void Function(int expenseId)? onExpenseTap,
 }) {
   return ProviderScope(
     overrides: [
@@ -50,6 +51,7 @@ Widget scopedExpenseListScreen({
       showSelect: false,
       showDrawer: false,
       showActiveFilterChips: false,
+      onExpenseTap: onExpenseTap,
     ),
   );
 }

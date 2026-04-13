@@ -325,10 +325,12 @@ class _DetailBody extends ConsumerWidget {
                                               onTap: () {
                                                 final row = link.toTellerTransactionRow();
                                                 if (isDesktopLayout(context)) {
-                                                  ref.read(panel3StateProvider.notifier).state =
-                                                      Panel3State(
-                                                    type: Panel3Type.teller,
-                                                    tellerRow: row,
+                                                  pushPanel3(
+                                                    ref,
+                                                    Panel3State(
+                                                      type: Panel3Type.teller,
+                                                      tellerRow: row,
+                                                    ),
                                                   );
                                                 } else {
                                                   Navigator.of(context).push<void>(
@@ -476,7 +478,8 @@ class _DetailBody extends ConsumerWidget {
             color: AppColors.slate400,
             size: 22,
           ),
-          onPressed: () => navExpenseDetailBack(context, ref),
+          onPressed: () =>
+              navExpenseDetailBack(context, ref, expenseId: expenseId),
         ),
         actions: [
           IconButton(
@@ -501,7 +504,8 @@ class _DetailBody extends ConsumerWidget {
             color: AppColors.slate400,
             size: 22,
           ),
-          onPressed: () => navExpenseDetailBack(context, ref),
+          onPressed: () =>
+              navExpenseDetailBack(context, ref, expenseId: expenseId),
         ),
         centerTitle: true,
         title: Text(

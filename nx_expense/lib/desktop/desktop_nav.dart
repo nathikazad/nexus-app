@@ -16,9 +16,9 @@ final desktopShellTabIndexProvider = StateProvider<int>((ref) => 0);
 // --- Expenses tab ---
 final selectedExpenseIdProvider = StateProvider<int?>((ref) => null);
 
-final panel3StateProvider = StateProvider<Panel3State>(
-  (ref) => const Panel3State(),
-);
+/// Panel 3 is a stack: bottom = first drill (e.g. relation list), top = deepest view.
+/// Empty = blank third column.
+final panel3StackProvider = StateProvider<List<Panel3State>>((ref) => const []);
 
 // --- Transfers tab ---
 final selectedTransferIdProvider = StateProvider<int?>((ref) => null);
@@ -42,7 +42,14 @@ class TagSystemsPanelSelection {
   final int? editId;
 }
 
-enum Panel3Type { none, transfer, teller, tagExpenses, relationExpenses }
+enum Panel3Type {
+  none,
+  transfer,
+  teller,
+  tagExpenses,
+  relationExpenses,
+  expenseDetail,
+}
 
 class Panel3State {
   const Panel3State({
@@ -60,10 +67,37 @@ class Panel3State {
   final TellerTransactionRow? tellerRow;
 }
 
+void clearPanel3(WidgetRef ref) {
+  ref.read(panel3StackProvider.notifier).state = const [];
+}
+
+void pushPanel3(WidgetRef ref, Panel3State state) {
+  ref.read(panel3StackProvider.notifier).state = [
+    ...ref.read(panel3StackProvider),
+    state,
+  ];
+}
+
+/// Replaces the entire panel 3 stack (e.g. new relation or tag drill from expense).
+void replacePanel3(WidgetRef ref, Panel3State state) {
+  ref.read(panel3StackProvider.notifier).state = [state];
+}
+
+void popPanel3(WidgetRef ref) {
+  final stack = ref.read(panel3StackProvider);
+  if (stack.isEmpty) return;
+  if (stack.length == 1) {
+    ref.read(panel3StackProvider.notifier).state = const [];
+  } else {
+    ref.read(panel3StackProvider.notifier).state =
+        stack.sublist(0, stack.length - 1);
+  }
+}
+
 void navToExpenseDetail(BuildContext context, WidgetRef ref, int id) {
   if (isDesktopLayout(context)) {
     ref.read(selectedExpenseIdProvider.notifier).state = id;
-    ref.read(panel3StateProvider.notifier).state = const Panel3State();
+    clearPanel3(ref);
   } else {
     context.push('/expense/$id');
   }
@@ -71,9 +105,9 @@ void navToExpenseDetail(BuildContext context, WidgetRef ref, int id) {
 
 void navToTransferDetail(BuildContext context, WidgetRef ref, int transferId) {
   if (isDesktopLayout(context)) {
-    ref.read(panel3StateProvider.notifier).state = Panel3State(
-      type: Panel3Type.transfer,
-      id: transferId,
+    pushPanel3(
+      ref,
+      Panel3State(type: Panel3Type.transfer, id: transferId),
     );
   } else {
     context.push('/transfer/$transferId');
@@ -88,11 +122,14 @@ void navToRelationExpenses(
   required String displayName,
 }) {
   if (isDesktopLayout(context)) {
-    ref.read(panel3StateProvider.notifier).state = Panel3State(
-      type: Panel3Type.relationExpenses,
-      id: relId,
-      label: relName,
-      secondaryLabel: displayName,
+    replacePanel3(
+      ref,
+      Panel3State(
+        type: Panel3Type.relationExpenses,
+        id: relId,
+        label: relName,
+        secondaryLabel: displayName,
+      ),
     );
   } else {
     context.push(
@@ -108,15 +145,34 @@ void navToTagExpenses(
   required String tagNode,
 }) {
   if (isDesktopLayout(context)) {
-    ref.read(panel3StateProvider.notifier).state = Panel3State(
-      type: Panel3Type.tagExpenses,
-      label: systemName,
-      secondaryLabel: tagNode,
+    replacePanel3(
+      ref,
+      Panel3State(
+        type: Panel3Type.tagExpenses,
+        label: systemName,
+        secondaryLabel: tagNode,
+      ),
     );
   } else {
     context.push(
       '/expenses/by-tag/${Uri.encodeComponent(systemName)}/${Uri.encodeComponent(tagNode)}',
     );
+  }
+}
+
+/// Open an expense inside panel 3 without changing column 2 selection (e.g. from scoped list).
+void navToExpenseDetailFromPanel3(
+  BuildContext context,
+  WidgetRef ref,
+  int expenseId,
+) {
+  if (isDesktopLayout(context)) {
+    pushPanel3(
+      ref,
+      Panel3State(type: Panel3Type.expenseDetail, id: expenseId),
+    );
+  } else {
+    context.push('/expense/$expenseId');
   }
 }
 
@@ -135,20 +191,32 @@ void navToTransferDetailDirect(
 void navAfterExpenseDelete(BuildContext context, WidgetRef ref) {
   if (isDesktopLayout(context)) {
     ref.read(selectedExpenseIdProvider.notifier).state = null;
-    ref.read(panel3StateProvider.notifier).state = const Panel3State();
+    clearPanel3(ref);
   } else {
     context.go('/expenses');
   }
 }
 
-/// Back from expense detail: pop route on mobile; clear desktop selection on shell.
-void navExpenseDetailBack(BuildContext context, WidgetRef ref) {
+/// Back from expense detail: pop route on mobile; clear desktop selection on shell,
+/// or pop panel 3 stack when this detail is the stacked panel 3 expense.
+void navExpenseDetailBack(
+  BuildContext context,
+  WidgetRef ref, {
+  required int expenseId,
+}) {
   if (!isDesktopLayout(context)) {
     context.pop();
     return;
   }
+  final stack = ref.read(panel3StackProvider);
+  if (stack.isNotEmpty &&
+      stack.last.type == Panel3Type.expenseDetail &&
+      stack.last.id == expenseId) {
+    popPanel3(ref);
+    return;
+  }
   ref.read(selectedExpenseIdProvider.notifier).state = null;
-  ref.read(panel3StateProvider.notifier).state = const Panel3State();
+  clearPanel3(ref);
 }
 
 /// Back from transfer detail (embedded or full-screen).
@@ -157,9 +225,11 @@ void navTransferDetailBack(BuildContext context, WidgetRef ref, int transferId) 
     context.pop();
     return;
   }
-  final p3 = ref.read(panel3StateProvider);
-  if (p3.type == Panel3Type.transfer && p3.id == transferId) {
-    ref.read(panel3StateProvider.notifier).state = const Panel3State();
+  final stack = ref.read(panel3StackProvider);
+  if (stack.isNotEmpty &&
+      stack.last.type == Panel3Type.transfer &&
+      stack.last.id == transferId) {
+    popPanel3(ref);
     return;
   }
   final sel = ref.read(selectedTransferIdProvider);
@@ -179,10 +249,11 @@ void navTellerTxDetailBack(
     context.pop();
     return;
   }
-  final p3 = ref.read(panel3StateProvider);
-  if (p3.type == Panel3Type.teller &&
-      p3.tellerRow?.eventId == row.eventId) {
-    ref.read(panel3StateProvider.notifier).state = const Panel3State();
+  final stack = ref.read(panel3StackProvider);
+  if (stack.isNotEmpty &&
+      stack.last.type == Panel3Type.teller &&
+      stack.last.tellerRow?.eventId == row.eventId) {
+    popPanel3(ref);
     return;
   }
   final sel = ref.read(selectedTellerRowProvider);
@@ -220,11 +291,15 @@ void navTagSystemFormBack(BuildContext context, WidgetRef ref) {
 }
 
 /// From Teller detail: open expense and switch to Expenses rail tab.
-void navToExpenseFromTellerLink(BuildContext context, WidgetRef ref, int expenseId) {
+void navToExpenseFromTellerLink(
+  BuildContext context,
+  WidgetRef ref,
+  int expenseId,
+) {
   if (isDesktopLayout(context)) {
     ref.read(desktopShellTabIndexProvider.notifier).state = 0;
     ref.read(selectedExpenseIdProvider.notifier).state = expenseId;
-    ref.read(panel3StateProvider.notifier).state = const Panel3State();
+    clearPanel3(ref);
     ref.read(selectedTellerRowProvider.notifier).state = null;
   } else {
     final router = GoRouter.of(context);
