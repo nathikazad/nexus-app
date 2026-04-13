@@ -150,6 +150,7 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
       if (amountKey != null) {
         attrs.add(sm.ModelAttribute(key: amountKey, value: 0));
       }
+      attrs.add(sm.ModelAttribute(key: kExpenseIgnoreAttributeKey, value: false));
 
       final req = sm.SetModelRequest(
         modelType: kExpenseModelTypeName,

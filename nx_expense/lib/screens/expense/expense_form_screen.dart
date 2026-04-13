@@ -424,7 +424,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
           children: [
             Expanded(
               child: Text(
-                ad.key ?? '',
+                formatAttributeLabel(ad.key ?? ''),
                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
               ),
             ),
@@ -443,7 +443,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
           children: [
             Expanded(
               child: Text(
-                ad.key ?? '',
+                formatAttributeLabel(ad.key ?? ''),
                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
               ),
             ),
@@ -473,7 +473,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            ad.key ?? '',
+            formatAttributeLabel(ad.key ?? ''),
             style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
           ),
           const SizedBox(height: 8),

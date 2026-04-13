@@ -274,20 +274,27 @@ final expenseListDisplayedProvider = FutureProvider<List<Model>>(
 );
 
 /// Count + total for the **same rows** shown in the list (filters, sort, **and search**).
+///
+/// Rows with `ignore` true are excluded from both count and sum.
 Future<ExpenseSummary> buildExpenseListSummary(Ref ref) async {
   final list = await ref.watch(expenseListDisplayedProvider.future);
   final schema = await ref.watch(expenseSchemaProvider.future);
   final key = primaryNumberAttributeKey(schema);
 
+  final tallied = [
+    for (final m in list)
+      if (!expenseIgnoredForTotals(m)) m,
+  ];
+
   num? sum;
   if (key != null) {
     sum = 0;
-    for (final m in list) {
+    for (final m in tallied) {
       sum = sum! + _numAttr(m, key);
     }
   }
 
-  return ExpenseSummary(count: list.length, sumTotal: sum);
+  return ExpenseSummary(count: tallied.length, sumTotal: sum);
 }
 
 final expenseListSummaryProvider = FutureProvider<ExpenseSummary>(
@@ -362,9 +369,9 @@ ExpenseSummary? buildExpenseListSelectionSummary(Ref ref) {
   if (key != null) {
     sum = 0;
     for (final m in list) {
-      if (selected.contains(m.id)) {
-        sum = sum! + _numAttr(m, key);
-      }
+      if (!selected.contains(m.id)) continue;
+      if (expenseIgnoredForTotals(m)) continue;
+      sum = sum! + _numAttr(m, key);
     }
   }
   return ExpenseSummary(count: selected.length, sumTotal: sum);
@@ -381,6 +388,7 @@ Map<String, dynamic> _dashboardFilterKgql(Ref ref) {
     'filters': [
       {'key': 'created_at', 'op': '>=', 'value': range.start.toIso8601String()},
       {'key': 'created_at', 'op': '<=', 'value': range.end.toIso8601String()},
+      {'key': kExpenseIgnoreAttributeKey, 'op': '!=', 'value': true},
     ],
   };
 }

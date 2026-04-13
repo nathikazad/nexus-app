@@ -204,7 +204,7 @@ class _DetailBody extends ConsumerWidget {
                             children: [
                               for (var i = 0; i < attrDefs.length; i++)
                                 _AttrRow(
-                                  label: attrDefs[i].key!,
+                                  label: formatAttributeLabel(attrDefs[i].key!),
                                   value: _formatAttr(model, attrDefs[i].key!),
                                   showDivider: i < attrDefs.length - 1,
                                 ),

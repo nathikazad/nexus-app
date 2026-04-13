@@ -121,7 +121,7 @@ class DashboardScreen extends ConsumerWidget {
                                 data: (raw) {
                                   final entries = parseGroupedChartEntries(raw);
                                   if (entries.isEmpty) return const SizedBox.shrink();
-                                  return _PieChartCard(title: 'Spend by $relName', entries: entries);
+                                  return _PieChartCard(title: relName, entries: entries);
                                 },
                                 loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
                                 error: (_, __) => const SizedBox.shrink(),
@@ -209,7 +209,7 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
         final title = titleParts.join(' › ');
 
         return _PieChartCard(
-          title: 'Spend by $title',
+          title: title,
           entries: entries,
           onSliceTap: isHierarchical
               ? (sliceName) {
@@ -270,14 +270,17 @@ class _PieChartCardState extends State<_PieChartCard> {
     AppColors.slate400,
   ];
 
-  bool _showDollars = false;
+  /// When true, legend shows dollar amounts; when false, percentages.
+  bool _showDollars = true;
 
   @override
   Widget build(BuildContext context) {
-    final entries = widget.entries;
+    final entries = [...widget.entries]
+      ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
     // Pie sections must be positive; amounts are signed (expenses negative, refunds positive).
     final totalAbs = entries.fold<double>(0, (a, b) => a + b.value.abs());
     if (totalAbs <= 0) return const SizedBox.shrink();
+    final showPie = entries.length <= 7;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -330,29 +333,30 @@ class _PieChartCardState extends State<_PieChartCard> {
           ),
           const SizedBox(height: 20),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Pie circle
-              SizedBox(
-                width: 96,
-                height: 96,
-                child: PieChart(
-                  PieChartData(
-                    sections: [
-                      for (var i = 0; i < entries.length; i++)
-                        PieChartSectionData(
-                          value: entries[i].value.abs(),
-                          title: '',
-                          radius: 48,
-                          color: _palette[i % _palette.length],
-                        ),
-                    ],
-                    sectionsSpace: 1,
-                    centerSpaceRadius: 0,
+              if (showPie) ...[
+                SizedBox(
+                  width: 96,
+                  height: 96,
+                  child: PieChart(
+                    PieChartData(
+                      sections: [
+                        for (var i = 0; i < entries.length; i++)
+                          PieChartSectionData(
+                            value: entries[i].value.abs(),
+                            title: '',
+                            radius: 48,
+                            color: _palette[i % _palette.length],
+                          ),
+                      ],
+                      sectionsSpace: 1,
+                      centerSpaceRadius: 0,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 24),
-              // Legend
+                const SizedBox(width: 24),
+              ],
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

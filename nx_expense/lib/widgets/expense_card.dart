@@ -40,8 +40,10 @@ class ExpenseCard extends StatelessWidget {
       vendorNames = first.value.map((m) => m.name).join(', ');
     }
 
-    final borderColor =
-        selectionMode && selected ? AppColors.teal600 : AppColors.slate100;
+    final ignored = expenseIgnoredForTotals(model);
+    final borderColor = ignored
+        ? Colors.red.shade200
+        : (selectionMode && selected ? AppColors.teal600 : AppColors.slate100);
     final borderWidth = selectionMode && selected ? 2.0 : 1.0;
 
     return Material(
@@ -51,7 +53,7 @@ class ExpenseCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: ignored ? Colors.red.shade50 : Colors.white,
               borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
               border: Border.all(color: borderColor, width: borderWidth),
               boxShadow: refCardShadow,
@@ -103,7 +105,9 @@ class ExpenseCard extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.teal600,
+                          color: ignored ? AppColors.slate500 : AppColors.teal600,
+                          decoration: ignored ? TextDecoration.lineThrough : null,
+                          decorationColor: AppColors.slate400,
                         ),
                       ),
                   ],

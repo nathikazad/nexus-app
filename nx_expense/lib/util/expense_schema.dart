@@ -142,6 +142,30 @@ dynamic attributeValue(Model model, String key) {
   return a[key];
 }
 
+/// Display label for a schema attribute key (`cost`, `date-time`, `snake_case` → title words).
+String formatAttributeLabel(String key) {
+  if (key.isEmpty) return key;
+  final parts = key.split(RegExp(r'[-_\s]+')).where((s) => s.isNotEmpty);
+  return parts
+      .map((p) => '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
+      .join(' ');
+}
+
+/// Expense attribute that excludes a row from list totals when true.
+const String kExpenseIgnoreAttributeKey = 'ignore';
+
+/// True when the expense `ignore` flag is set (excluded from list count/sum).
+bool expenseIgnoredForTotals(Model model) {
+  final v = attributeValue(model, kExpenseIgnoreAttributeKey);
+  if (v == true) return true;
+  if (v == false) return false;
+  if (v is String) {
+    final s = v.trim().toLowerCase();
+    return s == 'true' || s == '1';
+  }
+  return false;
+}
+
 /// Deduplicate [ids] in first-seen order. The API may list the same related model twice
 /// (e.g. multiple relationship types), which would otherwise duplicate `link` payloads on save.
 List<int> dedupeIntIdsPreserveOrder(List<int> ids) {
