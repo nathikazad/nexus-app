@@ -5,12 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nx_db/src/models/requests/SetModelRequest.dart' as sm;
 
-import '../app_theme.dart';
-import '../expense_schema.dart';
-import '../providers/expense_providers.dart';
-import '../reference_layout.dart';
-import '../widgets/relation_picker.dart';
-import '../widgets/tag_picker.dart';
+import '../../app_theme.dart';
+import '../../expense_schema.dart';
+import '../../providers/expense_providers.dart';
+import '../../reference_layout.dart';
+import '../../widgets/relation_picker.dart';
+import '../../widgets/tag_picker.dart';
 
 /// Create (`expenseId == null`) or edit. Layout matches reference Screen 4.
 class ExpenseFormScreen extends ConsumerStatefulWidget {

@@ -5,15 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/nx_db.dart';
 
-import '../aggregate_ui.dart';
-import '../app_theme.dart';
-import '../expense_schema.dart';
-import '../format.dart';
-import '../providers/expense_providers.dart';
-import '../reference_layout.dart';
-import '../widgets/expense_app_end_drawer.dart';
-import '../widgets/expense_date_range_bar.dart';
-import '../widgets/stat_card.dart';
+import '../../aggregate_ui.dart';
+import '../../app_theme.dart';
+import '../../expense_schema.dart';
+import '../../format.dart';
+import '../../providers/expense_providers.dart';
+import '../../reference_layout.dart';
+import '../../widgets/expense_app_end_drawer.dart';
+import '../../widgets/expense_date_range_bar.dart';
+import '../../widgets/stat_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});

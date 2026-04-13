@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/expense_providers.dart';
+import '../../providers/expense_providers.dart';
 
 /// Minimal screen that exercises schema + struct providers (Phase 3 shell).
 class DebugExpenseScreen extends ConsumerWidget {
