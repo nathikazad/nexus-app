@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:nexus_voice_assistant/app_theme.dart';
+import 'package:nexus_voice_assistant/layout.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/logging_service.dart';
@@ -32,22 +35,29 @@ int _nearestPhotoRecordPeriodOption(int deviceSec) {
   return best;
 }
 
+String _formatPeriodLabel(int sec) {
+  if (sec >= 60 && sec % 60 == 0) {
+    final m = sec ~/ 60;
+    return m == 1 ? '1 min' : '$m min';
+  }
+  return '$sec sec';
+}
 
-/// BLE-connected auto photo-record controls: status, interval dropdown, start/stop.
-///
-/// Refreshes status after record commands (start/stop/interval); single-shot capture
-/// does not affect record state on the device.
+/// BLE-connected camera card: capture FAB, expandable photo-record controls.
 class CameraSection extends ConsumerStatefulWidget {
   const CameraSection({
     super.key,
     required this.isConnected,
-    this.titleTrailing,
+    required this.onCapture,
+    this.captureInProgress = false,
   });
 
   final bool isConnected;
 
-  /// Shown to the right of the "Photo record" title (e.g. capture button).
-  final Widget? titleTrailing;
+  /// Single-shot capture (does not change record state on device).
+  final VoidCallback onCapture;
+
+  final bool captureInProgress;
 
   @override
   ConsumerState<CameraSection> createState() => CameraSectionState();
@@ -58,6 +68,7 @@ class CameraSectionState extends ConsumerState<CameraSection>
   bool? _recording;
   int _selectedPeriodSec = 60;
   bool _busy = false;
+  bool _advancedExpanded = false;
 
   StreamSubscription<CameraRecordStatus>? _cameraStatusSubscription;
 
@@ -130,7 +141,7 @@ class CameraSectionState extends ConsumerState<CameraSection>
       if (!mounted || status == null) return;
       _onCameraStatus(status);
     } catch (e) {
-      LoggingService.instance.log('PhotoRecordSection: initial read failed: $e');
+      LoggingService.instance.log('CameraSection: initial read failed: $e');
     }
   }
 
@@ -219,66 +230,183 @@ class CameraSectionState extends ConsumerState<CameraSection>
   Widget build(BuildContext context) {
     final canInteract = widget.isConnected && !_busy;
     final isRecording = _recording == true;
+    final subtitle = !widget.isConnected
+        ? 'Not connected'
+        : '${isRecording ? 'Recording' : 'Not Recording'} · ${_formatPeriodLabel(_selectedPeriodSec)}';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (widget.titleTrailing != null) ...[
-          widget.titleTrailing!,
-          const SizedBox(width: 8),
-        ],
-        IconButton(
-          onPressed: canInteract
-              ? (isRecording ? _stop : _start)
-              : null,
-          icon: Icon(
-            isRecording ? Icons.pause : Icons.play_arrow,
-            size: 22,
-            color: Colors.grey[800],
-          ),
-          tooltip: isRecording ? 'Stop photo record' : 'Start photo record',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 72,
-          child: InputDecorator(
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-              isDense: true,
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                isExpanded: true,
-                value: kPhotoRecordPeriodOptions.contains(_selectedPeriodSec)
-                    ? _selectedPeriodSec
-                    : _nearestPhotoRecordPeriodOption(_selectedPeriodSec),
-                items: kPhotoRecordPeriodOptions
-                    .map(
-                    (s) => DropdownMenuItem<int>(
-                      value: s,
-                      child: Text('$s', softWrap: false, overflow: TextOverflow.visible),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+        border: Border.all(color: AppColors.gray100),
+        boxShadow: refCardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _advancedExpanded = !_advancedExpanded),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8, bottom: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Camera',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppColors.gray500,
+                          ),
+                        ),
+                      ],
                     ),
-                    )
-                    .toList(),
-              onChanged: canInteract ? _onPeriodChanged : null,
-            ),
+                  ),
+                ),
+              ),
+              Material(
+                color: AppColors.orange600,
+                elevation: 3,
+                shadowColor: AppColors.orange600.withValues(alpha: 0.35),
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: canInteract && !widget.captureInProgress ? widget.onCapture : null,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: widget.captureInProgress
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.camera_alt, color: Colors.white, size: 22),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        ),
-        if (_busy) ...[
-          const SizedBox(width: 8),
-          const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox(width: double.infinity),
+                secondChild: Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Divider(height: 1, color: AppColors.gray100),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Auto Recording',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: AppColors.gray600,
+                            ),
+                          ),
+                          Switch.adaptive(
+                            value: isRecording,
+                            onChanged: canInteract
+                                ? (v) {
+                                    if (v) {
+                                      unawaited(_start());
+                                    } else {
+                                      unawaited(_stop());
+                                    }
+                                  }
+                                : null,
+                            activeTrackColor: AppColors.orange600,
+                            thumbColor: WidgetStateProperty.resolveWith((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return Colors.white;
+                              }
+                              return null;
+                            }),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Interval',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: AppColors.gray600,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.gray50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.gray200),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                isDense: true,
+                                value: kPhotoRecordPeriodOptions.contains(_selectedPeriodSec)
+                                    ? _selectedPeriodSec
+                                    : _nearestPhotoRecordPeriodOption(_selectedPeriodSec),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.gray900,
+                                ),
+                                iconEnabledColor: AppColors.gray500,
+                                iconSize: 18,
+                                dropdownColor: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                items: kPhotoRecordPeriodOptions
+                                    .map(
+                                      (s) => DropdownMenuItem<int>(
+                                        value: s,
+                                        child: Text(
+                                          _formatPeriodLabel(s),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColors.gray900,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: canInteract ? _onPeriodChanged : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                crossFadeState: _advancedExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 200),
+              ),
         ],
-      ],
+      ),
     );
   }
 }

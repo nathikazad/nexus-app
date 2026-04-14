@@ -77,32 +77,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Future<void> _testPing() async {
-    final result = await WatchBridgeService.instance.ping();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ping response: ${result ?? "failed"}'),
-          backgroundColor: result != null ? Colors.green : Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Platform.isIOS ? AppBar(
-        title: const Text('Nexus'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sync),
-            tooltip: 'Test Ping',
-            onPressed: _testPing,
-          ),
-        ],
-      ) : null,
       body: IndexedStack(
         index: _currentIndex,
         children: const [

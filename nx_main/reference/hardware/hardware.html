@@ -24,7 +24,7 @@
 
                 <div class="flex-1 overflow-y-auto no-scrollbar p-5 pb-24 space-y-4">
                     <button type="button" id="hw-device-card" class="w-full bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left cursor-pointer active:bg-gray-50/80 transition-colors hover:border-gray-200">
-                        <div class="flex items-start justify-between">
+                        <div class="flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div class="w-11 h-11 rounded-full bg-orange-50 flex items-center justify-center" aria-hidden="true">
                                     <!-- Wearable: triangle, point down (▽); black fill on orange tint circle -->
@@ -34,7 +34,6 @@
                                 </div>
                                 <div>
                                     <h2 class="text-base font-medium text-gray-900">NX-Necklace-Beta</h2>
-                                    <p class="text-sm text-gray-500 font-mono">ID: a4:c1:38:b2:99</p>
                                 </div>
                             </div>
                             <span class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 pointer-events-none shrink-0" aria-hidden="true"><i data-lucide="vibrate" class="w-4 h-4" stroke-width="1.5"></i></span>
@@ -125,8 +124,8 @@
                         <div class="flex flex-col gap-2">
                             <button type="button" id="hw-edit-name-btn" class="w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 hover:bg-gray-50 bg-white">Edit Name</button>
                             <button type="button" id="hw-restart-btn" class="w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 hover:bg-gray-50 bg-white">Restart</button>
-                            <button type="button" id="hw-forget-btn" class="w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 hover:bg-gray-50 bg-white">Forget</button>
-                            <button type="button" id="hw-disconnect-btn" class="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">Disconnect</button>
+                            <a href="no-hardware.html" id="hw-forget-btn" class="block w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 hover:bg-gray-50 bg-white text-center no-underline">Forget</a>
+                            <a href="hardware-disconnected.html" id="hw-disconnect-btn" class="block w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 text-center no-underline">Disconnect</a>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:nx_db/nx_db.dart';
+import 'package:nexus_voice_assistant/app_theme.dart';
+import 'package:nexus_voice_assistant/layout.dart';
 import 'package:nexus_voice_assistant/background_service.dart' show bleBackgroundServiceProvider;
 import 'package:nexus_voice_assistant/services/hardware_service/hardware_service.dart';
 import 'package:nexus_voice_assistant/services/hardware_service/camera_command.dart';
@@ -417,18 +422,144 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDevice() async {
+  /// Pairing / changing device: after **Forget**, or when there has never been a saved device.
+  Future<void> _navigateToDeviceSelection() async {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
     );
-    
+
     if (result == true && mounted) {
       await _loadPairedRemoteId();
       setState(() {
         _isConnected = _hardwareService.isConnected;
       });
     }
+  }
+
+  void _openPreferences() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Preferences'),
+            surfaceTintColor: Colors.transparent,
+          ),
+          body: Center(
+            child: Text(
+              'Preferences coming soon',
+              style: GoogleFonts.inter(fontSize: 15, color: AppColors.gray500),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    await ref.read(authProvider.notifier).logout();
+  }
+
+  Future<void> _disconnectBle() async {
+    ref.read(bleBackgroundServiceProvider).stopBle();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Disconnected from device')),
+    );
+  }
+
+  void _onDeviceCardTap() {
+    if (_isConnected) {
+      _showDeviceActionsSheet();
+      return;
+    }
+    final hasSavedDevice =
+        _pairedRemoteId != null && _pairedRemoteId!.isNotEmpty;
+    if (!hasSavedDevice) {
+      unawaited(_navigateToDeviceSelection());
+      return;
+    }
+  }
+
+  void _showDeviceActionsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                border: Border.all(color: AppColors.gray100),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: RefLayout.sheetHandleWidth,
+                      height: RefLayout.sheetHandleHeight,
+                      decoration: BoxDecoration(
+                        color: AppColors.gray200,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _DeviceSheetButton(
+                      label: 'Edit Name',
+                      filled: false,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        unawaited(_editDeviceName());
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _DeviceSheetButton(
+                      label: 'Restart',
+                      filled: false,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        unawaited(_powerCycleDevice());
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _DeviceSheetButton(
+                      label: 'Forget',
+                      filled: false,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        unawaited(_forgetPairedDevice());
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _DeviceSheetButton(
+                      label: 'Disconnect',
+                      filled: true,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        unawaited(_disconnectBle());
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _forgetPairedDevice() async {
@@ -456,347 +587,512 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
     await _hardwareService.forgetPairedDevice();
     if (mounted) {
       await _loadPairedRemoteId();
+      setState(() {
+        _isConnected = _hardwareService.isConnected;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Saved device cleared')),
       );
+      await _navigateToDeviceSelection();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use stored device name if available, otherwise fall back to advertising name
-    final displayName = _deviceName ?? _hardwareService.deviceName ?? 'Unknown';
-    
+    final displayName = _deviceName ?? _hardwareService.deviceName ?? 'Not connected';
+
+    String rtcSubtitle = '—';
+    if (_isConnected && _rtcTimeDisplay != null) {
+      final parts = _rtcTimeDisplay!.split('\n');
+      if (parts.length >= 2) {
+        final tz = _rtcTimezone != null ? ' (UTC$_rtcTimezone)' : '';
+        rtcSubtitle = '${parts[0].trim()} · ${parts[1].trim()}$tz';
+      } else {
+        rtcSubtitle = _rtcTimeDisplay!.replaceAll('\n', ' ');
+      }
+    }
+
+    final drawerWidth = math.min(
+      252.0,
+      MediaQuery.sizeOf(context).width * 0.72,
+    );
+
     return Scaffold(
+      backgroundColor: AppColors.gray50,
+      endDrawer: Drawer(
+        width: drawerWidth,
+        backgroundColor: Colors.white,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Text(
+                  'Menu',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    color: AppColors.gray900,
+                  ),
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.gray100),
+              ListTile(
+                leading: Icon(Icons.settings_outlined, color: AppColors.gray600, size: 22),
+                title: Text(
+                  'Preferences',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _openPreferences();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.logout_rounded, color: AppColors.gray600, size: 22),
+                title: Text(
+                  'Log out',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray900,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _logout();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
       appBar: AppBar(
-        title: const Text('Hardware Status'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text('Nexus', style: refAppBarTitleLarge()),
+        surfaceTintColor: Colors.transparent,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bluetooth_searching),
-            onPressed: _selectDevice,
-            tooltip: 'Select Device',
+          Builder(
+            builder: (scaffoldCtx) {
+              return IconButton(
+                icon: const Icon(Icons.menu, color: AppColors.gray600),
+                tooltip: 'Menu',
+                onPressed: () => Scaffold.of(scaffoldCtx).openEndDrawer(),
+              );
+            },
           ),
         ],
       ),
       body: SingleChildScrollView(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.fromLTRB(RefLayout.p4, RefLayout.p4, RefLayout.p4, 96),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_pairedRemoteId != null && _pairedRemoteId!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.link),
-                    title: const Text('Paired device'),
-                    subtitle: Text(
-                      _pairedRemoteId!,
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    trailing: TextButton(
-                      onPressed: _forgetPairedDevice,
-                      child: const Text('Forget'),
-                    ),
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Card(
-                  color: Colors.amber.shade50,
-                  child: ListTile(
-                    leading: const Icon(Icons.warning_amber_rounded),
-                    title: const Text('No device paired'),
-                    subtitle: const Text(
-                      'Tap the Bluetooth icon in the app bar to choose your Nexus.',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.bluetooth_searching),
-                      onPressed: _selectDevice,
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            // Device name
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: _isConnected && !_isSettingDeviceName ? _editDeviceName : null,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-            Text(
-                        displayName,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
+            _DeviceCard(
+              displayName: displayName,
+              isConnected: _isConnected,
+              isRenaming: _isSettingDeviceName,
+              onCardTap: _onDeviceCardTap,
+              onVibrate: _isConnected && !_isPulsingHaptic ? _pulseHaptic : null,
+              pulseBusy: _isPulsingHaptic,
+            ),
+            const SizedBox(height: RefLayout.gap4),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Battery',
+                      trailingIcon: (_isConnected && _isCharging == true)
+                          ? Icon(Icons.bolt_rounded, size: 18, color: AppColors.green500)
+                          : Icon(Icons.bolt_rounded, size: 18, color: AppColors.gray400),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            _isConnected && _batteryPercentage != null
+                                ? '$_batteryPercentage'
+                                : '—',
+                            style: GoogleFonts.inter(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: -0.5,
+                              color: _isConnected && _batteryPercentage != null
+                                  ? AppColors.gray900
+                                  : AppColors.gray400,
+                            ),
+                          ),
+                          Text(
+                            '%',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: AppColors.gray500,
+                            ),
+                          ),
+                        ],
                       ),
-                      if (_isSettingDeviceName) ...[
+                    ),
+                  ),
+                  const SizedBox(width: RefLayout.gap4),
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Voltage',
+                      trailingIcon: Icon(Icons.show_chart_rounded, size: 18, color: AppColors.gray400),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            _isConnected && _voltage != null
+                                ? _voltage!.toStringAsFixed(2)
+                                : '—',
+                            style: GoogleFonts.inter(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: -0.5,
+                              color: _isConnected && _voltage != null
+                                  ? AppColors.gray900
+                                  : AppColors.gray400,
+                            ),
+                          ),
+                          Text(
+                            ' v',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: AppColors.gray500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: RefLayout.gap4),
+            Container(
+              padding: const EdgeInsets.all(RefLayout.p4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                border: Border.all(color: AppColors.gray100),
+                boxShadow: refCardShadow,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Device Clock (RTC)',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppColors.gray500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          rtcSubtitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Material(
+                    color: AppColors.orange50,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _isConnected && !_isSettingRTC ? _setRTCTime : null,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: _isSettingRTC
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(
+                                Icons.refresh_rounded,
+                                color: _isConnected ? AppColors.orange600 : AppColors.gray400,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: RefLayout.gap4),
+            CameraSection(
+              isConnected: _isConnected,
+              captureInProgress: _isTriggeringCamera,
+              onCapture: _triggerCamera,
+            ),
+            if (!_isConnected) ...[
+              const SizedBox(height: 24),
+              Text(
+                _pairedRemoteId != null && _pairedRemoteId!.isNotEmpty
+                    ? 'Reconnecting to your Nexus…'
+                    : 'Tap the device card to set up a Nexus.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.gray500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+}
+
+class _DeviceCard extends StatelessWidget {
+  const _DeviceCard({
+    required this.displayName,
+    required this.isConnected,
+    required this.isRenaming,
+    required this.onCardTap,
+    required this.onVibrate,
+    required this.pulseBusy,
+  });
+
+  final String displayName;
+  final bool isConnected;
+  final bool isRenaming;
+  final VoidCallback onCardTap;
+  final VoidCallback? onVibrate;
+  final bool pulseBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(RefLayout.p4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+        border: Border.all(color: AppColors.gray100),
+        boxShadow: refCardShadow,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const _DownTriangleBadge(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onCardTap,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                      ),
+                      if (isRenaming) ...[
                         const SizedBox(width: 8),
                         const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 14,
+                          height: 14,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       ],
                     ],
                   ),
                 ),
-                if (_isConnected) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: _isPulsingHaptic
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.vibration, size: 20),
-                    onPressed: _isPulsingHaptic ? null : _pulseHaptic,
-                    tooltip: 'Vibrate',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  IconButton(
-                    icon: _isPowerCycling
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.restart_alt, size: 20),
-                    onPressed: _isPowerCycling ? null : _powerCycleDevice,
-                    tooltip: 'Power cycle',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 32),
-            // Battery and Voltage as separate columns on same row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Battery column
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        'Battery',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            _isConnected && _batteryPercentage != null
-                                ? '$_batteryPercentage%'
-                                : '--',
-                            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: _isConnected && _batteryPercentage != null
-                                  ? _getBatteryColor(_batteryPercentage!)
-                                  : Colors.grey,
-                            ),
-                          ),
-                          if (_isConnected && _isCharging == true) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.battery_charging_full,
-                              color: Colors.green,
-                              size: 24,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Voltage column
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        'Voltage',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _isConnected && _voltage != null
-                            ? '${_voltage!.toStringAsFixed(2)} V'
-                            : '-- V',
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: _isConnected && _voltage != null
-                              ? Colors.orange
-                              : Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // RTC Time (date and time+zone+button as columns on same row)
-            Text(
-              'RTC Time',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
               ),
-            ),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // Calculate font size based on screen width
-                final screenWidth = constraints.maxWidth;
-                final double fontSize = screenWidth /19;
-                
-                // Parse date and time from display string (format: "MM/DD/YY\nhh:mm am/pm")
-                String? datePart;
-                String? timePart;
-                if (_isConnected && _rtcTimeDisplay != null) {
-                  final parts = _rtcTimeDisplay!.split('\n');
-                  if (parts.length >= 2) {
-                    datePart = parts[0]; // "MM/DD/YY"
-                    timePart = parts[1]; // "hh:mm am/pm"
-                  } else {
-                    datePart = _rtcTimeDisplay;
-                    timePart = null;
-                  }
-                }
-                
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Date column
-                    Expanded(
-                      child: Text(
-                        datePart ?? '--',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.bold,
-                          color: _isConnected && datePart != null
-                              ? Colors.blue
-                              : Colors.grey,
-                        ),
-                      ),
-                    ),
-                    // Time + Zone + Button column
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              timePart != null && _rtcTimezone != null
-                                  ? '$timePart $_rtcTimezone'
-                                  : timePart ?? '--',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: fontSize,
-                                fontWeight: FontWeight.bold,
-                                color: _isConnected && timePart != null
-                                    ? Colors.blue
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ),
-                          if (_isConnected && _rtcTimeDisplay != null) ...[
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: _isSettingRTC
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.sync, size: 20),
-                              onPressed: _isSettingRTC ? null : _setRTCTime,
-                              tooltip: 'Sync with System Time',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-
-            const SizedBox(height: 24),
-            CameraSection(
-              isConnected: _isConnected,
-              titleTrailing: _isConnected
-                  ? IconButton(
-                      icon: _isTriggeringCamera
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.camera_alt, size: 22),
-                      onPressed: _isTriggeringCamera ? null : _triggerCamera,
-                      tooltip: 'Trigger camera',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                    )
-                  : null,
-            ),
-
-            if (!_isConnected) ...[
-              const SizedBox(height: 32),
-              Text(
-                'Not connected to device',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ],
             ),
           ),
+          Material(
+            color: AppColors.gray50,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onVibrate,
+              child: SizedBox(
+                width: 32,
+                height: 32,
+                child: pulseBusy
+                    ? const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        Icons.vibration_rounded,
+                        size: 18,
+                        color: isConnected ? AppColors.gray600 : AppColors.gray400,
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.child,
+    this.trailingIcon,
+  });
+
+  final String label;
+  final Widget child;
+  final Widget? trailingIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(RefLayout.p4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+        border: Border.all(color: AppColors.gray100),
+        boxShadow: refCardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.gray500,
+                ),
+              ),
+              if (trailingIcon != null) trailingIcon!,
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DeviceSheetButton extends StatelessWidget {
+  const _DeviceSheetButton({
+    required this.label,
+    required this.filled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool filled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (filled) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.gray900,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.gray900,
+          side: const BorderSide(color: AppColors.gray200),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
     );
   }
-  
-  Color _getBatteryColor(int percentage) {
-    if (percentage >= 50) {
-      return Colors.green;
-    } else if (percentage >= 20) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
+}
+
+class _DownTriangleBadge extends StatelessWidget {
+  const _DownTriangleBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(
+        color: AppColors.orange50,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: CustomPaint(
+        size: const Size(24, 24),
+        painter: _DownTrianglePainter(),
+      ),
+    );
   }
+}
+
+class _DownTrianglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFF171717);
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(w * 5 / 24, h * 6.5 / 24)
+      ..lineTo(w * 19 / 24, h * 6.5 / 24)
+      ..lineTo(w * 12 / 24, h * 18.2 / 24)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 

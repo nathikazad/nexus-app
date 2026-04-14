@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No Device — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+                <!-- Top bar -->
+                <div class="bg-white px-5 pt-14 pb-3 flex items-center justify-between border-b border-gray-100 z-10 sticky top-0">
+                    <h1 class="text-xl font-medium tracking-tight text-gray-900">Nexus</h1>
+                    <a href="hardware-menu-panel.html" class="w-10 h-10 -mr-1 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors no-underline" title="Menu">
+                        <i data-lucide="menu" class="w-6 h-6" stroke-width="1.5"></i>
+                    </a>
+                </div>
+
+                <!-- Main content — empty state -->
+                <div class="flex-1 flex flex-col items-center justify-center px-8 pb-24">
+                    <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
+                        <i data-lucide="bluetooth-off" class="w-9 h-9 text-gray-400" stroke-width="1.5"></i>
+                    </div>
+                    <h2 class="text-xl font-medium text-gray-900 mb-2 text-center">No device paired</h2>
+                    <p class="text-base text-gray-500 text-center leading-relaxed mb-8">Connect your Nexus wearable to see battery, clock, and camera controls.</p>
+                    <a href="device-selection.html" class="inline-flex items-center gap-2 bg-orange-600 text-white text-base font-medium px-6 py-3 rounded-xl shadow-md shadow-orange-600/20 hover:bg-orange-700 transition-colors no-underline">
+                        <i data-lucide="bluetooth-searching" class="w-5 h-5" stroke-width="1.5"></i>
+                        Find Device
+                    </a>
+                </div>
+
+                <!-- Bottom nav bar -->
+                <div class="bg-white border-t border-gray-100 pb-8 pt-3 px-6 flex justify-between items-center z-10 sticky bottom-0">
+                    <a href="no-hardware.html" class="flex flex-col items-center gap-1 text-orange-600 no-underline"><i data-lucide="cpu" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Hardware</span></a>
+                    <a href="../navigator/model-types.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="layout-grid" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Navigator</span></a>
+                    <a href="../logs/log-viewer.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="terminal-square" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Logs</span></a>
+                    <a href="../data/data-home.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="database" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Data</span></a>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

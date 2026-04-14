@@ -8,6 +8,7 @@ import 'package:opus_dart/opus_dart.dart';
 import 'dart:io';
 import 'package:nx_db/nx_db.dart';
 import 'router.dart';
+import 'app_theme.dart';
 import 'services/logging_service.dart';
 import 'services/watch_bridge_service.dart';
 import 'background_service.dart';
@@ -89,10 +90,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     return MaterialApp.router(
       title: 'Nexus Voice Assistant',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: buildNexusMainTheme(),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
