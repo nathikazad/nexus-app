@@ -24,7 +24,6 @@ dependencies:
   http: ^1.6.0
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
-  flutter_dotenv: ^6.0.0
   flutter_blue_plus: ^2.1.0
   flutter_background_service: ^5.0.5
   # Navigator dependencies
@@ -55,4 +54,3 @@ flutter:
     - assets/s16le_16000hz_mono.raw
     - assets/download.js
     - assets/ai.opus
-    - .env

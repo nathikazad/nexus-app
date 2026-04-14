@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'voice_assistant_screen.dart';
 import 'hardware_screen.dart';
 import 'navigator_screen.dart';
 import 'log_viewer_screen.dart';
@@ -67,16 +66,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  void _openVoiceAssistant() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const VoiceAssistantScreen(),
-        fullscreenDialog: true,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,28 +87,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           });
         },
         items: const [
+          // Matches reference/shell/home-tab-shell.html (Lucide: cpu, layout-grid, terminal-square, database).
           BottomNavigationBarItem(
-            icon: Icon(Icons.devices),
+            icon: Icon(Icons.developer_board_rounded),
             label: 'Hardware',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.navigation),
+            icon: Icon(Icons.folder_open_rounded),
             label: 'Navigator',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.description),
+            icon: Icon(Icons.terminal_rounded),
             label: 'Logs',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.folder_open),
+            icon: Icon(Icons.input_rounded),
             label: 'Data',
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openVoiceAssistant,
-        child: const Icon(Icons.chat),
-        tooltip: 'Voice Assistant',
       ),
     );
   }

@@ -64,6 +64,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isLoading = authState.isLoading;
+    final theme = Theme.of(context);
+    final dropdownTextStyle = theme.textTheme.bodyLarge?.copyWith(
+          color: theme.colorScheme.onSurface,
+        ) ??
+        TextStyle(color: theme.colorScheme.onSurface);
 
     return Scaffold(
       appBar: AppBar(
@@ -104,6 +109,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<BackendPreset>(
                   initialValue: _selectedPreset,
+                  style: dropdownTextStyle,
+                  iconEnabledColor: theme.colorScheme.onSurfaceVariant,
+                  dropdownColor: theme.colorScheme.surface,
                   decoration: const InputDecoration(
                     labelText: 'Backend',
                     border: OutlineInputBorder(),
@@ -113,7 +121,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       .map(
                         (p) => DropdownMenuItem<BackendPreset>(
                           value: p,
-                          child: Text(p.label),
+                          child: Text(p.label, style: dropdownTextStyle),
                         ),
                       )
                       .toList(),

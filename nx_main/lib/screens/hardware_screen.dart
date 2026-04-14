@@ -37,6 +37,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   bool _isTriggeringCamera = false;
   bool _isSettingDeviceName = false;
   String? _pairedRemoteId;
+  bool _menuOpen = false;
 
   StreamSubscription<BleConnectionState>? _connectionSubscription;
   StreamSubscription<Map<String, dynamic>>? _devicePushSubscription;
@@ -475,6 +476,9 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   }
 
   void _showDeviceActionsSheet() {
+    if (_menuOpen) {
+      setState(() => _menuOpen = false);
+    }
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -623,84 +627,43 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
       }
     }
 
-    final drawerWidth = math.min(
-      252.0,
-      MediaQuery.sizeOf(context).width * 0.72,
-    );
+    final paddingTop = MediaQuery.paddingOf(context).top;
 
-    return Scaffold(
-      backgroundColor: AppColors.gray50,
-      endDrawer: Drawer(
-        width: drawerWidth,
-        backgroundColor: Colors.white,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Text(
-                  'Menu',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
-                    color: AppColors.gray900,
+    return PopScope(
+      canPop: !_menuOpen,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _menuOpen) {
+          setState(() => _menuOpen = false);
+        }
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Scaffold(
+            backgroundColor: AppColors.gray50,
+            appBar: AppBar(
+              title: Text('Nexus', style: refAppBarTitleLarge()),
+              surfaceTintColor: Colors.transparent,
+              actions: [
+                Tooltip(
+                  message: 'Menu',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => setState(() => _menuOpen = !_menuOpen),
+                      child: const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(Icons.menu, color: AppColors.gray600, size: 24),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const Divider(height: 1, color: AppColors.gray100),
-              ListTile(
-                leading: Icon(Icons.settings_outlined, color: AppColors.gray600, size: 22),
-                title: Text(
-                  'Preferences',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray900,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _openPreferences();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.logout_rounded, color: AppColors.gray600, size: 22),
-                title: Text(
-                  'Log out',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray900,
-                  ),
-                ),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _logout();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      appBar: AppBar(
-        title: Text('Nexus', style: refAppBarTitleLarge()),
-        surfaceTintColor: Colors.transparent,
-        actions: [
-          Builder(
-            builder: (scaffoldCtx) {
-              return IconButton(
-                icon: const Icon(Icons.menu, color: AppColors.gray600),
-                tooltip: 'Menu',
-                onPressed: () => Scaffold.of(scaffoldCtx).openEndDrawer(),
-              );
-            },
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
+              ],
+            ),
+            body: LayoutBuilder(
+              builder: (context, constraints) {
           if (_isConnected) {
             return SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
@@ -826,7 +789,7 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Device Clock (RTC)',
+                                'Device Clock',
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   color: AppColors.gray500,
@@ -960,7 +923,127 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
               ),
             ),
           );
-        },
+              },
+            ),
+          ),
+          if (_menuOpen) ...[
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => setState(() => _menuOpen = false),
+                behavior: HitTestBehavior.opaque,
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.32),
+                ),
+              ),
+            ),
+            Positioned(
+              top: paddingTop + kToolbarHeight + 4,
+              right: 20,
+              width: 220,
+              child: Material(
+                elevation: 8,
+                shadowColor: Colors.black.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.gray100),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      InkWell(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        onTap: () {
+                          setState(() => _menuOpen = false);
+                          _openPreferences();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings_outlined,
+                                size: 18,
+                                color: AppColors.gray500,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Preferences',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.gray900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: AppColors.gray100,
+                        ),
+                      ),
+                      InkWell(
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(12),
+                        ),
+                        onTap: () async {
+                          setState(() => _menuOpen = false);
+                          await _logout();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.logout_rounded,
+                                size: 18,
+                                color: AppColors.gray500,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Log out',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.gray900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1283,7 +1366,7 @@ class _DownTriangleBadge extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: CustomPaint(
-        size: const Size(24, 24),
+        size: const Size(28, 28),
         painter: _DownTrianglePainter(offline: offline),
       ),
     );
