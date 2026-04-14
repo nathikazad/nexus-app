@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Person — Model Type Detail — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+                <!-- Header -->
+                <div class="bg-white px-4 pt-14 pb-3 flex items-center gap-3 border-b border-gray-100 z-10 sticky top-0">
+                    <a href="model-types.html" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-gray-900 hover:bg-gray-50 no-underline" title="Back">
+                        <i data-lucide="arrow-left" class="w-5 h-5" stroke-width="1.5"></i>
+                    </a>
+                    <h1 class="text-xl font-medium tracking-tight text-gray-900 flex-1">Person</h1>
+                    <a href="../models/model-type-form.html" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 no-underline" title="Edit">
+                        <i data-lucide="pencil" class="w-5 h-5" stroke-width="1.5"></i>
+                    </a>
+                </div>
+
+                <div class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-5 pb-8">
+
+                    <!-- Meta info -->
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg">base</span>
+                        <span class="text-sm text-gray-500">Parent: <a href="model-type-detail.html" class="text-orange-600 font-medium no-underline hover:underline">Real Nouns</a></span>
+                    </div>
+
+                    <p class="text-sm text-gray-600 leading-relaxed">A human being — someone you know, met, or work with.</p>
+
+                    <!-- Traits -->
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Traits</h3>
+                        <div class="space-y-2">
+                            <a href="model-type-detail.html" class="flex items-center bg-white rounded-xl p-3 border border-gray-100 no-underline text-inherit hover:border-gray-200 transition-colors">
+                                <i data-lucide="tag" class="w-4 h-4 text-purple-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                                <span class="text-sm font-medium text-gray-800 flex-1">Employee</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300" stroke-width="1.5"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Attributes -->
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Attributes</h3>
+                        <div class="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+                            <div class="flex items-center px-4 py-3">
+                                <span class="text-sm font-medium text-gray-800 flex-1">email</span>
+                                <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md mr-2">string</span>
+                                <span class="text-xs text-orange-500 font-medium">required</span>
+                            </div>
+                            <div class="flex items-center px-4 py-3">
+                                <span class="text-sm font-medium text-gray-800 flex-1">phone</span>
+                                <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">string</span>
+                            </div>
+                            <div class="flex items-center px-4 py-3">
+                                <span class="text-sm font-medium text-gray-800 flex-1">age</span>
+                                <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">number</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inherited Attributes -->
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Inherited Attributes <span class="normal-case font-normal">from Real Nouns</span></h3>
+                        <div class="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50 opacity-60">
+                            <div class="flex items-center px-4 py-3">
+                                <span class="text-sm font-medium text-gray-600 flex-1">name</span>
+                                <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md mr-2">string</span>
+                                <span class="text-xs text-orange-400 font-medium">required</span>
+                            </div>
+                            <div class="flex items-center px-4 py-3">
+                                <span class="text-sm font-medium text-gray-600 flex-1">description</span>
+                                <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">string</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relations -->
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Relations</h3>
+                        <div class="space-y-2">
+                            <!-- Relation to Company — tappable to go to Company detail -->
+                            <a href="model-type-detail.html" class="block bg-white rounded-xl p-4 border border-gray-100 no-underline text-inherit hover:border-gray-200 transition-colors">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-gray-800">Company</span>
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-300" stroke-width="1.5"></i>
+                                    </div>
+                                    <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">many</span>
+                                </div>
+                                <p class="text-xs text-gray-500">Person works at a company</p>
+                                <p class="text-xs text-purple-400 mt-1 italic">via trait Employee</p>
+                            </a>
+
+                            <!-- Relation to Place -->
+                            <a href="model-type-detail.html" class="block bg-white rounded-xl p-4 border border-gray-100 no-underline text-inherit hover:border-gray-200 transition-colors">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-gray-800">Place</span>
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-300" stroke-width="1.5"></i>
+                                    </div>
+                                    <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">many</span>
+                                </div>
+                                <p class="text-xs text-gray-500">Person visited a place</p>
+                                <div class="mt-2 pt-2 border-t border-gray-50">
+                                    <span class="text-xs text-gray-400 font-medium">Relation attrs:</span>
+                                    <div class="flex gap-2 mt-1 flex-wrap">
+                                        <span class="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md">visit_date · datetime</span>
+                                    </div>
+                                </div>
+                            </a>
+
+                            <!-- Relation to Contact -->
+                            <a href="model-type-detail.html" class="block bg-white rounded-xl p-4 border border-gray-100 no-underline text-inherit hover:border-gray-200 transition-colors">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-gray-800">Contact</span>
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-300" stroke-width="1.5"></i>
+                                    </div>
+                                    <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">many</span>
+                                </div>
+                                <p class="text-xs text-gray-500">Person has contact information</p>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Tag Systems -->
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tag Systems</h3>
+                        <div class="space-y-2">
+                            <div class="bg-white rounded-xl p-4 border border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-800">Relationship Level</span>
+                                    <div class="flex gap-2">
+                                        <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">exclusive</span>
+                                        <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">flat</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 flex-wrap">
+                                    <span class="text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">Close friend</span>
+                                    <span class="text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">Friend</span>
+                                    <span class="text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">Acquaintance</span>
+                                    <span class="text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">Colleague</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

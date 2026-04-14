@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/widgets/error_widget.dart';
-import 'widgets/model_type_row.dart';
+import 'package:nexus_voice_assistant/widgets/model_type_row.dart';
 
 class ModelTypeSelectorScreen extends ConsumerStatefulWidget {
   const ModelTypeSelectorScreen({super.key});

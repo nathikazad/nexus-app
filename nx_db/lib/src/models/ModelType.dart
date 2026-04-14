@@ -127,8 +127,8 @@ class ModelType {
         return RelationshipType(
           id: rel['id'] as int?,
           link: targetModelTypeName, // Use name as link (get_kgql_model_type doesn't provide target ID)
-          multiplicity: null, // get_kgql_model_type doesn't provide multiplicity
-          description: null, // get_kgql_model_type doesn't provide description
+          multiplicity: rel['multiplicity'] as String? ?? rel['cardinality'] as String?,
+          description: rel['description'] as String?,
           relationAttributeDefinitions: relationAttributeDefinitions,
         );
       }).whereType<RelationshipType>().toList();

@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/navigator/models_list_screen.dart';
 import 'screens/navigator/model_detail_screen.dart';
 import 'screens/navigator/model_type_form_screen.dart';
+import 'screens/navigator/model_type_detail_screen.dart';
 import 'screens/navigator/model_type_selector_screen.dart';
 import 'background_service.dart';
 
@@ -49,6 +50,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/model-type/:modelTypeId',
+        builder: (context, state) {
+          final modelTypeId = int.parse(state.pathParameters['modelTypeId']!);
+          return ModelTypeDetailScreen(modelTypeId: modelTypeId);
+        },
       ),
       GoRoute(
         path: '/models/:modelTypeId',

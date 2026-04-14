@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create model type — Nexus App UI</title>
+    <title>Edit model type — Nexus App UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -16,33 +16,51 @@
     <div class="flex flex-wrap justify-center gap-10 items-start">
             <div class="relative w-full max-w-[375px] h-[812px] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
                 <div class="px-4 pt-14 pb-3 flex items-center gap-3 border-b border-gray-100 z-10 sticky top-0 bg-white">
-                    <a href="../navigator/model-types-fab-expanded.html" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-gray-900 hover:bg-gray-50" title="Close">
-                        <i data-lucide="x" class="w-5 h-5" stroke-width="1.5"></i>
+                    <a href="../navigator/model-type-detail.html" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-gray-900 hover:bg-gray-50 no-underline" title="Back">
+                        <i data-lucide="arrow-left" class="w-5 h-5" stroke-width="1.5"></i>
                     </a>
-                    <h1 class="text-xl font-medium tracking-tight text-gray-900">Create Model Type</h1>
+                    <h1 class="text-xl font-medium tracking-tight text-gray-900 flex-1">Edit Model Type</h1>
+                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors" title="Delete" onclick="document.getElementById('delete-dialog').classList.remove('hidden')">
+                        <i data-lucide="trash-2" class="w-5 h-5" stroke-width="1.5"></i>
+                    </button>
                 </div>
 
                 <div class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-8 pb-28">
+                    <!-- Basic fields -->
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
-                            <input type="text" placeholder="e.g. Device" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600">
+                            <input type="text" value="Person" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Description (Optional)</label>
-                            <textarea rows="2" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600 resize-none"></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                            <textarea rows="2" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600 resize-none">A human being — someone you know, met, or work with.</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Type Kind</label>
+                            <div class="flex gap-2">
+                                <button class="flex-1 py-2.5 rounded-xl text-sm font-medium bg-orange-600 text-white">base</button>
+                                <button class="flex-1 py-2.5 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50">abstract</button>
+                                <button class="flex-1 py-2.5 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50">trait</button>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Parent Type</label>
-                            <a href="parent-type-picker.html" class="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-left text-base text-gray-500 hover:bg-gray-50 no-underline">
-                                <span>Select parent...</span>
-                                <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400" stroke-width="1.5"></i>
+                            <a href="parent-type-picker.html" class="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-left text-base hover:bg-gray-50 no-underline">
+                                <span class="text-gray-900">Real Nouns</span>
+                                <div class="flex items-center gap-2">
+                                    <button class="text-gray-400 hover:text-red-500" title="Clear parent" onclick="event.preventDefault(); event.stopPropagation();">
+                                        <i data-lucide="x" class="w-4 h-4" stroke-width="1.5"></i>
+                                    </button>
+                                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400" stroke-width="1.5"></i>
+                                </div>
                             </a>
                         </div>
                     </div>
 
                     <div class="h-px bg-gray-100 w-full"></div>
 
+                    <!-- Attributes -->
                     <div>
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-base font-medium text-gray-900">Attributes</h3>
@@ -50,31 +68,114 @@
                         </div>
                         <div class="space-y-3">
                             <div class="flex items-center gap-2">
-                                <input type="text" value="mac_address" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-orange-600">
-                                <select class="w-28 bg-white border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-900 appearance-none focus:outline-none focus:border-orange-600 text-center">
-                                    <option>String</option>
+                                <input type="text" value="email" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-orange-600">
+                                <select class="w-24 bg-white border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-900 appearance-none focus:outline-none focus:border-orange-600 text-center">
+                                    <option selected>String</option>
                                     <option>Number</option>
+                                    <option>Boolean</option>
+                                    <option>Datetime</option>
                                 </select>
-                                <button class="p-2 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                                <button class="p-1.5 text-orange-500" title="Required"><i data-lucide="asterisk" class="w-4 h-4" stroke-width="2"></i></button>
+                                <button class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="text" value="phone" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-orange-600">
+                                <select class="w-24 bg-white border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-900 appearance-none focus:outline-none focus:border-orange-600 text-center">
+                                    <option selected>String</option>
+                                    <option>Number</option>
+                                    <option>Boolean</option>
+                                    <option>Datetime</option>
+                                </select>
+                                <button class="p-1.5 text-gray-300" title="Optional"><i data-lucide="asterisk" class="w-4 h-4" stroke-width="2"></i></button>
+                                <button class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="text" value="age" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-orange-600">
+                                <select class="w-24 bg-white border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-900 appearance-none focus:outline-none focus:border-orange-600 text-center">
+                                    <option>String</option>
+                                    <option selected>Number</option>
+                                    <option>Boolean</option>
+                                    <option>Datetime</option>
+                                </select>
+                                <button class="p-1.5 text-gray-300" title="Optional"><i data-lucide="asterisk" class="w-4 h-4" stroke-width="2"></i></button>
+                                <button class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
                             </div>
                         </div>
                     </div>
 
+                    <div class="h-px bg-gray-100 w-full"></div>
+
+                    <!-- Relationships -->
                     <div>
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-base font-medium text-gray-900">Relationships</h3>
                             <button class="text-sm font-medium text-orange-600 flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4" stroke-width="1.5"></i> Add</button>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center border-dashed">
-                            <p class="text-sm text-gray-500">No relationships defined.</p>
+                        <div class="space-y-3">
+                            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-800">Place</span>
+                                    <button class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <select class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 appearance-none focus:outline-none focus:border-orange-600">
+                                        <option selected>many</option>
+                                        <option>one</option>
+                                    </select>
+                                </div>
+                                <input type="text" value="Person visited a place" placeholder="Description" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-orange-600">
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-500">Relation Attributes</span>
+                                        <button class="text-xs text-orange-600 font-medium">+ Add</button>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" value="visit_date" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-orange-600">
+                                        <select class="w-20 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 appearance-none focus:outline-none focus:border-orange-600 text-center">
+                                            <option>String</option>
+                                            <option>Number</option>
+                                            <option selected>Datetime</option>
+                                        </select>
+                                        <button class="p-1 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5" stroke-width="1.5"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-800">Contact</span>
+                                    <button class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <select class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 appearance-none focus:outline-none focus:border-orange-600">
+                                        <option selected>many</option>
+                                        <option>one</option>
+                                    </select>
+                                </div>
+                                <input type="text" value="Person has contact information" placeholder="Description" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-orange-600">
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Save button -->
                 <div class="bg-white border-t border-gray-100 p-5 pb-8 absolute bottom-0 w-full z-10">
-                    <a href="../navigator/model-types-fab-expanded.html" class="w-full bg-orange-600 text-white rounded-xl py-3.5 px-4 flex items-center justify-center font-medium text-base shadow-sm no-underline hover:bg-orange-700 transition-colors">
+                    <a href="../navigator/model-type-detail.html" class="w-full bg-orange-600 text-white rounded-xl py-3.5 px-4 flex items-center justify-center font-medium text-base shadow-sm no-underline hover:bg-orange-700 transition-colors">
                         Save Model Type
                     </a>
+                </div>
+
+                <!-- Delete confirmation dialog -->
+                <div id="delete-dialog" class="hidden absolute inset-0 z-[100] flex items-center justify-center">
+                    <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('delete-dialog').classList.add('hidden')"></div>
+                    <div class="relative bg-white rounded-2xl shadow-xl mx-8 p-6 max-w-sm w-full">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Delete "Person"?</h3>
+                        <p class="text-sm text-gray-500 mb-6 leading-relaxed">This will permanently delete this model type and all its attribute definitions and relationship types. This cannot be undone.</p>
+                        <div class="flex gap-3">
+                            <button class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50" onclick="document.getElementById('delete-dialog').classList.add('hidden')">Cancel</button>
+                            <a href="../navigator/model-types.html" class="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium text-center no-underline hover:bg-red-700">Delete</a>
+                        </div>
+                    </div>
                 </div>
             </div>
     </div>

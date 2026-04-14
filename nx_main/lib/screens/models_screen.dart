@@ -7,19 +7,72 @@ import 'package:nexus_voice_assistant/app_theme.dart';
 import 'package:nexus_voice_assistant/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/screens/navigator/widgets/model_type_row.dart';
-import 'package:nexus_voice_assistant/widgets/expanding_fab_menu.dart';
 
-class NavigatorHomeScreen extends ConsumerStatefulWidget {
-  const NavigatorHomeScreen({super.key});
-
-  @override
-  ConsumerState<NavigatorHomeScreen> createState() => _NavigatorHomeScreenState();
+ModelType _modelTypeWithChildren(ModelType n, List<ModelType> children) {
+  return ModelType(
+    id: n.id,
+    name: n.name,
+    typeKind: n.typeKind,
+    description: n.description,
+    parentId: n.parentId,
+    userId: n.userId,
+    parent: n.parent,
+    children: children,
+    traits: n.traits,
+    attributes: n.attributes,
+    relations: n.relations,
+    tagSystems: n.tagSystems,
+  );
 }
 
-class _NavigatorHomeScreenState extends ConsumerState<NavigatorHomeScreen> {
-  // Track which model types are expanded (by ID)
+List<ModelType> _filterModelTypeTree(List<ModelType> roots, String query) {
+  final trimmed = query.trim();
+  if (trimmed.isEmpty) return roots;
+  final q = trimmed.toLowerCase();
+
+  List<ModelType> walk(List<ModelType> nodes) {
+    final out = <ModelType>[];
+    for (final n in nodes) {
+      final childFiltered = n.children != null ? walk(n.children!) : <ModelType>[];
+      final selfMatch = n.name.toLowerCase().contains(q);
+      if (selfMatch) {
+        out.add(n);
+      } else if (childFiltered.isNotEmpty) {
+        out.add(_modelTypeWithChildren(n, childFiltered));
+      }
+    }
+    return out;
+  }
+
+  return walk(roots);
+}
+
+void _collectExpandableIds(List<ModelType> nodes, Set<int> into) {
+  for (final n in nodes) {
+    if (n.children != null && n.children!.isNotEmpty) {
+      into.add(n.id);
+      _collectExpandableIds(n.children!, into);
+    }
+  }
+}
+
+class ModelsScreen extends ConsumerStatefulWidget {
+  const ModelsScreen({super.key});
+
+  @override
+  ConsumerState<ModelsScreen> createState() => _ModelsScreenState();
+}
+
+class _ModelsScreenState extends ConsumerState<ModelsScreen> {
   final Set<int> _expandedIds = {};
   bool _menuOpen = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _openPreferences() {
     Navigator.of(context).push<void>(
@@ -54,10 +107,51 @@ class _NavigatorHomeScreenState extends ConsumerState<NavigatorHomeScreen> {
     });
   }
 
+  List<Widget> _buildModelTypeItems(
+    List<ModelType> types, {
+    int indentLevel = 0,
+  }) {
+    final items = <Widget>[];
+    for (var i = 0; i < types.length; i++) {
+      final modelType = types[i];
+      final hasChildren = modelType.children != null && modelType.children!.isNotEmpty;
+      final isExpanded = _expandedIds.contains(modelType.id);
+      final showTopDivider = indentLevel == 0 && i > 0;
+
+      items.add(
+        ModelTypeRow(
+          modelType: modelType,
+          isGroupHeader: hasChildren,
+          indentLevel: indentLevel,
+          isExpanded: isExpanded,
+          showTopDivider: showTopDivider,
+          onTap: () {
+            if (hasChildren) {
+              _toggleExpand(modelType.id);
+            } else {
+              context.push('/model-type/${modelType.id}');
+            }
+          },
+        ),
+      );
+
+      if (hasChildren && isExpanded) {
+        items.addAll(
+          _buildModelTypeItems(
+            modelType.children!,
+            indentLevel: indentLevel + 1,
+          ),
+        );
+      }
+    }
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     final modelTypesAsync = ref.watch(modelTypesProvider);
     final paddingTop = MediaQuery.paddingOf(context).top;
+    final searchQuery = _searchController.text;
 
     return PopScope(
       canPop: !_menuOpen,
@@ -71,7 +165,7 @@ class _NavigatorHomeScreenState extends ConsumerState<NavigatorHomeScreen> {
         children: [
           Scaffold(
             appBar: AppBar(
-              title: const Text('Model Types'),
+              title: const Text('Models'),
               elevation: 0,
               surfaceTintColor: Colors.transparent,
               actions: [
@@ -93,94 +187,117 @@ class _NavigatorHomeScreenState extends ConsumerState<NavigatorHomeScreen> {
               ],
             ),
             body: LayoutBuilder(
-        builder: (context, constraints) {
-          return modelTypesAsync.when(
-            data: (modelTypes) {
-              if (modelTypes.isEmpty) {
-                return const Center(
-                  child: Text('No model types found'),
-                );
-              }
+              builder: (context, constraints) {
+                return modelTypesAsync.when(
+                  data: (modelTypes) {
+                    if (modelTypes.isEmpty) {
+                      return const Center(
+                        child: Text('No model types found'),
+                      );
+                    }
 
-              // Helper function to build list items recursively
-              List<Widget> buildModelTypeItems(List<ModelType> types, {int indentLevel = 0}) {
-                final items = <Widget>[];
-                for (var modelType in types) {
-                  final hasChildren = modelType.children != null && modelType.children!.isNotEmpty;
-                  final isExpanded = _expandedIds.contains(modelType.id);
-                  
-                  // Add the model type itself
-                  items.add(
-                    Padding(
-                      padding: EdgeInsets.only(left: indentLevel * 32.0),
-                        child: ModelTypeRow(
-                          modelType: modelType,
-                        showExpandButton: hasChildren,
-                        isExpanded: isExpanded,
-                        onExpandTap: hasChildren ? () => _toggleExpand(modelType.id) : null,
-                        onTap: () {
-                          // Navigate to models list for base types, settings for others
-                          if (modelType.typeKind == 'base') {
-                            context.push('/models/${modelType.id}');
-                          } else {
-                            context.push('/model-type-settings/${modelType.id}');
-                          }
-                        },
-                          onSettingsTap: () async {
-                            final result = await context.push('/model-type-form?modelTypeId=${modelType.id}');
-                            // If model type was updated successfully, refetch model types
-                            if (result == true) {
-                              ref.invalidate(modelTypesProvider);
-                            }
-                          },
+                    final filtered = _filterModelTypeTree(modelTypes, searchQuery);
+                    if (searchQuery.trim().isNotEmpty) {
+                      final need = <int>{};
+                      _collectExpandableIds(filtered, need);
+                      final missing = need.difference(_expandedIds);
+                      if (missing.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          setState(() => _expandedIds.addAll(missing));
+                        });
+                      }
+                    }
+
+                    final allItems = _buildModelTypeItems(filtered);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (_) => setState(() {}),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: AppColors.gray900,
+                            ),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: 'Search types...',
+                              hintStyle: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: AppColors.gray400,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                size: 20,
+                                color: AppColors.gray400,
+                              ),
+                              suffixIcon: searchQuery.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Clear',
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {});
+                                        FocusScope.of(context).unfocus();
+                                      },
+                                      icon: Icon(
+                                        Icons.close,
+                                        size: 20,
+                                        color: AppColors.gray400,
+                                      ),
+                                    ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: AppColors.gray100,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
                         ),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: () async {
+                              ref.invalidate(modelTypesProvider);
+                            },
+                            child: ListView(
+                              padding: const EdgeInsets.only(bottom: 96),
+                              children: allItems,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const LoadingIndicator(),
+                  error: (error, stack) => ErrorDisplay(
+                    message: error.toString(),
+                    onRetry: () {
+                      ref.invalidate(modelTypesProvider);
+                    },
                   ),
                 );
-                  
-                  // Add children recursively with increased indent (only if expanded)
-                  if (hasChildren && isExpanded) {
-                    items.addAll(buildModelTypeItems(modelType.children!, indentLevel: indentLevel + 1));
-                  }
-                }
-                return items;
-              }
-
-              // Build all items recursively
-              final allItems = buildModelTypeItems(modelTypes);
-
-              // Simple ListView for all screen sizes
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(modelTypesProvider);
-                  },
-                child: ListView(
-                    padding: const EdgeInsets.all(16),
-                  children: allItems,
-                              ),
-              );
-            },
-            loading: () => const LoadingIndicator(),
-            error: (error, stack) => ErrorDisplay(
-              message: error.toString(),
-              onRetry: () {
-                ref.invalidate(modelTypesProvider);
               },
             ),
-          );
-        },
-      ),
-            floatingActionButton: ExpandingFabMenu(
-              onModelTypeTap: () async {
-                final result = await context.push('/model-type-form');
-                // If model type was created/updated successfully, refetch model types
+            floatingActionButton: FloatingActionButton(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              onPressed: () async {
+                final result = await context.push<bool>('/model-type-form');
                 if (result == true) {
                   ref.invalidate(modelTypesProvider);
                 }
               },
-              onModelTap: () {
-                // TODO: Navigate to model form when route is available
-                // context.push('/model-form');
-              },
+              child: const Icon(Icons.add),
             ),
           ),
           if (_menuOpen) ...[
@@ -305,4 +422,3 @@ class _NavigatorHomeScreenState extends ConsumerState<NavigatorHomeScreen> {
     );
   }
 }
-

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'hardware_screen.dart';
-import 'navigator_screen.dart';
+import 'models_screen.dart';
 import 'log_viewer_screen.dart';
 import 'data_screen.dart';
 import '../services/watch_bridge_service.dart';
@@ -73,7 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         index: _currentIndex,
         children: const [
           HardwareScreen(),
-          NavigatorHomeScreen(),
+          ModelsScreen(),
           LogViewerScreen(),
           DataScreen(),
         ],
@@ -93,8 +93,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             label: 'Hardware',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.folder_open_rounded),
-            label: 'Navigator',
+            icon: Icon(Icons.schema_rounded),
+            label: 'Models',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.terminal_rounded),

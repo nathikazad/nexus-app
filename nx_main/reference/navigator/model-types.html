@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model types (Navigator) — FAB collapsed — Nexus App UI</title>
+    <title>Model types (Navigator) — Nexus App UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -14,56 +14,124 @@
 <body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
 
     <div class="flex flex-wrap justify-center gap-10 items-start">
-            <div class="relative w-full max-w-[375px] h-[812px] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
                 <div class="bg-white px-5 pt-14 pb-3 flex items-center justify-between border-b border-gray-100 z-10 sticky top-0">
                     <h1 class="text-xl font-medium tracking-tight text-gray-900">Model Types</h1>
-                    <a href="../auth/login.html" class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100" title="Sign out">
-                        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+                    <button id="nav-menu-btn" class="w-10 h-10 -mr-1 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors" title="Menu">
+                        <i data-lucide="menu" class="w-6 h-6" stroke-width="1.5"></i>
+                    </button>
+                </div>
+
+                <!-- Menu popup -->
+                <div id="nav-menu-scrim" class="hidden absolute inset-0 z-[80]" aria-hidden="true"></div>
+                <div id="nav-menu-popup" class="hidden absolute right-7 top-[4.5rem] z-[90] bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[160px]">
+                    <a href="../hardware/preferences.html" class="flex items-center gap-3 px-4 py-3 no-underline text-inherit hover:bg-gray-50 transition-colors">
+                        <i data-lucide="settings" class="w-[18px] h-[18px] text-gray-500" stroke-width="1.75"></i>
+                        <span class="text-sm font-medium text-gray-900">Preferences</span>
                     </a>
+                    <div class="h-px bg-gray-100 mx-3"></div>
+                    <a href="../auth/login.html" class="flex items-center gap-3 px-4 py-3 no-underline text-inherit hover:bg-gray-50 transition-colors">
+                        <i data-lucide="log-out" class="w-[18px] h-[18px] text-gray-500" stroke-width="1.75"></i>
+                        <span class="text-sm font-medium text-gray-900">Log out</span>
+                    </a>
+                </div>
+
+                <!-- Search bar -->
+                <div class="px-5 py-3 bg-white border-b border-gray-100">
+                    <div class="flex items-center bg-gray-100 rounded-xl px-3 py-2.5">
+                        <i data-lucide="search" class="w-4 h-4 text-gray-400 mr-2 shrink-0" stroke-width="1.5"></i>
+                        <input type="text" placeholder="Search types..." class="bg-transparent text-sm text-gray-900 placeholder-gray-400 w-full outline-none">
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto no-scrollbar py-2 pb-28">
-                    <div class="flex items-center w-full px-4 py-3 hover:bg-gray-50 transition-colors">
-                        <button class="p-1 mr-1 text-gray-400 hover:text-gray-900"><i data-lucide="chevron-down" class="w-4 h-4" stroke-width="1.5"></i></button>
-                        <i data-lucide="folder" class="w-5 h-5 text-orange-500 mr-3" stroke-width="1.5"></i>
-                        <span class="text-base font-medium text-gray-900 flex-1">Hardware</span>
-                        <button class="p-2 text-gray-400 hover:text-gray-900"><i data-lucide="settings-2" class="w-4 h-4" stroke-width="1.5"></i></button>
-                    </div>
-                    
-                    <a href="../models/models-list.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors bg-gray-50/50 no-underline text-inherit">
-                        <div class="w-6 h-px bg-gray-200 mr-2"></div>
-                        <i data-lucide="file-box" class="w-4 h-4 text-gray-400 mr-3" stroke-width="1.5"></i>
-                        <span class="text-base text-gray-700 flex-1">Wearable Devices</span>
-                        <span class="text-xs text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-md mr-3">12</span>
-                        <span class="p-2 text-gray-400"><i data-lucide="settings-2" class="w-4 h-4" stroke-width="1.5"></i></span>
-                    </a>
 
-                    <div class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors bg-gray-50/50">
-                        <div class="w-6 h-px bg-gray-200 mr-2"></div>
-                        <i data-lucide="file-box" class="w-4 h-4 text-gray-400 mr-3" stroke-width="1.5"></i>
-                        <span class="text-base text-gray-700 flex-1">Sensors</span>
-                        <span class="text-xs text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-md mr-3">4</span>
-                        <button class="p-2 text-gray-400 hover:text-gray-900"><i data-lucide="settings-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                    <!-- === Real Nouns (abstract, expanded) === -->
+                    <button class="flex items-center w-full px-4 py-3 hover:bg-gray-50 transition-colors" id="realnouns-toggle">
+                        <span class="p-1 mr-1 text-gray-400"><i data-lucide="chevron-down" class="w-4 h-4" stroke-width="1.5"></i></span>
+                        <i data-lucide="folder" class="w-5 h-5 text-orange-500 mr-3 shrink-0" stroke-width="1.5"></i>
+                        <span class="text-base font-medium text-gray-900 flex-1 text-left">Real Nouns</span>
+                        <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">abstract</span>
+                    </button>
+                    <div id="realnouns-children">
+                        <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                            <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                            <span class="text-base text-gray-800 flex-1">Person</span>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                        </a>
+                        <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                            <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                            <span class="text-base text-gray-800 flex-1">Company</span>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                        </a>
+                        <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                            <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                            <span class="text-base text-gray-800 flex-1">Place</span>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                        </a>
+                        <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                            <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                            <span class="text-base text-gray-800 flex-1">Product</span>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                        </a>
                     </div>
 
-                    <div class="flex items-center w-full px-4 py-3 hover:bg-gray-50 transition-colors mt-1 border-t border-gray-50">
-                        <button class="p-1 mr-1 text-gray-400 hover:text-gray-900"><i data-lucide="chevron-right" class="w-4 h-4" stroke-width="1.5"></i></button>
-                        <i data-lucide="folder" class="w-5 h-5 text-gray-400 mr-3" stroke-width="1.5"></i>
-                        <span class="text-base font-medium text-gray-900 flex-1">Software</span>
-                        <button class="p-2 text-gray-400 hover:text-gray-900"><i data-lucide="settings-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                    <!-- === Action (abstract, collapsed) === -->
+                    <div class="border-t border-gray-100">
+                        <button class="flex items-center w-full px-4 py-3 hover:bg-gray-50 transition-colors" id="action-toggle">
+                            <span class="p-1 mr-1 text-gray-400"><i data-lucide="chevron-right" class="w-4 h-4" stroke-width="1.5"></i></span>
+                            <i data-lucide="folder" class="w-5 h-5 text-gray-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                            <span class="text-base font-medium text-gray-900 flex-1 text-left">Action</span>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">abstract</span>
+                        </button>
+                        <div id="action-children" class="hidden">
+                            <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                                <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                                <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                                <span class="text-base text-gray-800 flex-1">Meet</span>
+                                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                            </a>
+                            <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                                <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                                <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                                <span class="text-base text-gray-800 flex-1">Sleep</span>
+                                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                            </a>
+                        </div>
                     </div>
 
-                    <div class="flex items-center w-full px-4 py-3 hover:bg-gray-50 transition-colors border-t border-gray-50">
-                        <button class="p-1 mr-1 text-gray-400 hover:text-gray-900"><i data-lucide="chevron-right" class="w-4 h-4" stroke-width="1.5"></i></button>
-                        <i data-lucide="folder" class="w-5 h-5 text-gray-400 mr-3" stroke-width="1.5"></i>
-                        <span class="text-base font-medium text-gray-900 flex-1">Users & Orgs</span>
-                        <button class="p-2 text-gray-400 hover:text-gray-900"><i data-lucide="settings-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                    <!-- === Digital Nouns (abstract, collapsed) === -->
+                    <div class="border-t border-gray-100">
+                        <button class="flex items-center w-full px-4 py-3 hover:bg-gray-50 transition-colors" id="digital-toggle">
+                            <span class="p-1 mr-1 text-gray-400"><i data-lucide="chevron-right" class="w-4 h-4" stroke-width="1.5"></i></span>
+                            <i data-lucide="folder" class="w-5 h-5 text-gray-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                            <span class="text-base font-medium text-gray-900 flex-1 text-left">Digital Nouns</span>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">abstract</span>
+                        </button>
+                        <div id="digital-children" class="hidden">
+                            <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                                <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                                <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                                <span class="text-base text-gray-800 flex-1">Expense</span>
+                                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                            </a>
+                            <a href="model-type-detail.html" class="flex items-center w-full px-4 py-3 pl-10 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                                <div class="w-6 h-px bg-gray-200 mr-2"></div>
+                                <i data-lucide="box" class="w-4 h-4 text-orange-400 mr-3 shrink-0" stroke-width="1.5"></i>
+                                <span class="text-base text-gray-800 flex-1">Transfer</span>
+                                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">base</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Collapsed: single orange FAB (+ only), opens expanded menu -->
+                <!-- FAB — just "Create Type" -->
                 <div class="absolute bottom-24 right-5 z-20">
-                    <a href="model-types-fab-expanded.html" class="w-14 h-14 bg-orange-600 rounded-2xl shadow-lg shadow-orange-600/30 flex items-center justify-center text-white transition-colors hover:bg-orange-700 active:bg-orange-800 no-underline" title="Create">
+                    <a href="../models/model-type-form.html" class="w-14 h-14 bg-orange-600 rounded-2xl shadow-lg shadow-orange-600/30 flex items-center justify-center text-white transition-colors hover:bg-orange-700 active:bg-orange-800 no-underline" title="Create Model Type">
                         <i data-lucide="plus" class="w-6 h-6" stroke-width="1.5"></i>
                     </a>
                 </div>
@@ -79,6 +147,27 @@
 
     <script>
         lucide.createIcons();
+
+        // Menu toggle
+        var menuBtn = document.getElementById('nav-menu-btn');
+        var menuPopup = document.getElementById('nav-menu-popup');
+        var menuScrim = document.getElementById('nav-menu-scrim');
+        function toggleMenu() { menuPopup.classList.toggle('hidden'); menuScrim.classList.toggle('hidden'); }
+        menuBtn.addEventListener('click', toggleMenu);
+        menuScrim.addEventListener('click', toggleMenu);
+
+        // Tree toggles
+        function setupToggle(btnId, childrenId) {
+            document.getElementById(btnId).addEventListener('click', function() {
+                document.getElementById(childrenId).classList.toggle('hidden');
+                var icon = this.querySelector('[data-lucide]');
+                var current = icon.getAttribute('data-lucide');
+                icon.setAttribute('data-lucide', current === 'chevron-right' ? 'chevron-down' : 'chevron-right');
+                lucide.createIcons();
+            });
+        }
+        setupToggle('action-toggle', 'action-children');
+        setupToggle('digital-toggle', 'digital-children');
     </script>
 </body>
 </html>
