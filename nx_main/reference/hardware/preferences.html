@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preferences — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 p-4 md:p-8 antialiased text-slate-900" style="font-family: Inter, system-ui, sans-serif;">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+        <div class="relative w-full max-w-[375px] h-[812px] bg-slate-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+            <div class="bg-white px-4 pt-14 pb-3 flex items-center gap-3 border-b border-slate-100">
+                <a href="hardware.html" class="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900" title="Back">
+                    <i data-lucide="arrow-left" class="w-5 h-5" stroke-width="1.5"></i>
+                </a>
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">Preferences</h1>
+            </div>
+            <div class="flex-1 overflow-y-auto no-scrollbar p-5">
+                <p class="text-sm text-slate-500">Reference placeholder for app preferences.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

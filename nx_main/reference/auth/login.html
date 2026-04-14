@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col pt-12 no-scrollbar overflow-y-auto">
+                <div class="px-6 pt-12 pb-6 flex-1">
+                    <div class="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-6">
+                        <i data-lucide="compass" class="w-8 h-8 text-orange-600" stroke-width="1.5"></i>
+                    </div>
+                    <h1 class="text-3xl font-medium tracking-tight text-gray-900 mb-2">Nexus Navigator</h1>
+                    <p class="text-base text-gray-500 mb-10">Sign in to access developer tools.</p>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">User ID</label>
+                            <input type="text" placeholder="Enter your ID" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600 transition-colors">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Backend Environment</label>
+                            <div class="relative">
+                                <select class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600 transition-colors">
+                                    <option>Production Server</option>
+                                    <option>Staging Environment</option>
+                                    <option>Localhost (Dev)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                    <i data-lucide="chevron-down" class="w-5 h-5" stroke-width="1.5"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
+                            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0" stroke-width="1.5"></i>
+                            <span class="text-sm">Connection timeout. Check environment.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <a href="../shell/home-tab-shell.html" class="w-full bg-orange-600 text-white rounded-xl py-3.5 px-4 flex items-center justify-center gap-2 hover:bg-orange-700 active:bg-orange-800 transition-colors">
+                        <span class="text-base font-medium">Sign in</span>
+                    </a>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

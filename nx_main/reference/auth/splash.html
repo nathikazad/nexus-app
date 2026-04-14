@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splash — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col justify-center items-center">
+                <div class="flex flex-col items-center animate-pulse">
+                    <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/30">
+                        <i data-lucide="aperture" class="w-12 h-12 text-white" stroke-width="1.5"></i>
+                    </div>
+                    <h1 class="text-3xl font-medium tracking-tight text-gray-900 mb-8">Nexus</h1>
+                    <i data-lucide="loader-2" class="w-8 h-8 text-orange-600 animate-spin" stroke-width="1.5"></i>
+                    <p class="mt-10">
+                        <a href="login.html" class="text-sm font-medium text-orange-600 hover:text-orange-700 hover:underline">Continue to login</a>
+                    </p>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log viewer — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+                <div class="bg-white px-5 pt-14 pb-3 flex items-center justify-between border-b border-gray-100 z-10 sticky top-0">
+                    <h1 class="text-xl font-medium tracking-tight text-gray-900">Log Viewer</h1>
+                    <div class="flex gap-1">
+                        <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"><i data-lucide="arrow-down-to-line" class="w-4 h-4" stroke-width="1.5"></i></button>
+                        <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"><i data-lucide="trash-2" class="w-4 h-4" stroke-width="1.5"></i></button>
+                        <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"><i data-lucide="share" class="w-4 h-4" stroke-width="1.5"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto no-scrollbar p-4 font-mono text-xs pb-24 bg-gray-50/80">
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:01.042]</span> <span class="text-blue-600 font-medium">INFO</span> Nexus App initializing...</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:01.105]</span> <span class="text-blue-600 font-medium">INFO</span> Connecting to local backend.</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:01.890]</span> <span class="text-green-600 font-medium">SUCCESS</span> Auth token verified.</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:02.311]</span> <span class="text-orange-600 font-medium">WARN</span> Device scan found 0 known devices.</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:15.400]</span> <span class="text-blue-600 font-medium">INFO</span> Initiating manual scan.</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:18.992]</span> <span class="text-blue-600 font-medium">INFO</span> Found device: a4:c1:38:b2:99</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:19.100]</span> <span class="text-blue-600 font-medium">INFO</span> Connecting to GATT server...</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:20.005]</span> <span class="text-green-600 font-medium">SUCCESS</span> Connected to NX-Necklace-Beta.</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:20.050]</span> <span class="text-blue-600 font-medium">INFO</span> Subscribing to characteristic 0x2A19 (Battery)</div>
+                    <div class="mb-2 text-gray-700"><span class="text-gray-500">[14:32:20.120]</span> <span class="text-blue-600 font-medium">INFO</span> Subscribing to characteristic 0x2A2B (RTC)</div>
+                    <div class="mb-2 text-gray-800"><span class="text-gray-500">[14:32:20.500]</span> <span class="text-violet-600 font-medium">DATA</span> Rx: [84, 39, 20] -> Bat: 84%, Vol: 3.92v</div>
+                    <div class="mb-2 text-gray-800"><span class="text-gray-500">[14:32:25.881]</span> <span class="text-red-600 font-medium">ERROR</span> Failed to sync RTC. Payload too large.</div>
+                </div>
+
+                <div class="bg-white border-t border-gray-100 pb-8 pt-3 px-6 flex justify-between items-center z-10 sticky bottom-0">
+                    <a href="../hardware/hardware.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="cpu" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Hardware</span></a>
+                    <a href="../navigator/model-types.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="layout-grid" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Navigator</span></a>
+                    <a href="log-viewer.html" class="flex flex-col items-center gap-1 text-orange-600 no-underline"><i data-lucide="terminal-square" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Logs</span></a>
+                    <a href="../data/data-home.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="database" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Data</span></a>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

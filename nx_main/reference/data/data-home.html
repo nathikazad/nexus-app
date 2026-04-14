@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data — Nexus App UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <div class="flex flex-wrap justify-center gap-10 items-start">
+            <div class="relative w-full max-w-[375px] h-[812px] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+                <div class="bg-white px-5 pt-14 pb-3 flex items-center justify-between border-b border-gray-100 z-10 sticky top-0">
+                    <h1 class="text-xl font-medium tracking-tight text-gray-900">Data</h1>
+                </div>
+
+                <div class="flex-1 overflow-y-auto no-scrollbar pt-4 px-4 pb-28">
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <a href="images-viewer.html" class="w-full flex items-center px-4 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 mr-4">
+                                <i data-lucide="camera" class="w-4 h-4" stroke-width="1.5"></i>
+                            </div>
+                            <span class="text-base font-medium text-gray-900 flex-1 text-left">Necklace images</span>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400" stroke-width="1.5"></i>
+                        </a>
+
+                        <a href="images-viewer.html" class="w-full flex items-center px-4 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 mr-4">
+                                <i data-lucide="monitor" class="w-4 h-4" stroke-width="1.5"></i>
+                            </div>
+                            <span class="text-base font-medium text-gray-900 flex-1 text-left">Desktop images</span>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400" stroke-width="1.5"></i>
+                        </a>
+
+                        <a href="battery-detail.html" class="w-full flex items-center px-4 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors no-underline text-inherit">
+                            <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600 mr-4">
+                                <i data-lucide="battery" class="w-4 h-4" stroke-width="1.5"></i>
+                            </div>
+                            <span class="text-base font-medium text-gray-900 flex-1 text-left">Necklace battery</span>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400" stroke-width="1.5"></i>
+                        </a>
+
+                        <button class="w-full flex items-center px-4 py-4 bg-gray-50 cursor-not-allowed">
+                            <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 mr-4">
+                                <i data-lucide="receipt" class="w-4 h-4" stroke-width="1.5"></i>
+                            </div>
+                            <span class="text-base font-medium text-gray-400 flex-1 text-left">Expenses</span>
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Coming Soon</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-24 right-5 z-20">
+                    <a href="../assistant/nexus-ai.html" class="w-14 h-14 bg-orange-600 rounded-2xl shadow-lg shadow-orange-600/30 flex items-center justify-center text-white no-underline" title="Nexus AI">
+                        <i data-lucide="mic" class="w-6 h-6" stroke-width="1.5"></i>
+                    </a>
+                </div>
+                <div class="bg-white border-t border-gray-100 pb-8 pt-3 px-6 flex justify-between items-center z-10 sticky bottom-0">
+                    <a href="../hardware/hardware.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="cpu" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Hardware</span></a>
+                    <a href="../navigator/model-types.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="layout-grid" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Navigator</span></a>
+                    <a href="../logs/log-viewer.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 no-underline"><i data-lucide="terminal-square" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Logs</span></a>
+                    <a href="data-home.html" class="flex flex-col items-center gap-1 text-orange-600 no-underline"><i data-lucide="database" class="w-6 h-6" stroke-width="1.5"></i><span class="text-xs font-medium">Data</span></a>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
