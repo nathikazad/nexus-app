@@ -3,49 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hardware — Menu panel — Nexus App UI</title>
+    <title>Hardware — Menu — Nexus App UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Matches nx_expense ExpenseAppEndDrawer: Drawer + ListTile (see expense_app_end_drawer.dart) */
     </style>
 </head>
-<body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900 antialiased selection:bg-orange-100 selection:text-orange-900" style="font-family: Inter, system-ui, sans-serif;">
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-900 antialiased selection:bg-orange-100 selection:text-orange-900">
 
     <div class="flex flex-wrap justify-center gap-10 items-start">
-        <div class="relative w-full max-w-[375px] h-[812px] bg-slate-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
-            <!-- Scrim (matches ModalRoute barrier); tap = close like drawer pop -->
+        <div class="relative w-full max-w-[375px] h-[812px] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-gray-900 flex flex-col">
+            <!-- Scrim — tap to close -->
             <a href="hardware.html" class="absolute inset-0 bg-black/32 z-20" aria-label="Close menu"></a>
 
-            <!-- End drawer: white surface (narrower than default Material width) -->
-            <aside class="absolute right-0 top-0 bottom-0 w-[min(252px,72%)] bg-white z-30 flex flex-col shadow-xl">
-                <!-- SafeArea top: align with phone status inset -->
-                <div class="pt-14 flex flex-col flex-1 min-h-0">
-                    <div class="px-5 pt-4 pb-3">
-                        <h2 class="text-lg font-semibold text-slate-900 tracking-tight">Menu</h2>
-                    </div>
-                    <div class="h-px w-full bg-slate-100 shrink-0"></div>
-                    <nav class="flex-1 flex flex-col py-0">
-                        <a href="preferences.html" class="flex items-center gap-4 pl-4 pr-4 py-3 min-h-12 no-underline text-inherit hover:bg-slate-50 active:bg-slate-100/80 transition-colors">
-                            <span class="w-[22px] h-[22px] flex items-center justify-center text-slate-600 shrink-0">
-                                <i data-lucide="settings" class="w-[22px] h-[22px]" stroke-width="1.75"></i>
-                            </span>
-                            <span class="text-[15px] font-semibold text-slate-900">Preferences</span>
-                        </a>
-                        <a href="../auth/login.html" class="flex items-center gap-4 pl-4 pr-4 py-3 min-h-12 no-underline text-inherit hover:bg-slate-50 active:bg-slate-100/80 transition-colors">
-                            <span class="w-[22px] h-[22px] flex items-center justify-center text-slate-600 shrink-0">
-                                <i data-lucide="log-out" class="w-[22px] h-[22px]" stroke-width="1.75"></i>
-                            </span>
-                            <span class="text-[15px] font-semibold text-slate-900">Log out</span>
-                        </a>
-                    </nav>
-                </div>
-            </aside>
+            <!-- Popup menu — anchored top-right -->
+            <div class="absolute right-7 top-[4.5rem] z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[160px]">
+                <a href="preferences.html" class="flex items-center gap-3 px-4 py-3 no-underline text-inherit hover:bg-gray-50 transition-colors">
+                    <i data-lucide="settings" class="w-[18px] h-[18px] text-gray-500" stroke-width="1.75"></i>
+                    <span class="text-sm font-medium text-gray-900">Preferences</span>
+                </a>
+                <div class="h-px bg-gray-100 mx-3"></div>
+                <a href="../auth/login.html" class="flex items-center gap-3 px-4 py-3 no-underline text-inherit hover:bg-gray-50 transition-colors">
+                    <i data-lucide="log-out" class="w-[18px] h-[18px] text-gray-500" stroke-width="1.75"></i>
+                    <span class="text-sm font-medium text-gray-900">Log out</span>
+                </a>
+            </div>
         </div>
     </div>
 
