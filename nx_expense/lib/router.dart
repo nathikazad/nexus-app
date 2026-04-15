@@ -7,6 +7,7 @@ import 'app_theme.dart';
 import 'desktop/desktop_nav.dart';
 import 'desktop/desktop_shell.dart';
 import 'providers/expense_providers.dart';
+import 'data/teller_timeline_api.dart';
 import 'layout.dart';
 import 'scoped_expense_list.dart';
 import 'screens/expense/expense_dashboard_screen.dart';
@@ -20,6 +21,9 @@ import 'screens/transfers/transfer_relation_picker_screen.dart';
 import 'screens/transfers/transfers_list_screen.dart';
 import 'screens/teller/teller_list_screen.dart';
 import 'screens/teller/teller_link_picker_screen.dart';
+import 'screens/teller/teller_expense_link_picker_screen.dart';
+import 'screens/teller/teller_transfer_link_picker_screen.dart';
+import 'screens/teller/teller_transfer_quick_create_screen.dart';
 import 'screens/tag/tag_browser_screen.dart';
 import 'screens/tag/tag_system_form_screen.dart';
 import 'screens/tag/tag_systems_screen.dart';
@@ -161,7 +165,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/expense/form',
-        builder: (context, state) => const ExpenseFormScreen(),
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          final tid = q['tellerEventId'];
+          final tt = q['tellerEventTime'];
+          final pa = q['prefillAmount'];
+          return ExpenseFormScreen(
+            pendingTellerEventId: tid,
+            pendingTellerEventTime: tt != null ? DateTime.tryParse(tt) : null,
+            prefillName: q['prefillName'],
+            prefillDescription: q['prefillDescription'],
+            prefillAmount: pa != null ? num.tryParse(pa) : null,
+          );
+        },
       ),
       GoRoute(
         path: '/pick-transfer-relation',
@@ -190,6 +206,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = int.parse(state.pathParameters['expenseId']!);
           return TellerLinkPickerScreen(expenseId: id);
+        },
+      ),
+      GoRoute(
+        path: '/teller/link-expense',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! TellerTransactionRow) {
+            return const Scaffold(
+              body: Center(child: Text('Missing Teller transaction')),
+            );
+          }
+          return TellerExpenseLinkPickerScreen(row: extra);
+        },
+      ),
+      GoRoute(
+        path: '/teller/link-transfer',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! TellerTransactionRow) {
+            return const Scaffold(
+              body: Center(child: Text('Missing Teller transaction')),
+            );
+          }
+          return TellerTransferLinkPickerScreen(row: extra);
+        },
+      ),
+      GoRoute(
+        path: '/teller/transfer-create',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! TellerTransactionRow) {
+            return const Scaffold(
+              body: Center(child: Text('Missing Teller transaction')),
+            );
+          }
+          return TellerTransferQuickCreateScreen(row: extra);
         },
       ),
       GoRoute(

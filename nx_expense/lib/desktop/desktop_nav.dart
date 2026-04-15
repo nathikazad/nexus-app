@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/teller_timeline_api.dart';
+import '../providers/teller_providers.dart';
 
 const double kDesktopBreakpoint = 1100;
 
@@ -27,6 +28,72 @@ final selectedTransferIdProvider = StateProvider<int?>((ref) => null);
 final selectedTellerRowProvider = StateProvider<TellerTransactionRow?>(
   (ref) => null,
 );
+
+/// Teller tab third column: detail, link pickers, or create flows (desktop wide layout).
+final tellerPanel3Provider = StateProvider<TellerPanel3State?>((ref) => null);
+
+@immutable
+class TellerPanel3State {
+  const TellerPanel3State._({
+    required this.kind,
+    this.detailId,
+    this.tellerRow,
+  });
+
+  const TellerPanel3State.expense(int id)
+      : this._(kind: TellerPanel3Kind.expense, detailId: id);
+
+  const TellerPanel3State.transfer(int id)
+      : this._(kind: TellerPanel3Kind.transfer, detailId: id);
+
+  const TellerPanel3State.linkExpensePicker(TellerTransactionRow row)
+      : this._(kind: TellerPanel3Kind.linkExpensePicker, tellerRow: row);
+
+  const TellerPanel3State.linkTransferPicker(TellerTransactionRow row)
+      : this._(kind: TellerPanel3Kind.linkTransferPicker, tellerRow: row);
+
+  const TellerPanel3State.newExpenseForm(TellerTransactionRow row)
+      : this._(kind: TellerPanel3Kind.newExpenseForm, tellerRow: row);
+
+  const TellerPanel3State.newTransferCreate(TellerTransactionRow row)
+      : this._(kind: TellerPanel3Kind.newTransferCreate, tellerRow: row);
+
+  final TellerPanel3Kind kind;
+
+  /// [TellerPanel3Kind.expense] / [TellerPanel3Kind.transfer] detail id.
+  final int? detailId;
+
+  /// Row context for pickers / create flows.
+  final TellerTransactionRow? tellerRow;
+}
+
+enum TellerPanel3Kind {
+  expense,
+  transfer,
+  linkExpensePicker,
+  linkTransferPicker,
+  newExpenseForm,
+  newTransferCreate,
+}
+
+void closeTellerPanel3(WidgetRef ref) {
+  ref.read(tellerPanel3Provider.notifier).state = null;
+}
+
+/// After linking/unlinking a Teller row, reload the list and update the desktop shell selection.
+Future<void> refreshTellerSelectionAfterLinkChange(
+  WidgetRef ref,
+  String eventId,
+) async {
+  ref.invalidate(tellerTransactionsProvider);
+  final rows = await ref.read(tellerTransactionsProvider.future);
+  for (final r in rows) {
+    if (r.eventId == eventId) {
+      ref.read(selectedTellerRowProvider.notifier).state = r;
+      return;
+    }
+  }
+}
 
 // --- Tags tab (desktop two-pane) ---
 /// Right panel: create vs edit a tag system; `null` = empty.
@@ -208,6 +275,13 @@ void navExpenseDetailBack(
     context.pop();
     return;
   }
+  final tp = ref.read(tellerPanel3Provider);
+  if (tp != null &&
+      tp.kind == TellerPanel3Kind.expense &&
+      tp.detailId == expenseId) {
+    ref.read(tellerPanel3Provider.notifier).state = null;
+    return;
+  }
   final stack = ref.read(panel3StackProvider);
   if (stack.isNotEmpty &&
       stack.last.type == Panel3Type.expenseDetail &&
@@ -223,6 +297,13 @@ void navExpenseDetailBack(
 void navTransferDetailBack(BuildContext context, WidgetRef ref, int transferId) {
   if (!isDesktopLayout(context)) {
     context.pop();
+    return;
+  }
+  final tp = ref.read(tellerPanel3Provider);
+  if (tp != null &&
+      tp.kind == TellerPanel3Kind.transfer &&
+      tp.detailId == transferId) {
+    ref.read(tellerPanel3Provider.notifier).state = null;
     return;
   }
   final stack = ref.read(panel3StackProvider);
@@ -259,6 +340,7 @@ void navTellerTxDetailBack(
   final sel = ref.read(selectedTellerRowProvider);
   if (sel?.eventId == row.eventId) {
     ref.read(selectedTellerRowProvider.notifier).state = null;
+    ref.read(tellerPanel3Provider.notifier).state = null;
     return;
   }
   context.pop();
@@ -290,20 +372,36 @@ void navTagSystemFormBack(BuildContext context, WidgetRef ref) {
   }
 }
 
-/// From Teller detail: open expense and switch to Expenses rail tab.
+/// From Teller detail: desktop shows linked model in the Teller third column;
+/// mobile opens the expense route (pops Teller detail first).
 void navToExpenseFromTellerLink(
   BuildContext context,
   WidgetRef ref,
   int expenseId,
 ) {
   if (isDesktopLayout(context)) {
-    ref.read(desktopShellTabIndexProvider.notifier).state = 0;
-    ref.read(selectedExpenseIdProvider.notifier).state = expenseId;
-    clearPanel3(ref);
-    ref.read(selectedTellerRowProvider.notifier).state = null;
+    ref.read(tellerPanel3Provider.notifier).state =
+        TellerPanel3State.expense(expenseId);
   } else {
     final router = GoRouter.of(context);
     router.pop();
     router.push('/expense/$expenseId');
+  }
+}
+
+/// From Teller detail: desktop shows linked transfer in the Teller third column;
+/// mobile opens the transfer route (pops Teller detail first).
+void navToTransferFromTellerLink(
+  BuildContext context,
+  WidgetRef ref,
+  int transferId,
+) {
+  if (isDesktopLayout(context)) {
+    ref.read(tellerPanel3Provider.notifier).state =
+        TellerPanel3State.transfer(transferId);
+  } else {
+    final router = GoRouter.of(context);
+    router.pop();
+    router.push('/transfer/$transferId');
   }
 }

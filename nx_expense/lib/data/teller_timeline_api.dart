@@ -32,6 +32,7 @@ query TellerTimelineEvents(\$cond: TimelineEventCondition!) {
       payload
       modelTimelineEventLinksByEventTimeAndEventId {
         nodes {
+          id
           modelByModelId {
             id
             name
@@ -51,11 +52,15 @@ class LinkedTellerModel {
     required this.id,
     required this.name,
     required this.modelTypeName,
+    this.linkId,
   });
 
   final int id;
   final String name;
   final String modelTypeName;
+
+  /// `model_timeline_event_links.id` for [deleteExpenseTimelineLink].
+  final String? linkId;
 }
 
 class TellerTransactionRow {
@@ -99,13 +104,21 @@ List<TellerTransactionRow> parseTellerTimelineResponse(dynamic data) {
       if (ln is! Map<String, dynamic>) continue;
       final m = ln['modelByModelId'] as Map<String, dynamic>?;
       if (m == null) continue;
+      final linkId = ln['id']?.toString();
       final mid = m['id'];
       final id = mid is int ? mid : int.tryParse('$mid');
       if (id == null) continue;
       final name = (m['name'] as String?) ?? '';
       final mt = m['modelTypeByModelTypeId'] as Map<String, dynamic>?;
       final typeName = (mt?['name'] as String?) ?? '';
-      linked.add(LinkedTellerModel(id: id, name: name, modelTypeName: typeName));
+      linked.add(
+        LinkedTellerModel(
+          id: id,
+          name: name,
+          modelTypeName: typeName,
+          linkId: linkId,
+        ),
+      );
     }
     out.add(
       TellerTransactionRow(

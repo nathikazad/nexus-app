@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
+import '../../data/expense_timeline_api.dart';
 import '../../data/teller_timeline_api.dart';
 import '../../desktop/desktop_nav.dart';
 import '../../desktop/panel_chrome.dart';
 import '../../layout.dart';
-import '../../util/expense_schema.dart';
+import '../../providers/teller_providers.dart';
+import '../../util/expense_schema.dart'
+    show kExpenseModelTypeName, kTransferModelTypeName;
 
 /// Full-screen Teller transaction detail (read-only).
 class TellerTransactionDetailScreen extends ConsumerWidget {
@@ -45,17 +50,14 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
         _DetailRow(label: 'counterparty.name', value: cpName ?? '—'),
         if (row.linkedModels.isNotEmpty) ...[
           const SizedBox(height: 20),
-          Text(
-            'Linked',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.slate900,
-            ),
+          Text('Linked', style: refSectionTitle(context)),
+          const SizedBox(height: 12),
+          ...row.linkedModels.map(
+            (m) => _LinkedModelTile(row: row, model: m),
           ),
-          const SizedBox(height: 8),
-          ...row.linkedModels.map((m) => _LinkedModelTile(model: m)),
         ],
+        const SizedBox(height: 20),
+        _TellerLinkActions(row: row),
       ],
     );
 
@@ -148,71 +150,309 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _LinkedModelTile extends ConsumerWidget {
-  const _LinkedModelTile({required this.model});
+class _TellerLinkActions extends ConsumerWidget {
+  const _TellerLinkActions({required this.row});
 
+  final TellerTransactionRow row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Link', style: refSectionTitle(context)),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+            border: Border.all(color: AppColors.slate100),
+            boxShadow: refCardShadow,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+            child: Column(
+              children: [
+                _LinkActionTile(
+                  icon: Icons.link_rounded,
+                  iconColor: AppColors.slate500,
+                  title: 'Link expense',
+                  subtitle: 'Choose an existing expense',
+                  onTap: () {
+                    if (isDesktopLayout(context)) {
+                      ref.read(tellerPanel3Provider.notifier).state =
+                          TellerPanel3State.linkExpensePicker(row);
+                    } else {
+                      context.push('/teller/link-expense', extra: row);
+                    }
+                  },
+                  showDividerBelow: true,
+                ),
+                _LinkActionTile(
+                  icon: Icons.link_rounded,
+                  iconColor: AppColors.slate500,
+                  title: 'Link transfer',
+                  subtitle: 'Choose an existing transfer',
+                  onTap: () {
+                    if (isDesktopLayout(context)) {
+                      ref.read(tellerPanel3Provider.notifier).state =
+                          TellerPanel3State.linkTransferPicker(row);
+                    } else {
+                      context.push('/teller/link-transfer', extra: row);
+                    }
+                  },
+                  showDividerBelow: true,
+                ),
+                _LinkActionTile(
+                  icon: Icons.add_rounded,
+                  iconColor: AppColors.teal600,
+                  title: 'New expense',
+                  subtitle: 'Create and link',
+                  onTap: () {
+                    if (isDesktopLayout(context)) {
+                      ref.read(tellerPanel3Provider.notifier).state =
+                          TellerPanel3State.newExpenseForm(row);
+                    } else {
+                      final p = row.payload;
+                      final amt = num.tryParse(p['amount']?.toString().trim() ?? '');
+                      final q = <String, String>{
+                        'tellerEventId': row.eventId,
+                        'tellerEventTime': row.time.toUtc().toIso8601String(),
+                        'prefillName': tellerTransactionTitleLine(p),
+                      };
+                      if (amt != null) q['prefillAmount'] = amt.toString();
+                      final uri = Uri(path: '/expense/form', queryParameters: q);
+                      context.push(uri.toString());
+                    }
+                  },
+                  showDividerBelow: true,
+                ),
+                _LinkActionTile(
+                  icon: Icons.add_rounded,
+                  iconColor: AppColors.teal600,
+                  title: 'New transfer',
+                  subtitle: 'Create and link',
+                  onTap: () {
+                    if (isDesktopLayout(context)) {
+                      ref.read(tellerPanel3Provider.notifier).state =
+                          TellerPanel3State.newTransferCreate(row);
+                    } else {
+                      context.push('/teller/transfer-create', extra: row);
+                    }
+                  },
+                  showDividerBelow: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LinkActionTile extends StatelessWidget {
+  const _LinkActionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.showDividerBelow,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool showDividerBelow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 22, color: iconColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.slate900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.slate400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: AppColors.slate400, size: 22),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDividerBelow)
+          const Divider(height: 1, thickness: 1, color: AppColors.slate100),
+      ],
+    );
+  }
+}
+
+class _LinkedModelTile extends ConsumerWidget {
+  const _LinkedModelTile({required this.row, required this.model});
+
+  final TellerTransactionRow row;
   final LinkedTellerModel model;
+
+  Future<void> _unlink(BuildContext context, WidgetRef ref) async {
+    final id = model.linkId;
+    if (id == null) return;
+    final client = ref.read(graphqlClientProvider);
+    try {
+      await deleteExpenseTimelineLink(client, id);
+      if (!context.mounted) return;
+      ref.invalidate(tellerTransactionsProvider);
+      if (isDesktopLayout(context)) {
+        await refreshTellerSelectionAfterLinkChange(ref, row.eventId);
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unlinked')),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isExpense = model.modelTypeName == kExpenseModelTypeName;
+    final isTransfer = model.modelTypeName == kTransferModelTypeName;
+    final tappable = isExpense || isTransfer;
     final subtitle = '${model.modelTypeName} · #${model.id}';
 
-    final child = Container(
+    final card = Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
         border: Border.all(color: AppColors.slate100),
         boxShadow: refCardShadow,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            isExpense ? Icons.receipt_long_outlined : Icons.swap_horiz_rounded,
-            color: AppColors.slate500,
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  model.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate500),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              isExpense ? Icons.receipt_long_outlined : Icons.swap_horiz_rounded,
+              color: AppColors.slate500,
+              size: 22,
             ),
-          ),
-          if (isExpense)
-            Icon(Icons.chevron_right, color: AppColors.slate400, size: 22),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: tappable
+                  ? Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          if (isExpense) {
+                            navToExpenseFromTellerLink(context, ref, model.id);
+                          } else {
+                            navToTransferFromTellerLink(context, ref, model.id);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                model.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.slate900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppColors.slate400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          model.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.slate900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.slate400,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+            if (tappable)
+              Icon(Icons.chevron_right_rounded, color: AppColors.slate400, size: 22),
+            if (model.linkId != null)
+              IconButton(
+                tooltip: 'Unlink',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 20,
+                  color: AppColors.slate400,
+                ),
+                onPressed: () => _unlink(context, ref),
+              ),
+          ],
+        ),
       ),
     );
 
-    if (!isExpense) {
-      return child;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => navToExpenseFromTellerLink(context, ref, model.id),
-        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        child: child,
-      ),
-    );
+    return card;
   }
 }

@@ -22,9 +22,10 @@ void main() {
               'time': '2026-03-10T08:00:00.000Z',
               'id': 'te-1',
               'payload': {'amount': '20', 'description': 'Wire'},
-              'modelTimelineEventLinksByEventTimeAndEventId': {
+                'modelTimelineEventLinksByEventTimeAndEventId': {
                 'nodes': [
                   {
+                    'id': 'link-1',
                     'modelByModelId': {
                       'id': 7,
                       'name': 'Expense A',
@@ -46,6 +47,7 @@ void main() {
       expect(r.linkedModels.first.id, 7);
       expect(r.linkedModels.first.name, 'Expense A');
       expect(r.linkedModels.first.modelTypeName, 'Expense');
+      expect(r.linkedModels.first.linkId, 'link-1');
     });
 
     test('skips invalid time', () {

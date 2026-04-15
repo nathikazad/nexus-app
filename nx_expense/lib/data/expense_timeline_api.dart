@@ -179,6 +179,20 @@ Future<void> linkExpenseToTimelineEvent(
   }
 }
 
+/// Same junction row as [linkExpenseToTimelineEvent]; use for Transfer (or any model).
+Future<void> linkModelToTimelineEvent(
+  GraphQLClient client, {
+  required int modelId,
+  required DateTime eventTime,
+  required String eventId,
+}) =>
+    linkExpenseToTimelineEvent(
+      client,
+      modelId: modelId,
+      eventTime: eventTime,
+      eventId: eventId,
+    );
+
 const String createTimelineEventMutation = '''
 mutation CreateTimelineEvent(\$input: CreateTimelineEventInput!) {
   createTimelineEvent(input: \$input) {

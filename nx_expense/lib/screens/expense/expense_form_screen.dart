@@ -7,8 +7,11 @@ import 'package:nx_db/nx_db.dart';
 import 'package:nx_db/src/models/requests/SetModelRequest.dart' as sm;
 
 import '../../app_theme.dart';
+import '../../data/expense_timeline_api.dart';
 import '../../util/expense_schema.dart';
 import '../../providers/expense_providers.dart';
+import '../../providers/teller_providers.dart';
+import '../../desktop/desktop_nav.dart';
 import '../../layout.dart';
 import '../../widgets/expense_bills_section.dart';
 import '../../widgets/expense_teller_links_section.dart';
@@ -17,9 +20,29 @@ import '../../widgets/tag_picker.dart';
 
 /// Create (`expenseId == null`) or edit. Layout matches reference Screen 4.
 class ExpenseFormScreen extends ConsumerStatefulWidget {
-  const ExpenseFormScreen({super.key, this.expenseId});
+  const ExpenseFormScreen({
+    super.key,
+    this.expenseId,
+    this.pendingTellerEventId,
+    this.pendingTellerEventTime,
+    this.prefillName,
+    this.prefillDescription,
+    this.prefillAmount,
+    this.embedded = false,
+  });
 
   final int? expenseId;
+
+  /// Desktop Teller panel 3: no app bar; close via [desktop_nav.closeTellerPanel3].
+  final bool embedded;
+
+  /// When creating, link to this Teller timeline row after save (`/expense/form?...`).
+  final String? pendingTellerEventId;
+  final DateTime? pendingTellerEventTime;
+
+  final String? prefillName;
+  final String? prefillDescription;
+  final num? prefillAmount;
 
   @override
   ConsumerState<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
@@ -41,6 +64,8 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   Map<String, Map<String, dynamic>?> _relationSnapshotCreates = {};
   bool _loading = false;
   bool _seeded = false;
+  bool _tellerPrefillApplied = false;
+  bool _tellerPrefillScheduled = false;
 
   @override
   void dispose() {
@@ -111,6 +136,27 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     _captureRelationSnapshot();
   }
 
+  void _applyTellerPrefill(ModelType schema) {
+    if (_tellerPrefillApplied || widget.expenseId != null) return;
+    if (widget.prefillName == null &&
+        widget.prefillDescription == null &&
+        widget.prefillAmount == null) {
+      _tellerPrefillApplied = true;
+      return;
+    }
+    _tellerPrefillApplied = true;
+    if (widget.prefillName != null) {
+      _name.text = widget.prefillName!;
+    }
+    if (widget.prefillDescription != null) {
+      _desc.text = widget.prefillDescription!;
+    }
+    final pk = primaryNumberAttributeKey(schema);
+    if (pk != null && widget.prefillAmount != null && _attr[pk] != null) {
+      _attr[pk]!.text = widget.prefillAmount!.toString();
+    }
+  }
+
   void _captureRelationSnapshot() {
     _relationSnapshotIds = {
       for (final e in _relations.entries)
@@ -164,6 +210,16 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                 }
               });
             }
+            if (existing == null &&
+                widget.expenseId == null &&
+                !_tellerPrefillApplied &&
+                !_tellerPrefillScheduled) {
+              _tellerPrefillScheduled = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() => _applyTellerPrefill(schema));
+              });
+            }
 
             final title = widget.expenseId == null ? 'New Expense' : 'Edit Expense';
 
@@ -185,18 +241,20 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
               ),
               child: Scaffold(
               backgroundColor: Colors.white,
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-                  onPressed: () => context.pop(),
-                ),
-                centerTitle: true,
-                title: Text(title, style: refAppBarTitleBase()),
-                bottom: const PreferredSize(
-                  preferredSize: Size.fromHeight(1),
-                  child: Divider(height: 1, color: AppColors.slate100),
-                ),
-              ),
+              appBar: widget.embedded
+                  ? null
+                  : AppBar(
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                        onPressed: () => context.pop(),
+                      ),
+                      centerTitle: true,
+                      title: Text(title, style: refAppBarTitleBase()),
+                      bottom: const PreferredSize(
+                        preferredSize: Size.fromHeight(1),
+                        child: Divider(height: 1, color: AppColors.slate100),
+                      ),
+                    ),
               body: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
@@ -641,7 +699,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         relations: relPayload.isEmpty ? null : relPayload,
       );
 
-      await createModel(ref.container, req);
+      final savedId = await createModel(ref.container, req);
       ref.invalidate(expenseListForUiProvider);
       ref.invalidate(expenseSummaryProvider);
       for (final rt in schema.relations ?? const <RelationshipType>[]) {
@@ -654,7 +712,33 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         ref.invalidate(expenseDetailProvider(widget.expenseId!));
         ref.invalidate(expenseTimelineLinksProvider(widget.expenseId!));
       }
-      if (mounted) context.pop();
+      if (widget.expenseId == null &&
+          widget.pendingTellerEventId != null &&
+          widget.pendingTellerEventTime != null) {
+        final client = ref.read(graphqlClientProvider);
+        await linkModelToTimelineEvent(
+          client,
+          modelId: savedId,
+          eventTime: widget.pendingTellerEventTime!,
+          eventId: widget.pendingTellerEventId!,
+        );
+        ref.invalidate(expenseTimelineLinksProvider(savedId));
+        if (mounted && isDesktopLayout(context)) {
+          await refreshTellerSelectionAfterLinkChange(
+            ref,
+            widget.pendingTellerEventId!,
+          );
+        } else {
+          ref.invalidate(tellerTransactionsProvider);
+        }
+      }
+      if (mounted) {
+        if (widget.embedded) {
+          closeTellerPanel3(ref);
+        } else {
+          context.pop();
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));

@@ -14,11 +14,18 @@ import '../screens/expense/expense_detail_screen.dart';
 import '../screens/expense/expense_list_screen.dart';
 import '../screens/tag/tag_system_form_screen.dart';
 import '../screens/tag/tag_systems_screen.dart';
+import '../data/teller_timeline_api.dart';
+import '../screens/expense/expense_form_screen.dart';
+import '../screens/teller/teller_expense_link_picker_screen.dart';
 import '../screens/teller/teller_list_screen.dart';
+import '../screens/teller/teller_transfer_link_picker_screen.dart';
+import '../screens/teller/teller_transfer_quick_create_screen.dart';
 import '../screens/teller/teller_transaction_detail_screen.dart';
 import '../screens/transfers/transfer_detail_screen.dart';
 import '../screens/transfers/transfers_list_screen.dart';
+import '../widgets/expense_date_range_bar.dart';
 import 'desktop_nav.dart';
+import 'panel_chrome.dart';
 
 class DesktopShell extends ConsumerWidget {
   const DesktopShell({super.key});
@@ -40,6 +47,9 @@ class DesktopShell extends ConsumerWidget {
               ref.read(desktopShellTabIndexProvider.notifier).state = i;
               if (i != 3) {
                 ref.read(tagSystemsPanelSelectionProvider.notifier).state = null;
+              }
+              if (i != 4) {
+                ref.read(tellerPanel3Provider.notifier).state = null;
               }
             },
             labelType: NavigationRailLabelType.all,
@@ -352,8 +362,100 @@ class _TellerPanels extends ConsumerWidget {
                 )
               : _emptyPanel('Select a transaction'),
         ),
+        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
+        SizedBox(
+          width: 380,
+          child: _TellerPanel3(),
+        ),
       ],
     );
+  }
+}
+
+class _TellerPanel3 extends ConsumerWidget {
+  const _TellerPanel3();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(tellerPanel3Provider);
+    if (state == null) {
+      return const ColoredBox(
+        color: Colors.white,
+        child: SizedBox.expand(),
+      );
+    }
+    switch (state.kind) {
+      case TellerPanel3Kind.expense:
+        return ExpenseDetailScreen(
+          key: ValueKey('teller-p3-expense-${state.detailId}'),
+          expenseId: state.detailId!,
+        );
+      case TellerPanel3Kind.transfer:
+        return TransferDetailScreen(
+          key: ValueKey('teller-p3-transfer-${state.detailId}'),
+          transferId: state.detailId!,
+        );
+      case TellerPanel3Kind.linkExpensePicker:
+        final row = state.tellerRow!;
+        return PanelChrome(
+          title: 'Link expense',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            onPressed: () => closeTellerPanel3(ref),
+          ),
+          actions: [
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: ExpenseDateRangeCalendarButton(),
+            ),
+          ],
+          body: TellerExpenseLinkPickerBody(row: row, embedded: true),
+        );
+      case TellerPanel3Kind.linkTransferPicker:
+        final row = state.tellerRow!;
+        return PanelChrome(
+          title: 'Link transfer',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            onPressed: () => closeTellerPanel3(ref),
+          ),
+          actions: [
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: ExpenseDateRangeCalendarButton(),
+            ),
+          ],
+          body: TellerTransferLinkPickerBody(row: row, embedded: true),
+        );
+      case TellerPanel3Kind.newExpenseForm:
+        final row = state.tellerRow!;
+        final p = row.payload;
+        final amt = num.tryParse(p['amount']?.toString().trim() ?? '');
+        return PanelChrome(
+          title: 'New expense',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            onPressed: () => closeTellerPanel3(ref),
+          ),
+          body: ExpenseFormScreen(
+            embedded: true,
+            pendingTellerEventId: row.eventId,
+            pendingTellerEventTime: row.time,
+            prefillName: tellerTransactionTitleLine(p),
+            prefillAmount: amt,
+          ),
+        );
+      case TellerPanel3Kind.newTransferCreate:
+        final row = state.tellerRow!;
+        return PanelChrome(
+          title: 'New transfer',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            onPressed: () => closeTellerPanel3(ref),
+          ),
+          body: TellerTransferQuickCreateScreen(row: row, embedded: true),
+        );
+    }
   }
 }
 

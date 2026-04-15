@@ -166,6 +166,7 @@ class TellerListScreen extends ConsumerWidget {
             onTap: (ctx) {
               if (isDesktopLayout(ctx)) {
                 ref.read(selectedTellerRowProvider.notifier).state = r;
+                ref.read(tellerPanel3Provider.notifier).state = null;
               } else {
                 Navigator.of(ctx).push<void>(
                   MaterialPageRoute<void>(
