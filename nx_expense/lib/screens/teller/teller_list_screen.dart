@@ -215,16 +215,53 @@ class _TellerCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate900,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate900,
+                        ),
+                      ),
+                    ),
+                    if (tellerPayloadIsDeleted(row.payload)) ...[
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Tooltip(
+                          message: 'Removed from Teller (no longer in API)',
+                          child: Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                            color: AppColors.slate500,
+                          ),
+                        ),
+                      ),
+                    ] else if (!tellerRowHasExpenseOrTransferLink(row)) ...[
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Tooltip(
+                          message: 'No expense or transfer linked yet',
+                          child: Icon(
+                            Icons.link_off_rounded,
+                            size: 18,
+                            color: AppColors.slate400,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (amt != null)
+              if (amt != null) ...[
+                const SizedBox(width: 8),
                 Text(
                   formatMoney(amt),
                   style: GoogleFonts.inter(
@@ -233,6 +270,7 @@ class _TellerCard extends StatelessWidget {
                     color: AppColors.teal600,
                   ),
                 ),
+              ],
             ],
           ),
         ),

@@ -73,7 +73,7 @@ class ModelAttributeFormField extends StatelessWidget {
                 controller: c,
                 textAlign: TextAlign.right,
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.slate900),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 decoration: InputDecoration(
                   prefixText: r'$ ',
                   prefixStyle: GoogleFonts.inter(color: AppColors.slate400, fontWeight: FontWeight.w500),

@@ -1,4 +1,5 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_expense/util/expense_schema.dart';
 
 /// PostGraphile: `timeline_events` rows for Teller imports (`import_teller_timeline_events.py`).
 const String kTellerTimelineEventType = 'teller_transaction';
@@ -75,6 +76,29 @@ class TellerTransactionRow {
   final String eventId;
   final Map<String, dynamic> payload;
   final List<LinkedTellerModel> linkedModels;
+}
+
+/// True when [row] has at least one linked model of type Expense or Transfer.
+bool tellerRowHasExpenseOrTransferLink(TellerTransactionRow row) {
+  for (final m in row.linkedModels) {
+    final t = m.modelTypeName;
+    if (t == kExpenseModelTypeName || t == kTransferModelTypeName) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Sync marks transactions removed from the Teller API with `deleted: true` in the payload (see `teller.py`).
+bool tellerPayloadIsDeleted(Map<String, dynamic> payload) {
+  final v = payload['deleted'];
+  if (v == true) return true;
+  if (v is String) {
+    final s = v.trim().toLowerCase();
+    if (s == 'true' || s == '1') return true;
+  }
+  if (v is num && v != 0) return true;
+  return false;
 }
 
 Map<String, dynamic>? _asMap(dynamic v) {

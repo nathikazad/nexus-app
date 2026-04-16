@@ -12,18 +12,25 @@ import '../providers/teller_providers.dart';
 import '../util/format.dart';
 import '../util/teller_display.dart';
 
-/// Edit expense: linked Teller transactions + add via full-screen picker (`/expense/:id/link-teller`).
-class ExpenseTellerLinksFormSection extends ConsumerStatefulWidget {
-  const ExpenseTellerLinksFormSection({super.key, required this.expenseId});
+/// Linked Teller transactions + add via full-screen picker ([linkPickerRoute]).
+class ModelTellerLinksFormSection extends ConsumerStatefulWidget {
+  const ModelTellerLinksFormSection({
+    super.key,
+    required this.modelId,
+    required this.linkPickerRoute,
+  });
 
-  final int expenseId;
+  final int modelId;
+
+  /// Registered route, e.g. `/expense/12/link-teller` or `/transfer/12/link-teller`.
+  final String linkPickerRoute;
 
   @override
-  ConsumerState<ExpenseTellerLinksFormSection> createState() =>
-      _ExpenseTellerLinksFormSectionState();
+  ConsumerState<ModelTellerLinksFormSection> createState() =>
+      _ModelTellerLinksFormSectionState();
 }
 
-class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLinksFormSection> {
+class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFormSection> {
   bool _busy = false;
 
   Future<void> _run(Future<void> Function() fn) async {
@@ -31,7 +38,7 @@ class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLin
     try {
       await fn();
       if (!mounted) return;
-      ref.invalidate(expenseTimelineLinksProvider(widget.expenseId));
+      ref.invalidate(expenseTimelineLinksProvider(widget.modelId));
       ref.invalidate(tellerTransactionsProvider);
     } catch (e) {
       if (mounted) {
@@ -49,7 +56,7 @@ class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLin
 
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(expenseTimelineLinksProvider(widget.expenseId));
+    final async = ref.watch(expenseTimelineLinksProvider(widget.modelId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -68,9 +75,7 @@ class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLin
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: _busy
-                      ? null
-                      : () => context.push('/expense/${widget.expenseId}/link-teller'),
+                  onTap: _busy ? null : () => context.push(widget.linkPickerRoute),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -181,6 +186,21 @@ class _ExpenseTellerLinksFormSectionState extends ConsumerState<ExpenseTellerLin
           },
         ),
       ],
+    );
+  }
+}
+
+/// Expense form: [ModelTellerLinksFormSection] with `/expense/:id/link-teller`.
+class ExpenseTellerLinksFormSection extends StatelessWidget {
+  const ExpenseTellerLinksFormSection({super.key, required this.expenseId});
+
+  final int expenseId;
+
+  @override
+  Widget build(BuildContext context) {
+    return ModelTellerLinksFormSection(
+      modelId: expenseId,
+      linkPickerRoute: '/expense/$expenseId/link-teller',
     );
   }
 }

@@ -222,7 +222,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/expense/:expenseId/link-teller',
         builder: (context, state) {
           final id = int.parse(state.pathParameters['expenseId']!);
-          return TellerLinkPickerScreen(expenseId: id);
+          return TellerLinkPickerScreen(modelId: id);
+        },
+      ),
+      GoRoute(
+        path: '/transfer/:transferId/link-teller',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['transferId']!);
+          return TellerLinkPickerScreen(modelId: id);
         },
       ),
       GoRoute(

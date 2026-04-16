@@ -11,6 +11,7 @@ import '../../layout.dart';
 import '../../providers/expense_providers.dart';
 import '../../util/expense_schema.dart';
 import '../../widgets/model_attribute_form_field.dart';
+import '../../widgets/expense_teller_links_section.dart';
 import '../../widgets/relation_picker.dart';
 import '../../widgets/tag_picker.dart';
 
@@ -266,8 +267,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
       );
 
       debugPrint('[TransferForm] creating/updating transfer transferId=${widget.transferId}');
-      await createModel(ref.container, req);
-      debugPrint('[TransferForm] transfer save mutation completed');
+      final savedId = await createModel(ref.container, req);
+      debugPrint('[TransferForm] transfer save mutation completed id=$savedId');
 
       if (widget.prefillFromExpenseId != null && widget.transferId == null) {
         debugPrint(
@@ -301,9 +302,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
           ref.invalidate(relatedModelsProvider(link));
         }
       }
-      if (widget.transferId != null) {
-        ref.invalidate(transferDetailProvider(widget.transferId!));
-      }
+      ref.invalidate(transferDetailProvider(savedId));
+      ref.invalidate(expenseTimelineLinksProvider(savedId));
 
       if (!mounted) return;
       final msg = widget.prefillFromExpenseId != null && widget.transferId == null
@@ -572,6 +572,14 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                               },
                             ),
                           ),
+                          if (widget.transferId != null) ...[
+                            const SizedBox(height: 24),
+                            ModelTellerLinksFormSection(
+                              modelId: widget.transferId!,
+                              linkPickerRoute:
+                                  '/transfer/${widget.transferId}/link-teller',
+                            ),
+                          ],
                         ],
                       ),
                     ),

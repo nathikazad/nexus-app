@@ -37,5 +37,37 @@ void main() {
     expect(find.text('debit'), findsOneWidget);
     expect(find.text('posted'), findsOneWidget);
     expect(find.text('tx-99'), findsOneWidget);
+    expect(find.text('deleted'), findsOneWidget);
+    expect(find.text('false'), findsOneWidget);
+  });
+
+  testWidgets('TellerTransactionDetailScreen shows deleted true when payload marked', (tester) async {
+    final row = TellerTransactionRow(
+      time: DateTime.utc(2026, 3, 15, 14, 30),
+      eventId: 'e-del',
+      payload: {
+        'date': '2026-03-15',
+        'description': 'Old tx',
+        'deleted': true,
+        'type': 'debit',
+        'status': 'posted',
+        'id': 'tx-gone',
+      },
+      linkedModels: const [],
+    );
+
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => TellerTransactionDetailScreen(row: row),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    expect(find.text('true'), findsOneWidget);
   });
 }

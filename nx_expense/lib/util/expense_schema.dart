@@ -74,7 +74,20 @@ Map<String, dynamic> buildTransferStruct(ModelType schema) {
   for (final rel in schema.relations ?? const <RelationshipType>[]) {
     final link = rel.link;
     if (link is String && link.isNotEmpty) {
-      struct[link] = {'id': true, 'name': true};
+      if (link == kTransferModelTypeName) {
+        struct[link] = {
+          'id': true,
+          'name': true,
+          'description': true,
+          'created_at': true,
+          'amount': true,
+          'date': true,
+          'to': true,
+          'Company': {'id': true, 'name': true},
+        };
+      } else {
+        struct[link] = {'id': true, 'name': true};
+      }
     }
   }
 

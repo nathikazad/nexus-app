@@ -11,8 +11,9 @@ import '../../layout.dart';
 import '../../providers/expense_providers.dart';
 import '../../util/expense_schema.dart';
 import '../../util/format.dart';
+import '../../widgets/teller_detail_readonly_section.dart';
 
-/// Read-only transfer detail (amount, date, title, description).
+/// Read-only transfer detail (amount, date, title, description, attributes, relations).
 class TransferDetailScreen extends ConsumerWidget {
   const TransferDetailScreen({super.key, required this.transferId});
 
@@ -94,53 +95,10 @@ class TransferDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (model.description != null && model.description!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(RefLayout.px5),
-                    child: Text(
-                      model.description!,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        height: 1.6,
-                        color: AppColors.slate700,
-                      ),
-                    ),
-                  ),
+                ..._transferDetailSections(context, ref, model, schema),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 16),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                      border: Border.all(color: AppColors.slate100),
-                      boxShadow: refCardShadow,
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'COMPANY',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.slate500,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _transferCompanyDetailLabel(model),
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.slate900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5),
+                  child: TellerDetailReadonlySection(modelId: transferId),
                 ),
               ],
             );
@@ -200,15 +158,324 @@ class TransferDetailScreen extends ConsumerWidget {
   }
 }
 
-/// Linked company name(s), or [to] attribute (e.g. Cash), or em dash.
-String _transferCompanyDetailLabel(Model model) {
-  final companies = model.relations?['Company'];
-  if (companies != null && companies.isNotEmpty) {
-    return companies.map((c) => c.name).join(', ');
+/// Same layout as [ExpenseDetailScreen]: description, id, attributes (non-amount),
+/// relations, linked transfers.
+List<Widget> _transferDetailSections(
+  BuildContext context,
+  WidgetRef ref,
+  Model model,
+  ModelType schema,
+) {
+  final out = <Widget>[];
+
+  final hasDescription =
+      model.description != null && model.description!.isNotEmpty;
+
+  if (hasDescription) {
+    out.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RefLayout.px5, 24, RefLayout.px5, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Description', style: refSectionTitle(context)),
+            const SizedBox(height: 12),
+            Text(
+              model.description!,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.6,
+                color: AppColors.slate700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
-  final to = attributeValue(model, 'to');
-  if (to is String && to.isNotEmpty) {
-    return to;
+
+  out.add(
+    Padding(
+      padding: EdgeInsets.fromLTRB(
+        RefLayout.px5,
+        hasDescription ? 32 : 24,
+        RefLayout.px5,
+        32,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+          border: Border.all(color: AppColors.slate100),
+          boxShadow: refCardShadow,
+        ),
+        child: _TransferAttrRow(
+          label: 'Id',
+          value: '${model.id}',
+          showDivider: false,
+        ),
+      ),
+    ),
+  );
+
+  final amountKey = primaryNumberAttributeKey(schema);
+  final attrDefs = (schema.attributes ?? const <AttributeDefinition>[])
+      .where((a) => a.key != null && a.key != amountKey)
+      .toList();
+
+  if (attrDefs.isNotEmpty) {
+    out.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Attributes', style: refSectionTitle(context)),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                border: Border.all(color: AppColors.slate100),
+                boxShadow: refCardShadow,
+              ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < attrDefs.length; i++)
+                    _TransferAttrRow(
+                      label: formatAttributeLabel(attrDefs[i].key!),
+                      value: _formatTransferDetailAttr(
+                        model,
+                        attrDefs[i].key!,
+                        attrDefs[i].valueType,
+                      ),
+                      showDivider: i < attrDefs.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
-  return '—';
+
+  if (model.relations != null && model.relations!.isNotEmpty) {
+    for (final e in model.relations!.entries) {
+      if (e.key == kTransferModelTypeName) continue;
+      final list = dedupeModelsById(e.value);
+      if (list.isEmpty) continue;
+      out.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RefLayout.px5, 24, RefLayout.px5, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(formatAttributeLabel(e.key), style: refSectionTitle(context)),
+              const SizedBox(height: 12),
+              for (final relM in list)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _transferRelationRow(context, ref, e.key, relM),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  final transferLinks = model.relations?[kTransferModelTypeName];
+  if (transferLinks != null && dedupeModelsById(transferLinks).isNotEmpty) {
+    final list = dedupeModelsById(transferLinks);
+    out.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RefLayout.px5, 24, RefLayout.px5, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Transfer', style: refSectionTitle(context)),
+            const SizedBox(height: 12),
+            for (final relM in list)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _transferLinkedTransferCell(context, ref, relM),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  return out;
+}
+
+String _formatTransferDetailAttr(Model model, String key, String? valueType) {
+  final v = attributeValue(model, key);
+  return formatDisplayAttributeValue(v, valueType);
+}
+
+class _TransferAttrRow extends StatelessWidget {
+  const _TransferAttrRow({
+    required this.label,
+    required this.value,
+    required this.showDivider,
+  });
+
+  final String label;
+  final String value;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.slate500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (showDivider) const Divider(height: 1, color: AppColors.slate50),
+      ],
+    );
+  }
+}
+
+Widget _transferRelationRow(
+  BuildContext context,
+  WidgetRef ref,
+  String relName,
+  Model relModel,
+) {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.slate100),
+      boxShadow: refCardShadow,
+    ),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => navToRelationExpenses(
+          context,
+          ref,
+          relName: relName,
+          relId: relModel.id,
+          displayName: relModel.name,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  relModel.name,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate900,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _transferLinkedTransferCell(
+  BuildContext context,
+  WidgetRef ref,
+  Model relM,
+) {
+  final title = transferDisplayTitle(relM);
+  final amt = transferAmountAttribute(relM);
+  final dateStr = transferCellDateLabel(relM);
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.slate100),
+      boxShadow: refCardShadow,
+    ),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => navToTransferDetail(context, ref, relM.id),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      dateStr,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppColors.slate400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                amt != null ? formatMoney(amt) : '—',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.teal600,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

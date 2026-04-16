@@ -84,4 +84,79 @@ void main() {
       expect(tellerTransactionTitleLine({}), 'Teller transaction');
     });
   });
+
+  group('tellerRowHasExpenseOrTransferLink', () {
+    TellerTransactionRow rowWithLinks(List<LinkedTellerModel> models) {
+      return TellerTransactionRow(
+        time: DateTime.utc(2026, 3, 10, 8),
+        eventId: 'te-x',
+        payload: const {},
+        linkedModels: models,
+      );
+    }
+
+    test('false when no linked models', () {
+      expect(tellerRowHasExpenseOrTransferLink(rowWithLinks([])), isFalse);
+    });
+
+    test('false when only non-expense non-transfer types', () {
+      expect(
+        tellerRowHasExpenseOrTransferLink(
+          rowWithLinks([
+            const LinkedTellerModel(id: 1, name: 'Co', modelTypeName: 'Company'),
+          ]),
+        ),
+        isFalse,
+      );
+    });
+
+    test('true when linked Expense', () {
+      expect(
+        tellerRowHasExpenseOrTransferLink(
+          rowWithLinks([
+            const LinkedTellerModel(id: 2, name: 'E', modelTypeName: 'Expense'),
+          ]),
+        ),
+        isTrue,
+      );
+    });
+
+    test('true when linked Transfer', () {
+      expect(
+        tellerRowHasExpenseOrTransferLink(
+          rowWithLinks([
+            const LinkedTellerModel(id: 3, name: 'T', modelTypeName: 'Transfer'),
+          ]),
+        ),
+        isTrue,
+      );
+    });
+
+    test('true when both Expense and Transfer present', () {
+      expect(
+        tellerRowHasExpenseOrTransferLink(
+          rowWithLinks([
+            const LinkedTellerModel(id: 2, name: 'E', modelTypeName: 'Expense'),
+            const LinkedTellerModel(id: 3, name: 'T', modelTypeName: 'Transfer'),
+          ]),
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('tellerPayloadIsDeleted', () {
+    test('false when absent or false', () {
+      expect(tellerPayloadIsDeleted({}), isFalse);
+      expect(tellerPayloadIsDeleted({'deleted': false}), isFalse);
+      expect(tellerPayloadIsDeleted({'deleted': 'false'}), isFalse);
+    });
+
+    test('true when bool, string, or non-zero num', () {
+      expect(tellerPayloadIsDeleted({'deleted': true}), isTrue);
+      expect(tellerPayloadIsDeleted({'deleted': 'true'}), isTrue);
+      expect(tellerPayloadIsDeleted({'deleted': '1'}), isTrue);
+      expect(tellerPayloadIsDeleted({'deleted': 1}), isTrue);
+    });
+  });
 }

@@ -13,17 +13,17 @@ import '../../providers/teller_providers.dart';
 import '../../util/format.dart';
 import '../../widgets/expense_date_range_bar.dart';
 
-/// Pick a Teller transaction to link to an expense; on success, pops back to the expense form.
+/// Pick a Teller transaction to link to a model (Expense, Transfer, …); on success, pops back.
 class TellerLinkPickerScreen extends ConsumerWidget {
-  const TellerLinkPickerScreen({super.key, required this.expenseId});
+  const TellerLinkPickerScreen({super.key, required this.modelId});
 
-  final int expenseId;
+  final int modelId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listAsync = ref.watch(tellerTransactionsInRangeProvider);
     final summaryAsync = ref.watch(tellerListSummaryProvider);
-    final linksAsync = ref.watch(expenseTimelineLinksProvider(expenseId));
+    final linksAsync = ref.watch(expenseTimelineLinksProvider(modelId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -91,7 +91,7 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                   child: RefreshIndicator(
                     onRefresh: () async {
                       ref.invalidate(tellerTransactionsProvider);
-                      ref.invalidate(expenseTimelineLinksProvider(expenseId));
+                      ref.invalidate(expenseTimelineLinksProvider(modelId));
                       await ref.read(tellerTransactionsProvider.future);
                     },
                     color: AppColors.teal600,
@@ -133,7 +133,7 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                         final items = _buildDateGroupedItems(
                           candidates,
                           context,
-                          expenseId,
+                          modelId,
                         );
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(
@@ -160,7 +160,7 @@ class TellerLinkPickerScreen extends ConsumerWidget {
   List<Widget> _buildDateGroupedItems(
     List<TellerTransactionRow> rows,
     BuildContext context,
-    int expenseId,
+    int modelId,
   ) {
     final items = <Widget>[];
     String? lastDate;
@@ -188,7 +188,7 @@ class TellerLinkPickerScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: _PickerTellerCard(
             row: r,
-            expenseId: expenseId,
+            modelId: modelId,
             pickerContext: context,
           ),
         ),
@@ -206,12 +206,12 @@ class TellerLinkPickerScreen extends ConsumerWidget {
 class _PickerTellerCard extends ConsumerWidget {
   const _PickerTellerCard({
     required this.row,
-    required this.expenseId,
+    required this.modelId,
     required this.pickerContext,
   });
 
   final TellerTransactionRow row;
-  final int expenseId;
+  final int modelId;
   final BuildContext pickerContext;
 
   @override
@@ -226,11 +226,11 @@ class _PickerTellerCard extends ConsumerWidget {
           try {
             await linkExpenseToTimelineEvent(
               client,
-              modelId: expenseId,
+              modelId: modelId,
               eventTime: row.time,
               eventId: row.eventId,
             );
-            ref.invalidate(expenseTimelineLinksProvider(expenseId));
+            ref.invalidate(expenseTimelineLinksProvider(modelId));
             ref.invalidate(tellerTransactionsProvider);
             if (!pickerContext.mounted) return;
             Navigator.of(pickerContext).pop();

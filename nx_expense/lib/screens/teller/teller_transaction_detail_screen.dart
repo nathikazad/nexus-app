@@ -42,6 +42,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
       ),
       children: [
         _DetailRow(label: 'Date', value: _payloadDate(p) ?? row.time.toLocal().toIso8601String().split('T').first),
+        _DetailRow(label: 'deleted', value: tellerPayloadIsDeleted(p) ? 'true' : 'false'),
         _DetailRow(label: 'Description', value: (p['description'] as String?)?.trim() ?? '—'),
         _DetailRow(label: 'Type', value: p['type']?.toString() ?? '—'),
         _DetailRow(label: 'Status', value: p['status']?.toString() ?? '—'),
