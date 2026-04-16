@@ -1,35 +1,16 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'auth.dart';
 import 'backend_presets.dart';
 import 'cf_access.dart';
+import 'graphql_http_config.dart';
+
+export 'graphql_http_config.dart';
 
 class GraphQLConfig {
   static String get defaultEndpoint =>
       resolve(BackendPreset.defaultPreset).graphqlHttp;
   static const String defaultUserId = '1';
-}
-
-/// Upgrades `http://` to `https://` for Cloudflare tunnel hostnames.
-@visibleForTesting
-String normalizeHttpEndpointForCf(String endpoint) {
-  var ep = endpoint;
-  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
-    ep = ep.replaceFirst('http://', 'https://');
-  }
-  return ep;
-}
-
-/// Headers passed to [HttpLink] for GraphQL HTTP (matches [createClient]).
-@visibleForTesting
-Map<String, String> buildHttpLinkDefaultHeaders(String endpoint, String userId) {
-  final attachCf = CfAccess.shouldAttachHeaders(endpoint);
-  final cf = attachCf ? CfAccess.headers : const <String, String>{};
-  return {
-    'x-user-id': userId,
-    ...cf,
-  };
 }
 
 GraphQLClient createClient(String endpoint, String userId) {

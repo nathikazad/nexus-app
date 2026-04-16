@@ -3,6 +3,7 @@ library nx_db;
 // Core
 export 'src/db.dart';
 export 'src/auth.dart';
+export 'src/backend_ping.dart';
 export 'src/backend_presets.dart';
 export 'src/cf_access.dart';
 export 'src/login_page.dart';

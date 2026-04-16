@@ -41,7 +41,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authProvider.overrideWith(
-            () => AuthController(initialDelay: Duration.zero),
+            () => AuthController(initialDelay: Duration.zero, skipBackendPing: true),
           ),
         ],
       );
@@ -67,7 +67,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authProvider.overrideWith(
-            () => AuthController(initialDelay: Duration.zero),
+            () => AuthController(initialDelay: Duration.zero, skipBackendPing: true),
           ),
         ],
       );
@@ -88,7 +88,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authProvider.overrideWith(
-            () => AuthController(initialDelay: Duration.zero),
+            () => AuthController(initialDelay: Duration.zero, skipBackendPing: true),
           ),
         ],
       );
@@ -103,7 +103,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authProvider.overrideWith(
-            () => AuthController(initialDelay: Duration.zero),
+            () => AuthController(initialDelay: Duration.zero, skipBackendPing: true),
           ),
         ],
       );

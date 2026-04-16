@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'backend_ping.dart';
 import 'backend_presets.dart';
 
 /// User model: [preset] drives all resolved URLs via [resolve].
@@ -25,10 +26,16 @@ class User {
 /// AuthController manages user authentication state.
 /// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
-  AuthController({this.initialDelay = const Duration(seconds: 1)});
+  AuthController({
+    this.initialDelay = const Duration(seconds: 1),
+    this.skipBackendPing = false,
+  });
 
   /// Artificial delay before reading prefs (tests use [Duration.zero]).
   final Duration initialDelay;
+
+  /// When true, [login] and session restore skip [pingGraphqlBackend] (tests).
+  final bool skipBackendPing;
 
   @override
   Future<User?> build() async {
@@ -61,6 +68,24 @@ class AuthController extends AsyncNotifier<User?> {
           userId.isNotEmpty &&
           preset != null) {
         print('[AuthController] Found saved credentials: userId=$userId, preset=${preset.key}');
+        if (!skipBackendPing) {
+          try {
+            final urls = resolve(preset);
+            print('[AuthController] restore ping → ${urls.graphqlHttp}');
+            await pingGraphqlBackend(
+              graphqlHttpUrl: urls.graphqlHttp,
+              userId: userId,
+            );
+          } catch (e) {
+            print('[AuthController] restore ping failed: $e');
+            print('[AuthController] clearing session → login required');
+            await prefs.remove(PrefsKeys.userId);
+            await prefs.remove(PrefsKeys.endpoint);
+            await prefs.remove(PrefsKeys.backendPreset);
+            await prefs.remove(PrefsKeys.sockWsUrl);
+            return null;
+          }
+        }
         return User(userId: userId, preset: preset);
       } else {
         print('[AuthController] No saved credentials found');
@@ -84,6 +109,13 @@ class AuthController extends AsyncNotifier<User?> {
       }
 
       final urls = resolve(preset);
+      if (!skipBackendPing) {
+        await pingGraphqlBackend(
+          graphqlHttpUrl: urls.graphqlHttp,
+          userId: userId,
+        );
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.userId, userId);
       await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
