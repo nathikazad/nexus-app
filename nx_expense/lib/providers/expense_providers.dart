@@ -5,6 +5,10 @@ import 'package:nx_db/nx_db.dart';
 import '../data/expense_timeline_api.dart';
 import '../util/expense_schema.dart';
 
+/// Calendar day as `YYYY-MM-DD` for KGQL filters on Expense/Transfer `date` attributes.
+String _dateOnlyYmd(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
 /// Cached Expense model type with attributes, relations, and tag systems.
 final expenseSchemaProvider = modelTypeByNameProvider(kExpenseModelTypeName);
 
@@ -191,9 +195,9 @@ Future<List<Model>> buildExpenseListForUi(Ref ref) async {
   final sorted = [...filtered];
   switch (sortMode) {
     case ExpenseSortMode.dateDesc:
-      sorted.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+      sorted.sort((a, b) => modelDateSortKey(b).compareTo(modelDateSortKey(a)));
     case ExpenseSortMode.dateAsc:
-      sorted.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+      sorted.sort((a, b) => modelDateSortKey(a).compareTo(modelDateSortKey(b)));
     case ExpenseSortMode.amountDesc:
     case ExpenseSortMode.amountAsc:
       if (amountKey != null) {
@@ -387,8 +391,8 @@ Map<String, dynamic> _dashboardFilterKgql(Ref ref) {
   return <String, dynamic>{
     'model_type': kExpenseModelTypeName,
     'filters': [
-      {'key': 'created_at', 'op': '>=', 'value': range.start.toIso8601String()},
-      {'key': 'created_at', 'op': '<=', 'value': range.end.toIso8601String()},
+      {'key': 'date', 'op': '>=', 'value': _dateOnlyYmd(range.start)},
+      {'key': 'date', 'op': '<=', 'value': _dateOnlyYmd(range.end)},
       {'key': kExpenseIgnoreAttributeKey, 'op': '!=', 'value': true},
     ],
   };
@@ -411,14 +415,14 @@ final expenseListProvider =
           'tag_filters': params.filter!.tagFilters,
         'filters': [
           {
-            'key': 'created_at',
+            'key': 'date',
             'op': '>=',
-            'value': params.dateRange.start.toIso8601String(),
+            'value': _dateOnlyYmd(params.dateRange.start),
           },
           {
-            'key': 'created_at',
+            'key': 'date',
             'op': '<=',
-            'value': params.dateRange.end.toIso8601String(),
+            'value': _dateOnlyYmd(params.dateRange.end),
           },
         ],
       };
@@ -427,6 +431,9 @@ final expenseListProvider =
     });
 
 /// List Transfer models for [expenseDateRangeProvider].
+///
+/// Filters by the **`date` attribute** (same field as list section headers), not
+/// `created_at`, so transformed transfers appear in the month they belong to.
 final transferListProvider = FutureProvider<List<Model>>((ref) async {
   final schema = await ref.watch(transferSchemaProvider.future);
   final struct = buildTransferStruct(schema);
@@ -439,14 +446,14 @@ final transferListProvider = FutureProvider<List<Model>>((ref) async {
       'model_type': kTransferModelTypeName,
       'filters': [
         {
-          'key': 'created_at',
+          'key': 'date',
           'op': '>=',
-          'value': dateRange.start.toIso8601String(),
+          'value': _dateOnlyYmd(dateRange.start),
         },
         {
-          'key': 'created_at',
+          'key': 'date',
           'op': '<=',
-          'value': dateRange.end.toIso8601String(),
+          'value': _dateOnlyYmd(dateRange.end),
         },
       ],
     },
@@ -454,11 +461,11 @@ final transferListProvider = FutureProvider<List<Model>>((ref) async {
   );
 });
 
-/// Transfers sorted newest first (same window as expenses).
+/// Transfers sorted by **`date` attribute** (newest first), then `created_at`.
 final transferListForUiProvider = FutureProvider<List<Model>>((ref) async {
   final list = await ref.watch(transferListProvider.future);
   final sorted = [...list];
-  sorted.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+  sorted.sort((a, b) => modelDateSortKey(b).compareTo(modelDateSortKey(a)));
   return sorted;
 });
 
@@ -578,7 +585,7 @@ final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((
   return ExpenseSummary(count: count, sumTotal: sum);
 });
 
-/// Sum grouped by calendar day (`created_at` window). Uses dashboard date range when set.
+/// Sum grouped by Expense `date` attribute (per calendar day). Uses dashboard date range when set.
 final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final client = ref.watch(graphqlClientProvider);
   final schema = await ref.watch(expenseSchemaProvider.future);
@@ -588,7 +595,7 @@ final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   return getKgqlAggregate(client, _dashboardFilterKgql(ref), {
     'metric': 'sum',
     'key': key,
-    'group': {'key': 'created_at', 'window': 'day'},
+    'group': {'key': 'date'},
   });
 });
 

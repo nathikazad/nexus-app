@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
 import '../../desktop/desktop_nav.dart';
@@ -104,6 +106,42 @@ class TransferDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 16),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                      border: Border.all(color: AppColors.slate100),
+                      boxShadow: refCardShadow,
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'COMPANY',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.slate500,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _transferCompanyDetailLabel(model),
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.slate900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             );
 
@@ -116,6 +154,13 @@ class TransferDetailScreen extends ConsumerWidget {
                   icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
                   onPressed: () => navTransferDetailBack(context, ref, transferId),
                 ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Edit transfer',
+                    icon: const Icon(Icons.edit_outlined, color: AppColors.slate400, size: 22),
+                    onPressed: () => context.push('/transfer/form/$transferId'),
+                  ),
+                ],
                 body: listBody,
               );
             }
@@ -127,6 +172,13 @@ class TransferDetailScreen extends ConsumerWidget {
                   icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
                   onPressed: () => navTransferDetailBack(context, ref, transferId),
                 ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Edit transfer',
+                    icon: const Icon(Icons.edit_outlined, color: AppColors.slate400, size: 22),
+                    onPressed: () => context.push('/transfer/form/$transferId'),
+                  ),
+                ],
                 centerTitle: true,
                 title: Text(
                   title,
@@ -146,4 +198,17 @@ class TransferDetailScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Linked company name(s), or [to] attribute (e.g. Cash), or em dash.
+String _transferCompanyDetailLabel(Model model) {
+  final companies = model.relations?['Company'];
+  if (companies != null && companies.isNotEmpty) {
+    return companies.map((c) => c.name).join(', ');
+  }
+  final to = attributeValue(model, 'to');
+  if (to is String && to.isNotEmpty) {
+    return to;
+  }
+  return '—';
 }

@@ -124,9 +124,7 @@ class _DetailBody extends ConsumerWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            model.createdAt != null
-                                ? formatModelDateTime(model.createdAt)
-                                : '—',
+                            modelDateCellLabel(model),
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -178,7 +176,11 @@ class _DetailBody extends ConsumerWidget {
                               for (var i = 0; i < attrDefs.length; i++)
                                 _AttrRow(
                                   label: formatAttributeLabel(attrDefs[i].key!),
-                                  value: _formatAttr(model, attrDefs[i].key!),
+                                  value: _formatAttr(
+                                    model,
+                                    attrDefs[i].key!,
+                                    attrDefs[i].valueType,
+                                  ),
                                   showDivider: i < attrDefs.length - 1,
                                 ),
                             ],
@@ -417,55 +419,6 @@ class _DetailBody extends ConsumerWidget {
               ],
             ),
           ),
-
-          // Delete button
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: AppColors.slate50)),
-            ),
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.delete_outline),
-              label: Text(
-                'Delete Expense',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-              ),
-              onPressed: () async {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Delete expense?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Delete'),
-                      ),
-                    ],
-                  ),
-                );
-                if (ok != true || !context.mounted) return;
-                final req = SetModelRequest(id: expenseId, delete: true);
-                try {
-                  await createModel(ref.container, req);
-                  ref.invalidate(expenseListForUiProvider);
-                  ref.invalidate(expenseListSummaryProvider);
-                  if (context.mounted) navAfterExpenseDelete(context, ref);
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('$e')));
-                  }
-                }
-              },
-            ),
-          ),
         ],
     );
 
@@ -533,12 +486,9 @@ class _DetailBody extends ConsumerWidget {
     );
   }
 
-  String _formatAttr(Model model, String key) {
+  String _formatAttr(Model model, String key, String? valueType) {
     final v = attributeValue(model, key);
-    if (v == null) return '—';
-    if (v is bool) return v ? 'Yes' : 'No';
-    if (v is num) return formatMoney(v);
-    return v.toString();
+    return formatDisplayAttributeValue(v, valueType);
   }
 
   bool _hasAnyTags(List<TagSystem> systems) {

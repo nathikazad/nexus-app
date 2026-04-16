@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import '../db.dart';
@@ -113,6 +114,10 @@ Future<int> createModel(
 
   // Convert request to JSON
   final requestJson = request.toJson();
+  debugPrint(
+    '[createModel] ${request.delete ? "DELETE" : "save"} '
+    'id=${request.id} modelType=${request.modelType}',
+  );
 
   // Call set_kgql_models mutation
   // PostGraphile wraps JSON functions in input/output structure
@@ -128,6 +133,7 @@ Future<int> createModel(
   );
 
   if (result.hasException) {
+    debugPrint('[createModel] GraphQL exception: ${result.exception}');
     throw result.exception!;
   }
 
@@ -135,14 +141,33 @@ Future<int> createModel(
   // PostGraphile returns JSON result in a 'json' field
   final responseData = result.data?['setKgqlModels'] as Map<String, dynamic>?;
   if (responseData == null) {
+    debugPrint('[createModel] missing setKgqlModels in result.data=${result.data}');
     throw Exception('No data returned from setKgqlModels mutation');
   }
 
-  // The JSON result is in the 'json' field
+  // The JSON result is in the 'json' field (may be null for some delete responses)
   final jsonResult = responseData['json'];
-  final jsonData = jsonResult is String
-      ? json.decode(jsonResult) as Map<String, dynamic>
-      : jsonResult as Map<String, dynamic>;
+  Map<String, dynamic>? jsonData;
+  if (jsonResult != null) {
+    jsonData = jsonResult is String
+        ? json.decode(jsonResult) as Map<String, dynamic>
+        : jsonResult as Map<String, dynamic>;
+  }
+  debugPrint('[createModel] response json field: $jsonData');
+
+  // Deletes often omit `id` in the JSON body; fall back to request.id.
+  if (request.delete) {
+    final modelId = jsonData?['id'] as int? ?? request.id;
+    if (modelId == null) {
+      throw Exception('Delete: no id in response or request');
+    }
+    debugPrint('[createModel] DELETE ok → id=$modelId');
+    return modelId;
+  }
+
+  if (jsonData == null) {
+    throw Exception('No JSON in setKgqlModels response');
+  }
 
   final modelId = jsonData['id'] as int?;
   if (modelId == null) {

@@ -78,6 +78,13 @@ Map<String, dynamic> buildTransferStruct(ModelType schema) {
     }
   }
 
+  // Generic relations node: edge IDs for add/remove on save (same as Expense struct).
+  struct['relations'] = {
+    'relation_id': true,
+    'model_id': true,
+    'model_type': true,
+  };
+
   return struct;
 }
 
@@ -101,12 +108,22 @@ num? transferAmountAttribute(Model model) {
   return num.tryParse('$raw');
 }
 
+/// Prefer `date` attribute for ordering; fall back to `created_at` (ISO strings).
+String modelDateSortKey(Model m) {
+  final raw = attributeValue(m, 'date');
+  if (raw is String && raw.isNotEmpty) return normalizeDateAttributeSortKey(raw);
+  return m.createdAt ?? '';
+}
+
 /// Prefers `date` attribute, otherwise `created_at` (for list/detail cells).
-String transferCellDateLabel(Model model) {
+String modelDateCellLabel(Model model) {
   final raw = attributeValue(model, 'date');
   if (raw is String && raw.isNotEmpty) return formatModelDate(raw);
   return formatModelDate(model.createdAt);
 }
+
+/// Same as [modelDateCellLabel] (Transfer rows).
+String transferCellDateLabel(Model model) => modelDateCellLabel(model);
 
 /// First `number` attribute key in definition order (primary amount field).
 String? primaryNumberAttributeKey(ModelType schema) {
@@ -265,14 +282,10 @@ bool shouldOmitRelationsOnExpenseUpdate({
   );
 }
 
-/// Sort newest [createdAt] first (ISO strings compare lexicographically for UTC).
-List<Model> sortModelsByCreatedAtDesc(List<Model> models) {
+/// Sort by `date` attribute when set, else `created_at` (newest first).
+List<Model> sortModelsByDateDesc(List<Model> models) {
   final out = [...models];
-  out.sort((a, b) {
-    final ca = a.createdAt ?? '';
-    final cb = b.createdAt ?? '';
-    return cb.compareTo(ca);
-  });
+  out.sort((a, b) => modelDateSortKey(b).compareTo(modelDateSortKey(a)));
   return out;
 }
 
@@ -326,8 +339,8 @@ List<MapEntry<String, double>> parseGroupedChartEntries(Map<String, dynamic> raw
   return out;
 }
 
-/// Spend-by-day: backend returns `[{ "key": "2025-01-01T00:00:00", "aggregated_value": ... }]`
-/// (see `servers/pgdb/docs/human-reference/get_kgql_aggregate.md` — same `key` field as other groupings).
+/// Spend-by-day: backend returns grouped rows whose `key` is a day bucket (often the Expense `date`
+/// value, e.g. `2025-01-01`, or ISO timestamps when grouping on `created_at`).
 List<MapEntry<String, double>> parseDaySpendEntries(Map<String, dynamic> raw) {
   final g = raw['grouped'];
   if (g is! List) return [];
@@ -340,6 +353,7 @@ List<MapEntry<String, double>> parseDaySpendEntries(Map<String, dynamic> raw) {
               m['name'] ??
               m['label'] ??
               m['day'] ??
+              m['date'] ??
               m['created_at'] ??
               '')
           .toString();

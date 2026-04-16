@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/foundation.dart' show debugPrint, setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +14,7 @@ import '../../providers/teller_providers.dart';
 import '../../desktop/desktop_nav.dart';
 import '../../layout.dart';
 import '../../widgets/expense_bills_section.dart';
+import '../../widgets/model_attribute_form_field.dart';
 import '../../widgets/expense_teller_links_section.dart';
 import '../../widgets/relation_picker.dart';
 import '../../widgets/tag_picker.dart';
@@ -299,7 +300,12 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                       child: Column(
                                         children: [
                                           for (var i = 0; i < ads.length; i++) ...[
-                                            _attrField(ads[i], _attr[ads[i].key]!),
+                                            ModelAttributeFormField(
+                                              attribute: ads[i],
+                                              controller: _attr[ads[i].key]!,
+                                              onChanged: () => setState(() {}),
+                                              inputDecoration: _refInputDeco(hint: ''),
+                                            ),
                                             if (i < ads.length - 1)
                                               const Divider(height: 1, color: AppColors.slate50),
                                           ],
@@ -431,6 +437,85 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                   ExpenseTellerLinksFormSection(expenseId: widget.expenseId!),
                                   const SizedBox(height: 24),
                                   ExpenseBillsSection(expenseId: widget.expenseId!),
+                                  const SizedBox(height: 24),
+                                  OutlinedButton.icon(
+                                    icon: const Icon(Icons.swap_horiz_outlined, size: 20),
+                                    label: Text(
+                                      'Transform to transfer',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      context.push(
+                                        '/transfer/form?fromExpenseId=${widget.expenseId}',
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+                                  OutlinedButton.icon(
+                                    icon: const Icon(Icons.delete_outline, size: 20),
+                                    label: Text(
+                                      'Delete Expense',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      debugPrint(
+                                        '[ExpenseForm] Delete expense tapped id=${widget.expenseId}',
+                                      );
+                                      final ok = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Delete expense?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (ok != true || !context.mounted) {
+                                        debugPrint(
+                                          '[ExpenseForm] Delete cancelled or unmounted',
+                                        );
+                                        return;
+                                      }
+                                      final req = sm.SetModelRequest(
+                                        id: widget.expenseId,
+                                        delete: true,
+                                      );
+                                      try {
+                                        debugPrint(
+                                          '[ExpenseForm] calling createModel delete id=${widget.expenseId}',
+                                        );
+                                        await createModel(ref.container, req);
+                                        debugPrint(
+                                          '[ExpenseForm] delete succeeded, invalidating + go /expenses',
+                                        );
+                                        ref.invalidate(expenseListForUiProvider);
+                                        ref.invalidate(expenseListSummaryProvider);
+                                        ref.invalidate(expenseSummaryProvider);
+                                        if (context.mounted) context.go('/expenses');
+                                      } catch (e, st) {
+                                        debugPrint('[ExpenseForm] delete FAILED: $e');
+                                        debugPrint('[ExpenseForm] stack: $st');
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('$e')),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
                                 ],
                               ],
                             ),
@@ -446,47 +531,6 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (widget.expenseId != null) ...[
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.delete_outline, size: 20),
-                                  label: Text(
-                                    'Delete Expense',
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                                  ),
-                                  onPressed: () async {
-                                    final ok = await showDialog<bool>(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        title: const Text('Delete expense?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(ctx, false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          FilledButton(
-                                            onPressed: () => Navigator.pop(ctx, true),
-                                            child: const Text('Delete'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (ok != true || !context.mounted) return;
-                                    final req = sm.SetModelRequest(id: widget.expenseId, delete: true);
-                                    try {
-                                      await createModel(ref.container, req);
-                                      ref.invalidate(expenseListForUiProvider);
-                                      ref.invalidate(expenseListSummaryProvider);
-                                      if (context.mounted) context.go('/expenses');
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(SnackBar(content: Text('$e')));
-                                      }
-                                    }
-                                  },
-                                ),
-                                const SizedBox(height: 12),
-                              ],
                               FilledButton(
                                 onPressed: () => _submit(schema),
                                 child: Text(
@@ -529,77 +573,6 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.slate200),
-      ),
-    );
-  }
-
-  Widget _attrField(AttributeDefinition ad, TextEditingController c) {
-    final vt = ad.valueType ?? 'string';
-    if (vt == 'boolean') {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                formatAttributeLabel(ad.key ?? ''),
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
-              ),
-            ),
-            Switch(
-              value: c.text == 'true',
-              onChanged: (v) => setState(() => c.text = v ? 'true' : 'false'),
-            ),
-          ],
-        ),
-      );
-    }
-    if (vt == 'number') {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                formatAttributeLabel(ad.key ?? ''),
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
-              ),
-            ),
-            SizedBox(
-              width: 120,
-              child: TextField(
-                controller: c,
-                textAlign: TextAlign.right,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.slate900),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  prefixText: r'$ ',
-                  prefixStyle: GoogleFonts.inter(color: AppColors.slate400, fontWeight: FontWeight.w500),
-                  isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            formatAttributeLabel(ad.key ?? ''),
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate700),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: c,
-            decoration: _refInputDeco(hint: ''),
-          ),
-        ],
       ),
     );
   }

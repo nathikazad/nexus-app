@@ -106,6 +106,39 @@ void main() {
       expect(list.first.name, 'Coffee');
     });
 
+    test('P7.2b expenseListProvider — filters use date attribute YYYY-MM-DD', () async {
+      final mock = _MockGraphQLClient();
+      final captured = <QueryOptions>[];
+      var call = 0;
+      when(() => mock.query(any())).thenAnswer((inv) async {
+        captured.add(inv.positionalArguments[0] as QueryOptions);
+        call++;
+        if (call == 1) {
+          return _qr({'getKgqlModelType': [_expenseMtJson()]});
+        }
+        if (call == 2) {
+          return _qr({'getKgqlModels': []});
+        }
+        throw StateError('unexpected call $call');
+      });
+
+      final container = ProviderContainer(
+        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(
+        expenseListProvider((filter: null, dateRange: _testMonth(2024, 6))).future,
+      );
+
+      expect(captured.length, 2);
+      final filter = captured[1].variables['filter'] as Map<String, dynamic>;
+      final filters = filter['filters'] as List<dynamic>;
+      expect(filters.length, 2);
+      expect(filters[0], {'key': 'date', 'op': '>=', 'value': '2024-06-01'});
+      expect(filters[1], {'key': 'date', 'op': '<=', 'value': '2024-06-30'});
+    });
+
     test('P7.3 expenseListProvider — tag_filters in variables', () async {
       final mock = _MockGraphQLClient();
       final captured = <QueryOptions>[];
@@ -242,6 +275,33 @@ void main() {
       )).future);
 
       expect(agg!['group'], {'key': 'tag:Category'});
+    });
+
+    test('P7.6b spendByDayProvider — group key date', () async {
+      final mock = _MockGraphQLClient();
+      Map<String, dynamic>? agg;
+      var call = 0;
+      when(() => mock.query(any())).thenAnswer((inv) async {
+        final o = inv.positionalArguments[0] as QueryOptions;
+        call++;
+        if (o.variables.containsKey('input')) {
+          return _qr({'getKgqlModelType': [_expenseMtJson()]});
+        }
+        if (o.variables.containsKey('filterkgql')) {
+          agg = o.variables['aggregate'] as Map<String, dynamic>?;
+          return _qr({'getKgqlAggregate': '{}'});
+        }
+        throw StateError('unexpected call $call');
+      });
+
+      final container = ProviderContainer(
+        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(spendByDayProvider.future);
+
+      expect(agg!['group'], {'key': 'date'});
     });
 
     test('P7.7 spendByRelationProvider — group key Company.name', () async {

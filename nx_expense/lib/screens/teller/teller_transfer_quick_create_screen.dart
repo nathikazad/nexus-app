@@ -12,6 +12,7 @@ import '../../desktop/desktop_nav.dart';
 import '../../providers/expense_providers.dart';
 import '../../providers/teller_providers.dart';
 import '../../util/expense_schema.dart';
+import '../../widgets/date_attribute_picker_field.dart';
 import '../../widgets/expense_app_end_drawer.dart';
 
 /// Minimal new transfer + link to [row].
@@ -241,16 +242,12 @@ class _TellerTransferQuickCreateScreenState
                               ),
                             ),
                             const SizedBox(height: 16),
-                            _quickFieldLabel('Date'),
-                            const SizedBox(height: 6),
-                            TextField(
+                            DateAttributePickerField(
+                              label: 'Date',
                               controller: _date,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.slate900,
-                              ),
-                              decoration: _deco('YYYY-MM-DD'),
+                              decoration: _deco(''),
+                              onPicked: () => setState(() {}),
+                              padding: EdgeInsets.zero,
                             ),
                           ],
                         ),

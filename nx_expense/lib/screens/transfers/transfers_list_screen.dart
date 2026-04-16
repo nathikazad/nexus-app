@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
@@ -146,7 +145,7 @@ class TransfersListScreen extends ConsumerWidget {
     final amountKey = primaryNumberAttributeKey(schema);
 
     for (final m in models) {
-      final dateStr = _dateLabel(m.createdAt);
+      final dateStr = transferCellDateLabel(m);
       if (dateStr != lastDate) {
         items.add(
           Padding(
@@ -176,16 +175,6 @@ class TransfersListScreen extends ConsumerWidget {
       );
     }
     return items;
-  }
-
-  static String _dateLabel(String? iso) {
-    if (iso == null || iso.isEmpty) return 'Unknown';
-    try {
-      final d = DateTime.parse(iso);
-      return DateFormat('MMM d, y').format(d);
-    } catch (_) {
-      return iso;
-    }
   }
 
   static num? _num(Model m, String key) {

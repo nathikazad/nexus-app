@@ -17,6 +17,7 @@ import 'screens/expense/expense_form_screen.dart';
 import 'screens/expense/expense_list_screen.dart';
 import 'screens/auth/expense_login_screen.dart';
 import 'screens/transfers/transfer_detail_screen.dart';
+import 'screens/transfers/transfer_form_screen.dart';
 import 'screens/transfers/transfer_relation_picker_screen.dart';
 import 'screens/transfers/transfers_list_screen.dart';
 import 'screens/teller/teller_list_screen.dart';
@@ -192,6 +193,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             allowMultiple: extra.allowMultiple,
             initialIds: extra.initialIds,
           );
+        },
+      ),
+      GoRoute(
+        path: '/transfer/form',
+        builder: (context, state) {
+          final from = state.uri.queryParameters['fromExpenseId'];
+          return TransferFormScreen(
+            prefillFromExpenseId: from != null ? int.tryParse(from) : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/transfer/form/:id',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return TransferFormScreen(transferId: id);
         },
       ),
       GoRoute(
