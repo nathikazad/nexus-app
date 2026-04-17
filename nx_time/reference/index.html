@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Time & Tasks App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        iconify-icon { stroke-width: 1.5; }
+        /* Goals tab — compact dots + rows (matches goals_tab_with_sleep_bar.html) */
+        .g-row { padding: 12px 0; border-bottom: 0.5px solid #e2e8f0; }
+        .g-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+        .gd { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; }
+        .gd-ok { background: #1D9E75; }
+        .gd-miss { background: #E24B4A; }
+        .gd-pend { border: 1.5px solid #e2e8f0; background: transparent; }
+        .gd-today-ok { background: #1D9E75; border: 2px solid #0f172a; }
+        .gd-today-miss { background: #E24B4A; border: 2px solid #0f172a; }
+        .gd-today-prog { background: #BA7517; border: 2px solid #0f172a; }
+        .g-days { display: flex; gap: 4px; margin-top: 2px; }
+        .g-days span { width: 12px; text-align: center; font-size: 9px; color: #94a3b8; line-height: 1; }
+        /* Calendar (dense list — matches calendar_past_week.html) */
+        .cal-act-row { display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-bottom: 0.5px solid #e2e8f0; cursor: pointer; }
+        .cal-color { width: 4px; border-radius: 2px; align-self: stretch; min-height: 18px; flex-shrink: 0; }
+        
+        /* App Container for Desktop Preview */
+        #app-container {
+            width: 100%;
+            height: 100dvh;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        @media (min-width: 640px) {
+            #app-container {
+                max-width: 400px;
+                height: 850px;
+                max-height: 95vh;
+                border-radius: 40px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+                border: 8px solid #0f172a;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-900 antialiased selection:bg-[#FB923C] selection:text-white">
+
+<div id="app-container">
+
+    <!-- ==================== PAGE: TODAY (MAIN) ==================== -->
+    <div id="page-today" class="page flex flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-5 pt-12 pb-4">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Today — Thu, Oct 26</h1>
+            <button class="text-slate-500 hover:text-slate-900 transition-colors">
+                <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+
+        <main class="flex-1 overflow-y-auto hide-scrollbar px-5 pb-24">
+            <!-- Time Map Bar -->
+            <div class="relative w-full h-9 rounded-full bg-slate-100 flex overflow-hidden mb-3">
+                <div class="h-full bg-blue-400" style="width: 32%;"></div>
+                <div class="h-full bg-slate-300" style="width: 5%;"></div>
+                <div class="h-full bg-green-500" style="width: 8%;"></div>
+                <div class="h-full bg-slate-300" style="width: 5%;"></div>
+                <div class="h-full bg-[#F97316]" style="width: 25%;"></div>
+                <!-- Current Time Marker -->
+                <div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 shadow-sm z-10" style="left: 75%;"></div>
+                
+                <!-- Week View Link -->
+                <button onclick="navigate('page-week')" class="absolute -top-6 right-0 text-xs font-medium text-slate-500 hover:text-slate-900">week view ↗</button>
+            </div>
+
+            <!-- Color Legend -->
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8">
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-blue-400"></div><span class="text-xs text-slate-500 font-medium">Sleep</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-[#F97316]"></div><span class="text-xs text-slate-500 font-medium">Work</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-green-500"></div><span class="text-xs text-slate-500 font-medium">Exercise</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-yellow-400"></div><span class="text-xs text-slate-500 font-medium">Eat/Cook</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-teal-500"></div><span class="text-xs text-slate-500 font-medium">Outdoors</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-slate-300"></div><span class="text-xs text-slate-500 font-medium">Routine</span></div>
+            </div>
+
+            <!-- Activities List -->
+            <div class="flex items-center justify-between mb-4 mt-2">
+                <h2 class="text-lg font-medium tracking-tight">Activities</h2>
+                <span class="text-xs text-slate-500 font-medium">12 blocks</span>
+            </div>
+
+            <div class="flex flex-col gap-1 mb-8">
+                <!-- Activity Row -->
+                <div onclick="navigate('page-activity-detail', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-1 h-10 rounded-full bg-blue-400 shrink-0"></div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <span class="text-sm font-medium text-slate-900 leading-tight">Deep sleep</span>
+                        <span class="text-xs text-slate-500 mt-0.5">11:30p – 7:15a</span>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">7h 45m</div>
+                </div>
+
+                <!-- Activity Row -->
+                <div class="flex items-center gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-1 h-10 rounded-full bg-slate-300 shrink-0"></div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <span class="text-sm font-medium text-slate-900 leading-tight">Morning prep</span>
+                        <span class="text-xs text-slate-500 mt-0.5">7:15a – 8:00a</span>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">45m</div>
+                </div>
+
+                <!-- Activity Row (Warning) -->
+                <div onclick="navigate('page-activity-detail-flagged', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer group">
+                    <div class="w-1 h-10 rounded-full bg-green-500 shrink-0"></div>
+                    <div class="flex-1 flex flex-col justify-center relative">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-medium text-orange-600 leading-tight">Morning Run</span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                        </div>
+                        <span class="text-xs text-slate-500 mt-0.5">8:00a – 9:15a</span>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h 15m</div>
+                </div>
+
+                <!-- Activity Row (Now) -->
+                <div class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-slate-50 ring-1 ring-slate-100 transition-colors cursor-pointer group relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316]"></div>
+                    <div class="w-1 h-10 shrink-0 ml-1"></div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <span class="text-sm font-medium text-slate-900 leading-tight">Platform › DB Migration</span>
+                        <span class="text-xs text-slate-500 mt-0.5">9:45a – <span class="text-[#F97316] font-medium">now</span></span>
+                    </div>
+                    <div class="text-xs font-medium text-[#F97316] bg-orange-100 px-2 py-1 rounded-md tracking-tight">00:32:14</div>
+                </div>
+            </div>
+
+            <!-- Add Button -->
+            <button class="w-full py-3.5 flex items-center justify-center gap-2 rounded-xl border border-slate-200 border-dashed text-sm font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all">
+                <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
+                Add time block manually
+            </button>
+        </main>
+    </div>
+
+
+    <!-- ==================== PAGE: WEEK VIEW ==================== -->
+    <div id="page-week" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <header class="flex items-center justify-between px-5 pt-12 pb-4 border-b border-slate-100">
+            <button onclick="navigate('page-today')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <h1 class="text-base font-medium tracking-tight text-slate-900">Week of Oct 23</h1>
+            <div class="flex gap-1 -mr-2">
+                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-400">
+                    <iconify-icon icon="solar:alt-arrow-left-linear" class="text-lg"></iconify-icon>
+                </button>
+                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-600">
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-lg"></iconify-icon>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-5 py-6">
+            <!-- Vertical Bars Chart -->
+            <div class="flex items-end justify-between h-[35vh] gap-2 mb-4">
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-[90%] rounded-md overflow-hidden bg-slate-50">
+                        <div class="w-full bg-[#F97316]" style="height: 40%"></div>
+                        <div class="w-full bg-slate-300" style="height: 10%"></div>
+                        <div class="w-full bg-blue-400" style="height: 30%"></div>
+                    </div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">M</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-[85%] rounded-md overflow-hidden bg-slate-50">
+                        <div class="w-full bg-green-500" style="height: 15%"></div>
+                        <div class="w-full bg-[#F97316]" style="height: 35%"></div>
+                        <div class="w-full bg-slate-300" style="height: 15%"></div>
+                        <div class="w-full bg-blue-400" style="height: 35%"></div>
+                    </div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">T</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-[95%] rounded-md overflow-hidden bg-slate-50">
+                        <div class="w-full bg-teal-500" style="height: 10%"></div>
+                        <div class="w-full bg-[#F97316]" style="height: 50%"></div>
+                        <div class="w-full bg-slate-300" style="height: 5%"></div>
+                        <div class="w-full bg-blue-400" style="height: 30%"></div>
+                    </div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">W</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-50 ring-2 ring-[#F97316] ring-offset-2">
+                        <div class="w-full bg-slate-100 flex-1"></div>
+                        <div class="w-full bg-[#F97316]" style="height: 25%"></div>
+                        <div class="w-full bg-slate-300" style="height: 10%"></div>
+                        <div class="w-full bg-green-500" style="height: 15%"></div>
+                        <div class="w-full bg-blue-400" style="height: 35%"></div>
+                    </div>
+                    <span class="text-xs text-center text-[#F97316] font-medium mt-2 uppercase tracking-widest">T</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group opacity-40">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-100 border border-slate-200 border-dashed"></div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">F</span>
+                </div>
+                 <div class="w-full flex flex-col justify-end h-full relative group opacity-40">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-100 border border-slate-200 border-dashed"></div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">S</span>
+                </div>
+                 <div class="w-full flex flex-col justify-end h-full relative group opacity-40">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-100 border border-slate-200 border-dashed"></div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">S</span>
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 text-center mb-8">tap any day to see time blocks • pinch to zoom into hours</p>
+        </main>
+    </div>
+
+
+    <!-- ==================== PAGE: GOALS ==================== -->
+    <div id="page-goals" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-5 pt-12 pb-4">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-medium tracking-tight text-slate-900">Goals</h1>
+            <button class="text-slate-500 hover:text-slate-900 transition-colors">
+                <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+
+        <!-- Summary chips (matches goals_tab_with_sleep_bar.html) -->
+        <div class="px-5 pb-2 border-b border-slate-100">
+            <div class="flex flex-wrap gap-2">
+                <div class="bg-slate-100 rounded-2xl px-3 py-1 text-xs">
+                    <span class="font-medium text-[#0F6E56]">5</span> <span class="text-slate-600">on track</span>
+                </div>
+                <div class="bg-slate-100 rounded-2xl px-3 py-1 text-xs">
+                    <span class="font-medium text-[#BA7517]">2</span> <span class="text-slate-600">at risk</span>
+                </div>
+                <div class="bg-slate-100 rounded-2xl px-3 py-1 text-xs">
+                    <span class="font-medium text-[#A32D2D]">1</span> <span class="text-slate-600">missed</span>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto px-5 pb-24">
+
+            <div class="pt-2.5 pb-1">
+                <span class="text-xs font-medium text-slate-600">Daily goals</span>
+            </div>
+
+            <!-- Wake up before 7am -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Wake up before 7am</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">6:48 today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-today-ok"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+
+            <!-- Sleep by 11pm -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Sleep by 11pm</span>
+                    <span class="text-xs font-medium text-[#A32D2D]">11:42 last night</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-today-miss"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+
+            <!-- Sleep 8 hours -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Sleep 8 hours</span>
+                    <span class="text-xs font-medium text-[#A32D2D]">6h 50m today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-today-miss"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                <div class="text-[11px] text-slate-500 mt-1.5">Today: 6h 50m of 8h</div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#E24B4A]" style="width: 85%;"></div>
+                </div>
+            </div>
+
+            <!-- Yoga every day -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Yoga every day</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">32m today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-today-ok"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+
+            <!-- Theology reading -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Theology reading 1hr / day</span>
+                    <span class="text-xs font-medium text-[#BA7517]">35m today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-today-prog"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                <div class="text-[11px] text-slate-500 mt-1.5">Today: 35m of 60m — still in progress</div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#BA7517]" style="width: 58%;"></div>
+                </div>
+            </div>
+
+            <div class="pt-3.5 pb-1">
+                <span class="text-xs font-medium text-slate-600">Weekly goals</span>
+            </div>
+
+            <!-- Gym 3x / week -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Gym 3x / week</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">2 of 3</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <div class="flex gap-1">
+                        <div class="w-[18px] h-[18px] rounded-full bg-[#1D9E75] flex items-center justify-center shrink-0">
+                            <iconify-icon icon="solar:check-read-linear" class="text-[10px] text-white"></iconify-icon>
+                        </div>
+                        <div class="w-[18px] h-[18px] rounded-full bg-[#1D9E75] flex items-center justify-center shrink-0">
+                            <iconify-icon icon="solar:check-read-linear" class="text-[10px] text-white"></iconify-icon>
+                        </div>
+                        <div class="w-[18px] h-[18px] rounded-full border-[1.5px] border-slate-200 shrink-0 box-border"></div>
+                    </div>
+                    <span class="text-[11px] text-slate-500">2 days left in week</span>
+                </div>
+            </div>
+
+            <!-- Language learning -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Language learning 3hrs / week</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">2h 15m</span>
+                </div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#1D9E75]" style="width: 75%;"></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-1.5">2h 15m of 3h — 45m remaining, 2 days left</div>
+            </div>
+
+            <!-- Dancing -->
+            <div class="g-row border-b-0">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Dancing 3hrs / week</span>
+                    <span class="text-xs font-medium text-[#BA7517]">45m</span>
+                </div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#BA7517]" style="width: 25%;"></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-1.5">45m of 3h — 2h 15m remaining, 2 days left</div>
+            </div>
+
+        </main>
+    </div>
+
+
+    <!-- ==================== PAGE: TASKS (ACTIVE) ==================== -->
+    <div id="page-tasks" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <header class="flex items-center justify-between px-5 pt-12 pb-4 border-b border-slate-50">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Tasks — Thu, Oct 26</h1>
+            <button onclick="navigate('page-task-picker', true)" class="text-sm font-medium text-[#F97316] hover:text-[#FB923C] transition-colors">
+                + pick more
+            </button>
+        </header>
+
+        <!-- Summary Chips -->
+        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar px-5 py-3 border-b border-slate-100">
+            <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 whitespace-nowrap">7 Total</div>
+            <div class="px-3 py-1 rounded-full bg-green-50 border border-green-100 text-xs font-medium text-green-700 whitespace-nowrap">2 Done</div>
+            <div class="px-3 py-1 rounded-full bg-orange-50 border border-orange-100 text-xs font-medium text-orange-700 whitespace-nowrap">1 In progress</div>
+            <div class="px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-xs font-medium text-slate-500 whitespace-nowrap">4 Todo</div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto px-5 pt-4 pb-24">
+            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-medium mb-4 text-center">swipe right = done • long press to reorder</p>
+
+            <div class="flex flex-col gap-1">
+                <!-- Task Row (Done) -->
+                <div onclick="navigate('page-task-detail', true)" class="flex items-start gap-3 p-3 -mx-3 rounded-2xl opacity-50 cursor-pointer">
+                    <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                        <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900 line-through">Review Q3 Analytics</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Growth › Reports</div>
+                    </div>
+                    <div class="text-xs text-slate-400">45m</div>
+                </div>
+
+                <!-- Task Row (Done) -->
+                <div class="flex items-start gap-3 p-3 -mx-3 rounded-2xl opacity-50 cursor-pointer">
+                    <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                        <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900 line-through">Reply to investors</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Admin</div>
+                    </div>
+                    <div class="text-xs text-slate-400">15m</div>
+                </div>
+
+                <!-- Task Row (In Progress) -->
+                <div onclick="navigate('page-task-detail', true)" class="flex items-start gap-3 p-3 -mx-3 rounded-2xl bg-orange-50/40 ring-1 ring-[#FB923C]/20 cursor-pointer group relative overflow-hidden">
+                    <!-- Progress visual indicator -->
+                    <div class="w-5 h-5 rounded-md bg-white border border-[#FB923C]/50 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden relative">
+                        <div class="absolute bottom-0 left-0 right-0 bg-[#F97316]" style="height: 40%;"></div>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-semibold text-slate-900">DB Migration Script</span>
+                        <div class="text-xs text-slate-500 mt-0.5 mb-2">Platform</div>
+
+                        <!-- Subtask progress embedded -->
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                                <div class="h-full bg-[#F97316] rounded-full" style="width: 40%;"></div>
+                            </div>
+                            <span class="text-[10px] font-medium text-slate-400">2/5</span>
+                        </div>
+                        <div class="text-xs text-slate-600 mt-1 font-medium flex gap-1">
+                            <span class="text-[#F97316] font-semibold">Next:</span> Write rollback logic
+                        </div>
+                    </div>
+                    <div class="text-xs font-medium text-[#F97316]">2h est.</div>
+                </div>
+
+                <!-- Task Row (Todo) -->
+                <div class="flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900">Draft weekly newsletter</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Content › Newsletter</div>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h</div>
+                </div>
+
+                <!-- Task Row (Todo) -->
+                <div class="flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900">Gym: Upper Body</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Personal › Health</div>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h 15m</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+    <!-- ==================== PAGE: TASK PICKER ==================== -->
+    <div id="page-task-picker" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <header class="flex items-center justify-between px-5 pt-12 pb-4">
+            <button onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Pick tasks</h1>
+            <span class="text-xs font-medium text-slate-400">23 left</span>
+        </header>
+
+        <!-- Filter Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar px-5 pb-3">
+            <button class="px-3 py-1.5 rounded-full bg-slate-900 text-white text-xs font-medium whitespace-nowrap">All</button>
+            <button class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors text-xs font-medium whitespace-nowrap">Yesterday (2)</button>
+            <button class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors text-xs font-medium whitespace-nowrap">Work (12)</button>
+            <button class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors text-xs font-medium whitespace-nowrap">Personal (5)</button>
+            <button class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors text-xs font-medium whitespace-nowrap">Home (4)</button>
+        </div>
+
+        <main class="flex-1 overflow-y-auto px-5 pb-24">
+
+            <!-- Section: Left over -->
+            <div class="mb-6 mt-2">
+                <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#F97316]"></div>
+                    Left over from yesterday
+                </h3>
+
+                <div class="flex flex-col gap-0.5">
+                    <!-- Task Item (Selected) -->
+                    <div class="flex items-start gap-3 p-2.5 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded bg-[#F97316] flex items-center justify-center shrink-0 mt-0.5 text-white shadow-sm shadow-orange-500/20">
+                            <iconify-icon icon="solar:check-read-linear" class="text-sm"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 leading-tight">Sync with design team</span>
+                            <div class="text-[10px] text-slate-500 mt-0.5">Platform › UI</div>
+                        </div>
+                        <span class="text-[10px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">pinned yest.</span>
+                    </div>
+
+                    <!-- Task Item (Selected) -->
+                    <div class="flex items-start gap-3 p-2.5 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded bg-[#F97316] flex items-center justify-center shrink-0 mt-0.5 text-white shadow-sm shadow-orange-500/20">
+                            <iconify-icon icon="solar:check-read-linear" class="text-sm"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 leading-tight">Pay internet bill</span>
+                            <div class="text-[10px] text-slate-500 mt-0.5">Home › Admin</div>
+                        </div>
+                        <span class="text-[10px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">pinned yest.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Work -->
+            <div class="mb-6">
+                <h3 class="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-3">Work</h3>
+
+                <div class="flex flex-col gap-0.5">
+                    <!-- Task Item (Unselected) -->
+                    <div class="flex items-start gap-3 p-2.5 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 leading-tight">Update API docs</span>
+                            <div class="text-[10px] text-slate-500 mt-0.5">Platform › API</div>
+                        </div>
+                        <span class="text-[10px] font-medium text-slate-400">1w ago</span>
+                    </div>
+
+                    <!-- Task Item (Selected) -->
+                    <div class="flex items-start gap-3 p-2.5 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded bg-[#F97316] flex items-center justify-center shrink-0 mt-0.5 text-white shadow-sm shadow-orange-500/20">
+                            <iconify-icon icon="solar:check-read-linear" class="text-sm"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 leading-tight">Draft weekly newsletter</span>
+                            <div class="text-[10px] text-slate-500 mt-0.5">Content › Newsletter</div>
+                        </div>
+                        <span class="text-[10px] font-medium text-slate-400">2d ago</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Sticky Bottom Bar -->
+        <div class="absolute bottom-0 left-0 right-0 p-5 bg-white/80 backdrop-blur-md border-t border-slate-100 flex items-center justify-between pb-8">
+            <div>
+                <div class="text-sm font-semibold text-slate-900">3 selected</div>
+                <div class="text-xs font-medium text-slate-500">4 already pinned to today</div>
+            </div>
+            <button onclick="navigateBack()" class="px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition-colors shadow-sm">Done</button>
+        </div>
+    </div>
+
+
+    <!-- ==================== PAGE: TASK DETAIL ==================== -->
+    <div id="page-task-detail" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-30">
+        <header class="flex items-center justify-between px-5 pt-12 pb-2">
+            <button onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <span class="text-xs font-semibold text-slate-900 tracking-wide uppercase">Task</span>
+            <button class="text-xs font-medium text-red-500 hover:text-red-600 transition-colors">Delete</button>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-5 py-4 pb-12">
+
+            <!-- Title -->
+            <div class="flex items-start gap-3 mb-6">
+                 <!-- Status visual indicator -->
+                 <div class="w-6 h-6 rounded-md bg-white border-2 border-[#FB923C]/50 flex items-center justify-center shrink-0 mt-1 overflow-hidden relative cursor-pointer hover:bg-orange-50 transition-colors">
+                    <div class="absolute bottom-0 left-0 right-0 bg-[#F97316]" style="height: 40%;"></div>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900 leading-tight">DB Migration Script</h1>
+                    <p class="text-sm font-medium text-slate-500 mt-1">Platform › Infrastructure</p>
+                </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-2 mb-8">
+                <span class="px-2.5 py-1 rounded-md bg-orange-100 text-[#F97316] text-xs font-medium">high priority</span>
+                <span class="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">backend</span>
+                <button class="px-2.5 py-1 rounded-md border border-slate-200 border-dashed text-slate-400 hover:text-slate-900 text-xs font-medium">+ tag</button>
+            </div>
+
+            <!-- Metadata Cards -->
+            <div class="grid grid-cols-3 gap-2 mb-8">
+                <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <span class="block text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1">Created</span>
+                    <span class="text-sm font-semibold text-slate-900">Oct 20</span>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-3 border border-orange-100 cursor-pointer">
+                    <span class="block text-[10px] font-medium text-orange-400 uppercase tracking-widest mb-1">Pinned to</span>
+                    <span class="text-sm font-semibold text-orange-900">Today</span>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <span class="block text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1">Time spent</span>
+                    <span class="text-sm font-semibold text-slate-900">1h 12m</span>
+                </div>
+            </div>
+
+            <!-- Subtasks -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-medium text-slate-500 uppercase tracking-widest">Subtasks</h3>
+                    <span class="text-xs font-semibold text-slate-900">2 of 5</span>
+                </div>
+
+                <div class="h-1.5 w-full bg-slate-100 rounded-full mb-4 overflow-hidden">
+                    <div class="h-full bg-[#F97316] rounded-full transition-all duration-500" style="width: 40%;"></div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <!-- Done -->
+                    <div class="flex items-start gap-3 opacity-50">
+                        <div class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                            <iconify-icon icon="solar:check-read-linear" class="text-[10px]"></iconify-icon>
+                        </div>
+                        <span class="text-sm font-medium text-slate-900 line-through">Backup staging DB</span>
+                    </div>
+                    <!-- Done -->
+                    <div class="flex items-start gap-3 opacity-50">
+                        <div class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                            <iconify-icon icon="solar:check-read-linear" class="text-[10px]"></iconify-icon>
+                        </div>
+                        <span class="text-sm font-medium text-slate-900 line-through">Write schema updates</span>
+                    </div>
+                    <!-- Next Active -->
+                    <div class="flex items-start gap-3">
+                        <div class="w-4 h-4 rounded-full border-2 border-[#F97316] flex items-center justify-center shrink-0 mt-0.5 bg-orange-50"></div>
+                        <span class="text-sm font-semibold text-slate-900">Write rollback logic</span>
+                    </div>
+                    <!-- Future -->
+                    <div class="flex items-start gap-3">
+                        <div class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5"></div>
+                        <span class="text-sm font-medium text-slate-600">Test on staging env</span>
+                    </div>
+                    <!-- Future -->
+                    <div class="flex items-start gap-3">
+                        <div class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5"></div>
+                        <span class="text-sm font-medium text-slate-600">Deploy to production</span>
+                    </div>
+                </div>
+
+                <button class="mt-4 text-xs font-medium text-slate-400 hover:text-[#F97316] transition-colors">+ add subtask</button>
+            </div>
+
+            <!-- Time Blocks linked -->
+            <div class="mb-8">
+                <div class="flex items-center gap-2 mb-3">
+                    <h3 class="text-xs font-medium text-slate-500 uppercase tracking-widest">Time Blocks</h3>
+                    <div class="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-medium text-slate-500">Auto-linked</div>
+                </div>
+
+                <div class="space-y-2 border-l-2 border-slate-100 pl-3 ml-1">
+                    <div class="py-1 cursor-pointer group">
+                        <div class="text-xs font-medium text-slate-900 group-hover:text-[#F97316] transition-colors">DB Migration Session 1</div>
+                        <div class="flex justify-between items-center mt-0.5">
+                            <span class="text-[10px] text-slate-500">Yesterday, 2:00p – 2:40p</span>
+                            <span class="text-[10px] font-medium text-slate-400">40m</span>
+                        </div>
+                    </div>
+                    <div class="py-1 cursor-pointer group">
+                        <div class="flex items-center gap-2">
+                            <div class="w-1.5 h-1.5 rounded-full bg-[#F97316] animate-pulse"></div>
+                            <div class="text-xs font-semibold text-[#F97316] transition-colors">Current session</div>
+                        </div>
+                        <div class="flex justify-between items-center mt-0.5">
+                            <span class="text-[10px] text-slate-500">Today, 9:45a – now</span>
+                            <span class="text-[10px] font-medium text-[#F97316]">32m</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="pt-4 border-t border-slate-100">
+                <button class="w-full flex items-center gap-4 py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:calendar-linear"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-slate-900">Move to different day</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Repin this task</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-4 py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:archive-linear"></iconify-icon>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-slate-900">Unpin from today</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Send back to backlog</div>
+                    </div>
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+
+    <!-- ==================== PAGE: CALENDAR (PAST/CURRENT) — dense week + rows (calendar_past_week.html) ==================== -->
+    <div id="page-calendar" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <header class="flex items-center justify-between px-5 pt-12 pb-2">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-medium tracking-tight text-slate-900">Calendar</h1>
+            <button class="text-slate-500 hover:text-slate-900 transition-colors" type="button">
+                <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+
+        <!-- Week Nav (compact) -->
+        <div class="flex items-center justify-between px-5 py-1.5">
+            <button type="button" class="p-1.5 text-sky-600 hover:text-slate-900 rounded-full hover:bg-slate-50 -ml-2">
+                <iconify-icon icon="solar:alt-arrow-left-linear" class="text-base"></iconify-icon>
+            </button>
+            <span class="text-[15px] font-medium text-slate-900">Apr 13 – 19</span>
+            <button type="button" class="p-1.5 text-sky-600 hover:text-slate-900 rounded-full hover:bg-slate-50 -mr-2">
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-base"></iconify-icon>
+            </button>
+        </div>
+
+        <main class="flex-1 overflow-y-auto hide-scrollbar pb-24">
+
+            <!-- Week bar chart: fixed height, 6px gaps, 7 days -->
+            <div class="px-5 pt-1.5 pb-0 flex gap-1.5 h-40">
+                <!-- Mon -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:30%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:3%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:30%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:8%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">M</div>
+                </div>
+                <!-- Tue -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:33%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:28%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:12%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">T</div>
+                </div>
+                <!-- Wed (selected) -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border-[1.5px] border-slate-900">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:29%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:3%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:25%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#639922]" style="height:6%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:10%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div class="text-[10px] text-center font-medium text-slate-900 mt-0.5">W</div>
+                </div>
+                <!-- Thu -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:32%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:30%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:3%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">T</div>
+                </div>
+                <!-- Fri + today -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:29%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:2%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:17%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:8%"></div>
+                        <div class="w-full shrink-0 bg-[#639922]" style="height:3%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-slate-100"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">F</div>
+                    <div class="text-[8px] text-center text-sky-600 leading-tight">today</div>
+                </div>
+                <!-- Sat -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 rounded overflow-hidden border border-dashed border-slate-200 bg-slate-100 min-h-0"></div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">S</div>
+                </div>
+                <!-- Sun -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 rounded overflow-hidden border border-dashed border-slate-200 bg-slate-100 min-h-0"></div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">S</div>
+                </div>
+            </div>
+
+            <div class="h-px bg-slate-200 mx-5 mt-2"></div>
+
+            <!-- Day title + pill toggles -->
+            <div class="px-5 pt-2.5 pb-1.5 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
+                <h2 class="text-sm font-medium text-slate-900">Wednesday, Apr 15</h2>
+                <div class="flex gap-1">
+                    <button type="button" onclick="toggleCalView('activities')" id="cal-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Activities</button>
+                    <button type="button" onclick="toggleCalView('tasks')" id="cal-toggle-tsk" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors">Tasks</button>
+                </div>
+            </div>
+
+            <!-- Activities: dense rows -->
+            <div id="cal-activities" class="flex flex-col">
+                <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#534AB7]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">12:00 – 6:55a</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Sleep</span>
+                    <span class="text-xs text-slate-400 shrink-0">6h 55m</span>
+                </div>
+                <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#1D9E75]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">7:00 – 7:28a</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Yoga</span>
+                    <span class="text-xs text-slate-400 shrink-0">28m</span>
+                </div>
+                <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#D85A30]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">7:35 – 8:10a</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Breakfast</span>
+                    <span class="text-xs text-slate-400 shrink-0">35m</span>
+                </div>
+                <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#185FA5]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">8:15 – 11:30a</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Deep work — API</span>
+                    <span class="text-xs text-slate-400 shrink-0">3h 15m</span>
+                </div>
+                <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#D85A30]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">11:30 – 12:10p</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Lunch</span>
+                    <span class="text-xs text-slate-400 shrink-0">40m</span>
+                </div>
+                <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#639922]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">12:15 – 12:50p</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Walk</span>
+                    <span class="text-xs text-slate-400 shrink-0">35m</span>
+                </div>
+                <div class="cal-act-row border-b-0 hover:bg-slate-50/80 transition-colors">
+                    <div class="cal-color bg-[#185FA5]"></div>
+                    <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">1:00 – 3:30p</span>
+                    <span class="text-[13px] text-slate-900 flex-1 min-w-0">Meetings + review</span>
+                    <span class="text-xs text-slate-400 shrink-0">2h 30m</span>
+                </div>
+            </div>
+
+            <p id="cal-hint" class="px-5 py-1.5 text-[11px] text-slate-400 text-center">tap any row to view activity detail</p>
+
+            <!-- Detail List: Tasks (same rows as Tasks tab) -->
+            <div id="cal-tasks" class="hidden flex-col px-5 gap-0.5 py-2">
+                <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl opacity-50 cursor-pointer">
+                    <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                        <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900 line-through">Review Q3 Analytics</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Growth › Reports</div>
+                    </div>
+                    <div class="text-xs text-slate-400">45m</div>
+                </div>
+                <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl opacity-50 cursor-pointer">
+                    <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                        <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900 line-through">Reply to investors</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Admin</div>
+                    </div>
+                    <div class="text-xs text-slate-400">15m</div>
+                </div>
+                <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl bg-orange-50/40 ring-1 ring-[#FB923C]/20 cursor-pointer group relative overflow-hidden">
+                    <div class="w-5 h-5 rounded-md bg-white border border-[#FB923C]/50 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden relative">
+                        <div class="absolute bottom-0 left-0 right-0 bg-[#F97316]" style="height: 40%;"></div>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-semibold text-slate-900">DB Migration Script</span>
+                        <div class="text-xs text-slate-500 mt-0.5 mb-2">Platform</div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                                <div class="h-full bg-[#F97316] rounded-full" style="width: 40%;"></div>
+                            </div>
+                            <span class="text-[10px] font-medium text-slate-400">2/5</span>
+                        </div>
+                        <div class="text-xs text-slate-600 mt-1 font-medium flex gap-1">
+                            <span class="text-[#F97316] font-semibold">Next:</span> Write rollback logic
+                        </div>
+                    </div>
+                    <div class="text-xs font-medium text-[#F97316]">2h est.</div>
+                </div>
+                <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900">Draft weekly newsletter</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Content › Newsletter</div>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h</div>
+                </div>
+                <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900">Gym: Upper Body</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Personal › Health</div>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h 15m</div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+
+    <!-- ==================== PAGE: AI CHAT (FULLSCREEN) ==================== -->
+    <div id="page-ai-chat" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-30 transition-opacity duration-300">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-5 pt-12 pb-4 border-b border-slate-100 bg-white z-10 sticky top-0 shadow-sm">
+            <button onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">AI assistant</h1>
+            <button class="text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors">clear</button>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-5 py-6 bg-slate-50/50 flex flex-col gap-4">
+            <!-- AI Greeting -->
+            <div class="self-start bg-white border border-slate-100 text-slate-900 px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm max-w-[85%] shadow-sm">
+                Hey! What can I help you with?
+            </div>
+            
+            <!-- User Question -->
+            <div class="self-end bg-[#F97316] text-white px-4 py-2.5 rounded-2xl rounded-br-sm text-sm max-w-[85%] leading-relaxed shadow-sm">
+                How much deep work did I do this week?
+            </div>
+
+            <!-- AI Response -->
+            <div class="self-start bg-white border border-slate-100 text-slate-900 px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm max-w-[85%] leading-relaxed shadow-sm">
+                You've logged 12 hours of deep work this week so far. Tuesday was your best day with 4.5 hours.
+            </div>
+
+            <!-- User Command -->
+            <div class="self-end bg-[#F97316] text-white px-4 py-2.5 rounded-2xl rounded-br-sm text-sm max-w-[85%] leading-relaxed shadow-sm">
+                Add a task 'buy new yoga mat' to Saturday
+            </div>
+
+            <!-- AI Response with Action -->
+            <div class="self-start bg-white border border-slate-100 text-slate-900 px-4 py-3 rounded-2xl rounded-bl-sm text-sm max-w-[85%] leading-relaxed shadow-sm">
+                <p class="mb-2.5">Added 'buy new yoga mat' to your Tasks for this Saturday.</p>
+                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <button class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                        View task
+                    </button>
+                    <button class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                        View calendar
+                    </button>
+                </div>
+                <button class="text-[#F97316] font-medium text-xs hover:underline mt-1">Undo</button>
+            </div>
+        </main>
+
+        <!-- Input Bar -->
+        <div class="p-4 bg-white border-t border-slate-100 pb-8 sticky bottom-0">
+            <div class="flex items-center gap-2 bg-slate-100 rounded-full p-1.5 pl-4">
+                <input type="text" placeholder="Ask anything..." class="flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none min-w-0">
+                <button class="w-8 h-8 rounded-full bg-white shadow-sm text-slate-600 flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0">
+                    <iconify-icon icon="solar:microphone-2-linear" class="text-lg"></iconify-icon>
+                </button>
+                <button class="w-8 h-8 rounded-full bg-[#F97316] text-white flex items-center justify-center hover:bg-[#FB923C] transition-colors shrink-0">
+                    <iconify-icon icon="solar:arrow-up-linear" class="text-lg"></iconify-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== VOICE OVERLAY (LONG PRESS) ==================== -->
+    <div id="overlay-voice" onclick="closeVoiceMode(event)" class="absolute inset-x-0 top-0 bottom-[80px] bg-slate-900/40 z-40 hidden flex-col justify-end p-5 opacity-0 transition-opacity duration-300 backdrop-blur-[2px]">
+        
+        <div class="flex flex-col gap-4 mb-6" onclick="event.stopPropagation()">
+            <!-- Message bubbles stack from bottom up -->
+            <div class="self-end bg-[#F97316] text-white px-4 py-2.5 rounded-2xl rounded-br-sm text-sm max-w-[85%] shadow-sm leading-relaxed">
+                Move the blog post task to Monday
+            </div>
+            
+            <div class="self-start bg-white text-slate-900 px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm max-w-[85%] shadow-sm leading-relaxed">
+                Done — moved 'Draft blog post outline' from today to Monday, Apr 20.
+                <button class="block text-[#F97316] font-medium mt-1 text-xs hover:underline">Undo</button>
+            </div>
+        </div>
+        
+        <!-- Listening Indicator -->
+        <div onclick="event.stopPropagation()" class="self-center bg-white px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2.5 mb-2 transform transition-transform">
+            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <span class="text-xs font-medium text-slate-600 pr-1">Listening...</span>
+            <div class="flex gap-[3px] items-end h-3.5">
+                <div class="w-0.5 bg-slate-300 h-2 animate-[bounce_1s_infinite]"></div>
+                <div class="w-0.5 bg-slate-300 h-3.5 animate-[bounce_1s_infinite_100ms]"></div>
+                <div class="w-0.5 bg-slate-300 h-1.5 animate-[bounce_1s_infinite_200ms]"></div>
+                <div class="w-0.5 bg-slate-300 h-2.5 animate-[bounce_1s_infinite_300ms]"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== PERSISTENT BOTTOM NAV ==================== -->
+    <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 h-[80px] bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-1 pb-2 z-50 transition-transform duration-300">
+        
+        <button onclick="switchTab('today')" class="tab-btn flex flex-col items-center justify-center w-14 h-12 gap-1 text-[#F97316]" data-target="page-today">
+            <iconify-icon icon="solar:pie-chart-2-linear" class="text-2xl" id="icon-today"></iconify-icon>
+            <span class="text-xs font-medium tracking-wide">Today</span>
+        </button>
+
+        <button onclick="switchTab('tasks')" class="tab-btn flex flex-col items-center justify-center w-14 h-12 gap-1 text-slate-400 hover:text-slate-600 transition-colors" data-target="page-tasks">
+            <div class="relative">
+                <iconify-icon icon="solar:checklist-minimalistic-linear" class="text-2xl" id="icon-tasks"></iconify-icon>
+                <div class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#F97316] border-2 border-white rounded-full"></div>
+            </div>
+            <span class="text-xs font-medium tracking-wide">Tasks</span>
+        </button>
+
+        <!-- AI Button (Center Elevated) -->
+        <div class="w-14 h-12 flex justify-center items-center relative">
+            <button id="btn-ai" class="absolute -top-[18px] w-12 h-12 bg-[#F97316] rounded-full text-white flex items-center justify-center border-4 border-white shadow-md transition-transform duration-200 z-50 hover:bg-[#FB923C]">
+                <iconify-icon icon="solar:stars-linear" class="text-[22px]"></iconify-icon>
+            </button>
+        </div>
+
+        <button onclick="switchTab('goals')" class="tab-btn flex flex-col items-center justify-center w-14 h-12 gap-1 text-slate-400 hover:text-slate-600 transition-colors" data-target="page-goals">
+            <iconify-icon icon="solar:target-linear" class="text-2xl" id="icon-goals"></iconify-icon>
+            <span class="text-xs font-medium tracking-wide">Goals</span>
+        </button>
+
+        <button onclick="switchTab('calendar')" class="tab-btn flex flex-col items-center justify-center w-14 h-12 gap-1 text-slate-400 hover:text-slate-600 transition-colors" data-target="page-calendar">
+            <iconify-icon icon="solar:calendar-mark-linear" class="text-2xl" id="icon-calendar"></iconify-icon>
+            <span class="text-xs font-medium tracking-wide">Calendar</span>
+        </button>
+    </nav>
+
+</div>
+
+<script>
+    let historyStack = ['page-today'];
+
+    const hideNavPages = ['page-activity-detail', 'page-activity-detail-flagged', 'page-task-picker', 'page-task-detail', 'page-week', 'page-ai-chat'];
+    const bottomNav = document.getElementById('bottom-nav');
+
+    function navigate(pageId, pushToHistory = true) {
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.add('hidden');
+            page.classList.remove('flex');
+        });
+
+        const target = document.getElementById(pageId);
+        if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('flex');
+        }
+
+        if (hideNavPages.includes(pageId)) {
+            bottomNav.style.transform = 'translateY(100%)';
+        } else {
+            bottomNav.style.transform = 'translateY(0)';
+        }
+
+        if (pushToHistory) {
+            historyStack.push(pageId);
+        }
+    }
+
+    function navigateBack() {
+        if (historyStack.length > 1) {
+            historyStack.pop();
+            const prevPage = historyStack[historyStack.length - 1];
+            navigate(prevPage, false);
+            
+            // Re-sync tab UI if we navigate back
+            const baseTab = prevPage.replace('page-', '');
+            if(document.querySelector(`[data-target="page-${baseTab}"]`)) {
+                updateTabUI(baseTab);
+            } else if (prevPage.includes('calendar')) {
+                updateTabUI('calendar');
+            } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail') {
+                updateTabUI('tasks');
+            }
+        }
+    }
+
+    function switchTab(tabName) {
+        const targetPage = `page-${tabName}`;
+        historyStack = [targetPage];
+        navigate(targetPage, false);
+        updateTabUI(tabName);
+    }
+
+    function updateTabUI(activeTabName) {
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(tab => {
+            // Check if active tab matches target directly, or handles the calendar sub-pages
+            const isMatch = tab.dataset.target === `page-${activeTabName}` || (activeTabName.startsWith('calendar') && tab.dataset.target === 'page-calendar');
+            
+            if (isMatch) {
+                tab.classList.remove('text-slate-400', 'hover:text-slate-600');
+                tab.classList.add('text-[#F97316]');
+            } else {
+                tab.classList.add('text-slate-400', 'hover:text-slate-600');
+                tab.classList.remove('text-[#F97316]');
+            }
+        });
+    }
+
+    // Toggle script for the Calendar Detail view (pill toggles, matches calendar_past_week.html)
+    function toggleCalView(view) {
+        const actBtn = document.getElementById('cal-toggle-act');
+        const tskBtn = document.getElementById('cal-toggle-tsk');
+        const actList = document.getElementById('cal-activities');
+        const tskList = document.getElementById('cal-tasks');
+        const hint = document.getElementById('cal-hint');
+
+        if (view === 'activities') {
+            actBtn.className = "px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white";
+            tskBtn.className = "px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors";
+            actList.classList.remove('hidden');
+            actList.classList.add('flex');
+            tskList.classList.add('hidden');
+            tskList.classList.remove('flex');
+            if (hint) hint.classList.remove('hidden');
+        } else {
+            tskBtn.className = "px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white";
+            actBtn.className = "px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors";
+            tskList.classList.remove('hidden');
+            tskList.classList.add('flex');
+            actList.classList.add('hidden');
+            actList.classList.remove('flex');
+            if (hint) hint.classList.add('hidden');
+        }
+    }
+
+    // ================= AI Button Interactions =================
+    const aiBtn = document.getElementById('btn-ai');
+    const overlayVoice = document.getElementById('overlay-voice');
+    let pressTimer = null;
+    let isLongPress = false;
+
+    function startPress(e) {
+        if (e.type === 'touchstart') e.preventDefault(); // Prevent default double-fire on mobile
+        isLongPress = false;
+        
+        // Start the long press timer
+        pressTimer = setTimeout(() => {
+            isLongPress = true;
+            if(overlayVoice.classList.contains('hidden')) {
+                openVoiceMode();
+            }
+        }, 500); // 500ms triggers long press
+    }
+
+    function endPress(e) {
+        if (e.type === 'touchend') e.preventDefault();
+        
+        if (pressTimer) clearTimeout(pressTimer);
+        
+        if (!isLongPress) {
+            // It was a short tap
+            if (!overlayVoice.classList.contains('hidden')) {
+                closeVoiceMode(); // Tapping button while overlay open closes it
+            } else {
+                navigate('page-ai-chat');
+            }
+        }
+    }
+
+    // Attach interaction listeners to the AI button
+    aiBtn.addEventListener('mousedown', startPress);
+    aiBtn.addEventListener('touchstart', startPress, {passive: false});
+    aiBtn.addEventListener('mouseup', endPress);
+    aiBtn.addEventListener('touchend', endPress);
+    aiBtn.addEventListener('mouseleave', () => { 
+        if(pressTimer) clearTimeout(pressTimer); 
+        isLongPress = false;
+    });
+
+    function openVoiceMode() {
+        overlayVoice.classList.remove('hidden');
+        overlayVoice.classList.add('flex');
+        aiBtn.classList.add('scale-110');
+        
+        // Timeout allows transition to process
+        setTimeout(() => {
+            overlayVoice.classList.remove('opacity-0');
+        }, 10);
+    }
+
+    function closeVoiceMode(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        
+        overlayVoice.classList.add('opacity-0');
+        aiBtn.classList.remove('scale-110');
+        
+        setTimeout(() => {
+            overlayVoice.classList.add('hidden');
+            overlayVoice.classList.remove('flex');
+        }, 300);
+    }
+
+    // Initialize UI
+    updateTabUI('today');
+</script>
+
+</body>
+</html>
