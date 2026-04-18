@@ -1,0 +1,15 @@
+tags:
+  domain:
+    description: "Pure Dart domain entity/repo-interface tests"
+  data:
+    description: "Data-layer mappers & repositories (mocked GraphQLClient)"
+  view_model:
+    description: "Pure feature view-model tests"
+  widget:
+    description: "Flutter widget / page tests with fake repositories"
+  golden:
+    description: "Golden-image widget tests"
+  layering:
+    description: "Architectural import-rule tests"
+  integration:
+    description: "Live GraphQL — also requires RUN_NX_TIME_INTEGRATION=true"

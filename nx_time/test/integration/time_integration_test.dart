@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_time/data/time_kgql_schema.dart';
-import 'package:nx_time/data/today_repository.dart';
+import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/features/today/today_view_model.dart';
 
-import '../support/integration_auth.dart';
+import '../_support/integration_auth.dart';
 
 /// Calendar day for demo Actions from `seed_nx_time_calendar_demo` (Postgres `CURRENT_DATE` when you ran load_data).
 /// Run integration tests the same day you seed, or re-run load_data first.
@@ -41,6 +41,7 @@ void main() {
         expect(mt.name, kActionModelTypeName);
         expect(mt.attributes, isNotNull);
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -53,14 +54,14 @@ void main() {
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
-        final repo = container.read(todayRepositoryProvider);
-        final snapshot = await repo.loadToday(kNxTimeDemoDay);
+        final snapshot = await container.read(todaySnapshotProvider.future);
         final day = kNxTimeDemoDay;
         expect(
           snapshot.titleLine,
           'Today — ${DateFormat('EEE, MMM d').format(day)}',
         );
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -73,8 +74,7 @@ void main() {
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
-        final repo = container.read(todayRepositoryProvider);
-        final snapshot = await repo.loadToday(kNxTimeDemoDay);
+        final snapshot = await container.read(todaySnapshotProvider.future);
         expect(
           snapshot.activityBlockCount,
           greaterThanOrEqualTo(6),
@@ -82,6 +82,7 @@ void main() {
               'seed_nx_time_calendar_demo should place Sleep, Meet, Workout, Goto, Consumption, … on this day',
         );
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -111,6 +112,7 @@ void main() {
           reason: 'demo seed includes named Meet rows',
         );
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -134,6 +136,7 @@ void main() {
         );
         expect(meets.length, greaterThanOrEqualTo(2));
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -167,6 +170,7 @@ void main() {
         expect(one, isNotNull);
         expect(one!.id, id);
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -187,6 +191,7 @@ void main() {
         };
         expect(keys, containsAll(['start_time', 'end_time', 'duration']));
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
 
@@ -209,6 +214,7 @@ void main() {
           reason: 'seed_nx_time_calendar_demo adds Refactor token validation / Ship calendar v1',
         );
       },
+      tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );
   });

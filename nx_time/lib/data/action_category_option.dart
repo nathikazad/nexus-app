@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Action;
 import 'package:nx_db/nx_db.dart';
 
-import 'model_type_bar_color.dart';
+import 'package:nx_time/core/theme/action_color_palette.dart';
+import 'package:nx_time/domain/action/action.dart';
 
 /// One row in the add/edit category picker — matches a KGQL model type (Action subtype).
 class ActionCategoryOption {
@@ -23,6 +24,14 @@ class ActionCategoryOption {
       modelTypeId: m.modelTypeId,
       name: m.modelType?.name ?? 'Action',
       dotColor: barColorForModelTypeId(m.modelTypeId),
+    );
+  }
+
+  factory ActionCategoryOption.fromAction(Action a) {
+    return ActionCategoryOption(
+      modelTypeId: a.modelTypeId,
+      name: a.modelTypeName ?? 'Action',
+      dotColor: barColorForModelTypeId(a.modelTypeId),
     );
   }
 }

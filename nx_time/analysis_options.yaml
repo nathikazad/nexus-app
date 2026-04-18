@@ -1,7 +1,23 @@
+# Analyzer / lint configuration for `nx_time`.
+#
+# - `include:` pulls in Flutter's recommended baseline (`flutter_lints`).
+# - `analyzer:` configures language version, excludes, and how diagnostics are treated.
+# - `linter > rules:` turns individual style rules on/off (see dart.dev/lints).
+# - Formatting is separate: `dart format` (line length, etc.), not configured here.
+#
+# Package imports: `always_use_package_imports` requires `package:nx_time/...` for
+# code under `lib/` instead of relative `../` or same-folder imports.
+
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
 
 linter:
   rules:
+    # Style / hygiene (stricter than baseline)
+    always_use_package_imports: true
+    avoid_print: true
     prefer_const_constructors: true
     prefer_const_literals_to_create_immutables: true
-    avoid_print: true

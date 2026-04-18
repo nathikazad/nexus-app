@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 
-import 'screens/auth/time_login_screen.dart';
-import 'screens/shell/app_shell.dart';
+import 'package:nx_time/features/auth/time_login_screen.dart';
+import 'package:nx_time/features/shell/app_shell.dart';
 
 /// Root router: `/login` when unauthenticated, `/today` for [AppShell].
 ///
