@@ -1,18 +1,22 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_db/kgql.dart';
 
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/domain/action/action_repository.dart';
-import 'package:nx_time/data/action/action_kgql_struct.dart';
+import 'package:nx_time/data/action/action_attr_keys.dart';
 import 'package:nx_time/data/action/action_mapper.dart';
-import 'package:nx_time/data/action/action_schema_provider.dart';
 
 /// Loads Action (+ descendant) rows via `get_kgql_models` and mutates via `set_kgql_models`.
 class KgqlActionRepository implements ActionRepository {
-  KgqlActionRepository(this._ref);
+  KgqlActionRepository({
+    required GraphQLClient client,
+    required Future<ModelType> Function() loadActionSchema,
+  })  : _client = client,
+        _loadActionSchema = loadActionSchema;
 
-  final Ref _ref;
+  final GraphQLClient _client;
+  final Future<ModelType> Function() _loadActionSchema;
 
   void _log(String message) =>
       debugPrint('[nx_time kgql_action_repo] $message');
@@ -24,19 +28,18 @@ class KgqlActionRepository implements ActionRepository {
     final end = start.add(const Duration(days: 1));
     final fetchStart = start.subtract(const Duration(days: 1));
 
-    _log('await actionSchemaProvider (getKgqlModelType for Action)...');
-    final schema = await _ref.read(actionSchemaProvider.future);
-    _log('actionSchemaProvider ok: ${schema.name} id=${schema.id}');
+    _log('await loadActionSchema (getKgqlModelType for Action)...');
+    final schema = await _loadActionSchema();
+    _log('loadActionSchema ok: ${schema.name} id=${schema.id}');
 
-    final struct = buildActionActivityStruct(schema);
-    final client = _ref.read(graphqlClientProvider);
+    final struct = buildKgqlStructFromSchema(schema);
 
     _log(
       'fetchKgqlModels filter window start_time in '
       '[${fetchStart.toIso8601String()}, ${end.toIso8601String()})',
     );
     final models = await fetchKgqlModels(
-      client,
+      _client,
       filter: {
         'model_type': kActionModelTypeName,
         'filters': [
@@ -66,11 +69,10 @@ class KgqlActionRepository implements ActionRepository {
     required int id,
     required String modelTypeName,
   }) async {
-    final schema = await _ref.read(actionSchemaProvider.future);
-    final struct = buildActionActivityStruct(schema);
-    final client = _ref.read(graphqlClientProvider);
+    final schema = await _loadActionSchema();
+    final struct = buildKgqlStructFromSchema(schema);
     final m = await fetchKgqlModelById(
-      client,
+      _client,
       modelTypeName: modelTypeName,
       id: id,
       struct: struct,
@@ -80,8 +82,10 @@ class KgqlActionRepository implements ActionRepository {
 
   @override
   Future<int> create(Action action, String modelTypeName) async {
-    final client = _ref.read(graphqlClientProvider);
-    return setKgqlModel(client, setModelRequestForCreate(action, modelTypeName));
+    return setKgqlModel(
+      _client,
+      setModelRequestForCreate(action, modelTypeName),
+    );
   }
 
   @override
@@ -89,9 +93,8 @@ class KgqlActionRepository implements ActionRepository {
     Action action, {
     String? modelTypeNameIfChanged,
   }) async {
-    final client = _ref.read(graphqlClientProvider);
     return setKgqlModel(
-      client,
+      _client,
       setModelRequestForUpdate(
         action,
         modelTypeNameIfChanged: modelTypeNameIfChanged,
@@ -101,7 +104,6 @@ class KgqlActionRepository implements ActionRepository {
 
   @override
   Future<void> delete(int id) async {
-    final client = _ref.read(graphqlClientProvider);
-    await setKgqlModel(client, setModelRequestForDelete(id));
+    await setKgqlModel(_client, setModelRequestForDelete(id));
   }
 }

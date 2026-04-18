@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/misc.dart' show Override;
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
 
 /// Live GraphQL at [kIntegrationTestBackendUrls] (localhost). Matches nx_expense tests.
 class TestAuthController extends AuthController {

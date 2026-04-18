@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/widgets/task_status_segmented.dart';
 import 'package:nx_time/features/tasks/task_edit_page.dart';
 import 'package:nx_time/features/tasks/task_status.dart';

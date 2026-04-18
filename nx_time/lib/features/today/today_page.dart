@@ -2,8 +2,8 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import 'package:nx_time/app_theme.dart';
-import 'package:nx_time/core/widgets/nx_app_menu_button.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/today/widgets/activity_row.dart';
 import 'package:nx_time/features/today/widgets/category_legend.dart';

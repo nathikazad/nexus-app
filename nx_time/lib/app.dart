@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/router.dart';
 
 /// Root widget: [MaterialApp.router] + [routerProvider], like nx_expense’s shell entry.

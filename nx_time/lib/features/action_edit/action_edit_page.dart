@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
-import 'package:nx_time/data/action_category_option.dart';
+import 'package:nx_time/features/action_edit/action_category_option.dart';
+import 'package:nx_time/features/action_edit/action_edit_providers.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/tasks/task_picker_page.dart';

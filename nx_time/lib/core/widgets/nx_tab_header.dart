@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
-import 'package:nx_time/core/widgets/nx_app_menu_button.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 
 /// Clock + centered title + optional trailing (Tasks / Goals / Calendar pattern).
 class NxTabHeader extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 
 /// Full-screen AI assistant (`page-ai-chat` in reference `index.html`).
 class AiChatPage extends StatelessWidget {

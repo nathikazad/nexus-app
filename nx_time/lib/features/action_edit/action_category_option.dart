@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart' hide Action;
-import 'package:nx_db/nx_db.dart';
 
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/domain/action/action.dart';
@@ -18,14 +17,6 @@ class ActionCategoryOption {
 
   /// Display text (same as KGQL `model_type` name for `set_kgql_models`).
   String get label => name;
-
-  factory ActionCategoryOption.fromModel(Model m) {
-    return ActionCategoryOption(
-      modelTypeId: m.modelTypeId,
-      name: m.modelType?.name ?? 'Action',
-      dotColor: barColorForModelTypeId(m.modelTypeId),
-    );
-  }
 
   factory ActionCategoryOption.fromAction(Action a) {
     return ActionCategoryOption(

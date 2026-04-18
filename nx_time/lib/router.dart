@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
 
 import 'package:nx_time/features/auth/time_login_screen.dart';
 import 'package:nx_time/features/shell/app_shell.dart';

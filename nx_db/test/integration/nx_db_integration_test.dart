@@ -8,7 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:test/test.dart' show Tags;
 
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
+import 'package:nx_db/internal.dart';
+import 'package:nx_db/kgql.dart';
 
 /// Set `RUN_NX_DB_INTEGRATION=true` to run live GraphQL tests against a running PGDB.
 ///

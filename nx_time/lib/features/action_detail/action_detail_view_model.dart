@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:intl/intl.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/today/today_view_model.dart';

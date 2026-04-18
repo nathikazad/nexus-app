@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/settings/action_colors_page.dart';
 
 /// Hamburger menu (aligned with `nx_expense` [ExpenseAppMenuButton]); opens Colors + Logout.

@@ -1,4 +1,4 @@
-import 'package:nx_time/data/action_category_option.dart';
+import 'package:nx_time/features/action_edit/action_category_option.dart';
 import 'package:nx_time/domain/action/action.dart';
 
 /// Validation and [Action] construction for [ActionEditPage] (pure Dart).

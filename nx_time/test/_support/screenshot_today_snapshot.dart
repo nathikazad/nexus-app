@@ -1,4 +1,4 @@
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/today/widgets/time_map_segment.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/tasks/projects_browse_page.dart';
 
 /// New task (`reference/partials/page-task-create.html`).

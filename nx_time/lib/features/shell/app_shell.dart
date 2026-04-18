@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';

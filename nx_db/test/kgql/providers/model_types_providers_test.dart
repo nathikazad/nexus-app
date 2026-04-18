@@ -1,11 +1,12 @@
-@Tags(['provider', 'providers'])
+@Tags(['provider'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/kgql.dart';
+import 'package:nx_db/riverpod.dart';
 import 'package:test/test.dart' show Tags;
 
 import '../../_support/mock_graphql_client.dart';

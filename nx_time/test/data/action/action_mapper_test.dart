@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_db/nx_db.dart' hide ModelAttribute;
-import 'package:nx_db/src/kgql/requests/set_model_request.dart' show ModelAttribute;
+import 'package:nx_db/kgql.dart';
 import 'package:nx_time/data/action/action_attr_keys.dart';
 import 'package:nx_time/data/action/action_mapper.dart';
 import 'package:nx_time/domain/action/action.dart';

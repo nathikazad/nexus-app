@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/splash_page.dart';
+import 'screens/login_page.dart';
 import 'package:nx_db/nx_db.dart';
 import 'screens/home_screen.dart';
 import 'screens/navigator/models_list_screen.dart';

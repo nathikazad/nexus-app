@@ -1,9 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_db/nx_db.dart';
-import 'package:nx_time/data/action/action_kgql_struct.dart';
+import 'package:nx_db/kgql.dart';
 
 void main() {
-  group('buildActionActivityStruct', () {
+  group('buildKgqlStructFromSchema', () {
     test('includes core fields and attributes', () {
       final mt = ModelType.fromJson({
         'id': 1,
@@ -13,7 +12,7 @@ void main() {
           {'key': 'end_time', 'value_type': 'datetime'},
         ],
       });
-      final s = buildActionActivityStruct(mt);
+      final s = buildKgqlStructFromSchema(mt);
       expect(s['id'], true);
       expect(s['model_type_id'], true);
       expect(s['start_time'], true);
@@ -34,7 +33,7 @@ void main() {
           {'target_model_type': 'Place'},
         ],
       });
-      final s = buildActionActivityStruct(mt);
+      final s = buildKgqlStructFromSchema(mt);
       expect(s['Place'], {'id': true, 'name': true});
     });
   });

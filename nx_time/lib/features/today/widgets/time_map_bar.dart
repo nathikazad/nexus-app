@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/today/widgets/time_map_segment.dart';
 
 /// Horizontal day timeline bar + current-time marker (see `tab-today.html`).

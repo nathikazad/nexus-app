@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
-import 'package:nx_time/data/action_category_option.dart';
+import 'package:nx_time/features/action_edit/action_category_option.dart';
 
-/// Category picker: pass options from [actionCategoryOptionsProvider] (DB-backed).
+/// Category picker: pass options from [actionCategoryOptionsProvider] in
+/// `action_edit_providers.dart` (DB-backed; subtype list from [actionSubtypeModelTypesProvider] in data layer).
 Future<ActionCategoryOption?> showActionCategoryPicker(
   BuildContext context, {
   required List<ActionCategoryOption> categories,

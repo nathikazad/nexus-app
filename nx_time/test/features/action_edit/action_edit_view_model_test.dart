@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_time/data/action_category_option.dart';
+import 'package:nx_time/features/action_edit/action_category_option.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../core/client/graphql_client.dart';
-import '../core/config/backend_presets.dart';
-import 'auth_controller.dart';
+import 'package:nx_db/auth.dart';
 
 /// Login page with userId and backend preset dropdown.
 ///
@@ -28,7 +25,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _userIdController.text = GraphQLConfig.defaultUserId;
+    _userIdController.text = '1';
   }
 
   @override
@@ -116,7 +113,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   decoration: const InputDecoration(
                     labelText: 'Backend',
                     border: OutlineInputBorder(),
-                    helperText: 'GraphQL, socket, and image URLs for this environment',
+                    helperText:
+                        'GraphQL, socket, and image URLs for this environment',
                   ),
                   items: BackendPreset.values
                       .map(

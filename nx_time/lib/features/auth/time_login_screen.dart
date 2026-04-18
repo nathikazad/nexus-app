@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nx_time/data/auth_bridge.dart';
+import 'package:nx_db/auth.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import 'package:nx_time/app_theme.dart';
-import 'package:nx_time/layout.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/core/layout/layout.dart';
 
-/// Login (user id + backend preset), same fields as [LoginPage] / nx_expense [ExpenseLoginScreen].
+/// Login (user id + backend preset), aligned with nx_main [LoginPage] / nx_expense [ExpenseLoginScreen].
 class TimeLoginScreen extends ConsumerStatefulWidget {
   const TimeLoginScreen({super.key});
 
@@ -23,7 +23,7 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
   @override
   void initState() {
     super.initState();
-    _userIdController.text = GraphQLConfig.defaultUserId;
+    _userIdController.text = '1';
   }
 
   @override

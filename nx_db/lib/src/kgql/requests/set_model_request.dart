@@ -16,7 +16,7 @@ class SetModelRequest {
   final String? description;
 
   /// Attributes array (optional)
-  final List<ModelAttribute>? attributes;
+  final List<SetModelAttribute>? attributes;
 
   /// Relations array (optional)
   final List<ModelRelation>? relations;
@@ -108,14 +108,15 @@ class SetModelTag {
       };
 }
 
-/// Model attribute for create/update/delete operations (`set_kgql_models`).
-/// Use a library prefix when importing alongside [ModelAttribute] from `model.dart`.
-class ModelAttribute {
+/// Attribute entry for `set_kgql_models` (write path).
+///
+/// Distinct from [ModelAttribute] in `attribute.dart` (read path from API responses).
+class SetModelAttribute {
   final String key;
   final dynamic value;
   final bool delete;
 
-  ModelAttribute({
+  SetModelAttribute({
     required this.key,
     this.value,
     this.delete = false,

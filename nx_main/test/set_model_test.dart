@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_db/kgql.dart' as req;
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_db/src/models/requests/SetModelRequest.dart' as req;
 import 'dart:convert';
 
 // Custom AuthController for testing that returns user immediately
@@ -177,7 +177,7 @@ void main() {
         modelType: 'Person',
         name: 'TestPerson_${DateTime.now().millisecondsSinceEpoch}',
         attributes: [
-          req.ModelAttribute(key: 'age', value: 25),
+          req.SetModelAttribute(key: 'age', value: 25),
         ],
         relations: [
           req.ModelRelation(
@@ -259,7 +259,7 @@ void main() {
         id: createdModelId,
         name: createdModel.name,
         attributes: [
-          req.ModelAttribute(key: 'age', value: 30), // Update age to 30
+          req.SetModelAttribute(key: 'age', value: 30), // Update age to 30
         ],
         relations: [
           req.ModelRelation(
@@ -326,7 +326,7 @@ void main() {
         id: createdModelId,
         name: verifyModel1.name,
         attributes: [
-          req.ModelAttribute(key: 'age', delete: true),
+          req.SetModelAttribute(key: 'age', delete: true),
         ],
       );
       

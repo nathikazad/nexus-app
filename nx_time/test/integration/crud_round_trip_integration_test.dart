@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 

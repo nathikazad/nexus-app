@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 
 class LinkedTaskRow extends StatelessWidget {

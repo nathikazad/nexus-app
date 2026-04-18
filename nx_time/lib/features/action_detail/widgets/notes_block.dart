@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 
 /// “Notes” heading + body when [text] is non-empty after trim.
 class ActionDetailNotesBlock extends StatelessWidget {

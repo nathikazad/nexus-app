@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
+import 'package:nx_db/kgql.dart';
+import 'package:nx_db/riverpod.dart';
+import 'package:nx_time/data/action/action_attr_keys.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 
@@ -97,7 +100,7 @@ void main() {
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
         final schema = await container.read(actionSchemaProvider.future);
-        final struct = buildActionActivityStruct(schema);
+        final struct = buildKgqlStructFromSchema(schema);
 
         final models = await fetchKgqlModels(
           client,
@@ -127,7 +130,7 @@ void main() {
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
         final meetType = await fetchKgqlModelTypeByName(client, 'Meet');
-        final struct = buildActionActivityStruct(meetType);
+        final struct = buildKgqlStructFromSchema(meetType);
 
         final meets = await fetchKgqlModels(
           client,
@@ -151,7 +154,7 @@ void main() {
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
         final meetType = await fetchKgqlModelTypeByName(client, 'Meet');
-        final struct = buildActionActivityStruct(meetType);
+        final struct = buildKgqlStructFromSchema(meetType);
 
         final meets = await fetchKgqlModels(
           client,

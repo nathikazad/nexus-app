@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/kgql.dart';
 
 import 'package:nx_time/data/action/action_schema_provider.dart';
 

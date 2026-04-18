@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 
 /// Voice mode UI (`overlay-voice` in reference). Dimmed region stops above the ~80px bottom nav.
 Future<void> showVoiceListeningOverlay(BuildContext context) {

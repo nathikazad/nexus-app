@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:nx_time/app_theme.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/tasks/task_status.dart';
 
 /// iOS-style segmented control for task status (reference HTML `setTaskStatus`).

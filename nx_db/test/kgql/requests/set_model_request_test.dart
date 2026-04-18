@@ -2,8 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_db/nx_db.dart' hide ModelAttribute;
-import 'package:nx_db/src/kgql/requests/set_model_request.dart' show ModelAttribute;
+import 'package:nx_db/kgql.dart';
 import 'package:test/test.dart' show Tags;
 
 void main() {
@@ -13,7 +12,7 @@ void main() {
         modelType: 'Expense',
         name: 'Coffee',
         attributes: [
-          ModelAttribute(key: 'cost', value: 3),
+          SetModelAttribute(key: 'cost', value: 3),
         ],
       );
       final j = r.toJson();
@@ -27,9 +26,9 @@ void main() {
       expect(r.toJson()['id'], 99);
     });
 
-    test('RS5.3 ModelAttribute delete', () {
+    test('RS5.3 SetModelAttribute delete', () {
       final r = SetModelRequest(
-        attributes: [ModelAttribute(key: 'age', delete: true)],
+        attributes: [SetModelAttribute(key: 'age', delete: true)],
       );
       expect(r.toJson()['attributes'], [
         {'key': 'age', 'delete': true},

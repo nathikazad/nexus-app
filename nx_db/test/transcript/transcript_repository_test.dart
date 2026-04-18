@@ -3,7 +3,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/internal.dart';
+import 'package:nx_db/transcript.dart';
 import 'package:test/test.dart' show Tags;
 
 void main() {
