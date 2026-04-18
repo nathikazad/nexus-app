@@ -432,7 +432,7 @@ class _CalendarPageState extends State<CalendarPage> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Text(
-              'tap any row to view activity detail',
+              'tap any row to view action detail',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: AppColors.slate400),
             ),
@@ -590,7 +590,7 @@ class _CalendarPageState extends State<CalendarPage> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Text(
-              'tap any row to view activity detail',
+              'tap any row to view action detail',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: AppColors.slate400),
             ),

@@ -63,8 +63,15 @@ class _AppShellState extends ConsumerState<AppShell> {
             data: (snapshot) => TodayPage(
               snapshot: snapshot,
               onActivityTap: (index) {
-                final a = snapshot.actions[index];
-                final args = activityDetailArgsForTodayRow(a, snapshot.titleLine);
+                final m = index < snapshot.actionModels.length
+                    ? snapshot.actionModels[index]
+                    : null;
+                final args = m != null
+                    ? activityDetailArgsForModel(m, snapshot.titleLine)
+                    : activityDetailArgsForTodayRow(
+                        snapshot.actions[index],
+                        snapshot.titleLine,
+                      );
                 Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
                 );

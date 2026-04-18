@@ -1,51 +1,146 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/src/models/requests/SetModelRequest.dart' as req;
 
 import '../../app_theme.dart';
+import '../../data/action_category_option.dart';
+import '../../providers/action_category_providers.dart';
+import '../../providers/time_providers.dart';
 import '../tasks/task_picker_page.dart';
 import 'activity_pickers.dart';
 
-/// Reference: `partials/page-add-time-block.html` — category & times open pickers on tap.
-class AddTimeBlockPage extends StatefulWidget {
+/// Creates an Action row via `set_kgql_models`. Reference: `partials/page-add-time-block.html`.
+class AddTimeBlockPage extends ConsumerStatefulWidget {
   const AddTimeBlockPage({super.key});
 
   @override
-  State<AddTimeBlockPage> createState() => _AddTimeBlockPageState();
+  ConsumerState<AddTimeBlockPage> createState() => _AddTimeBlockPageState();
 }
 
-class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
-  ActivityCategoryOption? _category;
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
+class _AddTimeBlockPageState extends ConsumerState<AddTimeBlockPage> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _notesController;
+  ActionCategoryOption? _category;
+  late DateTime _start;
+  late DateTime _end;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _notesController = TextEditingController();
+    final n = DateTime.now();
+    final d = DateTime(n.year, n.month, n.day);
+    _start = DateTime(d.year, d.month, d.day, 9, 0);
+    _end = DateTime(d.year, d.month, d.day, 10, 0);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickCategory() async {
-    final choice = await showActivityCategoryPicker(
-      context,
-      selected: _category,
-    );
-    if (choice != null && mounted) {
-      setState(() => _category = choice);
+    try {
+      final options = await ref.read(actionCategoryOptionsProvider.future);
+      if (!mounted) return;
+      if (options.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No action types available')),
+        );
+        return;
+      }
+      final choice = await showActionCategoryPicker(
+        context,
+        categories: options,
+        selected: _category,
+      );
+      if (choice != null && mounted) {
+        setState(() => _category = choice);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load categories: $e')),
+        );
+      }
     }
   }
 
   Future<void> _pickStart() async {
-    final t = await showActivityTimePicker(
+    final t = await showActionDateTimePicker(
       context,
-      initialTime: _startTime ?? const TimeOfDay(hour: 9, minute: 0),
-      title: 'Start time',
+      initialDateTime: _start,
+      title: 'Start (date & time)',
     );
     if (t != null && mounted) {
-      setState(() => _startTime = t);
+      setState(() => _start = t);
     }
   }
 
   Future<void> _pickEnd() async {
-    final t = await showActivityTimePicker(
+    final t = await showActionDateTimePicker(
       context,
-      initialTime: _endTime ?? const TimeOfDay(hour: 10, minute: 0),
-      title: 'End time',
+      initialDateTime: _end,
+      title: 'End (date & time)',
     );
     if (t != null && mounted) {
-      setState(() => _endTime = t);
+      setState(() => _end = t);
+    }
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a name')),
+      );
+      return;
+    }
+    if (_category == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a type, start, and end')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final container = ProviderScope.containerOf(context);
+
+      var start = _start;
+      var end = _end;
+      if (!end.isAfter(start)) {
+        end = end.add(const Duration(days: 1));
+      }
+
+      final notes = _notesController.text.trim();
+      final request = SetModelRequest(
+        modelType: _category!.name,
+        name: name,
+        description: notes.isEmpty ? null : notes,
+        attributes: [
+          req.ModelAttribute(key: 'start_time', value: start.toIso8601String()),
+          req.ModelAttribute(key: 'end_time', value: end.toIso8601String()),
+        ],
+      );
+
+      await createModel(container, request);
+      ref.invalidate(todaySnapshotProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e, st) {
+      debugPrint('AddTimeBlockPage._save: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -63,7 +158,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
               child: Row(
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
@@ -88,7 +183,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: _saving ? null : _save,
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
@@ -97,7 +192,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.slate400,
+                        color: _saving ? AppColors.slate300 : AppColors.sky600,
                       ),
                     ),
                   ),
@@ -118,17 +213,22 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                   ),
                   const SizedBox(height: 6),
                   _OutlineField(
-                    child: Text(
-                      'e.g., Evening walk, Reading...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.slate400,
+                    child: TextField(
+                      controller: _nameController,
+                      enabled: !_saving,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        hintText: 'e.g., Evening walk, Reading…',
+                        hintStyle: TextStyle(color: AppColors.slate400),
                       ),
+                      style: const TextStyle(fontSize: 14, color: AppColors.slate900),
                     ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Category',
+                    'Type',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -139,7 +239,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: _pickCategory,
+                      onTap: _saving ? null : _pickCategory,
                       borderRadius: BorderRadius.circular(10),
                       child: _OutlineField(
                         child: _category == null
@@ -147,7 +247,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Select category',
+                                      'Select type',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: AppColors.slate400,
@@ -169,7 +269,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                                     width: 10,
                                     height: 10,
                                     decoration: BoxDecoration(
-                                      color: _category!.dot,
+                                      color: _category!.dotColor,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -204,7 +304,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'Start time',
+                              'Start',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -215,19 +315,15 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: _pickStart,
+                                onTap: _saving ? null : _pickStart,
                                 borderRadius: BorderRadius.circular(10),
                                 child: _OutlineField(
                                   child: Center(
                                     child: Text(
-                                      _startTime == null
-                                          ? 'Tap to set'
-                                          : formatTimeOfDay(_startTime!),
-                                      style: TextStyle(
+                                      formatActionDateTime(_start),
+                                      style: const TextStyle(
                                         fontSize: 14,
-                                        color: _startTime == null
-                                            ? AppColors.slate400
-                                            : AppColors.slate900,
+                                        color: AppColors.slate900,
                                       ),
                                     ),
                                   ),
@@ -243,7 +339,7 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'End time',
+                              'End',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -254,19 +350,15 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: _pickEnd,
+                                onTap: _saving ? null : _pickEnd,
                                 borderRadius: BorderRadius.circular(10),
                                 child: _OutlineField(
                                   child: Center(
                                     child: Text(
-                                      _endTime == null
-                                          ? 'Tap to set'
-                                          : formatTimeOfDay(_endTime!),
-                                      style: TextStyle(
+                                      formatActionDateTime(_end),
+                                      style: const TextStyle(
                                         fontSize: 14,
-                                        color: _endTime == null
-                                            ? AppColors.slate400
-                                            : AppColors.slate900,
+                                        color: AppColors.slate900,
                                       ),
                                     ),
                                   ),
@@ -293,11 +385,15 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute(builder: (_) => const TaskPickerPage()),
-                          );
-                        },
+                        onPressed: _saving
+                            ? null
+                            : () {
+                                Navigator.of(context).push<void>(
+                                  MaterialPageRoute(
+                                    builder: (_) => const TaskPickerPage(),
+                                  ),
+                                );
+                              },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
                           minimumSize: Size.zero,
@@ -339,11 +435,20 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                   _OutlineField(
                     alignment: Alignment.topLeft,
                     minHeight: 64,
-                    child: Text(
-                      'Optional — add notes...',
-                      style: TextStyle(
+                    child: TextField(
+                      controller: _notesController,
+                      enabled: !_saving,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        hintText: 'Optional — add notes…',
+                        hintStyle: TextStyle(color: AppColors.slate400),
+                      ),
+                      style: const TextStyle(
                         fontSize: 13,
-                        color: AppColors.slate400,
+                        color: AppColors.slate700,
                         height: 1.5,
                       ),
                     ),

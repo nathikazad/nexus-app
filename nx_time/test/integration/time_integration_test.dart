@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nx_time/data/time_kgql_schema.dart';
 import 'package:nx_time/data/today_repository.dart';
@@ -54,7 +55,11 @@ void main() {
         await container.read(authProvider.future);
         final repo = container.read(todayRepositoryProvider);
         final snapshot = await repo.loadToday(kNxTimeDemoDay);
-        expect(snapshot.titleLine, contains('Oct 26'));
+        final day = kNxTimeDemoDay;
+        expect(
+          snapshot.titleLine,
+          'Today — ${DateFormat('EEE, MMM d').format(day)}',
+        );
       },
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
     );

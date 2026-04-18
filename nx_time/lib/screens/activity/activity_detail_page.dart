@@ -4,7 +4,7 @@ import '../../app_theme.dart';
 import 'activity_detail_models.dart';
 import 'edit_activity_page.dart';
 
-/// Detail for a logged time block (reference: `partials/page-activity-detail-*.html`).
+/// Detail for a logged Action (reference: `partials/page-activity-detail-*.html`).
 class ActivityDetailPage extends StatelessWidget {
   const ActivityDetailPage({super.key, required this.args});
 
@@ -41,7 +41,7 @@ class ActivityDetailPage extends StatelessWidget {
                   ),
                   const Expanded(
                     child: Text(
-                      'Activity detail',
+                      'Action detail',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -51,24 +51,30 @@ class ActivityDetailPage extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const EditActivityPage(),
-                        ),
-                      );
-                    },
+                    onPressed: args.sourceModel == null
+                        ? null
+                        : () {
+                            Navigator.of(context).push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (_) => EditActionPage(
+                                  model: args.sourceModel!,
+                                ),
+                              ),
+                            );
+                          },
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text(
+                    child: Text(
                       'Edit',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.sky600,
+                        color: args.sourceModel == null
+                            ? AppColors.slate300
+                            : AppColors.sky600,
                       ),
                     ),
                   ),
@@ -89,10 +95,9 @@ class ActivityDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _CategoryPill(args: args),
-                      const SizedBox(width: 8),
                       Text(
                         args.dateLabel,
                         style: const TextStyle(
@@ -100,10 +105,35 @@ class ActivityDetailPage extends StatelessWidget {
                           color: AppColors.slate500,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      _CategoryPill(args: args),
                     ],
                   ),
                   const SizedBox(height: 12),
                   _TimeBlockBar(args: args),
+                  if (args.description != null && args.description!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Notes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      args.description!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: AppColors.slate700,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
                   const SizedBox(height: 12),
@@ -157,7 +187,7 @@ class ActivityDetailPage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Center(
                         child: Text(
-                          'No tasks linked to this activity',
+                          'No tasks linked to this action',
                           style: TextStyle(
                             fontSize: 13,
                             color: AppColors.slate400,

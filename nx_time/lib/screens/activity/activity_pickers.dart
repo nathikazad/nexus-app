@@ -1,48 +1,36 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../app_theme.dart';
+import '../../data/action_category_option.dart';
+import '../../data/model_type_bar_color.dart';
 
-/// Category row for pickers (reference edit/add screens).
-class ActivityCategoryOption {
-  const ActivityCategoryOption(this.label, this.dot);
-
-  final String label;
-  final Color dot;
-
-  /// Text color when selected (Work uses dark blue).
-  Color get labelColor =>
-      label == 'Work' ? const Color(0xFF0C447C) : AppColors.slate900;
-}
-
-/// Default list aligned with reference HTML.
-const List<ActivityCategoryOption> kActivityCategories = [
-  ActivityCategoryOption('Sleep', Color(0xFF534AB7)),
-  ActivityCategoryOption('Work', Color(0xFF185FA5)),
-  ActivityCategoryOption('Yoga', Color(0xFF1D9E75)),
-  ActivityCategoryOption('Eat', Color(0xFFD85A30)),
-  ActivityCategoryOption('Shopping', Color(0xFFD4537E)),
-  ActivityCategoryOption('Workout', Color(0xFF639922)),
-  ActivityCategoryOption('Commute', Color(0xFF888780)),
-  ActivityCategoryOption('Reading', Color(0xFFBA7517)),
-];
-
-Future<ActivityCategoryOption?> showActivityCategoryPicker(
+/// Category picker: pass options from [actionCategoryOptionsProvider] (DB-backed).
+Future<ActionCategoryOption?> showActionCategoryPicker(
   BuildContext context, {
-  ActivityCategoryOption? selected,
+  required List<ActionCategoryOption> categories,
+  ActionCategoryOption? selected,
 }) {
-  return showModalBottomSheet<ActivityCategoryOption>(
+  return showModalBottomSheet<ActionCategoryOption>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _CategoryPickerBody(selected: selected),
+    builder: (ctx) => _CategoryPickerBody(
+      categories: categories,
+      selected: selected,
+    ),
   );
 }
 
 class _CategoryPickerBody extends StatelessWidget {
-  const _CategoryPickerBody({this.selected});
+  const _CategoryPickerBody({
+    required this.categories,
+    this.selected,
+  });
 
-  final ActivityCategoryOption? selected;
+  final List<ActionCategoryOption> categories;
+  final ActionCategoryOption? selected;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +62,7 @@ class _CategoryPickerBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Select category',
+                  'Select type',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -88,8 +76,8 @@ class _CategoryPickerBody extends StatelessWidget {
                     border: Border.all(color: AppColors.slate200),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    'Search categories...',
+                  child: const Text(
+                    'Search types…',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.slate400,
@@ -97,69 +85,31 @@ class _CategoryPickerBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.sizeOf(context).height * 0.42,
-                  ),
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      for (final c in kActivityCategories)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: Material(
-                            color: selected?.label == c.label
-                                ? const Color(0xFFE6F1FB)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            child: InkWell(
-                              onTap: () => Navigator.of(context).pop(c),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        color: c.dot,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        c.label,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: selected?.label == c.label
-                                              ? FontWeight.w500
-                                              : FontWeight.w400,
-                                          color: selected?.label == c.label
-                                              ? c.labelColor
-                                              : AppColors.slate900,
-                                        ),
-                                      ),
-                                    ),
-                                    if (selected?.label == c.label)
-                                      Icon(
-                                        Icons.check,
-                                        size: 16,
-                                        color: c.labelColor,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                if (categories.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'No action types loaded. Check connection and try again.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: AppColors.slate500),
+                    ),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.42,
+                    ),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final c in categories)
+                          _CategoryRow(
+                            option: c,
+                            isSelected: selected?.modelTypeId == c.modelTypeId,
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -169,18 +119,79 @@ class _CategoryPickerBody extends StatelessWidget {
   }
 }
 
-/// Time picker in a bottom sheet (Cupertino wheel).
-Future<TimeOfDay?> showActivityTimePicker(
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    required this.option,
+    required this.isSelected,
+  });
+
+  final ActionCategoryOption option;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = categoryPillStyleFromBarColor(option.dotColor);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: isSelected ? style.background : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: () => Navigator.of(context).pop(option),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 10,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: option.dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    option.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                      color: isSelected ? style.foreground : AppColors.slate900,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Icon(
+                    Icons.check,
+                    size: 16,
+                    color: style.foreground,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Date + time (defaults should use [DateTime] with today’s calendar date).
+Future<DateTime?> showActionDateTimePicker(
   BuildContext context, {
-  required TimeOfDay initialTime,
-  String title = 'Select time',
+  required DateTime initialDateTime,
+  String title = 'Date & time',
 }) {
-  return showModalBottomSheet<TimeOfDay>(
+  return showModalBottomSheet<DateTime>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) {
-      var selected = initialTime;
+      var selected = initialDateTime;
       return StatefulBuilder(
         builder: (context, setModalState) {
           final bottom = MediaQuery.viewInsetsOf(context).bottom;
@@ -235,20 +246,16 @@ Future<TimeOfDay?> showActivityTimePicker(
                       ),
                     ),
                     SizedBox(
-                      height: 216,
+                      height: 240,
                       child: CupertinoDatePicker(
-                        mode: CupertinoDatePickerMode.time,
+                        mode: CupertinoDatePickerMode.dateAndTime,
                         use24hFormat: false,
-                        initialDateTime: DateTime(
-                          2020,
-                          1,
-                          1,
-                          initialTime.hour,
-                          initialTime.minute,
-                        ),
+                        initialDateTime: initialDateTime,
+                        minimumDate: DateTime(2000),
+                        maximumDate: DateTime(2100),
                         onDateTimeChanged: (dt) {
                           setModalState(() {
-                            selected = TimeOfDay(hour: dt.hour, minute: dt.minute);
+                            selected = dt;
                           });
                         },
                       ),
@@ -264,10 +271,7 @@ Future<TimeOfDay?> showActivityTimePicker(
   );
 }
 
-String formatTimeOfDay(TimeOfDay t) {
-  final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-  var h = t.hourOfPeriod;
-  if (h == 0) h = 12;
-  final m = t.minute.toString().padLeft(2, '0');
-  return '$h:$m $period';
+/// Formats a local wall-clock instant for start/end fields.
+String formatActionDateTime(DateTime dt) {
+  return DateFormat('EEE, MMM d').add_jm().format(dt);
 }

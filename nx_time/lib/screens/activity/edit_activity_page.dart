@@ -1,59 +1,207 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/src/models/requests/SetModelRequest.dart' as req;
 
 import '../../app_theme.dart';
+import '../../data/action_category_option.dart';
+import '../../data/wall_clock_time.dart';
+import '../../providers/action_category_providers.dart';
+import '../../providers/time_providers.dart';
 import '../tasks/task_picker_page.dart';
 import 'activity_pickers.dart';
 
-/// Reference: `partials/page-edit-activity.html` — category & time open bottom sheets on tap.
-class EditActivityPage extends StatefulWidget {
-  const EditActivityPage({super.key});
+/// Edit a logged Action row (`set_kgql_models`). Reference: `partials/page-edit-activity.html`.
+class EditActionPage extends ConsumerStatefulWidget {
+  const EditActionPage({super.key, required this.model});
+
+  final Model model;
 
   @override
-  State<EditActivityPage> createState() => _EditActivityPageState();
+  ConsumerState<EditActionPage> createState() => _EditActionPageState();
 }
 
-class _EditActivityPageState extends State<EditActivityPage> {
-  late ActivityCategoryOption _category;
-  late TimeOfDay _startTime;
-  late TimeOfDay _endTime;
+class _EditActionPageState extends ConsumerState<EditActionPage> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _notesController;
+  late ActionCategoryOption _category;
+  late DateTime _start;
+  late DateTime _end;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _category = kActivityCategories.firstWhere((c) => c.label == 'Work');
-    _startTime = const TimeOfDay(hour: 8, minute: 30);
-    _endTime = const TimeOfDay(hour: 11, minute: 15);
+    final m = widget.model;
+    _nameController = TextEditingController(text: m.name);
+    _notesController = TextEditingController(text: m.description ?? '');
+    _category = ActionCategoryOption.fromModel(m);
+    final start = readWallClockDateTimeAttr(m, 'start_time');
+    final end = readWallClockDateTimeAttr(m, 'end_time');
+    final n = DateTime.now();
+    final today = DateTime(n.year, n.month, n.day);
+    if (start != null) {
+      _start = asStoredLocalWallClock(start);
+    } else {
+      _start = DateTime(today.year, today.month, today.day, 9, 0);
+    }
+    if (end != null) {
+      _end = asStoredLocalWallClock(end);
+    } else {
+      _end = DateTime(today.year, today.month, today.day, 10, 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickCategory() async {
-    final choice = await showActivityCategoryPicker(
-      context,
-      selected: _category,
-    );
-    if (choice != null && mounted) {
-      setState(() => _category = choice);
+    try {
+      final options = await ref.read(actionCategoryOptionsProvider.future);
+      if (!mounted) return;
+      if (options.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No action types available')),
+        );
+        return;
+      }
+      final choice = await showActionCategoryPicker(
+        context,
+        categories: options,
+        selected: _category,
+      );
+      if (choice != null && mounted) {
+        setState(() => _category = choice);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load categories: $e')),
+        );
+      }
     }
   }
 
   Future<void> _pickStart() async {
-    final t = await showActivityTimePicker(
+    final t = await showActionDateTimePicker(
       context,
-      initialTime: _startTime,
-      title: 'Start time',
+      initialDateTime: _start,
+      title: 'Start (date & time)',
     );
     if (t != null && mounted) {
-      setState(() => _startTime = t);
+      setState(() => _start = t);
     }
   }
 
   Future<void> _pickEnd() async {
-    final t = await showActivityTimePicker(
+    final t = await showActionDateTimePicker(
       context,
-      initialTime: _endTime,
-      title: 'End time',
+      initialDateTime: _end,
+      title: 'End (date & time)',
     );
     if (t != null && mounted) {
-      setState(() => _endTime = t);
+      setState(() => _end = t);
+    }
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a name')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final container = ProviderScope.containerOf(context);
+      final modelTypeName = _category.name;
+
+      var newStart = _start;
+      var newEnd = _end;
+      if (!newEnd.isAfter(newStart)) {
+        newEnd = newEnd.add(const Duration(days: 1));
+      }
+
+      final notes = _notesController.text.trim();
+      final request = SetModelRequest(
+        id: widget.model.id,
+        modelType:
+            modelTypeName != widget.model.modelType?.name ? modelTypeName : null,
+        name: name,
+        description: notes.isEmpty ? null : notes,
+        attributes: [
+          req.ModelAttribute(
+            key: 'start_time',
+            value: newStart.toIso8601String(),
+          ),
+          req.ModelAttribute(
+            key: 'end_time',
+            value: newEnd.toIso8601String(),
+          ),
+        ],
+      );
+
+      await createModel(container, request);
+      ref.invalidate(todaySnapshotProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      Navigator.of(context).pop();
+    } catch (e, st) {
+      debugPrint('EditActionPage._save: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this action?'),
+        content: const Text('This removes the time block from your log.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final container = ProviderScope.containerOf(context);
+      await createModel(
+        container,
+        SetModelRequest(id: widget.model.id, delete: true),
+      );
+      ref.invalidate(todaySnapshotProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      Navigator.of(context).pop();
+    } catch (e, st) {
+      debugPrint('EditActionPage._confirmDelete: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -71,7 +219,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
               child: Row(
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
@@ -86,7 +234,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
                   ),
                   const Expanded(
                     child: Text(
-                      'Edit activity',
+                      'Edit action',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -96,16 +244,16 @@ class _EditActivityPageState extends State<EditActivityPage> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    onPressed: _saving ? null : _save,
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Save',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.sky600,
+                        color: _saving ? AppColors.slate300 : AppColors.sky600,
                       ),
                     ),
                   ),
@@ -126,14 +274,22 @@ class _EditActivityPageState extends State<EditActivityPage> {
                   ),
                   const SizedBox(height: 6),
                   _borderBox(
-                    child: const Text(
-                      'Deep work — auth refactor',
-                      style: TextStyle(fontSize: 14, color: AppColors.slate900),
+                    child: TextField(
+                      controller: _nameController,
+                      enabled: !_saving,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        hintText: 'Action name',
+                        hintStyle: TextStyle(color: AppColors.slate400),
+                      ),
+                      style: const TextStyle(fontSize: 14, color: AppColors.slate900),
                     ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Category',
+                    'Type',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -144,7 +300,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: _pickCategory,
+                      onTap: _saving ? null : _pickCategory,
                       borderRadius: BorderRadius.circular(10),
                       child: _borderBox(
                         child: Row(
@@ -153,7 +309,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
                               width: 10,
                               height: 10,
                               decoration: BoxDecoration(
-                                color: _category.dot,
+                                color: _category.dotColor,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -188,7 +344,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'Start time',
+                              'Start',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -199,12 +355,12 @@ class _EditActivityPageState extends State<EditActivityPage> {
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: _pickStart,
+                                onTap: _saving ? null : _pickStart,
                                 borderRadius: BorderRadius.circular(10),
                                 child: _borderBox(
                                   child: Center(
                                     child: Text(
-                                      formatTimeOfDay(_startTime),
+                                      formatActionDateTime(_start),
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: AppColors.slate900,
@@ -223,7 +379,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'End time',
+                              'End',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -234,12 +390,12 @@ class _EditActivityPageState extends State<EditActivityPage> {
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: _pickEnd,
+                                onTap: _saving ? null : _pickEnd,
                                 borderRadius: BorderRadius.circular(10),
                                 child: _borderBox(
                                   child: Center(
                                     child: Text(
-                                      formatTimeOfDay(_endTime),
+                                      formatActionDateTime(_end),
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: AppColors.slate900,
@@ -269,11 +425,15 @@ class _EditActivityPageState extends State<EditActivityPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute(builder: (_) => const TaskPickerPage()),
-                          );
-                        },
+                        onPressed: _saving
+                            ? null
+                            : () {
+                                Navigator.of(context).push<void>(
+                                  MaterialPageRoute(
+                                    builder: (_) => const TaskPickerPage(),
+                                  ),
+                                );
+                              },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
                           minimumSize: Size.zero,
@@ -291,14 +451,14 @@ class _EditActivityPageState extends State<EditActivityPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _taskEditRow(
-                    title: 'Refactor token validation',
-                    subtitle: 'Platform › Auth',
-                  ),
-                  const SizedBox(height: 6),
-                  _taskEditRow(
-                    title: 'Review PR for auth flow',
-                    subtitle: 'Platform › Auth',
+                  const Center(
+                    child: Text(
+                      'No tasks linked yet',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.slate400,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
@@ -315,11 +475,20 @@ class _EditActivityPageState extends State<EditActivityPage> {
                   _borderBox(
                     minHeight: 64,
                     alignment: Alignment.topLeft,
-                    child: const Text(
-                      'Finished the main token refresh logic. Still need to wire up the revocation endpoint.',
-                      style: TextStyle(
+                    child: TextField(
+                      controller: _notesController,
+                      enabled: !_saving,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        hintText: 'Optional notes…',
+                        hintStyle: TextStyle(color: AppColors.slate400),
+                      ),
+                      style: const TextStyle(
                         fontSize: 13,
-                        color: AppColors.slate500,
+                        color: AppColors.slate700,
                         height: 1.5,
                       ),
                     ),
@@ -327,20 +496,27 @@ class _EditActivityPageState extends State<EditActivityPage> {
                   const SizedBox(height: 12),
                   Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
                   const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFFECACA)),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _saving ? null : _confirmDelete,
                       borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Delete activity',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFFDC2626),
-                        fontWeight: FontWeight.w500,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'Delete action',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFFDC2626),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -368,50 +544,6 @@ class _EditActivityPageState extends State<EditActivityPage> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: child,
-    );
-  }
-
-  static Widget _taskEditRow({required String title, required String subtitle}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.slate50,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.slate900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.slate400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Text(
-            'Remove',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFFDC2626),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

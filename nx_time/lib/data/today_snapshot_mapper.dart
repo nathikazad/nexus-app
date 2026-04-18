@@ -6,6 +6,8 @@ import 'models/activity_category.dart';
 import 'models/time_map_segment.dart';
 import 'models/today_activity.dart';
 import 'models/today_snapshot.dart';
+import 'model_type_bar_color.dart';
+import 'wall_clock_time.dart';
 
 /// Maps KGQL [Model] rows (Action + descendants) to [TodaySnapshot] for the Today tab.
 ///
@@ -33,13 +35,13 @@ TodaySnapshot snapshotFromActionModels(
 
   final sorted = List<Model>.from(inDay)
     ..sort((a, b) {
-      final sa = _readDateTimeAttr(a, 'start_time');
-      final sb = _readDateTimeAttr(b, 'start_time');
+      final sa = readWallClockDateTimeAttr(a, 'start_time');
+      final sb = readWallClockDateTimeAttr(b, 'start_time');
       if (sa == null && sb == null) return a.id.compareTo(b.id);
       if (sa == null) return 1;
       if (sb == null) return -1;
       final cmp =
-          _asStoredLocalWallClock(sa).compareTo(_asStoredLocalWallClock(sb));
+          asStoredLocalWallClock(sa).compareTo(asStoredLocalWallClock(sb));
       if (cmp != 0) return cmp;
       return a.id.compareTo(b.id);
     });
@@ -50,19 +52,19 @@ TodaySnapshot snapshotFromActionModels(
   final seenTypeIds = <int>{};
 
   for (final m in sorted) {
-    final start = _readDateTimeAttr(m, 'start_time');
-    final end = _readDateTimeAttr(m, 'end_time');
-    final title = m.name.isNotEmpty ? m.name : 'Activity';
+    final start = readWallClockDateTimeAttr(m, 'start_time');
+    final end = readWallClockDateTimeAttr(m, 'end_time');
+    final title = m.name.isNotEmpty ? m.name : 'Action';
     final rangeLabel = _formatRange(
       timeFmt,
-      start != null ? _asStoredLocalWallClock(start) : null,
-      end != null ? _asStoredLocalWallClock(end) : null,
+      start != null ? asStoredLocalWallClock(start) : null,
+      end != null ? asStoredLocalWallClock(end) : null,
     );
     final durationLabel = _formatDuration(
-      start != null ? _asStoredLocalWallClock(start) : null,
-      end != null ? _asStoredLocalWallClock(end) : null,
+      start != null ? asStoredLocalWallClock(start) : null,
+      end != null ? asStoredLocalWallClock(end) : null,
     );
-    final color = _barColorForModelTypeId(m.modelTypeId);
+    final color = barColorForModelTypeId(m.modelTypeId);
     final embeddedName = m.modelType?.name;
     final typeLabel = (embeddedName != null && embeddedName.isNotEmpty)
         ? embeddedName
@@ -105,16 +107,17 @@ TodaySnapshot snapshotFromActionModels(
     legend: legendEntries,
     activityBlockCount: sorted.length,
     actions: actions,
+    actionModels: sorted.map<Model?>((m) => m).toList(),
   );
 }
 
 /// True if [start_time]/[end_time] overlap `[dayStart, dayEnd)` (wall-clock, see [_asStoredLocalWallClock]).
 bool _modelOverlapsLocalDay(Model m, DateTime dayStart, DateTime dayEnd) {
-  final start = _readDateTimeAttr(m, 'start_time');
-  final end = _readDateTimeAttr(m, 'end_time');
+  final start = readWallClockDateTimeAttr(m, 'start_time');
+  final end = readWallClockDateTimeAttr(m, 'end_time');
   if (start == null && end == null) return false;
-  final s = _asStoredLocalWallClock(start ?? end!);
-  final e = _asStoredLocalWallClock(end ?? start!.add(const Duration(hours: 1)));
+  final s = asStoredLocalWallClock(start ?? end!);
+  final e = asStoredLocalWallClock(end ?? start!.add(const Duration(hours: 1)));
   return s.isBefore(dayEnd) && e.isAfter(dayStart);
 }
 
@@ -125,12 +128,12 @@ TimeMapSegment? _segmentForModelInDay(
   int totalMs,
   Color color,
 ) {
-  final start = _readDateTimeAttr(m, 'start_time');
-  final end = _readDateTimeAttr(m, 'end_time');
+  final start = readWallClockDateTimeAttr(m, 'start_time');
+  final end = readWallClockDateTimeAttr(m, 'end_time');
   if (start == null) return null;
 
-  var s = _asStoredLocalWallClock(start);
-  var e = _asStoredLocalWallClock(end ?? start.add(const Duration(hours: 1)));
+  var s = asStoredLocalWallClock(start);
+  var e = asStoredLocalWallClock(end ?? start.add(const Duration(hours: 1)));
 
   if (!e.isAfter(s)) return null;
 
@@ -157,41 +160,6 @@ double _nowFractionForDay(DateTime dayStart, DateTime dayEnd) {
   if (now.isBefore(dayStart)) return 0;
   if (!now.isBefore(dayEnd)) return 1;
   return (now.difference(dayStart).inMilliseconds / total).clamp(0.0, 1.0);
-}
-
-/// Stable distinct color per concrete model type (`modelTypeId`); same type → same color.
-Color _barColorForModelTypeId(int modelTypeId) {
-  const golden = 0x9E3779B9;
-  final hue = (modelTypeId * golden) % 360;
-  return HSLColor.fromAHSL(1.0, hue.toDouble(), 0.52, 0.48).toColor();
-}
-
-DateTime? _readDateTimeAttr(Model m, String key) {
-  final raw = m.attributes?[key];
-  if (raw == null) return null;
-  if (raw is DateTime) return raw;
-  if (raw is String) return DateTime.tryParse(raw);
-  return null;
-}
-
-/// Interprets DB datetimes as **local wall clock** (no offset shift).
-///
-/// GraphQL/JSON often returns `...Z` even when the stored instant is meant as local civil time.
-/// Using [DateTime.toLocal] then moves 23:00/06:00 incorrectly and breaks clipping to midnight.
-DateTime _asStoredLocalWallClock(DateTime dt) {
-  if (dt.isUtc) {
-    return DateTime(
-      dt.year,
-      dt.month,
-      dt.day,
-      dt.hour,
-      dt.minute,
-      dt.second,
-      dt.millisecond,
-      dt.microsecond,
-    );
-  }
-  return dt;
 }
 
 String _formatRange(DateFormat timeFmt, DateTime? start, DateTime? end) {
