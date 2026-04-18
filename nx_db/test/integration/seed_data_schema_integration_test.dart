@@ -9,8 +9,6 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:test/test.dart' show Tags;
 
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_db/src/data_providers/model_types_provider.dart';
-import 'package:nx_db/src/data_providers/models_provider.dart';
 
 /// Same as [getAllModelTypesQuery] plus `traits` so trait types (e.g. Employee) appear.
 const _getAllModelTypesWithTraitsQuery = '''

@@ -1,20 +1,23 @@
 # Tag reference for `flutter test --tags …` / `--exclude-tags …`
 # Library-level `@Tags([...])` + `library;` is required for Flutter to apply tags.
 #
-# Layout: test/unit/, test/providers/, test/widget/, test/integration/
+# Layout mirrors lib/src/: test/core/, test/auth/, test/kgql/{models,requests,documents,repositories,providers}, test/transcript/, test/widget/, test/integration/
 #
 # Examples:
-#   flutter test test/unit
-#   flutter test test/providers --tags=providers
 #   flutter test --exclude-tags=integration
+#   flutter test test/kgql/repositories --tags=repository
 #   RUN_NX_DB_INTEGRATION=true flutter test test/integration
-# Seed schema checks (vs servers/pgdb/docs/llm-reference/seed-data.md):
-#   test/integration/seed_data_schema_integration_test.dart
 tags:
   unit:
-    description: "Pure model/request/parser tests"
+    description: "Pure model / request / json-coercion tests"
+  repository:
+    description: "KGQL repositories with mocked GraphQLClient"
+  provider:
+    description: "Riverpod wiring around repositories"
   providers:
-    description: "Data providers (mocked GraphQL)"
+    description: "Deprecated alias for provider (same intent)"
+  auth:
+    description: "AuthController + prefs (mocked)"
   widget:
     description: "Widget tests (LoginPage)"
   integration:
