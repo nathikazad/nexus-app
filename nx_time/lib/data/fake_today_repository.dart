@@ -2,26 +2,29 @@ import 'models/activity_category.dart';
 import 'models/time_map_segment.dart';
 import 'models/today_activity.dart';
 import 'models/today_snapshot.dart';
+import 'today_repository_interface.dart';
 import '../theme/app_colors.dart';
 
-/// In-memory fake backend for the Today screen.
-class FakeTodayRepository {
-  TodaySnapshot getToday() {
+/// In-memory fake backend for the Today screen (no GraphQL).
+class FakeTodayRepository implements TodayRepository {
+  @override
+  Future<TodaySnapshot> loadToday([DateTime? forDay]) async => buildSnapshot();
+
+  /// Synchronous snapshot for tests and callers that need immediate data.
+  TodaySnapshot buildSnapshot() {
     return TodaySnapshot(
       clockLabel: '9:41 AM',
       titleLine: 'Today — Thu, Oct 26',
-      // Percents of the day bar; remainder is background (see [TimeMapBar]).
-      timeMapSegments: [
+      timeMapSegments: const [
         TimeMapSegment(color: AppColors.sleepBlue, flex: 32),
         TimeMapSegment(color: AppColors.routineGray, flex: 5),
         TimeMapSegment(color: AppColors.exerciseGreen, flex: 8),
         TimeMapSegment(color: AppColors.routineGray, flex: 5),
         TimeMapSegment(color: AppColors.accent, flex: 25),
-        // Remaining day (HTML shows bg-slate-100 through; use opaque slate100).
         TimeMapSegment(color: AppColors.slate100, flex: 25),
       ],
       currentMarkerFraction: 0.75,
-      legend: [
+      legend: const [
         ActivityCategory(label: 'Sleep', swatch: AppColors.sleepBlue),
         ActivityCategory(label: 'Work', swatch: AppColors.accent),
         ActivityCategory(label: 'Exercise', swatch: AppColors.exerciseGreen),
@@ -30,7 +33,7 @@ class FakeTodayRepository {
         ActivityCategory(label: 'Routine', swatch: AppColors.routineGray),
       ],
       activityBlockCount: 12,
-      actions: [
+      actions: const [
         TodayActivity(
           title: 'Deep sleep',
           timeRangeLabel: '11:30p – 7:15a',

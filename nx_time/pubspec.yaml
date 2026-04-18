@@ -4,13 +4,18 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
+  sdk: ^3.9.2
 
 dependencies:
   flutter:
     sdk: flutter
   dotted_border: ^3.1.0
   google_fonts: ^8.0.2
+  intl: ^0.20.2
+  nx_db:
+    path: ../nx_db
+  flutter_riverpod: ^3.2.0
+  graphql_flutter: ^5.1.2
   solar_icon_pack: ^0.2.1
 
 dev_dependencies:

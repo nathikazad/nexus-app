@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import '../../data/fake_today_repository.dart';
+import '../../data/time_providers.dart';
 import '../../theme/app_colors.dart';
 import '../activity/activity_detail_models.dart';
 import '../activity/activity_detail_page.dart';
@@ -13,22 +14,18 @@ import '../goals/goals_page.dart';
 import '../tasks/tasks_page.dart';
 import '../today/today_page.dart';
 
-class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.todayRepository, this.initialTabIndex = 0});
-
-  final FakeTodayRepository? todayRepository;
+class AppShell extends ConsumerStatefulWidget {
+  const AppShell({super.key, this.initialTabIndex = 0});
 
   /// Initial bottom-nav index (0–3). Used by screenshot integration tests.
   final int initialTabIndex;
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   late int _index;
-
-  late final FakeTodayRepository _repo = widget.todayRepository ?? FakeTodayRepository();
 
   @override
   void initState() {
@@ -55,29 +52,38 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final snapshot = _repo.getToday();
+    final snapshotAsync = ref.watch(todaySnapshotProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: IndexedStack(
         index: _index,
         children: [
-          TodayPage(
-            snapshot: snapshot,
-            onActivityTap: (index) {
-              final a = snapshot.actions[index];
-              final args = activityDetailArgsForTodayRow(a, snapshot.titleLine);
-              Navigator.of(context).push<void>(
-                MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
-              );
-            },
-            onAddManualTap: () {
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AddTimeBlockPage(),
-                ),
-              );
-            },
+          snapshotAsync.when(
+            data: (snapshot) => TodayPage(
+              snapshot: snapshot,
+              onActivityTap: (index) {
+                final a = snapshot.actions[index];
+                final args = activityDetailArgsForTodayRow(a, snapshot.titleLine);
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
+                );
+              },
+              onAddManualTap: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AddTimeBlockPage(),
+                  ),
+                );
+              },
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Could not load Today: $e'),
+              ),
+            ),
           ),
           const TasksPage(),
           const GoalsPage(),
