@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../theme/app_colors.dart';
+import 'nx_app_menu_button.dart';
 
 /// Clock + centered title + optional trailing (Tasks / Goals / Calendar pattern).
 class NxTabHeader extends StatelessWidget {
@@ -56,12 +56,7 @@ class NxTabHeader extends StatelessWidget {
                 ),
               ),
             ),
-            trailing ??
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(SolarLinearIcons.settings, size: 24),
-                  color: AppColors.slate500,
-                ),
+            trailing ?? const NxAppMenuButton(),
           ],
         ),
       ),

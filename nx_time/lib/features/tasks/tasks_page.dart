@@ -29,47 +29,54 @@ class TasksPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NxTabHeader(
+        const NxTabHeader(
           clockLabel: _clock,
           title: 'Tasks — Thu, Oct 26',
           bottomBorder: true,
           borderColor: AppColors.slate50,
-          trailing: IconButton(
-            onPressed: () => _openPicker(context),
-            tooltip: 'Pick tasks',
-            style: IconButton.styleFrom(
-              foregroundColor: AppColors.accent,
-              hoverColor: AppColors.accentLight,
-            ),
-            icon: const Icon(SolarLinearIcons.addCircle, size: 26),
-          ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
           decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.slate100)),
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _Chip(label: '4 Total', bg: AppColors.slate100, border: AppColors.slate200, fg: AppColors.slate600),
-                const SizedBox(width: 8),
-                _Chip(
-                  label: '2 Done',
-                  bg: const Color(0xFFF0FDF4),
-                  border: const Color(0xFFDCFCE7),
-                  fg: const Color(0xFF15803D),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _Chip(label: '5 Total', bg: AppColors.slate100, border: AppColors.slate200, fg: AppColors.slate600),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: '2 Done',
+                        bg: const Color(0xFFF0FDF4),
+                        border: const Color(0xFFDCFCE7),
+                        fg: const Color(0xFF15803D),
+                      ),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: '3 Todo',
+                        bg: AppColors.slate50,
+                        border: AppColors.slate100,
+                        fg: AppColors.slate500,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _Chip(
-                  label: '2 Todo',
-                  bg: AppColors.slate50,
-                  border: AppColors.slate100,
-                  fg: AppColors.slate500,
+              ),
+              IconButton(
+                onPressed: () => _openPicker(context),
+                tooltip: 'Pick tasks',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.accent,
+                  hoverColor: AppColors.accentLight,
                 ),
-              ],
-            ),
+                icon: const Icon(SolarLinearIcons.addCircle, size: 26),
+              ),
+            ],
           ),
         ),
         Expanded(

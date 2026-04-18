@@ -4,6 +4,7 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../data/models/today_snapshot.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/nx_app_menu_button.dart';
 import 'widgets/activity_row.dart';
 import 'widgets/category_legend.dart';
 import 'widgets/time_map_bar.dart';
@@ -155,14 +156,7 @@ class _TodayHeader extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                SolarLinearIcons.settings,
-                color: AppColors.slate500,
-                size: 24,
-              ),
-            ),
+            const NxAppMenuButton(),
           ],
         ),
       ),
