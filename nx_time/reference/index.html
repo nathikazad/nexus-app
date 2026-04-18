@@ -137,6 +137,9 @@
         'partials/tab-goals.html',
         'partials/tab-tasks.html',
         'partials/view-task-picker.html',
+        'partials/page-projects-browse.html',
+        'partials/page-project-drill-down.html',
+        'partials/page-project-drill-deep.html',
         'partials/view-task-detail.html',
         'partials/tab-calendar.html',
         'partials/page-activity-detail-deep-work.html',
@@ -160,7 +163,7 @@
 
     let historyStack = ['page-today'];
 
-    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-add-time-block', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-week', 'page-ai-chat'];
+    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-add-time-block', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep'];
     const bottomNav = document.getElementById('bottom-nav');
 
     function navigate(pageId, pushToHistory = true) {
@@ -197,7 +200,7 @@
                 updateTabUI(baseTab);
             } else if (prevPage.includes('calendar')) {
                 updateTabUI('calendar');
-            } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail') {
+            } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail' || prevPage === 'page-projects-browse' || prevPage === 'page-project-drill-down' || prevPage === 'page-project-drill-deep') {
                 updateTabUI('tasks');
             }
         }

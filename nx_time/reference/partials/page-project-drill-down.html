@@ -1,0 +1,66 @@
+    <div id="page-project-drill-down" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <header class="flex items-center gap-3 px-5 pt-12 pb-4 border-b border-slate-100 bg-white shrink-0">
+            <button type="button" onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600" aria-label="Back">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <h1 class="flex-1 text-base font-semibold tracking-tight text-slate-900">Nexus App</h1>
+        </header>
+
+        <div class="px-5 pt-2 pb-3 shrink-0">
+            <div class="text-xs text-slate-500 flex items-center flex-wrap gap-1">
+                <button type="button" class="text-[#F97316] font-medium hover:underline">All</button>
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto min-h-0 pb-28 hide-scrollbar">
+            <div class="px-5 py-2 text-xs font-medium text-slate-500 bg-slate-50 border-y border-slate-100">
+                Sub-projects
+            </div>
+
+            <button type="button" class="w-full flex items-center gap-3 px-5 py-3 border-b border-slate-100 text-left active:bg-slate-50 transition-colors">
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-slate-900">Time App</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">5 tasks</div>
+                </div>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-400 shrink-0"></iconify-icon>
+            </button>
+
+            <button type="button" class="w-full flex items-center gap-3 px-5 py-3 border-b border-slate-100 text-left active:bg-slate-50 transition-colors">
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-slate-900">Expense App</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">4 tasks</div>
+                </div>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-400 shrink-0"></iconify-icon>
+            </button>
+
+            <button type="button" onclick="navigate('page-project-drill-deep', true)" class="w-full flex items-center gap-3 px-5 py-3 border-b border-slate-100 text-left active:bg-slate-50 transition-colors">
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-slate-900">Server</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">3 tasks</div>
+                </div>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-slate-400 shrink-0"></iconify-icon>
+            </button>
+
+            <div class="px-5 py-2 text-xs font-medium text-slate-500 bg-slate-50 border-y border-slate-100">
+                Direct tasks
+            </div>
+
+            <button type="button" class="w-full flex items-center gap-2.5 px-5 py-2.5 border-b border-slate-100 text-left hover:bg-slate-50/80 transition-colors">
+                <div class="w-[22px] h-[22px] rounded-md border-[1.5px] border-slate-300 shrink-0"></div>
+                <div class="flex-1 min-w-0 text-sm font-medium text-slate-900">Update README</div>
+            </button>
+
+            <button type="button" class="w-full flex items-center gap-2.5 px-5 py-2.5 text-left hover:bg-slate-50/80 transition-colors">
+                <div class="w-[22px] h-[22px] rounded-md border-[1.5px] border-slate-300 shrink-0"></div>
+                <div class="flex-1 min-w-0 text-sm font-medium text-slate-900">Set up CI/CD pipeline</div>
+            </button>
+        </main>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-between gap-3 pb-8">
+            <span class="text-sm font-semibold text-slate-900">2 selected</span>
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" class="px-3 py-2 text-xs font-medium text-slate-700 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">+ New task</button>
+                <button type="button" onclick="navigateBack()" class="px-5 py-2.5 bg-[#F97316] text-white text-sm font-medium rounded-xl hover:bg-[#FB923C] transition-colors shadow-sm">Done</button>
+            </div>
+        </div>
+    </div>
