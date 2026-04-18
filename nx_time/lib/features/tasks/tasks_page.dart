@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/nx_tab_header.dart';
@@ -33,21 +34,14 @@ class TasksPage extends StatelessWidget {
           title: 'Tasks — Thu, Oct 26',
           bottomBorder: true,
           borderColor: AppColors.slate50,
-          trailing: TextButton(
+          trailing: IconButton(
             onPressed: () => _openPicker(context),
-            style: TextButton.styleFrom(
+            tooltip: 'Pick tasks',
+            style: IconButton.styleFrom(
               foregroundColor: AppColors.accent,
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              hoverColor: AppColors.accentLight,
             ),
-            child: const Text(
-              '+ pick more',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            icon: const Icon(SolarLinearIcons.addCircle, size: 26),
           ),
         ),
         Container(

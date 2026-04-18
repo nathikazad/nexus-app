@@ -110,7 +110,7 @@ Future<void> main() async {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
 
-      await tester.tap(find.text('+ pick more'));
+      await tester.tap(find.byTooltip('Pick tasks'));
       await tester.pump();
       await tester.pump(_kAfterNav);
 

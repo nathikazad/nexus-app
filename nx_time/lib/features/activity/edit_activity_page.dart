@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../tasks/task_picker_page.dart';
 import 'activity_pickers.dart';
 
 /// Reference: `partials/page-edit-activity.html` — category & time open bottom sheets on tap.
@@ -268,7 +269,11 @@ class _EditActivityPageState extends State<EditActivityPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(builder: (_) => const TaskPickerPage()),
+                          );
+                        },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
                           minimumSize: Size.zero,

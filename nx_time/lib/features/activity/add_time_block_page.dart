@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../tasks/task_picker_page.dart';
 import 'activity_pickers.dart';
 
 /// Reference: `partials/page-add-time-block.html` — category & times open pickers on tap.
@@ -292,7 +293,11 @@ class _AddTimeBlockPageState extends State<AddTimeBlockPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(builder: (_) => const TaskPickerPage()),
+                          );
+                        },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
                           minimumSize: Size.zero,
