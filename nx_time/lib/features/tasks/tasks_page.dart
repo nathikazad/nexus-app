@@ -116,6 +116,20 @@ class TasksPage extends StatelessWidget {
                 ),
               ),
               TaskRowTile(
+                title: 'Refactor token validation',
+                subtitle: 'Nexus App › Time App › Auth',
+                durationLabel: '2h 45m',
+                done: false,
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(
+                    title: 'Refactor token validation',
+                    subtitle: 'Nexus App › Time App › Auth',
+                    durationLabel: '2h 45m',
+                  ),
+                ),
+              ),
+              TaskRowTile(
                 title: 'Draft weekly newsletter',
                 subtitle: 'Content › Newsletter',
                 durationLabel: '1h',

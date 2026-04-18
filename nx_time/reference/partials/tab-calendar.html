@@ -101,16 +101,16 @@
 
             <div class="h-px bg-slate-200 mx-5 mt-2"></div>
 
-            <!-- ========== Wednesday (default): Activities + Tasks switcher ========== -->
+            <!-- ========== Wednesday (default): Actions + Tasks switcher ========== -->
             <div id="cal-panel-wed" class="cal-day-panel flex flex-col">
                 <div class="px-5 pt-2.5 pb-1.5 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
                     <h2 class="text-sm font-medium text-slate-900">Wednesday, Apr 15</h2>
                     <div class="flex gap-1">
-                        <button type="button" onclick="toggleCalView('activities','wed')" id="cal-wed-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Activities</button>
+                        <button type="button" onclick="toggleCalView('actions','wed')" id="cal-wed-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Actions</button>
                         <button type="button" onclick="toggleCalView('tasks','wed')" id="cal-wed-toggle-tsk" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors">Tasks</button>
                     </div>
                 </div>
-                <div id="cal-wed-activities" class="flex flex-col">
+                <div id="cal-wed-actions" class="flex flex-col">
                     <div onclick="navigate('page-activity-detail-sleep', true)" class="cal-act-row hover:bg-slate-50/80 transition-colors">
                         <div class="cal-color bg-[#534AB7]"></div>
                         <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">12:00 – 6:55a</span>
@@ -195,7 +195,7 @@
                 </div>
             </div>
 
-            <!-- ========== Tuesday: completed day — full activities + mixed tasks ========== -->
+            <!-- ========== Tuesday: completed day — full actions + mixed tasks ========== -->
             <div id="cal-panel-tue" class="cal-day-panel hidden flex-col">
                 <div class="px-5 pt-2.5 pb-1.5 sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
                     <div class="flex items-center justify-between gap-2">
@@ -204,12 +204,12 @@
                             <p class="text-[11px] text-emerald-600 font-medium mt-0.5">Day complete</p>
                         </div>
                         <div class="flex gap-1 shrink-0">
-                            <button type="button" onclick="toggleCalView('activities','tue')" id="cal-tue-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Activities</button>
+                            <button type="button" onclick="toggleCalView('actions','tue')" id="cal-tue-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Actions</button>
                             <button type="button" onclick="toggleCalView('tasks','tue')" id="cal-tue-toggle-tsk" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors">Tasks</button>
                         </div>
                     </div>
                 </div>
-                <div id="cal-tue-activities" class="flex flex-col">
+                <div id="cal-tue-actions" class="flex flex-col">
                     <div onclick="navigate('page-activity-detail-sleep', true)" class="cal-act-row hover:bg-slate-50/80 transition-colors">
                         <div class="cal-color bg-[#534AB7]"></div>
                         <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">11:15p – 6:10a</span>
@@ -294,7 +294,7 @@
                 </div>
             </div>
 
-            <!-- ========== Saturday: tasks only, no Activities/Tasks switcher ========== -->
+            <!-- ========== Saturday: tasks only, no Actions/Tasks switcher ========== -->
             <div id="cal-panel-sat" class="cal-day-panel hidden flex-col">
                 <div class="px-5 pt-2.5 pb-1.5 sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
                     <h2 class="text-sm font-medium text-slate-900">Saturday, Apr 18</h2>

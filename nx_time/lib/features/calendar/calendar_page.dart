@@ -21,8 +21,8 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   _CalSelection _selection = _CalSelection.wed;
-  bool _wedTueActivities = true;
-  bool _tueActivities = true;
+  bool _wedTueActions = true;
+  bool _tueActions = true;
 
   static const _sky600 = Color(0xFF0284C7);
   static const _emerald600 = Color(0xFF059669);
@@ -363,22 +363,22 @@ class _CalendarPageState extends State<CalendarPage> {
               Row(
                 children: [
                   _CalToggleChip(
-                    label: 'Activities',
-                    selected: _wedTueActivities,
-                    onTap: () => setState(() => _wedTueActivities = true),
+                    label: 'Actions',
+                    selected: _wedTueActions,
+                    onTap: () => setState(() => _wedTueActions = true),
                   ),
                   const SizedBox(width: 4),
                   _CalToggleChip(
                     label: 'Tasks',
-                    selected: !_wedTueActivities,
-                    onTap: () => setState(() => _wedTueActivities = false),
+                    selected: !_wedTueActions,
+                    onTap: () => setState(() => _wedTueActions = false),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        if (_wedTueActivities) ...[
+        if (_wedTueActions) ...[
           _CalActivityRow(
             color: AppColors.calPurple,
             time: '12:00 – 6:55a',
@@ -529,22 +529,22 @@ class _CalendarPageState extends State<CalendarPage> {
               Row(
                 children: [
                   _CalToggleChip(
-                    label: 'Activities',
-                    selected: _tueActivities,
-                    onTap: () => setState(() => _tueActivities = true),
+                    label: 'Actions',
+                    selected: _tueActions,
+                    onTap: () => setState(() => _tueActions = true),
                   ),
                   const SizedBox(width: 4),
                   _CalToggleChip(
                     label: 'Tasks',
-                    selected: !_tueActivities,
-                    onTap: () => setState(() => _tueActivities = false),
+                    selected: !_tueActions,
+                    onTap: () => setState(() => _tueActions = false),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        if (_tueActivities) ...[
+        if (_tueActions) ...[
           _CalActivityRow(
             color: AppColors.calPurple,
             time: '11:15p – 6:10a',

@@ -65,7 +65,7 @@ class _AppShellState extends State<AppShell> {
           TodayPage(
             snapshot: snapshot,
             onActivityTap: (index) {
-              final a = snapshot.activities[index];
+              final a = snapshot.actions[index];
               final args = activityDetailArgsForTodayRow(a, snapshot.titleLine);
               Navigator.of(context).push<void>(
                 MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),

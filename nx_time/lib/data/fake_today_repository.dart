@@ -30,7 +30,7 @@ class FakeTodayRepository {
         ActivityCategory(label: 'Routine', swatch: AppColors.routineGray),
       ],
       activityBlockCount: 12,
-      activities: [
+      actions: [
         TodayActivity(
           title: 'Deep sleep',
           timeRangeLabel: '11:30p – 7:15a',

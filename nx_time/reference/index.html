@@ -141,6 +141,8 @@
         'partials/page-project-drill-down.html',
         'partials/page-project-drill-deep.html',
         'partials/view-task-detail.html',
+        'partials/page-task-edit.html',
+        'partials/page-task-create.html',
         'partials/tab-calendar.html',
         'partials/page-activity-detail-deep-work.html',
         'partials/page-activity-detail-sleep.html',
@@ -163,7 +165,7 @@
 
     let historyStack = ['page-today'];
 
-    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-add-time-block', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep'];
+    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-add-time-block', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep'];
     const bottomNav = document.getElementById('bottom-nav');
 
     function navigate(pageId, pushToHistory = true) {
@@ -200,7 +202,7 @@
                 updateTabUI(baseTab);
             } else if (prevPage.includes('calendar')) {
                 updateTabUI('calendar');
-            } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail' || prevPage === 'page-projects-browse' || prevPage === 'page-project-drill-down' || prevPage === 'page-project-drill-deep') {
+            } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail' || prevPage === 'page-task-edit' || prevPage === 'page-task-create' || prevPage === 'page-projects-browse' || prevPage === 'page-project-drill-down' || prevPage === 'page-project-drill-deep') {
                 updateTabUI('tasks');
             }
         }
@@ -294,12 +296,12 @@
         const suffix = panel === 'tue' ? 'tue' : 'wed';
         const actBtn = document.getElementById('cal-' + suffix + '-toggle-act');
         const tskBtn = document.getElementById('cal-' + suffix + '-toggle-tsk');
-        const actList = document.getElementById('cal-' + suffix + '-activities');
+        const actList = document.getElementById('cal-' + suffix + '-actions');
         const tskList = document.getElementById('cal-' + suffix + '-tasks');
         const hint = document.getElementById('cal-' + suffix + '-hint');
         if (!actBtn || !tskBtn || !actList || !tskList) return;
 
-        if (view === 'activities') {
+        if (view === 'actions') {
             actBtn.className = "px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white";
             tskBtn.className = "px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors";
             actList.classList.remove('hidden');
@@ -316,6 +318,20 @@
             actList.classList.remove('flex');
             if (hint) hint.classList.add('hidden');
         }
+    }
+
+    /** Task-detail status segmented control: mark the clicked segment active, reset siblings. */
+    function setTaskStatus(btn) {
+        const group = btn.closest('#task-status-segmented');
+        if (!group) return;
+        const inactive = 'status-seg flex-1 px-2 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors text-center';
+        const active = 'status-seg flex-1 px-2 py-2 rounded-lg text-xs font-semibold text-[#F97316] bg-white shadow-sm ring-1 ring-black/[0.03] text-center';
+        group.querySelectorAll('.status-seg').forEach((el) => {
+            el.className = inactive;
+            el.removeAttribute('aria-pressed');
+        });
+        btn.className = active;
+        btn.setAttribute('aria-pressed', 'true');
     }
 
     const aiBtn = document.getElementById('btn-ai');

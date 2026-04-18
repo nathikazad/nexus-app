@@ -3,6 +3,7 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../theme/app_colors.dart';
 import 'projects_browse_page.dart';
+import 'task_create_page.dart';
 import 'task_pick_widgets.dart';
 
 /// Pick backlog tasks to pin to today (`reference/partials/view-task-picker.html`).
@@ -200,6 +201,11 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
       bottomNavigationBar: TaskPickFooter(
         selectedLabel: '$_count selected',
         onDone: () => Navigator.of(context).maybePop(),
+        onNewTask: () {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute(builder: (_) => const TaskCreatePage()),
+          );
+        },
       ),
     );
   }

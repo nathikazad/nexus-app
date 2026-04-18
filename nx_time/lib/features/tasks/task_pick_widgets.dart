@@ -41,10 +41,12 @@ class TaskPickFooter extends StatelessWidget {
     super.key,
     required this.selectedLabel,
     required this.onDone,
+    this.onNewTask,
   });
 
   final String selectedLabel;
   final VoidCallback onDone;
+  final VoidCallback? onNewTask;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +70,7 @@ class TaskPickFooter extends StatelessWidget {
             ),
             const Spacer(),
             OutlinedButton(
-              onPressed: () {},
+              onPressed: onNewTask,
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.slate700,
                 side: const BorderSide(color: AppColors.slate200),

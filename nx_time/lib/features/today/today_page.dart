@@ -45,7 +45,7 @@ class TodayPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Activities',
+                    'Actions',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
@@ -63,9 +63,9 @@ class TodayPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              for (var i = 0; i < snapshot.activities.length; i++) ...[
+              for (var i = 0; i < snapshot.actions.length; i++) ...[
                 ActivityRow(
-                  activity: snapshot.activities[i],
+                  activity: snapshot.actions[i],
                   onTap: onActivityTap != null ? () => onActivityTap!(i) : null,
                 ),
                 const SizedBox(height: 4),

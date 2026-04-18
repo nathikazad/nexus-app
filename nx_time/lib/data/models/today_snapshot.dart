@@ -10,7 +10,7 @@ class TodaySnapshot {
     required this.currentMarkerFraction,
     required this.legend,
     required this.activityBlockCount,
-    required this.activities,
+    required this.actions,
   });
 
   final String clockLabel;
@@ -21,5 +21,5 @@ class TodaySnapshot {
   final double currentMarkerFraction;
   final List<ActivityCategory> legend;
   final int activityBlockCount;
-  final List<TodayActivity> activities;
+  final List<TodayActivity> actions;
 }
