@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 import 'package:nx_db/nx_db.dart';
 
-import '../theme/app_colors.dart';
+import '../app_theme.dart';
 import 'models/activity_category.dart';
 import 'models/time_map_segment.dart';
 import 'models/today_activity.dart';

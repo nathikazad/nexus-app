@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_theme.dart';
 import 'router.dart';
-import 'theme/app_theme.dart';
 
-class NxTimeApp extends ConsumerWidget {
-  const NxTimeApp({super.key, this.initialTabIndex = 0});
+/// Root widget: [MaterialApp.router] + [routerProvider], like nx_expense’s shell entry.
+class NexusTimeApp extends ConsumerWidget {
+  const NexusTimeApp({super.key, this.initialTabIndex = 0});
 
   /// Initial bottom-nav index (0–3). Used by screenshot driver tests (`?tab=`).
   final int initialTabIndex;

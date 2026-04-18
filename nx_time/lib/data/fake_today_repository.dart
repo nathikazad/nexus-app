@@ -3,7 +3,7 @@ import 'models/time_map_segment.dart';
 import 'models/today_activity.dart';
 import 'models/today_snapshot.dart';
 import 'today_repository_interface.dart';
-import '../theme/app_colors.dart';
+import '../app_theme.dart';
 
 /// In-memory fake backend for the Today screen (no GraphQL).
 class FakeTodayRepository implements TodayRepository {

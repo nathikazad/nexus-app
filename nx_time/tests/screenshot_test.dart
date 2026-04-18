@@ -31,7 +31,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(),
+          child: const NexusTimeApp(),
         ),
       );
       await tester.pump();
@@ -45,7 +45,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(initialTabIndex: 1),
+          child: const NexusTimeApp(initialTabIndex: 1),
         ),
       );
       await tester.pump();
@@ -59,7 +59,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(initialTabIndex: 2),
+          child: const NexusTimeApp(initialTabIndex: 2),
         ),
       );
       await tester.pump();
@@ -73,7 +73,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(initialTabIndex: 3),
+          child: const NexusTimeApp(initialTabIndex: 3),
         ),
       );
       await tester.pump();
@@ -89,7 +89,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(),
+          child: const NexusTimeApp(),
         ),
       );
       await tester.pump();
@@ -107,7 +107,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(),
+          child: const NexusTimeApp(),
         ),
       );
       await tester.pump();
@@ -125,7 +125,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(),
+          child: const NexusTimeApp(),
         ),
       );
       await tester.pump();
@@ -147,7 +147,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(initialTabIndex: 1),
+          child: const NexusTimeApp(initialTabIndex: 1),
         ),
       );
       await tester.pump();
@@ -165,7 +165,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(initialTabIndex: 1),
+          child: const NexusTimeApp(initialTabIndex: 1),
         ),
       );
       await tester.pump();
@@ -183,7 +183,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(),
+          child: const NexusTimeApp(),
         ),
       );
       await tester.pump();
@@ -201,7 +201,7 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: screenshotAuthOverrides,
-          child: const NxTimeApp(),
+          child: const NexusTimeApp(),
         ),
       );
       await tester.pump();

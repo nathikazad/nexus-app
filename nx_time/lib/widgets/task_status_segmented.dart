@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../features/tasks/task_status.dart';
+import '../app_theme.dart';
+import '../screens/tasks/task_status.dart';
 
 /// iOS-style segmented control for task status (reference HTML `setTaskStatus`).
 class TaskStatusSegmented extends StatelessWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../app_theme.dart';
 import 'nx_app_menu_button.dart';
 
 /// Clock + centered title + optional trailing (Tasks / Goals / Calendar pattern).

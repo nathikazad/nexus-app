@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../features/settings/action_colors_page.dart';
-import '../theme/app_colors.dart';
+import '../screens/settings/action_colors_page.dart';
+import '../app_theme.dart';
 
 /// Hamburger menu (aligned with `nx_expense` [ExpenseAppMenuButton]); opens Colors + Logout.
 class NxAppMenuButton extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-import '../theme/app_colors.dart';
+import '../app_theme.dart';
 
 class TaskRowTile extends StatelessWidget {
   const TaskRowTile({

@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../backend_presets.dart';
 import '../db.dart';
-import '../models/transcript_message.dart';
+import '../models/TranscriptMessage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // GraphQL query to get current transcript

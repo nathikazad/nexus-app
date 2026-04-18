@@ -13,7 +13,7 @@ export 'src/models/Model.dart';
 export 'src/models/ModelType.dart';
 export 'src/models/TagNode.dart';
 export 'src/models/TagSystem.dart';
-export 'src/models/transcript_message.dart';
+export 'src/models/TranscriptMessage.dart';
 export 'src/models/requests/SetModelRequest.dart' hide ModelAttribute;
 export 'src/models/requests/SetModelTypeRequest.dart';
 
