@@ -54,7 +54,7 @@ class TodayPage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${snapshot.activityBlockCount} blocks',
+                    '${snapshot.activityBlockCount} actions',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

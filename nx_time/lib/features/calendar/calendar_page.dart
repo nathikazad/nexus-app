@@ -514,15 +514,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         color: AppColors.slate900,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Day complete',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: _emerald600,
-                      ),
-                    ),
+                    
                   ],
                 ),
               ),

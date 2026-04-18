@@ -180,22 +180,6 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       ),
                       const SizedBox(height: 28),
                       Row(
-                        children: [
-                          Expanded(
-                            child: _SmallMeta(label: 'Created', value: 'Oct 20', accent: false),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _SmallMeta(label: 'Pinned to', value: 'Today', accent: true),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _SmallMeta(label: 'Time spent', value: '1h 12m', accent: false),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
@@ -245,26 +229,14 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       Row(
                         children: [
                           const Text(
-                            'TIME BLOCKS',
+                            'Actions',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               letterSpacing: 1,
                               color: AppColors.slate500,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.slate100,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'Auto-linked',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.slate500),
-                            ),
-                          ),
+                          )
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -585,7 +557,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'TIME SPENT',
+              'Actions',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -838,15 +810,6 @@ class _TimeBlockColumn extends StatelessWidget {
                           width: 6,
                           height: 6,
                           decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Current session',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.accent,
-                          ),
                         ),
                       ],
                     ),
