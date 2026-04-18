@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:nx_db/nx_db.dart';
 
 import '../../app_theme.dart';
+import '../../data/teller_sync_api.dart';
 import '../../data/teller_timeline_api.dart';
 import '../../layout.dart';
 import '../../providers/teller_providers.dart';
@@ -13,11 +15,54 @@ import '../../widgets/expense_date_range_bar.dart';
 import '../../desktop/desktop_nav.dart';
 import 'teller_transaction_detail_screen.dart';
 
-class TellerListScreen extends ConsumerWidget {
+class TellerListScreen extends ConsumerStatefulWidget {
   const TellerListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TellerListScreen> createState() => _TellerListScreenState();
+}
+
+class _TellerListScreenState extends ConsumerState<TellerListScreen> {
+  bool _syncBusy = false;
+
+  Future<void> _onSyncFromServer() async {
+    if (_syncBusy) return;
+    final base = ref.read(imageBaseUrlProvider);
+    final uid = ref.read(userIdProvider);
+    if (base == null || base.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image / MCP HTTP URL is not configured.')),
+        );
+      }
+      return;
+    }
+    if (uid == null || uid.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Not signed in.')),
+        );
+      }
+      return;
+    }
+    setState(() => _syncBusy = true);
+    try {
+      await postTellerSync(imageBaseUrl: base, userId: uid);
+      ref.invalidate(tellerTransactionsProvider);
+      await ref.read(tellerTransactionsProvider.future);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Teller sync failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _syncBusy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final listAsync = ref.watch(tellerTransactionsInRangeProvider);
     final summaryAsync = ref.watch(tellerListSummaryProvider);
 
@@ -46,6 +91,24 @@ class TellerListScreen extends ConsumerWidget {
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   Expanded(child: Text('Teller', style: refAppBarTitleLarge())),
+                  Tooltip(
+                    message: 'Fetch from Teller (server sync)',
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      onPressed: _syncBusy ? null : _onSyncFromServer,
+                      icon: _syncBusy
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.teal600,
+                              ),
+                            )
+                          : const Icon(Icons.refresh, color: AppColors.slate400, size: 22),
+                    ),
+                  ),
                   const ExpenseDateRangeCalendarButton(),
                   const SizedBox(width: 4),
                   const ExpenseAppMenuButton(),
