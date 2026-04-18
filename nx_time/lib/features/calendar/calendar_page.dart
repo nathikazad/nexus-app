@@ -5,6 +5,8 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/nx_tab_header.dart';
 import '../../widgets/task_row_tile.dart';
+import '../activity/activity_detail_page.dart';
+import '../tasks/task_detail_page.dart';
 
 /// Selectable days in the week bar (matches reference `tab-calendar.html`).
 enum _CalSelection { tue, wed, sat }
@@ -297,6 +299,58 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
+  String _calendarDateLabelForSelection() {
+    switch (_selection) {
+      case _CalSelection.tue:
+        return 'Tue, Apr 14';
+      case _CalSelection.wed:
+        return 'Wed, Apr 15';
+      case _CalSelection.sat:
+        return 'Sat, Apr 18';
+    }
+  }
+
+  String _categoryForCalendarTitle(String title) {
+    final t = title.toLowerCase();
+    if (t.contains('sleep')) return 'Sleep';
+    if (t.contains('yoga') || t.contains('stretch')) return 'Exercise';
+    if (t.contains('breakfast') || t.contains('lunch') || t.contains('coffee')) return 'Eat';
+    if (t.contains('walk')) return 'Outdoors';
+    if (t.contains('deep work') || t.contains('meeting') || t.contains('email') || t.contains('design')) {
+      return 'Work';
+    }
+    return 'Activity';
+  }
+
+  void _openCalendarActivity(
+    BuildContext context, {
+    required Color color,
+    required String time,
+    required String title,
+    required String duration,
+  }) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ActivityDetailPage(
+          args: ActivityDetailArgs(
+            title: title,
+            categoryLabel: _categoryForCalendarTitle(title),
+            accentColor: color,
+            dateLabel: _calendarDateLabelForSelection(),
+            timeRangeLabel: time,
+            durationLabel: duration,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openTaskDetail(BuildContext context, TaskDetailArgs args) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => TaskDetailPage(args: args)),
+    );
+  }
+
   Widget _buildWedPanel() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -337,13 +391,56 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
         ),
         if (_wedTueActivities) ...[
-          _CalActivityRow(color: AppColors.calPurple, time: '12:00 – 6:55a', title: 'Sleep', duration: '6h 55m'),
-          _CalActivityRow(color: AppColors.calGreen, time: '7:00 – 7:28a', title: 'Yoga', duration: '28m'),
-          _CalActivityRow(color: AppColors.calOrange, time: '7:35 – 8:10a', title: 'Breakfast', duration: '35m'),
-          _CalActivityRow(color: AppColors.calBlue, time: '8:15 – 11:30a', title: 'Deep work — API', duration: '3h 15m'),
-          _CalActivityRow(color: AppColors.calOrange, time: '11:30 – 12:10p', title: 'Lunch', duration: '40m'),
-          _CalActivityRow(color: AppColors.calOlive, time: '12:15 – 12:50p', title: 'Walk', duration: '35m'),
-          _CalActivityRow(color: AppColors.calBlue, time: '1:00 – 3:30p', title: 'Meetings + review', duration: '2h 30m', showBorder: false),
+          _CalActivityRow(
+            color: AppColors.calPurple,
+            time: '12:00 – 6:55a',
+            title: 'Sleep',
+            duration: '6h 55m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calPurple, time: '12:00 – 6:55a', title: 'Sleep', duration: '6h 55m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calGreen,
+            time: '7:00 – 7:28a',
+            title: 'Yoga',
+            duration: '28m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calGreen, time: '7:00 – 7:28a', title: 'Yoga', duration: '28m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calOrange,
+            time: '7:35 – 8:10a',
+            title: 'Breakfast',
+            duration: '35m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calOrange, time: '7:35 – 8:10a', title: 'Breakfast', duration: '35m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calBlue,
+            time: '8:15 – 11:30a',
+            title: 'Deep work — API',
+            duration: '3h 15m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calBlue, time: '8:15 – 11:30a', title: 'Deep work — API', duration: '3h 15m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calOrange,
+            time: '11:30 – 12:10p',
+            title: 'Lunch',
+            duration: '40m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calOrange, time: '11:30 – 12:10p', title: 'Lunch', duration: '40m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calOlive,
+            time: '12:15 – 12:50p',
+            title: 'Walk',
+            duration: '35m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calOlive, time: '12:15 – 12:50p', title: 'Walk', duration: '35m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calBlue,
+            time: '1:00 – 3:30p',
+            title: 'Meetings + review',
+            duration: '2h 30m',
+            showBorder: false,
+            onTap: () => _openCalendarActivity(context, color: AppColors.calBlue, time: '1:00 – 3:30p', title: 'Meetings + review', duration: '2h 30m'),
+          ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Text(
@@ -362,28 +459,40 @@ class _CalendarPageState extends State<CalendarPage> {
                   subtitle: 'Growth › Reports',
                   durationLabel: '45m',
                   done: true,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Review Q3 Analytics', subtitle: 'Growth › Reports', durationLabel: '45m'),
+                  ),
                 ),
                 TaskRowTile(
                   title: 'Reply to investors',
                   subtitle: 'Admin',
                   durationLabel: '15m',
                   done: true,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Reply to investors', subtitle: 'Admin', durationLabel: '15m'),
+                  ),
                 ),
                 TaskRowTile(
                   title: 'Draft weekly newsletter',
                   subtitle: 'Content › Newsletter',
                   durationLabel: '1h',
                   done: false,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Draft weekly newsletter', subtitle: 'Content › Newsletter', durationLabel: '1h'),
+                  ),
                 ),
                 TaskRowTile(
                   title: 'Gym: Upper Body',
                   subtitle: 'Personal › Health',
                   durationLabel: '1h 15m',
                   done: false,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Gym: Upper Body', subtitle: 'Personal › Health', durationLabel: '1h 15m'),
+                  ),
                 ),
               ],
             ),
@@ -448,13 +557,56 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
         ),
         if (_tueActivities) ...[
-          _CalActivityRow(color: AppColors.calPurple, time: '11:15p – 6:10a', title: 'Sleep', duration: '6h 55m'),
-          _CalActivityRow(color: AppColors.calGreen, time: '6:20 – 6:55a', title: 'Stretch + mobility', duration: '35m'),
-          _CalActivityRow(color: AppColors.calOrange, time: '7:00 – 7:40a', title: 'Breakfast + coffee', duration: '40m'),
-          _CalActivityRow(color: AppColors.calBlue, time: '8:00a – 12:10p', title: 'Deep work — design review', duration: '4h 10m'),
-          _CalActivityRow(color: AppColors.calOrange, time: '12:15 – 12:55p', title: 'Lunch', duration: '40m'),
-          _CalActivityRow(color: AppColors.calOlive, time: '1:00 – 1:45p', title: 'Walk', duration: '45m'),
-          _CalActivityRow(color: AppColors.calBlue, time: '2:00 – 5:30p', title: 'Meetings + email', duration: '3h 30m', showBorder: false),
+          _CalActivityRow(
+            color: AppColors.calPurple,
+            time: '11:15p – 6:10a',
+            title: 'Sleep',
+            duration: '6h 55m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calPurple, time: '11:15p – 6:10a', title: 'Sleep', duration: '6h 55m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calGreen,
+            time: '6:20 – 6:55a',
+            title: 'Stretch + mobility',
+            duration: '35m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calGreen, time: '6:20 – 6:55a', title: 'Stretch + mobility', duration: '35m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calOrange,
+            time: '7:00 – 7:40a',
+            title: 'Breakfast + coffee',
+            duration: '40m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calOrange, time: '7:00 – 7:40a', title: 'Breakfast + coffee', duration: '40m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calBlue,
+            time: '8:00a – 12:10p',
+            title: 'Deep work — design review',
+            duration: '4h 10m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calBlue, time: '8:00a – 12:10p', title: 'Deep work — design review', duration: '4h 10m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calOrange,
+            time: '12:15 – 12:55p',
+            title: 'Lunch',
+            duration: '40m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calOrange, time: '12:15 – 12:55p', title: 'Lunch', duration: '40m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calOlive,
+            time: '1:00 – 1:45p',
+            title: 'Walk',
+            duration: '45m',
+            onTap: () => _openCalendarActivity(context, color: AppColors.calOlive, time: '1:00 – 1:45p', title: 'Walk', duration: '45m'),
+          ),
+          _CalActivityRow(
+            color: AppColors.calBlue,
+            time: '2:00 – 5:30p',
+            title: 'Meetings + email',
+            duration: '3h 30m',
+            showBorder: false,
+            onTap: () => _openCalendarActivity(context, color: AppColors.calBlue, time: '2:00 – 5:30p', title: 'Meetings + email', duration: '3h 30m'),
+          ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Text(
@@ -473,28 +625,40 @@ class _CalendarPageState extends State<CalendarPage> {
                   subtitle: 'Work › Sync',
                   durationLabel: '12m',
                   done: true,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Team standup notes', subtitle: 'Work › Sync', durationLabel: '12m'),
+                  ),
                 ),
                 TaskRowTile(
                   title: 'Ship hotfix v1.2',
                   subtitle: 'Platform › Release',
                   durationLabel: '1h',
                   done: true,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Ship hotfix v1.2', subtitle: 'Platform › Release', durationLabel: '1h'),
+                  ),
                 ),
                 TaskRowTile(
                   title: 'Plan next sprint',
                   subtitle: 'Work › Roadmap',
                   durationLabel: '45m',
                   done: false,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Plan next sprint', subtitle: 'Work › Roadmap', durationLabel: '45m'),
+                  ),
                 ),
                 TaskRowTile(
                   title: 'Email contractor',
                   subtitle: 'Home › Reno',
                   durationLabel: '30m',
                   done: false,
-                  onTap: () {},
+                  onTap: () => _openTaskDetail(
+                    context,
+                    const TaskDetailArgs(title: 'Email contractor', subtitle: 'Home › Reno', durationLabel: '30m'),
+                  ),
                 ),
               ],
             ),
@@ -545,28 +709,40 @@ class _CalendarPageState extends State<CalendarPage> {
                 subtitle: 'Errands › Food',
                 durationLabel: '50m',
                 done: false,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(title: 'Farmers market run', subtitle: 'Errands › Food', durationLabel: '50m'),
+                ),
               ),
               TaskRowTile(
                 title: 'Call parents',
                 subtitle: 'Personal',
                 durationLabel: '25m',
                 done: false,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(title: 'Call parents', subtitle: 'Personal', durationLabel: '25m'),
+                ),
               ),
               TaskRowTile(
                 title: 'Movie night — pick film',
                 subtitle: 'Social · 7:30p',
                 durationLabel: '2h',
                 done: false,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(title: 'Movie night — pick film', subtitle: 'Social · 7:30p', durationLabel: '2h'),
+                ),
               ),
               TaskRowTile(
                 title: 'Tidy garage shelf',
                 subtitle: 'Home › Storage',
                 durationLabel: '35m',
                 done: false,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(title: 'Tidy garage shelf', subtitle: 'Home › Storage', durationLabel: '35m'),
+                ),
               ),
             ],
           ),
@@ -617,6 +793,7 @@ class _CalActivityRow extends StatelessWidget {
     required this.time,
     required this.title,
     required this.duration,
+    required this.onTap,
     this.showBorder = true,
   });
 
@@ -625,54 +802,61 @@ class _CalActivityRow extends StatelessWidget {
   final String title;
   final String duration;
   final bool showBorder;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        border: showBorder
-            ? const Border(bottom: BorderSide(color: AppColors.slate200, width: 0.5))
-            : null,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 4,
-            constraints: const BoxConstraints(minHeight: 18),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            border: showBorder
+                ? const Border(bottom: BorderSide(color: AppColors.slate200, width: 0.5))
+                : null,
           ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 88,
-            child: Text(
-              time,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.slate600,
-                fontFeatures: [FontFeature.tabularFigures()],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 4,
+                constraints: const BoxConstraints(minHeight: 18),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: AppColors.slate900,
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 88,
+                child: Text(
+                  time,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.slate600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.slate900,
+                  ),
+                ),
+              ),
+              Text(
+                duration,
+                style: const TextStyle(fontSize: 12, color: AppColors.slate400),
+              ),
+            ],
           ),
-          Text(
-            duration,
-            style: const TextStyle(fontSize: 12, color: AppColors.slate400),
-          ),
-        ],
+        ),
       ),
     );
   }

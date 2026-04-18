@@ -3,11 +3,25 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/nx_tab_header.dart';
 import '../../widgets/task_row_tile.dart';
+import 'task_detail_page.dart';
+import 'task_picker_page.dart';
 
 class TasksPage extends StatelessWidget {
   const TasksPage({super.key});
 
   static const _clock = '9:41 AM';
+
+  void _openPicker(BuildContext context) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const TaskPickerPage()),
+    );
+  }
+
+  void _openTaskDetail(BuildContext context, TaskDetailArgs args) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => TaskDetailPage(args: args)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +34,7 @@ class TasksPage extends StatelessWidget {
           bottomBorder: true,
           borderColor: AppColors.slate50,
           trailing: TextButton(
-            onPressed: () {},
+            onPressed: () => _openPicker(context),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.accent,
               padding: EdgeInsets.zero,
@@ -84,28 +98,56 @@ class TasksPage extends StatelessWidget {
                 subtitle: 'Growth › Reports',
                 durationLabel: '45m',
                 done: true,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(
+                    title: 'Review Q3 Analytics',
+                    subtitle: 'Growth › Reports',
+                    durationLabel: '45m',
+                  ),
+                ),
               ),
               TaskRowTile(
                 title: 'Reply to investors',
                 subtitle: 'Admin',
                 durationLabel: '15m',
                 done: true,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(
+                    title: 'Reply to investors',
+                    subtitle: 'Admin',
+                    durationLabel: '15m',
+                  ),
+                ),
               ),
               TaskRowTile(
                 title: 'Draft weekly newsletter',
                 subtitle: 'Content › Newsletter',
                 durationLabel: '1h',
                 done: false,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(
+                    title: 'Draft weekly newsletter',
+                    subtitle: 'Content › Newsletter',
+                    durationLabel: '1h',
+                  ),
+                ),
               ),
               TaskRowTile(
                 title: 'Gym: Upper Body',
                 subtitle: 'Personal › Health',
                 durationLabel: '1h 15m',
                 done: false,
-                onTap: () {},
+                onTap: () => _openTaskDetail(
+                  context,
+                  const TaskDetailArgs(
+                    title: 'Gym: Upper Body',
+                    subtitle: 'Personal › Health',
+                    durationLabel: '1h 15m',
+                  ),
+                ),
               ),
             ],
           ),

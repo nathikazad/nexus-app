@@ -1,48 +1,127 @@
 // iOS simulator integration test.
 //
-// Pumps the app, asks the iOS integration_test plugin to capture a screenshot,
-// and the companion [driver.dart] writes the PNG to `tests/screenshots/` on the host.
+// Captures PNGs for main tabs and key pushed screens; `tests/driver.dart`
+// writes files to `tests/screenshots/` on the host.
+//
+// After capture, optionally compare tab shots to design references (same folder):
+//   python3 tests/compare_tab_refs.py
+//
+// Run driver:
+//   flutter drive --driver=tests/driver.dart --target=tests/screenshot_test.dart -d <simulator_id>
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nx_time/app.dart';
+import 'package:solar_icon_pack/solar_icon_pack.dart';
+
+/// Extra settle time after [Navigator.push] so screenshots are not mid-transition.
+const _kAfterNav = Duration(milliseconds: 1100);
 
 Future<void> main() async {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Today tab — capture screenshot', (tester) async {
-    await tester.pumpWidget(const NxTimeApp());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+  group('Main tabs', () {
+    testWidgets('today_tab', (tester) async {
+      await tester.pumpWidget(const NxTimeApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
 
-    final bytes = await binding.takeScreenshot('today_tab');
-    expect(bytes, isNotEmpty);
+      final bytes = await binding.takeScreenshot('today_tab');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('tasks_tab', (tester) async {
+      await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      final bytes = await binding.takeScreenshot('tasks_tab');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('goals_tab', (tester) async {
+      await tester.pumpWidget(const NxTimeApp(initialTabIndex: 2));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      final bytes = await binding.takeScreenshot('goals_tab');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('calendar_tab', (tester) async {
+      await tester.pumpWidget(const NxTimeApp(initialTabIndex: 3));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      final bytes = await binding.takeScreenshot('calendar_tab');
+      expect(bytes, isNotEmpty);
+    });
   });
 
-  testWidgets('Tasks tab — capture screenshot', (tester) async {
-    await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+  group('Stacked screens', () {
+    testWidgets('activity_detail', (tester) async {
+      await tester.pumpWidget(const NxTimeApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
 
-    final bytes = await binding.takeScreenshot('tasks_tab');
-    expect(bytes, isNotEmpty);
-  });
+      await tester.tap(find.text('Deep sleep'));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
 
-  testWidgets('Goals tab — capture screenshot', (tester) async {
-    await tester.pumpWidget(const NxTimeApp(initialTabIndex: 2));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+      final bytes = await binding.takeScreenshot('activity_detail');
+      expect(bytes, isNotEmpty);
+    });
 
-    final bytes = await binding.takeScreenshot('goals_tab');
-    expect(bytes, isNotEmpty);
-  });
+    testWidgets('task_picker', (tester) async {
+      await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
 
-  testWidgets('Calendar tab — capture screenshot', (tester) async {
-    await tester.pumpWidget(const NxTimeApp(initialTabIndex: 3));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+      await tester.tap(find.text('+ pick more'));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
 
-    final bytes = await binding.takeScreenshot('calendar_tab');
-    expect(bytes, isNotEmpty);
+      final bytes = await binding.takeScreenshot('task_picker');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('task_detail', (tester) async {
+      await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      await tester.tap(find.text('Draft weekly newsletter'));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
+
+      final bytes = await binding.takeScreenshot('task_detail');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('ai_chat', (tester) async {
+      await tester.pumpWidget(const NxTimeApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      await tester.tap(find.byIcon(SolarLinearIcons.stars));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
+
+      final bytes = await binding.takeScreenshot('ai_chat');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('voice_overlay', (tester) async {
+      await tester.pumpWidget(const NxTimeApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      await tester.longPress(find.byIcon(SolarLinearIcons.stars));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
+
+      final bytes = await binding.takeScreenshot('voice_overlay');
+      expect(bytes, isNotEmpty);
+    });
   });
 }

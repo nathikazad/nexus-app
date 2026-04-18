@@ -3,6 +3,9 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../data/fake_today_repository.dart';
 import '../../theme/app_colors.dart';
+import '../activity/activity_detail_page.dart';
+import '../ai/ai_chat_page.dart';
+import '../ai/voice_listening_overlay.dart';
 import '../calendar/calendar_page.dart';
 import '../goals/goals_page.dart';
 import '../tasks/tasks_page.dart';
@@ -33,9 +36,19 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onAiTap() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('AI assistant — not in scope for this build.')),
+    Navigator.of(context).push<void>(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 220),
+        pageBuilder: (_, __, ___) => const AiChatPage(),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
     );
+  }
+
+  void _onAiLongPress() {
+    showVoiceListeningOverlay(context);
   }
 
   @override
@@ -49,9 +62,11 @@ class _AppShellState extends State<AppShell> {
         children: [
           TodayPage(
             snapshot: snapshot,
-            onActivityTap: (_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Activity detail — coming soon.')),
+            onActivityTap: (index) {
+              final a = snapshot.activities[index];
+              final args = activityDetailArgsForTodayRow(a, snapshot.titleLine);
+              Navigator.of(context).push<void>(
+                MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
               );
             },
             onAddManualTap: () {
@@ -69,6 +84,7 @@ class _AppShellState extends State<AppShell> {
         currentIndex: _index,
         onChanged: (i) => setState(() => _index = i),
         onAiTap: _onAiTap,
+        onAiLongPress: _onAiLongPress,
       ),
     );
   }
@@ -79,11 +95,13 @@ class _BottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onChanged,
     required this.onAiTap,
+    required this.onAiLongPress,
   });
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
   final VoidCallback onAiTap;
+  final VoidCallback onAiLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +135,7 @@ class _BottomNav extends StatelessWidget {
                     badge: true,
                   ),
                 ),
-                Expanded(child: _AiSlot(onTap: onAiTap)),
+                Expanded(child: _AiSlot(onTap: onAiTap, onLongPress: onAiLongPress)),
                 Expanded(
                   child: _NavItem(
                     label: 'Goals',
@@ -216,9 +234,10 @@ class _NavItem extends StatelessWidget {
 }
 
 class _AiSlot extends StatelessWidget {
-  const _AiSlot({required this.onTap});
+  const _AiSlot({required this.onTap, required this.onLongPress});
 
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -240,6 +259,7 @@ class _AiSlot extends StatelessWidget {
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: onTap,
+                onLongPress: onLongPress,
                 child: const SizedBox(
                   width: 48,
                   height: 48,
