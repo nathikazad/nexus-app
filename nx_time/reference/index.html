@@ -138,7 +138,11 @@
         'partials/tab-tasks.html',
         'partials/view-task-picker.html',
         'partials/view-task-detail.html',
-        'partials/tab-calendar.html'
+        'partials/tab-calendar.html',
+        'partials/page-activity-detail-deep-work.html',
+        'partials/page-activity-detail-sleep.html',
+        'partials/page-add-time-block.html',
+        'partials/page-edit-activity.html'
     ];
 
     async function loadPartials() {
@@ -156,7 +160,7 @@
 
     let historyStack = ['page-today'];
 
-    const hideNavPages = ['page-activity-detail', 'page-activity-detail-flagged', 'page-task-picker', 'page-task-detail', 'page-week', 'page-ai-chat'];
+    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-add-time-block', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-week', 'page-ai-chat'];
     const bottomNav = document.getElementById('bottom-nav');
 
     function navigate(pageId, pushToHistory = true) {

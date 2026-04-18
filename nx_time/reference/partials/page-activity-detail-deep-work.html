@@ -1,0 +1,82 @@
+    <div id="page-activity-detail-deep-work" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <div class="max-w-[375px] mx-auto w-full flex flex-col h-full min-h-0 font-sans text-slate-900">
+            <div class="flex items-center px-5 pt-12 pb-2 gap-3 shrink-0">
+                <button type="button" onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 -ml-2 text-sky-600" aria-label="Back">
+                    <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+                </button>
+                <span class="text-[15px] font-medium flex-1 text-center text-slate-900">Activity detail</span>
+                <button type="button" onclick="navigate('page-edit-activity')" class="text-[13px] text-sky-600 font-medium py-1">Edit</button>
+            </div>
+
+            <main class="flex-1 overflow-y-auto hide-scrollbar pb-8">
+                <div class="px-5 pt-2 pb-4">
+                    <div class="text-xl font-medium mb-1.5">Deep work — auth refactor</div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-[#E6F1FB] text-[#0C447C] text-xs font-medium px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
+                            <span class="inline-block w-2 h-2 rounded-full bg-[#185FA5]"></span>
+                            Work
+                        </span>
+                        <span class="text-[13px] text-[color:var(--color-text-secondary)]">Friday, Apr 17</span>
+                    </div>
+
+                    <div class="flex items-center gap-0 px-4 py-3 bg-[color:var(--color-background-secondary)] rounded-[var(--border-radius-lg)]">
+                        <div class="text-center">
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)] mb-0.5">start</div>
+                            <div class="text-lg font-medium">8:30<span class="text-[13px] font-normal text-[color:var(--color-text-secondary)]"> AM</span></div>
+                        </div>
+                        <div class="flex-1 flex items-center px-3 mt-2.5">
+                            <div class="flex-1 h-px bg-[color:var(--color-border-secondary)]"></div>
+                            <div class="px-2 py-0.5 text-[11px] text-[color:var(--color-text-tertiary)]">2h 45m</div>
+                            <div class="flex-1 h-px bg-[color:var(--color-border-secondary)]"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)] mb-0.5">end</div>
+                            <div class="text-lg font-medium">11:15<span class="text-[13px] font-normal text-[color:var(--color-text-secondary)]"> AM</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <div class="px-5 py-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[13px] font-medium">Associated tasks</span>
+                        <span class="text-xs text-[color:var(--color-text-secondary)]">2 tasks</span>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 p-2.5 bg-[color:var(--color-background-secondary)] rounded-[var(--border-radius-md)] mb-1.5 cursor-pointer">
+                        <div class="w-[18px] h-[18px] rounded border-[1.5px] border-[#185FA5] shrink-0 relative">
+                            <div class="absolute bottom-0 left-0 right-0 h-[60%] bg-[#185FA5] rounded-b-sm opacity-30"></div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[13px]">Refactor token validation</div>
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)]">Platform › Auth · in progress</div>
+                        </div>
+                        <span class="text-xs text-[color:var(--color-text-tertiary)]">▶</span>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 p-2.5 bg-[color:var(--color-background-secondary)] rounded-[var(--border-radius-md)] cursor-pointer">
+                        <div class="w-[18px] h-[18px] rounded-full bg-[#1D9E75] flex items-center justify-center shrink-0">
+                            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5l2 2 4-4" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[13px]">Review PR for auth flow</div>
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)]">Platform › Auth · done</div>
+                        </div>
+                        <span class="text-xs text-[color:var(--color-text-tertiary)]">▶</span>
+                    </div>
+
+                    <div class="text-[11px] text-[color:var(--color-text-tertiary)] mt-1.5">Tap to view task detail</div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <div class="px-5 py-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[13px] font-medium">Wearable captures</span>
+                        <button type="button" class="text-[13px] text-sky-600">View 16 photos ▶</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>

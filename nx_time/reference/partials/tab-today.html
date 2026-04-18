@@ -41,7 +41,7 @@
 
             <div class="flex flex-col gap-1 mb-8">
                 <!-- Activity Row -->
-                <div onclick="navigate('page-activity-detail', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                <div onclick="navigate('page-activity-detail-sleep', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
                     <div class="w-1 h-10 rounded-full bg-blue-400 shrink-0"></div>
                     <div class="flex-1 flex flex-col justify-center">
                         <span class="text-sm font-medium text-slate-900 leading-tight">Deep sleep</span>
@@ -61,7 +61,7 @@
                 </div>
 
                 <!-- Activity Row (Warning) -->
-                <div onclick="navigate('page-activity-detail-flagged', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer group">
+                <div onclick="navigate('page-activity-detail-deep-work', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer group">
                     <div class="w-1 h-10 rounded-full bg-green-500 shrink-0"></div>
                     <div class="flex-1 flex flex-col justify-center relative">
                         <div class="flex items-center gap-1.5">
@@ -74,7 +74,7 @@
                 </div>
 
                 <!-- Activity Row (Now) -->
-                <div class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-slate-50 ring-1 ring-slate-100 transition-colors cursor-pointer group relative overflow-hidden">
+                <div onclick="navigate('page-activity-detail-deep-work', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-slate-50 ring-1 ring-slate-100 transition-colors cursor-pointer group relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316]"></div>
                     <div class="w-1 h-10 shrink-0 ml-1"></div>
                     <div class="flex-1 flex flex-col justify-center">
@@ -86,7 +86,7 @@
             </div>
 
             <!-- Add Button -->
-            <button class="w-full py-3.5 flex items-center justify-center gap-2 rounded-xl border border-slate-200 border-dashed text-sm font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all">
+            <button type="button" onclick="navigate('page-add-time-block', true)" class="w-full py-3.5 flex items-center justify-center gap-2 rounded-xl border border-slate-200 border-dashed text-sm font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all">
                 <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
                 Add time block manually
             </button>
