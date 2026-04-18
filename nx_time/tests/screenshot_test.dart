@@ -6,6 +6,9 @@
 // After capture, optionally compare tab shots to design references (same folder):
 //   python3 tests/compare_tab_refs.py
 //
+// Activity detail / add time block / edit activity (HTML refs in tests/ref_capture/):
+//   python3 tests/compare_activity_refs.py
+//
 // Run driver:
 //   flutter drive --driver=tests/driver.dart --target=tests/screenshot_test.dart -d <simulator_id>
 
@@ -24,7 +27,7 @@ Future<void> main() async {
     testWidgets('today_tab', (tester) async {
       await tester.pumpWidget(const NxTimeApp());
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       final bytes = await binding.takeScreenshot('today_tab');
       expect(bytes, isNotEmpty);
@@ -33,7 +36,7 @@ Future<void> main() async {
     testWidgets('tasks_tab', (tester) async {
       await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       final bytes = await binding.takeScreenshot('tasks_tab');
       expect(bytes, isNotEmpty);
@@ -42,7 +45,7 @@ Future<void> main() async {
     testWidgets('goals_tab', (tester) async {
       await tester.pumpWidget(const NxTimeApp(initialTabIndex: 2));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       final bytes = await binding.takeScreenshot('goals_tab');
       expect(bytes, isNotEmpty);
@@ -51,7 +54,7 @@ Future<void> main() async {
     testWidgets('calendar_tab', (tester) async {
       await tester.pumpWidget(const NxTimeApp(initialTabIndex: 3));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       final bytes = await binding.takeScreenshot('calendar_tab');
       expect(bytes, isNotEmpty);
@@ -62,7 +65,7 @@ Future<void> main() async {
     testWidgets('activity_detail', (tester) async {
       await tester.pumpWidget(const NxTimeApp());
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       await tester.tap(find.text('Deep sleep'));
       await tester.pump();
@@ -72,10 +75,40 @@ Future<void> main() async {
       expect(bytes, isNotEmpty);
     });
 
+    testWidgets('add_time_block', (tester) async {
+      await tester.pumpWidget(const NxTimeApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1500));
+
+      await tester.tap(find.text('Add time block manually'));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
+
+      final bytes = await binding.takeScreenshot('add_time_block');
+      expect(bytes, isNotEmpty);
+    });
+
+    testWidgets('edit_activity', (tester) async {
+      await tester.pumpWidget(const NxTimeApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1500));
+
+      await tester.tap(find.text('Platform › Sprint review'));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
+
+      await tester.tap(find.text('Edit'));
+      await tester.pump();
+      await tester.pump(_kAfterNav);
+
+      final bytes = await binding.takeScreenshot('edit_activity');
+      expect(bytes, isNotEmpty);
+    });
+
     testWidgets('task_picker', (tester) async {
       await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       await tester.tap(find.text('+ pick more'));
       await tester.pump();
@@ -88,7 +121,7 @@ Future<void> main() async {
     testWidgets('task_detail', (tester) async {
       await tester.pumpWidget(const NxTimeApp(initialTabIndex: 1));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       await tester.tap(find.text('Draft weekly newsletter'));
       await tester.pump();
@@ -101,7 +134,7 @@ Future<void> main() async {
     testWidgets('ai_chat', (tester) async {
       await tester.pumpWidget(const NxTimeApp());
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       await tester.tap(find.byIcon(SolarLinearIcons.stars));
       await tester.pump();
@@ -114,7 +147,7 @@ Future<void> main() async {
     testWidgets('voice_overlay', (tester) async {
       await tester.pumpWidget(const NxTimeApp());
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
 
       await tester.longPress(find.byIcon(SolarLinearIcons.stars));
       await tester.pump();

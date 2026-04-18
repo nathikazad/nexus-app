@@ -11,6 +11,9 @@ abstract final class AppColors {
   static const Color slate600 = Color(0xFF475569);
   static const Color slate900 = Color(0xFF0F172A);
 
+  /// Reference link / header actions (Tailwind sky-600).
+  static const Color sky600 = Color(0xFF0284C7);
+
   static const Color accent = Color(0xFFF97316);
   static const Color accentLight = Color(0xFFFFEDD5);
   static const Color accentHover = Color(0xFFFB923C);

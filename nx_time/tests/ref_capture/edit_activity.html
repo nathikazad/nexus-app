@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>body { font-family: Inter, sans-serif; }</style>
+</head>
+<body class="bg-white text-slate-900 antialiased m-0">
+  <div class="h-[59px] bg-white w-full"></div>
+  <div class="max-w-[375px] mx-auto relative min-h-[844px]">
+    <div class="flex items-center px-5 pt-2 pb-2 gap-3 z-10 bg-white relative">
+      <span class="text-sm text-sky-600 font-medium">Cancel</span>
+      <span class="text-[15px] font-medium flex-1 text-center">Edit activity</span>
+      <span class="text-sm text-sky-600 font-medium">Save</span>
+    </div>
+    <div class="px-5 py-3">
+      <div class="text-[13px] font-medium mb-1.5">Name</div>
+      <div class="px-3 py-2.5 border border-slate-200 rounded-[10px] text-sm">Deep work — auth refactor</div>
+    </div>
+    <div class="px-5 pb-3">
+      <div class="text-[13px] font-medium mb-1.5">Category</div>
+      <div class="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-[10px]">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#185FA5]"></span>
+        <span class="text-sm flex-1">Work</span>
+        <span class="text-xs text-slate-400">Change ▶</span>
+      </div>
+    </div>
+    <div class="px-5 pb-3 flex gap-2.5">
+      <div class="flex-1">
+        <div class="text-[13px] font-medium mb-1.5">Start time</div>
+        <div class="px-3 py-2.5 border border-slate-200 rounded-[10px] text-sm text-center">8:30 AM</div>
+      </div>
+      <div class="flex-1">
+        <div class="text-[13px] font-medium mb-1.5">End time</div>
+        <div class="px-3 py-2.5 border border-slate-200 rounded-[10px] text-sm text-center">11:15 AM</div>
+      </div>
+    </div>
+    <div class="h-px bg-slate-100 mx-5"></div>
+    <div class="px-5 py-3">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-[13px] font-medium">Associated tasks</span>
+        <span class="text-xs text-sky-600 font-medium">+ Add task</span>
+      </div>
+      <div class="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-[10px] mb-1.5">
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px]">Refactor token validation</div>
+          <div class="text-[11px] text-slate-400">Platform › Auth</div>
+        </div>
+        <span class="text-xs text-red-600">Remove</span>
+      </div>
+      <div class="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-[10px]">
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px]">Review PR for auth flow</div>
+          <div class="text-[11px] text-slate-400">Platform › Auth</div>
+        </div>
+        <span class="text-xs text-red-600">Remove</span>
+      </div>
+    </div>
+    <div class="h-px bg-slate-100 mx-5"></div>
+    <div class="px-5 py-3">
+      <div class="text-[13px] font-medium mb-1.5">Notes</div>
+      <div class="px-3 py-2.5 border border-slate-200 rounded-[10px] min-h-16 text-[13px] text-slate-500 leading-relaxed">
+        Finished the main token refresh logic. Still need to wire up the revocation endpoint.
+      </div>
+    </div>
+    <div class="h-px bg-slate-100 mx-5"></div>
+    <div class="px-5 py-4">
+      <div class="py-3 border border-red-200 rounded-[10px] text-center text-sm text-red-600">Delete activity</div>
+    </div>
+    <div class="absolute inset-x-0 top-[52px] bottom-0 bg-black/35 flex flex-col justify-end pointer-events-none">
+      <div class="bg-white rounded-t-2xl px-5 pt-3 pb-6 pointer-events-auto">
+        <div class="w-9 h-1 rounded-full bg-slate-200 mx-auto mb-3"></div>
+        <div class="text-[15px] font-medium mb-2.5">Select category</div>
+        <div class="px-3 py-2 border border-slate-200 rounded-[10px] text-sm text-slate-400 mb-3">Search categories...</div>
+        <div class="flex flex-col gap-0.5 max-h-[420px] overflow-y-auto">
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#534AB7]"></span><span class="text-sm">Sleep</span></div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px] bg-[#E6F1FB]">
+            <span class="w-3 h-3 rounded-full bg-[#185FA5]"></span>
+            <span class="text-sm font-medium text-[#0C447C]">Work</span>
+            <svg width="14" height="14" class="ml-auto" viewBox="0 0 14 14"><path d="M3 7l3 3 5-5" fill="none" stroke="#0C447C" stroke-width="1.5"/></svg>
+          </div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#1D9E75]"></span><span class="text-sm">Yoga</span></div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#D85A30]"></span><span class="text-sm">Eat</span></div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#D4537E]"></span><span class="text-sm">Shopping</span></div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#639922]"></span><span class="text-sm">Workout</span></div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#888780]"></span><span class="text-sm">Commute</span></div>
+          <div class="flex items-center gap-2.5 px-2 py-2.5 rounded-[10px]"><span class="w-3 h-3 rounded-full bg-[#BA7517]"></span><span class="text-sm">Reading</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

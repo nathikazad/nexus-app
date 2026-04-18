@@ -3,7 +3,9 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../data/fake_today_repository.dart';
 import '../../theme/app_colors.dart';
+import '../activity/activity_detail_models.dart';
 import '../activity/activity_detail_page.dart';
+import '../activity/add_time_block_page.dart';
 import '../ai/ai_chat_page.dart';
 import '../ai/voice_listening_overlay.dart';
 import '../calendar/calendar_page.dart';
@@ -70,8 +72,10 @@ class _AppShellState extends State<AppShell> {
               );
             },
             onAddManualTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Add time block — coming soon.')),
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AddTimeBlockPage(),
+                ),
               );
             },
           ),

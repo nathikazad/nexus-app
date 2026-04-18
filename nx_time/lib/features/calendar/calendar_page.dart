@@ -5,6 +5,7 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/nx_tab_header.dart';
 import '../../widgets/task_row_tile.dart';
+import '../activity/activity_detail_models.dart';
 import '../activity/activity_detail_page.dart';
 import '../tasks/task_detail_page.dart';
 
@@ -310,18 +311,6 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
-  String _categoryForCalendarTitle(String title) {
-    final t = title.toLowerCase();
-    if (t.contains('sleep')) return 'Sleep';
-    if (t.contains('yoga') || t.contains('stretch')) return 'Exercise';
-    if (t.contains('breakfast') || t.contains('lunch') || t.contains('coffee')) return 'Eat';
-    if (t.contains('walk')) return 'Outdoors';
-    if (t.contains('deep work') || t.contains('meeting') || t.contains('email') || t.contains('design')) {
-      return 'Work';
-    }
-    return 'Activity';
-  }
-
   void _openCalendarActivity(
     BuildContext context, {
     required Color color,
@@ -330,15 +319,14 @@ class _CalendarPageState extends State<CalendarPage> {
     required String duration,
   }) {
     Navigator.of(context).push<void>(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => ActivityDetailPage(
-          args: ActivityDetailArgs(
+          args: activityDetailArgsForCalendarRow(
             title: title,
-            categoryLabel: _categoryForCalendarTitle(title),
-            accentColor: color,
-            dateLabel: _calendarDateLabelForSelection(),
             timeRangeLabel: time,
             durationLabel: duration,
+            dateLabel: _calendarDateLabelForSelection(),
+            barColor: color,
           ),
         ),
       ),
