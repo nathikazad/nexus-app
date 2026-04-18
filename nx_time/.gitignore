@@ -1,0 +1,11 @@
+.dart_tool/
+.packages
+build/
+.pub-cache/
+.pub/
+*.iml
+.idea/
+*.lock
+
+# Integration test / drive screenshots
+tests/screenshots/
