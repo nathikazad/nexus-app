@@ -1,0 +1,38 @@
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        iconify-icon { stroke-width: 1.5; }
+        /* Goals tab — compact dots + rows (matches goals_tab_with_sleep_bar.html) */
+        .g-row { padding: 12px 0; border-bottom: 0.5px solid #e2e8f0; }
+        .g-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+        .gd { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; }
+        .gd-ok { background: #1D9E75; }
+        .gd-miss { background: #E24B4A; }
+        .gd-pend { border: 1.5px solid #e2e8f0; background: transparent; }
+        .gd-today-ok { background: #1D9E75; border: 2px solid #0f172a; }
+        .gd-today-miss { background: #E24B4A; border: 2px solid #0f172a; }
+        .gd-today-prog { background: #BA7517; border: 2px solid #0f172a; }
+        .g-days { display: flex; gap: 4px; margin-top: 2px; }
+        .g-days span { width: 12px; text-align: center; font-size: 9px; color: #94a3b8; line-height: 1; }
+        /* Calendar (dense list — matches calendar_past_week.html) */
+        .cal-act-row { display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-bottom: 0.5px solid #e2e8f0; cursor: pointer; }
+        .cal-color { width: 4px; border-radius: 2px; align-self: stretch; min-height: 18px; flex-shrink: 0; }
+        
+        /* App Container for Desktop Preview */
+        #app-container {
+            width: 100%;
+            height: 100dvh;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        @media (min-width: 640px) {
+            #app-container {
+                max-width: 400px;
+                height: 850px;
+                max-height: 95vh;
+                border-radius: 40px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+                border: 8px solid #0f172a;
+            }
+        }

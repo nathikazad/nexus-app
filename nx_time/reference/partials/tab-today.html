@@ -1,0 +1,94 @@
+    <div id="page-today" class="page flex flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-5 pt-12 pb-4">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Today — Thu, Oct 26</h1>
+            <button class="text-slate-500 hover:text-slate-900 transition-colors">
+                <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+
+        <main class="flex-1 overflow-y-auto hide-scrollbar px-5 pb-24">
+            <!-- Time Map Bar -->
+            <div class="relative w-full h-9 rounded-full bg-slate-100 flex overflow-hidden mb-3">
+                <div class="h-full bg-blue-400" style="width: 32%;"></div>
+                <div class="h-full bg-slate-300" style="width: 5%;"></div>
+                <div class="h-full bg-green-500" style="width: 8%;"></div>
+                <div class="h-full bg-slate-300" style="width: 5%;"></div>
+                <div class="h-full bg-[#F97316]" style="width: 25%;"></div>
+                <!-- Current Time Marker -->
+                <div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 shadow-sm z-10" style="left: 75%;"></div>
+                
+                <!-- Week View Link -->
+                <button onclick="navigate('page-week')" class="absolute -top-6 right-0 text-xs font-medium text-slate-500 hover:text-slate-900">week view ↗</button>
+            </div>
+
+            <!-- Color Legend -->
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8">
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-blue-400"></div><span class="text-xs text-slate-500 font-medium">Sleep</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-[#F97316]"></div><span class="text-xs text-slate-500 font-medium">Work</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-green-500"></div><span class="text-xs text-slate-500 font-medium">Exercise</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-yellow-400"></div><span class="text-xs text-slate-500 font-medium">Eat/Cook</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-teal-500"></div><span class="text-xs text-slate-500 font-medium">Outdoors</span></div>
+                <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-[2px] bg-slate-300"></div><span class="text-xs text-slate-500 font-medium">Routine</span></div>
+            </div>
+
+            <!-- Activities List -->
+            <div class="flex items-center justify-between mb-4 mt-2">
+                <h2 class="text-lg font-medium tracking-tight">Activities</h2>
+                <span class="text-xs text-slate-500 font-medium">12 blocks</span>
+            </div>
+
+            <div class="flex flex-col gap-1 mb-8">
+                <!-- Activity Row -->
+                <div onclick="navigate('page-activity-detail', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-1 h-10 rounded-full bg-blue-400 shrink-0"></div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <span class="text-sm font-medium text-slate-900 leading-tight">Deep sleep</span>
+                        <span class="text-xs text-slate-500 mt-0.5">11:30p – 7:15a</span>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">7h 45m</div>
+                </div>
+
+                <!-- Activity Row -->
+                <div class="flex items-center gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-1 h-10 rounded-full bg-slate-300 shrink-0"></div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <span class="text-sm font-medium text-slate-900 leading-tight">Morning prep</span>
+                        <span class="text-xs text-slate-500 mt-0.5">7:15a – 8:00a</span>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">45m</div>
+                </div>
+
+                <!-- Activity Row (Warning) -->
+                <div onclick="navigate('page-activity-detail-flagged', true)" class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer group">
+                    <div class="w-1 h-10 rounded-full bg-green-500 shrink-0"></div>
+                    <div class="flex-1 flex flex-col justify-center relative">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-medium text-orange-600 leading-tight">Morning Run</span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                        </div>
+                        <span class="text-xs text-slate-500 mt-0.5">8:00a – 9:15a</span>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h 15m</div>
+                </div>
+
+                <!-- Activity Row (Now) -->
+                <div class="flex items-center gap-3 p-3 -mx-3 rounded-2xl bg-slate-50 ring-1 ring-slate-100 transition-colors cursor-pointer group relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316]"></div>
+                    <div class="w-1 h-10 shrink-0 ml-1"></div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <span class="text-sm font-medium text-slate-900 leading-tight">Platform › Sprint review</span>
+                        <span class="text-xs text-slate-500 mt-0.5">9:45a – <span class="text-[#F97316] font-medium">now</span></span>
+                    </div>
+                    <div class="text-xs font-medium text-[#F97316] bg-orange-100 px-2 py-1 rounded-md tracking-tight">00:32:14</div>
+                </div>
+            </div>
+
+            <!-- Add Button -->
+            <button class="w-full py-3.5 flex items-center justify-center gap-2 rounded-xl border border-slate-200 border-dashed text-sm font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all">
+                <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
+                Add time block manually
+            </button>
+        </main>
+    </div>

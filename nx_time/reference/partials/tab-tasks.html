@@ -1,0 +1,66 @@
+    <div id="page-tasks" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <header class="flex items-center justify-between px-5 pt-12 pb-4 border-b border-slate-50">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Tasks — Thu, Oct 26</h1>
+            <button onclick="navigate('page-task-picker', true)" class="text-sm font-medium text-[#F97316] hover:text-[#FB923C] transition-colors">
+                + pick more
+            </button>
+        </header>
+
+        <!-- Summary Chips -->
+        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar px-5 py-3 border-b border-slate-100">
+            <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 whitespace-nowrap">4 Total</div>
+            <div class="px-3 py-1 rounded-full bg-green-50 border border-green-100 text-xs font-medium text-green-700 whitespace-nowrap">2 Done</div>
+            <div class="px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-xs font-medium text-slate-500 whitespace-nowrap">2 Todo</div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto px-5 pt-4 pb-24">
+            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-medium mb-4 text-center">swipe right = done • long press to reorder</p>
+
+            <div class="flex flex-col gap-1">
+                <!-- Task Row (Done) -->
+                <div onclick="navigate('page-task-detail', true)" class="flex items-start gap-3 p-3 -mx-3 rounded-2xl opacity-50 cursor-pointer">
+                    <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                        <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900 line-through">Review Q3 Analytics</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Growth › Reports</div>
+                    </div>
+                    <div class="text-xs text-slate-400">45m</div>
+                </div>
+
+                <!-- Task Row (Done) -->
+                <div class="flex items-start gap-3 p-3 -mx-3 rounded-2xl opacity-50 cursor-pointer">
+                    <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                        <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900 line-through">Reply to investors</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Admin</div>
+                    </div>
+                    <div class="text-xs text-slate-400">15m</div>
+                </div>
+
+                <!-- Task Row (Todo) -->
+                <div onclick="navigate('page-task-detail', true)" class="flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900">Draft weekly newsletter</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Content › Newsletter</div>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h</div>
+                </div>
+
+                <!-- Task Row (Todo) -->
+                <div class="flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-slate-900">Gym: Upper Body</span>
+                        <div class="text-xs text-slate-500 mt-0.5">Personal › Health</div>
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">1h 15m</div>
+                </div>
+            </div>
+        </main>
+    </div>

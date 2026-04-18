@@ -1,0 +1,179 @@
+    <div id="page-goals" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-5 pt-12 pb-4">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-medium tracking-tight text-slate-900">Goals</h1>
+            <button class="text-slate-500 hover:text-slate-900 transition-colors">
+                <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+
+        <!-- Summary chips (matches goals_tab_with_sleep_bar.html) -->
+        <div class="px-5 pb-2 border-b border-slate-100">
+            <div class="flex flex-wrap gap-2">
+                <div class="bg-slate-100 rounded-2xl px-3 py-1 text-xs">
+                    <span class="font-medium text-[#0F6E56]">5</span> <span class="text-slate-600">on track</span>
+                </div>
+                <div class="bg-slate-100 rounded-2xl px-3 py-1 text-xs">
+                    <span class="font-medium text-[#BA7517]">2</span> <span class="text-slate-600">at risk</span>
+                </div>
+                <div class="bg-slate-100 rounded-2xl px-3 py-1 text-xs">
+                    <span class="font-medium text-[#A32D2D]">1</span> <span class="text-slate-600">missed</span>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto px-5 pb-24">
+
+            <div class="pt-2.5 pb-1">
+                <span class="text-xs font-medium text-slate-600">Daily goals</span>
+            </div>
+
+            <!-- Wake up before 7am -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Wake up before 7am</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">6:48 today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-today-ok"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+
+            <!-- Sleep by 11pm -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Sleep by 11pm</span>
+                    <span class="text-xs font-medium text-[#A32D2D]">11:42 last night</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-today-miss"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+
+            <!-- Sleep 8 hours -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Sleep 8 hours</span>
+                    <span class="text-xs font-medium text-[#A32D2D]">6h 50m today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-today-miss"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                <div class="text-[11px] text-slate-500 mt-1.5">Today: 6h 50m of 8h</div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#E24B4A]" style="width: 85%;"></div>
+                </div>
+            </div>
+
+            <!-- Yoga every day -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Yoga every day</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">32m today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-today-ok"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+
+            <!-- Theology reading -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Theology reading 1hr / day</span>
+                    <span class="text-xs font-medium text-[#BA7517]">35m today</span>
+                </div>
+                <div class="g-dots">
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-miss"></div>
+                    <div class="gd gd-ok"></div>
+                    <div class="gd gd-today-prog"></div>
+                    <div class="gd gd-pend"></div>
+                </div>
+                <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                <div class="text-[11px] text-slate-500 mt-1.5">Today: 35m of 60m — still in progress</div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#BA7517]" style="width: 58%;"></div>
+                </div>
+            </div>
+
+            <div class="pt-3.5 pb-1">
+                <span class="text-xs font-medium text-slate-600">Weekly goals</span>
+            </div>
+
+            <!-- Gym 3x / week -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Gym 3x / week</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">2 of 3</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <div class="flex gap-1">
+                        <div class="w-[18px] h-[18px] rounded-full bg-[#1D9E75] flex items-center justify-center shrink-0">
+                            <iconify-icon icon="solar:check-read-linear" class="text-[10px] text-white"></iconify-icon>
+                        </div>
+                        <div class="w-[18px] h-[18px] rounded-full bg-[#1D9E75] flex items-center justify-center shrink-0">
+                            <iconify-icon icon="solar:check-read-linear" class="text-[10px] text-white"></iconify-icon>
+                        </div>
+                        <div class="w-[18px] h-[18px] rounded-full border-[1.5px] border-slate-200 shrink-0 box-border"></div>
+                    </div>
+                    <span class="text-[11px] text-slate-500">2 days left in week</span>
+                </div>
+            </div>
+
+            <!-- Language learning -->
+            <div class="g-row">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Language learning 3hrs / week</span>
+                    <span class="text-xs font-medium text-[#0F6E56]">2h 15m</span>
+                </div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#1D9E75]" style="width: 75%;"></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-1.5">2h 15m of 3h — 45m remaining, 2 days left</div>
+            </div>
+
+            <!-- Dancing -->
+            <div class="g-row border-b-0">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-sm font-medium text-slate-900">Dancing 3hrs / week</span>
+                    <span class="text-xs font-medium text-[#BA7517]">45m</span>
+                </div>
+                <div class="h-1 w-full bg-slate-200 rounded-sm mt-1 overflow-hidden">
+                    <div class="h-full rounded-sm bg-[#BA7517]" style="width: 25%;"></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-1.5">45m of 3h — 2h 15m remaining, 2 days left</div>
+            </div>
+
+        </main>
+    </div>

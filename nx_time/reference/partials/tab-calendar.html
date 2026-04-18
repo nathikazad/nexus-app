@@ -1,0 +1,340 @@
+    <div id="page-calendar" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-10 transition-opacity duration-300">
+        <header class="flex items-center justify-between px-5 pt-12 pb-2">
+            <span class="text-sm font-medium text-slate-500">9:41 AM</span>
+            <h1 class="text-base font-medium tracking-tight text-slate-900">Calendar</h1>
+            <button class="text-slate-500 hover:text-slate-900 transition-colors" type="button">
+                <iconify-icon icon="solar:settings-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+
+        <!-- Week Nav (compact) -->
+        <div class="flex items-center justify-between px-5 py-1.5">
+            <button type="button" class="p-1.5 text-sky-600 hover:text-slate-900 rounded-full hover:bg-slate-50 -ml-2">
+                <iconify-icon icon="solar:alt-arrow-left-linear" class="text-base"></iconify-icon>
+            </button>
+            <span class="text-[15px] font-medium text-slate-900">Apr 13 – 19</span>
+            <button type="button" class="p-1.5 text-sky-600 hover:text-slate-900 rounded-full hover:bg-slate-50 -mr-2">
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-base"></iconify-icon>
+            </button>
+        </div>
+
+        <main class="flex-1 overflow-y-auto hide-scrollbar pb-24">
+
+            <!-- Week bar chart: fixed height, 6px gaps, 7 days -->
+            <div class="px-5 pt-1.5 pb-0 flex gap-1.5 h-40">
+                <!-- Mon -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:30%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:3%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:30%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:8%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">M</div>
+                </div>
+                <!-- Tue (clickable; selection toggles with Wed) -->
+                <div class="flex-1 flex flex-col h-full min-h-0 cursor-pointer select-none" role="button" tabindex="0" onclick="selectCalendarDay('tue')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCalendarDay('tue');}" aria-label="Select Tuesday">
+                    <div id="cal-bar-tue" class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:33%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:28%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:12%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div id="cal-label-tue" class="text-[10px] text-center text-slate-400 mt-0.5">T</div>
+                </div>
+                <!-- Wed (clickable; default selected) -->
+                <div class="flex-1 flex flex-col h-full min-h-0 cursor-pointer select-none" role="button" tabindex="0" onclick="selectCalendarDay('wed')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCalendarDay('wed');}" aria-label="Select Wednesday">
+                    <div id="cal-bar-wed" class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border-[1.5px] border-slate-900">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:29%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:3%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:25%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#639922]" style="height:6%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:10%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div id="cal-label-wed" class="text-[10px] text-center font-medium text-slate-900 mt-0.5">W</div>
+                </div>
+                <!-- Thu -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:32%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:30%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:3%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-[#888780]/30"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">T</div>
+                </div>
+                <!-- Fri -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0 rounded overflow-hidden border border-slate-200">
+                        <div class="w-full shrink-0 bg-[#534AB7]" style="height:29%"></div>
+                        <div class="w-full shrink-0 bg-[#1D9E75]" style="height:2%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:17%"></div>
+                        <div class="w-full shrink-0 bg-[#D85A30]" style="height:4%"></div>
+                        <div class="w-full shrink-0 bg-[#185FA5]" style="height:8%"></div>
+                        <div class="w-full shrink-0 bg-[#639922]" style="height:3%"></div>
+                        <div class="w-full flex-1 min-h-0 bg-slate-100"></div>
+                    </div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">F</div>
+                </div>
+                <!-- Sat (clickable) -->
+                <div class="flex-1 flex flex-col h-full min-h-0 cursor-pointer select-none" role="button" tabindex="0" onclick="selectCalendarDay('sat')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCalendarDay('sat');}" aria-label="Select Saturday">
+                    <div id="cal-bar-sat" class="flex-1 rounded overflow-hidden border border-dashed border-slate-200 bg-slate-100 min-h-0"></div>
+                    <div id="cal-label-sat" class="text-[10px] text-center text-slate-400 mt-0.5">S</div>
+                </div>
+                <!-- Sun -->
+                <div class="flex-1 flex flex-col h-full min-h-0">
+                    <div class="flex-1 rounded overflow-hidden border border-dashed border-slate-200 bg-slate-100 min-h-0"></div>
+                    <div class="text-[10px] text-center text-slate-400 mt-0.5">S</div>
+                </div>
+            </div>
+
+            <div class="h-px bg-slate-200 mx-5 mt-2"></div>
+
+            <!-- ========== Wednesday (default): Activities + Tasks switcher ========== -->
+            <div id="cal-panel-wed" class="cal-day-panel flex flex-col">
+                <div class="px-5 pt-2.5 pb-1.5 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
+                    <h2 class="text-sm font-medium text-slate-900">Wednesday, Apr 15</h2>
+                    <div class="flex gap-1">
+                        <button type="button" onclick="toggleCalView('activities','wed')" id="cal-wed-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Activities</button>
+                        <button type="button" onclick="toggleCalView('tasks','wed')" id="cal-wed-toggle-tsk" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors">Tasks</button>
+                    </div>
+                </div>
+                <div id="cal-wed-activities" class="flex flex-col">
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#534AB7]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">12:00 – 6:55a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Sleep</span>
+                        <span class="text-xs text-slate-400 shrink-0">6h 55m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#1D9E75]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">7:00 – 7:28a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Yoga</span>
+                        <span class="text-xs text-slate-400 shrink-0">28m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#D85A30]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">7:35 – 8:10a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Breakfast</span>
+                        <span class="text-xs text-slate-400 shrink-0">35m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#185FA5]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">8:15 – 11:30a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Deep work — API</span>
+                        <span class="text-xs text-slate-400 shrink-0">3h 15m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#D85A30]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">11:30 – 12:10p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Lunch</span>
+                        <span class="text-xs text-slate-400 shrink-0">40m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#639922]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">12:15 – 12:50p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Walk</span>
+                        <span class="text-xs text-slate-400 shrink-0">35m</span>
+                    </div>
+                    <div class="cal-act-row border-b-0 hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#185FA5]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">1:00 – 3:30p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Meetings + review</span>
+                        <span class="text-xs text-slate-400 shrink-0">2h 30m</span>
+                    </div>
+                </div>
+                <p id="cal-wed-hint" class="px-5 py-1.5 text-[11px] text-slate-400 text-center">tap any row to view activity detail</p>
+                <div id="cal-wed-tasks" class="hidden flex-col px-5 gap-0.5 py-2">
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl opacity-50 cursor-pointer">
+                        <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                            <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 line-through">Review Q3 Analytics</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Growth › Reports</div>
+                        </div>
+                        <div class="text-xs text-slate-400">45m</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl opacity-50 cursor-pointer">
+                        <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                            <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 line-through">Reply to investors</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Admin</div>
+                        </div>
+                        <div class="text-xs text-slate-400">15m</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Draft weekly newsletter</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Content › Newsletter</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">1h</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Gym: Upper Body</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Personal › Health</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">1h 15m</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== Tuesday: completed day — full activities + mixed tasks ========== -->
+            <div id="cal-panel-tue" class="cal-day-panel hidden flex-col">
+                <div class="px-5 pt-2.5 pb-1.5 sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 class="text-sm font-medium text-slate-900">Tuesday, Apr 14</h2>
+                            <p class="text-[11px] text-emerald-600 font-medium mt-0.5">Day complete</p>
+                        </div>
+                        <div class="flex gap-1 shrink-0">
+                            <button type="button" onclick="toggleCalView('activities','tue')" id="cal-tue-toggle-act" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-900 text-white">Activities</button>
+                            <button type="button" onclick="toggleCalView('tasks','tue')" id="cal-tue-toggle-tsk" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors">Tasks</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="cal-tue-activities" class="flex flex-col">
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#534AB7]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">11:15p – 6:10a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Sleep</span>
+                        <span class="text-xs text-slate-400 shrink-0">6h 55m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#1D9E75]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">6:20 – 6:55a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Stretch + mobility</span>
+                        <span class="text-xs text-slate-400 shrink-0">35m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#D85A30]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">7:00 – 7:40a</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Breakfast + coffee</span>
+                        <span class="text-xs text-slate-400 shrink-0">40m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#185FA5]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">8:00a – 12:10p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Deep work — design review</span>
+                        <span class="text-xs text-slate-400 shrink-0">4h 10m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#D85A30]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">12:15 – 12:55p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Lunch</span>
+                        <span class="text-xs text-slate-400 shrink-0">40m</span>
+                    </div>
+                    <div class="cal-act-row hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#639922]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">1:00 – 1:45p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Walk</span>
+                        <span class="text-xs text-slate-400 shrink-0">45m</span>
+                    </div>
+                    <div class="cal-act-row border-b-0 hover:bg-slate-50/80 transition-colors">
+                        <div class="cal-color bg-[#185FA5]"></div>
+                        <span class="text-xs text-slate-600 min-w-[85px] shrink-0 tabular-nums">2:00 – 5:30p</span>
+                        <span class="text-[13px] text-slate-900 flex-1 min-w-0">Meetings + email</span>
+                        <span class="text-xs text-slate-400 shrink-0">3h 30m</span>
+                    </div>
+                </div>
+                <p id="cal-tue-hint" class="px-5 py-1.5 text-[11px] text-slate-400 text-center">tap any row to view activity detail</p>
+                <div id="cal-tue-tasks" class="hidden flex-col px-5 gap-0.5 py-2">
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl opacity-50 cursor-pointer">
+                        <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                            <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 line-through">Team standup notes</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Work › Sync</div>
+                        </div>
+                        <div class="text-xs text-slate-400">12m</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl opacity-50 cursor-pointer">
+                        <div class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-white">
+                            <iconify-icon icon="solar:check-read-linear" class="text-xs"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900 line-through">Ship hotfix v1.2</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Platform › Release</div>
+                        </div>
+                        <div class="text-xs text-slate-400">1h</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Plan next sprint</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Work › Roadmap</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">45m</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Email contractor</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Home › Reno</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">30m</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== Saturday: tasks only, no Activities/Tasks switcher ========== -->
+            <div id="cal-panel-sat" class="cal-day-panel hidden flex-col">
+                <div class="px-5 pt-2.5 pb-1.5 sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
+                    <h2 class="text-sm font-medium text-slate-900">Saturday, Apr 18</h2>
+                    <p class="text-xs text-slate-500 mt-1 font-medium">Tasks</p>
+                </div>
+                <div id="cal-sat-tasks" class="flex flex-col px-5 gap-0.5 py-3 pb-6">
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Farmers market run</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Errands › Food</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">50m</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Call parents</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Personal</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">25m</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Movie night — pick film</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Social · 7:30p</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">2h</div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-slate-400 transition-colors"></div>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-slate-900">Tidy garage shelf</span>
+                            <div class="text-xs text-slate-500 mt-0.5">Home › Storage</div>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">35m</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>

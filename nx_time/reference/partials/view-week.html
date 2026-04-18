@@ -1,0 +1,72 @@
+    <div id="page-week" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <header class="flex items-center justify-between px-5 pt-12 pb-4 border-b border-slate-100">
+            <button onclick="navigate('page-today')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <h1 class="text-base font-medium tracking-tight text-slate-900">Week of Oct 23</h1>
+            <div class="flex gap-1 -mr-2">
+                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-400">
+                    <iconify-icon icon="solar:alt-arrow-left-linear" class="text-lg"></iconify-icon>
+                </button>
+                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-600">
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-lg"></iconify-icon>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-5 py-6">
+            <!-- Vertical Bars Chart -->
+            <div class="flex items-end justify-between h-[35vh] gap-2 mb-4">
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-[90%] rounded-md overflow-hidden bg-slate-50">
+                        <div class="w-full bg-[#F97316]" style="height: 40%"></div>
+                        <div class="w-full bg-slate-300" style="height: 10%"></div>
+                        <div class="w-full bg-blue-400" style="height: 30%"></div>
+                    </div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">M</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-[85%] rounded-md overflow-hidden bg-slate-50">
+                        <div class="w-full bg-green-500" style="height: 15%"></div>
+                        <div class="w-full bg-[#F97316]" style="height: 35%"></div>
+                        <div class="w-full bg-slate-300" style="height: 15%"></div>
+                        <div class="w-full bg-blue-400" style="height: 35%"></div>
+                    </div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">T</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-[95%] rounded-md overflow-hidden bg-slate-50">
+                        <div class="w-full bg-teal-500" style="height: 10%"></div>
+                        <div class="w-full bg-[#F97316]" style="height: 50%"></div>
+                        <div class="w-full bg-slate-300" style="height: 5%"></div>
+                        <div class="w-full bg-blue-400" style="height: 30%"></div>
+                    </div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">W</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-50 ring-2 ring-[#F97316] ring-offset-2">
+                        <div class="w-full bg-slate-100 flex-1"></div>
+                        <div class="w-full bg-[#F97316]" style="height: 25%"></div>
+                        <div class="w-full bg-slate-300" style="height: 10%"></div>
+                        <div class="w-full bg-green-500" style="height: 15%"></div>
+                        <div class="w-full bg-blue-400" style="height: 35%"></div>
+                    </div>
+                    <span class="text-xs text-center text-[#F97316] font-medium mt-2 uppercase tracking-widest">T</span>
+                </div>
+                <div class="w-full flex flex-col justify-end h-full relative group opacity-40">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-100 border border-slate-200 border-dashed"></div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">F</span>
+                </div>
+                 <div class="w-full flex flex-col justify-end h-full relative group opacity-40">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-100 border border-slate-200 border-dashed"></div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">S</span>
+                </div>
+                 <div class="w-full flex flex-col justify-end h-full relative group opacity-40">
+                    <div class="w-full flex flex-col justify-end h-full rounded-md overflow-hidden bg-slate-100 border border-slate-200 border-dashed"></div>
+                    <span class="text-xs text-center text-slate-400 font-medium mt-2 uppercase tracking-widest">S</span>
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 text-center mb-8">tap any day to see time blocks • pinch to zoom into hours</p>
+        </main>
+    </div>
