@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../data/models/time_map_segment.dart';
@@ -21,6 +23,9 @@ class TimeMapBar extends StatelessWidget {
   final List<TimeMapSegment> segments;
   final double currentMarkerFraction;
 
+  bool get _useFlexLayout =>
+      segments.isNotEmpty && segments.every((s) => s.flex != null);
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -35,20 +40,43 @@ class TimeMapBar extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final seg in segments)
-                        Expanded(
-                          flex: seg.flex,
-                          child: ColoredBox(
-                            color: _segmentPaintColor(seg.color),
+                  if (_useFlexLayout)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final seg in segments)
+                          Expanded(
+                            flex: seg.flex!,
+                            child: ColoredBox(
+                              color: _segmentPaintColor(seg.color),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        const ColoredBox(color: AppColors.slate100),
+                        for (final seg in segments)
+                          if (seg.isPositioned)
+                            Positioned(
+                              left: barWidth * seg.startFraction!.clamp(0.0, 1.0),
+                              width: math.max(
+                                1,
+                                barWidth * seg.widthFraction!.clamp(0.0, 1.0),
+                              ),
+                              top: 0,
+                              bottom: 0,
+                              child: ColoredBox(
+                                color: _segmentPaintColor(seg.color)
+                                    .withValues(alpha: 0.82),
+                              ),
+                            ),
+                      ],
+                    ),
                   Positioned(
-                    left: barWidth * currentMarkerFraction - 1,
+                    left: barWidth * currentMarkerFraction.clamp(0.0, 1.0) - 1,
                     top: 0,
                     bottom: 0,
                     child: Container(

@@ -10,7 +10,10 @@ abstract final class PrefsKeys {
 
 /// Fixed backend environments; all URLs derive from [resolve].
 enum BackendPreset {
-  laptop('laptop', 'Laptop'),
+  /// LAN dev host at `10.0.0.90` — not the same as Docker on this machine (use [localhost]).
+  laptop('laptop', 'Laptop (10.0.0.90)'),
+  /// Same URLs as [kIntegrationTestBackendUrls]: GraphQL on this host (e.g. Docker `-p 5001:5001`).
+  localhost('localhost', 'Local (127.0.0.1 / Docker)'),
   piLan('pi_lan', 'Pi (LAN)'),
   piTailscale('pi_tailscale', 'Pi (Tailscale)'),
   piWan('pi_wan', 'Pi (WAN)');
@@ -44,7 +47,7 @@ class BackendUrls {
 }
 
 /// URLs for integration tests with PGDB on the same machine as the test runner.
-/// [BackendPreset.laptop] resolves to the LAN dev host (`10.0.0.90`); tests use this.
+/// Same as [BackendPreset.localhost] / Docker port maps on `127.0.0.1`.
 const kIntegrationTestBackendUrls = BackendUrls(
   graphqlHttp: 'http://127.0.0.1:5001/graphql',
   sockWs: 'ws://127.0.0.1:8002',
@@ -59,6 +62,8 @@ BackendUrls resolve(BackendPreset p) {
         sockWs: 'ws://10.0.0.90:8002',
         imageHttp: 'http://10.0.0.90:8001',
       );
+    case BackendPreset.localhost:
+      return kIntegrationTestBackendUrls;
     case BackendPreset.piLan:
       return const BackendUrls(
         graphqlHttp: 'http://10.0.0.156:5001/graphql',

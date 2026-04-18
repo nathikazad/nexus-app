@@ -22,7 +22,7 @@ Same pattern as [`nx_expense`](../nx_expense/test/README.md): **`test/support/in
 **Requirements**
 
 - PostGraphile / PGDB on localhost (see `nx_db` [`kIntegrationTestBackendUrls`](../nx_db/lib/src/backend_presets.dart)).
-- Seed data including **`seed_nx_time_calendar_demo`** (e.g. `Action` rows on `2025-10-26`) for meaningful Today rows.
+- Seed data including **`seed_nx_time_calendar_demo`** (`Action` rows on the DB’s `CURRENT_DATE` when you ran load_data) for meaningful Today rows.
 
 **Run**
 

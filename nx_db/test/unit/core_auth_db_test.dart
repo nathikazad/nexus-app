@@ -24,6 +24,7 @@ void main() {
 
     test('CR11.3 BackendPreset.fromKey known keys', () {
       expect(BackendPreset.fromKey('laptop'), BackendPreset.laptop);
+      expect(BackendPreset.fromKey('localhost'), BackendPreset.localhost);
       expect(BackendPreset.fromKey('pi_tailscale'), BackendPreset.piTailscale);
     });
 

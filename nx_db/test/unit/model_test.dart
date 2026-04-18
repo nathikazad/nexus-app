@@ -193,5 +193,21 @@ void main() {
       });
       expect(m.relations!['Transfer']!.first.description, 'Memo a\nMemo b');
     });
+
+    test('MD1.14 embedded model_type from get_kgql_models', () {
+      final m = Model.fromJson({
+        'id': 1,
+        'name': 'Nap',
+        'model_type_id': 12,
+        'model_type': {
+          'id': 12,
+          'name': 'Sleep',
+          'type_kind': 'concrete',
+        },
+      });
+      expect(m.modelType, isNotNull);
+      expect(m.modelType!.name, 'Sleep');
+      expect(m.modelType!.id, 12);
+    });
   });
 }

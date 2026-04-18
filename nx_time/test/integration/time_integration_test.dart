@@ -6,8 +6,12 @@ import 'package:nx_time/data/today_repository.dart';
 
 import '../support/integration_auth.dart';
 
-/// Calendar day used by `seed_nx_time_calendar_demo` (see `servers/pgdb/admin_functions/seed_nx_time_calendar_demo.py`).
-final kNxTimeDemoDay = DateTime(2025, 10, 26);
+/// Calendar day for demo Actions from `seed_nx_time_calendar_demo` (Postgres `CURRENT_DATE` when you ran load_data).
+/// Run integration tests the same day you seed, or re-run load_data first.
+DateTime get kNxTimeDemoDay {
+  final n = DateTime.now();
+  return DateTime(n.year, n.month, n.day);
+}
 
 Map<String, dynamic> _startTimeDayFilter(String modelTypeName, DateTime day) {
   final start = DateTime(day.year, day.month, day.day);

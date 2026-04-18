@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/nx_db.dart';
 
 import '../screens/settings/action_colors_page.dart';
 import '../app_theme.dart';
 
 /// Hamburger menu (aligned with `nx_expense` [ExpenseAppMenuButton]); opens Colors + Logout.
-class NxAppMenuButton extends StatelessWidget {
+class NxAppMenuButton extends ConsumerWidget {
   const NxAppMenuButton({super.key});
 
   static void _onColors(BuildContext context) {
@@ -13,24 +15,23 @@ class NxAppMenuButton extends StatelessWidget {
     );
   }
 
-  static void _onLogout(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Logged out')),
-    );
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<String>(
       padding: EdgeInsets.zero,
       tooltip: 'Menu',
       offset: const Offset(0, 40),
       icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
-      onSelected: (value) {
+      onSelected: (value) async {
         if (value == 'colors') {
           _onColors(context);
         } else if (value == 'logout') {
-          _onLogout(context);
+          await ref.read(authProvider.notifier).logout();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Logged out')),
+            );
+          }
         }
       },
       itemBuilder: (context) => const [

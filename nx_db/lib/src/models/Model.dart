@@ -1,3 +1,13 @@
+import 'ModelType.dart';
+
+int _modelJsonInt(dynamic v, [int fallback = 0]) {
+  if (v == null) return fallback;
+  if (v is int) return v;
+  if (v is num) return v.round();
+  if (v is String) return int.tryParse(v) ?? fallback;
+  return fallback;
+}
+
 /// Coerces `description` (and similar) when the API returns a [String], a [List]
 /// of lines (e.g. Teller / transaction payloads), or other scalar JSON.
 String? _parseOptionalStringField(dynamic value) {
@@ -35,6 +45,9 @@ class Model {
   /// Tag assignments when `tags: true` is in struct — system name → assigned node names.
   final Map<String, List<String>>? tags;
 
+  /// Embedded type metadata when `struct` includes a `model_type: { ... }` object (get_kgql_models).
+  final ModelType? modelType;
+
   Model({
     required this.id,
     required this.name,
@@ -47,10 +60,17 @@ class Model {
     this.relations,
     this.relationsList,
     this.tags,
+    this.modelType,
   });
 
   /// Creates a Model from a JSON map (typically from GraphQL response)
   factory Model.fromJson(Map<String, dynamic> json) {
+    ModelType? embeddedModelType;
+    final modelTypeJson = json['model_type'];
+    if (modelTypeJson is Map<String, dynamic>) {
+      embeddedModelType = ModelType.fromJson(modelTypeJson, recursive: true);
+    }
+
     // Parse attributes (can be flat key-value pairs or attributes node)
     Map<String, dynamic>? attributes;
     List<ModelAttribute>? attributesList;
@@ -93,6 +113,7 @@ class Model {
           'relations',
           'attributes',
           'tags',
+          'model_type',
         ].contains(key)) {
           // Check if it's not a relation (relations are capitalized and contain arrays of models)
           if (value is! List) {
@@ -158,10 +179,13 @@ class Model {
     }
 
     return Model(
-      id: json['id'] as int,
-      name: json['name'] as String,
+      id: _modelJsonInt(json['id'], 0),
+      name: json['name'] as String? ?? '',
       description: _parseOptionalStringField(json['description']),
-      modelTypeId: json['model_type_id'] as int? ?? json['modelTypeId'] as int? ?? 0,
+      modelTypeId: _modelJsonInt(
+        json['model_type_id'] ?? json['modelTypeId'],
+        0,
+      ),
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
       updatedAt: json['updated_at'] as String? ?? json['updatedAt'] as String?,
       attributes: attributes,
@@ -169,6 +193,7 @@ class Model {
       relations: relations,
       relationsList: relationsList,
       tags: tags,
+      modelType: embeddedModelType,
     );
   }
 
@@ -186,6 +211,7 @@ class Model {
       if (relations != null) ...relations!,
       if (relationsList != null) 'relations': relationsList!.map((r) => r.toJson()).toList(),
       if (tags != null) 'tags': tags,
+      if (modelType != null) 'model_type': modelType!.toJson(),
     };
   }
 

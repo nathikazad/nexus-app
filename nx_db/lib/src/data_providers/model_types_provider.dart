@@ -102,6 +102,27 @@ final modelTypeNameToIdProvider = Provider<Map<String, int>>((ref) {
       {};
 });
 
+/// Maps model type id → display name (roots, children, and traits).
+final modelTypeIdToNameProvider = Provider<Map<int, String>>((ref) {
+  final async = ref.watch(modelTypesProvider);
+  return async.whenOrNull(
+        data: (types) {
+          final map = <int, String>{};
+          void walk(List<ModelType> list) {
+            for (final t in list) {
+              map[t.id] = t.name;
+              if (t.children != null) walk(t.children!);
+              if (t.traits != null) walk(t.traits!);
+            }
+          }
+
+          walk(types);
+          return map;
+        },
+      ) ??
+      {};
+});
+
 final modelTypeProvider = FutureProvider.family<ModelType?, int>((ref, modelTypeId) async {
   final client = ref.watch(graphqlClientProvider);
 

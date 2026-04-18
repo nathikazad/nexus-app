@@ -1,5 +1,21 @@
 import 'TagSystem.dart';
 
+int _jsonInt(dynamic v, [int fallback = 0]) {
+  if (v == null) return fallback;
+  if (v is int) return v;
+  if (v is num) return v.round();
+  if (v is String) return int.tryParse(v) ?? fallback;
+  return fallback;
+}
+
+int? _jsonIntNullable(dynamic v) {
+  if (v == null) return null;
+  if (v is int) return v;
+  if (v is num) return v.round();
+  if (v is String) return int.tryParse(v);
+  return null;
+}
+
 /// Model class representing a ModelType from the GraphQL API
 /// Supports nested structure from get_kgql_model_type (parent, children, traits)
 class ModelType {
@@ -55,7 +71,7 @@ class ModelType {
 
     // Parse children if present (from get_kgql_model_type)
     // Extract current model type's ID to set as parentId for children
-    final currentId = json['id'] as int?;
+    final currentId = _jsonIntNullable(json['id']);
     List<ModelType>? children;
     if (json['children'] != null) {
       final childrenJson = json['children'] as List<dynamic>;
@@ -143,8 +159,8 @@ class ModelType {
     }
 
     return ModelType(
-      id: json['id'] as int,
-      name: json['name'] as String,
+      id: _jsonInt(json['id'], 0),
+      name: json['name'] as String? ?? '',
       typeKind: typeKind,
       description: json['description'] as String?,
       parentId: json['parentId'] as int? ?? parent?.id,
