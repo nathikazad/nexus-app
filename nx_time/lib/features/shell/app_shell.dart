@@ -1,23 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../data/fake_today_repository.dart';
 import '../../theme/app_colors.dart';
+import '../calendar/calendar_page.dart';
+import '../goals/goals_page.dart';
+import '../tasks/tasks_page.dart';
 import '../today/today_page.dart';
-import 'placeholder_tab.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.todayRepository});
+  const AppShell({super.key, this.todayRepository, this.initialTabIndex = 0});
 
   final FakeTodayRepository? todayRepository;
+
+  /// Initial bottom-nav index (0–3). Used by screenshot integration tests.
+  final int initialTabIndex;
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  int _index = 0;
+  late int _index;
 
   late final FakeTodayRepository _repo = widget.todayRepository ?? FakeTodayRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    final i = widget.initialTabIndex;
+    _index = i < 0 ? 0 : (i > 3 ? 3 : i);
+  }
 
   void _onAiTap() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -36,11 +49,6 @@ class _AppShellState extends State<AppShell> {
         children: [
           TodayPage(
             snapshot: snapshot,
-            onWeekViewTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Week view — coming soon.')),
-              );
-            },
             onActivityTap: (_) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Activity detail — coming soon.')),
@@ -52,9 +60,9 @@ class _AppShellState extends State<AppShell> {
               );
             },
           ),
-          const PlaceholderTab(title: 'Tasks'),
-          const PlaceholderTab(title: 'Goals'),
-          const PlaceholderTab(title: 'Calendar'),
+          const TasksPage(),
+          const GoalsPage(),
+          const CalendarPage(),
         ],
       ),
       bottomNavigationBar: _BottomNav(
@@ -89,35 +97,42 @@ class _BottomNav extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 72,
+            height: 80,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _NavItem(
-                  label: 'Today',
-                  icon: Icons.pie_chart_outline_rounded,
-                  selected: currentIndex == 0,
-                  onTap: () => onChanged(0),
+                Expanded(
+                  child: _NavItem(
+                    label: 'Today',
+                    icon: SolarLinearIcons.pieChart2,
+                    selected: currentIndex == 0,
+                    onTap: () => onChanged(0),
+                  ),
                 ),
-                _NavItem(
-                  label: 'Tasks',
-                  icon: Icons.checklist_rtl_rounded,
-                  selected: currentIndex == 1,
-                  onTap: () => onChanged(1),
-                  badge: true,
+                Expanded(
+                  child: _NavItem(
+                    label: 'Tasks',
+                    icon: SolarLinearIcons.checklistMinimalistic,
+                    selected: currentIndex == 1,
+                    onTap: () => onChanged(1),
+                    badge: true,
+                  ),
                 ),
-                _AiSlot(onTap: onAiTap),
-                _NavItem(
-                  label: 'Goals',
-                  icon: Icons.track_changes_outlined,
-                  selected: currentIndex == 2,
-                  onTap: () => onChanged(2),
+                Expanded(child: _AiSlot(onTap: onAiTap)),
+                Expanded(
+                  child: _NavItem(
+                    label: 'Goals',
+                    icon: SolarLinearIcons.target,
+                    selected: currentIndex == 2,
+                    onTap: () => onChanged(2),
+                  ),
                 ),
-                _NavItem(
-                  label: 'Calendar',
-                  icon: Icons.calendar_month_outlined,
-                  selected: currentIndex == 3,
-                  onTap: () => onChanged(3),
+                Expanded(
+                  child: _NavItem(
+                    label: 'Calendar',
+                    icon: SolarLinearIcons.calendarMark,
+                    selected: currentIndex == 3,
+                    onTap: () => onChanged(3),
+                  ),
                 ),
               ],
             ),
@@ -150,8 +165,8 @@ class _NavItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 56,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -180,13 +195,17 @@ class _NavItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.2,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                  color: color,
+                ),
               ),
             ),
           ],
@@ -204,7 +223,6 @@ class _AiSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 56,
       height: 56,
       child: Stack(
         clipBehavior: Clip.none,
@@ -225,7 +243,11 @@ class _AiSlot extends StatelessWidget {
                 child: const SizedBox(
                   width: 48,
                   height: 48,
-                  child: Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
+                  child: Icon(
+                    SolarLinearIcons.stars,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
             ),

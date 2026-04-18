@@ -20,4 +20,21 @@ abstract final class AppColors {
   static const Color exerciseGreen = Color(0xFF22C55E);
   static const Color eatYellow = Color(0xFFFACC15);
   static const Color outdoorsTeal = Color(0xFF14B8A6);
+
+  // Goals (reference goals_tab)
+  static const Color goalOnTrack = Color(0xFF0F6E56);
+  static const Color goalAtRisk = Color(0xFFBA7517);
+  static const Color goalMissed = Color(0xFFA32D2D);
+  static const Color dotOk = Color(0xFF1D9E75);
+  static const Color dotMiss = Color(0xFFE24B4A);
+  static const Color dotPend = Color(0xFFE2E8F0);
+  static const Color dotTodayProg = Color(0xFFBA7517);
+
+  // Calendar stacked bars (reference tab-calendar)
+  static const Color calPurple = Color(0xFF534AB7);
+  static const Color calGreen = Color(0xFF1D9E75);
+  static const Color calOrange = Color(0xFFD85A30);
+  static const Color calBlue = Color(0xFF185FA5);
+  static const Color calOlive = Color(0xFF639922);
+  static const Color calMuted = Color(0x4D888780);
 }

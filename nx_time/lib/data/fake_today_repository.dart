@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 import 'models/activity_category.dart';
 import 'models/time_map_segment.dart';
 import 'models/today_activity.dart';
@@ -19,7 +17,8 @@ class FakeTodayRepository {
         TimeMapSegment(color: AppColors.exerciseGreen, flex: 8),
         TimeMapSegment(color: AppColors.routineGray, flex: 5),
         TimeMapSegment(color: AppColors.accent, flex: 25),
-        TimeMapSegment(color: Colors.transparent, flex: 25),
+        // Remaining day (HTML shows bg-slate-100 through; use opaque slate100).
+        TimeMapSegment(color: AppColors.slate100, flex: 25),
       ],
       currentMarkerFraction: 0.75,
       legend: [

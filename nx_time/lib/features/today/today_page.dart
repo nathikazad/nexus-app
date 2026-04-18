@@ -1,4 +1,6 @@
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
+import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import '../../data/models/today_snapshot.dart';
 import '../../theme/app_colors.dart';
@@ -10,13 +12,11 @@ class TodayPage extends StatelessWidget {
   const TodayPage({
     super.key,
     required this.snapshot,
-    this.onWeekViewTap,
     this.onActivityTap,
     this.onAddManualTap,
   });
 
   final TodaySnapshot snapshot;
-  final VoidCallback? onWeekViewTap;
   final void Function(int index)? onActivityTap;
   final VoidCallback? onAddManualTap;
 
@@ -31,12 +31,12 @@ class TodayPage extends StatelessWidget {
         ),
         Expanded(
           child: ListView(
+            clipBehavior: Clip.none,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
             children: [
               TimeMapBar(
                 segments: snapshot.timeMapSegments,
                 currentMarkerFraction: snapshot.currentMarkerFraction,
-                onWeekViewTap: onWeekViewTap,
               ),
               const SizedBox(height: 12),
               CategoryLegend(items: snapshot.legend),
@@ -71,20 +71,43 @@ class TodayPage extends StatelessWidget {
                 const SizedBox(height: 4),
               ],
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onAddManualTap,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: AppColors.slate200, style: BorderStyle.solid),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  foregroundColor: AppColors.slate500,
+              DottedBorder(
+                options: const RoundedRectDottedBorderOptions(
+                  radius: Radius.circular(12),
+                  color: AppColors.slate200,
+                  dashPattern: [4, 4],
+                  strokeWidth: 1,
+                  padding: EdgeInsets.zero,
                 ),
-                icon: const Icon(Icons.add_circle_outline, size: 20),
-                label: const Text(
-                  'Add time block manually',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onAddManualTap,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            SolarLinearIcons.addCircle,
+                            size: 20,
+                            color: AppColors.slate500,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Add time block manually',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              color: AppColors.slate500,
+                              fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -134,9 +157,11 @@ class _TodayHeader extends StatelessWidget {
             ),
             IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.settings_outlined),
-              color: AppColors.slate500,
-              iconSize: 24,
+              icon: const Icon(
+                SolarLinearIcons.settings,
+                color: AppColors.slate500,
+                size: 24,
+              ),
             ),
           ],
         ),
