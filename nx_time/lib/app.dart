@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/shell/app_shell.dart';
+import 'router.dart';
 import 'theme/app_theme.dart';
 
-class NxTimeApp extends StatelessWidget {
+class NxTimeApp extends ConsumerWidget {
   const NxTimeApp({super.key, this.initialTabIndex = 0});
 
-  /// For integration/screenshot tests (`flutter drive --target=tests/...`).
+  /// Initial bottom-nav index (0–3). Used by screenshot driver tests (`?tab=`).
   final int initialTabIndex;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider(initialTabIndex));
+    return MaterialApp.router(
       title: 'Nexus Time',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: AppShell(initialTabIndex: initialTabIndex),
+      routerConfig: router,
     );
   }
 }

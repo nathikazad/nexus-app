@@ -18,6 +18,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:nx_time/app.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
+import '../test/support/screenshot_auth.dart';
+
 /// Extra settle time after [Navigator.push] so screenshots are not mid-transition.
 const _kAfterNav = Duration(milliseconds: 1100);
 
@@ -27,7 +29,10 @@ Future<void> main() async {
   group('Main tabs', () {
     testWidgets('today_tab', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp()),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -38,7 +43,10 @@ Future<void> main() async {
 
     testWidgets('tasks_tab', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp(initialTabIndex: 1)),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(initialTabIndex: 1),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -49,7 +57,10 @@ Future<void> main() async {
 
     testWidgets('goals_tab', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp(initialTabIndex: 2)),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(initialTabIndex: 2),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -60,7 +71,10 @@ Future<void> main() async {
 
     testWidgets('calendar_tab', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp(initialTabIndex: 3)),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(initialTabIndex: 3),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -73,7 +87,10 @@ Future<void> main() async {
   group('Stacked screens', () {
     testWidgets('activity_detail', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp()),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -88,7 +105,10 @@ Future<void> main() async {
 
     testWidgets('add_time_block', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp()),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -103,7 +123,10 @@ Future<void> main() async {
 
     testWidgets('edit_activity', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp()),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -122,7 +145,10 @@ Future<void> main() async {
 
     testWidgets('task_picker', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp(initialTabIndex: 1)),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(initialTabIndex: 1),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -137,7 +163,10 @@ Future<void> main() async {
 
     testWidgets('task_detail', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp(initialTabIndex: 1)),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(initialTabIndex: 1),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -152,7 +181,10 @@ Future<void> main() async {
 
     testWidgets('ai_chat', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp()),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
@@ -167,7 +199,10 @@ Future<void> main() async {
 
     testWidgets('voice_overlay', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NxTimeApp()),
+        ProviderScope(
+          overrides: screenshotAuthOverrides,
+          child: const NxTimeApp(),
+        ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
