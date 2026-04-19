@@ -1,5 +1,11 @@
 import 'package:nx_time/domain/tasks/task_status.dart';
 
+class _TaskCopyUnset {
+  const _TaskCopyUnset();
+}
+
+const _taskCopyUnset = _TaskCopyUnset();
+
 /// Link from a [Task] to a concrete activity row (Action subtype) via `linked_to_activity`.
 class TaskActivityLink {
   const TaskActivityLink({
@@ -75,6 +81,58 @@ class Task {
   final int? projectRelationId;
 
   final List<TaskActivityLink> linkedActivities;
+
+  Task copyWith({
+    int? id,
+    String? name,
+    Object? description = _taskCopyUnset,
+    int? modelTypeId,
+    Object? modelTypeName = _taskCopyUnset,
+    TaskStatus? status,
+    List<String>? tags,
+    Object? date = _taskCopyUnset,
+    Object? startTime = _taskCopyUnset,
+    Object? endTime = _taskCopyUnset,
+    Object? parentTaskId = _taskCopyUnset,
+    List<int>? childTaskIds,
+    Map<int, int>? relationIdByChildTaskId,
+    Object? projectId = _taskCopyUnset,
+    Object? projectRelationId = _taskCopyUnset,
+    List<TaskActivityLink>? linkedActivities,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: identical(description, _taskCopyUnset)
+          ? this.description
+          : description as String?,
+      modelTypeId: modelTypeId ?? this.modelTypeId,
+      modelTypeName: identical(modelTypeName, _taskCopyUnset)
+          ? this.modelTypeName
+          : modelTypeName as String?,
+      status: status ?? this.status,
+      tags: tags ?? this.tags,
+      date: identical(date, _taskCopyUnset) ? this.date : date as DateTime?,
+      startTime: identical(startTime, _taskCopyUnset)
+          ? this.startTime
+          : startTime as DateTime?,
+      endTime:
+          identical(endTime, _taskCopyUnset) ? this.endTime : endTime as DateTime?,
+      parentTaskId: identical(parentTaskId, _taskCopyUnset)
+          ? this.parentTaskId
+          : parentTaskId as int?,
+      childTaskIds: childTaskIds ?? this.childTaskIds,
+      relationIdByChildTaskId:
+          relationIdByChildTaskId ?? this.relationIdByChildTaskId,
+      projectId: identical(projectId, _taskCopyUnset)
+          ? this.projectId
+          : projectId as int?,
+      projectRelationId: identical(projectRelationId, _taskCopyUnset)
+          ? this.projectRelationId
+          : projectRelationId as int?,
+      linkedActivities: linkedActivities ?? this.linkedActivities,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>

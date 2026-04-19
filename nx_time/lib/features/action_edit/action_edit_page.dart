@@ -8,6 +8,7 @@ import 'package:nx_time/features/action_edit/action_edit_providers.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/tasks/task_picker_page.dart';
+import 'package:nx_time/features/tasks/task_view_models.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/action_create/add_child_actions_page.dart';
 import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
@@ -554,12 +555,25 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                       TextButton(
                         onPressed: _saving
                             ? null
-                            : () {
-                                Navigator.of(context).push<void>(
+                            : () async {
+                                final picked = await Navigator.of(context)
+                                    .push<Set<int>?>(
                                   MaterialPageRoute(
                                     builder: (_) => const TaskPickerPage(),
                                   ),
                                 );
+                                if (!mounted) return;
+                                if (picked != null && picked.isNotEmpty) {
+                                  final repo = ref.read(taskRepositoryProvider);
+                                  await pinTaskIdsToCalendarDay(
+                                    repo,
+                                    picked,
+                                    DateTime.now(),
+                                  );
+                                  ref.invalidate(tasksForTodayProvider);
+                                  ref.invalidate(allTasksProvider);
+                                }
+                                ref.invalidate(todaySnapshotProvider);
                               },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,

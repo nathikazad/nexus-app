@@ -119,7 +119,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
           ),
-          const TasksPage(),
+          TasksPage(),
           const GoalsPage(),
           _index == 3 ? const CalendarPage() : const SizedBox.shrink(),
         ],

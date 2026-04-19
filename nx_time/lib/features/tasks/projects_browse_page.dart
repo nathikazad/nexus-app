@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
-import 'package:nx_time/features/tasks/project_drill_down_page.dart';
+import 'package:nx_time/features/tasks/project_drill_page.dart';
+import 'package:nx_time/features/tasks/projects_browse_view_model.dart';
 
 /// Reference: `reference/partials/page-projects-browse.html`
-class ProjectsBrowsePage extends StatelessWidget {
-  const ProjectsBrowsePage({super.key});
+class ProjectsBrowsePage extends ConsumerStatefulWidget {
+  const ProjectsBrowsePage({
+    super.key,
+    this.mode = ProjectsBrowseMode.browse,
+  });
 
-  static const _rows = <_ProjectRow>[
-    _ProjectRow(title: 'Nexus App', subtitle: '3 sub-projects · 12 tasks', opensDrillDown: true),
-    _ProjectRow(title: 'Cannatrols Fridge', subtitle: '2 sub-projects · 7 tasks'),
-    _ProjectRow(title: 'Bondu Toys', subtitle: '4 tasks'),
-    _ProjectRow(title: 'Personal', subtitle: '8 tasks'),
-    _ProjectRow(title: 'Content', subtitle: '4 tasks'),
-    _ProjectRow(title: 'Home', subtitle: '5 tasks'),
-  ];
+  final ProjectsBrowseMode mode;
+
+  @override
+  ConsumerState<ProjectsBrowsePage> createState() => _ProjectsBrowsePageState();
+}
+
+class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
+  final Set<int> _accumulatedTaskIds = {};
 
   @override
   Widget build(BuildContext context) {
+    final rowsAsync = ref.watch(projectBrowseRowsProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -35,10 +42,14 @@ class ProjectsBrowsePage extends StatelessWidget {
                     icon: const Icon(SolarLinearIcons.arrowLeft, size: 22),
                     color: AppColors.slate600,
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Projects',
-                      style: TextStyle(
+                      widget.mode == ProjectsBrowseMode.pickProject
+                          ? 'Pick project'
+                          : widget.mode == ProjectsBrowseMode.pickTask
+                              ? 'Pick tasks (projects)'
+                              : 'Projects',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.2,
@@ -46,6 +57,12 @@ class ProjectsBrowsePage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (widget.mode == ProjectsBrowseMode.pickTask)
+                    TextButton(
+                      onPressed: () => Navigator.of(context)
+                          .pop<Set<int>>(Set<int>.from(_accumulatedTaskIds)),
+                      child: const Text('Done'),
+                    ),
                 ],
               ),
             ),
@@ -70,55 +87,98 @@ class ProjectsBrowsePage extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ListView.separated(
-                itemCount: _rows.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.slate100),
-                itemBuilder: (context, i) {
-                  final r = _rows[i];
-                  return Material(
-                    color: Colors.white,
-                    child: InkWell(
-                      onTap: r.opensDrillDown
-                          ? () {
-                              Navigator.of(context).push<void>(
-                                MaterialPageRoute(builder: (_) => const ProjectDrillDownPage()),
-                              );
+              child: rowsAsync.when(
+                data: (rows) {
+                  return ListView.separated(
+                    itemCount: rows.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: AppColors.slate100),
+                    itemBuilder: (context, i) {
+                      final r = rows[i];
+                      return Material(
+                        color: Colors.white,
+                        child: InkWell(
+                          onTap: () async {
+                            if (widget.mode == ProjectsBrowseMode.pickProject) {
+                              if (r.subProjectCount > 0) {
+                                final picked = await Navigator.of(context)
+                                    .push<int?>(
+                                  MaterialPageRoute(
+                                    builder: (_) => ProjectDrillPage(
+                                      projectId: r.project.id,
+                                      mode: ProjectsBrowseMode.pickProject,
+                                    ),
+                                  ),
+                                );
+                                if (!context.mounted) return;
+                                if (picked != null) {
+                                  Navigator.of(context).pop<int>(picked);
+                                }
+                              } else {
+                                Navigator.of(context).pop<int>(r.project.id);
+                              }
+                              return;
                             }
-                          : null,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    r.title,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.slate900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    r.subtitle,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.slate500,
-                                    ),
-                                  ),
-                                ],
+                            final result = await Navigator.of(context)
+                                .push<Set<int>?>(
+                              MaterialPageRoute(
+                                builder: (_) => ProjectDrillPage(
+                                  projectId: r.project.id,
+                                  mode: widget.mode,
+                                ),
                               ),
+                            );
+                            if (!mounted) return;
+                            if (widget.mode == ProjectsBrowseMode.pickTask &&
+                                result != null) {
+                              setState(() => _accumulatedTaskIds.addAll(result));
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
                             ),
-                            Icon(SolarLinearIcons.altArrowRight, size: 18, color: AppColors.slate400),
-                          ],
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        r.project.name,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.slate900,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        r.subtitle,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.slate500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  SolarLinearIcons.altArrowRight,
+                                  size: 18,
+                                  color: AppColors.slate400,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('$e')),
               ),
             ),
           ],
@@ -126,16 +186,4 @@ class ProjectsBrowsePage extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ProjectRow {
-  const _ProjectRow({
-    required this.title,
-    required this.subtitle,
-    this.opensDrillDown = false,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool opensDrillDown;
 }

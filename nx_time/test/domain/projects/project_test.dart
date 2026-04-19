@@ -24,4 +24,11 @@ void main() {
     expect(a, b);
     expect(a, isNot(c));
   });
+
+  test('Project.copyWith', () {
+    const p = Project(id: 1, name: 'A', modelTypeId: 3);
+    final q = p.copyWith(name: 'B');
+    expect(q.name, 'B');
+    expect(q.id, 1);
+  });
 }

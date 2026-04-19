@@ -1,5 +1,11 @@
 /// Domain entity for a Project row in KGQL.
 ///
+class _ProjectCopyUnset {
+  const _ProjectCopyUnset();
+}
+
+const _projectCopyUnset = _ProjectCopyUnset();
+
 /// Pure Dart — no Flutter / nx_db.
 class Project {
   const Project({
@@ -27,6 +33,34 @@ class Project {
 
   /// `relations` row id per child project id (for unlink).
   final Map<int, int> relationIdByChildId;
+
+  Project copyWith({
+    int? id,
+    String? name,
+    Object? description = _projectCopyUnset,
+    int? modelTypeId,
+    Object? modelTypeName = _projectCopyUnset,
+    Object? parentProjectId = _projectCopyUnset,
+    List<int>? childProjectIds,
+    Map<int, int>? relationIdByChildId,
+  }) {
+    return Project(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: identical(description, _projectCopyUnset)
+          ? this.description
+          : description as String?,
+      modelTypeId: modelTypeId ?? this.modelTypeId,
+      modelTypeName: identical(modelTypeName, _projectCopyUnset)
+          ? this.modelTypeName
+          : modelTypeName as String?,
+      parentProjectId: identical(parentProjectId, _projectCopyUnset)
+          ? this.parentProjectId
+          : parentProjectId as int?,
+      childProjectIds: childProjectIds ?? this.childProjectIds,
+      relationIdByChildId: relationIdByChildId ?? this.relationIdByChildId,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>

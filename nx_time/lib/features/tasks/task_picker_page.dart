@@ -1,58 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/tasks/projects_browse_page.dart';
+import 'package:nx_time/features/tasks/projects_browse_view_model.dart';
 import 'package:nx_time/features/tasks/task_create_page.dart';
 import 'package:nx_time/features/tasks/task_pick_widgets.dart';
+import 'package:nx_time/features/tasks/task_picker_view_model.dart';
+import 'package:nx_time/features/tasks/task_view_models.dart';
 
 /// Pick backlog tasks to pin to today (`reference/partials/view-task-picker.html`).
-class TaskPickerPage extends StatefulWidget {
+class TaskPickerPage extends ConsumerStatefulWidget {
   const TaskPickerPage({super.key});
 
   @override
-  State<TaskPickerPage> createState() => _TaskPickerPageState();
+  ConsumerState<TaskPickerPage> createState() => _TaskPickerPageState();
 }
 
-class _PickerTask {
-  const _PickerTask({
-    required this.title,
-    required this.subtitle,
-  });
+class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
+  final Set<int> _selectedTaskIds = {};
 
-  final String title;
-  final String subtitle;
-}
-
-class _TaskPickerPageState extends State<TaskPickerPage> {
-  /// Indices into [_lines] combined list.
-  final Set<int> _selected = {0, 3};
-
-  static const _yesterday = [
-    _PickerTask(title: 'Fix Sorting', subtitle: 'Nexus App › Expense App'),
-    _PickerTask(title: 'Draft blog post outline', subtitle: 'Content'),
-    _PickerTask(title: 'Study high speed PCB design', subtitle: 'Nexus App › Server › PCB v3'),
-  ];
-
-  static const _recent = [
-    _PickerTask(title: 'Refactor token validation', subtitle: 'Nexus App › Time App › Auth'),
-    _PickerTask(title: 'Design the PCB', subtitle: 'Nexus App › Server › PCB v3'),
-  ];
-
-  void _toggle(int i) {
-    setState(() {
-      if (_selected.contains(i)) {
-        _selected.remove(i);
-      } else {
-        _selected.add(i);
-      }
-    });
+  String _projectSubtitle(Map<int, String> crumbs, int? projectId) {
+    if (projectId == null) return '';
+    return crumbs[projectId] ?? 'Project $projectId';
   }
-
-  int get _count => _selected.length;
 
   @override
   Widget build(BuildContext context) {
+    final yesterdayAsync = ref.watch(pickerUnfinishedYesterdayProvider);
+    final recentAsync = ref.watch(pickerRecentTasksProvider);
+    final crumbsAsync = ref.watch(projectBreadcrumbLabelsProvider);
+    final crumbs = crumbsAsync.when(
+      data: (d) => d,
+      loading: () => const <int, String>{},
+      error: (_, __) => const <int, String>{},
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -113,7 +97,10 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                            color: AppColors.accent,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         const Text(
@@ -127,14 +114,32 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
                       ],
                     ),
                   ),
-                  ...List.generate(_yesterday.length, (j) {
-                    final i = j;
-                    return _taskRow(
-                      task: _yesterday[j],
-                      selected: _selected.contains(i),
-                      onTap: () => _toggle(i),
-                    );
-                  }),
+                  yesterdayAsync.when(
+                    data: (tasks) => Column(
+                      children: tasks
+                          .map(
+                            (t) => _taskRow(
+                              title: t.name,
+                              subtitle: _projectSubtitle(crumbs, t.projectId),
+                              selected: _selectedTaskIds.contains(t.id),
+                              onTap: () => setState(() {
+                                if (!_selectedTaskIds.add(t.id)) {
+                                  _selectedTaskIds.remove(t.id);
+                                }
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (e, _) => Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text('$e'),
+                    ),
+                  ),
                   _sectionStrip(
                     child: const Text(
                       'Recently worked on',
@@ -145,35 +150,62 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
                       ),
                     ),
                   ),
-                  ...List.generate(_recent.length, (j) {
-                    final i = j + _yesterday.length;
-                    return _taskRow(
-                      task: _recent[j],
-                      selected: _selected.contains(i),
-                      onTap: () => _toggle(i),
-                    );
-                  }),
+                  recentAsync.when(
+                    data: (tasks) => Column(
+                      children: tasks
+                          .map(
+                            (t) => _taskRow(
+                              title: t.name,
+                              subtitle: _projectSubtitle(crumbs, t.projectId),
+                              selected: _selectedTaskIds.contains(t.id),
+                              onTap: () => setState(() {
+                                if (!_selectedTaskIds.add(t.id)) {
+                                  _selectedTaskIds.remove(t.id);
+                                }
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                     child: Material(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute(builder: (_) => const ProjectsBrowsePage()),
+                        onTap: () async {
+                          final extra = await Navigator.of(context)
+                              .push<Set<int>?>(
+                            MaterialPageRoute(
+                              builder: (_) => const ProjectsBrowsePage(
+                                mode: ProjectsBrowseMode.pickTask,
+                              ),
+                            ),
                           );
+                          if (extra != null && mounted) {
+                            setState(() => _selectedTaskIds.addAll(extra));
+                          }
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             border: Border.all(color: AppColors.slate200),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             children: [
-                              Icon(SolarLinearIcons.folder, size: 20, color: AppColors.slate600),
+                              Icon(
+                                SolarLinearIcons.folder,
+                                size: 20,
+                                color: AppColors.slate600,
+                              ),
                               const SizedBox(width: 10),
                               const Expanded(
                                 child: Text(
@@ -185,7 +217,11 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
                                   ),
                                 ),
                               ),
-                              Icon(SolarLinearIcons.altArrowRight, size: 18, color: AppColors.slate400),
+                              Icon(
+                                SolarLinearIcons.altArrowRight,
+                                size: 18,
+                                color: AppColors.slate400,
+                              ),
                             ],
                           ),
                         ),
@@ -199,12 +235,19 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
         ),
       ),
       bottomNavigationBar: TaskPickFooter(
-        selectedLabel: '$_count selected',
-        onDone: () => Navigator.of(context).maybePop(),
-        onNewTask: () {
-          Navigator.of(context).push<void>(
-            MaterialPageRoute(builder: (_) => const TaskCreatePage()),
+        selectedLabel: '${_selectedTaskIds.length} selected',
+        onDone: () {
+          Navigator.of(context).pop<Set<int>>(Set<int>.from(_selectedTaskIds));
+        },
+        onNewTask: () async {
+          final newId = await Navigator.of(context).push<int?>(
+            MaterialPageRoute(
+              builder: (_) => const TaskCreatePage(),
+            ),
           );
+          if (newId != null && mounted) {
+            setState(() => _selectedTaskIds.add(newId));
+          }
         },
       ),
     );
@@ -226,7 +269,8 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
   }
 
   Widget _taskRow({
-    required _PickerTask task,
+    required String title,
+    required String subtitle,
     required bool selected,
     required VoidCallback onTap,
   }) {
@@ -252,18 +296,23 @@ class _TaskPickerPageState extends State<TaskPickerPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task.title,
+                      title,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: AppColors.slate900,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      task.subtitle,
-                      style: const TextStyle(fontSize: 11, color: AppColors.slate500),
-                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

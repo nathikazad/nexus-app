@@ -29,6 +29,21 @@ void main() {
     expect(a, isNot(c));
   });
 
+  test('Task.copyWith overrides fields', () {
+    const t = Task(
+      id: 1,
+      name: 'A',
+      modelTypeId: 9,
+      status: TaskStatus.todo,
+      tags: ['x'],
+    );
+    final u = t.copyWith(name: 'B', status: TaskStatus.done);
+    expect(u.name, 'B');
+    expect(u.status, TaskStatus.done);
+    expect(u.tags, ['x']);
+    expect(u.id, 1);
+  });
+
   test('TaskActivityLink equality', () {
     const x = TaskActivityLink(
       activityId: 10,
