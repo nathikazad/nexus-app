@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 
@@ -18,9 +17,6 @@ class KgqlProjectRepository implements ProjectRepository {
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadProjectSchema;
 
-  void _log(String message) =>
-      debugPrint('[nx_time kgql_project_repo] $message');
-
   Map<String, dynamic> _projectFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
@@ -32,7 +28,6 @@ class KgqlProjectRepository implements ProjectRepository {
   Future<List<Project>> listAll() async {
     final schema = await _loadProjectSchema();
     final struct = _projectFetchStruct(schema);
-    _log('listAll structKeys=${struct.keys.join(",")}');
     final models = await fetchKgqlModels(
       _client,
       filter: {'model_type': kProjectModelTypeName},

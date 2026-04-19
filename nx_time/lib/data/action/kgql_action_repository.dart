@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 
@@ -18,9 +17,6 @@ class KgqlActionRepository implements ActionRepository {
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadActionSchema;
 
-  void _log(String message) =>
-      debugPrint('[nx_time kgql_action_repo] $message');
-
   Map<String, dynamic> _actionFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     // Ensure nested Action self-relation even if schema cache is stale.
@@ -31,26 +27,13 @@ class KgqlActionRepository implements ActionRepository {
 
   @override
   Future<List<Action>> listForCalendarDay(DateTime dayLocal) async {
-    _log('listForCalendarDay: begin dayLocal=$dayLocal');
     final start = DateTime(dayLocal.year, dayLocal.month, dayLocal.day);
     final end = start.add(const Duration(days: 1));
     final fetchStart = start.subtract(const Duration(days: 1));
 
-    _log('await loadActionSchema (getKgqlModelType for Action)...');
     final schema = await _loadActionSchema();
-    _log('loadActionSchema ok: ${schema.name} id=${schema.id}');
-
     final struct = _actionFetchStruct(schema);
 
-    _log(
-      'fetchKgqlModels filter window start_time in '
-      '[${fetchStart.toIso8601String()}, ${end.toIso8601String()})',
-    );
-    _log(
-      'fetch struct top-level keys (count=${struct.length}): ${struct.keys.join(", ")}',
-    );
-    final fetchSw = Stopwatch()..start();
-    _log('calling fetchKgqlModels(get_kgql_models) ...');
     final models = await fetchKgqlModels(
       _client,
       filter: {
@@ -70,14 +53,8 @@ class KgqlActionRepository implements ActionRepository {
       },
       struct: struct,
     );
-    fetchSw.stop();
-    _log(
-      'fetchKgqlModels returned ${models.length} models in ${fetchSw.elapsedMilliseconds}ms',
-    );
 
-    final out = models.map(actionFromModel).toList();
-    _log('listForCalendarDay: done → ${out.length} Action(s)');
-    return out;
+    return models.map(actionFromModel).toList();
   }
 
   @override

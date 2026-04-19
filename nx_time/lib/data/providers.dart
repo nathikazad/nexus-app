@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
@@ -54,12 +53,9 @@ final kgqlActionSchemaRepositoryProvider =
 /// Data providers that hit KGQL should depend on this provider so requests don't
 /// race ahead with default unauthenticated client config.
 final authenticatedUserProvider = FutureProvider<User>((ref) async {
-  const tag = '[nx_time session]';
-  debugPrint('$tag waiting for authProvider.future...');
   final user = await ref.watch(authProvider.future);
   if (user == null) {
     throw StateError('Not authenticated');
   }
-  debugPrint('$tag ready userId=${user.userId} preset=${user.preset}');
   return user;
 });

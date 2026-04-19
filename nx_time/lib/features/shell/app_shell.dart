@@ -56,12 +56,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     final snapshotAsync = ref.watch(todaySnapshotProvider);
 
     ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
-      debugPrint(
-        '[nx_time shell] todaySnapshot: '
-        'isLoading=${next.isLoading} hasValue=${next.hasValue} hasError=${next.hasError}',
-      );
       if (next.hasError) {
-        debugPrint('[nx_time shell] todaySnapshot error: ${next.error}');
+        debugPrint('[nx_time shell] todaySnapshot: ${next.error}');
       }
     });
 

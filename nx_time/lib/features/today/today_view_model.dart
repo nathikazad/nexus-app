@@ -104,30 +104,19 @@ class TodaySnapshot {
 /// Today tab snapshot — uses [actionRepositoryProvider] (fake or KGQL).
 final todaySnapshotProvider = FutureProvider<TodaySnapshot>((ref) async {
   const tag = '[nx_time Today]';
-  debugPrint('$tag snapshot provider: start');
   try {
-    final user = await ref.watch(authenticatedUserProvider.future);
-    debugPrint('$tag auth ready userId=${user.userId} preset=${user.preset}');
+    await ref.watch(authenticatedUserProvider.future);
     final repo = ref.watch(actionRepositoryProvider);
     final now = DateTime.now();
     final day = DateTime(now.year, now.month, now.day);
-    debugPrint('$tag calling listForCalendarDay(day=$day)');
-    final sw = Stopwatch()..start();
     final actions = await repo.listForCalendarDay(day);
-    sw.stop();
-    debugPrint(
-      '$tag listForCalendarDay returned ${actions.length} actions in ${sw.elapsedMilliseconds}ms',
-    );
-    final snap = buildTodaySnapshot(
+    return buildTodaySnapshot(
       actions,
       day,
       nowForClock: now,
     );
-    debugPrint('$tag buildTodaySnapshot done (rows=${snap.actions.length})');
-    return snap;
   } catch (e, st) {
-    debugPrint('$tag ERROR: $e');
-    debugPrint('$tag $st');
+    debugPrint('$tag $e\n$st');
     rethrow;
   }
 });
@@ -178,10 +167,7 @@ TodaySnapshot buildTodaySnapshot(
       return a.id.compareTo(b.id);
     });
 
-  _debugPrintActionsPreFold(sorted);
-
   final rows = foldDayActions(sorted);
-  _debugPrintUmbrellaRowsPostFold(rows);
   final actions = <TodayActivity>[];
   final timeMapSegments = <TimeMapSegment>[];
   final legendEntries = <ActivityCategory>[];
@@ -260,39 +246,6 @@ TodaySnapshot buildTodaySnapshot(
     umbrellaRows: umbrellaRows,
     dayActions: sorted,
   );
-}
-
-void _debugPrintActionsPreFold(List<Action> actions) {
-  const tag = '[nx_time Today fold] pre-fold';
-  debugPrint('$tag (${actions.length} actions, in-day sorted)');
-  for (var i = 0; i < actions.length; i++) {
-    final a = actions[i];
-    final mt = a.modelTypeName ?? '(null)';
-    debugPrint(
-      '$tag  [$i] id=${a.id} name="${a.name}" start=${a.startTime} end=${a.endTime} '
-      'model_type.name=$mt childActionIds=${a.childActionIds}',
-    );
-  }
-}
-
-void _debugPrintUmbrellaRowsPostFold(List<UmbrellaRow> rows) {
-  const tag = '[nx_time Today fold] post-fold';
-  debugPrint('$tag (${rows.length} umbrella row(s))');
-  for (var i = 0; i < rows.length; i++) {
-    final r = rows[i];
-    final u = r.umbrella;
-    final umt = u.modelTypeName ?? '(null)';
-    debugPrint(
-      '$tag  [$i] umbrella id=${u.id} name="${u.name}" start=${u.startTime} end=${u.endTime} model_type.name=$umt childCount=${r.children.length}',
-    );
-    for (var j = 0; j < r.children.length; j++) {
-      final c = r.children[j];
-      final cmt = c.modelTypeName ?? '(null)';
-      debugPrint(
-        '$tag      child[$j] id=${c.id} name="${c.name}" start=${c.startTime} end=${c.endTime} model_type.name=$cmt',
-      );
-    }
-  }
 }
 
 bool _actionOverlapsLocalDay(Action m, DateTime dayStart, DateTime dayEnd) {

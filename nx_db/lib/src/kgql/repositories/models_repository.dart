@@ -27,13 +27,6 @@ Future<List<Model>> fetchKgqlModels(
   required Map<String, dynamic> filter,
   required Map<String, dynamic> struct,
 }) async {
-  final modelType = filter['model_type'];
-  final filters = filter['filters'];
-  debugPrint(
-    '[nx_db fetchKgqlModels] START model_type=$modelType '
-    'filters=$filters structTopLevelKeys=${struct.keys.toList()}',
-  );
-
   final sw = Stopwatch()..start();
   QueryResult result;
   try {
@@ -57,19 +50,14 @@ Future<List<Model>> fetchKgqlModels(
   }
   sw.stop();
 
-  debugPrint(
-    '[nx_db fetchKgqlModels] client.query finished in ${sw.elapsedMilliseconds}ms '
-    'hasException=${result.hasException}',
-  );
-
   if (result.hasException) {
-    debugPrint('[nx_db fetchKgqlModels] GraphQL exception: ${result.exception}');
+    debugPrint(
+      '[nx_db fetchKgqlModels] ${sw.elapsedMilliseconds}ms GraphQL: ${result.exception}',
+    );
     throw result.exception!;
   }
 
-  final parsed = parseKgqlModelsResult(result.data?['getKgqlModels']);
-  debugPrint('[nx_db fetchKgqlModels] parsed ${parsed.length} Model(s)');
-  return parsed;
+  return parseKgqlModelsResult(result.data?['getKgqlModels']);
 }
 
 /// Loads a single model by numeric id within [modelTypeName].

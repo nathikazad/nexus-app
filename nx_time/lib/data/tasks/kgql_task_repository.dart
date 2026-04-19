@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 
@@ -19,8 +18,6 @@ class KgqlTaskRepository implements TaskRepository {
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadTaskSchema;
-
-  void _log(String message) => debugPrint('[nx_time kgql_task_repo] $message');
 
   Map<String, dynamic> _taskFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -69,10 +66,6 @@ class KgqlTaskRepository implements TaskRepository {
         'value': end.toIso8601String(),
       });
     }
-
-    _log(
-      'listAll filters=${filters.isEmpty ? "none" : filters.length} structKeys=${struct.keys.join(",")}',
-    );
 
     final models = await fetchKgqlModels(
       _client,
