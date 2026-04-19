@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexus_voice_assistant/core/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
+import 'package:nx_db/riverpod.dart' show modelTypesProvider;
 import 'package:nexus_voice_assistant/domain/schema/schema_model_type.dart';
 import 'package:nexus_voice_assistant/core/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/widgets/model_type_list_row.dart';
@@ -95,7 +96,7 @@ class _ModelTypeSelectorPageState extends ConsumerState<ModelTypeSelectorPage> {
               // Simple ListView for all screen sizes
               return RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(schemaModelTypesProvider);
+                  ref.invalidate(modelTypesProvider);
                 },
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -107,7 +108,7 @@ class _ModelTypeSelectorPageState extends ConsumerState<ModelTypeSelectorPage> {
             error: (error, stack) => ErrorDisplay(
               message: error.toString(),
               onRetry: () {
-                ref.invalidate(schemaModelTypesProvider);
+                ref.invalidate(modelTypesProvider);
               },
             ),
           );

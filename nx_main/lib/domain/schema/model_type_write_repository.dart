@@ -13,4 +13,7 @@ abstract class ModelTypeWriteRepository {
     required List<AttributeDefinitionDraft> attributeDefinitions,
     required List<RelationDefinitionDraft> relationshipTypes,
   });
+
+  /// Removes this model type via PostGraphile `deleteModelTypeById`.
+  Future<void> deleteModelType(int id);
 }

@@ -815,9 +815,10 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
     setState(() => _loading = true);
     try {
       final repo = ref.read(expenseRepositoryProvider);
+      final normalizedCost = -costNum.abs();
       final id = await repo.createMinimalExpense(
         name: _name.text.trim(),
-        amount: costNum,
+        amount: normalizedCost,
       );
       invalidateExpenseListCache(ref);
       if (!mounted) return;

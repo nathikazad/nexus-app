@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
+import 'package:nx_db/riverpod.dart' show modelTypesProvider;
 import 'package:nexus_voice_assistant/domain/schema/schema_model_type.dart';
 import 'package:nexus_voice_assistant/core/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/core/widgets/loading_indicator.dart';
@@ -275,7 +276,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         Expanded(
                           child: RefreshIndicator(
                             onRefresh: () async {
-                              ref.invalidate(schemaModelTypesProvider);
+                              ref.invalidate(modelTypesProvider);
                             },
                             child: ListView(
                               padding: const EdgeInsets.only(bottom: 96),
@@ -290,7 +291,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   error: (error, stack) => ErrorDisplay(
                     message: error.toString(),
                     onRetry: () {
-                      ref.invalidate(schemaModelTypesProvider);
+                      ref.invalidate(modelTypesProvider);
                     },
                   ),
                 );
@@ -303,7 +304,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               onPressed: () async {
                 final result = await context.push<bool>('/model-type-form');
                 if (result == true) {
-                  ref.invalidate(schemaModelTypesProvider);
+                  ref.invalidate(modelTypesProvider);
                 }
               },
               child: const Icon(Icons.add),

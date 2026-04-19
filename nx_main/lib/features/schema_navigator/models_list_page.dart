@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexus_voice_assistant/core/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
+import 'package:nx_db/riverpod.dart' show modelsProvider;
 import 'package:nexus_voice_assistant/core/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/widgets/model_row.dart';
 
@@ -65,7 +66,7 @@ class ModelsListPage extends ConsumerWidget {
                 // Mobile: ListView
                 return RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(schemaModelsProvider(modelTypeId));
+                    ref.invalidate(modelsProvider(modelTypeId));
                   },
                   child: ListView.builder(
                     itemCount: models.length,
@@ -84,7 +85,7 @@ class ModelsListPage extends ConsumerWidget {
                 // Desktop: DataTable
                 return RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(schemaModelsProvider(modelTypeId));
+                    ref.invalidate(modelsProvider(modelTypeId));
                   },
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
@@ -125,7 +126,7 @@ class ModelsListPage extends ConsumerWidget {
             error: (error, stack) => ErrorDisplay(
               message: error.toString(),
               onRetry: () {
-                ref.invalidate(schemaModelsProvider(modelTypeId));
+                ref.invalidate(modelsProvider(modelTypeId));
               },
             ),
           );

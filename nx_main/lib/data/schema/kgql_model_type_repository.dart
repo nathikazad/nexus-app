@@ -17,6 +17,16 @@ mutation SetKgqlModelTypes(\$input: SetKgqlModelTypesInput!) {
 }
 ''';
 
+const String _deleteModelTypeByIdMutation = '''
+mutation DeleteModelTypeById(\$input: DeleteModelTypeByIdInput!) {
+  deleteModelTypeById(input: \$input) {
+    modelType {
+      id
+    }
+  }
+}
+''';
+
 class KgqlModelTypeRepository implements ModelTypeWriteRepository {
   KgqlModelTypeRepository(this._ref);
 
@@ -77,6 +87,23 @@ class KgqlModelTypeRepository implements ModelTypeWriteRepository {
       throw Exception('No ID returned from setKgqlModelTypes mutation');
     }
     return savedId;
+  }
+
+  @override
+  Future<void> deleteModelType(int id) async {
+    final client = _ref.read(nx.graphqlClientProvider);
+    final result = await client.mutate(
+      MutationOptions(
+        document: gql(_deleteModelTypeByIdMutation),
+        variables: {
+          'input': {'id': id},
+        },
+      ),
+    );
+
+    if (result.hasException) {
+      throw Exception(result.exception.toString());
+    }
   }
 }
 

@@ -22,7 +22,7 @@ export 'package:nx_time/data/tasks/task_schema_provider.dart';
 /// Default KGQL-backed [ActionRepository].
 final actionRepositoryProvider = Provider<ActionRepository>(
   (ref) => KgqlActionRepository(
-    client: ref.read(graphqlClientProvider),
+    client: ref.watch(graphqlClientProvider),
     loadActionSchema: () => ref.read(actionSchemaProvider.future),
   ),
 );
@@ -30,7 +30,7 @@ final actionRepositoryProvider = Provider<ActionRepository>(
 /// KGQL-backed [TaskRepository].
 final taskRepositoryProvider = Provider<TaskRepository>(
   (ref) => KgqlTaskRepository(
-    client: ref.read(graphqlClientProvider),
+    client: ref.watch(graphqlClientProvider),
     loadTaskSchema: () => ref.read(taskSchemaProvider.future),
   ),
 );
@@ -38,7 +38,7 @@ final taskRepositoryProvider = Provider<TaskRepository>(
 /// KGQL-backed [ProjectRepository].
 final projectRepositoryProvider = Provider<ProjectRepository>(
   (ref) => KgqlProjectRepository(
-    client: ref.read(graphqlClientProvider),
+    client: ref.watch(graphqlClientProvider),
     loadProjectSchema: () => ref.read(projectSchemaProvider.future),
   ),
 );

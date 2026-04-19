@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nexus_voice_assistant/data/schema/kgql_model_type_repository.dart';
-import 'package:nexus_voice_assistant/data/schema/kgql_schema_providers.dart';
+import 'package:nx_db/riverpod.dart' show modelTypeProvider, modelTypesProvider;
 import 'package:nexus_voice_assistant/domain/schema/attribute_definition_draft.dart';
 import 'package:nexus_voice_assistant/domain/schema/model_type_form_state.dart';
 import 'package:nexus_voice_assistant/domain/schema/relation_definition_draft.dart';
@@ -148,9 +148,9 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
         relationshipTypes: state.relationshipTypes,
       );
 
-      ref.invalidate(schemaModelTypesProvider);
+      ref.invalidate(modelTypesProvider);
       if (modelTypeId != null) {
-        ref.invalidate(schemaModelTypeProvider(modelTypeId!));
+        ref.invalidate(modelTypeProvider(modelTypeId!));
       }
 
       if (context.mounted) {

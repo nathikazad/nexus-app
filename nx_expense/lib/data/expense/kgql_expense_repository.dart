@@ -84,13 +84,20 @@ class KgqlExpenseRepository implements ExpenseRepository {
     required num amount,
   }) async {
     final schema = await _loadExpenseSchema();
-    final key = schema.attributes
+    final numberKey = schema.attributes
         ?.where((a) => a.valueType == 'number' && (a.key ?? '').isNotEmpty)
         .map((a) => a.key!)
         .firstOrNull;
+    final dateKey = schema.attributes
+        ?.where((a) => (a.key ?? '').toLowerCase() == 'date')
+        .map((a) => a.key!)
+        .firstOrNull;
+    final today = _dateOnlyYmd(DateTime.now());
+    final normalizedAmount = -amount.abs();
     final attrs = <String, dynamic>{
       kExpenseIgnoreAttributeKey: false,
-      if (key != null) key: amount,
+      if (numberKey != null) numberKey: normalizedAmount,
+      if (dateKey != null) dateKey: today,
     };
     return upsert(
       ExpenseUpsert(

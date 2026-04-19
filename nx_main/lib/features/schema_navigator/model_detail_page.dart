@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nexus_voice_assistant/core/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/core/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
+import 'package:nx_db/riverpod.dart' show modelProvider;
 import 'package:nexus_voice_assistant/domain/schema/schema_model.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_model_attribute.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_relation.dart';
@@ -134,7 +135,7 @@ class ModelDetailPage extends ConsumerWidget {
         error: (error, stack) => ErrorDisplay(
           message: error.toString(),
           onRetry: () {
-            ref.invalidate(schemaModelProvider(modelId));
+            ref.invalidate(modelProvider(modelId));
           },
         ),
       ),

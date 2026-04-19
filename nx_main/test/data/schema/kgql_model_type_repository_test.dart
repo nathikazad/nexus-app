@@ -127,5 +127,48 @@ void main() {
         throwsException,
       );
     });
+
+    test('deleteModelType succeeds when GraphQL has no exception', () async {
+      final mock = MockGraphQLClient();
+      when(() => mock.mutate(any())).thenAnswer(
+        (_) async => QueryResult(
+          options: MutationOptions(document: gql('mutation { __typename }')),
+          source: QueryResultSource.network,
+          data: {
+            'deleteModelTypeById': {
+              'modelType': {'id': 7},
+            },
+          },
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(modelTypeWriteRepositoryProvider);
+      await repo.deleteModelType(7);
+      verify(() => mock.mutate(any())).called(1);
+    });
+
+    test('deleteModelType throws when GraphQL reports exception', () async {
+      final mock = MockGraphQLClient();
+      when(() => mock.mutate(any())).thenAnswer(
+        (_) async => QueryResult(
+          options: MutationOptions(document: gql('mutation { __typename }')),
+          source: QueryResultSource.network,
+          exception: OperationException(),
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(modelTypeWriteRepositoryProvider);
+      expect(() => repo.deleteModelType(1), throwsException);
+    });
   });
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
+import 'package:nx_db/riverpod.dart' show modelTypeProvider, modelTypesProvider;
 import 'package:nexus_voice_assistant/domain/schema/attribute_definition_draft.dart';
 import 'package:nexus_voice_assistant/domain/schema/relation_definition_draft.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_model_type.dart';
@@ -77,7 +78,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
         ),
         body: ErrorDisplay(
           message: e.toString(),
-          onRetry: () => ref.invalidate(schemaModelTypeProvider(modelTypeId)),
+          onRetry: () => ref.invalidate(modelTypeProvider(modelTypeId)),
         ),
       ),
     );
@@ -104,17 +105,23 @@ class ModelTypeDetailPage extends ConsumerWidget {
                 '/model-type-form?modelTypeId=${modelType.id}',
               );
               if (result == true && context.mounted) {
-                ref.invalidate(schemaModelTypeProvider(modelTypeId));
-                ref.invalidate(schemaModelTypesProvider);
+                ref.invalidate(modelTypeProvider(modelTypeId));
+                ref.invalidate(modelTypesProvider);
               }
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Delete',
+            onPressed: () =>
+                _confirmDeleteModelType(context, ref, modelType),
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(schemaModelTypeProvider(modelTypeId));
-          ref.invalidate(schemaModelTypesProvider);
+          ref.invalidate(modelTypeProvider(modelTypeId));
+          ref.invalidate(modelTypesProvider);
           await ref.read(schemaModelTypeProvider(modelTypeId).future);
         },
         child: ListView(
@@ -560,5 +567,50 @@ class ModelTypeDetailPage extends ConsumerWidget {
         style: GoogleFonts.inter(fontSize: 11, color: AppColors.gray400),
       ),
     );
+  }
+}
+
+Future<void> _confirmDeleteModelType(
+  BuildContext context,
+  WidgetRef ref,
+  SchemaModelType modelType,
+) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Delete model type'),
+      content: Text('Delete “${modelType.name}”? This cannot be undone.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(ctx).colorScheme.error,
+          ),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  try {
+    await ref.read(modelTypeWriteRepositoryProvider).deleteModelType(modelType.id);
+    ref.invalidate(modelTypesProvider);
+    ref.invalidate(modelTypeProvider(modelType.id));
+    if (context.mounted) {
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Deleted “${modelType.name}”')),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete: $e')),
+      );
+    }
   }
 }

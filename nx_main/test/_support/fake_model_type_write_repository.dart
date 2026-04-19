@@ -14,6 +14,7 @@ class FakeModelTypeWriteRepository implements ModelTypeWriteRepository {
   int? lastParentId;
   List<AttributeDefinitionDraft>? lastAttributes;
   List<RelationDefinitionDraft>? lastRelations;
+  int? lastDeletedId;
 
   @override
   Future<int> setModelType({
@@ -34,5 +35,10 @@ class FakeModelTypeWriteRepository implements ModelTypeWriteRepository {
     lastAttributes = List<AttributeDefinitionDraft>.from(attributeDefinitions);
     lastRelations = List<RelationDefinitionDraft>.from(relationshipTypes);
     return id ?? nextId++;
+  }
+
+  @override
+  Future<void> deleteModelType(int id) async {
+    lastDeletedId = id;
   }
 }
