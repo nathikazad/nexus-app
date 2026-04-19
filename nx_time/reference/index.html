@@ -146,7 +146,10 @@
         'partials/tab-calendar.html',
         'partials/page-activity-detail-deep-work.html',
         'partials/page-activity-detail-sleep.html',
+        'partials/page-activity-detail-umbrella.html',
+        'partials/page-activity-detail-umbrella-coffee.html',
         'partials/page-add-time-block.html',
+        'partials/page-add-trip-children.html',
         'partials/page-edit-activity.html'
     ];
 
@@ -165,7 +168,7 @@
 
     let historyStack = ['page-today'];
 
-    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-add-time-block', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep'];
+    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-activity-detail-umbrella', 'page-activity-detail-umbrella-coffee', 'page-add-time-block', 'page-add-trip-children', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep'];
     const bottomNav = document.getElementById('bottom-nav');
 
     function navigate(pageId, pushToHistory = true) {
@@ -317,6 +320,34 @@
             actList.classList.add('hidden');
             actList.classList.remove('flex');
             if (hint) hint.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Toggle an umbrella row's folded children inline (Today + Calendar lists).
+     * Expects: <div data-umbrella>...<button onclick="toggleUmbrella(this, event)">...</button>
+     *           <div data-umbrella-children class="hidden">...</div></div>
+     * Swaps chevron icon and aria-label; doesn't navigate.
+     */
+    function toggleUmbrella(btn, evt) {
+        if (evt && evt.stopPropagation) evt.stopPropagation();
+        const umbrella = btn.closest('[data-umbrella]');
+        if (!umbrella) return;
+        const children = umbrella.querySelector('[data-umbrella-children]');
+        const icon = btn.querySelector('iconify-icon');
+        if (!children) return;
+
+        const isOpen = !children.classList.contains('hidden');
+        if (isOpen) {
+            children.classList.add('hidden');
+            if (icon) icon.setAttribute('icon', 'solar:alt-arrow-down-linear');
+            btn.setAttribute('aria-label', 'Expand actions');
+            btn.setAttribute('aria-expanded', 'false');
+        } else {
+            children.classList.remove('hidden');
+            if (icon) icon.setAttribute('icon', 'solar:alt-arrow-up-linear');
+            btn.setAttribute('aria-label', 'Collapse actions');
+            btn.setAttribute('aria-expanded', 'true');
         }
     }
 

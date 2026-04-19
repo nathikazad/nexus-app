@@ -83,6 +83,60 @@
                     </div>
                     <div class="text-xs font-medium text-[#F97316] bg-orange-100 px-2 py-1 rounded-md tracking-tight">00:32:14</div>
                 </div>
+
+                <!-- Umbrella row (Coffee with Rachel — Starbucks). Starts collapsed; tap chevron to expand inline, tap body to open detail. -->
+                <div class="-mx-3" data-umbrella>
+                    <div class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors group">
+                        <div class="w-1 h-10 rounded-full bg-pink-400 shrink-0"></div>
+                        <div onclick="navigate('page-activity-detail-umbrella-coffee', true)" class="flex-1 flex flex-col justify-center cursor-pointer">
+                            <span class="text-sm font-medium text-slate-900 leading-tight">Met Rachel</span>
+                            <span class="text-xs text-slate-500 mt-0.5">Starbucks · 3:00p – 3:45p</span>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">45m</div>
+                        <button type="button" onclick="toggleUmbrella(this, event)" aria-expanded="false" class="w-7 h-7 ml-1 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0" aria-label="Expand 1 action">
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-base"></iconify-icon>
+                        </button>
+                    </div>
+                    <div data-umbrella-children class="pl-7 pr-3 pb-1 hidden">
+                        <div class="border-l border-slate-100 pl-3 flex flex-col gap-0.5">
+                            <div onclick="navigate('page-activity-detail-deep-work', true)" class="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+                                <div class="w-0.5 h-5 rounded-full bg-yellow-400 shrink-0"></div>
+                                <div class="flex-1 flex flex-col">
+                                    <span class="text-[13px] text-slate-900 leading-tight">Coffee and Cookies</span>
+                                    <span class="text-[11px] text-slate-500">3:05p – 3:25p</span>
+                                </div>
+                                <span class="text-[11px] font-medium text-slate-400">20m</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Umbrella row (Dancing — Joe's Club). Starts expanded to show the open state; chevron points up. -->
+                <div class="-mx-3" data-umbrella>
+                    <div class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors group">
+                        <div class="w-1 h-10 rounded-full bg-green-500 shrink-0"></div>
+                        <div onclick="navigate('page-activity-detail-umbrella', true)" class="flex-1 flex flex-col justify-center cursor-pointer">
+                            <span class="text-sm font-medium text-slate-900 leading-tight">Dancing</span>
+                            <span class="text-xs text-slate-500 mt-0.5">Joe's Club · 9:30p – 11:45p</span>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">2h 15m</div>
+                        <button type="button" onclick="toggleUmbrella(this, event)" aria-expanded="true" class="w-7 h-7 ml-1 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0" aria-label="Collapse 1 action">
+                            <iconify-icon icon="solar:alt-arrow-up-linear" class="text-base"></iconify-icon>
+                        </button>
+                    </div>
+                    <div data-umbrella-children class="pl-7 pr-3 pb-1">
+                        <div class="border-l border-slate-100 pl-3 flex flex-col gap-0.5">
+                            <div onclick="navigate('page-activity-detail-deep-work', true)" class="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+                                <div class="w-0.5 h-5 rounded-full bg-pink-400 shrink-0"></div>
+                                <div class="flex-1 flex flex-col">
+                                    <span class="text-[13px] text-slate-900 leading-tight">Met Corinne</span>
+                                    <span class="text-[11px] text-slate-500">9:30p – 11:45p</span>
+                                </div>
+                                <span class="text-[11px] font-medium text-slate-400">2h 15m</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Add Button -->

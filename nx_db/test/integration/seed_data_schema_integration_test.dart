@@ -53,10 +53,9 @@ const _kSeedModelTypeNames = <String>{
   'Meet',
   'Goto',
   'Prayer',
-  'Meal',
+  'Consumption',
   'Meditation',
   'Workout',
-  'Alcohol',
   'Sleep',
 };
 

@@ -1,0 +1,88 @@
+    <div id="page-add-trip-children" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <div class="max-w-[375px] mx-auto w-full flex flex-col h-full min-h-0 font-sans text-slate-900">
+            <div class="flex items-center px-5 pt-12 pb-2 gap-3 shrink-0">
+                <button type="button" onclick="navigateBack()" class="text-sm text-sky-600 font-medium py-1">Cancel</button>
+                <span class="text-[15px] font-medium flex-1 text-center">Trip details</span>
+                <button type="button" onclick="navigateBack()" class="text-sm text-sky-600 font-medium py-1">Done</button>
+            </div>
+
+            <main class="flex-1 overflow-y-auto hide-scrollbar pb-8">
+                <!-- Saved umbrella summary (shown after saving a Goto / Visit / Trip from page-add-time-block). -->
+                <div class="px-5 pt-3 pb-2">
+                    <div class="text-[11px] uppercase tracking-wide text-[color:var(--color-text-tertiary)] mb-1.5">Trip just saved</div>
+                    <div class="px-3 py-3 border border-[color:var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[color:var(--color-background-secondary)]">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+                            <span class="text-[13px] font-medium">Visit · Joe's Club</span>
+                        </div>
+                        <div class="text-[12px] text-[color:var(--color-text-tertiary)]">9:30 PM – 11:45 PM · Friday, Apr 17</div>
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5 my-1"></div>
+
+                <!-- Inline post-save prompt: each chip opens page-add-time-block pre-filled with type + parent's start/end + a hidden led_to_* link to this trip. -->
+                <div class="px-5 py-3">
+                    <div class="text-[13px] font-medium mb-1">What happened during this trip?</div>
+                    <div class="text-[11px] text-[color:var(--color-text-tertiary)] mb-2.5 leading-relaxed">
+                        Each tap opens a pre-filled time block linked to this trip via <code class="text-[10px] bg-slate-100 px-1 py-0.5 rounded">led_to_*</code>.
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="navigate('page-add-time-block', true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                            <span class="inline-block w-2 h-2 rounded-full bg-pink-400"></span>
+                            Meet
+                        </button>
+                        <button type="button" onclick="navigate('page-add-time-block', true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                            <span class="inline-block w-2 h-2 rounded-full bg-[#185FA5]"></span>
+                            Work
+                        </button>
+                        <button type="button" onclick="navigate('page-add-time-block', true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                            <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                            Workout
+                        </button>
+                        <button type="button" onclick="navigate('page-add-time-block', true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                            <span class="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
+                            Consumption
+                        </button>
+                        <button type="button" onclick="navigate('page-add-time-block', true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                            <iconify-icon icon="solar:add-circle-linear" class="text-sm text-slate-500"></iconify-icon>
+                            Other
+                        </button>
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <!-- Inside this trip: previously linked children. Long-press / Unlink removes the led_to_* relation, never deletes the action. -->
+                <div class="px-5 py-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[13px] font-medium">Inside this trip</span>
+                        <span class="text-xs text-[color:var(--color-text-secondary)]">1 action</span>
+                    </div>
+
+                    <div class="flex items-center gap-3 p-2.5 bg-[color:var(--color-background-secondary)] rounded-[var(--border-radius-md)] mb-1">
+                        <div class="w-1 h-9 rounded-full bg-pink-400 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[13px]">Met Corinne</div>
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)]">9:30 PM – 11:45 PM · linked to this trip</div>
+                        </div>
+                        <button type="button" class="text-xs text-[color:var(--color-text-danger)]">Unlink</button>
+                    </div>
+
+                    <div class="text-[11px] text-[color:var(--color-text-tertiary)] mt-1.5 leading-relaxed">
+                        Children inherit this trip's start/end as defaults; edit per child as needed.
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <!-- Promote-to-trip action for the case where a Meet / Work / etc. exists first and the user wraps it later. -->
+                <div class="px-5 py-3">
+                    <div class="text-[13px] font-medium mb-1.5">Promote standalone action to trip</div>
+                    <div class="text-[11px] text-[color:var(--color-text-tertiary)] mb-2 leading-relaxed">
+                        If a Meet or Work was logged first, open it from Today and use Edit ▶ "Wrap in a trip…" — that creates a Goto with the bounding times and links the existing action via <code class="text-[10px] bg-slate-100 px-1 py-0.5 rounded">led_to_*</code>.
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>

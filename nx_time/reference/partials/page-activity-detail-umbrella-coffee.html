@@ -1,0 +1,109 @@
+    <div id="page-activity-detail-umbrella-coffee" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-20">
+        <div class="max-w-[375px] mx-auto w-full flex flex-col h-full min-h-0 font-sans text-slate-900">
+            <div class="flex items-center px-5 pt-12 pb-2 gap-3 shrink-0">
+                <button type="button" onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 -ml-2 text-sky-600" aria-label="Back">
+                    <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+                </button>
+                <span class="text-[15px] font-medium flex-1 text-center text-slate-900">Trip detail</span>
+                <button type="button" onclick="navigate('page-edit-activity')" class="text-[13px] text-sky-600 font-medium py-1">Edit</button>
+            </div>
+
+            <main class="flex-1 overflow-y-auto hide-scrollbar pb-8">
+                <div class="px-5 pt-2 pb-4">
+                    <div class="text-xl font-medium mb-1.5">Met Rachel</div>
+                    <div class="flex items-center gap-2 mb-3 flex-wrap">
+                        <!-- Title rule: Meet present, no Event → "verb with people". Category rule: Meet → Meeting (pink palette). -->
+                        <span class="bg-[#FCE7F3] text-[#9D174D] text-xs font-medium px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
+                            <span class="inline-block w-2 h-2 rounded-full bg-pink-400"></span>
+                            Meeting
+                        </span>
+                        <span class="text-[13px] text-[color:var(--color-text-secondary)]">Friday, Apr 17</span>
+                    </div>
+
+                    <div class="flex items-center gap-0 px-4 py-3 bg-[color:var(--color-background-secondary)] rounded-[var(--border-radius-lg)]">
+                        <div class="text-center">
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)] mb-0.5">start</div>
+                            <div class="text-lg font-medium">3:00<span class="text-[13px] font-normal text-[color:var(--color-text-secondary)]"> PM</span></div>
+                        </div>
+                        <div class="flex-1 flex items-center px-3 mt-2.5">
+                            <div class="flex-1 h-px bg-[color:var(--color-border-secondary)]"></div>
+                            <div class="px-2 py-0.5 text-[11px] text-[color:var(--color-text-tertiary)]">45m</div>
+                            <div class="flex-1 h-px bg-[color:var(--color-border-secondary)]"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)] mb-0.5">end</div>
+                            <div class="text-lg font-medium">3:45<span class="text-[13px] font-normal text-[color:var(--color-text-secondary)]"> PM</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Place chip from Goto.at_place -->
+                    <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-full text-[12px] text-slate-700">
+                            <iconify-icon icon="solar:map-point-linear" class="text-sm text-slate-500"></iconify-icon>
+                            Starbucks · Powell St
+                        </span>
+                    </div>
+
+                    <!-- People (union of Meet.with_person across folded Meets) -->
+                    <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <span class="text-[11px] text-slate-500 mr-0.5">with</span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-full text-[12px] text-slate-700">
+                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-pink-100 text-[10px] font-medium text-pink-700">R</span>
+                            Rachel
+                        </span>
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <!-- What happened here: one folded item (coffee + cookies merged); Meet is the umbrella title, not listed again. -->
+                <div class="px-5 py-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[13px] font-medium">What happened here</span>
+                        <span class="text-xs text-[color:var(--color-text-secondary)]">1 action</span>
+                    </div>
+
+                    <div onclick="navigate('page-activity-detail-deep-work', true)" class="flex items-center gap-3 p-2.5 rounded-[var(--border-radius-md)] hover:bg-slate-50 cursor-pointer">
+                        <div class="w-1 h-9 rounded-full bg-yellow-400 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[13px] text-slate-900 leading-tight">Coffee and Cookies</div>
+                            <div class="text-[11px] text-[color:var(--color-text-tertiary)]">3:05 PM – 3:25 PM · 20m</div>
+                        </div>
+                        <span class="text-xs text-[color:var(--color-text-tertiary)]">▶</span>
+                    </div>
+
+                    <button type="button" onclick="navigate('page-add-trip-children', true)" class="mt-2 w-full py-2 flex items-center justify-center gap-1.5 rounded-[var(--border-radius-md)] border border-dashed border-slate-200 text-[12px] font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all">
+                        <iconify-icon icon="solar:add-circle-linear" class="text-base"></iconify-icon>
+                        Add another action to this trip
+                    </button>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <div class="px-5 py-3">
+                    <div class="text-[13px] font-medium mb-1.5">Notes</div>
+                    <div class="text-[13px] text-[color:var(--color-text-secondary)] leading-relaxed">
+                        Caught up with Rachel on the new project. Cookies were too sweet.
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <div class="px-5 py-3">
+                    <div class="text-[13px] font-medium mb-2">Associated tasks</div>
+                    <div class="py-3 text-center text-[color:var(--color-text-tertiary)] text-[13px]">
+                        No tasks linked to this trip
+                    </div>
+                </div>
+
+                <div class="h-px bg-[color:var(--color-border-tertiary)] mx-5"></div>
+
+                <div class="px-5 py-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[13px] font-medium">Wearable captures</span>
+                        <button type="button" class="text-[13px] text-sky-600">View 7 photos ▶</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
