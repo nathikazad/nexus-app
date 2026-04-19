@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_expense/util/expense_schema.dart';
+import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 
 void main() {
   test('parseDaySpendEntries reads backend "key" bucket (group by day)', () {

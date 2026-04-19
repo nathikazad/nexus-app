@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/auth.dart';
 
-import 'app_theme.dart';
-import 'desktop/desktop_nav.dart';
-import 'desktop/desktop_shell.dart';
-import 'providers/expense_providers.dart';
-import 'data/teller_timeline_api.dart';
-import 'layout.dart';
-import 'scoped_expense_list.dart';
-import 'screens/expense/expense_dashboard_screen.dart';
-import 'screens/expense/add_expense_screen.dart';
-import 'screens/expense/expense_detail_screen.dart';
-import 'screens/expense/expense_form_screen.dart';
-import 'screens/expense/expense_list_screen.dart';
-import 'screens/auth/expense_login_screen.dart';
-import 'screens/transfers/transfer_detail_screen.dart';
-import 'screens/transfers/transfer_form_screen.dart';
-import 'screens/transfers/transfer_relation_picker_screen.dart';
-import 'screens/transfers/transfers_list_screen.dart';
-import 'screens/teller/teller_list_screen.dart';
-import 'screens/teller/teller_link_picker_screen.dart';
-import 'screens/teller/teller_expense_link_picker_screen.dart';
-import 'screens/teller/teller_transfer_link_picker_screen.dart';
-import 'screens/teller/teller_transfer_quick_create_screen.dart';
-import 'screens/tag/tag_browser_screen.dart';
-import 'screens/tag/tag_system_form_screen.dart';
-import 'screens/tag/tag_systems_screen.dart';
+import 'package:nx_expense/core/layout/layout.dart';
+import 'package:nx_expense/core/theme/app_theme.dart';
+import 'package:nx_expense/domain/expense/expense_filter.dart';
+import 'package:nx_expense/domain/teller/teller_transaction.dart';
+import 'package:nx_expense/features/auth/expense_login_page.dart';
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
+import 'package:nx_expense/features/desktop/desktop_shell.dart';
+import 'package:nx_expense/features/expense/expense_dashboard_page.dart';
+import 'package:nx_expense/features/expense/expense_detail_page.dart';
+import 'package:nx_expense/features/expense/expense_form_page.dart';
+import 'package:nx_expense/features/expense/expense_list_page.dart';
+import 'package:nx_expense/features/expense/expense_list_view_model.dart';
+import 'package:nx_expense/features/expense/scoped_expense_list.dart';
+import 'package:nx_expense/features/tag/tag_browser_page.dart';
+import 'package:nx_expense/features/tag/tag_system_form_page.dart';
+import 'package:nx_expense/features/tag/tag_systems_page.dart';
+import 'package:nx_expense/features/teller/teller_expense_link_picker_page.dart';
+import 'package:nx_expense/features/teller/teller_link_picker_page.dart';
+import 'package:nx_expense/features/teller/teller_list_page.dart';
+import 'package:nx_expense/features/teller/teller_transfer_link_picker_page.dart';
+import 'package:nx_expense/features/teller/teller_transfer_quick_create_page.dart';
+import 'package:nx_expense/features/transfers/transfer_detail_page.dart';
+import 'package:nx_expense/features/transfers/transfer_form_page.dart';
+import 'package:nx_expense/features/transfers/transfer_relation_picker_page.dart';
+import 'package:nx_expense/features/transfers/transfers_list_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -62,8 +62,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               navigationShell.currentIndex == 0 && !selecting;
 
           if (isDesktopLayout(context)) {
-            // [navigationShell] must stay mounted for go_router; [DesktopShell]
-            // provides its own Scaffold, FAB, and multi-panel layout.
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -118,6 +116,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   selectedIcon: Icon(Icons.swap_horiz),
                   label: 'Transfers',
                 ),
+                NavigationDestination(
+                  icon: Icon(Icons.account_balance_outlined),
+                  selectedIcon: Icon(Icons.account_balance),
+                  label: 'Teller',
+                ),
               ],
             ),
           );
@@ -147,15 +150,19 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/teller',
+                builder: (context, state) => const TellerListScreen(),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
         path: '/tag-systems',
         builder: (context, state) => const TagSystemsScreen(),
-      ),
-      GoRoute(
-        path: '/teller',
-        builder: (context, state) => const TellerListScreen(),
       ),
       GoRoute(
         path: '/expense/form/:id',
@@ -236,7 +243,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/teller/link-expense',
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is! TellerTransactionRow) {
+          if (extra is! TellerTransaction) {
             return const Scaffold(
               body: Center(child: Text('Missing Teller transaction')),
             );
@@ -248,7 +255,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/teller/link-transfer',
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is! TellerTransactionRow) {
+          if (extra is! TellerTransaction) {
             return const Scaffold(
               body: Center(child: Text('Missing Teller transaction')),
             );
@@ -260,7 +267,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/teller/transfer-create',
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is! TellerTransactionRow) {
+          if (extra is! TellerTransaction) {
             return const Scaffold(
               body: Center(child: Text('Missing Teller transaction')),
             );

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_db/nx_db.dart';
-import 'package:nx_expense/widgets/expense_card.dart';
+import 'package:nx_expense/domain/expense/expense.dart';
+import 'package:nx_expense/domain/schema/model_type_view.dart';
+import 'package:nx_expense/features/expense/widgets/expense_card.dart';
 
 void main() {
   testWidgets('ExpenseCard shows name and amount', (tester) async {
-    final schema = ModelType(
+    const schema = ModelTypeView(
       id: 1,
       name: 'Expense',
       attributes: [
-        AttributeDefinition(key: 'cost', valueType: 'number'),
+        AttributeDefView(key: 'cost', valueType: 'number'),
       ],
     );
-    final model = Model(
+    const expense = Expense(
       id: 42,
       name: 'Coffee',
       modelTypeId: 1,
@@ -25,7 +26,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ExpenseCard(
-            model: model,
+            expense: expense,
             schema: schema,
             onTap: () {},
           ),

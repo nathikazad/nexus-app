@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_expense/util/expense_schema.dart';
-import 'package:nx_expense/widgets/relation_picker.dart';
+import 'package:nx_expense/data/expense/expense_struct.dart';
+import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
+import 'package:nx_expense/data/schema/model_type_view_mapper.dart';
+import 'package:nx_expense/domain/schema/model_type_view.dart';
+import 'package:nx_expense/features/expense/widgets/relation_picker.dart';
 
 void main() {
   group('buildExpenseStruct', () {
@@ -122,14 +125,15 @@ void main() {
           },
         ],
       });
-      final ts = tagSystemByName(mt, 'Judgment');
+      final view = modelTypeViewFromKgql(mt);
+      final ts = tagSystemByName(view, 'Judgment');
       expect(ts, isNotNull);
       expect(ts!.name, 'Judgment');
     });
 
     test('H6.5 tagSystemByName missing', () {
       final mt = ModelType.fromJson({'id': 1, 'name': 'Expense'});
-      expect(tagSystemByName(mt, 'Nope'), isNull);
+      expect(tagSystemByName(modelTypeViewFromKgql(mt), 'Nope'), isNull);
     });
 
     test('H6.6 allRelationTargetTypeNames', () {
@@ -141,7 +145,7 @@ void main() {
           {'target_model_type': 'Place'},
         ],
       });
-      expect(allRelationTargetTypeNames(mt), {'Company', 'Place'});
+      expect(allRelationTargetTypeNames(modelTypeViewFromKgql(mt)), {'Company', 'Place'});
     });
 
     test('H6.7 filterChipDescriptors', () {
@@ -161,7 +165,7 @@ void main() {
           },
         ],
       });
-      final d = filterChipDescriptors(mt);
+      final d = filterChipDescriptors(modelTypeViewFromKgql(mt));
       expect(d.length, 2);
       expect(d.map((e) => e.label).toSet(), {'Food', 'Travel'});
     });

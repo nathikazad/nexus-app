@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_expense/providers/expense_providers.dart';
+import 'package:nx_expense/data/providers.dart';
 
 void main() {
   test('E10.4 concurrent reads of expenseStructProvider share cached map', () async {

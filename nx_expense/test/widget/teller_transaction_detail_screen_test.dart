@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nx_expense/data/teller_timeline_api.dart';
-import 'package:nx_expense/screens/teller/teller_transaction_detail_screen.dart';
+import 'package:nx_expense/domain/teller/teller_transaction.dart';
+import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
 
 void main() {
   testWidgets('TellerTransactionDetailScreen shows app bar and payload fields', (tester) async {

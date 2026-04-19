@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_expense/data/expense_timeline_api.dart';
-import 'package:nx_expense/data/teller_timeline_api.dart';
+import 'package:nx_expense/data/teller/expense_timeline_api.dart';
+import 'package:nx_expense/domain/teller/teller_link.dart';
 
 void main() {
   group('parseExpenseTimelineLinks', () {
@@ -95,17 +95,17 @@ void main() {
     });
   });
 
-  group('ExpenseTellerLink.toTellerTransactionRow', () {
+  group('TellerExpenseLink.toTellerTransaction', () {
     test('maps fields; linkedModels empty', () {
       final t = DateTime.utc(2026, 4, 1, 12);
-      final link = ExpenseTellerLink(
+      final link = TellerExpenseLink(
         linkId: '1',
         eventTime: t,
         eventId: 'ev',
         payload: const {'amount': '5'},
         eventType: kTellerTimelineEventType,
       );
-      final row = link.toTellerTransactionRow();
+      final row = link.toTellerTransaction();
       expect(row.time, t);
       expect(row.eventId, 'ev');
       expect(row.payload['amount'], '5');

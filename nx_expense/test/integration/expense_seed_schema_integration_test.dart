@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_expense/util/expense_schema.dart';
-import 'package:nx_expense/providers/expense_providers.dart';
-import 'package:test/test.dart' show Tags;
-
+import 'package:nx_expense/data/providers.dart';
+import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
+import 'package:nx_expense/data/schema/model_type_view_mapper.dart';
+import 'package:nx_expense/domain/expense/model_names.dart';
+import 'package:nx_expense/domain/schema/model_type_view.dart';
 import '../support/integration_auth.dart';
 
 DateTimeRange _wideExpenseRange() {
@@ -20,9 +21,9 @@ DateTimeRange _wideExpenseRange() {
 
 /// Assertions aligned with [servers/pgdb/docs/llm-reference/seed-data.md]
 /// (`setup_model_types`, `setup_expense_tag_systems`, demo Expense rows).
-void _collectTagNodeNames(TagNode n, Set<String> out) {
+void _collectTagNodeNames(TagNodeView n, Set<String> out) {
   out.add(n.name);
-  for (final c in n.children ?? const <TagNode>[]) {
+  for (final c in n.children ?? const <TagNodeView>[]) {
     _collectTagNodeNames(c, out);
   }
 }
@@ -42,11 +43,12 @@ void main() {
       final keys = mt.attributes?.map((a) => a.key).whereType<String>().toSet() ?? {};
       expect(keys, contains('cost'));
 
-      final targets = allRelationTargetTypeNames(mt);
+      final view = modelTypeViewFromKgql(mt);
+      final targets = allRelationTargetTypeNames(view);
       expect(targets, contains('Company'));
 
       for (final name in ['Category', 'Judgment', 'Essentiality']) {
-        expect(tagSystemByName(mt, name), isNotNull, reason: 'Tag system $name');
+        expect(tagSystemByName(view, name), isNotNull, reason: 'Tag system $name');
       }
     }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
 
@@ -59,7 +61,7 @@ void main() {
       await container.read(authProvider.future);
       final mt = await container.read(expenseSchemaProvider.future);
 
-      final category = tagSystemByName(mt, 'Category');
+      final category = tagSystemByName(modelTypeViewFromKgql(mt), 'Category');
       expect(category, isNotNull);
       final names = <String>{};
       for (final node in category!.nodes) {

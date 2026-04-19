@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_expense/providers/expense_providers.dart';
-import 'package:nx_expense/widgets/expense_teller_links_section.dart';
+import 'package:nx_expense/data/providers.dart';
+import 'package:nx_expense/features/expense/widgets/expense_teller_links_section.dart';
 
 void main() {
   testWidgets('ExpenseTellerLinksFormSection shows title, add, empty state', (tester) async {

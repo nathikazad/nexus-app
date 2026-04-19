@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_expense/providers/expense_providers.dart';
+import 'package:nx_expense/data/providers.dart';
+import 'package:nx_expense/domain/expense/expense_filter.dart';
+import 'package:nx_expense/features/expense/expense_dashboard_view_model.dart';
 
 class _MockGraphQLClient extends Mock implements GraphQLClient {}
 

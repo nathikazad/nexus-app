@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_expense/data/teller_timeline_api.dart';
+import 'package:nx_expense/data/teller/teller_timeline_api.dart';
 
 void main() {
   group('parseTellerTimelineResponse', () {
