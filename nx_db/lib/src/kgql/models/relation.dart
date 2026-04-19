@@ -8,12 +8,17 @@ class Relation {
   final String? name;
   final String? description;
 
+  /// For self-type edges only (`from_model_type_id == to_model_type_id`): `'parent'`
+  /// or `'child'` relative to the fetched model. Null for cross-type relations.
+  final String? relation;
+
   Relation({
     required this.relationId,
     required this.modelId,
     required this.modelType,
     this.name,
     this.description,
+    this.relation,
   });
 
   factory Relation.fromJson(Map<String, dynamic> json) {
@@ -23,6 +28,7 @@ class Relation {
       modelType: json['model_type'] as String? ?? json['modelType'] as String? ?? 'Unknown',
       name: parseOptionalStringField(json['name']),
       description: parseOptionalStringField(json['description']),
+      relation: parseOptionalStringField(json['relation']),
     );
   }
 
@@ -33,6 +39,7 @@ class Relation {
       'model_type': modelType,
       'name': name,
       'description': description,
+      if (relation != null) 'relation': relation,
     };
   }
 }

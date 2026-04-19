@@ -27,56 +27,19 @@ int _cmpStartThenId(Action a, Action b) {
   return a.id.compareTo(b.id);
 }
 
-int _typeRankForParentTieBreak(Action a) {
-  switch (a.modelTypeName) {
-    case 'Goto':
-      return 0;
-    case 'Workout':
-      return 1;
-    case 'Meet':
-      return 2;
-    default:
-      return 10;
-  }
-}
-
-bool _acceptDirectedEdge(Action parent, Action child) {
-  if (parent.id == child.id) return false;
-
-  final ps = parent.startTime;
-  final pe = parent.endTime;
-  final cs = child.startTime;
-  final ce = child.endTime;
-
-  // Prefer semantic direction based on time window containment.
-  if (ps != null && pe != null && cs != null && ce != null) {
-    final contains = !ps.isAfter(cs) && !pe.isBefore(ce);
-    if (!contains) return false;
-
-    // If windows are identical, pick a stable parent direction.
-    final sameWindow = ps == cs && pe == ce;
-    if (sameWindow) {
-      final pr = _typeRankForParentTieBreak(parent);
-      final cr = _typeRankForParentTieBreak(child);
-      if (pr != cr) return pr < cr;
-      return parent.id < child.id;
-    }
-    return true;
-  }
-
-  // Fallback when times are missing: keep one stable direction only.
-  return parent.id < child.id;
-}
-
 /// Builds umbrella rows from a flat same-day [Action] list using only `childActionIds` edges.
 ///
-/// If a child is claimed by multiple parents in the day-set, the **smallest parent id** wins.
+/// `childActionIds` is already directional (the mapper filters KGQL `relation == 'child'`),
+/// so we trust it as-is. Two ties still need explicit handling:
+///   * **2-cycle** — both `A → B` and `B → A` were created. Drop the edge whose
+///     `parent.id > child.id` so exactly one direction wins (smaller id parents).
+///   * **Multiple parents claim the same child** — the smallest parent id wins.
 List<UmbrellaRow> foldDayActions(List<Action> dayActions) {
   const tag = '[nx_time fold]';
   if (kNxTimeTraceActionSemantics) {
     developer.log(
       '$tag begin inDay=${dayActions.length} '
-      '(childActionIds edges only; smallest parent id wins)',
+      '(directional childActionIds; 2-cycles broken by parent.id < child.id)',
       name: 'nx_time.fold',
     );
   }
@@ -84,17 +47,26 @@ List<UmbrellaRow> foldDayActions(List<Action> dayActions) {
   final byId = {for (final a in dayActions) a.id: a};
   final dayIds = byId.keys.toSet();
 
-  final childToParent = <int, int>{};
+  // Collect every (parent, child) edge that is fully in the day-set.
+  final edges = <(int parent, int child)>{};
   for (final a in dayActions) {
     for (final cid in a.childActionIds) {
+      if (cid == a.id) continue;
       if (!dayIds.contains(cid)) continue;
-      final candidate = byId[cid];
-      if (candidate == null) continue;
-      if (!_acceptDirectedEdge(a, candidate)) continue;
-      final prev = childToParent[cid];
-      if (prev == null || a.id < prev) {
-        childToParent[cid] = a.id;
-      }
+      edges.add((a.id, cid));
+    }
+  }
+
+  final childToParent = <int, int>{};
+  for (final e in edges) {
+    final pid = e.$1;
+    final cid = e.$2;
+    // 2-cycle breaker: if the reverse edge also exists, keep only the direction
+    // where parent.id < child.id.
+    if (edges.contains((cid, pid)) && pid > cid) continue;
+    final prev = childToParent[cid];
+    if (prev == null || pid < prev) {
+      childToParent[cid] = pid;
     }
   }
 

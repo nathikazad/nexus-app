@@ -27,7 +27,7 @@ flutter test test/unit/expense_providers_test.dart
 
 ## Integration tests
 
-Shared auth for live GraphQL: [`test/support/integration_auth.dart`](support/integration_auth.dart) — user **`1`**, [`BackendPreset.laptop`](../../nx_db/lib/src/backend_presets.dart) for the user object, with **[`expenseIntegrationOverrides`](support/integration_auth.dart)** so HTTP/WebSocket/image URLs use **[`kIntegrationTestBackendUrls`](../../nx_db/lib/src/backend_presets.dart)** (`127.0.0.1`, same ports as dev). The shipped app **Laptop** preset targets **`10.0.0.90`** instead.
+Shared auth for live GraphQL: [`test/support/integration_auth.dart`](support/integration_auth.dart) — user **`1`**, [`BackendPreset.laptop`](../../nx_db/lib/src/backend_presets.dart) for the user object, with **[`expenseIntegrationOverrides`](support/integration_auth.dart)** so HTTP/WebSocket/image URLs use **[`kIntegrationTestBackendUrls`](../../nx_db/lib/src/backend_presets.dart)** (`127.0.0.1`, same ports as dev). The shipped app **Laptop** preset targets **`10.0.0.210`** instead.
 
 | File | Role |
 |------|------|

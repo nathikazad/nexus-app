@@ -10,8 +10,8 @@ abstract final class PrefsKeys {
 
 /// Fixed backend environments; all URLs derive from [resolve].
 enum BackendPreset {
-  /// LAN dev host at `10.0.0.90` — not the same as Docker on this machine (use [localhost]).
-  laptop('laptop', 'Laptop (10.0.0.90)'),
+  /// LAN dev host at `10.0.0.210` — not the same as Docker on this machine (use [localhost]).
+  laptop('laptop', 'Laptop (10.0.0.210)'),
   /// Same URLs as [kIntegrationTestBackendUrls]: GraphQL on this host (e.g. Docker `-p 5001:5001`).
   localhost('localhost', 'Local (127.0.0.1 / Docker)'),
   piLan('pi_lan', 'Pi (LAN)'),
@@ -58,9 +58,9 @@ BackendUrls resolve(BackendPreset p) {
   switch (p) {
     case BackendPreset.laptop:
       return const BackendUrls(
-        graphqlHttp: 'http://10.0.0.90:5001/graphql',
-        sockWs: 'ws://10.0.0.90:8002',
-        imageHttp: 'http://10.0.0.90:8001',
+        graphqlHttp: 'http://10.0.0.210:5001/graphql',
+        sockWs: 'ws://10.0.0.210:8002',
+        imageHttp: 'http://10.0.0.210:8001',
       );
     case BackendPreset.localhost:
       return kIntegrationTestBackendUrls;

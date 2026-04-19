@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:nx_db/nx_db.dart';
 
 /// Live GraphQL at [kIntegrationTestBackendUrls] (localhost). The app preset
-/// [BackendPreset.laptop] targets the LAN host (`10.0.0.90`).
+/// [BackendPreset.laptop] targets the LAN host (`10.0.0.210`).
 class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {

@@ -16,7 +16,7 @@ import 'package:nx_db/kgql.dart';
 ///
 /// Targets **localhost PGDB** by default: [`kIntegrationTestBackendUrls.graphqlHttp`]
 /// (same seed data story as [`servers/pgdb/docs/llm-reference/seed-data.md`](../../../../servers/pgdb/docs/llm-reference/seed-data.md),
-/// typically `user_id=1`). The app [`BackendPreset.laptop`](../../lib/src/backend_presets.dart) uses LAN `10.0.0.90`.
+/// typically `user_id=1`). The app [`BackendPreset.laptop`](../../lib/src/backend_presets.dart) uses LAN `10.0.0.210`.
 ///
 /// Optional overrides:
 /// - `NX_DB_INTEGRATION_GRAPHQL_HTTP` — full GraphQL URL if not using localhost.
