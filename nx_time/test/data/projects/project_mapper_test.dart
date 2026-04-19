@@ -36,12 +36,73 @@ void main() {
             'relation_id': 800,
             'model_id': 2,
             'model_type': 'Project',
+            'relation': 'child',
           },
         ],
       });
       final p = projectFromModel(m);
       expect(p.childProjectIds, [2]);
       expect(p.relationIdByChildId[2], 800);
+    });
+
+    test('parent and children from relations list using relation field', () {
+      final m = Model.fromJson({
+        'id': 10,
+        'name': 'Mid',
+        'model_type_id': 3,
+        'model_type': {'id': 3, 'name': 'Project', 'type_kind': 'base'},
+        'relations': [
+          {
+            'relation_id': 100,
+            'model_id': 5,
+            'model_type': 'Project',
+            'relation': 'parent',
+          },
+          {
+            'relation_id': 200,
+            'model_id': 20,
+            'model_type': 'Project',
+            'relation': 'child',
+          },
+          {
+            'relation_id': 201,
+            'model_id': 21,
+            'model_type': 'Project',
+            'relation': 'child',
+          },
+        ],
+      });
+      final p = projectFromModel(m);
+      expect(p.parentProjectId, 5);
+      expect(p.childProjectIds, [20, 21]);
+      expect(p.relationIdByChildId[20], 200);
+      expect(p.relationIdByChildId[21], 201);
+    });
+
+    test('nested Project uses attributes.relation for parent/child', () {
+      final m = Model.fromJson({
+        'id': 10,
+        'name': 'Mid',
+        'model_type_id': 3,
+        'model_type': {'id': 3, 'name': 'Project', 'type_kind': 'base'},
+        'Project': [
+          {
+            'id': 5,
+            'name': 'Root',
+            'model_type_id': 3,
+            'relation': 'parent',
+          },
+          {
+            'id': 20,
+            'name': 'Leaf',
+            'model_type_id': 3,
+            'relation': 'child',
+          },
+        ],
+      });
+      final p = projectFromModel(m);
+      expect(p.parentProjectId, 5);
+      expect(p.childProjectIds, [20]);
     });
   });
 

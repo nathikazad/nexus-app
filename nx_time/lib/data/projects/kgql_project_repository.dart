@@ -24,7 +24,7 @@ class KgqlProjectRepository implements ProjectRepository {
   Map<String, dynamic> _projectFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
-    merged[kProjectRelationKey] = {'id': true, 'name': true};
+    merged[kProjectRelationKey] = {'id': true, 'name': true, 'relation': true};
     return merged;
   }
 

@@ -46,12 +46,10 @@ int taskCountForProjectSubtree(
       .length;
 }
 
+/// Top-level folders for browse/pick: projects with no parent in the
+/// `has_subproject` tree (requires KGQL `relation` on self-type Project edges).
 List<Project> rootProjects(List<Project> projects) {
-  final childIds = <int>{};
-  for (final p in projects) {
-    childIds.addAll(p.childProjectIds);
-  }
-  return projects.where((p) => !childIds.contains(p.id)).toList()
+  return projects.where((p) => p.parentProjectId == null).toList()
     ..sort((a, b) => a.name.compareTo(b.name));
 }
 

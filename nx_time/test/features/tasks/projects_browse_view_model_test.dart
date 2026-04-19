@@ -5,13 +5,23 @@ import 'package:nx_time/domain/tasks/task_status.dart';
 import 'package:nx_time/features/tasks/projects_browse_view_model.dart';
 
 void main() {
-  test('rootProjects excludes nodes that appear as children', () {
+  test('rootProjects returns only projects with no parent', () {
     final all = [
       const Project(id: 1, name: 'Root', modelTypeId: 8, childProjectIds: [2]),
-      const Project(id: 2, name: 'Sub', modelTypeId: 8),
+      const Project(id: 2, name: 'Sub', modelTypeId: 8, parentProjectId: 1),
     ];
     final roots = rootProjects(all);
     expect(roots.map((p) => p.id).toList(), [1]);
+  });
+
+  test('rootProjects returns multiple roots for disconnected trees', () {
+    final all = [
+      const Project(id: 1, name: 'A', modelTypeId: 8, childProjectIds: [2]),
+      const Project(id: 2, name: 'B', modelTypeId: 8, parentProjectId: 1),
+      const Project(id: 100, name: 'Solo', modelTypeId: 8),
+    ];
+    final ids = rootProjects(all).map((p) => p.id).toList()..sort();
+    expect(ids, [1, 100]);
   });
 
   test('taskCountForProjectSubtree includes nested project tasks', () {
@@ -35,8 +45,8 @@ void main() {
         modelTypeId: 8,
         childProjectIds: [2, 3],
       ),
-      const Project(id: 2, name: 'A', modelTypeId: 8),
-      const Project(id: 3, name: 'B', modelTypeId: 8),
+      const Project(id: 2, name: 'A', modelTypeId: 8, parentProjectId: 1),
+      const Project(id: 3, name: 'B', modelTypeId: 8, parentProjectId: 1),
     ];
     final tasks = [
       const Task(id: 1, name: 't', modelTypeId: 9, projectId: 2, status: TaskStatus.todo),

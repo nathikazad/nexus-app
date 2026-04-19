@@ -26,17 +26,36 @@ List<String> _tagsFromModel(Model m) {
   return [];
 }
 
+String? _taskEdgeRelationFromNestedModel(Model m) {
+  final a = m.attributes?['relation'];
+  if (a is String) return a;
+  return null;
+}
+
+bool _nestedTaskNeighborIsChild(Model c) {
+  final rel = _taskEdgeRelationFromNestedModel(c);
+  return rel == null || rel == 'child';
+}
+
+bool _isTaskNeighborChild(Relation r) {
+  if (r.modelType != kTaskRelationKey && r.modelType != kTaskModelTypeName) {
+    return false;
+  }
+  if (r.relation == 'parent') return false;
+  if (r.relation == 'child') return true;
+  return r.relation == null;
+}
+
 List<int> _childTaskIdsFromModel(Model m) {
   final nested = m.relations?[kTaskRelationKey];
   if (nested != null && nested.isNotEmpty) {
-    return nested.map((c) => c.id).toList();
+    return [for (final c in nested) if (_nestedTaskNeighborIsChild(c)) c.id];
   }
   final list = m.relationsList;
   if (list == null || list.isEmpty) return [];
   return [
     for (final r in list)
-      if (r.modelType == kTaskRelationKey || r.modelType == kTaskModelTypeName)
-        r.modelId,
+      if (_isTaskNeighborChild(r)) r.modelId,
   ];
 }
 
@@ -45,25 +64,28 @@ Map<int, int> _taskRelationIdsByChildFromModel(Model m) {
   if (list == null || list.isEmpty) return {};
   final out = <int, int>{};
   for (final r in list) {
-    if (r.modelType == kTaskRelationKey || r.modelType == kTaskModelTypeName) {
+    if (_isTaskNeighborChild(r)) {
       out[r.modelId] = r.relationId;
     }
   }
   return out;
 }
 
-int? _parentTaskIdFromModel(Model m, List<int> childIds) {
-  final list = m.relationsList;
-  if (list == null || list.isEmpty) return null;
-  final candidates = <int>[];
-  for (final r in list) {
-    if (r.modelType == kTaskRelationKey || r.modelType == kTaskModelTypeName) {
-      if (r.modelId != m.id && !childIds.contains(r.modelId)) {
-        candidates.add(r.modelId);
-      }
+int? _parentTaskIdFromModel(Model m) {
+  final nested = m.relations?[kTaskRelationKey];
+  if (nested != null) {
+    for (final c in nested) {
+      if (_taskEdgeRelationFromNestedModel(c) == 'parent') return c.id;
     }
   }
-  if (candidates.length == 1) return candidates.first;
+  final list = m.relationsList;
+  if (list == null || list.isEmpty) return null;
+  for (final r in list) {
+    if ((r.modelType == kTaskRelationKey || r.modelType == kTaskModelTypeName) &&
+        r.relation == 'parent') {
+      return r.modelId;
+    }
+  }
   return null;
 }
 
@@ -151,7 +173,7 @@ Task taskFromModel(Model m) {
     date: date != null ? asStoredLocalWallClock(date) : null,
     startTime: start != null ? asStoredLocalWallClock(start) : null,
     endTime: end != null ? asStoredLocalWallClock(end) : null,
-    parentTaskId: _parentTaskIdFromModel(m, childIds),
+    parentTaskId: _parentTaskIdFromModel(m),
     childTaskIds: childIds,
     relationIdByChildTaskId: _taskRelationIdsByChildFromModel(m),
     projectId: projectId,

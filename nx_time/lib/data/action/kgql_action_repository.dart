@@ -25,7 +25,7 @@ class KgqlActionRepository implements ActionRepository {
     final base = buildKgqlStructFromSchema(schema);
     // Ensure nested Action self-relation even if schema cache is stale.
     final merged = Map<String, dynamic>.from(base);
-    merged[kActionRelationKey] = {'id': true, 'name': true};
+    merged[kActionRelationKey] = {'id': true, 'name': true, 'relation': true};
     return merged;
   }
 

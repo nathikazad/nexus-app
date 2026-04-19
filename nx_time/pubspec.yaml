@@ -28,5 +28,12 @@ dev_dependencies:
   mocktail: ^1.0.4
   shared_preferences: ^2.2.2
 
+# graphql_flutter 5.3.x resolves connectivity_plus ^7, whose iOS code uses
+# NWPath.isUltraConstrained (Xcode / iOS SDK that defines it). Older Xcode
+# fails with: Value of type 'NWPath' has no member 'isUltraConstrained'.
+# Pin 6.1.5 until Xcode is upgraded or the plugin guards compile-time availability.
+dependency_overrides:
+  connectivity_plus: 6.1.5
+
 flutter:
   uses-material-design: true

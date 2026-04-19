@@ -25,7 +25,7 @@ class KgqlTaskRepository implements TaskRepository {
   Map<String, dynamic> _taskFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
-    merged[kTaskRelationKey] = {'id': true, 'name': true};
+    merged[kTaskRelationKey] = {'id': true, 'name': true, 'relation': true};
     merged[kProjectRelationKey] = {'id': true, 'name': true};
     return merged;
   }

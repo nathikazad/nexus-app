@@ -14,10 +14,30 @@ String? notesDescriptionFromModel(Model model) {
   return model.attrString(kActionAttrDescription);
 }
 
+String? _actionEdgeRelationFromNestedModel(Model m) {
+  final a = m.attributes?['relation'];
+  if (a is String) return a;
+  return null;
+}
+
+bool _nestedActionNeighborIsChild(Model c) {
+  final rel = _actionEdgeRelationFromNestedModel(c);
+  return rel == null || rel == 'child';
+}
+
+bool _isActionNeighborChild(Relation r) {
+  if (r.modelType != kActionRelationKey && r.modelType != kActionModelTypeName) {
+    return false;
+  }
+  if (r.relation == 'parent') return false;
+  if (r.relation == 'child') return true;
+  return r.relation == null;
+}
+
 List<int> _childIdsFromModel(Model m) {
   final nested = m.relations?[kActionRelationKey];
   if (nested != null && nested.isNotEmpty) {
-    final ids = nested.map((c) => c.id).toList();
+    final ids = nested.where(_nestedActionNeighborIsChild).map((c) => c.id).toList();
     if (kNxTimeTraceActionSemantics) {
       developer.log(
         '[nx_time action_map] id=${m.id} type=${m.modelType?.name} nested_Action_len=${nested.length} '
@@ -40,8 +60,7 @@ List<int> _childIdsFromModel(Model m) {
   }
   final fromList = [
     for (final r in list)
-      if (r.modelType == kActionRelationKey || r.modelType == kActionModelTypeName)
-        r.modelId,
+      if (_isActionNeighborChild(r)) r.modelId,
   ];
   if (kNxTimeTraceActionSemantics) {
     final types = list.map((r) => '${r.modelType}:${r.modelId}').join(', ');
@@ -59,7 +78,7 @@ Map<int, int> _relationIdsByChildFromModel(Model m) {
   if (list == null || list.isEmpty) return {};
   final out = <int, int>{};
   for (final r in list) {
-    if (r.modelType == kActionRelationKey || r.modelType == kActionModelTypeName) {
+    if (_isActionNeighborChild(r)) {
       out[r.modelId] = r.relationId;
     }
   }
