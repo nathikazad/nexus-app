@@ -1,0 +1,17 @@
+tags:
+  domain:
+    description: "Pure Dart domain entity / repo-interface tests"
+  data:
+    description: "Data-layer mappers & repositories (mocked GraphQL / HTTP)"
+  view_model:
+    description: "Pure feature view-model tests"
+  widget:
+    description: "Flutter widget / page tests"
+  golden:
+    description: "Golden-image widget tests"
+  layering:
+    description: "Architectural import-rule tests"
+  integration:
+    description: "Live PGDB — requires RUN_NX_MAIN_INTEGRATION=true"
+  hardware:
+    description: "Live BLE — requires RUN_NX_MAIN_BLE_INTEGRATION=true"

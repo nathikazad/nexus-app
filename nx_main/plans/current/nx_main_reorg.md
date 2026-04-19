@@ -238,7 +238,9 @@ nx_main/test/
     no_nx_db_in_features_test.dart
 
   integration/
-    schema_navigator_integration_test.dart    # live PGDB; create / patch model types
+    kgql_model_type_live_test.dart            # was test/data/schema/kgql_model_type_repository_test.dart
+    kgql_model_repository_live_test.dart
+    schema_model_type_struct_live_test.dart   # RUN_NX_MAIN_INTEGRATION=true
 ```
 
 ## File-by-file move map
