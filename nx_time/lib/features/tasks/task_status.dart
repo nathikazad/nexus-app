@@ -1,12 +1,9 @@
-/// Task workflow status (matches `reference/partials/view-task-detail.html` segmented control).
-enum TaskStatus {
-  todo,
-  progress,
-  done,
-  skip,
-}
+import 'package:nx_time/domain/tasks/task_status.dart';
 
-extension TaskStatusX on TaskStatus {
+export 'package:nx_time/domain/tasks/task_status.dart';
+
+/// UI labels for [TaskStatus] (matches reference segmented control).
+extension TaskStatusLabel on TaskStatus {
   String get label {
     switch (this) {
       case TaskStatus.todo:

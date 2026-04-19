@@ -166,9 +166,13 @@ nx_time/
       tasks/
         task.dart
         task_repository.dart            # abstract TaskRepository
+        task_status.dart                # TaskStatus + KGQL string helpers
+      projects/
+        project.dart
+        project_repository.dart         # abstract ProjectRepository
 
     data/                              # KGQL + Riverpod ALLOWED HERE
-      providers.dart                    # actionRepositoryProvider, taskRepositoryProvider, authenticatedUserProvider
+      providers.dart                    # action/task/project repo providers, authenticatedUserProvider
       action/
         action_attr_keys.dart           # const String kActionAttrStartTime = '…';
         action_mapper.dart              # Model ⇄ Action; Action → SetModelRequest
@@ -176,7 +180,15 @@ nx_time/
         action_schema_provider.dart     # cached ModelType for "Action"
         action_subtypes_provider.dart   # FutureProvider<List<ModelType>> for subtype picker
       tasks/
+        task_attr_keys.dart             # `task_tags` stores labels (not `tags` — reserved on Model JSON)
+        task_mapper.dart
         kgql_task_repository.dart       # implements TaskRepository
+        task_schema_provider.dart
+      projects/
+        project_attr_keys.dart
+        project_mapper.dart
+        kgql_project_repository.dart
+        project_schema_provider.dart
       schema/
         kgql_action_schema_repository.dart  # cached schema fetcher
 
@@ -276,6 +288,10 @@ nx_time/test/
     action/
       action_test.dart
       action_category_test.dart
+    tasks/
+      task_test.dart
+    projects/
+      project_test.dart
 
   data/
     providers_test.dart              # asserts wiring (which class each provider exposes)
@@ -287,7 +303,13 @@ nx_time/test/
     schema/
       kgql_action_schema_repository_test.dart
     tasks/
+      task_attr_keys_test.dart
+      task_mapper_test.dart
       kgql_task_repository_test.dart
+    projects/
+      project_attr_keys_test.dart
+      project_mapper_test.dart
+      kgql_project_repository_test.dart
 
   features/
     today/today_view_model_test.dart           # ProviderContainer + FakeActionRepository

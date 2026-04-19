@@ -4,14 +4,20 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_time/domain/action/action_repository.dart';
+import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/data/action/action_schema_provider.dart';
 import 'package:nx_time/data/action/kgql_action_repository.dart';
+import 'package:nx_time/data/projects/kgql_project_repository.dart';
+import 'package:nx_time/data/projects/project_schema_provider.dart';
 import 'package:nx_time/data/schema/kgql_action_schema_repository.dart';
 import 'package:nx_time/data/tasks/kgql_task_repository.dart';
+import 'package:nx_time/data/tasks/task_schema_provider.dart';
 
 export 'package:nx_time/data/action/action_schema_provider.dart';
 export 'package:nx_time/data/action/action_subtypes_provider.dart';
+export 'package:nx_time/data/projects/project_schema_provider.dart';
+export 'package:nx_time/data/tasks/task_schema_provider.dart';
 
 /// Default KGQL-backed [ActionRepository].
 final actionRepositoryProvider = Provider<ActionRepository>(
@@ -21,10 +27,19 @@ final actionRepositoryProvider = Provider<ActionRepository>(
   ),
 );
 
-/// KGQL-backed [TaskRepository] (relation picker lists).
+/// KGQL-backed [TaskRepository].
 final taskRepositoryProvider = Provider<TaskRepository>(
   (ref) => KgqlTaskRepository(
     client: ref.read(graphqlClientProvider),
+    loadTaskSchema: () => ref.read(taskSchemaProvider.future),
+  ),
+);
+
+/// KGQL-backed [ProjectRepository].
+final projectRepositoryProvider = Provider<ProjectRepository>(
+  (ref) => KgqlProjectRepository(
+    client: ref.read(graphqlClientProvider),
+    loadProjectSchema: () => ref.read(projectSchemaProvider.future),
   ),
 );
 
