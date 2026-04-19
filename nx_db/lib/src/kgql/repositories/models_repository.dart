@@ -27,22 +27,49 @@ Future<List<Model>> fetchKgqlModels(
   required Map<String, dynamic> filter,
   required Map<String, dynamic> struct,
 }) async {
-  final result = await client.query(
-    QueryOptions(
-      document: gql(kgqlGetKgqlModelsQuery),
-      variables: {
-        'filter': filter,
-        'struct': struct,
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
+  final modelType = filter['model_type'];
+  final filters = filter['filters'];
+  debugPrint(
+    '[nx_db fetchKgqlModels] START model_type=$modelType '
+    'filters=$filters structTopLevelKeys=${struct.keys.toList()}',
+  );
+
+  final sw = Stopwatch()..start();
+  QueryResult result;
+  try {
+    result = await client.query(
+      QueryOptions(
+        document: gql(kgqlGetKgqlModelsQuery),
+        variables: {
+          'filter': filter,
+          'struct': struct,
+        },
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
+    );
+  } catch (e, st) {
+    sw.stop();
+    debugPrint(
+      '[nx_db fetchKgqlModels] client.query threw after ${sw.elapsedMilliseconds}ms: $e',
+    );
+    debugPrint('[nx_db fetchKgqlModels] $st');
+    rethrow;
+  }
+  sw.stop();
+
+  debugPrint(
+    '[nx_db fetchKgqlModels] client.query finished in ${sw.elapsedMilliseconds}ms '
+    'hasException=${result.hasException}',
   );
 
   if (result.hasException) {
+    debugPrint('[nx_db fetchKgqlModels] GraphQL exception: ${result.exception}');
     throw result.exception!;
   }
 
-  return parseKgqlModelsResult(result.data?['getKgqlModels']);
+  final parsed = parseKgqlModelsResult(result.data?['getKgqlModels']);
+  debugPrint('[nx_db fetchKgqlModels] parsed ${parsed.length} Model(s)');
+  return parsed;
 }
 
 /// Loads a single model by numeric id within [modelTypeName].

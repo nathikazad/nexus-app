@@ -1,6 +1,8 @@
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/features/action_create/add_child_actions_page.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_detail/widgets/category_pill.dart';
@@ -116,6 +118,141 @@ class ActivityDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   TimeBlockBar(args: args),
+                  if (args.layout == ActivityDetailLayout.umbrella) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Child actions',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.slate900,
+                          ),
+                        ),
+                        Text(
+                          '${args.umbrellaChildCount}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.slate500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    for (final c in args.umbrellaChildren) ...[
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.of(context).push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ActivityDetailPage(
+                                  args: activityDetailArgsForAction(
+                                    c.sourceAction,
+                                    'Today — ${args.dateLabel}',
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: c.barColor,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        c.title,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.slate900,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${c.timeRangeLabel} · ${c.durationLabel}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.slate500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Text(
+                                  '▶',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.slate400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (args.sourceAction != null) ...[
+                      const SizedBox(height: 8),
+                      DottedBorder(
+                        options: const RoundedRectDottedBorderOptions(
+                          radius: Radius.circular(10),
+                          color: AppColors.slate200,
+                          dashPattern: [4, 4],
+                          strokeWidth: 1,
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push<void>(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => AddChildActionsPage(
+                                    parent: args.sourceAction!,
+                                  ),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.add_circle_outline, size: 18, color: AppColors.slate500),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Add another action',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.slate500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                   if (args.description != null && args.description!.trim().isNotEmpty) ...[
                     const SizedBox(height: 14),
                     ActionDetailNotesBlock(text: args.description!.trim()),

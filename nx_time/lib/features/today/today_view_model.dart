@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +7,7 @@ import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
+import 'package:nx_time/features/today/action_fold.dart';
 import 'package:nx_time/features/today/widgets/time_map_segment.dart';
 
 /// View-model types for the Today tab (presentation only).
@@ -39,6 +39,26 @@ class TodayActivity {
   final String? liveElapsedLabel;
 }
 
+/// A row with inline-expandable child actions (from [foldDayActions]).
+class TodayUmbrellaActivity extends TodayActivity {
+  const TodayUmbrellaActivity({
+    required super.title,
+    required super.timeRangeLabel,
+    required super.durationLabel,
+    required super.barColor,
+    super.kind,
+    super.secondaryLine,
+    super.liveElapsedLabel,
+    required this.children,
+    required this.umbrellaAction,
+  });
+
+  final List<TodayActivity> children;
+  final Action umbrellaAction;
+
+  int get childCount => children.length;
+}
+
 class ActivityCategory {
   const ActivityCategory({
     required this.label,
@@ -59,6 +79,8 @@ class TodaySnapshot {
     required this.activityBlockCount,
     required this.actions,
     required this.sourceActions,
+    required this.umbrellaRows,
+    required this.dayActions,
   });
 
   final String clockLabel;
@@ -69,8 +91,14 @@ class TodaySnapshot {
   final int activityBlockCount;
   final List<TodayActivity> actions;
 
-  /// Same order as [actions]; used for navigation to detail/edit.
+  /// One [Action] per visible row (the umbrella / root); same order as [actions].
   final List<Action> sourceActions;
+
+  /// Fold output for umbrella detail / child navigation.
+  final List<UmbrellaRow> umbrellaRows;
+
+  /// All actions overlapping the calendar day (before fold), for id → name lookup.
+  final List<Action> dayActions;
 }
 
 /// Today tab snapshot — uses [actionRepositoryProvider] (fake or KGQL).
@@ -84,8 +112,12 @@ final todaySnapshotProvider = FutureProvider<TodaySnapshot>((ref) async {
     final now = DateTime.now();
     final day = DateTime(now.year, now.month, now.day);
     debugPrint('$tag calling listForCalendarDay(day=$day)');
+    final sw = Stopwatch()..start();
     final actions = await repo.listForCalendarDay(day);
-    debugPrint('$tag listForCalendarDay returned ${actions.length} actions');
+    sw.stop();
+    debugPrint(
+      '$tag listForCalendarDay returned ${actions.length} actions in ${sw.elapsedMilliseconds}ms',
+    );
     final snap = buildTodaySnapshot(
       actions,
       day,
@@ -99,6 +131,21 @@ final todaySnapshotProvider = FutureProvider<TodaySnapshot>((ref) async {
     rethrow;
   }
 });
+
+TodayActivity _activityFromAction(Action m, DateFormat timeFmt) {
+  final start = m.startTime;
+  final end = m.endTime;
+  final title = m.name.isNotEmpty ? m.name : 'Action';
+  final rangeLabel = formatTimeRange(timeFmt, start, end);
+  final durationLabel = formatDurationHm(start, end);
+  final color = barColorForModelTypeId(m.modelTypeId);
+  return TodayActivity(
+    title: title,
+    timeRangeLabel: rangeLabel,
+    durationLabel: durationLabel,
+    barColor: color,
+  );
+}
 
 /// Maps domain [Action] rows to [TodaySnapshot] for the Today tab.
 ///
@@ -131,43 +178,67 @@ TodaySnapshot buildTodaySnapshot(
       return a.id.compareTo(b.id);
     });
 
+  _debugPrintActionsPreFold(sorted);
+
+  final rows = foldDayActions(sorted);
+  _debugPrintUmbrellaRowsPostFold(rows);
   final actions = <TodayActivity>[];
   final timeMapSegments = <TimeMapSegment>[];
   final legendEntries = <ActivityCategory>[];
   final seenTypeIds = <int>{};
+  final sourceActions = <Action>[];
+  final umbrellaRows = <UmbrellaRow>[];
 
-  for (final m in sorted) {
-    final start = m.startTime;
-    final end = m.endTime;
-    final title = m.name.isNotEmpty ? m.name : 'Action';
-    final rangeLabel = formatTimeRange(timeFmt, start, end);
-    final durationLabel = formatDurationHm(start, end);
-    final color = barColorForModelTypeId(m.modelTypeId);
+  void addLegendFor(Action m) {
     final embeddedName = m.modelTypeName;
     final typeLabel = (embeddedName != null && embeddedName.isNotEmpty)
         ? embeddedName
         : 'Type ${m.modelTypeId}';
-
+    final color = barColorForModelTypeId(m.modelTypeId);
     if (seenTypeIds.add(m.modelTypeId)) {
       legendEntries.add(ActivityCategory(label: typeLabel, swatch: color));
     }
+  }
 
-    actions.add(
-      TodayActivity(
-        title: title,
-        timeRangeLabel: rangeLabel,
-        durationLabel: durationLabel,
-        barColor: color,
-      ),
-    );
+  for (final row in rows) {
+    final u = row.umbrella;
+    addLegendFor(u);
+    for (final c in row.children) {
+      addLegendFor(c);
+    }
+
+    final umbrellaActivity = _activityFromAction(u, timeFmt);
+    sourceActions.add(u);
+    umbrellaRows.add(row);
+
+    if (row.children.isEmpty) {
+      actions.add(umbrellaActivity);
+    } else {
+      final childActivities = row.children
+          .map((c) => _activityFromAction(c, timeFmt))
+          .toList();
+      actions.add(
+        TodayUmbrellaActivity(
+          title: umbrellaActivity.title,
+          timeRangeLabel: umbrellaActivity.timeRangeLabel,
+          durationLabel: umbrellaActivity.durationLabel,
+          barColor: umbrellaActivity.barColor,
+          kind: umbrellaActivity.kind,
+          secondaryLine: umbrellaActivity.secondaryLine,
+          liveElapsedLabel: umbrellaActivity.liveElapsedLabel,
+          children: childActivities,
+          umbrellaAction: u,
+        ),
+      );
+    }
 
     if (totalMs <= 0) continue;
     final seg = _segmentForActionInDay(
-      m,
+      u,
       dayStart,
       dayEnd,
       totalMs,
-      color,
+      barColorForModelTypeId(u.modelTypeId),
     );
     if (seg != null) {
       timeMapSegments.add(seg);
@@ -183,10 +254,45 @@ TodaySnapshot buildTodaySnapshot(
     timeMapSegments: timeMapSegments,
     currentMarkerFraction: _nowFractionForDay(dayStart, dayEnd, clockSource),
     legend: legendEntries,
-    activityBlockCount: sorted.length,
+    activityBlockCount: rows.length,
     actions: actions,
-    sourceActions: sorted,
+    sourceActions: sourceActions,
+    umbrellaRows: umbrellaRows,
+    dayActions: sorted,
   );
+}
+
+void _debugPrintActionsPreFold(List<Action> actions) {
+  const tag = '[nx_time Today fold] pre-fold';
+  debugPrint('$tag (${actions.length} actions, in-day sorted)');
+  for (var i = 0; i < actions.length; i++) {
+    final a = actions[i];
+    final mt = a.modelTypeName ?? '(null)';
+    debugPrint(
+      '$tag  [$i] id=${a.id} name="${a.name}" start=${a.startTime} end=${a.endTime} '
+      'model_type.name=$mt childActionIds=${a.childActionIds}',
+    );
+  }
+}
+
+void _debugPrintUmbrellaRowsPostFold(List<UmbrellaRow> rows) {
+  const tag = '[nx_time Today fold] post-fold';
+  debugPrint('$tag (${rows.length} umbrella row(s))');
+  for (var i = 0; i < rows.length; i++) {
+    final r = rows[i];
+    final u = r.umbrella;
+    final umt = u.modelTypeName ?? '(null)';
+    debugPrint(
+      '$tag  [$i] umbrella id=${u.id} name="${u.name}" start=${u.startTime} end=${u.endTime} model_type.name=$umt childCount=${r.children.length}',
+    );
+    for (var j = 0; j < r.children.length; j++) {
+      final c = r.children[j];
+      final cmt = c.modelTypeName ?? '(null)';
+      debugPrint(
+        '$tag      child[$j] id=${c.id} name="${c.name}" start=${c.startTime} end=${c.endTime} model_type.name=$cmt',
+      );
+    }
+  }
 }
 
 bool _actionOverlapsLocalDay(Action m, DateTime dayStart, DateTime dayEnd) {
@@ -237,4 +343,3 @@ double _nowFractionForDay(DateTime dayStart, DateTime dayEnd, DateTime now) {
   if (!now.isBefore(dayEnd)) return 1;
   return (now.difference(dayStart).inMilliseconds / total).clamp(0.0, 1.0);
 }
-

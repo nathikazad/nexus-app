@@ -9,3 +9,9 @@ const String kActionModelTypeName = 'Action';
 const String kActionAttrStartTime = 'start_time';
 const String kActionAttrEndTime = 'end_time';
 const String kActionAttrDescription = 'description';
+
+/// KGQL relationship name for umbrella parent → child (`RelationshipType.relation_name`).
+const String kActionRelationName = 'action_action';
+
+/// Struct nesting key for the `Action → Action` relation from [buildKgqlStructFromSchema].
+const String kActionRelationKey = 'Action';

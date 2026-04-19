@@ -36,6 +36,50 @@ void main() {
       final a = actionFromModel(m);
       expect(a.description, '  hello  ');
     });
+
+    test('reads child ids from nested Action map', () {
+      final m = Model.fromJson({
+        'id': 1,
+        'name': 'Parent',
+        'model_type_id': 1,
+        'start_time': '2026-04-18T08:00:00.000',
+        'end_time': '2026-04-18T12:00:00.000',
+        'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
+        'Action': [
+          {
+            'id': 7,
+            'name': 'Child',
+            'model_type_id': 2,
+            'start_time': '2026-04-18T09:00:00.000',
+            'end_time': '2026-04-18T10:00:00.000',
+            'model_type': {'id': 2, 'name': 'Meet', 'type_kind': 'base'},
+          },
+        ],
+      });
+      final a = actionFromModel(m);
+      expect(a.childActionIds, [7]);
+    });
+
+    test('reads child ids and relation ids from relations list', () {
+      final m = Model.fromJson({
+        'id': 1,
+        'name': 'Parent',
+        'model_type_id': 1,
+        'start_time': '2026-04-18T08:00:00.000',
+        'end_time': '2026-04-18T12:00:00.000',
+        'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
+        'relations': [
+          {
+            'relation_id': 9001,
+            'model_id': 7,
+            'model_type': 'Action',
+          },
+        ],
+      });
+      final a = actionFromModel(m);
+      expect(a.childActionIds, [7]);
+      expect(a.relationIdByChildId[7], 9001);
+    });
   });
 
   group('setModelRequestForCreate', () {
@@ -55,6 +99,28 @@ void main() {
       expect(req.modelType, 'Meet');
       final keys = req.attributes!.map((a) => a.key).toSet();
       expect(keys, containsAll([kActionAttrStartTime, kActionAttrEndTime]));
+    });
+  });
+
+  group('setModelRequestForCreateWithParent', () {
+    test('adds Action relation link to parent id', () {
+      final start = DateTime(2026, 4, 18, 8, 0);
+      final end = DateTime(2026, 4, 18, 9, 0);
+      final req = setModelRequestForCreateWithParent(
+        Action(
+          id: 0,
+          name: 'Child block',
+          modelTypeId: 2,
+          startTime: start,
+          endTime: end,
+        ),
+        'Meet',
+        parentActionId: 42,
+      );
+      expect(req.relations, isNotNull);
+      expect(req.relations!.length, 1);
+      expect(req.relations!.first.modelType, kActionRelationKey);
+      expect(req.relations!.first.link, [42]);
     });
   });
 

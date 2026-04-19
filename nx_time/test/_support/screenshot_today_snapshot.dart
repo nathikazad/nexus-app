@@ -1,5 +1,6 @@
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/domain/action/action.dart';
+import 'package:nx_time/features/today/action_fold.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/today/widgets/time_map_segment.dart';
 
@@ -42,10 +43,17 @@ TodaySnapshot buildScreenshotTodaySnapshot() {
     Action(id: 4, name: 'Platform › Sprint review', modelTypeId: 4, modelTypeName: 'Meet'),
   ];
 
-  return const TodaySnapshot(
+  final umbrellaRows = [
+    UmbrellaRow(umbrella: sourceActions[0], children: const []),
+    UmbrellaRow(umbrella: sourceActions[1], children: const []),
+    UmbrellaRow(umbrella: sourceActions[2], children: const []),
+    UmbrellaRow(umbrella: sourceActions[3], children: const []),
+  ];
+
+  return TodaySnapshot(
     clockLabel: '9:41 AM',
     titleLine: 'Today — Thu, Oct 26',
-    timeMapSegments: [
+    timeMapSegments: const [
       TimeMapSegment(color: AppColors.sleepBlue, flex: 32),
       TimeMapSegment(color: AppColors.routineGray, flex: 5),
       TimeMapSegment(color: AppColors.exerciseGreen, flex: 8),
@@ -54,7 +62,7 @@ TodaySnapshot buildScreenshotTodaySnapshot() {
       TimeMapSegment(color: AppColors.slate100, flex: 25),
     ],
     currentMarkerFraction: 0.75,
-    legend: [
+    legend: const [
       ActivityCategory(label: 'Sleep', swatch: AppColors.sleepBlue),
       ActivityCategory(label: 'Work', swatch: AppColors.accent),
       ActivityCategory(label: 'Exercise', swatch: AppColors.exerciseGreen),
@@ -65,5 +73,7 @@ TodaySnapshot buildScreenshotTodaySnapshot() {
     activityBlockCount: 12,
     actions: actions,
     sourceActions: sourceActions,
+    umbrellaRows: umbrellaRows,
+    dayActions: sourceActions,
   );
 }

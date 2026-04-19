@@ -21,6 +21,14 @@ class KgqlActionRepository implements ActionRepository {
   void _log(String message) =>
       debugPrint('[nx_time kgql_action_repo] $message');
 
+  Map<String, dynamic> _actionFetchStruct(ModelType schema) {
+    final base = buildKgqlStructFromSchema(schema);
+    // Ensure nested Action self-relation even if schema cache is stale.
+    final merged = Map<String, dynamic>.from(base);
+    merged[kActionRelationKey] = {'id': true, 'name': true};
+    return merged;
+  }
+
   @override
   Future<List<Action>> listForCalendarDay(DateTime dayLocal) async {
     _log('listForCalendarDay: begin dayLocal=$dayLocal');
@@ -32,12 +40,17 @@ class KgqlActionRepository implements ActionRepository {
     final schema = await _loadActionSchema();
     _log('loadActionSchema ok: ${schema.name} id=${schema.id}');
 
-    final struct = buildKgqlStructFromSchema(schema);
+    final struct = _actionFetchStruct(schema);
 
     _log(
       'fetchKgqlModels filter window start_time in '
       '[${fetchStart.toIso8601String()}, ${end.toIso8601String()})',
     );
+    _log(
+      'fetch struct top-level keys (count=${struct.length}): ${struct.keys.join(", ")}',
+    );
+    final fetchSw = Stopwatch()..start();
+    _log('calling fetchKgqlModels(get_kgql_models) ...');
     final models = await fetchKgqlModels(
       _client,
       filter: {
@@ -57,7 +70,10 @@ class KgqlActionRepository implements ActionRepository {
       },
       struct: struct,
     );
-    _log('fetchKgqlModels returned ${models.length} models');
+    fetchSw.stop();
+    _log(
+      'fetchKgqlModels returned ${models.length} models in ${fetchSw.elapsedMilliseconds}ms',
+    );
 
     final out = models.map(actionFromModel).toList();
     _log('listForCalendarDay: done → ${out.length} Action(s)');
@@ -70,7 +86,7 @@ class KgqlActionRepository implements ActionRepository {
     required String modelTypeName,
   }) async {
     final schema = await _loadActionSchema();
-    final struct = buildKgqlStructFromSchema(schema);
+    final struct = _actionFetchStruct(schema);
     final m = await fetchKgqlModelById(
       _client,
       modelTypeName: modelTypeName,
@@ -81,11 +97,19 @@ class KgqlActionRepository implements ActionRepository {
   }
 
   @override
-  Future<int> create(Action action, String modelTypeName) async {
-    return setKgqlModel(
-      _client,
-      setModelRequestForCreate(action, modelTypeName),
-    );
+  Future<int> create(
+    Action action,
+    String modelTypeName, {
+    int? parentActionId,
+  }) async {
+    final req = parentActionId != null
+        ? setModelRequestForCreateWithParent(
+            action,
+            modelTypeName,
+            parentActionId: parentActionId,
+          )
+        : setModelRequestForCreate(action, modelTypeName);
+    return setKgqlModel(_client, req);
   }
 
   @override
@@ -105,5 +129,43 @@ class KgqlActionRepository implements ActionRepository {
   @override
   Future<void> delete(int id) async {
     await setKgqlModel(_client, setModelRequestForDelete(id));
+  }
+
+  @override
+  Future<int> linkChildAction({
+    required int parentId,
+    required int childId,
+  }) async {
+    return setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: parentId,
+        relations: [
+          ModelRelation(
+            modelType: kActionRelationKey,
+            link: [childId],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> unlinkChildAction({
+    required int parentId,
+    required int relationId,
+  }) async {
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: parentId,
+        relations: [
+          ModelRelation(
+            id: relationId,
+            delete: true,
+          ),
+        ],
+      ),
+    );
   }
 }

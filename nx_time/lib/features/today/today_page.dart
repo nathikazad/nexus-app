@@ -14,11 +14,13 @@ class TodayPage extends StatelessWidget {
     super.key,
     required this.snapshot,
     this.onActivityTap,
+    this.onChildTap,
     this.onAddManualTap,
   });
 
   final TodaySnapshot snapshot;
   final void Function(int index)? onActivityTap;
+  final void Function(int rowIndex, int childIndex)? onChildTap;
   final VoidCallback? onAddManualTap;
 
   @override
@@ -68,6 +70,9 @@ class TodayPage extends StatelessWidget {
                 ActivityRow(
                   activity: snapshot.actions[i],
                   onTap: onActivityTap != null ? () => onActivityTap!(i) : null,
+                  onChildTap: onChildTap != null
+                      ? (ci) => onChildTap!(i, ci)
+                      : null,
                 ),
                 const SizedBox(height: 4),
               ],

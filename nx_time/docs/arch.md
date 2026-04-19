@@ -166,8 +166,6 @@ nx_time/
       tasks/
         task.dart
         task_repository.dart            # abstract TaskRepository
-      schema/
-        action_schema.dart              # typed schema view (no nx_db types leak)
 
     data/                              # KGQL + Riverpod ALLOWED HERE
       providers.dart                    # actionRepositoryProvider, taskRepositoryProvider, authenticatedUserProvider
@@ -278,8 +276,6 @@ nx_time/test/
     action/
       action_test.dart
       action_category_test.dart
-    schema/
-      action_schema_test.dart
 
   data/
     providers_test.dart              # asserts wiring (which class each provider exposes)

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:intl/intl.dart';
 
+import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/domain/action/action.dart';
+import 'package:nx_time/features/today/action_fold.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 
 /// Matches reference `page-activity-detail-sleep` / `page-activity-detail-deep-work`.
 enum ActivityDetailLayout {
   sleep,
   deepWork,
+  umbrella,
 }
 
 enum LinkedTaskProgress {
@@ -27,6 +30,22 @@ class LinkedTaskItem {
   final String title;
   final String subtitle;
   final LinkedTaskProgress progress;
+}
+
+class UmbrellaChildItem {
+  const UmbrellaChildItem({
+    required this.title,
+    required this.barColor,
+    required this.timeRangeLabel,
+    required this.durationLabel,
+    required this.sourceAction,
+  });
+
+  final String title;
+  final Color barColor;
+  final String timeRangeLabel;
+  final String durationLabel;
+  final Action sourceAction;
 }
 
 class ActivityDetailArgs {
@@ -47,6 +66,7 @@ class ActivityDetailArgs {
     required this.wearablePhotoLabel,
     this.sourceAction,
     this.description,
+    this.umbrellaChildren = const [],
   });
 
   final ActivityDetailLayout layout;
@@ -70,7 +90,12 @@ class ActivityDetailArgs {
   /// When non-null, this row came from the repository and can be edited or deleted.
   final Action? sourceAction;
 
+  /// Populated when [layout] is [ActivityDetailLayout.umbrella].
+  final List<UmbrellaChildItem> umbrellaChildren;
+
   int get linkedTaskCount => tasks.length;
+
+  int get umbrellaChildCount => umbrellaChildren.length;
 }
 
 /// Builds detail UI from a loaded [Action].
@@ -104,6 +129,58 @@ ActivityDetailArgs activityDetailArgsForAction(Action model, String snapshotTitl
     wearablePhotoLabel: 'View photos ▶',
     sourceAction: model,
     description: _notesFromAction(model),
+  );
+}
+
+ActivityDetailArgs activityDetailArgsForUmbrella(
+  UmbrellaRow row,
+  String snapshotTitleLine,
+) {
+  final dateLabel = _dateFromSnapshotTitle(snapshotTitleLine);
+  final u = row.umbrella;
+  final sl = u.startTime;
+  final el = u.endTime;
+  final startParts = _splitTimeForDisplay(sl);
+  final endParts = _splitTimeForDisplay(el);
+  final bar = barColorForModelTypeId(u.modelTypeId);
+  final style = categoryPillStyleFromBarColor(bar);
+  final typeLabel =
+      (u.modelTypeName != null && u.modelTypeName!.isNotEmpty) ? u.modelTypeName! : 'Type ${u.modelTypeId}';
+
+  final timeFmt = DateFormat.jm();
+  final children = <UmbrellaChildItem>[];
+  for (final c in row.children) {
+    final cr = formatTimeRange(timeFmt, c.startTime, c.endTime);
+    final cd = formatDurationHm(c.startTime, c.endTime);
+    children.add(
+      UmbrellaChildItem(
+        title: c.name.isNotEmpty ? c.name : (c.modelTypeName ?? 'Action'),
+        barColor: barColorForModelTypeId(c.modelTypeId),
+        timeRangeLabel: cr,
+        durationLabel: cd,
+        sourceAction: c,
+      ),
+    );
+  }
+
+  return ActivityDetailArgs(
+    layout: ActivityDetailLayout.umbrella,
+    detailTitle: u.name.isNotEmpty ? u.name : (u.modelTypeName ?? 'Action'),
+    categoryPillLabel: typeLabel,
+    categoryPillBackground: style.background,
+    categoryPillForeground: style.foreground,
+    categoryDotColor: style.dot,
+    dateLabel: dateLabel,
+    startTime: startParts.$1,
+    startSuffix: startParts.$2,
+    endTime: endParts.$1,
+    endSuffix: endParts.$2,
+    durationCenter: _formatDurationDetail(sl, el),
+    tasks: const [],
+    wearablePhotoLabel: 'View photos ▶',
+    sourceAction: u,
+    description: _notesFromAction(u),
+    umbrellaChildren: children,
   );
 }
 

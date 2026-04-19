@@ -9,6 +9,7 @@ import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/tasks/task_picker_page.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
+import 'package:nx_time/features/action_create/add_child_actions_page.dart';
 import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 import 'package:nx_time/features/action_edit/widgets/action_category_picker.dart';
 import 'package:nx_time/features/action_edit/widgets/action_datetime_picker.dart';
@@ -24,10 +25,21 @@ class ActionEditPage extends ConsumerStatefulWidget {
     super.key,
     this.mode = ActionEditMode.create,
     this.initial,
+    this.parentActionId,
+    this.prefillStart,
+    this.prefillEnd,
+    this.prefillCategory,
   });
 
   final ActionEditMode mode;
   final Action? initial;
+
+  /// When set, create links the new action under this parent via `action_action`.
+  final int? parentActionId;
+
+  final DateTime? prefillStart;
+  final DateTime? prefillEnd;
+  final ActionCategoryOption? prefillCategory;
 
   @override
   ConsumerState<ActionEditPage> createState() => _ActionEditPageState();
@@ -52,8 +64,18 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       _notesController = TextEditingController();
       final n = DateTime.now();
       final d = DateTime(n.year, n.month, n.day);
-      _start = DateTime(d.year, d.month, d.day, 9, 0);
-      _end = DateTime(d.year, d.month, d.day, 10, 0);
+      final ps = widget.prefillStart;
+      final pe = widget.prefillEnd;
+      if (ps != null && pe != null) {
+        _start = ps;
+        _end = pe;
+      } else {
+        _start = DateTime(d.year, d.month, d.day, 9, 0);
+        _end = DateTime(d.year, d.month, d.day, 10, 0);
+      }
+      if (widget.prefillCategory != null) {
+        _categoryCreate = widget.prefillCategory;
+      }
     } else {
       final a = widget.initial!;
       _nameController = TextEditingController(text: a.name);
@@ -156,7 +178,32 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
           start: start,
           end: end,
         );
-        await repo.create(action, cat.name);
+        final newId = await repo.create(
+          action,
+          cat.name,
+          parentActionId: widget.parentActionId,
+        );
+        ref.invalidate(todaySnapshotProvider);
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        if (widget.parentActionId != null) {
+          return;
+        }
+        final created = Action(
+          id: newId,
+          name: action.name,
+          description: action.description,
+          modelTypeId: action.modelTypeId,
+          modelTypeName: cat.name,
+          startTime: action.startTime,
+          endTime: action.endTime,
+        );
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => AddChildActionsPage(parent: created),
+          ),
+        );
+        return;
       } else {
         final a = widget.initial!;
         final cat = _categoryEdit;

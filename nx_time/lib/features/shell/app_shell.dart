@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
@@ -54,6 +55,16 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     final snapshotAsync = ref.watch(todaySnapshotProvider);
 
+    ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
+      debugPrint(
+        '[nx_time shell] todaySnapshot: '
+        'isLoading=${next.isLoading} hasValue=${next.hasValue} hasError=${next.hasError}',
+      );
+      if (next.hasError) {
+        debugPrint('[nx_time shell] todaySnapshot error: ${next.error}');
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: IndexedStack(
@@ -63,14 +74,31 @@ class _AppShellState extends ConsumerState<AppShell> {
             data: (snapshot) => TodayPage(
               snapshot: snapshot,
               onActivityTap: (index) {
-                final actions = snapshot.sourceActions;
-                final a = index < actions.length ? actions[index] : null;
-                final args = a != null
-                    ? activityDetailArgsForAction(a, snapshot.titleLine)
-                    : activityDetailArgsForTodayRow(
-                        snapshot.actions[index],
-                        snapshot.titleLine,
-                      );
+                final row = index < snapshot.umbrellaRows.length
+                    ? snapshot.umbrellaRows[index]
+                    : null;
+                final Action? rowAction =
+                    index < snapshot.sourceActions.length ? snapshot.sourceActions[index] : null;
+                late final ActivityDetailArgs args;
+                if (row != null && row.children.isNotEmpty) {
+                  args = activityDetailArgsForUmbrella(row, snapshot.titleLine);
+                } else if (rowAction != null) {
+                  args = activityDetailArgsForAction(rowAction, snapshot.titleLine);
+                } else {
+                  args = activityDetailArgsForTodayRow(
+                    snapshot.actions[index],
+                    snapshot.titleLine,
+                  );
+                }
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
+                );
+              },
+              onChildTap: (rowIndex, childIndex) {
+                final row = snapshot.umbrellaRows[rowIndex];
+                if (childIndex < 0 || childIndex >= row.children.length) return;
+                final child = row.children[childIndex];
+                final args = activityDetailArgsForAction(child, snapshot.titleLine);
                 Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
                 );
@@ -93,7 +121,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
           const TasksPage(),
           const GoalsPage(),
-          const CalendarPage(),
+          _index == 3 ? const CalendarPage() : const SizedBox.shrink(),
         ],
       ),
       bottomNavigationBar: _BottomNav(

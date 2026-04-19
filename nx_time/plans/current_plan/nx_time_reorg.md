@@ -131,8 +131,6 @@ nx_time/
       goals/
         goal.dart
         goal_repository.dart
-      schema/
-        action_schema.dart                 # "what action subtypes exist"
 
     data/                                  # KGQL <-> domain
       action/                              # PROMOTION-SHAPED — mirrors nx_db/src/kgql/shared/action/
