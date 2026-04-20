@@ -43,6 +43,12 @@ void main() {
     expect(n.isAfter(start), isTrue);
   });
 
+  test('normalizeEndAfterStart nudges identical start/end by one minute', () {
+    final t = DateTime(2026, 4, 18, 14, 30, 0);
+    final n = ActionEditViewModel.normalizeEndAfterStart(t, t);
+    expect(n, DateTime(2026, 4, 18, 14, 31, 0));
+  });
+
   test('modelTypeNameIfChanged', () {
     const initial = Action(
       id: 1,

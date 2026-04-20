@@ -64,15 +64,14 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       _nameController = TextEditingController();
       _notesController = TextEditingController();
       final n = DateTime.now();
-      final d = DateTime(n.year, n.month, n.day);
       final ps = widget.prefillStart;
       final pe = widget.prefillEnd;
       if (ps != null && pe != null) {
         _start = ps;
         _end = pe;
       } else {
-        _start = DateTime(d.year, d.month, d.day, 9, 0);
-        _end = DateTime(d.year, d.month, d.day, 10, 0);
+        _start = n;
+        _end = n;
       }
       if (widget.prefillCategory != null) {
         _categoryCreate = widget.prefillCategory;

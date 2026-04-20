@@ -6,8 +6,10 @@ import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/today/widgets/activity_row.dart';
-import 'package:nx_time/features/today/widgets/category_legend.dart';
 import 'package:nx_time/features/today/widgets/time_map_bar.dart';
+
+/// Header row + time bar height below the status bar (includes [TimeMapBar] + padding; tuned for device text scale).
+const _kTodayPinnedBelowStatusBar = 138.0;
 
 class TodayPage extends StatelessWidget {
   const TodayPage({
@@ -25,47 +27,22 @@ class TodayPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _TodayHeader(
-          clockLabel: snapshot.clockLabel,
-          titleLine: snapshot.titleLine,
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    return CustomScrollView(
+      clipBehavior: Clip.hardEdge,
+      slivers: [
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _TodayPinnedHeaderDelegate(
+            topInset: topInset,
+            snapshot: snapshot,
+          ),
         ),
-        Expanded(
-          child: ListView(
-            clipBehavior: Clip.none,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-            children: [
-              TimeMapBar(
-                segments: snapshot.timeMapSegments,
-                currentMarkerFraction: snapshot.currentMarkerFraction,
-              ),
-              const SizedBox(height: 12),
-              CategoryLegend(items: snapshot.legend),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Actions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  Text(
-                    '${snapshot.activityBlockCount} actions',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
               for (var i = 0; i < snapshot.actions.length; i++) ...[
                 ActivityRow(
                   activity: snapshot.actions[i],
@@ -116,7 +93,7 @@ class TodayPage extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+            ]),
           ),
         ),
       ],
@@ -124,47 +101,81 @@ class TodayPage extends StatelessWidget {
   }
 }
 
-class _TodayHeader extends StatelessWidget {
-  const _TodayHeader({
-    required this.clockLabel,
-    required this.titleLine,
+class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _TodayPinnedHeaderDelegate({
+    required this.topInset,
+    required this.snapshot,
   });
 
-  final String clockLabel;
-  final String titleLine;
+  final double topInset;
+  final TodaySnapshot snapshot;
 
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+  double get minExtent => topInset + _kTodayPinnedBelowStatusBar;
+
+  @override
+  double get maxExtent => topInset + _kTodayPinnedBelowStatusBar;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox(
+      height: maxExtent,
+      child: Material(
+        color: Colors.white,
+        elevation: overlapsContent ? 0.5 : 0,
+        shadowColor: AppColors.slate200.withValues(alpha: 0.9),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              clockLabel,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.slate500,
+            SizedBox(height: topInset),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    snapshot.clockLabel,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate500,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      snapshot.titleLine,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  const NxAppMenuButton(),
+                ],
               ),
             ),
-            Expanded(
-              child: Text(
-                titleLine,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: TimeMapBar(
+                segments: snapshot.timeMapSegments,
+                currentMarkerFraction: snapshot.currentMarkerFraction,
               ),
             ),
-            const NxAppMenuButton(),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  bool shouldRebuild(covariant _TodayPinnedHeaderDelegate oldDelegate) {
+    return oldDelegate.topInset != topInset ||
+        oldDelegate.snapshot != snapshot;
   }
 }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:nx_time/core/formatting/date_label.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
+import 'package:nx_time/core/time/action_calendar_overlap.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
@@ -153,7 +154,7 @@ TodaySnapshot buildTodaySnapshot(
   final totalMs = dayEnd.difference(dayStart).inMilliseconds;
 
   final inDay =
-      domainActions.where((m) => _actionOverlapsLocalDay(m, dayStart, dayEnd)).toList();
+      domainActions.where((m) => actionOverlapsHalfOpen(m, dayStart, dayEnd)).toList();
 
   final sorted = List<Action>.from(inDay)
     ..sort((a, b) {
@@ -246,15 +247,6 @@ TodaySnapshot buildTodaySnapshot(
     umbrellaRows: umbrellaRows,
     dayActions: sorted,
   );
-}
-
-bool _actionOverlapsLocalDay(Action m, DateTime dayStart, DateTime dayEnd) {
-  final start = m.startTime;
-  final end = m.endTime;
-  if (start == null && end == null) return false;
-  final s = start ?? end!;
-  final e = end ?? start!.add(const Duration(hours: 1));
-  return s.isBefore(dayEnd) && e.isAfter(dayStart);
 }
 
 TimeMapSegment? _segmentForActionInDay(

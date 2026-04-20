@@ -18,10 +18,14 @@ class ActionEditViewModel {
     return null;
   }
 
-  /// Ensures end is strictly after start (overnight block rolls to next day).
+  /// Ensures end is after start: same instant → +1 min; otherwise if end is not
+  /// after start, treat as overnight and roll [end] forward one calendar day.
   static DateTime normalizeEndAfterStart(DateTime start, DateTime end) {
-    if (!end.isAfter(start)) return end.add(const Duration(days: 1));
-    return end;
+    if (end.isAfter(start)) return end;
+    if (end.isAtSameMomentAs(start)) {
+      return start.add(const Duration(minutes: 1));
+    }
+    return end.add(const Duration(days: 1));
   }
 
   static Action buildCreateAction({

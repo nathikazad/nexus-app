@@ -1,6 +1,7 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 
+import 'package:nx_time/core/time/action_calendar_overlap.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/domain/action/action_repository.dart';
 import 'package:nx_time/data/action/action_attr_keys.dart';
@@ -54,7 +55,10 @@ class KgqlActionRepository implements ActionRepository {
       struct: struct,
     );
 
-    return models.map(actionFromModel).toList();
+    return models
+        .map(actionFromModel)
+        .where((a) => actionOverlapsLocalCalendarDay(a, dayLocal))
+        .toList();
   }
 
   @override
