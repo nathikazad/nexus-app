@@ -2,11 +2,16 @@
 library;
 
 import 'package:flutter/material.dart' hide Action;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
+import 'package:nx_time/features/tasks/task_view_models.dart';
 import 'package:nx_time/features/today/action_fold.dart';
+
+import '../_support/fake_task_repository.dart';
 
 void main() {
   testWidgets('umbrella layout shows Child actions section and child rows', (tester) async {
@@ -31,10 +36,17 @@ void main() {
     final args = activityDetailArgsForUmbrella(row, 'Today — Sat, Apr 18');
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ActivityDetailPage(args: args),
+      ProviderScope(
+        overrides: [
+          taskRepositoryProvider.overrideWithValue(const FakeEmptyTaskRepository()),
+          allTasksProvider.overrideWith((ref) async => const []),
+        ],
+        child: MaterialApp(
+          home: ActivityDetailPage(args: args),
+        ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Child actions'), findsOneWidget);
     expect(find.text('Stop'), findsOneWidget);

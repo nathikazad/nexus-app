@@ -1,5 +1,6 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/action_create/add_child_actions_page.dart';
@@ -9,12 +10,60 @@ import 'package:nx_time/features/action_detail/widgets/category_pill.dart';
 import 'package:nx_time/features/action_detail/widgets/linked_task_row.dart';
 import 'package:nx_time/features/action_detail/widgets/notes_block.dart';
 import 'package:nx_time/features/action_detail/widgets/time_block_bar.dart';
+import 'package:nx_time/features/tasks/task_view_models.dart';
 
 /// Detail for a logged Action (reference: `partials/page-activity-detail-*.html`).
-class ActivityDetailPage extends StatelessWidget {
+///
+/// Watches [tasksLinkedToActivityProvider] so any task mutation that invalidates
+/// [allTasksProvider] (status change, edit, link, create) flows back here with
+/// no manual reload needed.
+class ActivityDetailPage extends ConsumerWidget {
   const ActivityDetailPage({super.key, required this.args});
 
   final ActivityDetailArgs args;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final action = args.sourceAction;
+    final linkedAsync = action == null
+        ? null
+        : ref.watch(tasksLinkedToActivityProvider(action.id));
+
+    final effectiveArgs = linkedAsync == null
+        ? args
+        : args.copyWith(
+            tasks: linkedAsync.maybeWhen(
+              data: linkedTaskItemsFromTasks,
+              orElse: () => args.tasks,
+            ),
+          );
+
+    return _ActivityDetailScaffold(
+      args: effectiveArgs,
+      onEdit: action == null
+          ? null
+          : () {
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => ActionEditPage(
+                    mode: ActionEditMode.edit,
+                    initial: action,
+                  ),
+                ),
+              );
+            },
+    );
+  }
+}
+
+class _ActivityDetailScaffold extends StatelessWidget {
+  const _ActivityDetailScaffold({
+    required this.args,
+    required this.onEdit,
+  });
+
+  final ActivityDetailArgs args;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -57,18 +106,7 @@ class ActivityDetailPage extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: args.sourceAction == null
-                        ? null
-                        : () {
-                            Navigator.of(context).push<void>(
-                              MaterialPageRoute<void>(
-                                builder: (_) => ActionEditPage(
-                                  mode: ActionEditMode.edit,
-                                  initial: args.sourceAction,
-                                ),
-                              ),
-                            );
-                          },
+                    onPressed: onEdit,
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       minimumSize: Size.zero,

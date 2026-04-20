@@ -149,3 +149,26 @@ Future<void> pinTaskIdsToCalendarDay(
     await repo.update(t.copyWith(date: day), includeAttributes: true);
   }
 }
+
+/// Tasks whose `linked_to_activity` relation includes [activityId].
+Future<List<Task>> tasksLinkedToActivity(
+  TaskRepository repo,
+  int activityId,
+) async {
+  final all = await repo.listAll();
+  return all
+      .where((t) => t.linkedActivities.any((l) => l.activityId == activityId))
+      .toList();
+}
+
+/// Derived view of [allTasksProvider] filtered to tasks linked to a given activity id.
+///
+/// Because it `watch`es [allTasksProvider], any invalidation of that provider
+/// (status change, edit, link, etc.) propagates here automatically.
+final tasksLinkedToActivityProvider =
+    FutureProvider.family<List<Task>, int>((ref, activityId) async {
+  final all = await ref.watch(allTasksProvider.future);
+  return all
+      .where((t) => t.linkedActivities.any((l) => l.activityId == activityId))
+      .toList();
+});

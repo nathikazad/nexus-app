@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
+import 'package:nx_time/features/tasks/task_detail_page.dart';
 
 class LinkedTaskRow extends StatelessWidget {
   const LinkedTaskRow({super.key, required this.task});
@@ -10,11 +11,20 @@ class LinkedTaskRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final id = task.taskId;
     return Material(
       color: AppColors.slate50,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        onTap: () {},
+        onTap: id == null
+            ? null
+            : () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TaskDetailPage(taskId: id),
+                  ),
+                );
+              },
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

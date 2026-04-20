@@ -55,6 +55,12 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
   late DateTime _end;
   bool _saving = false;
 
+  /// Create mode: task ids to [TaskRepository.linkActivity] after the action row exists.
+  final Set<int> _pendingTaskIdsToLink = {};
+
+  /// Edit mode: task ids linked to this action (loaded + session adds).
+  final Set<int> _linkedTaskIdsForEdit = {};
+
   bool get _isCreate => widget.mode == ActionEditMode.create;
 
   @override
@@ -84,6 +90,60 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       _start = a.startTime ?? DateTime.now();
       _end = a.endTime ?? _start.add(const Duration(hours: 1));
     }
+    if (!_isCreate) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLinkedTaskIds());
+    }
+  }
+
+  Future<void> _refreshLinkedTaskIds() async {
+    if (_isCreate || !mounted) return;
+    final a = widget.initial!;
+    final tasks = await tasksLinkedToActivity(
+      ref.read(taskRepositoryProvider),
+      a.id,
+    );
+    if (!mounted) return;
+    setState(() {
+      _linkedTaskIdsForEdit
+        ..clear()
+        ..addAll(tasks.map((e) => e.id));
+    });
+  }
+
+  Future<void> _applyPickedTasks(Set<int> picked) async {
+    if (picked.isEmpty) return;
+    final taskRepo = ref.read(taskRepositoryProvider);
+    if (_isCreate) {
+      setState(() => _pendingTaskIdsToLink.addAll(picked));
+      await pinTaskIdsToCalendarDay(taskRepo, picked, _start);
+      ref.invalidate(tasksForTodayProvider);
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaySnapshotProvider);
+      return;
+    }
+    final action = widget.initial!;
+    final typeName = action.modelTypeName ?? _categoryEdit.name;
+    for (final id in picked) {
+      final t = await taskRepo.getById(id);
+      if (t == null) continue;
+      if (t.linkedActivities.any((l) => l.activityId == action.id)) {
+        continue;
+      }
+      await taskRepo.linkActivity(
+        taskId: id,
+        activityId: action.id,
+        activityModelTypeName: typeName,
+      );
+      if (mounted) setState(() => _linkedTaskIdsForEdit.add(id));
+    }
+    await pinTaskIdsToCalendarDay(
+      taskRepo,
+      picked,
+      action.startTime ?? DateTime.now(),
+    );
+    ref.invalidate(tasksForTodayProvider);
+    ref.invalidate(allTasksProvider);
+    ref.invalidate(todaySnapshotProvider);
   }
 
   @override
@@ -183,6 +243,14 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
           cat.name,
           parentActionId: widget.parentActionId,
         );
+        final taskRepo = ref.read(taskRepositoryProvider);
+        for (final taskId in _pendingTaskIdsToLink) {
+          await taskRepo.linkActivity(
+            taskId: taskId,
+            activityId: newId,
+            activityModelTypeName: cat.name,
+          );
+        }
         ref.invalidate(todaySnapshotProvider);
         if (!mounted) return;
         Navigator.of(context).pop();
@@ -563,16 +631,8 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                                 );
                                 if (!mounted) return;
                                 if (picked != null && picked.isNotEmpty) {
-                                  final repo = ref.read(taskRepositoryProvider);
-                                  await pinTaskIdsToCalendarDay(
-                                    repo,
-                                    picked,
-                                    DateTime.now(),
-                                  );
-                                  ref.invalidate(tasksForTodayProvider);
-                                  ref.invalidate(allTasksProvider);
+                                  await _applyPickedTasks(picked);
                                 }
-                                ref.invalidate(todaySnapshotProvider);
                               },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -591,12 +651,21 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Center(
+                  Center(
                     child: Text(
-                      'No tasks linked yet',
+                      _isCreate
+                          ? (_pendingTaskIdsToLink.isEmpty
+                              ? 'No tasks linked yet'
+                              : '${_pendingTaskIdsToLink.length} task(s) will link when you save')
+                          : (_linkedTaskIdsForEdit.isEmpty
+                              ? 'No tasks linked yet'
+                              : '${_linkedTaskIdsForEdit.length} task(s) linked'),
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.slate400,
+                        color: _isCreate && _pendingTaskIdsToLink.isNotEmpty ||
+                                !_isCreate && _linkedTaskIdsForEdit.isNotEmpty
+                            ? AppColors.slate500
+                            : AppColors.slate400,
                       ),
                     ),
                   ),

@@ -5,6 +5,8 @@ import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/domain/action/action.dart';
+import 'package:nx_time/domain/tasks/task.dart';
+import 'package:nx_time/domain/tasks/task_status.dart';
 import 'package:nx_time/features/today/action_fold.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 
@@ -25,11 +27,15 @@ class LinkedTaskItem {
     required this.title,
     required this.subtitle,
     required this.progress,
+    this.taskId,
   });
 
   final String title;
   final String subtitle;
   final LinkedTaskProgress progress;
+
+  /// When set (from a real [Task] row), the detail UI can open [TaskDetailPage].
+  final int? taskId;
 }
 
 class UmbrellaChildItem {
@@ -96,6 +102,54 @@ class ActivityDetailArgs {
   int get linkedTaskCount => tasks.length;
 
   int get umbrellaChildCount => umbrellaChildren.length;
+
+  /// Rebuild with an updated task list (e.g. after linking tasks to the action).
+  ActivityDetailArgs copyWith({
+    List<LinkedTaskItem>? tasks,
+  }) {
+    return ActivityDetailArgs(
+      layout: layout,
+      detailTitle: detailTitle,
+      description: description,
+      categoryPillLabel: categoryPillLabel,
+      categoryPillBackground: categoryPillBackground,
+      categoryPillForeground: categoryPillForeground,
+      categoryDotColor: categoryDotColor,
+      dateLabel: dateLabel,
+      startTime: startTime,
+      startSuffix: startSuffix,
+      endTime: endTime,
+      endSuffix: endSuffix,
+      durationCenter: durationCenter,
+      tasks: tasks ?? this.tasks,
+      wearablePhotoLabel: wearablePhotoLabel,
+      sourceAction: sourceAction,
+      umbrellaChildren: umbrellaChildren,
+    );
+  }
+}
+
+LinkedTaskProgress _linkedProgressForStatus(TaskStatus s) {
+  if (s == TaskStatus.done) return LinkedTaskProgress.doneGreen;
+  return LinkedTaskProgress.partialBlue;
+}
+
+/// Maps repository [Task]s to rows for the activity detail “Associated tasks” list.
+List<LinkedTaskItem> linkedTaskItemsFromTasks(List<Task> tasks) {
+  final sorted = List<Task>.from(tasks)
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return sorted
+      .map(
+        (t) => LinkedTaskItem(
+          taskId: t.id,
+          title: t.name.isEmpty ? 'Task' : t.name,
+          subtitle: t.modelTypeName?.isNotEmpty == true
+              ? t.modelTypeName!
+              : 'Task',
+          progress: _linkedProgressForStatus(t.status),
+        ),
+      )
+      .toList();
 }
 
 /// Builds detail UI from a loaded [Action].

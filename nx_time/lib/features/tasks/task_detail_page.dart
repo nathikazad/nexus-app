@@ -30,6 +30,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     ref.invalidate(taskDetailScreenVmProvider(widget.taskId));
     ref.invalidate(subtasksOfTaskProvider(widget.taskId));
     ref.invalidate(tasksForTodayProvider);
+    ref.invalidate(allTasksProvider);
   }
 
   Future<void> _moveToTomorrow() async {
