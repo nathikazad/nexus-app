@@ -36,6 +36,19 @@ Map<String, String> _imageGetHeaders(String imageBaseUrl, String userId) {
   return h;
 }
 
+Future<void> _showBillImageFullScreen(
+  BuildContext context,
+  String imageUrl,
+  Map<String, String> headers,
+) {
+  return Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (ctx) => _BillFullScreenPage(imageUrl: imageUrl, headers: headers),
+    ),
+  );
+}
+
 /// Expense detail / form: bill thumbnails + add (camera or library).
 class ExpenseBillsSection extends ConsumerStatefulWidget {
   const ExpenseBillsSection({super.key, required this.expenseId});
@@ -252,23 +265,32 @@ class _BillThumb extends StatelessWidget {
     );
     final headers = _imageGetHeaders(imageBaseUrl, userId);
 
+    final url = uri.toString();
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-          child: Image.network(
-            uri.toString(),
-            width: 64,
-            height: 64,
-            fit: BoxFit.cover,
-            headers: headers,
-            errorBuilder: (_, __, ___) => Container(
-              width: 64,
-              height: 64,
-              color: AppColors.slate100,
-              alignment: Alignment.center,
-              child: Icon(Icons.broken_image_outlined, color: AppColors.slate400, size: 28),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showBillImageFullScreen(context, url, headers),
+            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+              child: Image.network(
+                url,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+                headers: headers,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 64,
+                  height: 64,
+                  color: AppColors.slate100,
+                  alignment: Alignment.center,
+                  child: Icon(Icons.broken_image_outlined, color: AppColors.slate400, size: 28),
+                ),
+              ),
             ),
           ),
         ),
@@ -291,6 +313,73 @@ class _BillThumb extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _BillFullScreenPage extends StatelessWidget {
+  const _BillFullScreenPage({
+    required this.imageUrl,
+    required this.headers,
+  });
+
+  final String imageUrl;
+  final Map<String, String> headers;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 6,
+              child: Image.network(
+                imageUrl,
+                headers: headers,
+                fit: BoxFit.contain,
+                width: size.width,
+                height: size.height,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.broken_image_outlined,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  size: 56,
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                icon: Icon(Icons.close_rounded, color: Colors.white.withValues(alpha: 0.95)),
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
