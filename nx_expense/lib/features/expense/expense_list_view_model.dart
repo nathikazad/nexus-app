@@ -51,6 +51,13 @@ final expenseListSortProvider =
       ExpenseListSortNotifier.new,
     );
 
+/// Sort notifier for [scopedExpenseListScreen] (tag / relation drill-down from detail).
+/// Uses newest-first date order; the main list would default to oldest-first for this wide range.
+class ScopedExpenseListSortNotifier extends ExpenseListSortNotifier {
+  @override
+  ExpenseSortMode build() => ExpenseSortMode.dateDesc;
+}
+
 Future<List<Expense>> buildExpenseListForUi(Ref ref) async {
   final filter = ref.watch(expenseListFilterProvider);
   final dateRange = ref.watch(expenseDateRangeProvider);

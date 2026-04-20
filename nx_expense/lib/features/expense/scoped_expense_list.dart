@@ -15,7 +15,7 @@ Widget scopedExpenseListScreen({
   return ProviderScope(
     overrides: [
       expenseListFilterProvider.overrideWith(ExpenseListFilterNotifier.new),
-      expenseListSortProvider.overrideWith(ExpenseListSortNotifier.new),
+      expenseListSortProvider.overrideWith(ScopedExpenseListSortNotifier.new),
       expenseListSearchQueryProvider.overrideWith(
         ExpenseListSearchQueryNotifier.new,
       ),
