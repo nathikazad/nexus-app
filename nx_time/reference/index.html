@@ -150,7 +150,10 @@
         'partials/page-activity-detail-umbrella-coffee.html',
         'partials/page-add-time-block.html',
         'partials/page-add-trip-children.html',
-        'partials/page-edit-activity.html'
+        'partials/page-edit-activity.html',
+        'partials/page-goal-detail-sleep.html',
+        'partials/page-goal-detail-gym.html',
+        'partials/page-goal-detail-wake.html'
     ];
 
     async function loadPartials() {
@@ -168,7 +171,7 @@
 
     let historyStack = ['page-today'];
 
-    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-activity-detail-umbrella', 'page-activity-detail-umbrella-coffee', 'page-add-time-block', 'page-add-trip-children', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep'];
+    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-activity-detail-umbrella', 'page-activity-detail-umbrella-coffee', 'page-add-time-block', 'page-add-trip-children', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep', 'page-goal-detail-sleep', 'page-goal-detail-gym', 'page-goal-detail-wake'];
     const bottomNav = document.getElementById('bottom-nav');
 
     function navigate(pageId, pushToHistory = true) {
@@ -207,6 +210,8 @@
                 updateTabUI('calendar');
             } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail' || prevPage === 'page-task-edit' || prevPage === 'page-task-create' || prevPage === 'page-projects-browse' || prevPage === 'page-project-drill-down' || prevPage === 'page-project-drill-deep') {
                 updateTabUI('tasks');
+            } else if (prevPage === 'page-goal-detail-sleep' || prevPage === 'page-goal-detail-gym' || prevPage === 'page-goal-detail-wake') {
+                updateTabUI('goals');
             }
         }
     }
