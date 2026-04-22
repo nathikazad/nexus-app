@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_time/data/goals/kgql_goal_repository.dart';
 import 'package:nx_time/data/projects/kgql_project_repository.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/data/tasks/kgql_task_repository.dart';
@@ -21,6 +22,7 @@ void main() {
     addTearDown(container.dispose);
     expect(container.read(taskRepositoryProvider), isA<KgqlTaskRepository>());
     expect(container.read(projectRepositoryProvider), isA<KgqlProjectRepository>());
+    expect(container.read(goalRepositoryProvider), isA<KgqlGoalRepository>());
   });
 
   test('todaySnapshotProvider uses overridden repository', () async {

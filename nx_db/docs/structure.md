@@ -10,8 +10,8 @@ things:
 2. **A KGQL "ORM"** — typed `Model` / `ModelType` / `SetModelRequest`
    classes plus a small set of repository functions (`fetchKgqlModels`,
    `setKgqlModel`, …) that talk to the PGDB GraphQL backend.
-3. **A few cross-app feature modules** (currently `transcript/`) when a
-   feature is genuinely shared by ≥2 apps.
+3. **A few cross-app feature modules** (today: `transcript/`, `goals/`) when
+   a feature is genuinely shared by ≥2 apps.
 
 It does **not** ship UI screens, app-specific entities, or business
 logic. Apps import it; it does not import them.
@@ -81,7 +81,8 @@ Three structural moves:
 core/         cross-cutting infrastructure (config, GraphQL client, JSON helpers)
 auth/         identity / session — User, AuthController, providers, backend_ping
 kgql/         the generic "ORM" over the PGDB GraphQL API
-transcript/   one self-contained feature module (template for future modules)
+transcript/   one self-contained feature module
+goals/        `app` schema goal orchestrators (week, trend, expense month)
 ```
 
 A new reader opens `lib/src/` and immediately knows which folder owns
@@ -101,15 +102,15 @@ kgql/
 
 Hard rules inside the `lib/`:
 
-- `core/`, `auth/`, `kgql/` may not import `transcript/` or any other
-  feature module. **Features import lower layers, not the reverse.**
+- `core/`, `auth/`, `kgql/` may not import `transcript/`, `goals/`, or any
+  other feature module. **Features import lower layers, not the reverse.**
 - Repositories take a `GraphQLClient`, never a Riverpod `Ref`.
 - Providers are thin wrappers — if a provider has 50 lines of logic, the
   logic belongs in the repository.
 
 ### 2. A curated public surface — multiple sub-libraries
 
-`nx_db` exposes its API through five sub-library entry points. Apps pick
+`nx_db` exposes its API through multiple sub-library entry points. Apps pick
 the smallest one that fits.
 
 | Import path | What it gives you | Riverpod? | Flutter? |
@@ -118,6 +119,7 @@ the smallest one that fits.
 | `package:nx_db/kgql.dart` | `Model`, `ModelType`, `SetModelRequest`, `SetModelAttribute`, repositories (`fetchKgqlModels`, `setKgqlModel`, …), helpers (`buildKgqlStructFromSchema`, `setKgqlCreate/Update/Delete`, `attrString/attrDateTime/...`), `GraphQLClient` | **no** | no |
 | `package:nx_db/riverpod.dart` | `graphqlClientProvider`, `modelsByTypeProvider`, `modelTypeByNameProvider`, relation picker providers | yes | no |
 | `package:nx_db/transcript.dart` | `Transcript`, `TranscriptMessage`, repository, providers | yes | no |
+| `package:nx_db/goals.dart` | `fetchActionGoalsWeek` / `fetchActionGoalsTrend` / `fetchExpenseGoalsMonth`, DTOs, GraphQL operation strings | no | no |
 | `package:nx_db/nx_db.dart` | Everything-shim — re-exports all of the above; prefer the focused sub-libraries | yes | no |
 | `package:nx_db/internal.dart` | Raw GraphQL document strings + JSON helpers; **may break in any release** | no | no |
 
@@ -162,6 +164,7 @@ nx_db/
     kgql.dart             # public sub-library (Riverpod-free)
     riverpod.dart         # public sub-library (opt-in Riverpod)
     transcript.dart       # public sub-library (feature module)
+    goals.dart            # public sub-library (app goal orchestrators)
     internal.dart         # not part of public API; tests / advanced use only
 
     src/
@@ -220,6 +223,12 @@ nx_db/
         transcript.dart                  # Transcript + TranscriptMessage types
         transcript_repository.dart       # query / mutation / subscription docs + functions
         transcript_providers.dart        # FutureProvider, StreamProvider
+
+      goals/                             # app schema goal orchestrators
+        documents/                       # get_action_goals_week / _trend / get_expense_goals_month
+        models/                          # wire DTOs (week, trend, expense month, streak, …)
+        goal_parsing.dart                # date / JSON unwrapping helpers
+        goals_repository.dart            # fetch* over GraphQLClient
 ```
 
 The layering inside `kgql/` reads bottom-up: `documents` → `models` /
@@ -282,6 +291,14 @@ nx_db/test/
     transcript_test.dart                # types + parsing
     transcript_repository_test.dart     # query/mutate/subscribe with mocked client
     transcript_providers_test.dart      # barrel re-export smoke
+
+  goals/
+    goals_documents_shape_test.dart
+    models/
+      action_goal_week_test.dart
+      action_goal_trend_test.dart
+      expense_goal_month_test.dart
+    goals_repository_test.dart
 
   integration/                          # opt-in; live PGDB required
     nx_db_integration_test.dart

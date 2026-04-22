@@ -3,10 +3,12 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_time/domain/action/action_repository.dart';
+import 'package:nx_time/domain/goals/goal_repository.dart';
 import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/data/action/action_schema_provider.dart';
 import 'package:nx_time/data/action/kgql_action_repository.dart';
+import 'package:nx_time/data/goals/kgql_goal_repository.dart';
 import 'package:nx_time/data/projects/kgql_project_repository.dart';
 import 'package:nx_time/data/projects/project_schema_provider.dart';
 import 'package:nx_time/data/schema/kgql_action_schema_repository.dart';
@@ -39,6 +41,13 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
   (ref) => KgqlProjectRepository(
     client: ref.watch(graphqlClientProvider),
     loadProjectSchema: () => ref.read(projectSchemaProvider.future),
+  ),
+);
+
+/// KGQL-backed [GoalRepository] (`app.get_action_goals_*` / `app.get_expense_goals_month`).
+final goalRepositoryProvider = Provider<GoalRepository>(
+  (ref) => KgqlGoalRepository(
+    client: ref.watch(graphqlClientProvider),
   ),
 );
 

@@ -8,7 +8,7 @@
 | [`core/`](core/time/wall_clock_time_test.dart) | Core time/theme helpers |
 | [`domain/`](domain/action/action_test.dart) | Pure Dart domain types |
 | [`data/action/`](data/action/action_kgql_struct_test.dart) | KGQL struct builders |
-| [`integration/`](integration/time_integration_test.dart) | Opt-in live GraphQL (`RUN_NX_TIME_INTEGRATION=true`) |
+| [`integration/`](integration/time_integration_test.dart) | Opt-in live GraphQL (`RUN_NX_TIME_INTEGRATION=true`); [goals](integration/goals_integration_test.dart) needs `--with-goals` seed |
 
 ## Default (CI / offline)
 
@@ -33,7 +33,8 @@ Same pattern as [`nx_expense`](../nx_expense/test/README.md): **`test/_support/i
 **Requirements**
 
 - PostGraphile / PGDB on localhost (see `nx_db` `kIntegrationTestBackendUrls`).
-- Seed data including **`seed_nx_time_calendar_demo`** for meaningful Today rows.
+- Seed data including **`seed_nx_time_calendar_demo`** for meaningful Today rows; goals tests need **`python admin_functions/reset_db.py --till-model-types --with-goals`** (or equivalent load with `--with-goals`).
+- GraphQL must expose the goal root fields (`getActionGoalsWeek`, `getActionGoalsTrend`, `getExpenseGoalsMonth`); the repo’s `servers/graphql` appends `plugins/goals-queries.js` for that.
 
 **Run**
 

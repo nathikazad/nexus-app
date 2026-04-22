@@ -44,3 +44,6 @@ export 'src/kgql/providers/relation_picker_providers.dart';
 export 'src/transcript/transcript.dart';
 export 'src/transcript/transcript_repository.dart';
 export 'src/transcript/transcript_providers.dart';
+
+// Goals (app schema orchestrators)
+export 'goals.dart';
