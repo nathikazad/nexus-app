@@ -1,10 +1,8 @@
     <!--
-        Goal detail — daily sum-of-duration variant.
-        Shape covers:
-          • daily cadence + aggregation=sum (e.g. Sleep 8h, Theology 1hr/day)
-          • daily cadence + aggregation=count w/ time filter (Wake before 7am, Sleep by 11pm)
-            differs by: hero number is a clock time instead of a duration.
-        For weekly goals see page-goal-detail-gym.html.
+        Goal detail — daily sum/duration (Sleep 8 hours, reading time, …).
+        Streak: compact pill top-right in the hero (muted when 0), no separate streak section.
+        See also page-goal-detail-wake.html (time threshold) and page-goal-detail-gym.html (weekly).
+        Canonical combined markup: partials/page-goal-detail.html (sleep variant block).
     -->
     <div id="page-goal-detail-sleep" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-30">
         <header class="flex items-center justify-between px-5 pt-12 pb-2 shrink-0">
@@ -16,13 +14,7 @@
                 <iconify-icon icon="solar:menu-dots-linear" class="text-xl"></iconify-icon>
             </button>
         </header>
-
         <main class="flex-1 overflow-y-auto px-5 pb-12">
-
-            <!-- ============================================================
-                 Hero — title, target, today's headline number, status pill,
-                 progress to today's threshold.
-                 ============================================================ -->
             <section class="pt-3 pb-5">
                 <h1 class="text-2xl font-semibold tracking-tight text-slate-900 leading-tight">Sleep 8 hours</h1>
                 <p class="text-xs font-medium text-slate-500 mt-1">Every day · ≥ 8h · attributed to wake time</p>
@@ -32,7 +24,11 @@
                         <div class="text-3xl font-semibold text-slate-900">6h 50m</div>
                         <div class="text-xs text-slate-500 mt-0.5">today, so far</div>
                     </div>
-                    <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 text-[#BA7517]">in progress</span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 shrink-0" title="Streak" aria-label="0 day streak">
+                        <iconify-icon icon="solar:fire-bold" class="text-sm text-slate-500"></iconify-icon>
+                        <span class="text-[13px] font-semibold text-slate-700">0</span>
+                        <span class="text-[11px] font-medium text-slate-500">days</span>
+                    </span>
                 </div>
 
                 <div class="h-1.5 w-full bg-slate-100 rounded-full mt-3 overflow-hidden">
@@ -42,31 +38,6 @@
                     <span>0h</span>
                     <span>4h</span>
                     <span class="font-medium text-slate-600">8h target</span>
-                </div>
-            </section>
-
-            <!-- ============================================================
-                 Streak — the motivation engine. Big "fire" tile + context.
-                 ============================================================ -->
-            <section class="mb-7">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Streak</h3>
-                    <button class="text-[11px] font-medium text-slate-400 hover:text-slate-600">view history</button>
-                </div>
-                <div class="flex gap-3 items-stretch">
-                    <div class="flex flex-col items-center justify-center w-[88px] rounded-2xl bg-slate-50 py-3">
-                        <iconify-icon icon="solar:fire-bold" class="text-2xl text-slate-300"></iconify-icon>
-                        <div class="text-2xl font-semibold text-slate-700 mt-0.5 leading-none">0</div>
-                        <div class="text-[10px] text-slate-400 mt-1">days</div>
-                    </div>
-                    <div class="flex-1 flex flex-col justify-center">
-                        <div class="text-sm font-medium text-slate-900">Streak broken Wednesday</div>
-                        <div class="text-xs text-slate-500 mt-1 leading-snug">Hit 8h tonight to start a fresh one.</div>
-                        <div class="text-[11px] text-slate-400 mt-2 flex items-center gap-1.5">
-                            <iconify-icon icon="solar:medal-ribbon-star-linear" class="text-sm"></iconify-icon>
-                            Best: <span class="font-medium text-slate-600">5 days</span> · Jan 19 – 23
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -228,6 +199,5 @@
                     </div>
                 </button>
             </div>
-
         </main>
     </div>

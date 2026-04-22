@@ -3,11 +3,21 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/widgets/nx_tab_header.dart';
+import 'package:nx_time/features/goals/goal_detail/goal_detail_page.dart';
+import 'package:nx_time/features/goals/goal_detail/goal_detail_variant.dart';
 
 class GoalsPage extends StatelessWidget {
   const GoalsPage({super.key});
 
   static const _clock = '9:41 AM';
+
+  void _openDetail(BuildContext context, GoalDetailVariant variant) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => GoalDetailPage(variant: variant),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +62,7 @@ class GoalsPage extends StatelessWidget {
               const SizedBox(height: 10),
               _SectionLabel(text: 'Daily goals'),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.wake),
                 title: 'Wake up before 7am',
                 status: '6:48 today',
                 statusColor: AppColors.goalOnTrack,
@@ -66,6 +77,7 @@ class GoalsPage extends StatelessWidget {
                 ],
               ),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.wake),
                 title: 'Sleep by 11pm',
                 status: '11:42 last night',
                 statusColor: AppColors.goalMissed,
@@ -80,6 +92,7 @@ class GoalsPage extends StatelessWidget {
                 ],
               ),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
                 title: 'Sleep 8 hours',
                 status: '6h 50m today',
                 statusColor: AppColors.goalMissed,
@@ -97,6 +110,7 @@ class GoalsPage extends StatelessWidget {
                 progressColor: AppColors.dotMiss,
               ),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
                 title: 'Yoga every day',
                 status: '32m today',
                 statusColor: AppColors.goalOnTrack,
@@ -111,6 +125,7 @@ class GoalsPage extends StatelessWidget {
                 ],
               ),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
                 title: 'Theology reading 1hr / day',
                 status: '35m today',
                 statusColor: AppColors.goalAtRisk,
@@ -130,11 +145,13 @@ class GoalsPage extends StatelessWidget {
               const SizedBox(height: 14),
               _SectionLabel(text: 'Weekly goals'),
               _GymWeekRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.gym),
                 title: 'Gym 3x / week',
                 status: '2 of 3',
                 statusColor: AppColors.goalOnTrack,
               ),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
                 title: 'Language learning 3hrs / week',
                 status: '2h 15m',
                 statusColor: AppColors.goalOnTrack,
@@ -146,6 +163,7 @@ class GoalsPage extends StatelessWidget {
                 progressBeforeSubline: true,
               ),
               _GoalRow(
+                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
                 title: 'Dancing 3hrs / week',
                 status: '45m',
                 statusColor: AppColors.goalAtRisk,
@@ -225,6 +243,7 @@ enum _Dot { ok, miss, pend, todayOk, todayMiss, todayProg }
 
 class _GoalRow extends StatelessWidget {
   const _GoalRow({
+    this.onTap,
     required this.title,
     required this.status,
     required this.statusColor,
@@ -237,6 +256,7 @@ class _GoalRow extends StatelessWidget {
     this.progressBeforeSubline = false,
   });
 
+  final VoidCallback? onTap;
   final String title;
   final String status;
   final Color statusColor;
@@ -251,7 +271,7 @@ class _GoalRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final child = Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         border: lastBorder
@@ -353,6 +373,14 @@ class _GoalRow extends StatelessWidget {
         ],
       ),
     );
+    if (onTap == null) return child;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: child,
+      ),
+    );
   }
 }
 
@@ -428,18 +456,20 @@ class _GoalDot extends StatelessWidget {
 
 class _GymWeekRow extends StatelessWidget {
   const _GymWeekRow({
+    this.onTap,
     required this.title,
     required this.status,
     required this.statusColor,
   });
 
+  final VoidCallback? onTap;
   final String title;
   final String status;
   final Color statusColor;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final child = Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.slate200, width: 0.5)),
@@ -501,6 +531,14 @@ class _GymWeekRow extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+    if (onTap == null) return child;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: child,
       ),
     );
   }

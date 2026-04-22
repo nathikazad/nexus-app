@@ -1,0 +1,642 @@
+    <!-- Unified goal detail: one page, three variants (wake / sleep / gym). Set via navigateToGoalDetail("wake"|"sleep"|"gym"). -->
+    <div id="page-goal-detail" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-30">
+        <header class="flex items-center justify-between px-5 pt-12 pb-2 shrink-0">
+            <button onclick="navigateBack()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -ml-2 text-slate-600" aria-label="Back">
+                <iconify-icon icon="solar:arrow-left-linear" class="text-xl"></iconify-icon>
+            </button>
+            <span class="text-xs font-semibold text-slate-900 tracking-wide uppercase">Goal</span>
+            <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors -mr-2 text-slate-500" aria-label="More">
+                <iconify-icon icon="solar:menu-dots-linear" class="text-xl"></iconify-icon>
+            </button>
+        </header>
+        <div id="goal-detail-scroll" class="flex-1 overflow-y-auto min-h-0">
+            <div data-goal-detail-variant="wake" class="px-5 pb-12">
+<!-- ============================================================
+                 Hero — today's wake time + delta vs threshold.
+                 ============================================================ -->
+            <section class="pt-3 pb-5">
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 leading-tight">Wake up before 7 AM</h1>
+                <p class="text-xs font-medium text-slate-500 mt-1">Every day · end of sleep before 07:00</p>
+
+                <div class="mt-4 flex items-end justify-between">
+                    <div>
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="text-3xl font-semibold text-slate-900">6:48</span>
+                            <span class="text-sm font-medium text-slate-500">AM</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-0.5">today · <span class="text-[#0F6E56] font-medium">12 min before goal</span></div>
+                    </div>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50/80 shrink-0" title="Streak" aria-label="3 day streak">
+                        <iconify-icon icon="solar:fire-bold" class="text-sm text-[#F97316]"></iconify-icon>
+                        <span class="text-[13px] font-semibold text-slate-900">3</span>
+                        <span class="text-[11px] font-medium text-[#F97316]">days</span>
+                    </span>
+                </div>
+
+                <!-- Mini timeline showing where today landed vs threshold -->
+                <div class="mt-4 relative h-8">
+                    <!-- track -->
+                    <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-200"></div>
+                    <!-- before-7 (good) zone -->
+                    <div class="absolute left-0 top-1/2 h-px bg-[#1D9E75]" style="width: 75%; transform: translateY(-50%);"></div>
+                    <!-- 7am marker -->
+                    <div class="absolute top-0 bottom-0 w-px bg-slate-700" style="left: 75%;"></div>
+                    <div class="absolute -top-0.5 text-[9px] font-medium text-slate-700 -translate-x-1/2" style="left: 75%;">7 AM</div>
+                    <!-- today's wake position (6:48 ≈ 73% along a 5–8 AM scale) -->
+                    <div class="absolute top-1/2 w-3 h-3 rounded-full bg-[#1D9E75] border-2 border-white shadow ring-1 ring-slate-900" style="left: 73%; transform: translate(-50%, -50%);"></div>
+                    <!-- ticks -->
+                    <div class="absolute bottom-0 left-0 text-[9px] text-slate-400">5 AM</div>
+                    <div class="absolute bottom-0 right-0 text-[9px] text-slate-400">8 AM</div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 This week — wake times plotted against the 7am threshold
+                 on a single timeline. Quickly shows margin of safety.
+                 Each day = a horizontal swim-lane with a dot.
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">This week</h3>
+                    <span class="text-[11px] text-slate-500"><span class="font-semibold text-slate-700">5</span> of 7 hit</span>
+                </div>
+
+                <div class="relative">
+                    <!-- 7am threshold line spanning the day rows -->
+                    <div class="absolute top-1 bottom-1 w-px bg-slate-300" style="left: 75%;"></div>
+                    <div class="absolute -top-1 text-[9px] font-medium text-slate-700 -translate-x-1/2" style="left: 75%;">7 AM</div>
+
+                    <!-- Mon — 6:32 -->
+                    <div class="relative flex items-center gap-2 py-1.5">
+                        <span class="w-4 text-[10px] text-slate-400 font-medium shrink-0">M</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                            <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-[#1D9E75]" style="left: 67%; transform: translate(-50%, -50%);"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-medium text-slate-700 text-right shrink-0">6:32</span>
+                    </div>
+
+                    <!-- Tue — 6:55 -->
+                    <div class="relative flex items-center gap-2 py-1.5">
+                        <span class="w-4 text-[10px] text-slate-400 font-medium shrink-0">T</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                            <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-[#1D9E75]" style="left: 73%; transform: translate(-50%, -50%);"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-medium text-slate-700 text-right shrink-0">6:55</span>
+                    </div>
+
+                    <!-- Wed — 7:38 (missed) -->
+                    <div class="relative flex items-center gap-2 py-1.5">
+                        <span class="w-4 text-[10px] text-slate-400 font-medium shrink-0">W</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                            <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-[#E24B4A]" style="left: 88%; transform: translate(-50%, -50%);"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-medium text-[#A32D2D] text-right shrink-0">7:38</span>
+                    </div>
+
+                    <!-- Thu — 6:40 -->
+                    <div class="relative flex items-center gap-2 py-1.5">
+                        <span class="w-4 text-[10px] text-slate-400 font-medium shrink-0">T</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                            <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-[#1D9E75]" style="left: 70%; transform: translate(-50%, -50%);"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-medium text-slate-700 text-right shrink-0">6:40</span>
+                    </div>
+
+                    <!-- Fri — 6:50 -->
+                    <div class="relative flex items-center gap-2 py-1.5">
+                        <span class="w-4 text-[10px] text-slate-400 font-medium shrink-0">F</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                            <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-[#1D9E75]" style="left: 72%; transform: translate(-50%, -50%);"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-medium text-slate-700 text-right shrink-0">6:50</span>
+                    </div>
+
+                    <!-- Sat (today) — 6:48 -->
+                    <div class="relative flex items-center gap-2 py-1.5 -mx-2 px-2 rounded ring-1 ring-[#F97316] bg-orange-50/40">
+                        <span class="w-4 text-[10px] font-semibold text-[#F97316] shrink-0">S</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                            <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-[#1D9E75] ring-2 ring-slate-900" style="left: 71%; transform: translate(-50%, -50%);"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-semibold text-slate-900 text-right shrink-0">6:48</span>
+                    </div>
+
+                    <!-- Sun — pending -->
+                    <div class="relative flex items-center gap-2 py-1.5 opacity-60">
+                        <span class="w-4 text-[10px] text-slate-300 font-medium shrink-0">S</span>
+                        <div class="relative flex-1 h-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-px bg-slate-100"></div>
+                        </div>
+                        <span class="w-12 text-[10px] font-medium text-slate-300 text-right shrink-0">—</span>
+                    </div>
+                </div>
+
+                <div class="mt-2 flex items-center gap-3 text-[10px] text-slate-400 px-1">
+                    <span>5 AM</span>
+                    <div class="flex-1 h-px bg-slate-100"></div>
+                    <span>8 AM</span>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Trend — last 8 weeks, days-hit-per-week. Async load:
+                 driven by a separate get_schedule_trend(item, weeks)
+                 call; the rest of the page renders before this resolves.
+                 Bar height = bucket.successes / bucket.expected.
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">8-week trend</h3>
+                    <span class="text-[11px] text-slate-500">this wk <span class="font-semibold text-slate-700">5 / 7</span></span>
+                </div>
+
+                <div class="flex items-end justify-between gap-1.5 h-20 px-0.5">
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 43%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 57%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 71%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 57%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 71%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 86%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 71%"></div>
+                    <div class="flex-1 bg-[#F97316] rounded-t" style="height: 71%"></div>
+                </div>
+                <div class="flex justify-between mt-1.5 text-[10px] text-slate-400">
+                    <span>8w ago</span>
+                    <span class="font-medium text-[#F97316]">this wk</span>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Definition — collapsed by default.
+                 ============================================================ -->
+            <section class="mb-6">
+                <details class="group rounded-xl border border-slate-100 bg-slate-50/60">
+                    <summary class="flex items-center justify-between cursor-pointer list-none px-3.5 py-3">
+                        <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                            <iconify-icon icon="solar:settings-linear" class="text-slate-400 text-sm"></iconify-icon>
+                            How this is measured
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400 group-open:rotate-180 transition-transform"></iconify-icon>
+                    </summary>
+                    <div class="px-3.5 pb-3.5 pt-1 space-y-1.5 text-[13px] text-slate-600">
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Tracks</span><span class="text-slate-900 font-medium">Sleep actions</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Hits when</span><span class="text-slate-900 font-medium text-right">wake time ≤ 07:00</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Day attribution</span><span class="text-slate-900 font-medium">wake time</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Cadence</span><span class="text-slate-900 font-medium">daily</span></div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- ============================================================
+                 Bottom actions — same pattern as other detail pages.
+                 ============================================================ -->
+            <div class="pt-4 border-t border-slate-100 space-y-0.5">
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:pen-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-slate-900">Edit goal</div>
+                        <div class="text-xs text-slate-500">Change threshold time or filter</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:pause-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-slate-900">Pause</div>
+                        <div class="text-xs text-slate-500">Hide from the goals tab without deleting history</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-red-50/60 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 shrink-0">
+                        <iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-red-500">Delete goal</div>
+                        <div class="text-xs text-slate-500">Sleep history stays; this goal stops tracking</div>
+                    </div>
+                </button>
+            </div>
+            </div>
+            <div data-goal-detail-variant="sleep" class="px-5 pb-12 hidden">
+<!-- ============================================================
+                 Hero — title, target, today's headline number, streak pill,
+                 progress to today's threshold.
+                 ============================================================ -->
+            <section class="pt-3 pb-5">
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 leading-tight">Sleep 8 hours</h1>
+                <p class="text-xs font-medium text-slate-500 mt-1">Every day · ≥ 8h · attributed to wake time</p>
+
+                <div class="mt-4 flex items-end justify-between">
+                    <div>
+                        <div class="text-3xl font-semibold text-slate-900">6h 50m</div>
+                        <div class="text-xs text-slate-500 mt-0.5">today, so far</div>
+                    </div>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 shrink-0" title="Streak" aria-label="0 day streak">
+                        <iconify-icon icon="solar:fire-bold" class="text-sm text-slate-500"></iconify-icon>
+                        <span class="text-[13px] font-semibold text-slate-700">0</span>
+                        <span class="text-[11px] font-medium text-slate-500">days</span>
+                    </span>
+                </div>
+
+                <div class="h-1.5 w-full bg-slate-100 rounded-full mt-3 overflow-hidden">
+                    <div class="h-full rounded-full bg-[#BA7517]" style="width: 85%;"></div>
+                </div>
+                <div class="flex justify-between mt-1 text-[10px] text-slate-400">
+                    <span>0h</span>
+                    <span>4h</span>
+                    <span class="font-medium text-slate-600">8h target</span>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 This week — bigger, denser version of the tab dot strip.
+                 Each cell shows letter + dot + value. Today is highlighted
+                 with a ring. Tapping a cell expands the detail panel below
+                 (mock: Saturday is pre-selected and shown).
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">This week</h3>
+                    <span class="text-[11px] text-slate-500"><span class="font-semibold text-slate-700">3</span> of 7 hit</span>
+                </div>
+
+                <div class="grid grid-cols-7 gap-1.5">
+                    <!-- Mon ✓ 8h 10m -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">M</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#1D9E75] mb-1.5"></div>
+                        <div class="text-[10px] font-medium text-slate-700">8h 10m</div>
+                    </div>
+                    <!-- Tue ✓ 8h -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">T</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#1D9E75] mb-1.5"></div>
+                        <div class="text-[10px] font-medium text-slate-700">8h</div>
+                    </div>
+                    <!-- Wed ✗ 6h 20m -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">W</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#E24B4A] mb-1.5"></div>
+                        <div class="text-[10px] font-medium text-slate-500">6h 20m</div>
+                    </div>
+                    <!-- Thu ✓ 8h 20m -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">T</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#1D9E75] mb-1.5"></div>
+                        <div class="text-[10px] font-medium text-slate-700">8h 20m</div>
+                    </div>
+                    <!-- Fri ✗ 6h 40m -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">F</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#E24B4A] mb-1.5"></div>
+                        <div class="text-[10px] font-medium text-slate-500">6h 40m</div>
+                    </div>
+                    <!-- Sat (today, selected) pending 6h 50m -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer ring-1 ring-[#F97316] bg-orange-50/50">
+                        <div class="text-[10px] font-semibold text-[#F97316] mb-1.5">S</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#BA7517] mb-1.5 ring-2 ring-slate-900 ring-offset-1 ring-offset-orange-50/50"></div>
+                        <div class="text-[10px] font-medium text-slate-700">6h 50m</div>
+                    </div>
+                    <!-- Sun (future) -->
+                    <div class="flex flex-col items-center py-2 rounded-lg">
+                        <div class="text-[10px] text-slate-300 mb-1.5">S</div>
+                        <div class="w-2.5 h-2.5 rounded-full border border-slate-200 mb-1.5"></div>
+                        <div class="text-[10px] font-medium text-slate-300">—</div>
+                    </div>
+                </div>
+
+                <!-- Selected-day panel (Saturday, in-progress) -->
+                <div class="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-medium text-slate-900">Saturday — in progress</div>
+                        <div class="text-[11px] text-slate-500">6h 50m / 8h</div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-2.5 px-2 py-1.5 bg-white rounded-lg cursor-pointer">
+                            <iconify-icon icon="solar:moon-stars-linear" class="text-slate-500 text-base"></iconify-icon>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[12px] font-medium text-slate-900">Sleep · main</div>
+                                <div class="text-[10px] text-slate-400">12:08 AM → 6:58 AM (still recording)</div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700">6h 50m</span>
+                        </div>
+                    </div>
+                    <button class="mt-2 text-[11px] font-medium text-[#F97316] hover:text-[#FB923C]">+ log a nap</button>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Trend — last 8 weeks of hit-rate per week. Async load:
+                 driven by a separate get_schedule_trend(item, weeks) call;
+                 the rest of the page renders before this resolves. Bar
+                 height encodes successes/expected; this-week bar in accent.
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">8-week trend</h3>
+                    <span class="text-[11px] text-slate-500">hit <span class="font-semibold text-slate-700">5 / 7</span> wks</span>
+                </div>
+                <div class="flex items-end justify-between gap-1.5 h-20 px-0.5">
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 57%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 100%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 86%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 71%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 100%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 100%"></div>
+                    <div class="flex-1 bg-slate-200 rounded-t" style="height: 86%"></div>
+                    <div class="flex-1 bg-[#F97316] rounded-t" style="height: 71%"></div>
+                </div>
+                <div class="flex justify-between mt-1.5 text-[10px] text-slate-400">
+                    <span>8w ago</span>
+                    <span class="font-medium text-[#F97316]">this wk</span>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Definition — collapsed by default; for the curious / editor.
+                 Mirrors the stored ScheduleItem fields plain-English.
+                 ============================================================ -->
+            <section class="mb-6">
+                <details class="group rounded-xl border border-slate-100 bg-slate-50/60">
+                    <summary class="flex items-center justify-between cursor-pointer list-none px-3.5 py-3">
+                        <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                            <iconify-icon icon="solar:settings-linear" class="text-slate-400 text-sm"></iconify-icon>
+                            How this is measured
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400 group-open:rotate-180 transition-transform"></iconify-icon>
+                    </summary>
+                    <div class="px-3.5 pb-3.5 pt-1 space-y-1.5 text-[13px] text-slate-600">
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Tracks</span><span class="text-slate-900 font-medium">Sleep actions</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Hits when</span><span class="text-slate-900 font-medium text-right">total duration ≥ 8h</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Day attribution</span><span class="text-slate-900 font-medium">wake time</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Cadence</span><span class="text-slate-900 font-medium">daily</span></div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- ============================================================
+                 Bottom actions — pause / edit / delete.
+                 ============================================================ -->
+            <div class="pt-4 border-t border-slate-100 space-y-0.5">
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:pen-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-slate-900">Edit goal</div>
+                        <div class="text-xs text-slate-500">Change target, schedule, or filter</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:pause-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-slate-900">Pause</div>
+                        <div class="text-xs text-slate-500">Hide from the goals tab without deleting history</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-red-50/60 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 shrink-0">
+                        <iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-red-500">Delete goal</div>
+                        <div class="text-xs text-slate-500">History stays; this goal stops tracking</div>
+                    </div>
+                </button>
+            </div>
+            </div>
+            <div data-goal-detail-variant="gym" class="px-5 pb-12 hidden">
+<!-- ============================================================
+                 Hero — count out of weekly target. "1 day left" sub-text.
+                 ============================================================ -->
+            <section class="pt-3 pb-5">
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 leading-tight">Gym 3× / week</h1>
+                <p class="text-xs font-medium text-slate-500 mt-1">≥ 3 sessions per week · usually Mon, Wed, Fri at 12:30 PM</p>
+
+                <div class="mt-4 flex items-end justify-between">
+                    <div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-semibold text-slate-900">2</span>
+                            <span class="text-lg text-slate-400 font-medium">/ 3</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-0.5">sessions this week · 2 days left</div>
+                    </div>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50/80 shrink-0" title="Streak" aria-label="4 week streak">
+                        <iconify-icon icon="solar:fire-bold" class="text-sm text-[#F97316]"></iconify-icon>
+                        <span class="text-[13px] font-semibold text-slate-900">4</span>
+                        <span class="text-[11px] font-medium text-[#F97316]">weeks</span>
+                    </span>
+                </div>
+
+                <div class="h-1.5 w-full bg-slate-100 rounded-full mt-3 overflow-hidden">
+                    <div class="h-full rounded-full bg-[#BA7517]" style="width: 67%;"></div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Preferred slots — first-class for slot-based goals.
+                 Each slot card shows scheduled day/time, completion state,
+                 and (when done) the actual session start + duration.
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Preferred slots</h3>
+                    <button class="text-[11px] font-medium text-slate-400 hover:text-slate-600">edit</button>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <!-- Mon ✓ -->
+                    <div class="rounded-xl border border-slate-100 bg-white p-2.5">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-semibold text-slate-700">Mon</span>
+                            <div class="w-4 h-4 rounded-full bg-[#1D9E75] flex items-center justify-center">
+                                <iconify-icon icon="solar:check-read-linear" class="text-[8px] text-white"></iconify-icon>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-500">12:34 PM</div>
+                        <div class="text-[10px] font-medium text-slate-700">62 min</div>
+                    </div>
+                    <!-- Wed ✓ -->
+                    <div class="rounded-xl border border-slate-100 bg-white p-2.5">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-semibold text-slate-700">Wed</span>
+                            <div class="w-4 h-4 rounded-full bg-[#1D9E75] flex items-center justify-center">
+                                <iconify-icon icon="solar:check-read-linear" class="text-[8px] text-white"></iconify-icon>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-500">12:42 PM</div>
+                        <div class="text-[10px] font-medium text-slate-700">58 min</div>
+                    </div>
+                    <!-- Fri ✗ -->
+                    <div class="rounded-xl border border-dashed border-red-200 bg-red-50/40 p-2.5">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-semibold text-slate-700">Fri</span>
+                            <div class="w-4 h-4 rounded-full border-[1.5px] border-red-300"></div>
+                        </div>
+                        <div class="text-[10px] text-red-500 font-medium">missed</div>
+                        <div class="text-[10px] text-slate-400">12:30 scheduled</div>
+                    </div>
+                </div>
+                <div class="mt-2 text-[11px] text-slate-500">
+                    <span class="font-medium text-slate-700">Auto-create tasks</span> for these slots —
+                    <button class="text-[#F97316] font-medium hover:underline">on</button>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 This week — 7-day strip. Slot days marked with a tiny dot
+                 so the user sees "Friday was a planned day, not a bonus".
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">This week</h3>
+                    <span class="text-[11px] text-slate-500">2 sessions logged</span>
+                </div>
+                <div class="grid grid-cols-7 gap-1.5">
+                    <!-- Mon: slot + done -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">M</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#1D9E75] mb-1"></div>
+                        <div class="w-1 h-1 rounded-full bg-slate-400"></div>
+                    </div>
+                    <!-- Tue: no slot, no session -->
+                    <div class="flex flex-col items-center py-2 rounded-lg">
+                        <div class="text-[10px] text-slate-400 mb-1.5">T</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-slate-100 mb-1"></div>
+                        <div class="w-1 h-1"></div>
+                    </div>
+                    <!-- Wed: slot + done -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">W</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#1D9E75] mb-1"></div>
+                        <div class="w-1 h-1 rounded-full bg-slate-400"></div>
+                    </div>
+                    <!-- Thu: no slot -->
+                    <div class="flex flex-col items-center py-2 rounded-lg">
+                        <div class="text-[10px] text-slate-400 mb-1.5">T</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-slate-100 mb-1"></div>
+                        <div class="w-1 h-1"></div>
+                    </div>
+                    <!-- Fri: slot + missed -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="text-[10px] text-slate-400 mb-1.5">F</div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-[#E24B4A] mb-1"></div>
+                        <div class="w-1 h-1 rounded-full bg-slate-400"></div>
+                    </div>
+                    <!-- Sat (today): no slot, pending bonus -->
+                    <div class="flex flex-col items-center py-2 rounded-lg cursor-pointer ring-1 ring-[#F97316] bg-orange-50/50">
+                        <div class="text-[10px] font-semibold text-[#F97316] mb-1.5">S</div>
+                        <div class="w-2.5 h-2.5 rounded-full border border-slate-300 mb-1"></div>
+                        <div class="w-1 h-1"></div>
+                    </div>
+                    <!-- Sun: no slot, future -->
+                    <div class="flex flex-col items-center py-2 rounded-lg">
+                        <div class="text-[10px] text-slate-300 mb-1.5">S</div>
+                        <div class="w-2.5 h-2.5 rounded-full border border-slate-200 mb-1"></div>
+                        <div class="w-1 h-1"></div>
+                    </div>
+                </div>
+                <div class="mt-2 flex items-center gap-3 text-[10px] text-slate-400">
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-slate-400"></span><span>scheduled slot</span></div>
+                    <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#1D9E75]"></span><span>completed</span></div>
+                    <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#E24B4A]"></span><span>missed</span></div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Trend — 12-week binary hit/miss grid. Async load: driven
+                 by a separate get_schedule_trend(item, weeks) call; the
+                 rest of the page renders before this resolves. One square
+                 per bucket, green when bucket.hit, grey otherwise.
+                 ============================================================ -->
+            <section class="mb-7">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">12-week trend</h3>
+                    <span class="text-[11px] text-slate-500"><span class="font-semibold text-slate-700">9 / 12</span> weeks hit</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-slate-100"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-slate-100"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm bg-[#1D9E75]"></div>
+                    <div class="aspect-[2/3] rounded-sm ring-1 ring-[#F97316] bg-slate-100"></div>
+                </div>
+                <div class="flex justify-between mt-1.5 text-[10px] text-slate-400">
+                    <span>12w ago</span>
+                    <span class="font-medium text-[#F97316]">this wk</span>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Definition — collapsed by default.
+                 ============================================================ -->
+            <section class="mb-6">
+                <details class="group rounded-xl border border-slate-100 bg-slate-50/60">
+                    <summary class="flex items-center justify-between cursor-pointer list-none px-3.5 py-3">
+                        <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                            <iconify-icon icon="solar:settings-linear" class="text-slate-400 text-sm"></iconify-icon>
+                            How this is measured
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400 group-open:rotate-180 transition-transform"></iconify-icon>
+                    </summary>
+                    <div class="px-3.5 pb-3.5 pt-1 space-y-1.5 text-[13px] text-slate-600">
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Tracks</span><span class="text-slate-900 font-medium">Workouts tagged "gym"</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Hits when</span><span class="text-slate-900 font-medium text-right">≥ 3 sessions in a week</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Day attribution</span><span class="text-slate-900 font-medium">start time</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Cadence</span><span class="text-slate-900 font-medium">weekly</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-slate-400">Slot tasks</span><span class="text-slate-900 font-medium">Mon, Wed, Fri 12:30 PM</span></div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- ============================================================
+                 Bottom actions — same pattern as the daily-detail page.
+                 ============================================================ -->
+            <div class="pt-4 border-t border-slate-100 space-y-0.5">
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:pen-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-slate-900">Edit goal</div>
+                        <div class="text-xs text-slate-500">Change target, slots, or tag filter</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <iconify-icon icon="solar:pause-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-slate-900">Pause</div>
+                        <div class="text-xs text-slate-500">Stops auto-creating slot tasks too</div>
+                    </div>
+                </button>
+                <button class="w-full flex items-center gap-3 py-2.5 px-2 hover:bg-red-50/60 rounded-xl transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 shrink-0">
+                        <iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon>
+                    </div>
+                    <div class="text-left flex-1">
+                        <div class="text-sm font-medium text-red-500">Delete goal</div>
+                        <div class="text-xs text-slate-500">Workouts stay; this goal stops tracking</div>
+                    </div>
+                </button>
+            </div>
+            </div>
+        </div>
+    </div>

@@ -5,6 +5,7 @@
             (Wake before 7am, Sleep by 11pm, "morning meditation before 8am", …)
         Differs from page-goal-detail-sleep.html (sum/duration) in:
           • Hero shows a clock time (not a duration) and the diff to the threshold
+          • Streak is a compact pill top-right in the hero (not a separate section)
           • This week shows the actual attribute value per day on a single timeline
             (with the threshold drawn in) instead of a value-per-cell strip
           • Trend bars encode bucket.successes / bucket.expected
@@ -38,7 +39,11 @@
                         </div>
                         <div class="text-xs text-slate-500 mt-0.5">today · <span class="text-[#0F6E56] font-medium">12 min before goal</span></div>
                     </div>
-                    <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-[#0F6E56]">on time</span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50/80 shrink-0" title="Streak" aria-label="3 day streak">
+                        <iconify-icon icon="solar:fire-bold" class="text-sm text-[#F97316]"></iconify-icon>
+                        <span class="text-[13px] font-semibold text-slate-900">3</span>
+                        <span class="text-[11px] font-medium text-[#F97316]">days</span>
+                    </span>
                 </div>
 
                 <!-- Mini timeline showing where today landed vs threshold -->
@@ -55,31 +60,6 @@
                     <!-- ticks -->
                     <div class="absolute bottom-0 left-0 text-[9px] text-slate-400">5 AM</div>
                     <div class="absolute bottom-0 right-0 text-[9px] text-slate-400">8 AM</div>
-                </div>
-            </section>
-
-            <!-- ============================================================
-                 Streak — daily, intuitive for wake-time goals.
-                 ============================================================ -->
-            <section class="mb-7">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Streak</h3>
-                    <button class="text-[11px] font-medium text-slate-400 hover:text-slate-600">view history</button>
-                </div>
-                <div class="flex gap-3 items-stretch">
-                    <div class="flex flex-col items-center justify-center w-[88px] rounded-2xl bg-orange-50/70 py-3">
-                        <iconify-icon icon="solar:fire-bold" class="text-2xl text-[#F97316]"></iconify-icon>
-                        <div class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none">3</div>
-                        <div class="text-[10px] text-slate-500 mt-1">days</div>
-                    </div>
-                    <div class="flex-1 flex flex-col justify-center">
-                        <div class="text-sm font-medium text-slate-900">3-day streak alive</div>
-                        <div class="text-xs text-slate-500 mt-1 leading-snug">One more morning hits a personal best for this month.</div>
-                        <div class="text-[11px] text-slate-400 mt-2 flex items-center gap-1.5">
-                            <iconify-icon icon="solar:medal-ribbon-star-linear" class="text-sm"></iconify-icon>
-                            Best: <span class="font-medium text-slate-600">12 days</span> · Feb 2 – 13
-                        </div>
-                    </div>
                 </div>
             </section>
 

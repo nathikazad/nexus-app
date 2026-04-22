@@ -28,8 +28,10 @@
             <div class="pt-2.5 pb-1">
                 <span class="text-xs font-medium text-slate-600">Daily goals</span>
             </div>
+            <!-- Reference detail templates (static partials): page-goal-detail-wake | -sleep | -gym -->
+            <p class="text-[10px] text-slate-400 pb-1 -mt-0.5">Detail refs: row 1 → wake · Sleep 8h → sleep · Gym → gym</p>
 
-            <!-- Wake up before 7am -->
+            <!-- Wake up before 7am → time-threshold detail (page-goal-detail-wake) -->
             <div class="g-row cursor-pointer" onclick="navigate('page-goal-detail-wake')">
                 <div class="flex justify-between items-center mb-1.5">
                     <span class="text-sm font-medium text-slate-900">Wake up before 7am</span>
@@ -47,7 +49,7 @@
                 <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
             </div>
 
-            <!-- Sleep by 11pm -->
+            <!-- Sleep by 11pm (same time-threshold shell as wake; full page TBD) -->
             <div class="g-row cursor-pointer" onclick="navigate('page-goal-detail-wake')">
                 <div class="flex justify-between items-center mb-1.5">
                     <span class="text-sm font-medium text-slate-900">Sleep by 11pm</span>
@@ -65,7 +67,7 @@
                 <div class="g-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
             </div>
 
-            <!-- Sleep 8 hours -->
+            <!-- Sleep 8 hours → duration / sum detail (page-goal-detail-sleep) -->
             <div class="g-row cursor-pointer" onclick="navigate('page-goal-detail-sleep')">
                 <div class="flex justify-between items-center mb-1.5">
                     <span class="text-sm font-medium text-slate-900">Sleep 8 hours</span>
@@ -131,7 +133,7 @@
                 <span class="text-xs font-medium text-slate-600">Weekly goals</span>
             </div>
 
-            <!-- Gym 3x / week -->
+            <!-- Gym 3x / week → weekly + slots detail (page-goal-detail-gym) -->
             <div class="g-row cursor-pointer" onclick="navigate('page-goal-detail-gym')">
                 <div class="flex justify-between items-center mb-1.5">
                     <span class="text-sm font-medium text-slate-900">Gym 3x / week</span>
