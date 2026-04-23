@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 
-/// Clock + centered title + optional trailing (Tasks / Goals / Calendar pattern).
+/// Optional clock + centered title + optional trailing (Tasks / Goals / Calendar pattern).
 class NxTabHeader extends StatelessWidget {
   const NxTabHeader({
     super.key,
-    required this.clockLabel,
+    this.clockLabel,
     required this.title,
     this.trailing,
     this.bottomBorder = false,
     this.borderColor = AppColors.slate50,
   });
 
-  final String clockLabel;
+  final String? clockLabel;
   final String title;
   final Widget? trailing;
   final bool bottomBorder;
@@ -36,14 +36,15 @@ class NxTabHeader extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              clockLabel,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.slate500,
+            if (clockLabel != null && clockLabel!.isNotEmpty)
+              Text(
+                clockLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate500,
+                ),
               ),
-            ),
             Expanded(
               child: Text(
                 title,

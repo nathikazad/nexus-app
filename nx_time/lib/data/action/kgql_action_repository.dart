@@ -62,6 +62,38 @@ class KgqlActionRepository implements ActionRepository {
   }
 
   @override
+  Future<List<Action>> listForWeek(DateTime mondayLocal) async {
+    final weekStart = DateTime(mondayLocal.year, mondayLocal.month, mondayLocal.day);
+    final fetchStart = weekStart.subtract(const Duration(days: 1));
+    final fetchEnd = weekStart.add(const Duration(days: 8));
+
+    final schema = await _loadActionSchema();
+    final struct = _actionFetchStruct(schema);
+
+    final models = await fetchKgqlModels(
+      _client,
+      filter: {
+        'model_type': kActionModelTypeName,
+        'filters': [
+          {
+            'key': 'start_time',
+            'op': '>=',
+            'value': fetchStart.toIso8601String(),
+          },
+          {
+            'key': 'start_time',
+            'op': '<',
+            'value': fetchEnd.toIso8601String(),
+          },
+        ],
+      },
+      struct: struct,
+    );
+
+    return models.map(actionFromModel).toList();
+  }
+
+  @override
   Future<Action?> getById({
     required int id,
     required String modelTypeName,

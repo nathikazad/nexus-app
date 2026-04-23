@@ -6,6 +6,7 @@ import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/features/action_edit/action_category_option.dart';
 import 'package:nx_time/features/action_edit/action_edit_providers.dart';
 import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/tasks/task_picker_page.dart';
 import 'package:nx_time/features/tasks/task_view_models.dart';
@@ -119,6 +120,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       ref.invalidate(tasksForTodayProvider);
       ref.invalidate(allTasksProvider);
       ref.invalidate(todaySnapshotProvider);
+      invalidateWeekActions(ref);
       return;
     }
     final action = widget.initial!;
@@ -144,6 +146,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
     ref.invalidate(todaySnapshotProvider);
+    invalidateWeekActions(ref);
   }
 
   @override
@@ -252,6 +255,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
           );
         }
         ref.invalidate(todaySnapshotProvider);
+        invalidateWeekActions(ref);
         if (!mounted) return;
         Navigator.of(context).pop();
         if (widget.parentActionId != null) {
@@ -291,6 +295,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       }
 
       ref.invalidate(todaySnapshotProvider);
+      invalidateWeekActions(ref);
       if (!mounted) return;
       Navigator.of(context).pop();
       if (!_isCreate) {
@@ -332,6 +337,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
     try {
       await ref.read(actionRepositoryProvider).delete(widget.initial!.id);
       ref.invalidate(todaySnapshotProvider);
+      invalidateWeekActions(ref);
       if (!mounted) return;
       Navigator.of(context).pop();
       Navigator.of(context).pop();

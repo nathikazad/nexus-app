@@ -1,186 +1,367 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/core/time/wall_clock_time.dart';
+import 'package:nx_time/core/time/week_calendar.dart';
 import 'package:nx_time/core/widgets/nx_tab_header.dart';
+import 'package:nx_time/domain/action/week_actions.dart';
+import 'package:nx_time/domain/goals/action_goal.dart';
+import 'package:nx_time/domain/goals/goal_cadence.dart';
+import 'package:nx_time/domain/goals/goal_day_state.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
+import 'package:nx_time/features/goals/goal_detail/goal_action_helpers.dart';
+import 'package:nx_time/features/goals/goal_detail/goal_detail_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_page.dart';
-import 'package:nx_time/features/goals/goal_detail/goal_detail_variant.dart';
 
-class GoalsPage extends StatelessWidget {
+class GoalsPage extends ConsumerWidget {
   const GoalsPage({super.key});
 
-  static const _clock = '9:41 AM';
-
-  void _openDetail(BuildContext context, GoalDetailVariant variant) {
+  static void openDetail(BuildContext context, int goalId) {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => GoalDetailPage(variant: variant),
+        builder: (_) => GoalDetailPage(goalId: goalId),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final weekAsync = ref.watch(actionGoalsWeekProvider);
+    final weekActions = ref.watch(weekActionsProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const NxTabHeader(
-          clockLabel: _clock,
-          title: 'Goals',
-        ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.slate100)),
-          ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _SummaryChip(
-                leading: '5',
-                leadingColor: AppColors.goalOnTrack,
-                rest: 'on track',
-              ),
-              _SummaryChip(
-                leading: '2',
-                leadingColor: AppColors.goalAtRisk,
-                rest: 'at risk',
-              ),
-              _SummaryChip(
-                leading: '1',
-                leadingColor: AppColors.goalMissed,
-                rest: 'missed',
-              ),
-            ],
-          ),
-        ),
+        const NxTabHeader(title: 'Goals'),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-            children: [
-              const SizedBox(height: 10),
-              _SectionLabel(text: 'Daily goals'),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.wake),
-                title: 'Wake up before 7am',
-                status: '6:48 today',
-                statusColor: AppColors.goalOnTrack,
-                dots: const [
-                  _Dot.ok,
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.ok,
-                  _Dot.ok,
-                  _Dot.todayOk,
-                  _Dot.pend,
+          child: weekAsync.when(
+            data: (week) {
+              final ws = asStoredLocalWallClock(week.weekStart);
+              final daily = week.items.where((e) => e.cadence == GoalCadence.daily).toList();
+              final weekly = week.items.where((e) => e.cadence == GoalCadence.weekly).toList();
+              final wa = weekActions.maybeWhen(
+                data: (d) => d,
+                orElse: () => null,
+              );
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                children: [
+                  const SizedBox(height: 10),
+                  const _SectionLabel(text: 'Daily goals'),
+                  ...daily.map(
+                    (item) => _buildDailyRow(context, item, ws, wa),
+                  ),
+                  const SizedBox(height: 14),
+                  const _SectionLabel(text: 'Weekly goals'),
+                  ...weekly.map(
+                    (item) => _buildWeeklyRow(context, item, ws, wa),
+                  ),
                 ],
+              );
+            },
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(48),
+                child: CircularProgressIndicator(),
               ),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.wake),
-                title: 'Sleep by 11pm',
-                status: '11:42 last night',
-                statusColor: AppColors.goalMissed,
-                dots: const [
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.ok,
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.todayMiss,
-                  _Dot.pend,
-                ],
+            ),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Could not load goals: $e',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.slate500, fontSize: 13),
+                ),
               ),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
-                title: 'Sleep 8 hours',
-                status: '6h 50m today',
-                statusColor: AppColors.goalMissed,
-                dots: const [
-                  _Dot.ok,
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.todayMiss,
-                  _Dot.pend,
-                ],
-                subline: 'Today: 6h 50m of 8h',
-                progress: 0.85,
-                progressColor: AppColors.dotMiss,
-              ),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
-                title: 'Yoga every day',
-                status: '32m today',
-                statusColor: AppColors.goalOnTrack,
-                dots: const [
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.ok,
-                  _Dot.todayOk,
-                  _Dot.pend,
-                ],
-              ),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
-                title: 'Theology reading 1hr / day',
-                status: '35m today',
-                statusColor: AppColors.goalAtRisk,
-                dots: const [
-                  _Dot.ok,
-                  _Dot.ok,
-                  _Dot.ok,
-                  _Dot.miss,
-                  _Dot.ok,
-                  _Dot.todayProg,
-                  _Dot.pend,
-                ],
-                subline: 'Today: 35m of 60m — still in progress',
-                progress: 0.58,
-                progressColor: AppColors.dotTodayProg,
-              ),
-              const SizedBox(height: 14),
-              _SectionLabel(text: 'Weekly goals'),
-              _GymWeekRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.gym),
-                title: 'Gym 3x / week',
-                status: '2 of 3',
-                statusColor: AppColors.goalOnTrack,
-              ),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
-                title: 'Language learning 3hrs / week',
-                status: '2h 15m',
-                statusColor: AppColors.goalOnTrack,
-                dots: const [],
-                showDots: false,
-                subline: '2h 15m of 3h — 45m remaining, 2 days left',
-                progress: 0.75,
-                progressColor: AppColors.dotOk,
-                progressBeforeSubline: true,
-              ),
-              _GoalRow(
-                onTap: () => _openDetail(context, GoalDetailVariant.sleep),
-                title: 'Dancing 3hrs / week',
-                status: '45m',
-                statusColor: AppColors.goalAtRisk,
-                dots: const [],
-                showDots: false,
-                subline: '45m of 3h — 2h 15m remaining, 2 days left',
-                progress: 0.25,
-                progressColor: AppColors.dotTodayProg,
-                lastBorder: false,
-                progressBeforeSubline: true,
-              ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
+}
+
+GoalDailyState? _todayInWeek(ActionGoalWeekItem item, DateTime weekStart) {
+  final days = normalizeDailyStates(item.dailyState, weekStart);
+  final i = todayDowIndex0Mon();
+  if (i < 0 || i >= days.length) {
+    return null;
+  }
+  return days[i];
+}
+
+String _rightStatusText(
+  ActionGoalWeekItem item,
+  DateTime weekStart,
+  WeekActions? wa,
+) {
+  if (item.cadence == GoalCadence.weekly) {
+    if (item.aggregation == 'count') {
+      final days = normalizeDailyStates(item.dailyState, weekStart);
+      final hits = countHits(days);
+      return '$hits of ${item.target.value}';
+    }
+    if (item.aggregation == 'sum' && item.metric == 'duration' && wa != null) {
+      final list = actionsForGoal(wa, item);
+      final wk = weekTotalDuration(list, capAtNow: isWeekCurrent(wa.weekStart));
+      return formatDurationShort(wk, useDashForZero: false);
+    }
+    if (item.aggregation == 'sum' && item.metric == 'duration') {
+      return '${formatTargetValue(item)} target';
+    }
+    return '—';
+  }
+
+  if (wa != null && isWeekCurrent(wa.weekStart)) {
+    if (item.cadence == GoalCadence.daily &&
+        item.aggregation == 'sum' &&
+        item.metric == 'duration') {
+      final d = todaySoFarDuration(wa, item);
+      if (d != null) {
+        return '${formatDurationShort(d, useDashForZero: false)} today';
+      }
+    }
+    if (item.cadence == GoalCadence.daily && item.aggregation == 'count' && item.modelType == 'Sleep') {
+      var t = todayAttributedTime(wa, item);
+      var fromYesterday = false;
+      if (t == null) {
+        final idx = todayDowIndex0Mon();
+        if (item.selectedAttribute.toLowerCase().contains('start') && idx > 0) {
+          t = attributedTimeOnDay(wa, item, idx - 1);
+          fromYesterday = t != null;
+        }
+      }
+      if (t != null) {
+        return '${formatHoursMinutes12h(t)} ${fromYesterday ? 'last night' : 'today'}';
+      }
+    }
+    if (item.cadence == GoalCadence.daily &&
+        item.aggregation == 'count' &&
+        item.modelType != 'Sleep') {
+      final list = actionsForGoal(wa, item);
+      final idx = todayDowIndex0Mon();
+      final dur = sumDurationForDay(
+        wa,
+        list,
+        idx,
+        capAtNow: true,
+        selectedAttribute: item.selectedAttribute,
+      );
+      if (dur > Duration.zero) {
+        return '${formatDurationShort(dur, useDashForZero: false)} today';
+      }
+    }
+  }
+
+  final t = _todayInWeek(item, weekStart);
+  if (t == null) {
+    return '—';
+  }
+  return switch (t.state) {
+    GoalDayState.hit => 'on track',
+    GoalDayState.miss => 'missed',
+    GoalDayState.pending => 'pending',
+  };
+}
+
+Color _rightStatusColor(
+  ActionGoalWeekItem item,
+  DateTime weekStart,
+  WeekActions? wa,
+) {
+  if (item.cadence == GoalCadence.weekly) {
+    if (item.streak.currentPeriodHit) {
+      return AppColors.goalOnTrack;
+    }
+    if (daysLeftInMonSunWeek() == 0 && !item.streak.currentPeriodHit) {
+      return AppColors.goalMissed;
+    }
+    return AppColors.goalAtRisk;
+  }
+
+  if (wa != null && isWeekCurrent(wa.weekStart)) {
+    if (item.cadence == GoalCadence.daily &&
+        item.aggregation == 'sum' &&
+        item.metric == 'duration') {
+      final d = todaySoFarDuration(wa, item);
+      if (d != null) {
+        if (d.inSeconds >= item.target.value) {
+          return AppColors.goalOnTrack;
+        }
+        return _colorForDayState(_todayInWeek(item, weekStart));
+      }
+    }
+    if (item.cadence == GoalCadence.daily && item.aggregation == 'count' && item.modelType == 'Sleep') {
+      var t = todayAttributedTime(wa, item);
+      if (t == null) {
+        final idx = todayDowIndex0Mon();
+        if (item.selectedAttribute.toLowerCase().contains('start') && idx > 0) {
+          t = attributedTimeOnDay(wa, item, idx - 1);
+        }
+      }
+      if (t != null) {
+        return wakeIsOnTrack(item, t) ? AppColors.goalOnTrack : AppColors.goalMissed;
+      }
+    }
+    if (item.cadence == GoalCadence.daily &&
+        item.aggregation == 'count' &&
+        item.modelType != 'Sleep') {
+      return _colorForDayState(_todayInWeek(item, weekStart));
+    }
+  }
+
+  return _colorForDayState(_todayInWeek(item, weekStart));
+}
+
+Color _colorForDayState(GoalDailyState? day) {
+  if (day == null) {
+    return AppColors.slate500;
+  }
+  return switch (day.state) {
+    GoalDayState.hit => AppColors.goalOnTrack,
+    GoalDayState.miss => AppColors.goalMissed,
+    GoalDayState.pending => AppColors.goalAtRisk,
+  };
+}
+
+List<_Dot> _dotsFor(ActionGoalWeekItem item, DateTime weekStart) {
+  final days = normalizeDailyStates(item.dailyState, weekStart);
+  return days.map((d) {
+    final isToday = isSameCalendarDate(d.date, todayDate);
+    if (d.state == GoalDayState.hit) {
+      return isToday ? _Dot.todayOk : _Dot.ok;
+    }
+    if (d.state == GoalDayState.miss) {
+      return isToday ? _Dot.todayMiss : _Dot.miss;
+    }
+    return isToday ? _Dot.todayProg : _Dot.pend;
+  }).toList();
+}
+
+class _LabelExtras2 {
+  const _LabelExtras2({
+    this.subline,
+    this.progress,
+    this.progressColor,
+    this.progressBeforeSubline = false,
+    this.lastBorder = true,
+  });
+
+  final String? subline;
+  final double? progress;
+  final Color? progressColor;
+  final bool progressBeforeSubline;
+  final bool lastBorder;
+}
+
+/// Derives subline + progress for duration rows from [weekActions]. Returns null
+/// for goals that keep a plain row (e.g. Wake, Yoga, weekly count).
+_LabelExtras2? _goalRowExtrasFor(
+  ActionGoalWeekItem item,
+  WeekActions? weekActions,
+) {
+  if (weekActions == null) {
+    return null;
+  }
+  if (item.cadence == GoalCadence.daily &&
+      item.aggregation == 'sum' &&
+      item.metric == 'duration') {
+    final t = todaySoFarDuration(weekActions, item);
+    if (t == null) {
+      return null;
+    }
+    final tv = formatTargetValue(item);
+    final targetSec = item.target.value;
+    final prog = targetSec > 0 ? (t.inSeconds / targetSec).clamp(0, 1).toDouble() : 0.0;
+    final isReading = item.modelType == 'Reading';
+    return _LabelExtras2(
+      subline: 'Today: ${formatDurationShort(t, useDashForZero: false)} of $tv',
+      progress: prog,
+      progressColor: isReading ? AppColors.dotTodayProg : AppColors.dotMiss,
+    );
+  }
+  if (item.cadence == GoalCadence.weekly &&
+      item.aggregation == 'sum' &&
+      item.metric == 'duration') {
+    final list = actionsForGoal(weekActions, item);
+    final wk = weekTotalDuration(list, capAtNow: isWeekCurrent(weekActions.weekStart));
+    final targetSec = item.target.value.toInt();
+    final remSec = (targetSec - wk.inSeconds);
+    final rem = remSec > 0 ? remSec : 0;
+    final tv = formatTargetValue(item);
+    final wkStr = formatDurationShort(wk, useDashForZero: false);
+    final remStr = formatDurationShort(Duration(seconds: rem), useDashForZero: false);
+    final dl = daysLeftInSelectedWeek(weekActions);
+    final prog = targetSec > 0 ? (wk.inSeconds / targetSec).clamp(0, 1).toDouble() : 0.0;
+    final isDance = item.modelType == 'Dance';
+    return _LabelExtras2(
+      subline: '$wkStr of $tv — $remStr remaining, $dl days left',
+      progress: prog,
+      progressColor: isDance ? AppColors.dotTodayProg : AppColors.dotOk,
+      progressBeforeSubline: true,
+      lastBorder: !isDance,
+    );
+  }
+  return null;
+}
+
+Widget _buildDailyRow(
+  BuildContext context,
+  ActionGoalWeekItem item,
+  DateTime weekStart,
+  WeekActions? weekActions,
+) {
+  final dots = _dotsFor(item, weekStart);
+  final ex = _goalRowExtrasFor(item, weekActions);
+  return _GoalRow(
+    onTap: () => GoalsPage.openDetail(context, item.id),
+    title: item.label,
+    status: _rightStatusText(item, weekStart, weekActions),
+    statusColor: _rightStatusColor(item, weekStart, weekActions),
+    dots: dots,
+    subline: ex?.subline,
+    progress: ex?.progress,
+    progressColor: ex?.progressColor,
+    lastBorder: ex?.lastBorder ?? true,
+    progressBeforeSubline: ex?.progressBeforeSubline ?? false,
+  );
+}
+
+Widget _buildWeeklyRow(
+  BuildContext context,
+  ActionGoalWeekItem item,
+  DateTime weekStart,
+  WeekActions? weekActions,
+) {
+  final dots = _dotsFor(item, weekStart);
+  final ex = _goalRowExtrasFor(item, weekActions);
+  if (item.label.contains('Gym')) {
+    final c = weeklySlotCounts(item, weekStart);
+    return _GymWeekRow(
+      onTap: () => GoalsPage.openDetail(context, item.id),
+      title: item.label,
+      status: _rightStatusText(item, weekStart, weekActions),
+      statusColor: _rightStatusColor(item, weekStart, weekActions),
+      hits: c.hit,
+      target: c.total,
+      daysLeft: c.daysLeft,
+    );
+  }
+  return _GoalRow(
+    onTap: () => GoalsPage.openDetail(context, item.id),
+    title: item.label,
+    status: _rightStatusText(item, weekStart, weekActions),
+    statusColor: _rightStatusColor(item, weekStart, weekActions),
+    dots: dots,
+    subline: ex?.subline,
+    progress: ex?.progress,
+    progressColor: ex?.progressColor,
+    lastBorder: ex?.lastBorder ?? true,
+    progressBeforeSubline: ex?.progressBeforeSubline ?? false,
+  );
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -204,41 +385,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({
-    required this.leading,
-    required this.leadingColor,
-    required this.rest,
-  });
-
-  final String leading;
-  final Color leadingColor;
-  final String rest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.slate100,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 12, color: AppColors.slate600),
-          children: [
-            TextSpan(
-              text: leading,
-              style: TextStyle(fontWeight: FontWeight.w500, color: leadingColor),
-            ),
-            TextSpan(text: ' $rest'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 enum _Dot { ok, miss, pend, todayOk, todayMiss, todayProg }
 
 class _GoalRow extends StatelessWidget {
@@ -248,7 +394,6 @@ class _GoalRow extends StatelessWidget {
     required this.status,
     required this.statusColor,
     required this.dots,
-    this.showDots = true,
     this.subline,
     this.progress,
     this.progressColor,
@@ -261,12 +406,10 @@ class _GoalRow extends StatelessWidget {
   final String status;
   final Color statusColor;
   final List<_Dot> dots;
-  final bool showDots;
   final String? subline;
   final double? progress;
   final Color? progressColor;
   final bool lastBorder;
-  /// When true (weekly goals), progress bar appears above the subline.
   final bool progressBeforeSubline;
 
   @override
@@ -304,7 +447,7 @@ class _GoalRow extends StatelessWidget {
               ),
             ],
           ),
-          if (showDots && dots.isNotEmpty) ...[
+          if (dots.isNotEmpty) ...[
             const SizedBox(height: 6),
             Row(
               children: List.generate(7, (i) {
@@ -373,7 +516,9 @@ class _GoalRow extends StatelessWidget {
         ],
       ),
     );
-    if (onTap == null) return child;
+    if (onTap == null) {
+      return child;
+    }
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -460,12 +605,18 @@ class _GymWeekRow extends StatelessWidget {
     required this.title,
     required this.status,
     required this.statusColor,
+    required this.hits,
+    required this.target,
+    required this.daysLeft,
   });
 
   final VoidCallback? onTap;
   final String title;
   final String status;
   final Color statusColor;
+  final int hits;
+  final int target;
+  final int daysLeft;
 
   @override
   Widget build(BuildContext context) {
@@ -507,23 +658,22 @@ class _GymWeekRow extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _GymCheck(),
-                  const SizedBox(width: 4),
-                  _GymCheck(),
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.slate200, width: 1.5),
+                  for (var i = 0; i < target; i++) ...[
+                    if (i > 0) const SizedBox(width: 4),
+                    if (i < hits.clamp(0, target)) _GymCheck() else Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.slate200, width: 1.5),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
-              const Text(
-                '2 days left in week',
-                style: TextStyle(
+              Text(
+                daysLeft == 0 ? 'last day of week' : '$daysLeft days left in week',
+                style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.slate500,
                 ),
@@ -533,7 +683,9 @@ class _GymWeekRow extends StatelessWidget {
         ],
       ),
     );
-    if (onTap == null) return child;
+    if (onTap == null) {
+      return child;
+    }
     return Material(
       color: Colors.transparent,
       child: InkWell(

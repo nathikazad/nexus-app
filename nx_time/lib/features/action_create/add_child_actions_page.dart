@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_create/add_child_actions_view_model.dart';
 import 'package:nx_time/features/action_edit/action_category_option.dart';
@@ -44,6 +45,7 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
     try {
       await repo.unlinkChildAction(parentId: widget.parent.id, relationId: rid);
       ref.invalidate(todaySnapshotProvider);
+      invalidateWeekActions(ref);
       ref.invalidate(parentActionForChildrenProvider(_key));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

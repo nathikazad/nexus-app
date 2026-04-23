@@ -17,7 +17,7 @@ const _kActionGoalLabels = <String>[
   'Sleep by 11pm',
   'Sleep 8 hours',
   'Yoga every day',
-  'Theology reading 1hr / day',
+  'Reading 1hr / day',
   'Gym 3x/week',
   'Language learning 3hrs / week',
   'Dancing 3hrs / week',
@@ -28,7 +28,7 @@ const _kDailyActionLabels = <String>{
   'Sleep by 11pm',
   'Sleep 8 hours',
   'Yoga every day',
-  'Theology reading 1hr / day',
+  'Reading 1hr / day',
 };
 
 const _kWeeklyActionLabels = <String>{

@@ -12,6 +12,7 @@ import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/widgets/nx_tab_header.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_view_model.dart';
 import 'package:nx_time/features/today/action_fold.dart';
 
@@ -23,8 +24,6 @@ class CalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
-  late DateTime _weekRefDay;
-
   /// Index 0 = Monday … 6 = Sunday; `null` until first frame picks default for the week.
   int? _selectedDayIndex;
 
@@ -32,23 +31,25 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   static const _sky600 = Color(0xFF0284C7);
 
-  @override
-  void initState() {
-    super.initState();
-    _weekRefDay = DateTime.now();
-  }
-
   void _prevWeek() {
+    final m = ref.read(currentWeekProvider);
+    final m0 = DateTime(m.year, m.month, m.day);
+    ref.read(currentWeekProvider.notifier).setLocalWeekMonday(
+          m0.subtract(const Duration(days: 7)),
+        );
     setState(() {
-      _weekRefDay = _weekRefDay.subtract(const Duration(days: 7));
       _selectedDayIndex = null;
       _showTasksView = false;
     });
   }
 
   void _nextWeek() {
+    final m = ref.read(currentWeekProvider);
+    final m0 = DateTime(m.year, m.month, m.day);
+    ref.read(currentWeekProvider.notifier).setLocalWeekMonday(
+          m0.add(const Duration(days: 7)),
+        );
     setState(() {
-      _weekRefDay = _weekRefDay.add(const Duration(days: 7));
       _selectedDayIndex = null;
       _showTasksView = false;
     });
@@ -97,16 +98,14 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    final monday = mondayOfWeek(_weekRefDay);
-    final async = ref.watch(calendarWeekProvider(monday));
+    final monday = ref.watch(currentWeekProvider);
+    final m0 = DateTime(monday.year, monday.month, monday.day);
+    final async = ref.watch(calendarWeekProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const NxTabHeader(
-          clockLabel: '9:41 AM',
-          title: 'Calendar',
-        ),
+        const NxTabHeader(title: 'Calendar'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Row(
@@ -119,7 +118,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               ),
               Expanded(
                 child: Text(
-                  _weekRangeLabel(monday),
+                  _weekRangeLabel(m0),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 15,
@@ -140,7 +139,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         Expanded(
           child: async.when(
             data: (days) {
-              final idx = _selectedDayIndex ?? _defaultDayIndexForWeek(monday);
+              final idx = _selectedDayIndex ?? _defaultDayIndexForWeek(m0);
               final safeIdx = idx.clamp(0, 6);
               final selected = days[safeIdx];
               return Column(

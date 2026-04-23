@@ -81,6 +81,21 @@ class FakeActionRepository implements ActionRepository {
   }
 
   @override
+  Future<List<Action>> listForWeek(DateTime mondayLocal) async {
+    await Future<void>.delayed(delay);
+    final weekStart = DateTime(mondayLocal.year, mondayLocal.month, mondayLocal.day);
+    final fetchStart = weekStart.subtract(const Duration(days: 1));
+    final fetchEnd = weekStart.add(const Duration(days: 8));
+    return _all.where((a) {
+      final s = a.startTime;
+      if (s == null) {
+        return false;
+      }
+      return !s.isBefore(fetchStart) && s.isBefore(fetchEnd);
+    }).toList();
+  }
+
+  @override
   Future<Action?> getById({
     required int id,
     required String modelTypeName,

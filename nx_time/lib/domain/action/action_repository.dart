@@ -5,6 +5,10 @@ abstract class ActionRepository {
   /// Actions whose interval overlaps [dayLocal]’s calendar day (see KGQL repo).
   Future<List<Action>> listForCalendarDay(DateTime dayLocal);
 
+  /// All actions with `start_time` in the window that can overlap the Mon–Sun
+  /// week starting at [mondayLocal]’s date (see KGQL: [monday−1d, monday+8d)).
+  Future<List<Action>> listForWeek(DateTime mondayLocal);
+
   Future<Action?> getById({
     required int id,
     required String modelTypeName,
