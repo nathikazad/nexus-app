@@ -123,6 +123,7 @@
   const viewToday = document.getElementById('view-today');
 
   function setView(name) {
+    if (name !== 'sprint') openDay = null;
     viewPlanner.hidden = name !== 'planner';
     viewSprint.hidden = name !== 'sprint';
     viewToday.hidden = name !== 'today';
@@ -187,6 +188,337 @@
     return i.planned_day === d ? (i.actual || 0) : 0;
   }
 
+  function dayTitle(s, d) {
+    const n = s.day_notes && s.day_notes[d];
+    return typeof n === 'string' ? n : (n && n.title) || '';
+  }
+  function dayBody(s, d) {
+    const n = s.day_notes && s.day_notes[d];
+    return typeof n === 'string' ? '' : (n && n.body) || '';
+  }
+  function setDayField(s, d, field, value) {
+    s.day_notes = s.day_notes || {};
+    const cur = s.day_notes[d];
+    const obj = typeof cur === 'string' ? { title: cur, body: '' } : (cur || { title: '', body: '' });
+    obj[field] = value;
+    s.day_notes[d] = obj;
+  }
+  function itemDayNote(i, d) { return (i.day_notes && i.day_notes[d]) || ''; }
+  function setItemDayNote(i, d, v) { (i.day_notes = i.day_notes || {})[d] = v; }
+
+  function dayIndexInSprint(sp, date) {
+    const start = new Date(sp.start);
+    start.setHours(0, 0, 0, 0);
+    const t = new Date(date);
+    t.setHours(0, 0, 0, 0);
+    const diff = Math.round((t - start) / 86400000);
+    if (diff < 0 || diff >= sp.len) return null;
+    return diff;
+  }
+  function todayDayIndex() {
+    return dayIndexInSprint(sprint(), today);
+  }
+  function sprintIdxContainingToday() {
+    for (let i = 0; i < sprints.length; i++) {
+      if (dayIndexInSprint(sprints[i], today) != null) return i;
+    }
+    return null;
+  }
+
+  let openDay = null;
+  let pendingTaskPlannedDay = null;
+  function openDayDetail(d) {
+    openDay = d;
+    renderAll();
+  }
+  function closeDayDetail() {
+    openDay = null;
+    renderAll();
+  }
+
+  function syncItemActualFromDays(i) {
+    if (i.actuals_by_day && Object.keys(i.actuals_by_day).length) {
+      i.actual = Object.values(i.actuals_by_day).reduce((a, h) => a + h, 0);
+    } else {
+      i.actual = 0;
+      if (i.actuals_by_day) delete i.actuals_by_day;
+    }
+  }
+
+  function dayTaskEntries(list, d) {
+    const seen = new Set();
+    const out = [];
+    function add(item, ghost) {
+      if (seen.has(item.id)) return;
+      seen.add(item.id);
+      out.push({ item, ghost });
+    }
+    list.forEach(i => { if (i.planned_day === d) add(i, false); });
+    list.forEach(i => {
+      if ((i.drift_from || []).includes(d) && i.planned_day !== d) add(i, true);
+    });
+    list.forEach(i => {
+      const had = (i.actuals_by_day && i.actuals_by_day[d] > 0);
+      if (had && i.planned_day !== d && !(i.drift_from || []).includes(d)) add(i, true);
+    });
+    return out;
+  }
+
+  function crumbFromProjectSelect(val) {
+    switch (val) {
+      case 'nexus': return 'Nexus / Web';
+      case 'nexus/ui-polish': return 'Nexus / UI Polish';
+      case 'nexus/auth-rewrite': return 'Nexus / Auth';
+      case 'pipeline': return 'Pipeline';
+      case 'mobile': return 'Mobile App';
+      default: return 'Nexus / UI Polish';
+    }
+  }
+
+  function renderTodayEmptyState() {
+    const host = document.getElementById('view-today');
+    if (!host) return;
+    const si = sprintIdxContainingToday();
+    const sp = si != null ? sprints[si] : null;
+    const label = `${MON[today.getMonth()]} ${today.getDate()}`;
+    host.innerHTML = `<div class="dd-empty">`
+      + `<p>Today (${label}) is not in <b>${sprint().name}</b>.</p>`
+      + (sp
+          ? `<button type="button" class="btn-primary dd-jump-sprint" data-sprint-idx="${si}">Open ${sp.name}</button>`
+          : `<p class="dd-empty-sub">No sprint in this mock contains today.</p>`)
+      + `</div>`;
+    host.querySelector('.dd-jump-sprint')?.addEventListener('click', e => {
+      const btn = e.target.closest('.dd-jump-sprint');
+      if (!btn) return;
+      cur = parseInt(btn.dataset.sprintIdx, 10);
+      renderAll();
+    });
+  }
+
+  function renderDayDetail(s, d, mode) {
+    const host = mode === 'sprint'
+      ? document.getElementById('sp-day-detail')
+      : document.getElementById('view-today');
+    if (!host) return;
+    const list = s.items;
+    const n = s.len;
+    const isDoneSprint = s.badge === 'done';
+    const isPlannedSprint = s.badge === 'planned';
+    const dt = new Date(s.start);
+    dt.setDate(dt.getDate() + d);
+    const dow = dt.getDay();
+    const isToday = sameDay(dt, today);
+    const isPast = dt < today && !isToday;
+    const isFuture = dt > today && !isToday;
+    const dayLabel = isToday ? 'today' : (isPast ? 'past' : 'future');
+    const hasHistory = (isPast || isToday) && !isPlannedSprint;
+
+    const dayItems = list.filter(i => i.planned_day === d);
+    const planned = dayItems.reduce((a, i) => a + i.est, 0);
+    const actual = list.reduce((a, i) => a + dayActualFor(i, d), 0);
+    const doneCount = dayItems.filter(i => i.status === 'done').length;
+    const pushedOut = list.filter(i =>
+      (i.drift_from || []).includes(d) && i.planned_day !== d).length;
+    const rolledIn = list.filter(i =>
+      i.planned_day === d && (i.drift_from || []).length > 0).length;
+    const over = planned > DAILY_CAP;
+    const actualCls = varianceCls(actual, planned);
+
+    let headHtml = `<div class="dd-head">`;
+    if (mode === 'sprint') {
+      headHtml += `<button type="button" class="dd-back" title="Back to days">&larr; Days</button>`
+        + `<div class="dd-day-nav">`
+        + `<button type="button" class="dd-day-arrow" ${d <= 0 ? 'disabled' : ''} data-dd-nav="${d - 1}" title="Previous day">&lsaquo;</button>`
+        + `<button type="button" class="dd-day-arrow" ${d >= n - 1 ? 'disabled' : ''} data-dd-nav="${d + 1}" title="Next day">&rsaquo;</button>`
+        + `</div>`;
+    }
+    headHtml += `<span class="dd-date">${DOW[dow]} ${MON[dt.getMonth()]} ${dt.getDate()}`
+      + (isToday ? ' · today' : '') + ` <span class="dd-pill">${dayLabel}</span></span>`
+      + `<input type="text" class="dd-title" placeholder="Short title for this day&hellip;" value="${dayTitle(s, d).replace(/"/g, '&quot;')}" data-dd-field="title" />`
+      + `</div>`;
+
+    let statsHtml = '';
+    if (hasHistory && dayItems.length > 0) {
+      const doneCls = doneCount === dayItems.length ? '' : 'incomplete';
+      statsHtml = `<div class="dd-stats">`
+        + `<span class="stat done ${doneCls}">✓ <b>${doneCount}/${dayItems.length}</b> done</span>`
+        + `<span class="stat"><b>${planned}h</b> planned / ${DAILY_CAP}h cap</span>`
+        + (actual > 0 || doneCount > 0
+            ? `<span class="stat day-hours-actual ${actualCls}"><b>${actual}h</b> actual</span>`
+            : '')
+        + (pushedOut > 0 ? `<span class="stat pushed">↗ <b>${pushedOut}</b> pushed out</span>` : '')
+        + (rolledIn > 0 ? `<span class="stat rolled">↙ <b>${rolledIn}</b> rolled in</span>` : '')
+        + `</div>`;
+    } else {
+      statsHtml = `<div class="dd-stats">`
+        + `<span class="stat"><b>${planned}h</b> planned / ${DAILY_CAP}h cap</span>`
+        + (actual > 0 ? `<span class="stat day-hours-actual ${actualCls}"><b>${actual}h</b> actual</span>` : '')
+        + `</div>`;
+    }
+
+    const barInner = planned > 0
+      ? progVarianceSegments(planned, actual, 'todo')
+      : '';
+    const barHtml = `<div class="dd-bar">${barInner}</div>`;
+
+    const entries = dayTaskEntries(list, d);
+    let tasksHtml = `<div class="dd-tasks">`;
+    if (entries.length === 0) {
+      tasksHtml += `<div class="dd-tasks-empty">Nothing scheduled or logged on this day.</div>`;
+    }
+    entries.forEach(({ item: i, ghost }) => {
+      const g = i.kind === 'bug' ? '●' : '◉';
+      const status = i.status || 'todo';
+      const drift = (i.drift_from || []).length;
+      const lastSrc = drift > 0 ? (i.drift_from || [])[i.drift_from.length - 1] : null;
+      const fromBadge = drift > 0 && lastSrc != null && !ghost
+          ? `<span class="from-day" title="Rolled in from ${fmtDay(lastSrc)}">↙ ${DOW[dayDate(lastSrc).getDay()]} ${dayDate(lastSrc).getDate()}</span>`
+          : '';
+      const onThisDay = i.planned_day === d;
+      const movedTo = i.planned_day;
+      const movedToLabel = movedTo == null
+          ? 'unscheduled'
+          : `${DOW[dayDate(movedTo).getDay()]} ${dayDate(movedTo).getDate()}`;
+      const movedBadge = ghost
+          ? `<span class="moved-to">→ ${movedToLabel}</span>`
+          : '';
+      const hVal = dayActualFor(i, d);
+      const chips = ['todo', 'doing', 'done', 'blocked'].map(st =>
+        `<button type="button" class="schip ${status === st ? 'active' : ''}" data-task-id="${i.id}" data-status="${st}">${st}</button>`
+      ).join('');
+      const canPush = onThisDay && !ghost && d + 1 < n;
+      const canPull = ghost && (i.drift_from || []).includes(d) && i.planned_day !== d;
+      const noteEsc = itemDayNote(i, d).replace(/"/g, '&quot;');
+      tasksHtml += `<div class="dd-task ${ghost ? 'is-ghost' : ''}" data-task-id="${i.id}">`
+        + `<div class="dd-task-top">`
+        +   `<span class="status-dot ${status}" title="${status}"></span>`
+        +   `<span class="g ${i.kind}">${g}</span>`
+        +   `<div class="dd-task-main">`
+        +     `<div class="dd-task-title-row">`
+        +       `<span class="crumb-inline">${i.crumb}</span>${i.title}`
+        +       (drift > 0 && !ghost ? `<span class="drift" title="Postponed ${drift}× · ${driftChain(i)}">↻${drift}</span>` : '')
+        +       fromBadge + movedBadge
+        +       (i.blocker ? `<span class="blocker-dot" title="${i.blocker.replace(/"/g, '&quot;')}"></span>` : '')
+        +     `</div>`
+        +     `<input type="text" class="dd-task-note" placeholder="What happened on this task today?" value="${noteEsc}" data-task-note="${i.id}" />`
+        +   `</div>`
+        + `</div>`
+        + `<div class="dd-hours"><label class="dd-h-lbl"><input type="number" class="dd-h-input" min="0" step="0.25" value="${hVal}" data-task-hours="${i.id}" /> / ${i.est}h</label></div>`
+        + `<div class="dd-actions">`
+        +   `<div class="status-chips">${chips}</div>`
+        +   (canPush ? `<button type="button" class="btn-ghost-sm" data-task-push="${i.id}">Push &rarr;</button>` : '')
+        +   (canPull ? `<button type="button" class="btn-ghost-sm" data-task-pull="${i.id}">Pull here</button>` : '')
+        +   `<button type="button" class="btn-ghost-sm" data-task-block="${i.id}">${i.blocker ? 'Clear block' : 'Block…'}</button>`
+        + `</div>`
+        + `</div>`;
+    });
+    tasksHtml += `</div>`;
+
+    const addHtml = `<div class="dd-add"><button type="button" class="btn-secondary" data-dd-add="${d}">+ Add task to this day</button></div>`;
+
+    const bodyEsc = dayBody(s, d)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const journalHtml = `<div class="dd-journal">`
+      + `<label class="dd-journal-label">Day journal</label>`
+      + `<textarea class="dd-body" placeholder="Longer notes for this day&hellip;" data-dd-field="body">${bodyEsc}</textarea>`
+      + `</div>`;
+
+    const innerHtml = headHtml + statsHtml + barHtml + tasksHtml + addHtml + journalHtml;
+    host.innerHTML = mode === 'today' ? `<div class="day-detail">${innerHtml}</div>` : innerHtml;
+
+    const bindRoot = mode === 'today' ? host.querySelector('.day-detail') : host;
+    bindRoot.querySelector('.dd-title')?.addEventListener('input', e => {
+      setDayField(s, d, 'title', e.target.value);
+    });
+    bindRoot.querySelector('.dd-body')?.addEventListener('input', e => {
+      setDayField(s, d, 'body', e.target.value);
+    });
+
+    bindRoot.querySelectorAll('.dd-back').forEach(btn => {
+      btn.addEventListener('click', () => closeDayDetail());
+    });
+    bindRoot.querySelectorAll('[data-dd-nav]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const el = e.currentTarget;
+        if (el.disabled) return;
+        const next = parseInt(el.dataset.ddNav, 10);
+        if (!Number.isNaN(next) && next >= 0 && next < n) openDayDetail(next);
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-task-note]').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const it = list.find(x => x.id === e.target.dataset.taskNote);
+        if (it) setItemDayNote(it, d, e.target.value);
+      });
+    });
+    bindRoot.querySelectorAll('[data-task-hours]').forEach(inp => {
+      inp.addEventListener('change', e => {
+        const it = list.find(x => x.id === e.target.dataset.taskHours);
+        if (!it) return;
+        const v = parseFloat(e.target.value);
+        it.actuals_by_day = it.actuals_by_day || {};
+        if (v > 0) it.actuals_by_day[d] = v;
+        else delete it.actuals_by_day[d];
+        syncItemActualFromDays(it);
+        renderAll();
+      });
+    });
+    bindRoot.querySelectorAll('.schip[data-status]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const b = e.currentTarget;
+        const id = b.dataset.taskId;
+        const st = b.dataset.status;
+        const it = list.find(x => x.id === id);
+        if (it) { it.status = st; renderAll(); }
+      });
+    });
+    bindRoot.querySelectorAll('[data-task-push]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const it = list.find(x => x.id === e.currentTarget.dataset.taskPush);
+        if (!it || it.planned_day !== d || d + 1 >= n) return;
+        if (it.planned_day != null && it.planned_day !== d + 1) {
+          it.drift_from = [...(it.drift_from || []), it.planned_day];
+        }
+        it.planned_day = d + 1;
+        renderAll();
+      });
+    });
+    bindRoot.querySelectorAll('[data-task-pull]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const it = list.find(x => x.id === e.currentTarget.dataset.taskPull);
+        if (!it) return;
+        it.planned_day = d;
+        renderAll();
+      });
+    });
+    bindRoot.querySelectorAll('[data-task-block]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const it = list.find(x => x.id === e.currentTarget.dataset.taskBlock);
+        if (!it) return;
+        if (it.blocker) {
+          it.blocker = '';
+          it.status = it.status === 'blocked' ? 'todo' : it.status;
+        } else {
+          const reason = window.prompt('Blocker reason?', 'Waiting on dependency');
+          if (reason != null && reason !== '') {
+            it.blocker = reason;
+            it.status = 'blocked';
+          }
+        }
+        renderAll();
+      });
+    });
+    bindRoot.querySelectorAll('[data-dd-add]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        pendingTaskPlannedDay = parseInt(e.target.dataset.ddAdd, 10);
+        openModal('modal-task');
+      });
+    });
+  }
+
   function applySprintChrome() {
     const s = sprint();
     const syncText = (a, b, val) => {
@@ -218,10 +550,10 @@
   }
 
   function prevSprint() {
-    if (cur > 0) { cur--; renderAll(); }
+    if (cur > 0) { cur--; openDay = null; renderAll(); }
   }
   function nextSprint() {
-    if (cur < sprints.length - 1) { cur++; renderAll(); }
+    if (cur < sprints.length - 1) { cur++; openDay = null; renderAll(); }
   }
   document.querySelectorAll('.sprint-chev-prev').forEach(b => b.addEventListener('click', prevSprint));
   document.querySelectorAll('.sprint-chev-next').forEach(b => b.addEventListener('click', nextSprint));
@@ -351,8 +683,9 @@
 
     const groups = new Map();
     list.forEach(i => {
-      if (!groups.has(i.crumb)) groups.set(i.crumb, []);
-      groups.get(i.crumb).push(i);
+      const key = i.crumb && i.crumb !== '—' ? i.crumb : topProject(i.crumb);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(i);
     });
 
     const unscheduledCount = list.filter(i => i.planned_day == null).length;
@@ -363,22 +696,33 @@
       html += `<div class="unscheduled-hint"><b>${unscheduledCount} item${unscheduledCount > 1 ? 's' : ''}</b> (${unscheduledHrs}h) not yet scheduled — drag onto a day.</div>`;
     }
     html += `<div class="cart-section">Items (${list.length})</div>`;
-
-    for (const [gname, gitems] of groups) {
-      html += `<div class="cart-group"><div class="gname">${gname}</div>`;
-      gitems.forEach(i => {
-        const g = i.kind === 'bug' ? '●' : '◉';
-        const scheduled = i.planned_day != null;
-        const pday = scheduled
-          ? `<span class="pday">${DOW[dayDate(i.planned_day).getDay()]} ${dayDate(i.planned_day).getDate()}</span>`
-          : '';
-        html += `<div class="crow ${scheduled ? 'scheduled' : ''}" draggable="true" data-id="${i.id}">`
-              + `<span class="g ${i.kind}">${g}</span>`
-              + `<span class="name">${i.title}${pday}</span>`
-              + `<span class="h">${i.est}h</span>`
-              + `<span class="x" title="Remove from sprint" data-remove="${i.id}">×</span>`
-              + `</div>`;
+    if (list.length === 0) {
+      html += `<div class="empty-cart">No items in ${s.name} yet.<br>Click ☆ on a backlog row to add.</div>`;
+    } else {
+      for (const [gname, gitems] of groups) {
+        html += `<div class="cart-group"><div class="gname">${gname}</div>`;
+        gitems.forEach(i => {
+          const g = i.kind === 'bug' ? '●' : '◉';
+          const scheduled = i.planned_day != null;
+          html += `<div class="crow ${scheduled ? 'scheduled' : ''}" draggable="true" data-id="${i.id}">`
+                + `<span class="g ${i.kind}">${g}</span>`
+                + `<span class="name">${i.title}</span>`
+                + `<span class="h">${i.est}h</span>`
+                + `</div>`;
+        });
+        html += `</div>`;
+      }
+      const projTotals = new Map();
+      list.forEach(i => {
+        const p = topProject(i.crumb);
+        projTotals.set(p, (projTotals.get(p) || 0) + i.est);
       });
+      html += `<div class="cart-section">Breakdown</div><div class="breakdown">`;
+      for (const [p, h] of projTotals) {
+        const pct = committed ? Math.round((h / committed) * 100) : 0;
+        const col = PROJ_COLOR[p] || 'var(--accent)';
+        html += `<div class="b-row"><span>${p}</span><div class="pb"><span style="width:${pct}%;background:${col}"></span></div><span>${h}h · ${pct}%</span></div>`;
+      }
       html += `</div>`;
     }
 
@@ -398,16 +742,6 @@
         row.classList.add('dragging');
       });
       row.addEventListener('dragend', () => row.classList.remove('dragging'));
-    });
-
-    body.querySelectorAll('.x[data-remove]').forEach(x => {
-      x.addEventListener('click', e => {
-        e.stopPropagation();
-        const id = x.dataset.remove;
-        const idx = list.findIndex(i => i.id === id);
-        if (idx >= 0) list.splice(idx, 1);
-        renderAll();
-      });
     });
   }
 
@@ -522,7 +856,7 @@
       const over = planned > DAILY_CAP;
 
       const actualCls = varianceCls(actual, planned);
-      const note = (s.day_notes && s.day_notes[d]) || '';
+      const dayNoteVal = dayTitle(s, d);
       const isEmpty = dayItems.length === 0;
       const hasNoRows = dayItems.length === 0 && ghostItems.length === 0;
 
@@ -633,7 +967,7 @@
 
       if (hasHistory || isDoneSprint) {
         html += `<div class="day-note">`
-             +   `<input type="text" placeholder="Day note…" value="${(note || '').replace(/"/g,'&quot;')}" data-day="${d}">`
+             +   `<input type="text" placeholder="Short title for this day…" value="${(dayNoteVal || '').replace(/"/g,'&quot;')}" data-day="${d}">`
              + `</div>`;
       }
 
@@ -691,8 +1025,16 @@
 
     daysEl.querySelectorAll('.day-note input[data-day]').forEach(inp => {
       inp.addEventListener('input', () => {
-        if (!s.day_notes) s.day_notes = {};
-        s.day_notes[parseInt(inp.dataset.day, 10)] = inp.value;
+        setDayField(s, parseInt(inp.dataset.day, 10), 'title', inp.value);
+      });
+    });
+
+    daysEl.querySelectorAll('.day').forEach(dayEl => {
+      dayEl.addEventListener('click', e => {
+        if (e.target.closest('.day-item')) return;
+        if (e.target.closest('.day-note')) return;
+        if (e.target.closest('.day-cap-bar')) return;
+        openDayDetail(parseInt(dayEl.dataset.day, 10));
       });
     });
   }
@@ -704,6 +1046,32 @@
     renderSummary();
     renderSprintCart();
     renderDays();
+
+    const viewSprintEl = document.getElementById('view-sprint');
+    const daysList = document.getElementById('sp-days-list');
+    const dayDetail = document.getElementById('sp-day-detail');
+    const viewTodayEl = document.getElementById('view-today');
+    const inSprintDetail = viewSprintEl && !viewSprintEl.hidden && openDay != null;
+
+    if (daysList) daysList.hidden = inSprintDetail;
+    if (dayDetail) dayDetail.hidden = !inSprintDetail;
+
+    if (inSprintDetail && openDay != null) {
+      renderDayDetail(sprint(), openDay, 'sprint');
+    } else if (dayDetail && !inSprintDetail) {
+      dayDetail.innerHTML = '';
+    }
+
+    if (viewTodayEl && !viewTodayEl.hidden) {
+      const idx = todayDayIndex();
+      if (idx == null) {
+        renderTodayEmptyState();
+      } else {
+        renderDayDetail(sprint(), idx, 'today');
+      }
+    } else if (viewTodayEl) {
+      viewTodayEl.innerHTML = '';
+    }
   }
 
   // search: live filter + auto-expand + highlight
@@ -815,7 +1183,25 @@
     };
     if (!payload.title) { document.getElementById('task-title').focus(); return; }
     console.log('[mockup] create task', payload);
+    if (pendingTaskPlannedDay != null) {
+      const est = parseFloat(document.getElementById('task-estimate').value) || 1;
+      const kind = type === 'bug' ? 'bug' : 'feat';
+      const crumb = crumbFromProjectSelect(document.getElementById('task-project').value);
+      items().push({
+        id: 't' + Date.now().toString(36),
+        kind,
+        title: payload.title,
+        crumb,
+        est,
+        planned_day: pendingTaskPlannedDay,
+        status: 'todo',
+        actual: 0,
+        drift_from: [],
+      });
+      pendingTaskPlannedDay = null;
+    }
     closeModal('modal-task');
+    renderAll();
   });
 
   const projScopeHints = {
