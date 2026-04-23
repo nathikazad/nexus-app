@@ -1,0 +1,150 @@
+    <!--
+        Edit goal — Wake up before 7 AM (daily end-time threshold goal).
+        Tracks the end of the Sleep action (wake time).
+        Same dynamic form as create; behavior in bindGoalForm() in index.html.
+    -->
+    <div id="page-goal-edit-wake" class="page hidden flex-col h-full w-full absolute inset-0 bg-white z-30">
+        <header class="flex items-center justify-between px-5 pt-12 pb-3 border-b border-slate-100 shrink-0">
+            <button type="button" onclick="navigateBack()" class="text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors">Cancel</button>
+            <h1 class="text-base font-semibold tracking-tight text-slate-900">Edit goal</h1>
+            <button type="button" onclick="navigateBack()" class="text-sm font-semibold text-[#F97316] hover:text-[#FB923C] transition-colors">Save</button>
+        </header>
+
+        <main
+            class="flex-1 overflow-y-auto px-5 pb-10 goal-form"
+            data-goal-form-root
+            data-cadence="daily"
+            data-attr="end"
+            data-op="lt"
+        >
+            <!-- 1 — Name -->
+            <div class="pt-5 pb-2">
+                <label for="goal-name-input-wake" class="block text-xs font-medium text-slate-500 uppercase tracking-widest mb-2">Name</label>
+                <input
+                    id="goal-name-input-wake"
+                    type="text"
+                    value="Wake up before 7 AM"
+                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:border-slate-400"
+                />
+            </div>
+
+            <!-- 2 — Action type -->
+            <div class="pt-3 pb-2">
+                <label for="goal-action-select-wake" class="block text-xs font-medium text-slate-500 uppercase tracking-widest mb-2">Action type</label>
+                <div class="relative">
+                    <select
+                        id="goal-action-select-wake"
+                        data-gf="action"
+                        class="appearance-none w-full px-3.5 py-2.5 pr-9 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-400"
+                    >
+                        <option value="sleep" selected>Sleep</option>
+                        <option value="wake">Wake</option>
+                        <option value="workout">Workout</option>
+                        <option value="read">Read</option>
+                        <option value="yoga">Yoga</option>
+                        <option value="language">Language</option>
+                        <option value="meditation">Meditation</option>
+                        <option value="journal">Journal</option>
+                    </select>
+                    <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></iconify-icon>
+                </div>
+            </div>
+
+            <!-- 3 — Cadence -->
+            <div class="pt-3 pb-2">
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-widest mb-2">Cadence</label>
+                <div class="inline-flex p-1 bg-slate-100 rounded-xl">
+                    <button type="button" data-gf="cadence" data-value="daily" class="gf-cad px-4 py-1.5 rounded-lg text-xs font-semibold text-[#F97316] bg-white shadow-sm ring-1 ring-black/[0.03]">Daily</button>
+                    <button type="button" data-gf="cadence" data-value="weekly" class="gf-cad px-4 py-1.5 rounded-lg text-xs font-medium text-slate-500">Weekly</button>
+                </div>
+            </div>
+
+            <!-- 4 — Condition -->
+            <div class="pt-4 pb-2">
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-widest mb-2">Goal condition</label>
+
+                <div class="flex items-stretch gap-2 flex-wrap">
+                    <div class="relative flex-1 min-w-[7.5rem]">
+                        <select
+                            data-gf="attr"
+                            class="appearance-none w-full h-full px-3.5 py-2.5 pr-9 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-400"
+                        >
+                            <option value="count">Count</option>
+                            <option value="duration">Duration</option>
+                            <option data-gf-daily-only value="start">Start time</option>
+                            <option data-gf-daily-only value="end" selected>End time</option>
+                        </select>
+                        <iconify-icon icon="solar:alt-arrow-down-linear" class="text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></iconify-icon>
+                    </div>
+
+                    <div class="inline-flex items-stretch p-1 bg-slate-100 rounded-xl shrink-0" role="group" aria-label="Comparison">
+                        <button type="button" data-gf="op" data-value="lt" aria-label="less than" class="gf-op w-9 rounded-lg text-sm font-semibold text-[#F97316] bg-white shadow-sm flex items-center justify-center transition-colors">&lt;</button>
+                        <button type="button" data-gf="op" data-value="gte" aria-label="greater than" class="gf-op w-9 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">&gt;</button>
+                    </div>
+
+                    <div class="flex-1 min-w-[7.5rem]">
+                        <label data-gf-value="duration" class="hidden items-center border border-slate-200 rounded-xl bg-white focus-within:border-slate-400 transition-colors h-full">
+                            <input type="number" min="0" step="0.5" value="1" inputmode="decimal" data-gf="value-duration" class="w-full min-w-0 px-3 py-2.5 text-sm font-medium text-slate-900 bg-transparent rounded-xl focus:outline-none" />
+                            <span class="pr-3 pl-1 text-xs font-medium text-slate-400 shrink-0">hrs</span>
+                        </label>
+                        <label data-gf-value="count" class="hidden items-center border border-slate-200 rounded-xl bg-white focus-within:border-slate-400 transition-colors h-full">
+                            <input type="number" min="1" step="1" value="1" inputmode="numeric" data-gf="value-count" class="w-full min-w-0 px-3 py-2.5 text-sm font-medium text-slate-900 bg-transparent rounded-xl focus:outline-none" />
+                            <span class="pr-3 pl-1 text-xs font-medium text-slate-400 shrink-0" data-gf-count-unit>/ day</span>
+                        </label>
+                        <div data-gf-value="time" class="h-full">
+                            <input type="time" value="07:00" data-gf="value-time" class="w-full h-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-400" />
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mt-2 text-[11px] text-slate-400" data-gf-helper>Each day, hits when sleep end time is before 7:00 AM.</p>
+            </div>
+
+            <!-- 5 — Slots (hidden for daily/end-time) -->
+            <div data-gf-slots class="hidden pt-4 pb-2 border-t border-slate-100 mt-4">
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-widest mb-2">Preferred days <span class="text-slate-400 normal-case font-normal">(optional)</span></label>
+                <p class="text-[11px] text-slate-500 mb-3">Days you plan to do this. We won&rsquo;t require sessions only on these days.</p>
+                <div class="flex gap-1.5 mb-4" data-gf-slot-days>
+                    <button type="button" data-gf-day="0" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">M</button>
+                    <button type="button" data-gf-day="1" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">T</button>
+                    <button type="button" data-gf-day="2" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">W</button>
+                    <button type="button" data-gf-day="3" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">T</button>
+                    <button type="button" data-gf-day="4" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">F</button>
+                    <button type="button" data-gf-day="5" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">S</button>
+                    <button type="button" data-gf-day="6" class="gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center">S</button>
+                </div>
+                <label data-gf-slot-time-tile class="flex items-center gap-2 border border-slate-200 rounded-xl bg-white pl-3.5 pr-1.5 mb-2 focus-within:border-slate-400 transition-colors">
+                    <iconify-icon icon="solar:clock-circle-linear" class="text-slate-400 text-base shrink-0"></iconify-icon>
+                    <span class="text-xs font-medium text-slate-500 shrink-0">Time</span>
+                    <input type="time" data-gf="slot-time" value="" class="flex-1 min-w-0 py-2.5 text-sm font-medium text-slate-900 bg-transparent text-right focus:outline-none" />
+                    <button type="button" data-gf="slot-time-clear" aria-label="Clear time" class="hidden w-7 h-7 rounded-full text-slate-300 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
+                        <iconify-icon icon="solar:close-circle-bold" class="text-base"></iconify-icon>
+                    </button>
+                </label>
+                <p class="text-[11px] text-slate-400 mb-3">Optional — applies to every preferred day. Leave empty for no specific time.</p>
+                <div class="flex items-center justify-between py-2">
+                    <div class="pr-4">
+                        <div class="text-sm font-medium text-slate-900">Auto-create slot tasks</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Drop a task on each day so it shows in Tasks</div>
+                    </div>
+                    <button type="button" data-gf="auto" aria-pressed="false" class="w-10 h-6 rounded-full bg-slate-200 relative shrink-0">
+                        <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform" data-gf-auto-knob></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="h-px bg-slate-100 my-6"></div>
+
+            <div class="space-y-2.5 pb-6">
+                <button type="button" class="w-full flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                    <iconify-icon icon="solar:pause-linear" class="text-base"></iconify-icon>
+                    Pause goal
+                </button>
+                <button type="button" class="w-full flex items-center justify-center gap-2 py-3 border border-red-200 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
+                    <iconify-icon icon="solar:trash-bin-minimalistic-linear" class="text-base"></iconify-icon>
+                    Delete goal
+                </button>
+                <p class="text-[11px] text-slate-400 text-center pt-1">Sleep history stays; this goal stops tracking.</p>
+            </div>
+        </main>
+    </div>

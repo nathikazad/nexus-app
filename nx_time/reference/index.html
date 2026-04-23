@@ -153,7 +153,11 @@
         'partials/page-edit-activity.html',
         'partials/page-goal-detail-sleep.html',
         'partials/page-goal-detail-gym.html',
-        'partials/page-goal-detail-wake.html'
+        'partials/page-goal-detail-wake.html',
+        'partials/page-goal-create.html',
+        'partials/page-goal-edit-gym.html',
+        'partials/page-goal-edit-sleep.html',
+        'partials/page-goal-edit-wake.html'
     ];
 
     async function loadPartials() {
@@ -171,7 +175,7 @@
 
     let historyStack = ['page-today'];
 
-    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-activity-detail-umbrella', 'page-activity-detail-umbrella-coffee', 'page-add-time-block', 'page-add-trip-children', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep', 'page-goal-detail-sleep', 'page-goal-detail-gym', 'page-goal-detail-wake'];
+    const hideNavPages = ['page-activity-detail-deep-work', 'page-activity-detail-sleep', 'page-activity-detail-umbrella', 'page-activity-detail-umbrella-coffee', 'page-add-time-block', 'page-add-trip-children', 'page-edit-activity', 'page-task-picker', 'page-task-detail', 'page-task-edit', 'page-task-create', 'page-week', 'page-ai-chat', 'page-projects-browse', 'page-project-drill-down', 'page-project-drill-deep', 'page-goal-detail-sleep', 'page-goal-detail-gym', 'page-goal-detail-wake', 'page-goal-create', 'page-goal-edit-gym', 'page-goal-edit-sleep', 'page-goal-edit-wake'];
     const bottomNav = document.getElementById('bottom-nav');
 
     function navigate(pageId, pushToHistory = true) {
@@ -210,7 +214,7 @@
                 updateTabUI('calendar');
             } else if (prevPage === 'page-task-picker' || prevPage === 'page-task-detail' || prevPage === 'page-task-edit' || prevPage === 'page-task-create' || prevPage === 'page-projects-browse' || prevPage === 'page-project-drill-down' || prevPage === 'page-project-drill-deep') {
                 updateTabUI('tasks');
-            } else if (prevPage === 'page-goal-detail-sleep' || prevPage === 'page-goal-detail-gym' || prevPage === 'page-goal-detail-wake') {
+            } else if (prevPage === 'page-goal-detail-sleep' || prevPage === 'page-goal-detail-gym' || prevPage === 'page-goal-detail-wake' || prevPage === 'page-goal-create' || prevPage === 'page-goal-edit-gym' || prevPage === 'page-goal-edit-sleep' || prevPage === 'page-goal-edit-wake') {
                 updateTabUI('goals');
             }
         }
@@ -432,9 +436,218 @@
         }, 300);
     }
 
+    /**
+     * Goal create + edit forms — both pages render `[data-goal-form-root]` with
+     * `data-cadence`, `data-attr`, `data-op`, optional `data-slot-days`,
+     * `data-auto`. Sub-controls are tagged with `data-gf="..."`. One delegate
+     * per root keeps the form coherent: changing cadence clamps the attribute,
+     * changing attribute swaps the value control, weekly + count reveals slots.
+     */
+    const GF_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const GF_ACTION_NOUNS = {
+        sleep: 'sleep', wake: 'wake', workout: 'workouts', read: 'reading',
+        yoga: 'yoga', language: 'language', meditation: 'meditation', journal: 'journals'
+    };
+
+    function gfCurrentValue(root) {
+        const attr = root.dataset.attr;
+        if (attr === 'duration') {
+            const v = parseFloat(root.querySelector('[data-gf="value-duration"]')?.value || '0');
+            return { kind: 'duration', value: v };
+        }
+        if (attr === 'count') {
+            const v = parseInt(root.querySelector('[data-gf="value-count"]')?.value || '0', 10);
+            return { kind: 'count', value: v };
+        }
+        return { kind: 'time', value: root.querySelector('[data-gf="value-time"]')?.value || '07:00' };
+    }
+
+    function gfFormatTime(hhmm) {
+        if (!hhmm) return '';
+        const [hStr, mStr] = hhmm.split(':');
+        let h = parseInt(hStr, 10);
+        const m = mStr || '00';
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (h === 0) h = 12;
+        return h + ':' + m + ' ' + ampm;
+    }
+
+    function gfHelperText(root, action, cadence, attr, op) {
+        const noun = GF_ACTION_NOUNS[action] || action;
+        const opWord = op === 'lt' ? 'less than' : 'at least';
+        const beforeAfter = op === 'lt' ? 'before' : 'after';
+        const v = gfCurrentValue(root);
+        if (attr === 'duration') {
+            const unit = v.value === 1 ? 'hour' : 'hours';
+            return cadence === 'daily'
+                ? 'Each day, hits when total ' + noun + ' duration is ' + opWord + ' ' + v.value + ' ' + unit + '.'
+                : 'This week, hits when total ' + noun + ' duration is ' + opWord + ' ' + v.value + ' ' + unit + '.';
+        }
+        if (attr === 'count') {
+            const unit = v.value === 1 ? 'session' : 'sessions';
+            return cadence === 'daily'
+                ? 'Each day, hits when count of ' + noun + ' is ' + opWord + ' ' + v.value + ' ' + unit + '.'
+                : 'This week, hits when count of ' + noun + ' is ' + opWord + ' ' + v.value + ' ' + unit + '.';
+        }
+        const which = attr === 'end' ? 'end time' : 'start time';
+        return 'Each day, hits when ' + noun + ' ' + which + ' is ' + beforeAfter + ' ' + gfFormatTime(v.value) + '.';
+    }
+
+    function gfReadSlotDays(root) {
+        const raw = root.dataset.slotDays || '';
+        if (!raw) return new Set();
+        return new Set(raw.split(',').filter(Boolean).map((n) => parseInt(n, 10)));
+    }
+
+    function gfWriteSlotDays(root, set) {
+        root.dataset.slotDays = Array.from(set).sort((a, b) => a - b).join(',');
+    }
+
+    function refreshGoalForm(root) {
+        if (!root) return;
+        let cadence = root.dataset.cadence || 'daily';
+        let attr = root.dataset.attr || 'duration';
+        const op = root.dataset.op || 'gte';
+
+        if (cadence === 'weekly' && (attr === 'start' || attr === 'end')) {
+            attr = 'count';
+            root.dataset.attr = 'count';
+        }
+
+        const action = root.querySelector('[data-gf="action"]')?.value || 'sleep';
+
+        root.querySelectorAll('[data-gf-daily-only]').forEach((opt) => {
+            opt.disabled = cadence === 'weekly';
+            opt.hidden = cadence === 'weekly';
+        });
+        const attrSelect = root.querySelector('select[data-gf="attr"]');
+        if (attrSelect && attrSelect.value !== attr) attrSelect.value = attr;
+
+        root.querySelectorAll('.gf-cad').forEach((btn) => {
+            const on = btn.dataset.value === cadence;
+            btn.className = on
+                ? 'gf-cad px-4 py-1.5 rounded-lg text-xs font-semibold text-[#F97316] bg-white shadow-sm ring-1 ring-black/[0.03]'
+                : 'gf-cad px-4 py-1.5 rounded-lg text-xs font-medium text-slate-500';
+        });
+        root.querySelectorAll('.gf-op').forEach((btn) => {
+            const on = btn.dataset.value === op;
+            btn.className = on
+                ? 'gf-op w-9 rounded-lg text-sm font-semibold text-[#F97316] bg-white shadow-sm flex items-center justify-center transition-colors'
+                : 'gf-op w-9 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors';
+        });
+
+        const showTime = attr === 'start' || attr === 'end';
+        root.querySelectorAll('[data-gf-value]').forEach((node) => {
+            const kind = node.dataset.gfValue;
+            const visible =
+                (kind === 'duration' && attr === 'duration') ||
+                (kind === 'count' && attr === 'count') ||
+                (kind === 'time' && showTime);
+            node.classList.toggle('hidden', !visible);
+            node.classList.toggle('flex', visible && (kind === 'duration' || kind === 'count'));
+        });
+
+        const countUnit = root.querySelector('[data-gf-count-unit]');
+        if (countUnit) {
+            countUnit.textContent = cadence === 'weekly' ? '/ wk' : '/ day';
+        }
+
+        const helper = root.querySelector('[data-gf-helper]');
+        if (helper) helper.textContent = gfHelperText(root, action, cadence, attr, op);
+
+        const showSlots = cadence === 'weekly' && attr === 'count';
+        const slots = root.querySelector('[data-gf-slots]');
+        if (slots) slots.classList.toggle('hidden', !showSlots);
+        if (showSlots) refreshGoalSlots(root);
+    }
+
+    function refreshGoalSlots(root) {
+        const days = gfReadSlotDays(root);
+        root.querySelectorAll('.gf-day').forEach((btn) => {
+            const idx = parseInt(btn.dataset.gfDay, 10);
+            const on = days.has(idx);
+            btn.className = on
+                ? 'gf-day w-9 h-9 rounded-full border-[1.5px] border-slate-900 bg-slate-900 text-[11px] font-semibold text-white flex items-center justify-center'
+                : 'gf-day w-9 h-9 rounded-full border border-slate-200 text-[11px] font-medium text-slate-400 flex items-center justify-center';
+        });
+
+        const slotTime = root.querySelector('[data-gf="slot-time"]');
+        const clearBtn = root.querySelector('[data-gf="slot-time-clear"]');
+        if (clearBtn) clearBtn.classList.toggle('hidden', !slotTime || !slotTime.value);
+
+        const auto = root.querySelector('[data-gf="auto"]');
+        if (auto) {
+            const on = root.dataset.auto === '1';
+            auto.setAttribute('aria-pressed', on ? 'true' : 'false');
+            auto.classList.toggle('bg-[#F97316]', on);
+            auto.classList.toggle('bg-slate-200', !on);
+            const knob = auto.querySelector('[data-gf-auto-knob]');
+            if (knob) {
+                knob.classList.toggle('translate-x-4', on);
+            }
+        }
+    }
+
+    function bindGoalForm(root) {
+        if (!root || root.dataset.gfBound) return;
+        root.dataset.gfBound = '1';
+
+        root.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-gf], button[data-gf-day]');
+            if (!btn || !root.contains(btn)) return;
+            e.preventDefault();
+            if (btn.dataset.gf === 'cadence') {
+                root.dataset.cadence = btn.dataset.value;
+            } else if (btn.dataset.gf === 'op') {
+                root.dataset.op = btn.dataset.value;
+            } else if (btn.dataset.gf === 'auto') {
+                root.dataset.auto = root.dataset.auto === '1' ? '0' : '1';
+            } else if (btn.dataset.gf === 'slot-time-clear') {
+                const slotTime = root.querySelector('[data-gf="slot-time"]');
+                if (slotTime) slotTime.value = '';
+            } else if (btn.hasAttribute('data-gf-day')) {
+                const idx = parseInt(btn.dataset.gfDay, 10);
+                const days = gfReadSlotDays(root);
+                if (days.has(idx)) days.delete(idx);
+                else days.add(idx);
+                gfWriteSlotDays(root, days);
+            }
+            refreshGoalForm(root);
+        });
+
+        root.addEventListener('change', (e) => {
+            const t = e.target;
+            if (t.matches('select[data-gf="attr"]')) {
+                root.dataset.attr = t.value;
+                refreshGoalForm(root);
+            } else if (t.matches('select[data-gf="action"]')) {
+                refreshGoalForm(root);
+            }
+        });
+
+        root.addEventListener('input', (e) => {
+            const t = e.target;
+            if (t.matches('[data-gf="value-duration"], [data-gf="value-count"], [data-gf="value-time"]')) {
+                refreshGoalForm(root);
+            } else if (t.matches('[data-gf="slot-time"]')) {
+                refreshGoalSlots(root);
+            }
+        });
+
+        refreshGoalForm(root);
+    }
+
+    function bindAllGoalForms() {
+        document.querySelectorAll('[data-goal-form-root]').forEach(bindGoalForm);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         loadPartials()
-            .then(() => updateTabUI('today'))
+            .then(() => {
+                updateTabUI('today');
+                bindAllGoalForms();
+            })
             .catch((err) => {
                 console.error(err);
                 const root = document.getElementById('pages-root');
