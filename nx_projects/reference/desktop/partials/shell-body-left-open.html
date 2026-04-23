@@ -1,0 +1,32 @@
+  <div class="body">
+
+    <!-- ── LEFT: backlog ─────────────────────────────────────── -->
+    <section class="left">
+
+      <div class="left-head">
+        <h1>Backlog</h1>
+        <div class="pane-toggle" role="tablist">
+          <button id="tab-priority" class="active">Priority</button>
+          <button id="tab-projects">Projects</button>
+        </div>
+      </div>
+
+      <div class="quick-add">
+        <span class="qa-plus">+</span>
+        <input id="qa-input" placeholder="Add idea…   try: Fix sidebar lag /b /p nexus /e 2h" />
+        <span class="hints">
+          <span class="qa-hint">/b bug</span>
+          <span class="qa-hint">/p project</span>
+          <span class="qa-hint">/e 4h</span>
+          <span class="qa-hint">/n next</span>
+        </span>
+        <span class="qa-enter">↵</span>
+      </div>
+
+      <div class="filters">
+        <div class="filter"><span class="lbl">Project</span> All ▾</div>
+        <div class="filter"><span class="lbl">Kind</span> All ▾</div>
+        <div class="filter"><span class="lbl">Status</span> Open ▾</div>
+        <div class="spacer"></div>
+        <input id="search" class="search" placeholder="Search ideas…" />
+      </div>
