@@ -1,12 +1,869 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0;url=project_app_mockup.html" />
   <title>Nexus — Planner</title>
-  <link rel="canonical" href="project_app_mockup.html" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="canonical" href="index.html" />
 </head>
-<body style="margin:0;background:#0f1115;color:#8a93a6;font:14px/1.5 system-ui,sans-serif">
-  <p style="padding:24px">Opening mockup… <a href="project_app_mockup.html" style="color:#6aa3ff">project_app_mockup.html</a></p>
+<body>
+
+<!-- display:contents so .app + #menu-pop lay out as direct body children (same as flat HTML) -->
+<div id="reference-mount" style="display:contents"></div>
+
+<script>
+  /** Load order must preserve opening/closing tags across fragments (see nx_time/reference/index.html). */
+  const PARTIAL_FILES = [
+    'partials/shell-app-open.html',
+    'partials/shell-topbar.html',
+    'partials/shell-body-slot-open.html',
+    'partials/view-planner-open.html',
+    'partials/shell-body-left-open.html',
+    'partials/pane-backlog-priority.html',
+    'partials/pane-backlog-projects.html',
+    'partials/shell-left-close.html',
+    'partials/panel-sprint-cart.html',
+    'partials/view-planner-close.html',
+    'partials/view-sprint-open.html',
+    'partials/panel-sprint-cart-left.html',
+    'partials/panel-sprint-days.html',
+    'partials/view-sprint-close.html',
+    'partials/view-today.html',
+    'partials/shell-body-slot-close.html',
+    'partials/shell-body-app-close.html',
+    'partials/menu-row-context.html',
+    'partials/modal-task-create.html',
+    'partials/modal-project-create.html',
+  ];
+
+  async function loadPartials() {
+    const root = document.getElementById('reference-mount');
+    const chunks = await Promise.all(
+      PARTIAL_FILES.map((path) =>
+        fetch(path).then((r) => {
+          if (!r.ok) throw new Error(path + ' HTTP ' + r.status);
+          return r.text();
+        })
+      )
+    );
+    root.innerHTML = chunks.join('');
+  }
+
+  async function boot() {
+    await loadPartials();
+
+  const today = new Date(2026, 3, 23);
+  const DAILY_CAP = 5;
+
+  const sprints = [
+    {
+      id: 13, name: 'Sprint 13', badge: 'done', badgeText: 'done',
+      dates: 'Apr 13 – Apr 19 · closed', capH: 24,
+      goal: 'Shipped auth rewrite, started UI polish work.',
+      start: new Date(2026, 3, 13), len: 7,
+      day_notes: {
+        1: 'Lost most of the afternoon to a cert rotation.',
+        4: 'Good flow day — CSV export came together fast.',
+        5: 'Push plumbing took longer than expected; APNs sandbox gremlins.',
+      },
+      retro_note: 'Auth rewrite landed cleanly. Pipeline work underestimated — both ingest items ran over. Need to pad estimates when SRE is involved.',
+      items: [
+        { id: 'a1', kind: 'feat', title: 'OAuth callback hardening', crumb: 'Nexus / Auth', est: 3, planned_day: 0, status: 'done', actual: 3.25, drift_from: [] },
+        { id: 'a2', kind: 'bug',  title: 'Session refresh loop',     crumb: 'Nexus / Auth', est: 2, planned_day: 1, status: 'done', actual: 1.5,  drift_from: [] },
+        { id: 'a3', kind: 'feat', title: 'List virtual scroll',      crumb: 'Nexus / UI Polish', est: 4, planned_day: 2, status: 'done', actual: 6.5, drift_from: [1] },
+        { id: 'a5', kind: 'bug',  title: 'Timezone in reports',      crumb: 'Pipeline', est: 2, planned_day: 3, status: 'done', actual: 2,   drift_from: [] },
+        { id: 'a4', kind: 'feat', title: 'CSV export',               crumb: 'Pipeline', est: 5, planned_day: 4, status: 'done', actual: 4,   drift_from: [] },
+        { id: 'a6', kind: 'feat', title: 'Push notification plumbing', crumb: 'Mobile App', est: 4, planned_day: 5, status: 'done', actual: 5, drift_from: [4] },
+      ],
+    },
+    {
+      id: 14, name: 'Sprint 14', badge: 'active', badgeText: 'active',
+      dates: 'Apr 20 – Apr 26 · 4 days left', capH: 40,
+      goal: 'Ship dark mode + unblock the pipeline OOM.',
+      start: new Date(2026, 3, 20), len: 7,
+      day_notes: {
+        0: 'Strong morning, tokens landed before lunch.',
+        1: 'Toggle took longer — hover + a11y states ate the afternoon.',
+        2: 'Partitioned ingest slipped a day; SRE review not ready.',
+      },
+      retro_note: '',
+      items: [
+        { id: 't1', kind: 'feat', title: 'Design tokens',       crumb: 'Nexus / UI Polish', est: 2, planned_day: 0, status: 'done',    actual: 2.5, drift_from: [] },
+        { id: 't2', kind: 'feat', title: 'Toggle component',    crumb: 'Nexus / UI Polish', est: 4, planned_day: 1, status: 'done',    actual: 5,   drift_from: [] },
+        { id: 't3', kind: 'bug',  title: 'Flash of wrong theme',crumb: 'Nexus / UI Polish', est: 1, planned_day: 2, status: 'done',    actual: 1.5, drift_from: [] },
+        { id: 't4', kind: 'feat', title: 'Partitioned ingest',  crumb: 'Pipeline',          est: 6, planned_day: 3, status: 'doing',   actual: 2,   drift_from: [2] },
+        { id: 't5', kind: 'bug',  title: 'OOM on large batch',  crumb: 'Pipeline',          est: 3, planned_day: 4, status: 'todo',    actual: 0,   drift_from: [] },
+        { id: 't6', kind: 'feat', title: 'Auth refactor cleanup', crumb: 'Nexus / Auth',    est: 4, planned_day: 5, status: 'blocked', actual: 0,   drift_from: [], blocker: 'Waiting on SRE review of migration plan.' },
+        { id: 't7', kind: 'feat', title: 'Schema drift alerts', crumb: 'Pipeline',          est: 5, planned_day: 6, status: 'todo',    actual: 0,   drift_from: [] },
+        { id: 't8', kind: 'feat', title: 'Mobile deep links',   crumb: 'Mobile App',        est: 3, planned_day: 5, status: 'todo',    actual: 0,   drift_from: [3] },
+        { id: 't9', kind: 'bug',  title: 'iOS splash flicker',  crumb: 'Mobile App',        est: 2, planned_day: 4, status: 'doing',   actual: 4, drift_from: [2, 3], actuals_by_day: { 2: 2, 3: 2 } },
+      ],
+    },
+    {
+      id: 15, name: 'Sprint 15', badge: 'planned', badgeText: 'planned',
+      dates: 'Apr 27 – May 2 · starts in 4 days', capH: 40,
+      goal: '',
+      start: new Date(2026, 3, 27), len: 6,
+      day_notes: {},
+      retro_note: '',
+      items: [
+        { id: 'n1', kind: 'feat', title: 'Onboarding checklist',    crumb: 'Nexus / UI Polish', est: 3, planned_day: 0,    status: 'todo', actual: 0, drift_from: [] },
+        { id: 'n2', kind: 'feat', title: 'Retry dead-letter queue', crumb: 'Pipeline',          est: 4, planned_day: 1,    status: 'todo', actual: 0, drift_from: [] },
+        { id: 'n3', kind: 'bug',  title: 'Android back stack',      crumb: 'Mobile App',        est: 2, planned_day: null, status: 'todo', actual: 0, drift_from: [] },
+        { id: 'n4', kind: 'feat', title: 'Metrics dashboard v1',    crumb: 'Pipeline',          est: 6, planned_day: null, status: 'todo', actual: 0, drift_from: [] },
+        { id: 'n5', kind: 'feat', title: 'Widget refresh',          crumb: 'Mobile App',        est: 3, planned_day: 3,    status: 'todo', actual: 0, drift_from: [] },
+      ],
+    },
+  ];
+
+  let cur = 1;
+
+  const viewPlanner = document.getElementById('view-planner');
+  const viewSprint = document.getElementById('view-sprint');
+  const viewToday = document.getElementById('view-today');
+
+  function setView(name) {
+    viewPlanner.hidden = name !== 'planner';
+    viewSprint.hidden = name !== 'sprint';
+    viewToday.hidden = name !== 'today';
+    document.querySelectorAll('[data-view]').forEach(btn => {
+      const on = btn.dataset.view === name;
+      btn.classList.toggle('active', on);
+      btn.classList.toggle('muted', !on);
+    });
+    renderAll();
+  }
+
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => setView(btn.dataset.view));
+  });
+  document.querySelectorAll('[data-goto-view]').forEach(btn => {
+    btn.addEventListener('click', () => setView(btn.dataset.gotoView));
+  });
+
+  // pane toggle
+  const tabP = document.getElementById('tab-priority');
+  const tabJ = document.getElementById('tab-projects');
+  const paneP = document.getElementById('pane-priority');
+  const paneJ = document.getElementById('pane-projects');
+  function showPane(p) {
+    tabP.classList.toggle('active', p);
+    tabJ.classList.toggle('active', !p);
+    paneP.classList.toggle('hidden', !p);
+    paneJ.classList.toggle('hidden', p);
+  }
+  tabP.addEventListener('click', () => showPane(true));
+  tabJ.addEventListener('click', () => showPane(false));
+
+  function sprint() { return sprints[cur]; }
+  function items() { return sprint().items; }
+
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function dayDate(idx) {
+    const d = new Date(sprint().start);
+    d.setDate(d.getDate() + idx);
+    return d;
+  }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function itemActual(i) {
+    if (i.actuals_by_day) {
+      return Object.values(i.actuals_by_day).reduce((a, h) => a + h, 0);
+    }
+    return i.actual || 0;
+  }
+  function cumulativeActualUpTo(i, d) {
+    if (!i.actuals_by_day) return d >= (i.planned_day ?? -Infinity) ? (i.actual || 0) : 0;
+    return Object.entries(i.actuals_by_day)
+      .filter(([k]) => parseInt(k, 10) <= d)
+      .reduce((a, [, h]) => a + h, 0);
+  }
+  function dayActualFor(i, d) {
+    if (i.actuals_by_day && i.actuals_by_day[d] != null) return i.actuals_by_day[d];
+    return i.planned_day === d ? (i.actual || 0) : 0;
+  }
+
+  function applySprintChrome() {
+    const s = sprint();
+    const syncText = (a, b, val) => {
+      const e1 = document.getElementById(a);
+      const e2 = document.getElementById(b);
+      if (e1) e1.textContent = val;
+      if (e2) e2.textContent = val;
+    };
+    syncText('sprint-name', 'sp-sprint-name', s.name);
+    const badge1 = document.getElementById('sprint-badge');
+    const badge2 = document.getElementById('sp-sprint-badge');
+    if (badge1) { badge1.textContent = s.badgeText; badge1.className = 'badge ' + s.badge; }
+    if (badge2) { badge2.textContent = s.badgeText; badge2.className = 'badge ' + s.badge; }
+    syncText('sprint-dates', 'sp-sprint-dates', s.dates);
+
+    document.querySelectorAll('.sprint-chev-prev').forEach(el => {
+      el.classList.toggle('disabled', cur === 0);
+    });
+    document.querySelectorAll('.sprint-chev-next').forEach(el => {
+      el.classList.toggle('disabled', cur === sprints.length - 1);
+    });
+    document.querySelectorAll('.sprint-dots').forEach(container => {
+      container.querySelectorAll('.dot').forEach((d, i) => {
+        d.classList.toggle('cur', i === cur);
+      });
+    });
+    const sub = document.getElementById('sp-plan-heading-sprint');
+    if (sub) sub.textContent = '· ' + s.name;
+  }
+
+  function prevSprint() {
+    if (cur > 0) { cur--; renderAll(); }
+  }
+  function nextSprint() {
+    if (cur < sprints.length - 1) { cur++; renderAll(); }
+  }
+  document.querySelectorAll('.sprint-chev-prev').forEach(b => b.addEventListener('click', prevSprint));
+  document.querySelectorAll('.sprint-chev-next').forEach(b => b.addEventListener('click', nextSprint));
+
+  const PROJ_COLOR = {
+    'Nexus': 'var(--p-nexus)',
+    'Pipeline': 'var(--p-pipe)',
+    'Mobile App': 'var(--p-mobile)',
+  };
+  function parseHours(str) {
+    const m = (str || '').match(/(\d+(?:\.\d+)?)\s*h/i);
+    return m ? parseFloat(m[1]) : 0;
+  }
+  function topProject(crumb) {
+    const first = (crumb || '').split('/')[0].trim();
+    return first && first !== '—' ? first : 'Other';
+  }
+
+  function itemFromRow(row) {
+    const title = row.dataset.title || '';
+    const crumb = (row.querySelector('.crumb')?.textContent || '').trim();
+    const est = parseHours(row.querySelector('.est')?.textContent);
+    const kind = row.querySelector('.glyph')?.classList.contains('bug') ? 'bug' : 'feat';
+    const slug = title.replace(/[^\w\-]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'item';
+    return {
+      id: 'pin-' + slug + '-' + Math.random().toString(36).slice(2, 7),
+      title, crumb, est: est || 1, kind,
+      planned_day: null, status: 'todo', actual: 0, drift_from: [],
+    };
+  }
+  function removeItemByTitle(sprintIdx, title) {
+    const sp = sprints[sprintIdx];
+    sp.items = sp.items.filter(i => i.title !== title);
+  }
+  function hasItemInSprint(sprintIdx, title) {
+    return sprints[sprintIdx].items.some(i => i.title === title);
+  }
+
+  function renderChips() {
+    const sid = String(sprints[cur].id);
+    document.querySelectorAll('.row').forEach(row => {
+      const chip = row.querySelector('.chip');
+      if (!chip) return;
+      chip.classList.remove('s13', 's14', 's15');
+      if (hasItemInSprint(cur, row.dataset.title || '')) {
+        chip.classList.add('s' + sid);
+        chip.textContent = 'S' + sid;
+      } else {
+        chip.textContent = '☆';
+      }
+    });
+  }
+
+  function renderPlannerCart() {
+    const s = sprint();
+    const body = document.getElementById('cart-body');
+    if (!body) return;
+    const list = s.items;
+    const used = list.reduce((a, x) => a + x.est, 0);
+    const total = s.capH;
+    document.getElementById('cap-used').textContent = used + 'h';
+    document.getElementById('cap-total').textContent = total + 'h';
+    document.getElementById('cap-fill').style.width = Math.min(100, (used / total) * 100) + '%';
+
+    const groups = new Map();
+    list.forEach(i => {
+      const key = i.crumb && i.crumb !== '—' ? i.crumb : topProject(i.crumb);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(i);
+    });
+
+    let html = `<div class="cart-section">Items (${list.length})</div>`;
+    if (list.length === 0) {
+      html += `<div class="empty-cart">No items in ${s.name} yet.<br>Click ☆ on a backlog row to add.</div>`;
+    } else {
+      for (const [gname, gitems] of groups) {
+        html += `<div class="cart-group"><div class="gname">${gname}</div>`;
+        gitems.forEach(i => {
+          const glyphChar = i.kind === 'bug' ? '●' : '◉';
+          html += `<div class="crow"><span class="g ${i.kind}">${glyphChar}</span>`
+                + `<span class="name">${i.title}</span>`
+                + `<span class="h">${i.est}h</span>`
+                + `<span class="x" data-unpin="${i.title.replace(/"/g, '&quot;')}">×</span></div>`;
+        });
+        html += `</div>`;
+      }
+      const projTotals = new Map();
+      list.forEach(i => {
+        const p = topProject(i.crumb);
+        projTotals.set(p, (projTotals.get(p) || 0) + i.est);
+      });
+      html += `<div class="cart-section">Breakdown</div><div class="breakdown">`;
+      for (const [p, h] of projTotals) {
+        const pct = used ? Math.round((h / used) * 100) : 0;
+        const col = PROJ_COLOR[p] || 'var(--accent)';
+        html += `<div class="b-row"><span>${p}</span><div class="pb"><span style="width:${pct}%;background:${col}"></span></div><span>${h}h · ${pct}%</span></div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `<div class="cart-section">Sprint goal</div><div class="notes"><textarea placeholder="What's the goal for ${s.name}?">${s.goal || ''}</textarea></div>`;
+    body.innerHTML = html;
+
+    body.querySelectorAll('.x[data-unpin]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        removeItemByTitle(cur, btn.dataset.unpin);
+        renderAll();
+      });
+    });
+    const ta = body.querySelector('textarea');
+    if (ta) ta.addEventListener('input', () => { s.goal = ta.value; });
+  }
+
+  function renderSprintCart() {
+    const body = document.getElementById('sp-cart-body');
+    if (!body) return;
+    const s = sprint();
+    const list = items();
+    const committed = list.reduce((a, i) => a + i.est, 0);
+    const cap = s.capH;
+    const capU = document.getElementById('sp-cap-used');
+    const capT = document.getElementById('sp-cap-total');
+    const capF = document.getElementById('sp-cap-fill');
+    if (capU) capU.textContent = committed + 'h';
+    if (capT) capT.textContent = cap + 'h';
+    if (capF) capF.style.width = Math.min(100, (committed / cap) * 100) + '%';
+
+    const groups = new Map();
+    list.forEach(i => {
+      if (!groups.has(i.crumb)) groups.set(i.crumb, []);
+      groups.get(i.crumb).push(i);
+    });
+
+    const unscheduledCount = list.filter(i => i.planned_day == null).length;
+    const unscheduledHrs = list.filter(i => i.planned_day == null).reduce((a, i) => a + i.est, 0);
+
+    let html = '';
+    if (unscheduledCount > 0) {
+      html += `<div class="unscheduled-hint"><b>${unscheduledCount} item${unscheduledCount > 1 ? 's' : ''}</b> (${unscheduledHrs}h) not yet scheduled — drag onto a day.</div>`;
+    }
+    html += `<div class="cart-section">Items (${list.length})</div>`;
+
+    for (const [gname, gitems] of groups) {
+      html += `<div class="cart-group"><div class="gname">${gname}</div>`;
+      gitems.forEach(i => {
+        const g = i.kind === 'bug' ? '●' : '◉';
+        const scheduled = i.planned_day != null;
+        const pday = scheduled
+          ? `<span class="pday">${DOW[dayDate(i.planned_day).getDay()]} ${dayDate(i.planned_day).getDate()}</span>`
+          : '';
+        html += `<div class="crow ${scheduled ? 'scheduled' : ''}" draggable="true" data-id="${i.id}">`
+              + `<span class="g ${i.kind}">${g}</span>`
+              + `<span class="name">${i.title}${pday}</span>`
+              + `<span class="h">${i.est}h</span>`
+              + `<span class="x" title="Remove from sprint" data-remove="${i.id}">×</span>`
+              + `</div>`;
+      });
+      html += `</div>`;
+    }
+
+    const goalPh = `What's the goal for ${s.name}?`;
+    html += `<div class="cart-section">Sprint goal</div>`
+          + `<div class="notes"><textarea placeholder="${goalPh.replace(/"/g, '&quot;')}">${s.goal || ''}</textarea></div>`;
+
+    body.innerHTML = html;
+
+    const ta = body.querySelector('textarea');
+    if (ta) ta.addEventListener('input', () => { s.goal = ta.value; });
+
+    body.querySelectorAll('.crow[draggable="true"]').forEach(row => {
+      row.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', row.dataset.id);
+        e.dataTransfer.effectAllowed = 'move';
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    });
+
+    body.querySelectorAll('.x[data-remove]').forEach(x => {
+      x.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = x.dataset.remove;
+        const idx = list.findIndex(i => i.id === id);
+        if (idx >= 0) list.splice(idx, 1);
+        renderAll();
+      });
+    });
+  }
+
+  function varianceCls(actual, est) {
+    if (!actual || actual <= 0) return '';
+    if (est <= 0) return 'near';
+    const r = actual / est;
+    if (r <= 1)    return 'under';
+    if (r <= 1.25) return 'near';
+    if (r <= 1.5)  return 'over';
+    return 'way-over';
+  }
+  /** B1 segmented bar: green under est, blue at est, blue+yellow/red overrun (same width container). */
+  function progVarianceSegments(est, act, status) {
+    const hasAct = act > 0;
+    const isDoneNoActual = status === 'done' && !hasAct;
+    if (isDoneNoActual) return `<span class="near" style="width:100%"></span>`;
+    if (est <= 0) return '';
+    const r = act / est;
+    const EPS = 1e-9;
+    if (r <= 0) return '';
+    if (r < 1 - EPS) return `<span class="under" style="width:${r * 100}%"></span>`;
+    if (r <= 1 + EPS) return `<span class="near" style="width:100%"></span>`;
+    const baseW = (est / act) * 100;
+    const overCls = r <= 1.5 ? 'over' : 'way-over';
+    return `<span class="near" style="width:${baseW}%"></span>`
+         + `<span class="${overCls}" style="width:${100 - baseW}%"></span>`;
+  }
+  function fmtDay(d) {
+    const dt = dayDate(d);
+    return DOW[dt.getDay()] + ' ' + MON[dt.getMonth()] + ' ' + dt.getDate();
+  }
+  function driftChain(item) {
+    const chain = [...(item.drift_from || [])];
+    if (item.planned_day != null) chain.push(item.planned_day);
+    return chain.map(fmtDay).join(' → ');
+  }
+
+  function renderSummary() {
+    const el = document.getElementById('sp-sprint-summary');
+    if (!el) return;
+    const s = sprint();
+    const list = items();
+    const total = list.length;
+    const done = list.filter(i => i.status === 'done').length;
+    const doing = list.filter(i => i.status === 'doing').length;
+    const blocked = list.filter(i => i.status === 'blocked').length;
+    const totalEst = list.reduce((a, i) => a + i.est, 0);
+    const totalAct = list.reduce((a, i) => a + itemActual(i), 0);
+    const drifted = list.filter(i => (i.drift_from || []).length > 0).length;
+
+    const hoursVar = varianceCls(totalAct, totalEst);
+    const hoursCls = hoursVar === 'under' ? 'ok'
+                   : (hoursVar === 'over' || hoursVar === 'way-over') ? 'warn' : '';
+    const doneCls = (total > 0 && done === total) ? 'ok' : '';
+
+    let phase = '';
+    if (s.badge === 'done') {
+      phase = 'Sprint complete';
+    } else if (s.badge === 'active') {
+      const dayIdx = Math.max(0, Math.min(s.len - 1,
+        Math.floor((today.getTime() - s.start.getTime()) / 86400000)));
+      phase = `Day ${dayIdx + 1} of ${s.len} · ${doing} in flight`;
+    } else {
+      phase = 'Not started — planning only';
+    }
+
+    const fmtH = h => (Number.isInteger(h) ? h : h.toFixed(1)) + 'h';
+
+    el.innerHTML =
+        `<div class="stat"><div class="label">Done</div>`
+      +   `<div class="val ${doneCls}">${done}/${total}<span class="sub"> items</span></div></div>`
+      + `<div class="divider"></div>`
+      + `<div class="stat"><div class="label">Hours actual / planned</div>`
+      +   `<div class="val ${hoursCls}">${fmtH(totalAct)} <span class="sub">/ ${fmtH(totalEst)}</span></div></div>`
+      + `<div class="divider"></div>`
+      + `<div class="stat"><div class="label">Drift</div>`
+      +   `<div class="val ${drifted > 0 ? 'warn' : ''}">${drifted}<span class="sub"> item${drifted === 1 ? '' : 's'} moved</span></div></div>`
+      + (blocked > 0
+          ? `<div class="divider"></div><div class="stat"><div class="label">Blocked</div><div class="val warn">${blocked}</div></div>`
+          : '')
+      + `<div class="phase">${phase}</div>`;
+  }
+
+  function renderDays() {
+    const daysEl = document.getElementById('sp-days-list');
+    if (!daysEl) return;
+    const s = sprint();
+    const list = items();
+    const n = s.len;
+    const isDoneSprint = s.badge === 'done';
+    const isPlannedSprint = s.badge === 'planned';
+    let html = '';
+
+    for (let d = 0; d < n; d++) {
+      const dt = dayDate(d);
+      const dow = dt.getDay();
+      const isToday = sameDay(dt, today);
+      const isPast = dt < today && !isToday;
+      const hasHistory = (isPast || isToday) && !isPlannedSprint;
+
+      const dayItems = list.filter(i => i.planned_day === d);
+      const ghostItems = list.filter(i =>
+        (i.drift_from || []).includes(d) && i.planned_day !== d);
+      const planned = dayItems.reduce((a, i) => a + i.est, 0);
+      const actual = list.reduce((a, i) => a + dayActualFor(i, d), 0);
+      const doneCount = dayItems.filter(i => i.status === 'done').length;
+      const pushedOut = list.filter(i =>
+        (i.drift_from || []).includes(d) && i.planned_day !== d).length;
+      const rolledIn = list.filter(i =>
+        i.planned_day === d && (i.drift_from || []).length > 0).length;
+      const over = planned > DAILY_CAP;
+
+      const actualCls = varianceCls(actual, planned);
+      const note = (s.day_notes && s.day_notes[d]) || '';
+      const isEmpty = dayItems.length === 0;
+      const hasNoRows = dayItems.length === 0 && ghostItems.length === 0;
+
+      html += `<div class="day ${isToday?'today':''} ${isPast?'past':''}" data-day="${d}">`
+           +   `<div class="day-head">`
+           +     `<div class="day-dow">${DOW[dow]}</div>`
+           +     `<div class="day-date ${isToday?'today-label':''}">${MON[dt.getMonth()]} <span class="date-num">${dt.getDate()}</span>${isToday?'  · today':''}</div>`
+           +     `<div></div>`
+           +     `<div class="day-hours ${over?'over':''}">`
+           +        `<b>${planned}h</b> / ${DAILY_CAP}h`
+           +        (hasHistory && (actual > 0 || doneCount > 0)
+                      ? `<div class="day-hours-actual ${actualCls}">${actual}h actual</div>`
+                      : '')
+           +     `</div>`
+           +   `</div>`
+           +   `<div class="day-cap-bar"><div class="fill ${over?'over':''}" style="width:${Math.min(100,(planned/DAILY_CAP)*100)}%"></div></div>`;
+
+      if (hasHistory && !isEmpty) {
+        const doneCls = doneCount === dayItems.length ? '' : 'incomplete';
+        html += `<div class="day-stats">`
+             +   `<span class="stat done ${doneCls}">✓ <b>${doneCount}/${dayItems.length}</b> done</span>`
+             +   (pushedOut > 0
+                  ? `<span class="stat pushed" title="${pushedOut} item${pushedOut===1?'':'s'} originally here, moved to later day">↗ <b>${pushedOut}</b> pushed out</span>`
+                  : '')
+             +   (rolledIn > 0
+                  ? `<span class="stat rolled" title="${rolledIn} item${rolledIn===1?'':'s'} moved here from an earlier day">↙ <b>${rolledIn}</b> rolled in</span>`
+                  : '')
+             +   (actual === 0 && isPast
+                  ? `<span class="gap-signal">· no logged work</span>`
+                  : '')
+             + `</div>`;
+      }
+
+      html += `<div class="day-items">`;
+      if (hasNoRows) {
+        html += `<div class="day-empty">Nothing scheduled.</div>`;
+      } else {
+        dayItems.forEach(i => {
+          const g = i.kind === 'bug' ? '●' : '◉';
+          const status = i.status || 'todo';
+          const drift = (i.drift_from || []).length;
+          const lastSrc = drift > 0 ? (i.drift_from || [])[i.drift_from.length - 1] : null;
+          const fromBadge = drift > 0 && lastSrc != null
+              ? `<span class="from-day" title="Rolled in from ${fmtDay(lastSrc)}">↙ ${DOW[dayDate(lastSrc).getDay()]} ${dayDate(lastSrc).getDate()}</span>`
+              : '';
+          const act = cumulativeActualUpTo(i, d);
+          const todayDelta = dayActualFor(i, d);
+          const showProg = (act > 0 || status === 'done') && !isPlannedSprint;
+          const vCls = varianceCls(act, i.est);
+          const hasActual = act > 0;
+          const hoursCell = hasActual
+              ? `<span class="actual ${vCls}">${act}h</span> <span class="est-inline">/ ${i.est}h</span>`
+                  + (todayDelta > 0 ? `<span class="day-delta">+${todayDelta}h</span>` : '')
+              : `<span class="est-inline">${i.est}h</span>`;
+          const rowCls = status === 'done' ? 'is-done' : (status === 'blocked' ? 'is-blocked' : '');
+
+          html += `<div class="day-item ${rowCls}" draggable="true" data-id="${i.id}">`
+               +   `<span class="status-dot ${status}" title="${status}"></span>`
+               +   `<span class="g ${i.kind}">${g}</span>`
+               +   `<div class="name-wrap">`
+               +     `<div class="title"><span class="crumb-inline">${i.crumb}</span>${i.title}`
+               +        (drift > 0 ? `<span class="drift" title="Postponed ${drift}× · ${driftChain(i)}">↻${drift}</span>` : '')
+               +        fromBadge
+               +        (i.blocker ? `<span class="blocker-dot" title="${i.blocker.replace(/"/g,'&quot;')}"></span>` : '')
+               +     `</div>`
+               +     (showProg
+                      ? `<div class="prog">${progVarianceSegments(i.est, act, status)}</div>`
+                      : '')
+               +   `</div>`
+               +   `<div class="h">${hoursCell}</div>`
+               +   `<span class="x" data-unschedule="${i.id}" title="Unschedule">×</span>`
+               +  `</div>`;
+        });
+        ghostItems.forEach(i => {
+          const g = i.kind === 'bug' ? '●' : '◉';
+          const status = i.status || 'todo';
+          const movedTo = i.planned_day;
+          const movedToLabel = movedTo == null
+              ? 'unscheduled'
+              : `${DOW[dayDate(movedTo).getDay()]} ${dayDate(movedTo).getDate()}`;
+          const rowCls = status === 'done' ? 'is-done' : (status === 'blocked' ? 'is-blocked' : '');
+          const cum = cumulativeActualUpTo(i, d);
+          const todayDelta = dayActualFor(i, d);
+          const vClsG = varianceCls(cum, i.est);
+          const showGhostProg = (cum > 0 || status === 'done') && !isPlannedSprint;
+          const hoursCellG = cum > 0
+              ? `<span class="actual ${vClsG}">${cum}h</span> <span class="est-inline">/ ${i.est}h</span>`
+                  + (todayDelta > 0 ? `<span class="day-delta">+${todayDelta}h</span>` : '')
+              : `<span class="est-inline">${i.est}h</span>`;
+          html += `<div class="day-item is-ghost ${rowCls}" draggable="false">`
+               +   `<span class="status-dot ${status}" title="${status}"></span>`
+               +   `<span class="g ${i.kind}">${g}</span>`
+               +   `<div class="name-wrap">`
+               +     `<div class="title"><span class="crumb-inline">${i.crumb}</span>${i.title}`
+               +        `<span class="moved-to">→ ${movedToLabel}</span>`
+               +        (i.blocker ? `<span class="blocker-dot" title="${i.blocker.replace(/"/g,'&quot;')}"></span>` : '')
+               +     `</div>`
+               +     (showGhostProg
+                      ? `<div class="prog">${progVarianceSegments(i.est, cum, status)}</div>`
+                      : '')
+               +   `</div>`
+               +   `<div class="h">${hoursCellG}</div>`
+               +   `<span class="x x--ghost-slot" aria-hidden="true"></span>`
+               +  `</div>`;
+        });
+      }
+      html +=   `</div>`;
+
+      if (hasHistory || isDoneSprint) {
+        html += `<div class="day-note">`
+             +   `<input type="text" placeholder="Day note…" value="${(note || '').replace(/"/g,'&quot;')}" data-day="${d}">`
+             + `</div>`;
+      }
+
+      html += `</div>`;
+    }
+    daysEl.innerHTML = html;
+
+    const schedEl = document.getElementById('sp-scheduled-total');
+    const unschEl = document.getElementById('sp-unscheduled-total');
+    const scheduled = list.filter(i => i.planned_day != null).reduce((a, i) => a + i.est, 0);
+    const unscheduled = list.filter(i => i.planned_day == null).reduce((a, i) => a + i.est, 0);
+    if (schedEl) schedEl.textContent = scheduled + 'h';
+    if (unschEl) unschEl.textContent = unscheduled + 'h';
+
+    daysEl.querySelectorAll('.day-item[draggable="true"]').forEach(row => {
+      row.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', row.dataset.id);
+        e.dataTransfer.effectAllowed = 'move';
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    });
+
+    daysEl.querySelectorAll('.day').forEach(dayEl => {
+      dayEl.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        dayEl.classList.add('drop-hover');
+      });
+      dayEl.addEventListener('dragleave', e => {
+        if (!dayEl.contains(e.relatedTarget)) dayEl.classList.remove('drop-hover');
+      });
+      dayEl.addEventListener('drop', e => {
+        e.preventDefault();
+        dayEl.classList.remove('drop-hover');
+        const id = e.dataTransfer.getData('text/plain');
+        const it = list.find(i => i.id === id);
+        if (!it) return;
+        const newDay = parseInt(dayEl.dataset.day, 10);
+        if (it.planned_day != null && it.planned_day !== newDay) {
+          it.drift_from = [...(it.drift_from || []), it.planned_day];
+        }
+        it.planned_day = newDay;
+        renderAll();
+      });
+    });
+
+    daysEl.querySelectorAll('.x[data-unschedule]').forEach(x => {
+      x.addEventListener('click', e => {
+        e.stopPropagation();
+        const it = list.find(i => i.id === x.dataset.unschedule);
+        if (it) { it.planned_day = null; renderAll(); }
+      });
+    });
+
+    daysEl.querySelectorAll('.day-note input[data-day]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        if (!s.day_notes) s.day_notes = {};
+        s.day_notes[parseInt(inp.dataset.day, 10)] = inp.value;
+      });
+    });
+  }
+
+  function renderAll() {
+    applySprintChrome();
+    renderPlannerCart();
+    renderChips();
+    renderSummary();
+    renderSprintCart();
+    renderDays();
+  }
+
+  // search: live filter + auto-expand + highlight
+  const search = document.getElementById('search');
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    document.querySelectorAll('.row').forEach(r => {
+      const t = (r.dataset.title || '').toLowerCase();
+      const hit = q && t.includes(q);
+      r.classList.toggle('match', !!hit);
+      r.style.display = (!q || hit) ? '' : 'none';
+    });
+    const visibleAny = q.length > 0;
+    document.querySelectorAll('.bucket-h, .inline-add, .tree-node, .tree-sub-name').forEach(el => {
+      el.style.opacity = visibleAny ? '0.5' : '1';
+    });
+  });
+
+  const pop = document.getElementById('menu-pop');
+  document.querySelectorAll('[data-menu]').forEach(m => {
+    m.addEventListener('click', e => {
+      e.stopPropagation();
+      const r = m.getBoundingClientRect();
+      pop.style.left = Math.min(window.innerWidth - 220, r.right + 4) + 'px';
+      pop.style.top = (r.top - 4) + 'px';
+      pop.classList.add('open');
+    });
+  });
+  document.addEventListener('click', () => pop.classList.remove('open'));
+
+  document.querySelectorAll('.row .chip').forEach(c => {
+    c.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = c.closest('.row');
+      const title = row.dataset.title || '';
+      if (!title) return;
+      if (hasItemInSprint(cur, title)) {
+        removeItemByTitle(cur, title);
+      } else {
+        sprints[cur].items.push(itemFromRow(row));
+      }
+      renderAll();
+    });
+  });
+
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.hidden = false;
+    const focusable = m.querySelector('input, select, textarea, button');
+    if (focusable) setTimeout(() => focusable.focus(), 0);
+  }
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.hidden = true;
+  }
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', e => {
+      if (e.target === bd) bd.hidden = true;
+    });
+  });
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop:not([hidden])').forEach(m => m.hidden = true);
+    }
+  });
+
+  const headBtns = document.querySelectorAll('.head-add-btn');
+  if (headBtns[0]) headBtns[0].addEventListener('click', () => openModal('modal-project'));
+  if (headBtns[1]) headBtns[1].addEventListener('click', () => openModal('modal-task'));
+
+  const taskTypeHints = {
+    task:    "Plain sub-task under a Feature, or a standalone item.",
+    feature: "A larger unit of work — can decompose into sub-tasks and bugs.",
+    bug:     "Something broken. Pick severity below.",
+  };
+  document.querySelectorAll('#task-type-toggle .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#task-type-toggle .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const t = btn.dataset.type;
+      document.getElementById('task-type-hint').textContent = taskTypeHints[t] || '';
+      document.querySelectorAll('#modal-task .subtype-field').forEach(f => {
+        f.hidden = f.dataset.showWhen !== t;
+      });
+    });
+  });
+  document.querySelectorAll('#modal-task [data-sev]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+  const taskSubmit = document.getElementById('task-create-submit');
+  if (taskSubmit) taskSubmit.addEventListener('click', () => {
+    const type = document.querySelector('#task-type-toggle .seg-btn.active')?.dataset.type;
+    const sev = document.querySelector('#modal-task [data-sev].active')?.dataset.sev;
+    const payload = {
+      type,
+      title: document.getElementById('task-title').value.trim(),
+      project: document.getElementById('task-project').value,
+      priority: document.getElementById('task-priority').value,
+      estimate_hours: parseFloat(document.getElementById('task-estimate').value) || null,
+      sprint: document.getElementById('task-sprint').value || null,
+      severity: type === 'bug' ? sev : undefined,
+      ideation_status: type === 'feature' ? document.getElementById('task-ideation').value : undefined,
+      notes: document.getElementById('task-notes').value.trim() || undefined,
+    };
+    if (!payload.title) { document.getElementById('task-title').focus(); return; }
+    console.log('[mockup] create task', payload);
+    closeModal('modal-task');
+  });
+
+  const projScopeHints = {
+    top: "A new top-level project shown as its own tree node.",
+    sub: "Adds a subproject under an existing project (uses parent's color).",
+  };
+  document.querySelectorAll('#project-scope-toggle .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#project-scope-toggle .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const scope = btn.dataset.scope;
+      document.getElementById('project-scope-hint').textContent = projScopeHints[scope] || '';
+      document.getElementById('project-parent-field').hidden = scope !== 'sub';
+      document.getElementById('project-color-field').hidden = scope !== 'top';
+      document.getElementById('modal-project-title').textContent =
+        scope === 'sub' ? 'New subproject' : 'New project';
+    });
+  });
+  document.querySelectorAll('#project-color-swatches .swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('#project-color-swatches .swatch').forEach(s => s.classList.toggle('active', s === sw));
+    });
+  });
+  const projSubmit = document.getElementById('project-create-submit');
+  if (projSubmit) projSubmit.addEventListener('click', () => {
+    const scope = document.querySelector('#project-scope-toggle .seg-btn.active')?.dataset.scope;
+    const payload = {
+      scope,
+      name: document.getElementById('project-name').value.trim(),
+      parent: scope === 'sub' ? document.getElementById('project-parent').value : undefined,
+      color: scope === 'top'
+        ? document.querySelector('#project-color-swatches .swatch.active')?.dataset.color
+        : undefined,
+      description: document.getElementById('project-desc').value.trim() || undefined,
+    };
+    if (!payload.name) { document.getElementById('project-name').focus(); return; }
+    console.log('[mockup] create project', payload);
+    closeModal('modal-project');
+  });
+
+  setView('planner');
+  }
+
+  boot().catch((err) => {
+    console.error(err);
+    document.getElementById('reference-mount').innerHTML =
+      '<p style="padding:24px;color:#e7e9ee;font-family:system-ui">Failed to load reference partials. Serve this folder over HTTP (e.g. <code>npx serve mobile/nx_projects/reference/desktop</code>) so <code>fetch()</code> can load <code>partials/*.html</code>.<br><br>' +
+      String(err) + '</p>';
+  });
+</script>
 </body>
 </html>

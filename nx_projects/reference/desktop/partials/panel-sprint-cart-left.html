@@ -1,0 +1,32 @@
+    <!-- ── LEFT: sprint cart (Sprint view) ───────────────────── -->
+    <aside class="cart left-cart">
+
+      <div class="sprint-nav">
+        <button type="button" id="sp-prev-sprint" class="chev sprint-chev-prev" title="Previous sprint">‹</button>
+        <div class="sprint-info">
+          <div class="name"><span id="sp-sprint-name">Sprint 14</span> <span id="sp-sprint-badge" class="badge active">active</span></div>
+          <div class="dates" id="sp-sprint-dates">Apr 20 – Apr 26 · 4 days left</div>
+        </div>
+        <button type="button" id="sp-next-sprint" class="chev sprint-chev-next" title="Next sprint">›</button>
+      </div>
+
+      <div class="sprint-dots">
+        <span class="dot" title="S13 (done)"></span>
+        <span class="dot cur" title="S14 (active)"></span>
+        <span class="dot" title="S15 (planned)"></span>
+        <span class="add" title="New sprint">+</span>
+      </div>
+
+      <div class="cap-block">
+        <div class="cap-row"><span>Committed</span><span><b id="sp-cap-used">0h</b> / <span id="sp-cap-total">40h</span></span></div>
+        <div class="cap-bar">
+          <div class="fill" id="sp-cap-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="cart-body" id="sp-cart-body"></div>
+
+      <div class="cart-foot">
+        <button type="button" class="commit" data-goto-view="planner">Planner View</button>
+      </div>
+    </aside>
