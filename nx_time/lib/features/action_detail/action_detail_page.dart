@@ -189,7 +189,7 @@ class _ActivityDetailScaffold extends StatelessWidget {
                                 builder: (_) => ActivityDetailPage(
                                   args: activityDetailArgsForAction(
                                     c.sourceAction,
-                                    'Today — ${args.dateLabel}',
+                                    args.dateLabel,
                                   ),
                                 ),
                               ),

@@ -59,9 +59,10 @@ void main() {
         await container.read(authProvider.future);
         final snapshot = await container.read(todaySnapshotProvider.future);
         final day = kNxTimeDemoDay;
+        expect(snapshot.titleLine, 'Actions');
         expect(
-          snapshot.titleLine,
-          'Today — ${DateFormat('EEE, MMM d').format(day)}',
+          snapshot.dayDateLabel,
+          DateFormat('EEE, MMM d').format(day),
         );
       },
       tags: ['integration'],

@@ -8,6 +8,7 @@ import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/data/action/action_schema_provider.dart';
 import 'package:nx_time/data/action/kgql_action_repository.dart';
+import 'package:nx_time/data/goals/goal_schema_provider.dart';
 import 'package:nx_time/data/goals/kgql_goal_repository.dart';
 import 'package:nx_time/data/projects/kgql_project_repository.dart';
 import 'package:nx_time/data/projects/project_schema_provider.dart';
@@ -19,6 +20,7 @@ export 'package:nx_time/data/action/action_schema_provider.dart';
 export 'package:nx_time/data/action/action_subtypes_provider.dart';
 export 'package:nx_time/data/projects/project_schema_provider.dart';
 export 'package:nx_time/data/tasks/task_schema_provider.dart';
+export 'package:nx_time/data/goals/goal_schema_provider.dart';
 
 /// Default KGQL-backed [ActionRepository].
 final actionRepositoryProvider = Provider<ActionRepository>(
@@ -48,6 +50,7 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
 final goalRepositoryProvider = Provider<GoalRepository>(
   (ref) => KgqlGoalRepository(
     client: ref.watch(graphqlClientProvider),
+    loadGoalSchema: () => ref.read(goalSchemaProvider.future),
   ),
 );
 

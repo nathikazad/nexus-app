@@ -1,0 +1,116 @@
+<!-- + Task modal: pick subtype (Task / Feature / Bug), project, bucket, sprint, etc. -->
+<div id="modal-task" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-labelledby="modal-task-title" aria-modal="true">
+    <header class="modal-head">
+      <h2 id="modal-task-title">New task</h2>
+      <button type="button" class="modal-x" data-close="modal-task" aria-label="Close">×</button>
+    </header>
+
+    <div class="modal-body">
+
+      <!-- Subtype selector: drives which subtype-specific fields show. -->
+      <div class="field">
+        <label class="field-label">Type</label>
+        <div class="seg-toggle" id="task-type-toggle" role="tablist">
+          <button type="button" class="seg-btn active" data-type="task">
+            <span class="seg-glyph">▢</span> Task
+          </button>
+          <button type="button" class="seg-btn" data-type="feature">
+            <span class="seg-glyph feat">◉</span> Feature
+          </button>
+          <button type="button" class="seg-btn" data-type="bug">
+            <span class="seg-glyph bug">●</span> Bug
+          </button>
+        </div>
+        <p class="field-hint" id="task-type-hint">Plain sub-task under a Feature, or a standalone item.</p>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-title">Title</label>
+        <input id="task-title" class="field-input" type="text" placeholder="What needs to get done?" autofocus />
+      </div>
+
+      <div class="field-row">
+        <!-- in_project (Project + optional subproject in the same picker) -->
+        <div class="field">
+          <label class="field-label" for="task-project">Project</label>
+          <select id="task-project" class="field-input">
+            <option value="">— No project —</option>
+            <optgroup label="Nexus Web App">
+              <option value="nexus">Nexus Web App (top level)</option>
+              <option value="nexus/ui-polish">Nexus Web App / UI Polish</option>
+              <option value="nexus/auth-rewrite">Nexus Web App / Auth Rewrite</option>
+            </optgroup>
+            <optgroup label="Data Pipeline v2">
+              <option value="pipeline">Data Pipeline v2 (top level)</option>
+            </optgroup>
+            <optgroup label="Mobile App">
+              <option value="mobile">Mobile App (top level)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- ProjectTask.priority -->
+        <div class="field">
+          <label class="field-label" for="task-priority">Bucket</label>
+          <select id="task-priority" class="field-input">
+            <option value="now">Now (this sprint)</option>
+            <option value="next" selected>Next (1–2 sprints out)</option>
+            <option value="later">Later</option>
+            <option value="someday">Someday</option>
+            <option value="">Unsorted</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <!-- ProjectTask.estimate_hours -->
+        <div class="field">
+          <label class="field-label" for="task-estimate">Estimate (hours)</label>
+          <input id="task-estimate" class="field-input" type="number" min="0" step="0.5" placeholder="e.g. 4" />
+        </div>
+
+        <!-- in_sprint (optional; absence = backlog) -->
+        <div class="field">
+          <label class="field-label" for="task-sprint">Sprint</label>
+          <select id="task-sprint" class="field-input">
+            <option value="">— Backlog (no sprint) —</option>
+            <option value="14">Sprint 14 (active)</option>
+            <option value="15">Sprint 15 (planned)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Bug-only: severity (critical / med / low) -->
+      <div class="field subtype-field" data-show-when="bug" hidden>
+        <label class="field-label">Severity</label>
+        <div class="seg-toggle small">
+          <button type="button" class="seg-btn" data-sev="low">Low</button>
+          <button type="button" class="seg-btn active" data-sev="med">Medium</button>
+          <button type="button" class="seg-btn" data-sev="crit">Critical</button>
+        </div>
+      </div>
+
+      <!-- Feature-only: ideation_status -->
+      <div class="field subtype-field" data-show-when="feature" hidden>
+        <label class="field-label" for="task-ideation">Ideation status</label>
+        <select id="task-ideation" class="field-input">
+          <option value="ideated">Ideated</option>
+          <option value="refined">Refined</option>
+          <option value="spec'd">Spec'd</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-notes">Notes <span class="field-opt">(optional)</span></label>
+        <textarea id="task-notes" class="field-input" rows="3" placeholder="Acceptance criteria, links, context…"></textarea>
+      </div>
+
+    </div>
+
+    <footer class="modal-foot">
+      <button type="button" class="btn-secondary" data-close="modal-task">Cancel</button>
+      <button type="button" class="btn-primary" id="task-create-submit">Create task</button>
+    </footer>
+  </div>
+</div>

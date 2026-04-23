@@ -52,7 +52,8 @@ TodaySnapshot buildScreenshotTodaySnapshot() {
 
   return TodaySnapshot(
     clockLabel: '9:41 AM',
-    titleLine: 'Today — Thu, Oct 26',
+    titleLine: 'Actions',
+    dayDateLabel: 'Thu, Oct 26',
     timeMapSegments: const [
       TimeMapSegment(color: AppColors.sleepBlue, flex: 32),
       TimeMapSegment(color: AppColors.routineGray, flex: 5),

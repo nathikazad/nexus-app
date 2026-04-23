@@ -1,0 +1,61 @@
+<!-- + Project modal: top-level project OR subproject under an existing one. -->
+<div id="modal-project" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-labelledby="modal-project-title" aria-modal="true">
+    <header class="modal-head">
+      <h2 id="modal-project-title">New project</h2>
+      <button type="button" class="modal-x" data-close="modal-project" aria-label="Close">×</button>
+    </header>
+
+    <div class="modal-body">
+
+      <!-- Top-level vs. has_subproject. Drives parent-picker + color-picker visibility. -->
+      <div class="field">
+        <label class="field-label">Scope</label>
+        <div class="seg-toggle" id="project-scope-toggle" role="tablist">
+          <button type="button" class="seg-btn active" data-scope="top">Top-level project</button>
+          <button type="button" class="seg-btn" data-scope="sub">Subproject</button>
+        </div>
+        <p class="field-hint" id="project-scope-hint">A new top-level project shown as its own tree node.</p>
+      </div>
+
+      <!-- Parent picker (only for subproject) -->
+      <div class="field" id="project-parent-field" hidden>
+        <label class="field-label" for="project-parent">Parent project</label>
+        <select id="project-parent" class="field-input">
+          <option value="nexus">Nexus Web App</option>
+          <option value="pipeline">Data Pipeline v2</option>
+          <option value="mobile">Mobile App</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="project-name">Name</label>
+        <input id="project-name" class="field-input" type="text" placeholder="e.g. Billing v2" autofocus />
+      </div>
+
+      <!-- Project dot color — only for top-level (subprojects inherit visual) -->
+      <div class="field" id="project-color-field">
+        <label class="field-label">Color</label>
+        <div class="color-swatches" id="project-color-swatches">
+          <button type="button" class="swatch active" data-color="var(--p-nexus)" style="background:var(--p-nexus)" aria-label="Blue"></button>
+          <button type="button" class="swatch" data-color="var(--p-pipe)" style="background:var(--p-pipe)" aria-label="Amber"></button>
+          <button type="button" class="swatch" data-color="var(--p-mobile)" style="background:var(--p-mobile)" aria-label="Purple"></button>
+          <button type="button" class="swatch" data-color="#4ade80" style="background:#4ade80" aria-label="Green"></button>
+          <button type="button" class="swatch" data-color="#f87171" style="background:#f87171" aria-label="Red"></button>
+          <button type="button" class="swatch" data-color="#94a3b8" style="background:#94a3b8" aria-label="Slate"></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="project-desc">Description <span class="field-opt">(optional)</span></label>
+        <textarea id="project-desc" class="field-input" rows="3" placeholder="What this project is about…"></textarea>
+      </div>
+
+    </div>
+
+    <footer class="modal-foot">
+      <button type="button" class="btn-secondary" data-close="modal-project">Cancel</button>
+      <button type="button" class="btn-primary" id="project-create-submit">Create project</button>
+    </footer>
+  </div>
+</div>

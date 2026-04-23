@@ -23,11 +23,13 @@ class CalendarPage extends ConsumerStatefulWidget {
   ConsumerState<CalendarPage> createState() => _CalendarPageState();
 }
 
+enum _CalendarView { actions, tasks, stats }
+
 class _CalendarPageState extends ConsumerState<CalendarPage> {
   /// Index 0 = Monday … 6 = Sunday; `null` until first frame picks default for the week.
   int? _selectedDayIndex;
 
-  bool _showTasksView = false;
+  _CalendarView _view = _CalendarView.actions;
 
   static const _sky600 = Color(0xFF0284C7);
 
@@ -39,7 +41,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         );
     setState(() {
       _selectedDayIndex = null;
-      _showTasksView = false;
+      _view = _CalendarView.actions;
     });
   }
 
@@ -51,7 +53,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         );
     setState(() {
       _selectedDayIndex = null;
-      _showTasksView = false;
+      _view = _CalendarView.actions;
     });
   }
 
@@ -83,11 +85,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final args = row.children.isNotEmpty
         ? activityDetailArgsForUmbrella(
             row,
-            'Today — $dayLabel',
+            dayLabel,
           )
         : activityDetailArgsForAction(
             row.umbrella,
-            'Today — $dayLabel',
+            dayLabel,
           );
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -160,7 +162,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                                 selected: i == safeIdx,
                                 onTap: () => setState(() {
                                   _selectedDayIndex = i;
-                                  _showTasksView = false;
+                                  _view = _CalendarView.actions;
                                 }),
                               ),
                             ),
@@ -177,9 +179,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   Expanded(
                     child: _CalendarDayPanel(
                       dayData: selected,
-                      showTasks: _showTasksView,
-                      onToggleActions: () => setState(() => _showTasksView = false),
-                      onToggleTasks: () => setState(() => _showTasksView = true),
+                      view: _view,
+                      onSelectView: (v) => setState(() => _view = v),
                       onRowTap: (row) => _openActivityDetail(context, selected, row),
                     ),
                   ),
@@ -290,16 +291,14 @@ class _CalActRow extends StatelessWidget {
 class _CalendarDayPanel extends StatelessWidget {
   const _CalendarDayPanel({
     required this.dayData,
-    required this.showTasks,
-    required this.onToggleActions,
-    required this.onToggleTasks,
+    required this.view,
+    required this.onSelectView,
     required this.onRowTap,
   });
 
   final CalendarDayData dayData;
-  final bool showTasks;
-  final VoidCallback onToggleActions;
-  final VoidCallback onToggleTasks;
+  final _CalendarView view;
+  final ValueChanged<_CalendarView> onSelectView;
   final void Function(UmbrellaRow row) onRowTap;
 
   @override
@@ -330,16 +329,25 @@ class _CalendarDayPanel extends StatelessWidget {
               ),
               Row(
                 children: [
-                  _CalViewChip(
-                    label: 'Actions',
-                    selected: !showTasks,
-                    onTap: onToggleActions,
+                  _CalViewIcon(
+                    icon: SolarLinearIcons.pieChart2,
+                    tooltip: 'Actions',
+                    selected: view == _CalendarView.actions,
+                    onTap: () => onSelectView(_CalendarView.actions),
                   ),
                   const SizedBox(width: 4),
-                  _CalViewChip(
-                    label: 'Tasks',
-                    selected: showTasks,
-                    onTap: onToggleTasks,
+                  _CalViewIcon(
+                    icon: SolarLinearIcons.checklistMinimalistic,
+                    tooltip: 'Tasks',
+                    selected: view == _CalendarView.tasks,
+                    onTap: () => onSelectView(_CalendarView.tasks),
+                  ),
+                  const SizedBox(width: 4),
+                  _CalViewIcon(
+                    icon: SolarLinearIcons.chartSquare,
+                    tooltip: 'Stats',
+                    selected: view == _CalendarView.stats,
+                    onTap: () => onSelectView(_CalendarView.stats),
                   ),
                 ],
               ),
@@ -347,94 +355,231 @@ class _CalendarDayPanel extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: showTasks
-              ? const Center(
-                  child: Text(
-                    'No tasks',
-                    style: TextStyle(fontSize: 14, color: AppColors.slate500),
-                  ),
-                )
-              : rows.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No actions',
-                        style: TextStyle(fontSize: 14, color: AppColors.slate500),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 120),
-                      itemCount: rows.length + 1,
-                      itemBuilder: (context, i) {
-                        if (i == rows.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 6),
-                            child: Text(
-                              'tap any row to view activity detail',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                          );
-                        }
-                        final row = rows[i];
-                        final u = row.umbrella;
-                        final bar = barColorForModelTypeId(u.modelTypeId);
-                        final name = u.name.isNotEmpty ? u.name : (u.modelTypeName ?? 'Action');
-                        final start = u.startTime;
-                        final end = u.endTime;
-                        return _CalActRow(
-                          color: bar,
-                          timeRange: _compactTimeRange(start, end),
-                          title: name,
-                          duration: formatDurationHm(start, end),
-                          showBottomBorder: i < rows.length - 1,
-                          onTap: () => onRowTap(row),
-                        );
-                      },
+          child: switch (view) {
+            _CalendarView.tasks => const Center(
+                child: Text(
+                  'No tasks',
+                  style: TextStyle(fontSize: 14, color: AppColors.slate500),
+                ),
+              ),
+            _CalendarView.stats => _StatsList(stats: _statsForDay(dayData)),
+            _CalendarView.actions => rows.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No actions',
+                      style: TextStyle(fontSize: 14, color: AppColors.slate500),
                     ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 120),
+                    itemCount: rows.length + 1,
+                    itemBuilder: (context, i) {
+                      if (i == rows.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Text(
+                            'tap any row to view activity detail',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.slate400,
+                            ),
+                          ),
+                        );
+                      }
+                      final row = rows[i];
+                      final u = row.umbrella;
+                      final bar = barColorForModelTypeId(u.modelTypeId);
+                      final name = u.name.isNotEmpty ? u.name : (u.modelTypeName ?? 'Action');
+                      final start = u.startTime;
+                      final end = u.endTime;
+                      return _CalActRow(
+                        color: bar,
+                        timeRange: _compactTimeRange(start, end),
+                        title: name,
+                        duration: formatDurationHm(start, end),
+                        showBottomBorder: i < rows.length - 1,
+                        onTap: () => onRowTap(row),
+                      );
+                    },
+                  ),
+          },
         ),
       ],
     );
   }
 }
 
-class _CalViewChip extends StatelessWidget {
-  const _CalViewChip({
-    required this.label,
+class _CalViewIcon extends StatelessWidget {
+  const _CalViewIcon({
+    required this.icon,
+    required this.tooltip,
     required this.selected,
     required this.onTap,
   });
 
-  final String label;
+  final IconData icon;
+  final String tooltip;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.slate900 : AppColors.slate100,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.slate900 : AppColors.slate100,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
               color: selected ? Colors.white : AppColors.slate600,
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TypeStat {
+  _TypeStat({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+  int totalMinutes = 0;
+}
+
+List<_TypeStat> _statsForDay(CalendarDayData dayData) {
+  final dayStart = DateTime(dayData.day.year, dayData.day.month, dayData.day.day);
+  final dayEnd = dayStart.add(const Duration(days: 1));
+  final byType = <int, _TypeStat>{};
+  for (final r in dayData.rows) {
+    final u = r.umbrella;
+    var s = u.startTime;
+    var e = u.endTime;
+    if (s == null) continue;
+    e ??= s.add(const Duration(hours: 1));
+    if (s.isBefore(dayStart)) s = dayStart;
+    if (e.isAfter(dayEnd)) e = dayEnd;
+    if (!e.isAfter(s)) continue;
+    final mins = e.difference(s).inMinutes;
+    if (mins <= 0) continue;
+    final id = u.modelTypeId;
+    final stat = byType.putIfAbsent(
+      id,
+      () => _TypeStat(
+        label: (u.modelTypeName != null && u.modelTypeName!.isNotEmpty)
+            ? u.modelTypeName!
+            : 'Type $id',
+        color: barColorForModelTypeId(id),
+      ),
+    );
+    stat.totalMinutes += mins;
+  }
+  final list = byType.values.toList()
+    ..sort((a, b) => b.totalMinutes.compareTo(a.totalMinutes));
+  return list;
+}
+
+String _formatHm(int totalMinutes) {
+  final h = totalMinutes ~/ 60;
+  final m = totalMinutes.remainder(60);
+  if (h <= 0) return '${m}m';
+  if (m == 0) return '${h}h';
+  return '${h}h ${m}m';
+}
+
+class _StatsList extends StatelessWidget {
+  const _StatsList({required this.stats});
+
+  final List<_TypeStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stats.isEmpty) {
+      return const Center(
+        child: Text(
+          'No actions',
+          style: TextStyle(fontSize: 14, color: AppColors.slate500),
+        ),
+      );
+    }
+    final maxMinutes = stats.first.totalMinutes;
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      itemCount: stats.length,
+      itemBuilder: (context, i) {
+        final s = stats[i];
+        final fraction = maxMinutes <= 0 ? 0.0 : s.totalMinutes / maxMinutes;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: s.color,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      s.label,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.slate900,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _formatHm(s.totalMinutes),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.slate500,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 6,
+                      color: AppColors.slate100,
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: fraction.clamp(0.0, 1.0),
+                      child: Container(
+                        height: 6,
+                        color: s.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

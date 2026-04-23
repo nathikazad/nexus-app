@@ -2,7 +2,6 @@ import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:nx_time/core/formatting/date_label.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/time/action_calendar_overlap.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
@@ -74,6 +73,7 @@ class TodaySnapshot {
   const TodaySnapshot({
     required this.clockLabel,
     required this.titleLine,
+    required this.dayDateLabel,
     required this.timeMapSegments,
     required this.currentMarkerFraction,
     required this.legend,
@@ -86,6 +86,8 @@ class TodaySnapshot {
 
   final String clockLabel;
   final String titleLine;
+  /// Calendar line for the focused day, e.g. "Sat, Apr 18" (for activity detail, not the header title).
+  final String dayDateLabel;
   final List<TimeMapSegment> timeMapSegments;
   final double currentMarkerFraction;
   final List<ActivityCategory> legend;
@@ -232,12 +234,14 @@ TodaySnapshot buildTodaySnapshot(
     }
   }
 
-  final titleLine = todayTitleLine(dayLocal);
+  final dayDateLabel = DateFormat('EEE, MMM d').format(dayLocal);
+  const titleLine = 'Actions';
   final clockLabel = timeFmt.format(clockSource);
 
   return TodaySnapshot(
     clockLabel: clockLabel,
     titleLine: titleLine,
+    dayDateLabel: dayDateLabel,
     timeMapSegments: timeMapSegments,
     currentMarkerFraction: _nowFractionForDay(dayStart, dayEnd, clockSource),
     legend: legendEntries,

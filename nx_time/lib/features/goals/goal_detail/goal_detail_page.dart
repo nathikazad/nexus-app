@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -13,6 +15,8 @@ import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_action_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_variant.dart';
+import 'package:nx_time/features/goals/goal_edit/goal_edit_page.dart';
+import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
 
 /// Goal detail: loads this goal's week + trend from [goalRepositoryProvider].
 class GoalDetailPage extends ConsumerStatefulWidget {
@@ -36,6 +40,36 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
     super.initState();
     // ignore: discarded_futures
     _load();
+  }
+
+  Future<void> _openEdit() async {
+    final repo = ref.read(goalRepositoryProvider);
+    try {
+      final g = await repo.getById(widget.goalId);
+      if (!mounted) return;
+      if (g == null) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load goal to edit')),
+        );
+        return;
+      }
+      if (!context.mounted) return;
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => GoalEditPage(mode: GoalEditMode.edit, initial: g),
+        ),
+      );
+      if (mounted) {
+        // ignore: discarded_futures
+        _load();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open edit: $e')),
+      );
+    }
   }
 
   Future<void> _load() async {
@@ -130,7 +164,10 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _DetailAppBar(onBack: () => Navigator.of(context).maybePop()),
+            _DetailAppBar(
+              onBack: () => Navigator.of(context).maybePop(),
+              onEdit: () => unawaited(_openEdit()),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
@@ -145,9 +182,10 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
 }
 
 class _DetailAppBar extends StatelessWidget {
-  const _DetailAppBar({required this.onBack});
+  const _DetailAppBar({required this.onBack, required this.onEdit});
 
   final VoidCallback onBack;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -174,10 +212,11 @@ class _DetailAppBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.more_horiz, size: 22, color: AppColors.slate500),
+            onPressed: onEdit,
+            icon: const Icon(SolarLinearIcons.pen, size: 22, color: AppColors.slate500),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            tooltip: 'Edit goal',
           ),
         ],
       ),

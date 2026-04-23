@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Nexus — Planner</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- display:contents so .app + #menu-pop lay out as direct body children (same as flat HTML) -->
+<div id="reference-mount" style="display:contents"></div>
+
+<script>
+  /** Load order must preserve opening/closing tags across fragments (see nx_time/reference/index.html). */
+  const PARTIAL_FILES = [
+    'partials/shell-app-open.html',
+    'partials/shell-topbar.html',
+    'partials/shell-body-left-open.html',
+    'partials/pane-backlog-priority.html',
+    'partials/pane-backlog-projects.html',
+    'partials/shell-left-close.html',
+    'partials/panel-sprint-cart.html',
+    'partials/shell-body-app-close.html',
+    'partials/menu-row-context.html',
+    'partials/modal-task-create.html',
+    'partials/modal-project-create.html',
+  ];
+
+  async function loadPartials() {
+    const root = document.getElementById('reference-mount');
+    const chunks = await Promise.all(
+      PARTIAL_FILES.map((path) =>
+        fetch(path).then((r) => {
+          if (!r.ok) throw new Error(path + ' HTTP ' + r.status);
+          return r.text();
+        })
+      )
+    );
+    root.innerHTML = chunks.join('');
+  }
+
+  async function boot() {
+    await loadPartials();
+
+  // pane toggle
+  const tabP = document.getElementById('tab-priority');
+  const tabJ = document.getElementById('tab-projects');
+  const paneP = document.getElementById('pane-priority');
+  const paneJ = document.getElementById('pane-projects');
+  function showPane(p) {
+    tabP.classList.toggle('active', p);
+    tabJ.classList.toggle('active', !p);
+    paneP.classList.toggle('hidden', !p);
+    paneJ.classList.toggle('hidden', p);
+  }
+  tabP.addEventListener('click', () => showPane(true));
+  tabJ.addEventListener('click', () => showPane(false));
+
+  // sprint chevron nav
+  const sprints = [
+    { id: 13, name: 'Sprint 13', badge: 'done', badgeText: 'done',
+      dates: 'Apr 6 – Apr 19 · closed', capH: 24,
+      commit: 'View summary', commitDisabled: true,
+      goal: 'Shipped auth rewrite, started UI polish work.' },
+    { id: 14, name: 'Sprint 14', badge: 'active', badgeText: 'active',
+      dates: 'Apr 20 – May 3 · 7 days left', capH: 40,
+      commit: 'Commit to Sprint 14', commitDisabled: false,
+      goal: 'Ship dark mode + unblock the pipeline OOM.' },
+    { id: 15, name: 'Sprint 15', badge: 'planned', badgeText: 'planned',
+      dates: 'May 4 – May 17 · starts in 14 days', capH: 40,
+      commit: 'Schedule for May 4', commitDisabled: true,
+      goal: '' },
+  ];
+  let cur = 1; // index in sprints[]
+
+  // Header + nav chrome (does NOT touch cart contents or capacity — that's renderCart)
+  function applySprint() {
+    const s = sprints[cur];
+    document.getElementById('sprint-name').textContent = s.name;
+    const badge = document.getElementById('sprint-badge');
+    badge.textContent = s.badgeText;
+    badge.className = 'badge ' + s.badge;
+    document.getElementById('sprint-dates').textContent = s.dates;
+    const commit = document.getElementById('commit-btn');
+    commit.textContent = s.commit;
+    commit.classList.toggle('disabled', s.commitDisabled);
+    document.getElementById('prev-sprint').classList.toggle('disabled', cur === 0);
+    document.getElementById('next-sprint').classList.toggle('disabled', cur === sprints.length - 1);
+    document.querySelectorAll('.sprint-dots .dot').forEach((d, i) => {
+      d.classList.toggle('cur', i === cur);
+    });
+  }
+
+  function update() { applySprint(); renderChips(); renderCart(); }
+  document.getElementById('prev-sprint').addEventListener('click', () => { if (cur > 0) { cur--; update(); } });
+  document.getElementById('next-sprint').addEventListener('click', () => { if (cur < sprints.length - 1) { cur++; update(); } });
+
+  // Stash each row's true sprint pinning into a data attribute, derived from
+  // the chip class it was authored with. Then `renderChips` below decides what
+  // to *display* based on which sprint the cart is currently viewing.
+  function initSprintData() {
+    document.querySelectorAll('.row').forEach(row => {
+      const chip = row.querySelector('.chip');
+      if (!chip) return;
+      if (chip.classList.contains('s14')) row.dataset.sprint = '14';
+      else if (chip.classList.contains('s15')) row.dataset.sprint = '15';
+      else row.dataset.sprint = '';
+    });
+  }
+  function renderChips() {
+    const sid = String(sprints[cur].id);
+    document.querySelectorAll('.row').forEach(row => {
+      const chip = row.querySelector('.chip');
+      if (!chip) return;
+      chip.classList.remove('s14', 's15');
+      if (row.dataset.sprint === sid) {
+        chip.classList.add('s' + sid);
+        chip.textContent = 'S' + sid;
+      } else {
+        chip.textContent = '☆';
+      }
+    });
+  }
+  // Derive cart contents from whichever backlog rows are pinned to the
+  // currently-viewed sprint. Groups by top-level project, sums hours,
+  // rebuilds capacity bar + breakdown.
+  const PROJ_COLOR = {
+    'Nexus': 'var(--p-nexus)',
+    'Pipeline': 'var(--p-pipe)',
+    'Mobile App': 'var(--p-mobile)',
+  };
+  function parseHours(str) {
+    const m = (str || '').match(/(\d+(?:\.\d+)?)\s*h/i);
+    return m ? parseFloat(m[1]) : 0;
+  }
+  function topProject(crumb) {
+    const first = (crumb || '').split('/')[0].trim();
+    return first && first !== '—' ? first : 'Other';
+  }
+  function renderCart() {
+    const s = sprints[cur];
+    const sid = String(s.id);
+    const body = document.getElementById('cart-body');
+
+    // Collect unique items by title (same row may appear in both panes).
+    // Prefer the occurrence that has a real crumb (Priority view).
+    const byTitle = new Map();
+    document.querySelectorAll('.row').forEach(r => {
+      if (r.dataset.sprint !== sid) return;
+      const title = r.dataset.title || '';
+      if (!title) return;
+      const crumb = (r.querySelector('.crumb')?.textContent || '').trim();
+      const est = parseHours(r.querySelector('.est')?.textContent);
+      const glyph = r.querySelector('.glyph')?.classList.contains('bug') ? 'bug' : 'feat';
+      const existing = byTitle.get(title);
+      if (!existing || (existing.crumb === '—' && crumb !== '—')) {
+        byTitle.set(title, { title, crumb, est, glyph });
+      }
+    });
+    const items = [...byTitle.values()];
+
+    // Capacity header
+    const used = items.reduce((a, x) => a + x.est, 0);
+    const total = s.capH;
+    document.getElementById('cap-used').textContent = used + 'h';
+    document.getElementById('cap-total').textContent = total + 'h';
+    document.getElementById('cap-fill').style.width = Math.min(100, (used / total) * 100) + '%';
+
+    // Group items by sub-path for display (e.g. "Nexus / UI Polish")
+    const groups = new Map();
+    items.forEach(i => {
+      const key = i.crumb && i.crumb !== '—' ? i.crumb : topProject(i.crumb);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(i);
+    });
+
+    let html = `<div class="cart-section">Items (${items.length})</div>`;
+    if (items.length === 0) {
+      html += `<div class="empty-cart">No items pinned to ${s.name} yet.<br>Click ☆ on any backlog row to add.</div>`;
+    } else {
+      for (const [gname, list] of groups) {
+        html += `<div class="cart-group"><div class="gname">${gname}</div>`;
+        list.forEach(i => {
+          const glyphChar = i.glyph === 'bug' ? '●' : '◉';
+          html += `<div class="crow"><span class="g ${i.glyph}">${glyphChar}</span>`
+                + `<span class="name">${i.title}</span>`
+                + `<span class="h">${i.est}h</span>`
+                + `<span class="x" data-unpin="${i.title.replace(/"/g, '&quot;')}">×</span></div>`;
+        });
+        html += `</div>`;
+      }
+
+      // Breakdown by top-level project
+      const projTotals = new Map();
+      items.forEach(i => {
+        const p = topProject(i.crumb);
+        projTotals.set(p, (projTotals.get(p) || 0) + i.est);
+      });
+      html += `<div class="cart-section">Breakdown</div><div class="breakdown">`;
+      for (const [p, h] of projTotals) {
+        const pct = used ? Math.round((h / used) * 100) : 0;
+        const col = PROJ_COLOR[p] || 'var(--accent)';
+        html += `<div class="b-row"><span>${p}</span><div class="pb"><span style="width:${pct}%;background:${col}"></span></div><span>${h}h · ${pct}%</span></div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `<div class="cart-section">Sprint goal</div><div class="notes"><textarea placeholder="What's the goal for ${s.name}?">${s.goal || ''}</textarea></div>`;
+    body.innerHTML = html;
+
+    // Wire × to unpin (sync both panes)
+    body.querySelectorAll('.x[data-unpin]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.unpin;
+        document.querySelectorAll('.row').forEach(r => {
+          if (r.dataset.title === t) r.dataset.sprint = '';
+        });
+        renderChips();
+        renderCart();
+      });
+    });
+
+    // Persist goal edits back into sprints[] so they survive sprint-switching
+    const ta = body.querySelector('textarea');
+    if (ta) ta.addEventListener('input', () => { s.goal = ta.value; });
+  }
+
+  initSprintData();
+  update();
+
+  // search: live filter + auto-expand + highlight
+  const search = document.getElementById('search');
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    document.querySelectorAll('.row').forEach(r => {
+      const t = (r.dataset.title || '').toLowerCase();
+      const hit = q && t.includes(q);
+      r.classList.toggle('match', !!hit);
+      r.style.display = (!q || hit) ? '' : 'none';
+    });
+    // when searching, hide empty bucket headers / inline adds for clarity
+    const visibleAny = q.length > 0;
+    document.querySelectorAll('.bucket-h, .inline-add, .tree-node, .tree-sub-name').forEach(el => {
+      el.style.opacity = visibleAny ? '0.5' : '1';
+    });
+  });
+
+  // row context menu
+  const pop = document.getElementById('menu-pop');
+  document.querySelectorAll('[data-menu]').forEach(m => {
+    m.addEventListener('click', e => {
+      e.stopPropagation();
+      const r = m.getBoundingClientRect();
+      pop.style.left = Math.min(window.innerWidth - 220, r.right + 4) + 'px';
+      pop.style.top = (r.top - 4) + 'px';
+      pop.classList.add('open');
+    });
+  });
+  document.addEventListener('click', () => pop.classList.remove('open'));
+
+  // chip click: toggle whether this row is pinned to the currently-viewed
+  // sprint. Sync across both panes (Priority + Projects) since the same
+  // item appears in both, then re-render chips and cart.
+  document.querySelectorAll('.row .chip').forEach(c => {
+    c.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = c.closest('.row');
+      const title = row.dataset.title;
+      const sid = String(sprints[cur].id);
+      const next = (row.dataset.sprint === sid) ? '' : sid;
+      document.querySelectorAll('.row').forEach(r => {
+        if (r.dataset.title === title) r.dataset.sprint = next;
+      });
+      renderChips();
+      renderCart();
+    });
+  });
+
+  // ── modals ───────────────────────────────────────────
+  // Generic open/close. Backdrop click + Esc + [data-close] all dismiss.
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.hidden = false;
+    const focusable = m.querySelector('input, select, textarea, button');
+    if (focusable) setTimeout(() => focusable.focus(), 0);
+  }
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.hidden = true;
+  }
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', e => {
+      if (e.target === bd) bd.hidden = true; // click outside .modal
+    });
+  });
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop:not([hidden])').forEach(m => m.hidden = true);
+    }
+  });
+
+  // Header buttons → open modals
+  const headBtns = document.querySelectorAll('.head-add-btn');
+  if (headBtns[0]) headBtns[0].addEventListener('click', () => openModal('modal-project'));
+  if (headBtns[1]) headBtns[1].addEventListener('click', () => openModal('modal-task'));
+
+  // ── + Task modal: subtype toggle (Task / Feature / Bug) ──────────
+  // Show/hide subtype-specific fields and update the helper hint.
+  const taskTypeHints = {
+    task:    "Plain sub-task under a Feature, or a standalone item.",
+    feature: "A larger unit of work — can decompose into sub-tasks and bugs.",
+    bug:     "Something broken. Pick severity below.",
+  };
+  document.querySelectorAll('#task-type-toggle .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#task-type-toggle .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const t = btn.dataset.type;
+      document.getElementById('task-type-hint').textContent = taskTypeHints[t] || '';
+      document.querySelectorAll('#modal-task .subtype-field').forEach(f => {
+        f.hidden = f.dataset.showWhen !== t;
+      });
+    });
+  });
+  // Bug severity toggle (visual only)
+  document.querySelectorAll('#modal-task [data-sev]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+  // Stub submit — close + log payload (mockup, no persistence)
+  const taskSubmit = document.getElementById('task-create-submit');
+  if (taskSubmit) taskSubmit.addEventListener('click', () => {
+    const type = document.querySelector('#task-type-toggle .seg-btn.active')?.dataset.type;
+    const sev = document.querySelector('#modal-task [data-sev].active')?.dataset.sev;
+    const payload = {
+      type,
+      title: document.getElementById('task-title').value.trim(),
+      project: document.getElementById('task-project').value,
+      priority: document.getElementById('task-priority').value,
+      estimate_hours: parseFloat(document.getElementById('task-estimate').value) || null,
+      sprint: document.getElementById('task-sprint').value || null,
+      severity: type === 'bug' ? sev : undefined,
+      ideation_status: type === 'feature' ? document.getElementById('task-ideation').value : undefined,
+      notes: document.getElementById('task-notes').value.trim() || undefined,
+    };
+    if (!payload.title) { document.getElementById('task-title').focus(); return; }
+    console.log('[mockup] create task', payload);
+    closeModal('modal-task');
+  });
+
+  // ── + Project modal: scope toggle (Top-level / Subproject) ──────
+  const projScopeHints = {
+    top: "A new top-level project shown as its own tree node.",
+    sub: "Adds a subproject under an existing project (uses parent's color).",
+  };
+  document.querySelectorAll('#project-scope-toggle .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#project-scope-toggle .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const scope = btn.dataset.scope;
+      document.getElementById('project-scope-hint').textContent = projScopeHints[scope] || '';
+      document.getElementById('project-parent-field').hidden = scope !== 'sub';
+      document.getElementById('project-color-field').hidden = scope !== 'top';
+      document.getElementById('modal-project-title').textContent =
+        scope === 'sub' ? 'New subproject' : 'New project';
+    });
+  });
+  // Color swatch picker
+  document.querySelectorAll('#project-color-swatches .swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('#project-color-swatches .swatch').forEach(s => s.classList.toggle('active', s === sw));
+    });
+  });
+  const projSubmit = document.getElementById('project-create-submit');
+  if (projSubmit) projSubmit.addEventListener('click', () => {
+    const scope = document.querySelector('#project-scope-toggle .seg-btn.active')?.dataset.scope;
+    const payload = {
+      scope,
+      name: document.getElementById('project-name').value.trim(),
+      parent: scope === 'sub' ? document.getElementById('project-parent').value : undefined,
+      color: scope === 'top'
+        ? document.querySelector('#project-color-swatches .swatch.active')?.dataset.color
+        : undefined,
+      description: document.getElementById('project-desc').value.trim() || undefined,
+    };
+    if (!payload.name) { document.getElementById('project-name').focus(); return; }
+    console.log('[mockup] create project', payload);
+    closeModal('modal-project');
+  });
+
+  }
+
+  boot().catch((err) => {
+    console.error(err);
+    document.getElementById('reference-mount').innerHTML =
+      '<p style="padding:24px;color:#e7e9ee;font-family:system-ui">Failed to load reference partials. Serve this folder over HTTP (e.g. <code>npx serve mobile/nx_projects/reference/desktop</code>) so <code>fetch()</code> can load <code>partials/*.html</code>.<br><br>' +
+      String(err) + '</p>';
+  });
+</script>
+</body>
+</html>

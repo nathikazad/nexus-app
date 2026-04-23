@@ -133,31 +133,29 @@ class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
           children: [
             SizedBox(height: topInset),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    snapshot.clockLabel,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      snapshot.titleLine,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+              child: SizedBox(
+                height: 28,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Center(
+                      child: Text(
+                        snapshot.titleLine,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
-                  ),
-                  const NxAppMenuButton(),
-                ],
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: NxAppMenuButton(),
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(

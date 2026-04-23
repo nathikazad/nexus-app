@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
@@ -15,22 +14,16 @@ import 'package:nx_time/features/tasks/task_view_models.dart';
 class TasksPage extends ConsumerWidget {
   const TasksPage({super.key});
 
-  static String _tasksHeaderTitle(DateTime dayLocal) {
-    return 'Tasks — ${DateFormat('EEE, MMM d').format(dayLocal)}';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksForTodayProvider);
     final crumbsAsync = ref.watch(projectBreadcrumbLabelsProvider);
-    final day = calendarDay(DateTime.now());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NxTabHeader(
-          clockLabel: DateFormat.jm().format(DateTime.now()),
-          title: _tasksHeaderTitle(day),
+        const NxTabHeader(
+          title: 'Tasks',
           bottomBorder: true,
           borderColor: AppColors.slate50,
         ),

@@ -77,13 +77,13 @@ class _AppShellState extends ConsumerState<AppShell> {
                     index < snapshot.sourceActions.length ? snapshot.sourceActions[index] : null;
                 late final ActivityDetailArgs args;
                 if (row != null && row.children.isNotEmpty) {
-                  args = activityDetailArgsForUmbrella(row, snapshot.titleLine);
+                  args = activityDetailArgsForUmbrella(row, snapshot.dayDateLabel);
                 } else if (rowAction != null) {
-                  args = activityDetailArgsForAction(rowAction, snapshot.titleLine);
+                  args = activityDetailArgsForAction(rowAction, snapshot.dayDateLabel);
                 } else {
                   args = activityDetailArgsForTodayRow(
                     snapshot.actions[index],
-                    snapshot.titleLine,
+                    snapshot.dayDateLabel,
                   );
                 }
                 Navigator.of(context).push<void>(
@@ -94,7 +94,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 final row = snapshot.umbrellaRows[rowIndex];
                 if (childIndex < 0 || childIndex >= row.children.length) return;
                 final child = row.children[childIndex];
-                final args = activityDetailArgsForAction(child, snapshot.titleLine);
+                final args = activityDetailArgsForAction(child, snapshot.dayDateLabel);
                 Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
                 );
@@ -111,7 +111,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             error: (e, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('Could not load Today: $e'),
+                child: Text('Could not load Actions: $e'),
               ),
             ),
           ),
@@ -160,7 +160,7 @@ class _BottomNav extends StatelessWidget {
               children: [
                 Expanded(
                   child: _NavItem(
-                    label: 'Today',
+                    label: 'Actions',
                     icon: SolarLinearIcons.pieChart2,
                     selected: currentIndex == 0,
                     onTap: () => onChanged(0),
@@ -288,25 +288,25 @@ class _AiSlot extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Positioned(
-            top: -14,
+            top: -22,
             child: Material(
               color: AppColors.accent,
               shape: const CircleBorder(
                 side: BorderSide(color: Colors.white, width: 4),
               ),
-              elevation: 2,
+              elevation: 4,
               shadowColor: Colors.black26,
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: onTap,
                 onLongPress: onLongPress,
                 child: const SizedBox(
-                  width: 48,
-                  height: 48,
+                  width: 60,
+                  height: 60,
                   child: Icon(
-                    SolarLinearIcons.stars,
+                    SolarBoldIcons.bolt,
                     color: Colors.white,
-                    size: 24,
+                    size: 28,
                   ),
                 ),
               ),

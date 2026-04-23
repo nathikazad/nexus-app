@@ -33,7 +33,7 @@ void main() {
       endTime: DateTime(day.year, day.month, day.day, 11, 0),
     );
     final row = UmbrellaRow(umbrella: u, children: [c]);
-    final args = activityDetailArgsForUmbrella(row, 'Today — Sat, Apr 18');
+    final args = activityDetailArgsForUmbrella(row, 'Sat, Apr 18');
 
     await tester.pumpWidget(
       ProviderScope(

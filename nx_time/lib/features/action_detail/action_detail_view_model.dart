@@ -153,8 +153,8 @@ List<LinkedTaskItem> linkedTaskItemsFromTasks(List<Task> tasks) {
 }
 
 /// Builds detail UI from a loaded [Action].
-ActivityDetailArgs activityDetailArgsForAction(Action model, String snapshotTitleLine) {
-  final dateLabel = _dateFromSnapshotTitle(snapshotTitleLine);
+/// [dayDateLabel] is the focused calendar day, e.g. `DateFormat('EEE, MMM d')` of that day.
+ActivityDetailArgs activityDetailArgsForAction(Action model, String dayDateLabel) {
   final sl = model.startTime;
   final el = model.endTime;
   final typeName = model.modelTypeName ?? '';
@@ -173,7 +173,7 @@ ActivityDetailArgs activityDetailArgsForAction(Action model, String snapshotTitl
     categoryPillBackground: style.background,
     categoryPillForeground: style.foreground,
     categoryDotColor: style.dot,
-    dateLabel: dateLabel,
+    dateLabel: dayDateLabel,
     startTime: startParts.$1,
     startSuffix: startParts.$2,
     endTime: endParts.$1,
@@ -188,9 +188,8 @@ ActivityDetailArgs activityDetailArgsForAction(Action model, String snapshotTitl
 
 ActivityDetailArgs activityDetailArgsForUmbrella(
   UmbrellaRow row,
-  String snapshotTitleLine,
+  String dayDateLabel,
 ) {
-  final dateLabel = _dateFromSnapshotTitle(snapshotTitleLine);
   final u = row.umbrella;
   final sl = u.startTime;
   final el = u.endTime;
@@ -224,7 +223,7 @@ ActivityDetailArgs activityDetailArgsForUmbrella(
     categoryPillBackground: style.background,
     categoryPillForeground: style.foreground,
     categoryDotColor: style.dot,
-    dateLabel: dateLabel,
+    dateLabel: dayDateLabel,
     startTime: startParts.$1,
     startSuffix: startParts.$2,
     endTime: endParts.$1,
@@ -263,9 +262,8 @@ String _formatDurationDetail(DateTime? start, DateTime? end) {
 
 ActivityDetailArgs activityDetailArgsForTodayRow(
   TodayActivity activity,
-  String snapshotTitleLine,
+  String dayDateLabel,
 ) {
-  final dateLabel = _dateFromSnapshotTitle(snapshotTitleLine);
   final t = activity.title.toLowerCase();
 
   if (t.contains('sleep')) {
@@ -276,7 +274,7 @@ ActivityDetailArgs activityDetailArgsForTodayRow(
       categoryPillBackground: const Color(0xFFEEEDFE),
       categoryPillForeground: const Color(0xFF3C3489),
       categoryDotColor: AppColors.calPurple,
-      dateLabel: dateLabel,
+      dateLabel: dayDateLabel,
       startTime: '12:00',
       startSuffix: ' AM',
       endTime: '6:50',
@@ -296,7 +294,7 @@ ActivityDetailArgs activityDetailArgsForTodayRow(
       categoryPillBackground: const Color(0xFFE6F1FB),
       categoryPillForeground: const Color(0xFF0C447C),
       categoryDotColor: AppColors.calBlue,
-      dateLabel: dateLabel,
+      dateLabel: dayDateLabel,
       startTime: '8:30',
       startSuffix: ' AM',
       endTime: '11:15',
@@ -327,7 +325,7 @@ ActivityDetailArgs activityDetailArgsForTodayRow(
       categoryPillBackground: const Color(0xFFE8F8EF),
       categoryPillForeground: const Color(0xFF0F5132),
       categoryDotColor: AppColors.calGreen,
-      dateLabel: dateLabel,
+      dateLabel: dayDateLabel,
       startTime: '8:00',
       startSuffix: ' AM',
       endTime: '9:15',
@@ -346,7 +344,7 @@ ActivityDetailArgs activityDetailArgsForTodayRow(
     categoryPillBackground: AppColors.slate100,
     categoryPillForeground: AppColors.slate600,
     categoryDotColor: AppColors.slate400,
-    dateLabel: dateLabel,
+    dateLabel: dayDateLabel,
     startTime: '—',
     startSuffix: '',
     endTime: '—',
@@ -356,14 +354,6 @@ ActivityDetailArgs activityDetailArgsForTodayRow(
     wearablePhotoLabel: 'View photos ▶',
     sourceAction: null,
   );
-}
-
-String _dateFromSnapshotTitle(String snapshotTitleLine) {
-  final i = snapshotTitleLine.indexOf('—');
-  if (i >= 0 && i + 1 < snapshotTitleLine.length) {
-    return snapshotTitleLine.substring(i + 1).trim();
-  }
-  return snapshotTitleLine;
 }
 
 /// Builds the same detail args as Today, using an explicit calendar date line.
@@ -381,6 +371,6 @@ ActivityDetailArgs activityDetailArgsForCalendarRow({
       durationLabel: durationLabel,
       barColor: barColor,
     ),
-    'Today — $dateLabel',
+    dateLabel,
   );
 }

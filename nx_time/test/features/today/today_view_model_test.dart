@@ -20,7 +20,8 @@ void main() {
       ),
     ];
     final snap = buildTodaySnapshot(actions, day);
-    expect(snap.titleLine, 'Today — Sat, Apr 18');
+    expect(snap.titleLine, 'Actions');
+    expect(snap.dayDateLabel, 'Sat, Apr 18');
     expect(snap.actions.length, 1);
     expect(snap.sourceActions.length, 1);
     expect(snap.activityBlockCount, 1);

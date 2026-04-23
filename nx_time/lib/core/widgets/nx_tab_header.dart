@@ -3,18 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 
-/// Optional clock + centered title + optional trailing (Tasks / Goals / Calendar pattern).
+/// Centered title with an optional trailing widget (defaults to the app menu button).
+///
+/// Uses a [Stack] so the title is centered against the full row width, not
+/// the space remaining after the trailing icon — keeping the text visually
+/// centered regardless of the menu button.
 class NxTabHeader extends StatelessWidget {
   const NxTabHeader({
     super.key,
-    this.clockLabel,
     required this.title,
     this.trailing,
     this.bottomBorder = false,
     this.borderColor = AppColors.slate50,
   });
 
-  final String? clockLabel;
   final String title;
   final Widget? trailing;
   final bool bottomBorder;
@@ -32,33 +34,30 @@ class NxTabHeader extends StatelessWidget {
                 ),
               )
             : null,
-        padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (clockLabel != null && clockLabel!.isNotEmpty)
-              Text(
-                clockLabel!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.slate500,
+        padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+        child: SizedBox(
+          height: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Center(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    color: AppColors.slate900,
+                  ),
                 ),
               ),
-            Expanded(
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                  color: AppColors.slate900,
-                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: trailing ?? const NxAppMenuButton(),
               ),
-            ),
-            trailing ?? const NxAppMenuButton(),
-          ],
+            ],
+          ),
         ),
       ),
     );

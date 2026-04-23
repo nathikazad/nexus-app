@@ -14,6 +14,8 @@ import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_action_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_page.dart';
+import 'package:nx_time/features/goals/goal_edit/goal_edit_page.dart';
+import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
 
 class GoalsPage extends ConsumerWidget {
   const GoalsPage({super.key});
@@ -22,6 +24,14 @@ class GoalsPage extends ConsumerWidget {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => GoalDetailPage(goalId: goalId),
+      ),
+    );
+  }
+
+  static void openCreate(BuildContext context) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const GoalEditPage(mode: GoalEditMode.create),
       ),
     );
   }
@@ -58,6 +68,7 @@ class GoalsPage extends ConsumerWidget {
                   ...weekly.map(
                     (item) => _buildWeeklyRow(context, item, ws, wa),
                   ),
+                  _AddGoalRow(onTap: () => GoalsPage.openCreate(context)),
                 ],
               );
             },
@@ -362,6 +373,43 @@ Widget _buildWeeklyRow(
     lastBorder: ex?.lastBorder ?? true,
     progressBeforeSubline: ex?.progressBeforeSubline ?? false,
   );
+}
+
+class _AddGoalRow extends StatelessWidget {
+  const _AddGoalRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              const Icon(
+                SolarLinearIcons.addCircle,
+                size: 18,
+                color: AppColors.slate400,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Add a goal',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SectionLabel extends StatelessWidget {

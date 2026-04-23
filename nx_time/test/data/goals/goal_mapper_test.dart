@@ -2,8 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/goals.dart' as nx;
+import 'package:nx_db/kgql.dart';
+import 'package:nx_time/data/goals/goal_attr_keys.dart';
 import 'package:nx_time/data/goals/goal_mapper.dart';
+import 'package:nx_time/domain/goals/goal.dart';
 import 'package:nx_time/domain/goals/goal_cadence.dart';
+import 'package:nx_time/domain/goals/goal_selected_attribute.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
 const _trendEmpty = r'{ "buckets": [] }';
@@ -110,5 +114,53 @@ void main() {
     final d = expenseGoalsMonthFromWire(w);
     expect(d.items.first.periodValue, 207);
     expect(d.items.first.target.op, GoalThresholdOp.lte);
+  });
+
+  test('setModelRequestForCreateGoal: count weekly sets meta slots', () {
+    final g = Goal(
+      label: 'G',
+      cadence: GoalCadence.weekly,
+      actionModelTypeName: 'Gym',
+      selectedAttribute: GoalSelectedAttribute.count,
+      op: GoalThresholdOp.gte,
+      thresholdValue: 3,
+      preferredDays: [0, 2, 4],
+      preferredTime: '12:30',
+      autoGenerateTasks: true,
+    );
+    final req = setModelRequestForCreateGoal(g);
+    expect(req.modelType, 'Goal');
+    final attrs = req.attributes;
+    expect(attrs, isNotNull);
+    final map = {for (final a in attrs!) a.key: a.value};
+    expect(map[kGoalAttrThresholdValue], 3);
+    final meta = map[kGoalAttrMeta] as Map<String, dynamic>?;
+    expect(meta!['auto_generate_tasks'], isTrue);
+    final slots = meta['preferred_slots'] as List<dynamic>?;
+    expect(slots?.length, 3);
+  });
+
+  test('goalFromModel round-trip for duration', () {
+    final g = Goal(
+      label: 'Sleep more',
+      cadence: GoalCadence.daily,
+      actionModelTypeName: 'Sleep',
+      selectedAttribute: GoalSelectedAttribute.duration,
+      op: GoalThresholdOp.gte,
+      thresholdValue: 8,
+    );
+    final req = setModelRequestForCreateGoal(g);
+    final attrMap = <String, dynamic>{
+      for (final a in req.attributes ?? const <SetModelAttribute>[]) a.key: a.value,
+    };
+    final m2 = Model(
+      id: 42,
+      name: g.label,
+      modelTypeId: 1,
+      attributes: attrMap,
+    );
+    final back = goalFromModel(m2);
+    expect(back.selectedAttribute, GoalSelectedAttribute.duration);
+    expect(back.thresholdValue, closeTo(8.0, 0.001));
   });
 }
