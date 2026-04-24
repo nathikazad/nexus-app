@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
@@ -54,6 +55,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final snapshotAsync = ref.watch(todaySnapshotProvider);
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
 
     ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
       if (next.hasError) {
@@ -77,9 +81,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                     index < snapshot.sourceActions.length ? snapshot.sourceActions[index] : null;
                 late final ActivityDetailArgs args;
                 if (row != null && row.children.isNotEmpty) {
-                  args = activityDetailArgsForUmbrella(row, snapshot.dayDateLabel);
+                  args = activityDetailArgsForUmbrella(row, snapshot.dayDateLabel, colors);
                 } else if (rowAction != null) {
-                  args = activityDetailArgsForAction(rowAction, snapshot.dayDateLabel);
+                  args = activityDetailArgsForAction(rowAction, snapshot.dayDateLabel, colors);
                 } else {
                   args = activityDetailArgsForTodayRow(
                     snapshot.actions[index],
@@ -94,7 +98,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 final row = snapshot.umbrellaRows[rowIndex];
                 if (childIndex < 0 || childIndex >= row.children.length) return;
                 final child = row.children[childIndex];
-                final args = activityDetailArgsForAction(child, snapshot.dayDateLabel);
+                final args = activityDetailArgsForAction(child, snapshot.dayDateLabel, colors);
                 Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
                 );

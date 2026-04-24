@@ -2,16 +2,17 @@
 
 ## What `nx_db` is
 
-A Flutter package that gives any Nexus app three things and only three
-things:
+A Flutter package that gives any Nexus app a small set of shared layers
+(the exact count is not sacred — the boundaries are):
 
 1. **Auth** — sign in with a user id + backend preset; persist the
    session; expose the current `User` and the resolved endpoint URLs.
 2. **A KGQL "ORM"** — typed `Model` / `ModelType` / `SetModelRequest`
    classes plus a small set of repository functions (`fetchKgqlModels`,
    `setKgqlModel`, …) that talk to the PGDB GraphQL backend.
-3. **A few cross-app feature modules** (today: `transcript/`, `goals/`) when
-   a feature is genuinely shared by ≥2 apps.
+3. **Current-user “profile” data** (today: `models/domain/{person,transcript}`, `models/data/{person,transcript}`)
+   plus **a few other cross-app modules** (`goals/`) when a feature is
+   genuinely shared by ≥2 apps.
 
 It does **not** ship UI screens, app-specific entities, or business
 logic. Apps import it; it does not import them.
@@ -53,8 +54,10 @@ It owns:
   (`SetModelRequest` & friends), the operation documents, and the
   repository functions that connect the two.
 - **The Riverpod surface** that wraps all of that for Flutter apps.
-- **Cross-app feature modules** (today: `transcript/`) when an entire
-  vertical feature is genuinely shared.
+- **User-scoped entities** under `models/domain/<entity>` + `models/data/<entity>` (today: `person`, `transcript`) —
+  the current authenticated user’s profile row, current transcript, and future
+  per-user settings that are not the generic many-rows-per-`ModelType` pattern.
+- **Other cross-app modules** (today: `goals/`) for app-schema orchestrators.
 
 It deliberately does **not** own:
 
@@ -81,7 +84,7 @@ Three structural moves:
 core/         cross-cutting infrastructure (config, GraphQL client, JSON helpers)
 auth/         identity / session — User, AuthController, providers, backend_ping
 kgql/         the generic "ORM" over the PGDB GraphQL API
-transcript/   one self-contained feature module
+models/       `domain/<entity>` + `data/<entity>` — current-user–scoped; same layout as app `lib/`
 goals/        `app` schema goal orchestrators (week, trend, expense month)
 ```
 
@@ -102,8 +105,10 @@ kgql/
 
 Hard rules inside the `lib/`:
 
-- `core/`, `auth/`, `kgql/` may not import `transcript/`, `goals/`, or any
-  other feature module. **Features import lower layers, not the reverse.**
+- `core/`, `auth/`, `kgql/` may not import `models/`, `goals/`, or any other
+  higher module. **Higher layers import lower ones, not the reverse.**
+- `models/...` may import `auth/`, `core/`, and `kgql/` (not the other
+  way around). **Apps never import** `package:nx_db/src/...` directly.
 - Repositories take a `GraphQLClient`, never a Riverpod `Ref`.
 - Providers are thin wrappers — if a provider has 50 lines of logic, the
   logic belongs in the repository.
@@ -118,7 +123,8 @@ the smallest one that fits.
 | `package:nx_db/auth.dart` | `User`, `AuthController`, `authProvider`, `userIdProvider`, `endpointProvider`, `BackendPreset`, `BackendUrls`, `pingGraphqlBackend`, HTTP config | yes (auth providers) | no |
 | `package:nx_db/kgql.dart` | `Model`, `ModelType`, `SetModelRequest`, `SetModelAttribute`, repositories (`fetchKgqlModels`, `setKgqlModel`, …), helpers (`buildKgqlStructFromSchema`, `setKgqlCreate/Update/Delete`, `attrString/attrDateTime/...`), `GraphQLClient` | **no** | no |
 | `package:nx_db/riverpod.dart` | `graphqlClientProvider`, `modelsByTypeProvider`, `modelTypeByNameProvider`, relation picker providers | yes | no |
-| `package:nx_db/transcript.dart` | `Transcript`, `TranscriptMessage`, repository, providers | yes | no |
+| `package:nx_db/person.dart` | `Person`, `PersonRepository`, `KgqlPersonRepository`, `mainPersonProvider`, `personRepositoryProvider`, mappers, attr keys | yes | no |
+| `package:nx_db/transcript.dart` | `Transcript`, `TranscriptMessage`, `TranscriptRepository`, `KgqlTranscriptRepository`, `transcriptRepositoryProvider`, `currentTranscriptProvider` | yes | no |
 | `package:nx_db/goals.dart` | `fetchActionGoalsWeek` / `fetchActionGoalsTrend` / `fetchExpenseGoalsMonth`, DTOs, GraphQL operation strings | no | no |
 | `package:nx_db/nx_db.dart` | Everything-shim — re-exports all of the above; prefer the focused sub-libraries | yes | no |
 | `package:nx_db/internal.dart` | Raw GraphQL document strings + JSON helpers; **may break in any release** | no | no |
@@ -154,6 +160,32 @@ the convention exists, the first migration happens when a second app
 needs it. See `plans/current/nx_db_app_boundary.md` for the full
 promotion recipe.
 
+### User-scoped entities (`src/models/`)
+
+Generic multi-row entities (many `Action`s per user) belong in `kgql/shared/`
+when promoted. **User-scoped** data is different: the “current user’s”
+singleton-ish records — e.g. the `Person` row for the session, the current
+`Transcript` — use the **same `domain/<entity>/` + `data/<entity>/` layout as
+app packages** (`nx_time`’s `lib/domain/…` and `lib/data/…`, …) by placing code
+at `models/domain/<entity>/` and `models/data/<entity>/`, so a
+promotion is a straight `git mv` into `nx_db/src/models/` with only
+import-path fixes.
+
+**`models/domain/<entity>/`** (pure Dart; entity + abstract repository):
+
+- `<entity>.dart` — the typed object
+- `<entity>_repository.dart` — abstract contract
+
+**`models/data/<entity>/`** (keys, mappers, KGQL impl, Riverpod):
+
+- `<entity>_attr_keys.dart` — KGQL / JSON key strings
+- `<entity>_mapper.dart` — `Model` ⇄ entity, parsing helpers
+- `kgql_<entity>_repository.dart` — `GraphQLClient` in the constructor (no `Ref`)
+- `<entity>_providers.dart` — `*RepositoryProvider`, auth-gated `FutureProvider`s
+
+GraphQL document strings for transcript still live under `src/kgql/documents/`
+(consumed by `models/data/transcript/kgql_transcript_repository.dart`).
+
 ## Folder layout in detail
 
 ```
@@ -163,7 +195,8 @@ nx_db/
     auth.dart             # public sub-library
     kgql.dart             # public sub-library (Riverpod-free)
     riverpod.dart         # public sub-library (opt-in Riverpod)
-    transcript.dart       # public sub-library (feature module)
+    person.dart           # public sub-library (current user Person)
+    transcript.dart       # public sub-library (current user transcript)
     goals.dart            # public sub-library (app goal orchestrators)
     internal.dart         # not part of public API; tests / advanced use only
 
@@ -219,10 +252,25 @@ nx_db/
           attr_accessors.dart
         shared/                          # (reserved for promoted entities)
 
-      transcript/                        # a feature module — self-contained
-        transcript.dart                  # Transcript + TranscriptMessage types
-        transcript_repository.dart       # query / mutation / subscription docs + functions
-        transcript_providers.dart        # FutureProvider, StreamProvider
+      models/                            # current-user–scoped; same shape as app lib/domain + lib/data
+        domain/
+          person/
+            person.dart
+            person_repository.dart
+          transcript/
+            transcript.dart
+            transcript_repository.dart
+        data/
+          person/
+            person_attr_keys.dart
+            person_mapper.dart
+            kgql_person_repository.dart
+            person_providers.dart
+          transcript/
+            transcript_attr_keys.dart
+            transcript_mapper.dart
+            kgql_transcript_repository.dart
+            transcript_providers.dart
 
       goals/                             # app schema goal orchestrators
         documents/                       # get_action_goals_week / _trend / get_expense_goals_month
@@ -287,10 +335,22 @@ nx_db/test/
       model_types_providers_test.dart
       relation_picker_providers_test.dart
 
-  transcript/
-    transcript_test.dart                # types + parsing
-    transcript_repository_test.dart     # query/mutate/subscribe with mocked client
-    transcript_providers_test.dart      # barrel re-export smoke
+  models/
+    domain/
+      person/
+        person_test.dart
+      transcript/
+        transcript_test.dart
+    data/
+      person/
+        person_attr_keys_test.dart
+        person_mapper_test.dart
+        kgql_person_repository_test.dart
+        person_providers_test.dart
+      transcript/
+        transcript_mapper_test.dart
+        kgql_transcript_repository_test.dart
+        transcript_providers_test.dart
 
   goals/
     goals_documents_shape_test.dart
@@ -360,7 +420,8 @@ Quick decision table for contributors:
 | A generic helper over `Model` / `ModelType` / `SetModelRequest` | `src/kgql/helpers/<x>.dart` | yes — via `kgql.dart` |
 | A new auth-y concern | `src/auth/<x>.dart` + maybe `auth.dart` export | yes — via `auth.dart` |
 | A typed entity used by ≥2 apps (promotion) | `src/kgql/shared/<x>/` + new `lib/<x>.dart` re-export | yes — via `<x>.dart` |
-| A new vertical feature module | `src/<feature>/` + new `lib/<feature>.dart` re-export | yes — via `<feature>.dart` |
+| A current-user-scoped entity (Person, Transcript, …) | `src/models/domain/<x>` + `src/models/data/<x>` + `lib/<x>.dart` re-export (see above) | yes — via `person.dart`, `transcript.dart`, … |
+| A new vertical feature module (non–user-scoped) | e.g. `src/goals/` + `goals.dart` | yes — via `<feature>.dart` |
 | Anything Flutter Material | **not in `nx_db`** — belongs in the consuming app or a UI package |
 
 When in doubt, the rule is: **does this concept exist independently of

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_time/domain/action/action_subtype_option.dart';
 
 import 'package:nx_time/data/action/action_schema_provider.dart';
 
@@ -26,4 +27,11 @@ final actionSubtypeModelTypesProvider =
     FutureProvider<List<ModelType>>((ref) async {
   final action = await ref.watch(actionSchemaProvider.future);
   return collectActionSubtypeModelTypes(action);
+});
+
+/// Same as [actionSubtypeModelTypesProvider] in domain-shaped form (no [ModelType] in features).
+final actionSubtypeOptionsProvider =
+    FutureProvider<List<ActionSubtypeOption>>((ref) async {
+  final raw = await ref.watch(actionSubtypeModelTypesProvider.future);
+  return [for (final t in raw) ActionSubtypeOption(id: t.id, name: t.name)];
 });

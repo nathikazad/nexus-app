@@ -310,7 +310,10 @@ class _WakeBodyData extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncWa = ref.watch(weekActionsProvider);
+    final w = ref.watch(currentWeekProvider);
+    final asyncWa = ref.watch(weekActionsProvider(
+      DateTime(w.year, w.month, w.day),
+    ));
     return asyncWa.when(
       data: (wa) => _wakeColumn(wa),
       loading: () => _wakeColumn(null),
@@ -722,7 +725,10 @@ class _SleepBodyData extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(weekActionsProvider).when(
+    final w = ref.watch(currentWeekProvider);
+    return ref
+        .watch(weekActionsProvider(DateTime(w.year, w.month, w.day)))
+        .when(
           data: (wa) => _column(wa),
           loading: () => _column(null),
           error: (_, __) => _column(null),
@@ -914,7 +920,10 @@ class _GymBodyData extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(weekActionsProvider).when(
+    final w = ref.watch(currentWeekProvider);
+    return ref
+        .watch(weekActionsProvider(DateTime(w.year, w.month, w.day)))
+        .when(
           data: (wa) => _gymContent(wa: wa),
           loading: () => _gymContent(wa: null),
           error: (_, __) => _gymContent(wa: null),

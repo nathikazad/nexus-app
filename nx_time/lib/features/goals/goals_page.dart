@@ -38,8 +38,10 @@ class GoalsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final weekAsync = ref.watch(actionGoalsWeekProvider);
-    final weekActions = ref.watch(weekActionsProvider);
+    final m = ref.watch(currentWeekProvider);
+    final monday = DateTime(m.year, m.month, m.day);
+    final weekAsync = ref.watch(actionGoalsWeekProvider(monday));
+    final weekActions = ref.watch(weekActionsProvider(monday));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

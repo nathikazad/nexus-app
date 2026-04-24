@@ -7,10 +7,11 @@ import 'package:intl/intl.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/formatting/time_format.dart';
-import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/core/widgets/nx_tab_header.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
+import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_view_model.dart';
@@ -31,6 +32,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   _CalendarView _view = _CalendarView.actions;
 
+  /// When true, the tab shows week-level pie + distribution bars instead of the day grid.
+  bool _weekOverview = false;
+
   static const _sky600 = Color(0xFF0284C7);
 
   void _prevWeek() {
@@ -42,6 +46,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     setState(() {
       _selectedDayIndex = null;
       _view = _CalendarView.actions;
+      _weekOverview = false;
     });
   }
 
@@ -54,6 +59,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     setState(() {
       _selectedDayIndex = null;
       _view = _CalendarView.actions;
+      _weekOverview = false;
     });
   }
 
@@ -80,16 +86,19 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     BuildContext context,
     CalendarDayData dayData,
     UmbrellaRow row,
+    ModelTypeColors colors,
   ) {
     final dayLabel = DateFormat.MMMd().format(dayData.day);
     final args = row.children.isNotEmpty
         ? activityDetailArgsForUmbrella(
             row,
             dayLabel,
+            colors,
           )
         : activityDetailArgsForAction(
             row.umbrella,
             dayLabel,
+            colors,
           );
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -103,11 +112,33 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final monday = ref.watch(currentWeekProvider);
     final m0 = DateTime(monday.year, monday.month, monday.day);
     final async = ref.watch(calendarWeekProvider);
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const NxTabHeader(title: 'Calendar'),
+        NxTabHeader(
+          title: 'Calendar',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => setState(() => _weekOverview = !_weekOverview),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                tooltip: _weekOverview ? 'Week schedule' : 'Week overview',
+                icon: Icon(
+                  SolarLinearIcons.pieChart2,
+                  size: 22,
+                  color: _weekOverview ? AppColors.accent : AppColors.slate400,
+                ),
+              ),
+              const NxAppMenuButton(),
+            ],
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Row(
@@ -141,6 +172,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         Expanded(
           child: async.when(
             data: (days) {
+              if (_weekOverview) {
+                final weekStats = _statsForWeek(days, colors);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _WeekOverviewBody(weekStats: weekStats),
+                    ),
+                  ],
+                );
+              }
               final idx = _selectedDayIndex ?? _defaultDayIndexForWeek(m0);
               final safeIdx = idx.clamp(0, 6);
               final selected = days[safeIdx];
@@ -160,9 +202,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                               child: _DayColumn(
                                 dayData: days[i],
                                 selected: i == safeIdx,
+                                colors: colors,
                                 onTap: () => setState(() {
                                   _selectedDayIndex = i;
-                                  _view = _CalendarView.actions;
                                 }),
                               ),
                             ),
@@ -180,8 +222,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     child: _CalendarDayPanel(
                       dayData: selected,
                       view: _view,
+                      colors: colors,
                       onSelectView: (v) => setState(() => _view = v),
-                      onRowTap: (row) => _openActivityDetail(context, selected, row),
+                      onRowTap: (row) => _openActivityDetail(context, selected, row, colors),
                     ),
                   ),
                 ],
@@ -292,12 +335,14 @@ class _CalendarDayPanel extends StatelessWidget {
   const _CalendarDayPanel({
     required this.dayData,
     required this.view,
+    required this.colors,
     required this.onSelectView,
     required this.onRowTap,
   });
 
   final CalendarDayData dayData;
   final _CalendarView view;
+  final ModelTypeColors colors;
   final ValueChanged<_CalendarView> onSelectView;
   final void Function(UmbrellaRow row) onRowTap;
 
@@ -362,7 +407,7 @@ class _CalendarDayPanel extends StatelessWidget {
                   style: TextStyle(fontSize: 14, color: AppColors.slate500),
                 ),
               ),
-            _CalendarView.stats => _StatsList(stats: _statsForDay(dayData)),
+            _CalendarView.stats => _StatsList(stats: _statsForDay(dayData, colors)),
             _CalendarView.actions => rows.isEmpty
                 ? const Center(
                     child: Text(
@@ -389,7 +434,7 @@ class _CalendarDayPanel extends StatelessWidget {
                       }
                       final row = rows[i];
                       final u = row.umbrella;
-                      final bar = barColorForModelTypeId(u.modelTypeId);
+                      final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
                       final name = u.name.isNotEmpty ? u.name : (u.modelTypeName ?? 'Action');
                       final start = u.startTime;
                       final end = u.endTime;
@@ -459,10 +504,13 @@ class _TypeStat {
   int totalMinutes = 0;
 }
 
-List<_TypeStat> _statsForDay(CalendarDayData dayData) {
+void _accumulateDayRowsInto(
+  CalendarDayData dayData,
+  ModelTypeColors colors,
+  Map<int, _TypeStat> byType,
+) {
   final dayStart = DateTime(dayData.day.year, dayData.day.month, dayData.day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
-  final byType = <int, _TypeStat>{};
   for (final r in dayData.rows) {
     final u = r.umbrella;
     var s = u.startTime;
@@ -481,10 +529,25 @@ List<_TypeStat> _statsForDay(CalendarDayData dayData) {
         label: (u.modelTypeName != null && u.modelTypeName!.isNotEmpty)
             ? u.modelTypeName!
             : 'Type $id',
-        color: barColorForModelTypeId(id),
+        color: colors.forId(id, name: u.modelTypeName),
       ),
     );
     stat.totalMinutes += mins;
+  }
+}
+
+List<_TypeStat> _statsForDay(CalendarDayData dayData, ModelTypeColors colors) {
+  final byType = <int, _TypeStat>{};
+  _accumulateDayRowsInto(dayData, colors, byType);
+  final list = byType.values.toList()
+    ..sort((a, b) => b.totalMinutes.compareTo(a.totalMinutes));
+  return list;
+}
+
+List<_TypeStat> _statsForWeek(List<CalendarDayData> days, ModelTypeColors colors) {
+  final byType = <int, _TypeStat>{};
+  for (final d in days) {
+    _accumulateDayRowsInto(d, colors, byType);
   }
   final list = byType.values.toList()
     ..sort((a, b) => b.totalMinutes.compareTo(a.totalMinutes));
@@ -500,9 +563,17 @@ String _formatHm(int totalMinutes) {
 }
 
 class _StatsList extends StatelessWidget {
-  const _StatsList({required this.stats});
+  const _StatsList({
+    required this.stats,
+    this.shrinkWrap = false,
+    this.physics,
+    this.padding = const EdgeInsets.fromLTRB(20, 12, 20, 120),
+  });
 
   final List<_TypeStat> stats;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -516,7 +587,9 @@ class _StatsList extends StatelessWidget {
     }
     final maxMinutes = stats.first.totalMinutes;
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      shrinkWrap: shrinkWrap,
+      physics: physics,
+      padding: padding,
       itemCount: stats.length,
       itemBuilder: (context, i) {
         final s = stats[i];
@@ -584,6 +657,147 @@ class _StatsList extends StatelessWidget {
   }
 }
 
+/// Week summary: pie by type + same horizontal bars as the per-day Stats tab.
+class _WeekOverviewBody extends StatelessWidget {
+  const _WeekOverviewBody({required this.weekStats});
+
+  final List<_TypeStat> weekStats;
+
+  @override
+  Widget build(BuildContext context) {
+    if (weekStats.isEmpty) {
+      return const Center(
+        child: Text(
+          'No actions',
+          style: TextStyle(fontSize: 14, color: AppColors.slate500),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'This week',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.slate900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _WeekPieChart(stats: weekStats),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                SizedBox(height: 8),
+                Divider(height: 1, thickness: 1, color: AppColors.slate200),
+                SizedBox(height: 8),
+              ],
+            ),
+          ),
+          _StatsList(
+            stats: weekStats,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeekPieChart extends StatelessWidget {
+  const _WeekPieChart({required this.stats});
+
+  final List<_TypeStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = stats.fold<int>(0, (a, s) => a + s.totalMinutes);
+    if (total <= 0) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final side = math.min(220.0, constraints.maxWidth);
+          return Center(
+            child: SizedBox(
+              width: side,
+              height: side,
+              child: CustomPaint(
+                painter: _WeekPiePainter(stats: stats, totalMinutes: total),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _WeekPiePainter extends CustomPainter {
+  _WeekPiePainter({required this.stats, required this.totalMinutes});
+
+  final List<_TypeStat> stats;
+  final int totalMinutes;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 1;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = Colors.white
+      ..strokeWidth = 1.5;
+    var startAngle = -math.pi / 2;
+    for (final s in stats) {
+      if (s.totalMinutes <= 0) continue;
+      final sweep = 2 * math.pi * (s.totalMinutes / totalMinutes);
+      canvas.drawArc(
+        rect,
+        startAngle,
+        sweep,
+        true,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = s.color,
+      );
+      startAngle += sweep;
+    }
+    startAngle = -math.pi / 2;
+    for (final s in stats) {
+      if (s.totalMinutes <= 0) continue;
+      final sweep = 2 * math.pi * (s.totalMinutes / totalMinutes);
+      canvas.drawArc(rect, startAngle, sweep, true, edge);
+      startAngle += sweep;
+    }
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = AppColors.slate200
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _WeekPiePainter oldDelegate) {
+    return oldDelegate.totalMinutes != totalMinutes ||
+        oldDelegate.stats.length != stats.length;
+  }
+}
+
 /// One flex segment in a 24h column: [flex] sums to 1440 minutes; [color] null = muted gap.
 class _DayBarSeg {
   const _DayBarSeg({required this.flex, this.color});
@@ -593,7 +807,7 @@ class _DayBarSeg {
 }
 
 /// Stacked segments from local midnight → next midnight (1440 min). Gaps use [AppColors.calMuted].
-List<_DayBarSeg> _segments24h(CalendarDayData dayData) {
+List<_DayBarSeg> _segments24h(CalendarDayData dayData, ModelTypeColors colors) {
   final dayStart = DateTime(dayData.day.year, dayData.day.month, dayData.day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
   const total = 24 * 60;
@@ -613,7 +827,7 @@ List<_DayBarSeg> _segments24h(CalendarDayData dayData) {
     intervals.add((
       startMin: startMin,
       endMin: endMin,
-      color: barColorForModelTypeId(u.modelTypeId),
+      color: colors.forId(u.modelTypeId, name: u.modelTypeName),
     ));
   }
   intervals.sort((a, b) => a.startMin.compareTo(b.startMin));
@@ -639,11 +853,13 @@ class _DayColumn extends StatelessWidget {
   const _DayColumn({
     required this.dayData,
     required this.selected,
+    required this.colors,
     required this.onTap,
   });
 
   final CalendarDayData dayData;
   final bool selected;
+  final ModelTypeColors colors;
   final VoidCallback onTap;
 
   static const _letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -685,7 +901,7 @@ class _DayColumn extends StatelessWidget {
               ),
             );
     } else {
-      final segments = _segments24h(dayData);
+      final segments = _segments24h(dayData, colors);
       bar = Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),

@@ -70,6 +70,7 @@ class ActionEditViewModel {
     Action initial,
     ActionCategoryOption category,
   ) {
-    return category.name != (initial.modelTypeName ?? '') ? category.name : null;
+    if (category.modelTypeId == initial.modelTypeId) return null;
+    return category.name;
   }
 }

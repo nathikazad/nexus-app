@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/features/calendar/calendar_providers.dart';
@@ -44,8 +43,7 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
     }
     try {
       await repo.unlinkChildAction(parentId: widget.parent.id, relationId: rid);
-      ref.invalidate(todaySnapshotProvider);
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       ref.invalidate(parentActionForChildrenProvider(_key));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +62,13 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
   @override
   Widget build(BuildContext context) {
     final parentAsync = ref.watch(parentActionForChildrenProvider(_key));
-    final bar = barColorForModelTypeId(widget.parent.modelTypeId);
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
+    final bar = colors.forId(
+      widget.parent.modelTypeId,
+      name: widget.parent.modelTypeName,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,

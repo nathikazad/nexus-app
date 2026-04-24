@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Nexus — Mobile</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- top bar (title + optional back button swapped by JS) -->
+  <header class="topbar" id="topbar">
+    <button class="back" id="back-btn" hidden aria-label="Back">‹</button>
+    <div class="logo" id="logo">◆ Nexus</div>
+    <h1 id="top-title">Planner</h1>
+    <div class="spacer"></div>
+    <div class="who" title="@nathik">N</div>
+  </header>
+
+  <!-- subheader: Sprint strip (Sprint tab only) -->
+  <div class="sprint-strip view hidden" id="sprint-strip">
+    <button class="chev" id="sprint-prev" aria-label="Previous sprint">‹</button>
+    <div class="info">
+      <div class="name"><span id="sprint-name">Sprint 14</span> <span id="sprint-badge" class="badge active">active</span></div>
+      <div class="dates" id="sprint-dates">Apr 20 – Apr 26</div>
+    </div>
+    <button class="chev" id="sprint-next" aria-label="Next sprint">›</button>
+  </div>
+  <div class="sprint-goal view hidden" id="sprint-goal">Ship dark mode + unblock the pipeline OOM.</div>
+
+  <!-- subheader: Daily strip (Daily tab only) -->
+  <div class="sprint-strip view hidden" id="daily-strip">
+    <button class="chev" id="daily-prev" aria-label="Previous day">‹</button>
+    <div class="info">
+      <div class="name"><span id="daily-dow">Thursday</span> <span id="daily-today-pill" class="badge active">today</span></div>
+      <div class="dates" id="daily-date">Apr 23, 2026</div>
+    </div>
+    <button class="chev" id="daily-next" aria-label="Next day">›</button>
+  </div>
+
+  <!-- search + filters (Priority + Projects list only) -->
+  <div class="search-wrap view hidden" id="search-wrap">
+    <input id="search" class="search" placeholder="Search tasks…" />
+    <button class="filter-btn hidden" id="filter-btn" aria-label="Filters">
+      <span class="ico">⚙</span>
+      <span>Filters</span>
+      <span class="dot-active" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <!-- content -->
+  <main class="content" id="content">
+    <!-- rendered by JS per tab / view -->
+  </main>
+
+  <!-- FAB -->
+  <div class="fab hidden" id="fab">
+    <div class="fab-menu">
+      <button class="fab-item" data-new="project"><span class="ico">+</span> Project</button>
+      <button class="fab-item" data-new="task"><span class="ico">+</span> Task</button>
+    </div>
+    <button class="fab-main" id="fab-main" aria-label="Add">+</button>
+  </div>
+
+  <!-- bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn" data-tab="project"><span class="ico">▦</span><span>Projects</span></button>
+    <button class="nav-btn active" data-tab="priority"><span class="ico">☰</span><span>Priority</span></button>
+    <button class="nav-btn" data-tab="sprint"><span class="ico">◈</span><span>Sprint</span></button>
+    <button class="nav-btn" data-tab="daily"><span class="ico">◉</span><span>Daily</span></button>
+  </nav>
+
+</div>
+
+<!-- context sheet -->
+<div class="sheet-backdrop" id="sheet-backdrop"></div>
+<div class="sheet" id="sheet-row" role="dialog" aria-label="Task actions">
+  <div class="grab"></div>
+  <div class="mi-h">Move to bucket</div>
+  <div class="mi" data-act="now">NOW</div>
+  <div class="mi" data-act="next">NEXT</div>
+  <div class="mi" data-act="later">LATER</div>
+  <div class="mi" data-act="someday">SOMEDAY</div>
+  <div class="mi-sep"></div>
+  <div class="mi-h">Status</div>
+  <div class="mi" data-act="st-todo">Todo</div>
+  <div class="mi" data-act="st-doing">Doing</div>
+  <div class="mi" data-act="st-done">Done</div>
+  <div class="mi-sep"></div>
+  <div class="mi" data-act="edit">Edit…</div>
+  <div class="mi danger" data-act="del">Delete</div>
+</div>
+
+<!-- Filter sheet -->
+<div class="sheet" id="sheet-filter" role="dialog" aria-label="Filters">
+  <div class="grab"></div>
+  <div class="mi-h">Kind</div>
+  <div class="mi" data-filter="kind" data-value="all">All kinds</div>
+  <div class="mi" data-filter="kind" data-value="feat">Features only</div>
+  <div class="mi" data-filter="kind" data-value="bug">Bugs only</div>
+  <div class="mi-sep"></div>
+  <div class="mi-h">Status</div>
+  <div class="mi" data-filter="status" data-value="all">All</div>
+  <div class="mi" data-filter="status" data-value="open">Open (not done)</div>
+  <div class="mi" data-filter="status" data-value="done">Done</div>
+  <div class="mi-sep"></div>
+  <div class="mi" data-filter-reset>Reset filters</div>
+</div>
+
+<!-- New task modal -->
+<div id="modal-task" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-labelledby="modal-task-title" aria-modal="true">
+    <header class="modal-head">
+      <h2 id="modal-task-title">New task</h2>
+      <button type="button" class="modal-x" data-close="modal-task" aria-label="Close">×</button>
+    </header>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Type</label>
+        <div class="seg-toggle" id="task-type-toggle" role="tablist">
+          <button type="button" class="seg-btn active" data-type="task"><span class="seg-glyph">▢</span> Task</button>
+          <button type="button" class="seg-btn" data-type="feature"><span class="seg-glyph feat">◉</span> Feature</button>
+          <button type="button" class="seg-btn" data-type="bug"><span class="seg-glyph bug">●</span> Bug</button>
+        </div>
+        <p class="field-hint" id="task-type-hint">Plain sub-task or standalone item.</p>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-title">Title</label>
+        <input id="task-title" class="field-input" type="text" placeholder="What needs to get done?" />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-project">Project</label>
+        <select id="task-project" class="field-input"></select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-priority">Bucket</label>
+        <select id="task-priority" class="field-input">
+          <option value="now">Now</option>
+          <option value="next" selected>Next</option>
+          <option value="later">Later</option>
+          <option value="someday">Someday</option>
+          <option value="">Unsorted</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-estimate">Estimate (hours)</label>
+        <input id="task-estimate" class="field-input" type="number" min="0" step="0.5" placeholder="e.g. 4" inputmode="decimal" />
+      </div>
+
+      <div class="field subtype-field" data-show-when="bug" hidden>
+        <label class="field-label">Severity</label>
+        <div class="seg-toggle">
+          <button type="button" class="seg-btn" data-sev="low">Low</button>
+          <button type="button" class="seg-btn active" data-sev="med">Medium</button>
+          <button type="button" class="seg-btn" data-sev="crit">Critical</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-notes">Notes <span class="field-opt">(optional)</span></label>
+        <textarea id="task-notes" class="field-input" rows="3" placeholder="Acceptance criteria, links, context…"></textarea>
+      </div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn-secondary" data-close="modal-task">Cancel</button>
+      <button type="button" class="btn-primary" id="task-create-submit">Create</button>
+    </footer>
+  </div>
+</div>
+
+<!-- New project modal -->
+<div id="modal-project" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-labelledby="modal-project-title" aria-modal="true">
+    <header class="modal-head">
+      <h2 id="modal-project-title">New project</h2>
+      <button type="button" class="modal-x" data-close="modal-project" aria-label="Close">×</button>
+    </header>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Scope</label>
+        <div class="seg-toggle" id="project-scope-toggle" role="tablist">
+          <button type="button" class="seg-btn active" data-scope="top">Top-level</button>
+          <button type="button" class="seg-btn" data-scope="sub">Subproject</button>
+        </div>
+      </div>
+      <div class="field" id="project-parent-field" hidden>
+        <label class="field-label" for="project-parent">Parent project</label>
+        <select id="project-parent" class="field-input"></select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="project-name">Name</label>
+        <input id="project-name" class="field-input" type="text" placeholder="e.g. Billing v2" />
+      </div>
+      <div class="field" id="project-color-field">
+        <label class="field-label">Color</label>
+        <div class="color-swatches" id="project-color-swatches">
+          <button type="button" class="swatch active" data-color="var(--p-nexus)" style="background:var(--p-nexus)" aria-label="Blue"></button>
+          <button type="button" class="swatch" data-color="var(--p-pipe)" style="background:var(--p-pipe)" aria-label="Amber"></button>
+          <button type="button" class="swatch" data-color="var(--p-mobile)" style="background:var(--p-mobile)" aria-label="Purple"></button>
+          <button type="button" class="swatch" data-color="#4ade80" style="background:#4ade80" aria-label="Green"></button>
+          <button type="button" class="swatch" data-color="#f87171" style="background:#f87171" aria-label="Red"></button>
+          <button type="button" class="swatch" data-color="#94a3b8" style="background:#94a3b8" aria-label="Slate"></button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="project-desc">Description <span class="field-opt">(optional)</span></label>
+        <textarea id="project-desc" class="field-input" rows="3" placeholder="What this project is about…"></textarea>
+      </div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn-secondary" data-close="modal-project">Cancel</button>
+      <button type="button" class="btn-primary" id="project-create-submit">Create</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────
+   Seed data
+   ────────────────────────────────────────────────────── */
+const PROJECTS = [
+  {
+    id: 'nexus', name: 'Nexus Web App', color: 'var(--p-nexus)',
+    subs: [
+      { id: 'ui-polish', name: 'UI Polish' },
+      { id: 'auth-rewrite', name: 'Auth Rewrite' },
+    ],
+  },
+  { id: 'pipeline', name: 'Data Pipeline v2', color: 'var(--p-pipe)', subs: [] },
+  { id: 'mobile',   name: 'Mobile App',       color: 'var(--p-mobile)', subs: [] },
+];
+
+const SPRINTS = [
+  { id: 13, name: 'Sprint 13', badge: 'done',    dates: 'Apr 13 – Apr 19', goal: 'Shipped auth rewrite, started UI polish.', capH: 24, start: '2026-04-13', length: 7 },
+  { id: 14, name: 'Sprint 14', badge: 'active',  dates: 'Apr 20 – Apr 26', goal: 'Ship dark mode + unblock the pipeline OOM.', capH: 40, start: '2026-04-20', length: 7 },
+  { id: 15, name: 'Sprint 15', badge: 'planned', dates: 'Apr 27 – May 2',  goal: '', capH: 40, start: '2026-04-27', length: 6 },
+];
+
+const TODAY = '2026-04-23';
+
+let TASKS = [
+  // Sprint 14 (active) — Apr 20 Mon ... Apr 26 Sun
+  { id: 't3',  kind: 'bug',  title: 'Flash of wrong theme', crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 2,  bucket: 'now',    sev: 'med',  sprint: 14, status: 'done',   plannedFor: '2026-04-20' },
+  { id: 'tk1', kind: 'feat', title: 'Design tokens',        crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 2,  bucket: 'now',    sprint: 14, status: 'done',   plannedFor: '2026-04-20' },
+  { id: 'tk2', kind: 'feat', title: 'Toggle component',     crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 4,  bucket: 'now',    sprint: 14, status: 'done',   plannedFor: '2026-04-21' },
+  { id: 't9b', kind: 'bug',  title: 'iOS splash flicker',   crumb: 'Mobile App',          project: 'mobile',   sub: null,          est: 2,  bucket: 'now',    sev: 'med',  sprint: 14, status: 'doing',  plannedFor: '2026-04-22' },
+  { id: 't2',  kind: 'feat', title: 'Add dark mode',        crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 8,  bucket: 'now',    sprint: 14, status: 'doing',  plannedFor: '2026-04-23' },
+  { id: 't4',  kind: 'feat', title: 'Command palette',      crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 3,  bucket: 'now',    sprint: 14, status: 'todo',   plannedFor: '2026-04-23' },
+  { id: 't1',  kind: 'bug',  title: 'Nightly job OOM',      crumb: 'Data Pipeline v2',    project: 'pipeline', sub: null,          est: 6,  bucket: 'now',    sev: 'crit', sprint: 14, status: 'todo',   plannedFor: '2026-04-24' },
+  { id: 't6b', kind: 'feat', title: 'Auth refactor cleanup',crumb: 'Nexus / Auth Rewrite',project: 'nexus',    sub: 'auth-rewrite',est: 4,  bucket: 'now',    sprint: 14, status: 'blocked' },
+
+  // Sprint 15 (planned) — Apr 27 Mon ... May 2 Sat
+  { id: 't5',  kind: 'feat', title: 'Partitioned ingest',   crumb: 'Data Pipeline v2',    project: 'pipeline', sub: null,          est: 13, bucket: 'next',   sprint: 15, status: 'todo',   plannedFor: '2026-04-27' },
+  { id: 't6',  kind: 'feat', title: 'Keyboard shortcuts',   crumb: 'Nexus',               project: 'nexus',    sub: null,          est: 5,  bucket: 'next',   sprint: 15, status: 'todo',   plannedFor: '2026-04-28' },
+  { id: 't7',  kind: 'bug',  title: 'Schema drift alerts',  crumb: 'Data Pipeline v2',    project: 'pipeline', sub: null,          est: 4,  bucket: 'next',   sev: 'crit', sprint: 15, status: 'todo',   plannedFor: '2026-04-29' },
+
+  // Sprint 13 (done) — Apr 13 Mon ... Apr 19 Sun
+  { id: 'a1',  kind: 'feat', title: 'OAuth callback hardening', crumb: 'Nexus / Auth Rewrite', project: 'nexus', sub: 'auth-rewrite', est: 3, bucket: 'now',  sprint: 13, status: 'done',   plannedFor: '2026-04-13' },
+  { id: 'a4',  kind: 'feat', title: 'CSV export',           crumb: 'Data Pipeline v2',    project: 'pipeline', sub: null,          est: 5,  bucket: 'now',    sprint: 13, status: 'done',   plannedFor: '2026-04-17' },
+  { id: 'a6',  kind: 'feat', title: 'Push notification plumbing', crumb: 'Mobile App',    project: 'mobile',   sub: null,          est: 4,  bucket: 'now',    sprint: 13, status: 'done',   plannedFor: '2026-04-18' },
+
+  // backlog (no sprint)
+  { id: 't8',  kind: 'feat', title: 'Saved views',          crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 6,  bucket: 'later',  sprint: null, status: 'todo' },
+  { id: 't9',  kind: 'feat', title: 'Streaming writes',     crumb: 'Data Pipeline v2',    project: 'pipeline', sub: null,          est: 20, bucket: 'later',  sprint: null, status: 'todo' },
+  { id: 't10', kind: 'feat', title: 'SSO providers',        crumb: 'Nexus / Auth Rewrite',project: 'nexus',    sub: 'auth-rewrite',est: 8,  bucket: 'later',  sprint: null, status: 'todo' },
+  { id: 't11', kind: 'feat', title: 'Biometric login',      crumb: 'Mobile App',          project: 'mobile',   sub: null,          est: 8,  bucket: 'someday',sprint: null, status: 'todo' },
+  { id: 't12', kind: 'feat', title: 'Push notifications',   crumb: 'Mobile App',          project: 'mobile',   sub: null,          est: 12, bucket: 'someday',sprint: null, status: 'todo' },
+  { id: 't13', kind: 'feat', title: 'Offline mode',         crumb: 'Mobile App',          project: 'mobile',   sub: null,          est: 20, bucket: 'someday',sprint: null, status: 'todo' },
+  { id: 'u1',  kind: 'feat', title: 'Bulk edit row actions',crumb: 'Nexus / UI Polish',   project: 'nexus',    sub: 'ui-polish',   est: 8,  bucket: '',       sprint: null, status: 'todo' },
+  { id: 'u2',  kind: 'bug',  title: 'Token refresh race',   crumb: 'Nexus / Auth Rewrite',project: 'nexus',    sub: 'auth-rewrite',est: 4,  bucket: '',       sev: 'crit', sprint: null, status: 'todo' },
+];
+
+const BUCKETS = [
+  { key: 'now',     label: 'NOW',     hint: 'do now' },
+  { key: 'next',    label: 'NEXT',    hint: '1–2 cycles out' },
+  { key: 'later',   label: 'LATER',   hint: '' },
+  { key: 'someday', label: 'SOMEDAY', hint: '' },
+];
+const BUCKET_COLLAPSED = {};
+
+/* ──────────────────────────────────────────────────────
+   State
+   ────────────────────────────────────────────────────── */
+let tab = 'priority';                  // 'project' | 'priority' | 'sprint' | 'daily'
+let projectNav = { project: null, sub: null };  // drill-down stack for Projects tab
+let sprintIdx = 1;                     // index into SPRINTS
+let dailyDate = TODAY;                 // ISO date string for Daily tab
+let projFilter = { kind: 'all', status: 'all' };
+let priorityBucket = null;     // null = bucket list; 'now'|'next'|'later'|'someday'|'unsorted' = drilled in
+
+const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOW_LONG  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MON_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function parseDate(s) { return new Date(s + 'T00:00:00'); }
+function fmtISO(d) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate()+n); return fmtISO(d); }
+function isToday(s) { return s === TODAY; }
+
+/* ──────────────────────────────────────────────────────
+   Utils
+   ────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function projById(id)  { return PROJECTS.find(p => p.id === id); }
+function subById(projId, subId) { const p = projById(projId); return p && p.subs.find(s => s.id === subId); }
+
+const searchIn = document.getElementById('search');
+function getSearchQuery() { return (searchIn.value || '').trim().toLowerCase(); }
+function matchQuery(t, q) { return !q || t.title.toLowerCase().includes(q) || t.crumb.toLowerCase().includes(q); }
+
+function passesProjFilter(t) {
+  if (projFilter.kind !== 'all' && t.kind !== projFilter.kind) return false;
+  if (projFilter.status === 'open' && t.status === 'done') return false;
+  if (projFilter.status === 'done' && t.status !== 'done') return false;
+  return true;
+}
+function hasActiveFilter() {
+  return projFilter.kind !== 'all' || projFilter.status !== 'all';
+}
+
+/* ──────────────────────────────────────────────────────
+   Task row renderer (shared by all tabs)
+   ────────────────────────────────────────────────────── */
+function rowHTML(t, opts = {}) {
+  const glyph = t.kind === 'bug' ? '●' : t.kind === 'feat' ? '◉' : '▢';
+  const kindLabel = t.kind === 'bug' ? 'Bug' : t.kind === 'feat' ? 'Feat' : 'Task';
+  const sev = t.sev ? ` <span class="sev ${t.sev}">${t.sev}</span>` : '';
+  const doneClass = t.status === 'done' ? ' done' : '';
+  const status = opts.showStatus && t.status && t.status !== 'todo'
+    ? `<span class="status ${t.status}">${t.status}</span>` : '';
+  const crumb = opts.showCrumb !== false
+    ? `<span class="crumb">${esc(t.crumb)}</span>` : '';
+  const bkt = opts.showBucket && t.bucket
+    ? `<span class="bkt ${t.bucket}">${t.bucket}</span>` : '';
+  return `
+    <div class="row${doneClass}" data-id="${t.id}">
+      <div class="glyph ${t.kind}">${glyph}</div>
+      <div class="main">
+        <div class="title">${esc(t.title)}${sev}</div>
+        <div class="meta">
+          <span class="kind ${t.kind}">${kindLabel}</span>
+          ${status}
+          ${crumb}
+          ${bkt}
+          <span class="est">${t.est}h</span>
+        </div>
+      </div>
+      <div class="menu" data-menu data-id="${t.id}" aria-label="Actions">⋮</div>
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────
+   Tab: Priority
+   ────────────────────────────────────────────────────── */
+function renderPriorityList() {
+  const q = getSearchQuery();
+  const tasks = TASKS.filter(t => matchQuery(t, q));
+  let html = '';
+  for (const b of BUCKETS) {
+    const items = tasks.filter(t => t.bucket === b.key);
+    const totalH = items.reduce((a, t) => a + (t.est || 0), 0);
+    html += `<div class="drill" data-drill-bucket="${b.key}">
+      <span class="dot bkt-dot ${b.key}"></span>
+      <span class="name">${b.label}</span>
+      <span class="meta">${items.length} · ${totalH}h</span>
+      <span class="chev">›</span>
+    </div>`;
+  }
+  const unsorted = tasks.filter(t => !t.bucket);
+  const unsortedH = unsorted.reduce((a, t) => a + (t.est || 0), 0);
+  html += `<div class="drill" data-drill-bucket="unsorted">
+    <span class="dot bkt-dot unsorted"></span>
+    <span class="name">UNSORTED</span>
+    <span class="meta">${unsorted.length} · ${unsortedH}h</span>
+    <span class="chev">›</span>
+  </div>`;
+  return html;
+}
+
+function renderPriorityBucket(key) {
+  const q = getSearchQuery();
+  const items = TASKS.filter(t => {
+    const bucketMatch = key === 'unsorted' ? !t.bucket : t.bucket === key;
+    return bucketMatch && matchQuery(t, q);
+  });
+  if (!items.length) return `<div class="empty">No tasks in this bucket.</div>`;
+  return items.map(t => rowHTML(t, { showStatus: true })).join('');
+}
+
+/* ──────────────────────────────────────────────────────
+   Tab: Projects (drill-down)
+   ────────────────────────────────────────────────────── */
+function projectTasks(projId, subId) {
+  return TASKS.filter(t => {
+    if (t.project !== projId) return false;
+    if (subId !== undefined && t.sub !== subId) return false;
+    return true;
+  });
+}
+
+function renderProjectList() {
+  const q = getSearchQuery();
+  let html = '';
+  for (const p of PROJECTS) {
+    const pTasks = projectTasks(p.id).filter(t => matchQuery(t, q) && passesProjFilter(t));
+    const totalH = pTasks.reduce((a, t) => a + (t.est || 0), 0);
+    html += `<div class="drill" data-drill-project="${p.id}">
+      <span class="dot" style="background:${p.color}"></span>
+      <span class="name">${esc(p.name)}</span>
+      <span class="meta">${pTasks.length} · ${totalH}h</span>
+      <span class="chev">›</span>
+    </div>`;
+  }
+  return html;
+}
+
+function renderProjectDetail(projId) {
+  const p = projById(projId);
+  if (!p) return '';
+  const q = getSearchQuery();
+  let html = '';
+
+  if (p.subs.length) {
+    html += `<div class="section-head">Subprojects <span class="count">${p.subs.length}</span></div>`;
+    for (const sp of p.subs) {
+      const subTasks = projectTasks(p.id, sp.id).filter(t => matchQuery(t, q) && passesProjFilter(t));
+      const subH = subTasks.reduce((a, t) => a + (t.est || 0), 0);
+      html += `<div class="drill sub" data-drill-sub="${sp.id}">
+        <span class="dot"></span>
+        <span class="name">${esc(sp.name)}</span>
+        <span class="meta">${subTasks.length} · ${subH}h</span>
+        <span class="chev">›</span>
+      </div>`;
+    }
+  }
+
+  const all = projectTasks(p.id).filter(t => matchQuery(t, q) && passesProjFilter(t));
+  const bugs = all.filter(t => t.kind === 'bug');
+  const feats = all.filter(t => t.kind === 'feat');
+  const other = all.filter(t => t.kind !== 'bug' && t.kind !== 'feat');
+
+  if (feats.length) {
+    html += `<div class="section-head">Features <span class="count">${feats.length}</span></div>`;
+    html += feats.map(t => rowHTML(t, { showBucket: true, showStatus: true, showCrumb: false })).join('');
+  }
+  if (bugs.length) {
+    html += `<div class="section-head">Bugs <span class="count">${bugs.length}</span></div>`;
+    html += bugs.map(t => rowHTML(t, { showBucket: true, showStatus: true, showCrumb: false })).join('');
+  }
+  if (other.length) {
+    html += `<div class="section-head">Tasks <span class="count">${other.length}</span></div>`;
+    html += other.map(t => rowHTML(t, { showBucket: true, showStatus: true, showCrumb: false })).join('');
+  }
+  if (!all.length && !p.subs.length) html += `<div class="empty">No tasks yet.</div>`;
+  return html;
+}
+
+function renderSubprojectDetail(projId, subId) {
+  const p = projById(projId); const sp = subById(projId, subId);
+  if (!p || !sp) return '';
+  const q = getSearchQuery();
+  const all = projectTasks(projId, subId).filter(t => matchQuery(t, q) && passesProjFilter(t));
+  const bugs = all.filter(t => t.kind === 'bug');
+  const feats = all.filter(t => t.kind === 'feat');
+  const other = all.filter(t => t.kind !== 'bug' && t.kind !== 'feat');
+  let html = '';
+  if (feats.length) {
+    html += `<div class="section-head">Features <span class="count">${feats.length}</span></div>`;
+    html += feats.map(t => rowHTML(t, { showBucket: true, showStatus: true, showCrumb: false })).join('');
+  }
+  if (bugs.length) {
+    html += `<div class="section-head">Bugs <span class="count">${bugs.length}</span></div>`;
+    html += bugs.map(t => rowHTML(t, { showBucket: true, showStatus: true, showCrumb: false })).join('');
+  }
+  if (other.length) {
+    html += `<div class="section-head">Tasks <span class="count">${other.length}</span></div>`;
+    html += other.map(t => rowHTML(t, { showBucket: true, showStatus: true, showCrumb: false })).join('');
+  }
+  if (!all.length) html += `<div class="empty">No tasks in this subproject.</div>`;
+  return html;
+}
+
+/* ──────────────────────────────────────────────────────
+   Tab: Sprint
+   ────────────────────────────────────────────────────── */
+function renderSprint() {
+  const sp = SPRINTS[sprintIdx];
+  const items = TASKS.filter(t => t.sprint === sp.id);
+  const totalEst = items.reduce((a, t) => a + (t.est || 0), 0);
+  const pct = Math.min(100, Math.round((totalEst / sp.capH) * 100));
+
+  let html = `<div class="cap-block" style="border-bottom:0;padding-top:14px">
+    <div class="cap-row"><span>Planned</span><span><b>${totalEst}h</b> / ${sp.capH}h</span></div>
+    <div class="cap-bar"><div class="fill" style="width:${pct}%"></div></div>
+  </div>`;
+
+  // one section per day of the sprint
+  for (let i = 0; i < sp.length; i++) {
+    const iso = addDays(sp.start, i);
+    const d = parseDate(iso);
+    const dayTasks = items.filter(t => t.plannedFor === iso);
+    const dayH = dayTasks.reduce((a, t) => a + (t.est || 0), 0);
+    const todayCls = isToday(iso) ? ' today' : '';
+    const todayPill = isToday(iso) ? `<span class="today-pill">today</span>` : '';
+    html += `<div class="day-head${todayCls}">
+      <span class="dow">${DOW_SHORT[d.getDay()]}</span>
+      <span class="ymd">${MON_SHORT[d.getMonth()]} ${d.getDate()}</span>
+      ${todayPill}
+      <span class="meta">${dayTasks.length} · ${dayH}h</span>
+    </div>`;
+    if (dayTasks.length) {
+      html += dayTasks.map(t => rowHTML(t, { showStatus: true })).join('');
+    } else {
+      html += `<div class="empty" style="padding:14px 8px">Nothing planned</div>`;
+    }
+  }
+
+  // unscheduled (no plannedFor)
+  const unscheduled = items.filter(t => !t.plannedFor);
+  if (unscheduled.length) {
+    html += `<div class="section-head">Unscheduled <span class="count">${unscheduled.length}</span></div>`;
+    html += unscheduled.map(t => rowHTML(t, { showStatus: true })).join('');
+  }
+
+  if (!items.length) html += `<div class="empty">No tasks in this sprint yet.</div>`;
+  return html;
+}
+
+function updateSprintStrip() {
+  const sp = SPRINTS[sprintIdx];
+  document.getElementById('sprint-name').textContent = sp.name;
+  const badge = document.getElementById('sprint-badge');
+  badge.className = 'badge ' + sp.badge;
+  badge.textContent = sp.badge;
+  document.getElementById('sprint-dates').textContent = sp.dates;
+  const goalEl = document.getElementById('sprint-goal');
+  if (sp.goal) { goalEl.textContent = sp.goal; goalEl.classList.remove('hidden'); }
+  else goalEl.classList.add('hidden');
+  document.getElementById('sprint-prev').classList.toggle('disabled', sprintIdx === 0);
+  document.getElementById('sprint-next').classList.toggle('disabled', sprintIdx === SPRINTS.length - 1);
+}
+
+/* ──────────────────────────────────────────────────────
+   Tab: Today
+   ────────────────────────────────────────────────────── */
+function renderDaily() {
+  const todays = TASKS.filter(t => t.plannedFor === dailyDate);
+  const totalEst = todays.reduce((a, t) => a + (t.est || 0), 0);
+
+  let html = `<div class="date-head">
+    <div class="meta">${todays.length} task${todays.length === 1 ? '' : 's'} · ${totalEst}h planned</div>
+  </div>`;
+
+  if (!todays.length) {
+    html += `<div class="empty">Nothing planned for this day.</div>`;
+    return html;
+  }
+  const order = { doing: 0, todo: 1, blocked: 2, done: 3 };
+  todays.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+  html += todays.map(t => rowHTML(t, { showStatus: true })).join('');
+  return html;
+}
+
+function updateDailyStrip() {
+  const d = parseDate(dailyDate);
+  document.getElementById('daily-dow').textContent = DOW_LONG[d.getDay()];
+  document.getElementById('daily-date').textContent = `${MON_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  document.getElementById('daily-today-pill').hidden = !isToday(dailyDate);
+}
+
+/* ──────────────────────────────────────────────────────
+   Rendering entry point
+   ────────────────────────────────────────────────────── */
+const content = document.getElementById('content');
+const backBtn = document.getElementById('back-btn');
+const logoEl = document.getElementById('logo');
+const titleEl = document.getElementById('top-title');
+const searchWrap = document.getElementById('search-wrap');
+const sprintStrip = document.getElementById('sprint-strip');
+const sprintGoal = document.getElementById('sprint-goal');
+const dailyStrip = document.getElementById('daily-strip');
+const filterBtn = document.getElementById('filter-btn');
+const fab = document.getElementById('fab');
+
+function renderAll() {
+  // reset chrome
+  backBtn.hidden = true;
+  logoEl.hidden = false;
+  searchWrap.classList.add('hidden');
+  sprintStrip.classList.add('hidden');
+  sprintGoal.classList.add('hidden');
+  dailyStrip.classList.add('hidden');
+  filterBtn.classList.add('hidden');
+  fab.classList.add('hidden');
+
+  let html = '';
+  if (tab === 'priority') {
+    searchWrap.classList.remove('hidden');
+    if (!priorityBucket) {
+      titleEl.textContent = 'Priority';
+      html = renderPriorityList();
+    } else {
+      const labelMap = { now: 'NOW', next: 'NEXT', later: 'LATER', someday: 'SOMEDAY', unsorted: 'UNSORTED' };
+      titleEl.textContent = labelMap[priorityBucket] || 'Bucket';
+      logoEl.hidden = true;
+      backBtn.hidden = false;
+      html = renderPriorityBucket(priorityBucket);
+    }
+  } else if (tab === 'project') {
+    searchWrap.classList.remove('hidden');
+    filterBtn.classList.remove('hidden');
+    filterBtn.classList.toggle('has-active', hasActiveFilter());
+    if (!projectNav.project) {
+      titleEl.textContent = 'Projects';
+      html = renderProjectList();
+    } else if (!projectNav.sub) {
+      const p = projById(projectNav.project);
+      titleEl.textContent = p ? p.name : 'Project';
+      logoEl.hidden = true;
+      backBtn.hidden = false;
+      fab.classList.remove('hidden');          // FAB on project detail only
+      html = renderProjectDetail(projectNav.project);
+    } else {
+      const sp = subById(projectNav.project, projectNav.sub);
+      titleEl.textContent = sp ? sp.name : 'Subproject';
+      logoEl.hidden = true;
+      backBtn.hidden = false;
+      fab.classList.remove('hidden');          // FAB on subproject detail only
+      html = renderSubprojectDetail(projectNav.project, projectNav.sub);
+    }
+  } else if (tab === 'sprint') {
+    titleEl.textContent = 'Sprint';
+    sprintStrip.classList.remove('hidden');
+    updateSprintStrip();
+    html = renderSprint();
+  } else if (tab === 'daily') {
+    titleEl.textContent = 'Daily';
+    dailyStrip.classList.remove('hidden');
+    updateDailyStrip();
+    html = renderDaily();
+  }
+  content.innerHTML = html;
+  content.scrollTop = 0;
+}
+
+/* ──────────────────────────────────────────────────────
+   Navigation / interactions
+   ────────────────────────────────────────────────────── */
+document.querySelectorAll('.bottom-nav .nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    tab = btn.dataset.tab;
+    projectNav = { project: null, sub: null };
+    priorityBucket = null;
+    document.querySelectorAll('.bottom-nav .nav-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderAll();
+  });
+});
+
+backBtn.addEventListener('click', () => {
+  if (tab === 'priority') { priorityBucket = null; renderAll(); return; }
+  if (projectNav.sub) projectNav.sub = null;
+  else projectNav.project = null;
+  renderAll();
+});
+
+searchIn.addEventListener('input', renderAll);
+
+/* content click handling (drill-down, bucket collapse, inline add, context menu) */
+content.addEventListener('click', (e) => {
+  const menuBtn = e.target.closest('[data-menu]');
+  if (menuBtn) { openSheet(menuBtn.dataset.id); return; }
+
+  const drillP = e.target.closest('[data-drill-project]');
+  if (drillP) { projectNav.project = drillP.dataset.drillProject; projectNav.sub = null; renderAll(); return; }
+
+  const drillS = e.target.closest('[data-drill-sub]');
+  if (drillS) { projectNav.sub = drillS.dataset.drillSub; renderAll(); return; }
+
+  const drillB = e.target.closest('[data-drill-bucket]');
+  if (drillB) { priorityBucket = drillB.dataset.drillBucket; renderAll(); return; }
+});
+
+/* sprint nav */
+document.getElementById('sprint-prev').addEventListener('click', () => {
+  if (sprintIdx > 0) { sprintIdx--; renderAll(); }
+});
+document.getElementById('sprint-next').addEventListener('click', () => {
+  if (sprintIdx < SPRINTS.length - 1) { sprintIdx++; renderAll(); }
+});
+
+/* daily nav */
+document.getElementById('daily-prev').addEventListener('click', () => {
+  dailyDate = addDays(dailyDate, -1); renderAll();
+});
+document.getElementById('daily-next').addEventListener('click', () => {
+  dailyDate = addDays(dailyDate, 1); renderAll();
+});
+
+/* filter sheet */
+const sheetFilter = document.getElementById('sheet-filter');
+filterBtn.addEventListener('click', () => {
+  sheetFilter.classList.add('open');
+  sheetBd.classList.add('open');
+});
+sheetFilter.addEventListener('click', (e) => {
+  const reset = e.target.closest('[data-filter-reset]');
+  if (reset) {
+    projFilter = { kind: 'all', status: 'all', bucket: 'all' };
+    closeFilterSheet();
+    renderAll();
+    return;
+  }
+  const mi = e.target.closest('[data-filter]');
+  if (!mi) return;
+  projFilter[mi.dataset.filter] = mi.dataset.value;
+  closeFilterSheet();
+  renderAll();
+});
+function closeFilterSheet() {
+  sheetFilter.classList.remove('open');
+  sheetBd.classList.remove('open');
+}
+
+/* ──────────────────────────────────────────────────────
+   Context sheet
+   ────────────────────────────────────────────────────── */
+const sheet = document.getElementById('sheet-row');
+const sheetBd = document.getElementById('sheet-backdrop');
+let activeRowId = null;
+
+function openSheet(id) {
+  activeRowId = id;
+  sheet.classList.add('open');
+  sheetBd.classList.add('open');
+}
+function closeSheet() {
+  sheet.classList.remove('open');
+  sheetBd.classList.remove('open');
+  activeRowId = null;
+}
+sheetBd.addEventListener('click', () => {
+  sheet.classList.remove('open');
+  document.getElementById('sheet-filter').classList.remove('open');
+  sheetBd.classList.remove('open');
+  activeRowId = null;
+});
+
+sheet.addEventListener('click', (e) => {
+  const mi = e.target.closest('.mi');
+  if (!mi || !activeRowId) return;
+  const act = mi.dataset.act;
+  const task = TASKS.find(t => t.id === activeRowId);
+  if (!task) return closeSheet();
+
+  if (['now','next','later','someday'].includes(act)) task.bucket = act;
+  else if (act === 'st-todo')  task.status = 'todo';
+  else if (act === 'st-doing') task.status = 'doing';
+  else if (act === 'st-done')  task.status = 'done';
+  else if (act === 'del')      TASKS = TASKS.filter(t => t.id !== activeRowId);
+  else if (act === 'edit')     { openTaskModal({ editId: activeRowId }); closeSheet(); return; }
+
+  closeSheet();
+  renderAll();
+});
+
+/* ──────────────────────────────────────────────────────
+   FAB
+   ────────────────────────────────────────────────────── */
+document.getElementById('fab-main').addEventListener('click', (e) => {
+  e.stopPropagation();
+  fab.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!fab.contains(e.target)) fab.classList.remove('open');
+});
+fab.querySelectorAll('[data-new]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    fab.classList.remove('open');
+    if (btn.dataset.new === 'task') openTaskModal({});
+    if (btn.dataset.new === 'project') openProjectModal();
+  });
+});
+
+/* ──────────────────────────────────────────────────────
+   Populate project selects
+   ────────────────────────────────────────────────────── */
+function populateProjectSelect() {
+  const sel = document.getElementById('task-project');
+  let opts = '<option value="">— No project —</option>';
+  for (const p of PROJECTS) {
+    opts += `<optgroup label="${esc(p.name)}">`;
+    opts += `<option value="${p.id}">${esc(p.name)} (top level)</option>`;
+    for (const s of p.subs) opts += `<option value="${p.id}/${s.id}">${esc(p.name)} / ${esc(s.name)}</option>`;
+    opts += `</optgroup>`;
+  }
+  sel.innerHTML = opts;
+
+  const parentSel = document.getElementById('project-parent');
+  parentSel.innerHTML = PROJECTS.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+
+/* ──────────────────────────────────────────────────────
+   Task modal
+   ────────────────────────────────────────────────────── */
+const modalTask = document.getElementById('modal-task');
+let editingTaskId = null;
+
+function openTaskModal({ bucket, project, editId } = {}) {
+  populateProjectSelect();
+  editingTaskId = editId || null;
+  modalTask.hidden = false;
+
+  const titleIn = document.getElementById('task-title');
+  const projIn  = document.getElementById('task-project');
+  const priIn   = document.getElementById('task-priority');
+  const estIn   = document.getElementById('task-estimate');
+  const notesIn = document.getElementById('task-notes');
+
+  if (editId) {
+    const t = TASKS.find(x => x.id === editId);
+    if (t) {
+      document.getElementById('modal-task-title').textContent = 'Edit task';
+      document.querySelector('#task-create-submit').textContent = 'Save';
+      setTaskType(t.kind === 'task' ? 'task' : t.kind === 'feat' ? 'feature' : 'bug');
+      titleIn.value = t.title;
+      projIn.value = t.sub ? `${t.project}/${t.sub}` : (t.project || '');
+      priIn.value = t.bucket;
+      estIn.value = t.est || '';
+      notesIn.value = '';
+    }
+  } else {
+    document.getElementById('modal-task-title').textContent = 'New task';
+    document.querySelector('#task-create-submit').textContent = 'Create';
+    setTaskType('task');
+    titleIn.value = '';
+    projIn.value = project || '';
+    priIn.value = bucket != null ? bucket : 'next';
+    estIn.value = '';
+    notesIn.value = '';
+  }
+  setTimeout(() => titleIn.focus(), 50);
+}
+
+function setTaskType(kind) {
+  document.querySelectorAll('#task-type-toggle .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === kind);
+  });
+  document.getElementById('task-type-hint').textContent =
+    kind === 'bug' ? 'Something broken — track severity.' :
+    kind === 'feature' ? 'A feature to ideate, spec, and ship.' :
+    'Plain sub-task or standalone item.';
+  document.querySelectorAll('.subtype-field').forEach(f => {
+    f.hidden = f.dataset.showWhen !== kind;
+  });
+}
+document.querySelectorAll('#task-type-toggle .seg-btn').forEach(b => {
+  b.addEventListener('click', () => setTaskType(b.dataset.type));
+});
+
+document.querySelectorAll('[data-close]').forEach(b => {
+  b.addEventListener('click', () => { document.getElementById(b.dataset.close).hidden = true; });
+});
+
+document.getElementById('task-create-submit').addEventListener('click', () => {
+  const kindBtn = document.querySelector('#task-type-toggle .seg-btn.active');
+  const kindMap = { task: 'task', feature: 'feat', bug: 'bug' };
+  const kind = kindMap[kindBtn.dataset.type];
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) { document.getElementById('task-title').focus(); return; }
+  const projVal = document.getElementById('task-project').value;
+  const [projectId, subId] = projVal.includes('/') ? projVal.split('/') : [projVal, null];
+  const bucket = document.getElementById('task-priority').value;
+  const est = parseFloat(document.getElementById('task-estimate').value) || 0;
+  const proj = projById(projectId);
+  const sub = proj && subId ? proj.subs.find(s => s.id === subId) : null;
+  const crumb = !proj ? '—' : sub ? `${proj.name} / ${sub.name}` : proj.name;
+  const sevBtn = document.querySelector('.subtype-field[data-show-when="bug"]:not([hidden]) .seg-btn.active');
+  const sev = kind === 'bug' && sevBtn ? sevBtn.dataset.sev : undefined;
+
+  if (editingTaskId) {
+    const t = TASKS.find(x => x.id === editingTaskId);
+    if (t) {
+      t.kind = kind; t.title = title; t.project = projectId || null;
+      t.sub = subId || null; t.crumb = crumb; t.bucket = bucket; t.est = est;
+      if (sev) t.sev = sev; else delete t.sev;
+    }
+  } else {
+    const id = 'n' + Date.now().toString(36);
+    const t = { id, kind, title, crumb, project: projectId || null, sub: subId || null, est, bucket, sprint: null, status: 'todo' };
+    if (sev) t.sev = sev;
+    TASKS.unshift(t);
+  }
+  editingTaskId = null;
+  modalTask.hidden = true;
+  renderAll();
+});
+
+/* ──────────────────────────────────────────────────────
+   Project modal
+   ────────────────────────────────────────────────────── */
+const modalProj = document.getElementById('modal-project');
+function openProjectModal() {
+  populateProjectSelect();
+  modalProj.hidden = false;
+  document.getElementById('project-name').value = '';
+  document.getElementById('project-desc').value = '';
+  setTimeout(() => document.getElementById('project-name').focus(), 50);
+}
+document.querySelectorAll('#project-scope-toggle .seg-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#project-scope-toggle .seg-btn').forEach(x => x.classList.toggle('active', x === b));
+    const isSub = b.dataset.scope === 'sub';
+    document.getElementById('project-parent-field').hidden = !isSub;
+    document.getElementById('project-color-field').hidden = isSub;
+  });
+});
+document.querySelectorAll('#project-color-swatches .swatch').forEach(s => {
+  s.addEventListener('click', () => {
+    document.querySelectorAll('#project-color-swatches .swatch').forEach(x => x.classList.toggle('active', x === s));
+  });
+});
+document.getElementById('project-create-submit').addEventListener('click', () => {
+  const name = document.getElementById('project-name').value.trim();
+  if (!name) { document.getElementById('project-name').focus(); return; }
+  const scope = document.querySelector('#project-scope-toggle .seg-btn.active').dataset.scope;
+  if (scope === 'sub') {
+    const parent = document.getElementById('project-parent').value;
+    const proj = projById(parent);
+    if (proj) proj.subs.push({ id: 'sub-' + Date.now().toString(36), name });
+  } else {
+    const color = document.querySelector('#project-color-swatches .swatch.active').dataset.color;
+    PROJECTS.push({ id: 'p-' + Date.now().toString(36), name, color, subs: [] });
+  }
+  modalProj.hidden = true;
+  renderAll();
+});
+
+/* boot */
+populateProjectSelect();
+renderAll();
+</script>
+
+</body>
+</html>

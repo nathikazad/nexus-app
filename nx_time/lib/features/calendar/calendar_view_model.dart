@@ -14,9 +14,10 @@ class CalendarDayData {
   final List<UmbrellaRow> rows;
 }
 
-/// Seven days (Mon–Sun) derived from the shared [weekActionsProvider] store.
+/// Seven days (Mon–Sun) derived from [weekActionsProvider] for [currentWeekProvider].
 final calendarWeekProvider = Provider<AsyncValue<List<CalendarDayData>>>((ref) {
-  return ref.watch(weekActionsProvider).when(
+  final monday = ref.watch(currentWeekProvider);
+  return ref.watch(weekActionsProvider(monday)).when(
         data: (wa) {
           return AsyncValue.data(
             List.generate(

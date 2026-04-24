@@ -3,6 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
 
 void main() {
+  test('hexFromColor and colorFromHex roundtrip', () {
+    const c = Color(0xFF0A1B2C);
+    expect(colorFromHex(hexFromColor(c)), c);
+  });
+
   test('same modelTypeId → same bar color', () {
     expect(barColorForModelTypeId(42), barColorForModelTypeId(42));
   });

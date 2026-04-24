@@ -40,10 +40,21 @@ export 'src/kgql/providers/models_providers.dart';
 export 'src/kgql/providers/model_types_providers.dart';
 export 'src/kgql/providers/relation_picker_providers.dart';
 
-// Transcript feature
-export 'src/transcript/transcript.dart';
-export 'src/transcript/transcript_repository.dart';
-export 'src/transcript/transcript_providers.dart';
+// Person (current user profile)
+export 'src/models/domain/person/person.dart';
+export 'src/models/domain/person/person_repository.dart';
+export 'src/models/data/person/person_attr_keys.dart';
+export 'src/models/data/person/person_mapper.dart';
+export 'src/models/data/person/kgql_person_repository.dart';
+export 'src/models/data/person/person_providers.dart';
+
+// Transcript (current user conversation)
+export 'src/models/domain/transcript/transcript.dart';
+export 'src/models/domain/transcript/transcript_repository.dart';
+export 'src/models/data/transcript/transcript_attr_keys.dart';
+export 'src/models/data/transcript/transcript_mapper.dart';
+export 'src/models/data/transcript/kgql_transcript_repository.dart';
+export 'src/models/data/transcript/transcript_providers.dart';
 
 // Goals (app schema orchestrators)
 export 'goals.dart';

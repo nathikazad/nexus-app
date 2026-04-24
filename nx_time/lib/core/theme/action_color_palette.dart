@@ -1,5 +1,23 @@
 import 'package:flutter/material.dart';
 
+/// `#RRGGBB` in uppercase, no alpha (matches [colorFromHex]).
+String hexFromColor(Color c) {
+  final rgb = c.toARGB32() & 0xFFFFFF;
+  return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
+}
+
+/// Parses `#RRGGBB` or `RRGGBB` (case-insensitive); falls back to opaque black on failure.
+Color colorFromHex(String raw) {
+  var s = raw.trim();
+  if (s.isEmpty) return const Color(0xFF000000);
+  if (s.startsWith('#')) s = s.substring(1);
+  if (s.length == 6) {
+    final v = int.tryParse(s, radix: 16);
+    if (v != null) return Color(0xFF000000 | v);
+  }
+  return const Color(0xFF000000);
+}
+
 /// Stable distinct color per concrete model type id — used for Today list rows,
 /// time bar segments, legend swatches, and action detail category pill (same as list).
 Color barColorForModelTypeId(int modelTypeId) {

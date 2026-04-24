@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/features/action_create/add_child_actions_page.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
@@ -28,6 +29,9 @@ class ActivityDetailPage extends ConsumerWidget {
     final linkedAsync = action == null
         ? null
         : ref.watch(tasksLinkedToActivityProvider(action.id));
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
 
     final effectiveArgs = linkedAsync == null
         ? args
@@ -40,6 +44,7 @@ class ActivityDetailPage extends ConsumerWidget {
 
     return _ActivityDetailScaffold(
       args: effectiveArgs,
+      modelTypeColors: colors,
       onEdit: action == null
           ? null
           : () {
@@ -59,10 +64,12 @@ class ActivityDetailPage extends ConsumerWidget {
 class _ActivityDetailScaffold extends StatelessWidget {
   const _ActivityDetailScaffold({
     required this.args,
+    required this.modelTypeColors,
     required this.onEdit,
   });
 
   final ActivityDetailArgs args;
+  final ModelTypeColors modelTypeColors;
   final VoidCallback? onEdit;
 
   @override
@@ -190,6 +197,7 @@ class _ActivityDetailScaffold extends StatelessWidget {
                                   args: activityDetailArgsForAction(
                                     c.sourceAction,
                                     args.dateLabel,
+                                    modelTypeColors,
                                   ),
                                 ),
                               ),

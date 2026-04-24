@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:nx_time/core/time/action_calendar_overlap.dart';
 import 'package:nx_time/core/time/week_calendar.dart';
 import 'package:nx_time/data/providers.dart';
@@ -21,31 +20,50 @@ class CurrentWeek extends Notifier<DateTime> {
 final currentWeekProvider =
     NotifierProvider<CurrentWeek, DateTime>(CurrentWeek.new);
 
-/// Loads every action for [currentWeekProvider] in one request, then buckets by
-/// [actionOverlapsLocalCalendarDay] per day.
+/// Monday 00:00 of the current calendar week (local) — the week the **Today** tab
+/// shows. Evaluated on first read of this provider, not on every build; the week
+/// does not auto-roll at midnight (same as before the week-store unification). Use
+/// [invalidateActionsAfterMutation] after writes so the tab refetches.
+final todayMondayProvider = Provider<DateTime>(
+  (ref) => mondayOfWeek(DateTime.now()),
+);
+
+/// Loads every action for the week that starts on [monday] (one request), then
+/// buckets by [actionOverlapsLocalCalendarDay] per day.
+///
+/// Colors are read at render time via [modelTypeColorsProvider], so this
+/// provider intentionally does not await it (changing a color must not
+/// trigger a re-fetch of the entire week's actions).
 final weekActionsProvider =
-    FutureProvider.autoDispose<WeekActions>((ref) async {
-  await ref.watch(authenticatedUserProvider.future);
-  final monday = ref.watch(currentWeekProvider);
-  final m0 = DateTime(monday.year, monday.month, monday.day);
-  final repo = ref.watch(actionRepositoryProvider);
-  final all = await repo.listForWeek(m0);
-  final byDay = List.generate(7, (i) {
-    final day = m0.add(Duration(days: i));
-    return all.where((a) => actionOverlapsLocalCalendarDay(a, day)).toList();
-  });
-  return WeekActions(weekStart: m0, byDay: byDay, all: all);
-});
+    FutureProvider.autoDispose.family<WeekActions, DateTime>(
+  (ref, monday) async {
+    await ref.watch(authenticatedUserProvider.future);
+    final m0 = DateTime(monday.year, monday.month, monday.day);
+    final repo = ref.watch(actionRepositoryProvider);
+    final all = await repo.listForWeek(m0);
+    final byDay = List.generate(7, (i) {
+      final day = m0.add(Duration(days: i));
+      return all.where((a) => actionOverlapsLocalCalendarDay(a, day)).toList();
+    });
+    return WeekActions(weekStart: m0, byDay: byDay, all: all);
+  },
+);
 
-/// Current week's action goals (no expense goals — `getActionGoalsWeek` is action-only).
-final actionGoalsWeekProvider = FutureProvider<ActionGoalsWeek>((ref) async {
-  final monday = ref.watch(currentWeekProvider);
-  final repo = ref.watch(goalRepositoryProvider);
-  return repo.getActionGoalsWeek(weekStart: monday);
-});
+/// Action goals for the week starting on [monday] (`getActionGoalsWeek` — no expense
+/// goals; action-only).
+final actionGoalsWeekProvider =
+    FutureProvider.autoDispose.family<ActionGoalsWeek, DateTime>(
+  (ref, monday) async {
+    final m0 = DateTime(monday.year, monday.month, monday.day);
+    final repo = ref.watch(goalRepositoryProvider);
+    return repo.getActionGoalsWeek(weekStart: m0);
+  },
+);
 
-/// Call after an action is created/updated/deleted on a day so calendar + goals refetch.
-void invalidateWeekActions(WidgetRef ref) {
+/// After any local action create/update/delete, invalidates the week-action and
+/// week-goal [FutureProvider] families. Refetches any **mounted** family instances
+/// (e.g. Today's week, the calendar's selected week) — typically one or two weeks.
+void invalidateActionsAfterMutation(WidgetRef ref) {
   ref.invalidate(weekActionsProvider);
   ref.invalidate(actionGoalsWeekProvider);
 }

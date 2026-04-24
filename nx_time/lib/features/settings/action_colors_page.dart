@@ -1,26 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
+import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/domain/action/action_subtype_option.dart';
 
-class ActionColorsPage extends StatefulWidget {
+class ActionColorsPage extends ConsumerStatefulWidget {
   const ActionColorsPage({super.key});
 
   @override
-  State<ActionColorsPage> createState() => _ActionColorsPageState();
+  ConsumerState<ActionColorsPage> createState() => _ActionColorsPageState();
 }
 
-class _ActionColorsPageState extends State<ActionColorsPage> {
-  final List<_ActionColorItem> _items = [
-    const _ActionColorItem(label: 'Sleep', color: AppColors.sleepBlue),
-    const _ActionColorItem(label: 'Work', color: Color(0xFF185FA5)),
-    const _ActionColorItem(label: 'Yoga', color: AppColors.dotOk),
-    const _ActionColorItem(label: 'Eat', color: AppColors.calOrange),
-    const _ActionColorItem(label: 'Shopping', color: Color(0xFFD4537E)),
-    const _ActionColorItem(label: 'Workout', color: AppColors.calOlive),
-    const _ActionColorItem(label: 'Commute', color: Color(0xFF888780)),
-    const _ActionColorItem(label: 'Reading', color: Color(0xFFBA7517)),
-  ];
+class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
+  bool _seedAttempted = false;
 
   static const List<Color> _swatches = [
     AppColors.sleepBlue,
@@ -41,7 +36,53 @@ class _ActionColorsPageState extends State<ActionColorsPage> {
     Color(0xFF111827),
   ];
 
-  Future<void> _pickColor(int index) async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // ignore: discarded_futures
+      _trySeed();
+    });
+  }
+
+  /// One batched write so new installs persist defaults from [barColorForModelTypeId].
+  Future<void> _trySeed() async {
+    if (!mounted || _seedAttempted) return;
+    try {
+      final subtypes = await ref.read(actionSubtypeOptionsProvider.future);
+      final person = await ref.read(mainPersonProvider.future);
+      if (!mounted) return;
+      if (person == null) return;
+      final map = readModelTypeColorHexByName(person.preference);
+      var allPresent = true;
+      for (final t in subtypes) {
+        if (!map.containsKey(t.name)) {
+          allPresent = false;
+          break;
+        }
+      }
+      if (allPresent) return;
+      _seedAttempted = true;
+      final repo = ref.read(personRepositoryProvider);
+      await seedMissingModelTypeColors(
+        repo: repo,
+        person: person,
+        subtypes: subtypes,
+      );
+      if (mounted) {
+        ref.invalidate(mainPersonProvider);
+      }
+    } catch (e) {
+      debugPrint('[ActionColorsPage] seed: $e');
+    }
+  }
+
+  Future<void> _pickColor({
+    required Person person,
+    required String modelTypeName,
+    required Color current,
+  }) async {
     final selected = await showModalBottomSheet<Color>(
       context: context,
       backgroundColor: Colors.white,
@@ -50,7 +91,6 @@ class _ActionColorsPageState extends State<ActionColorsPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        final current = _items[index].color;
         return SafeArea(
           top: false,
           child: Padding(
@@ -60,7 +100,7 @@ class _ActionColorsPageState extends State<ActionColorsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Choose color for ${_items[index].label}',
+                  'Choose color for $modelTypeName',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -100,14 +140,37 @@ class _ActionColorsPageState extends State<ActionColorsPage> {
       },
     );
 
-    if (selected == null) return;
-    setState(() {
-      _items[index] = _ActionColorItem(label: _items[index].label, color: selected);
-    });
+    if (selected == null || !mounted) return;
+    final repo = ref.read(personRepositoryProvider);
+    final hex = hexFromColor(selected);
+    try {
+      await setModelTypeColor(
+        repo: repo,
+        person: person,
+        modelTypeName: modelTypeName,
+        hex: hex,
+      );
+      if (mounted) {
+        ref.invalidate(mainPersonProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final subtypes = ref.watch(actionSubtypeOptionsProvider);
+    final colorsAsync = ref.watch(modelTypeColorsProvider);
+    final personAsync = ref.watch(mainPersonProvider);
+
+    final colorsLast = colorsAsync.asData?.value;
+    final personLast = personAsync.asData?.value;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -152,70 +215,11 @@ class _ActionColorsPageState extends State<ActionColorsPage> {
               ),
             ),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                itemCount: _items.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.slate100),
-                itemBuilder: (context, index) {
-                  final item = _items[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.label,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.slate900,
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () => _pickColor(index),
-                          borderRadius: BorderRadius.circular(999),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.slate200),
-                              borderRadius: BorderRadius.circular(999),
-                              color: Colors.white,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 14,
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    color: item.color,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 1),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _hex(item.color),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.slate600,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  SolarLinearIcons.altArrowDown,
-                                  size: 14,
-                                  color: AppColors.slate400,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              child: _buildBody(
+                subtypes: subtypes,
+                colorsLast: colorsLast,
+                personAsync: personAsync,
+                personLast: personLast,
               ),
             ),
           ],
@@ -224,15 +228,125 @@ class _ActionColorsPageState extends State<ActionColorsPage> {
     );
   }
 
-  String _hex(Color c) {
-    final rgb = c.toARGB32() & 0xFFFFFF;
-    return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
+  Widget _buildBody({
+    required AsyncValue<List<ActionSubtypeOption>> subtypes,
+    required ModelTypeColors? colorsLast,
+    required AsyncValue<Person?> personAsync,
+    required Person? personLast,
+  }) {
+    final types = subtypes.asData?.value;
+    if (types == null) {
+      if (subtypes.hasError) return _error(subtypes.error!);
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (colorsLast == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (personLast == null) {
+      if (personAsync.hasError) return _error(personAsync.error!);
+      if (personAsync.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return const Center(
+        child: Text(
+          'No Person profile found. Run server setup (Main User).',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.slate500),
+        ),
+      );
+    }
+    return _buildList(
+      types,
+      colorsLast,
+      person: personLast,
+    );
   }
-}
 
-class _ActionColorItem {
-  const _ActionColorItem({required this.label, required this.color});
+  Widget _error(Object e) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text('Error: $e', textAlign: TextAlign.center),
+      ),
+    );
+  }
 
-  final String label;
-  final Color color;
+  Widget _buildList(
+    List<ActionSubtypeOption> types,
+    ModelTypeColors c, {
+    required Person person,
+  }) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      itemCount: types.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.slate100),
+      itemBuilder: (context, index) {
+        final mt = types[index];
+        final name = mt.name;
+        final id = mt.id;
+        final color = c.forId(id, name: name);
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.slate900,
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () => _pickColor(
+                  person: person,
+                  modelTypeName: name,
+                  current: color,
+                ),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.slate200),
+                    borderRadius: BorderRadius.circular(999),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        hexFromColor(color),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        SolarLinearIcons.altArrowDown,
+                        size: 14,
+                        color: AppColors.slate400,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

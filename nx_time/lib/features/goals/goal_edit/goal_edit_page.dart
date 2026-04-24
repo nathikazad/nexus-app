@@ -166,7 +166,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
         await repo.update(built);
       }
       if (!mounted) return;
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -188,7 +188,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     try {
       await ref.read(goalRepositoryProvider).update(built);
       if (!mounted) return;
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -230,7 +230,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     try {
       await ref.read(goalRepositoryProvider).delete(id);
       if (!mounted) return;
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;

@@ -65,7 +65,7 @@ void main() {
     );
     expect(ActionEditViewModel.modelTypeNameIfChanged(initial, catSame), isNull);
     const catNew = ActionCategoryOption(
-      modelTypeId: 1,
+      modelTypeId: 2,
       name: 'Sleep',
       dotColor: Color(0xFF000000),
     );

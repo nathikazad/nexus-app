@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
+import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_time/domain/action/action_repository.dart';
@@ -7,20 +7,32 @@ import 'package:nx_time/domain/goals/goal_repository.dart';
 import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/data/action/action_schema_provider.dart';
+import 'package:nx_time/data/action/action_subtypes_provider.dart';
 import 'package:nx_time/data/action/kgql_action_repository.dart';
 import 'package:nx_time/data/goals/goal_schema_provider.dart';
 import 'package:nx_time/data/goals/kgql_goal_repository.dart';
+import 'package:nx_time/data/person/model_type_colors.dart';
 import 'package:nx_time/data/projects/kgql_project_repository.dart';
 import 'package:nx_time/data/projects/project_schema_provider.dart';
 import 'package:nx_time/data/schema/kgql_action_schema_repository.dart';
 import 'package:nx_time/data/tasks/kgql_task_repository.dart';
 import 'package:nx_time/data/tasks/task_schema_provider.dart';
 
+export 'package:nx_db/person.dart';
 export 'package:nx_time/data/action/action_schema_provider.dart';
 export 'package:nx_time/data/action/action_subtypes_provider.dart';
 export 'package:nx_time/data/projects/project_schema_provider.dart';
 export 'package:nx_time/data/tasks/task_schema_provider.dart';
 export 'package:nx_time/data/goals/goal_schema_provider.dart';
+export 'package:nx_time/data/person/model_type_colors.dart';
+
+/// Model-type bar colors from Person `preference.model_type_colors` (with defaults).
+final modelTypeColorsProvider = FutureProvider<ModelTypeColors>((ref) async {
+  final person = await ref.watch(mainPersonProvider.future);
+  final pref = person?.preference ?? <String, dynamic>{};
+  await ref.watch(actionSubtypeModelTypesProvider.future);
+  return ModelTypeColors.fromPreference(pref);
+});
 
 /// Default KGQL-backed [ActionRepository].
 final actionRepositoryProvider = Provider<ActionRepository>(
@@ -59,15 +71,3 @@ final kgqlActionSchemaRepositoryProvider =
     Provider<KgqlActionSchemaRepository>(
   (ref) => KgqlActionSchemaRepository(ref),
 );
-
-/// Resolves only when auth has loaded a non-null user.
-///
-/// Data providers that hit KGQL should depend on this provider so requests don't
-/// race ahead with default unauthenticated client config.
-final authenticatedUserProvider = FutureProvider<User>((ref) async {
-  final user = await ref.watch(authProvider.future);
-  if (user == null) {
-    throw StateError('Not authenticated');
-  }
-  return user;
-});

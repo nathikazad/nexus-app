@@ -6,6 +6,8 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_time/data/action/action_attr_keys.dart';
 import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/domain/action/week_actions.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 
 import '../_support/integration_auth.dart';
@@ -57,7 +59,14 @@ void main() {
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
-        final snapshot = await container.read(todaySnapshotProvider.future);
+        final mon = container.read(todayMondayProvider);
+        final weekKeepAlive = container.listen<AsyncValue<WeekActions>>(
+          weekActionsProvider(mon),
+          (_, __) {},
+        );
+        addTearDown(weekKeepAlive.close);
+        await container.read(weekActionsProvider(mon).future);
+        final snapshot = container.read(todaySnapshotProvider).requireValue;
         final day = kNxTimeDemoDay;
         expect(snapshot.titleLine, 'Actions');
         expect(
@@ -78,7 +87,14 @@ void main() {
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
-        final snapshot = await container.read(todaySnapshotProvider.future);
+        final mon = container.read(todayMondayProvider);
+        final weekKeepAlive = container.listen<AsyncValue<WeekActions>>(
+          weekActionsProvider(mon),
+          (_, __) {},
+        );
+        addTearDown(weekKeepAlive.close);
+        await container.read(weekActionsProvider(mon).future);
+        final snapshot = container.read(todaySnapshotProvider).requireValue;
         expect(
           snapshot.activityBlockCount,
           greaterThanOrEqualTo(6),

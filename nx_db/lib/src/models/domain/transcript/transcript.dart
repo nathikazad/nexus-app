@@ -10,7 +10,7 @@ class TranscriptMessage {
     required this.message,
   });
 
-  bool get isFromUser => sender == "Human";
+  bool get isFromUser => sender == 'Human';
 
   factory TranscriptMessage.fromJson(Map<String, dynamic> json) {
     return TranscriptMessage(

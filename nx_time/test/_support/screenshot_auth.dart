@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:nx_db/auth.dart';
 
@@ -25,7 +26,10 @@ List<Override> get screenshotAuthOverrides => [
           initial: buildScreenshotTodaySnapshot().sourceActions,
         ),
       ),
-      todaySnapshotProvider.overrideWith(
-        (ref) async => buildScreenshotTodaySnapshot(),
+      modelTypeColorsProvider.overrideWith(
+        (ref) async => ModelTypeColors.fallback,
+      ),
+      todaySnapshotProvider.overrideWithValue(
+        AsyncData(buildScreenshotTodaySnapshot()),
       ),
     ];

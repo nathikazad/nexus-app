@@ -33,11 +33,18 @@ void main() {
       endTime: DateTime(day.year, day.month, day.day, 11, 0),
     );
     final row = UmbrellaRow(umbrella: u, children: [c]);
-    final args = activityDetailArgsForUmbrella(row, 'Sat, Apr 18');
+    final args = activityDetailArgsForUmbrella(
+      row,
+      'Sat, Apr 18',
+      ModelTypeColors.fallback,
+    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          modelTypeColorsProvider.overrideWith(
+            (ref) async => ModelTypeColors.fallback,
+          ),
           taskRepositoryProvider.overrideWithValue(const FakeEmptyTaskRepository()),
           allTasksProvider.overrideWith((ref) async => const []),
         ],

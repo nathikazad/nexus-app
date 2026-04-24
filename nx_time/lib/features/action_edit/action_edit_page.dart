@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/features/action_edit/action_category_option.dart';
@@ -10,7 +9,6 @@ import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/tasks/task_picker_page.dart';
 import 'package:nx_time/features/tasks/task_view_models.dart';
-import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/action_create/add_child_actions_page.dart';
 import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 import 'package:nx_time/features/action_edit/widgets/action_category_picker.dart';
@@ -119,8 +117,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       await pinTaskIdsToCalendarDay(taskRepo, picked, _start);
       ref.invalidate(tasksForTodayProvider);
       ref.invalidate(allTasksProvider);
-      ref.invalidate(todaySnapshotProvider);
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       return;
     }
     final action = widget.initial!;
@@ -145,8 +142,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
     );
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
-    ref.invalidate(todaySnapshotProvider);
-    invalidateWeekActions(ref);
+    invalidateActionsAfterMutation(ref);
   }
 
   @override
@@ -254,8 +250,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
             activityModelTypeName: cat.name,
           );
         }
-        ref.invalidate(todaySnapshotProvider);
-        invalidateWeekActions(ref);
+        invalidateActionsAfterMutation(ref);
         if (!mounted) return;
         Navigator.of(context).pop();
         if (widget.parentActionId != null) {
@@ -294,8 +289,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
         );
       }
 
-      ref.invalidate(todaySnapshotProvider);
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       if (!mounted) return;
       Navigator.of(context).pop();
       if (!_isCreate) {
@@ -336,8 +330,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
     setState(() => _saving = true);
     try {
       await ref.read(actionRepositoryProvider).delete(widget.initial!.id);
-      ref.invalidate(todaySnapshotProvider);
-      invalidateWeekActions(ref);
+      invalidateActionsAfterMutation(ref);
       if (!mounted) return;
       Navigator.of(context).pop();
       Navigator.of(context).pop();

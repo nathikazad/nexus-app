@@ -393,6 +393,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     LinkedActivityLineVm line,
   ) {
     final act = line.action;
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -402,6 +405,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 final args = activityDetailArgsForAction(
                   act,
                   '',
+                  colors,
                 );
                 Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(

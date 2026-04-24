@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
+import 'package:nx_time/data/person/model_type_colors.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/domain/tasks/task_status.dart';
@@ -154,7 +155,11 @@ List<LinkedTaskItem> linkedTaskItemsFromTasks(List<Task> tasks) {
 
 /// Builds detail UI from a loaded [Action].
 /// [dayDateLabel] is the focused calendar day, e.g. `DateFormat('EEE, MMM d')` of that day.
-ActivityDetailArgs activityDetailArgsForAction(Action model, String dayDateLabel) {
+ActivityDetailArgs activityDetailArgsForAction(
+  Action model,
+  String dayDateLabel,
+  ModelTypeColors colors,
+) {
   final sl = model.startTime;
   final el = model.endTime;
   final typeName = model.modelTypeName ?? '';
@@ -162,7 +167,7 @@ ActivityDetailArgs activityDetailArgsForAction(Action model, String dayDateLabel
       typeName == 'Sleep' ? ActivityDetailLayout.sleep : ActivityDetailLayout.deepWork;
   final startParts = _splitTimeForDisplay(sl);
   final endParts = _splitTimeForDisplay(el);
-  final bar = barColorForModelTypeId(model.modelTypeId);
+  final bar = colors.forId(model.modelTypeId, name: model.modelTypeName);
   final style = categoryPillStyleFromBarColor(bar);
   final typeLabel = (typeName.isNotEmpty) ? typeName : 'Type ${model.modelTypeId}';
 
@@ -189,13 +194,14 @@ ActivityDetailArgs activityDetailArgsForAction(Action model, String dayDateLabel
 ActivityDetailArgs activityDetailArgsForUmbrella(
   UmbrellaRow row,
   String dayDateLabel,
+  ModelTypeColors colors,
 ) {
   final u = row.umbrella;
   final sl = u.startTime;
   final el = u.endTime;
   final startParts = _splitTimeForDisplay(sl);
   final endParts = _splitTimeForDisplay(el);
-  final bar = barColorForModelTypeId(u.modelTypeId);
+  final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
   final style = categoryPillStyleFromBarColor(bar);
   final typeLabel =
       (u.modelTypeName != null && u.modelTypeName!.isNotEmpty) ? u.modelTypeName! : 'Type ${u.modelTypeId}';
@@ -208,7 +214,7 @@ ActivityDetailArgs activityDetailArgsForUmbrella(
     children.add(
       UmbrellaChildItem(
         title: c.name.isNotEmpty ? c.name : (c.modelTypeName ?? 'Action'),
-        barColor: barColorForModelTypeId(c.modelTypeId),
+        barColor: colors.forId(c.modelTypeId, name: c.modelTypeName),
         timeRangeLabel: cr,
         durationLabel: cd,
         sourceAction: c,

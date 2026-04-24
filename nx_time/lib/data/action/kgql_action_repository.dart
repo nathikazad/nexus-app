@@ -1,6 +1,5 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
-
 import 'package:nx_time/core/time/action_calendar_overlap.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/domain/action/action_repository.dart';

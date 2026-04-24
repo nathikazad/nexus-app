@@ -32,7 +32,7 @@ void main() {
     );
   });
 
-  test('weekActionsProvider refetches on invalidateWeekActions', () async {
+  test('weekActionsProvider refetches on invalidateActionsAfterMutation', () async {
     final counter = _ListForWeekCounter();
     final c = makeContainer(
       overrides: [
@@ -42,16 +42,21 @@ void main() {
             preset: BackendPreset.localhost,
           ),
         ),
+        modelTypeColorsProvider.overrideWith(
+          (ref) async => ModelTypeColors.fallback,
+        ),
         actionRepositoryProvider.overrideWith((ref) => counter),
       ],
     );
     addTearDown(c.dispose);
     expect(counter.listForWeekCount, 0);
-    await c.read(weekActionsProvider.future);
+    final mon = c.read(currentWeekProvider);
+    final m0 = DateTime(mon.year, mon.month, mon.day);
+    await c.read(weekActionsProvider(m0).future);
     expect(counter.listForWeekCount, 1);
     c.invalidate(weekActionsProvider);
     c.invalidate(actionGoalsWeekProvider);
-    await c.read(weekActionsProvider.future);
+    await c.read(weekActionsProvider(m0).future);
     expect(counter.listForWeekCount, 2);
   });
 
@@ -65,18 +70,25 @@ void main() {
             preset: BackendPreset.localhost,
           ),
         ),
+        modelTypeColorsProvider.overrideWith(
+          (ref) async => ModelTypeColors.fallback,
+        ),
         actionRepositoryProvider.overrideWith((ref) => counter),
       ],
     );
     addTearDown(c.dispose);
-    await c.read(weekActionsProvider.future);
+    var mon = c.read(currentWeekProvider);
+    var m0 = DateTime(mon.year, mon.month, mon.day);
+    await c.read(weekActionsProvider(m0).future);
     expect(counter.listForWeekCount, 1);
-    final m = c.read(currentWeekProvider);
-    final m0 = DateTime(m.year, m.month, m.day);
+    mon = c.read(currentWeekProvider);
+    m0 = DateTime(mon.year, mon.month, mon.day);
     c.read(currentWeekProvider.notifier).setLocalWeekMonday(
           m0.subtract(const Duration(days: 7)),
         );
-    await c.read(weekActionsProvider.future);
+    mon = c.read(currentWeekProvider);
+    m0 = DateTime(mon.year, mon.month, mon.day);
+    await c.read(weekActionsProvider(m0).future);
     expect(counter.listForWeekCount, 2);
   });
 }

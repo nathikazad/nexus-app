@@ -4,9 +4,9 @@ import 'package:intl/intl.dart';
 
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/time/action_calendar_overlap.dart';
-import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/action.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/today/action_fold.dart';
 import 'package:nx_time/features/today/widgets/time_map_segment.dart';
 
@@ -104,33 +104,57 @@ class TodaySnapshot {
   final List<Action> dayActions;
 }
 
-/// Today tab snapshot — uses [actionRepositoryProvider] (fake or KGQL).
-final todaySnapshotProvider = FutureProvider<TodaySnapshot>((ref) async {
+/// Today tab snapshot — combines [weekActionsProvider] (same week store as
+/// Calendar) with [modelTypeColorsProvider] (in-memory) via
+/// [modelTypeColorsOrFallback] so the shell never blocks on colors while they load.
+///
+/// Returns [AsyncValue] (not a [FutureProvider]) so the shell’s [AsyncValue.when]
+/// gets the default [skipLoadingOnRefresh] behavior: on action invalidation the
+/// previous snapshot stays visible (like [calendarWeekProvider]) instead of a
+/// full-screen spinner.
+final todaySnapshotProvider = Provider<AsyncValue<TodaySnapshot>>((ref) {
   const tag = '[nx_time Today]';
-  try {
-    await ref.watch(authenticatedUserProvider.future);
-    final repo = ref.watch(actionRepositoryProvider);
-    final now = DateTime.now();
-    final day = DateTime(now.year, now.month, now.day);
-    final actions = await repo.listForCalendarDay(day);
-    return buildTodaySnapshot(
-      actions,
-      day,
-      nowForClock: now,
-    );
-  } catch (e, st) {
-    debugPrint('$tag $e\n$st');
-    rethrow;
-  }
+  final monday = ref.watch(todayMondayProvider);
+  final weekAsync = ref.watch(weekActionsProvider(monday));
+  final colors = modelTypeColorsOrFallback(
+    ref.watch(modelTypeColorsProvider),
+  );
+
+  return weekAsync.when(
+    data: (week) {
+      try {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final i = today.weekday - DateTime.monday; // 0..6: Mon..Sun
+        return AsyncValue.data(
+          buildTodaySnapshot(
+            week.byDay[i],
+            today,
+            nowForClock: now,
+            colors: colors,
+          ),
+        );
+      } catch (e, st) {
+        debugPrint('$tag $e\n$st');
+        return AsyncValue<TodaySnapshot>.error(e, st);
+      }
+    },
+    error: (e, st) => AsyncValue<TodaySnapshot>.error(e, st),
+    loading: () => const AsyncValue<TodaySnapshot>.loading(),
+  );
 });
 
-TodayActivity _activityFromAction(Action m, DateFormat timeFmt) {
+TodayActivity _activityFromAction(
+  Action m,
+  DateFormat timeFmt,
+  ModelTypeColors colors,
+) {
   final start = m.startTime;
   final end = m.endTime;
   final title = m.name.isNotEmpty ? m.name : 'Action';
   final rangeLabel = formatTimeRange(timeFmt, start, end);
   final durationLabel = formatDurationHm(start, end);
-  final color = barColorForModelTypeId(m.modelTypeId);
+  final color = colors.forId(m.modelTypeId, name: m.modelTypeName);
   return TodayActivity(
     title: title,
     timeRangeLabel: rangeLabel,
@@ -147,6 +171,7 @@ TodaySnapshot buildTodaySnapshot(
   List<Action> domainActions,
   DateTime dayLocal, {
   DateTime? nowForClock,
+  ModelTypeColors colors = ModelTypeColors.fallback,
 }) {
   final timeFmt = DateFormat.jm();
   final clockSource = nowForClock ?? DateTime.now();
@@ -183,7 +208,7 @@ TodaySnapshot buildTodaySnapshot(
     final typeLabel = (embeddedName != null && embeddedName.isNotEmpty)
         ? embeddedName
         : 'Type ${m.modelTypeId}';
-    final color = barColorForModelTypeId(m.modelTypeId);
+    final color = colors.forId(m.modelTypeId, name: m.modelTypeName);
     if (seenTypeIds.add(m.modelTypeId)) {
       legendEntries.add(ActivityCategory(label: typeLabel, swatch: color));
     }
@@ -196,7 +221,7 @@ TodaySnapshot buildTodaySnapshot(
       addLegendFor(c);
     }
 
-    final umbrellaActivity = _activityFromAction(u, timeFmt);
+    final umbrellaActivity = _activityFromAction(u, timeFmt, colors);
     sourceActions.add(u);
     umbrellaRows.add(row);
 
@@ -204,7 +229,7 @@ TodaySnapshot buildTodaySnapshot(
       actions.add(umbrellaActivity);
     } else {
       final childActivities = row.children
-          .map((c) => _activityFromAction(c, timeFmt))
+          .map((c) => _activityFromAction(c, timeFmt, colors))
           .toList();
       actions.add(
         TodayUmbrellaActivity(
@@ -227,7 +252,7 @@ TodaySnapshot buildTodaySnapshot(
       dayStart,
       dayEnd,
       totalMs,
-      barColorForModelTypeId(u.modelTypeId),
+      colors.forId(u.modelTypeId, name: u.modelTypeName),
     );
     if (seg != null) {
       timeMapSegments.add(seg);
