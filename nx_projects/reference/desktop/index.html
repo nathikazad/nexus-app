@@ -28,6 +28,7 @@
     'partials/panel-sprint-cart-left.html',
     'partials/panel-sprint-days.html',
     'partials/view-sprint-close.html',
+    'partials/view-sprint-day.html',
     'partials/view-today.html',
     'partials/shell-body-slot-close.html',
     'partials/shell-body-app-close.html',
@@ -68,13 +69,14 @@
       },
       retro_note: 'Auth rewrite landed cleanly. Pipeline work underestimated — both ingest items ran over. Need to pad estimates when SRE is involved.',
       items: [
-        { id: 'a1', kind: 'feat', title: 'OAuth callback hardening', crumb: 'Nexus / Auth', est: 3, planned_day: 0, status: 'done', actual: 3.25, drift_from: [] },
-        { id: 'a2', kind: 'bug',  title: 'Session refresh loop',     crumb: 'Nexus / Auth', est: 2, planned_day: 1, status: 'done', actual: 1.5,  drift_from: [] },
-        { id: 'a3', kind: 'feat', title: 'List virtual scroll',      crumb: 'Nexus / UI Polish', est: 4, planned_day: 2, status: 'done', actual: 6.5, drift_from: [1] },
-        { id: 'a5', kind: 'bug',  title: 'Timezone in reports',      crumb: 'Pipeline', est: 2, planned_day: 3, status: 'done', actual: 2,   drift_from: [] },
-        { id: 'a4', kind: 'feat', title: 'CSV export',               crumb: 'Pipeline', est: 5, planned_day: 4, status: 'done', actual: 4,   drift_from: [] },
-        { id: 'a6', kind: 'feat', title: 'Push notification plumbing', crumb: 'Mobile App', est: 4, planned_day: 5, status: 'done', actual: 5, drift_from: [4] },
+        { id: 'a1', kind: 'feat', title: 'OAuth callback hardening', crumb: 'Nexus / Auth', est: 3, planned_day: 0, status: 'done', drift_from: [] },
+        { id: 'a2', kind: 'bug',  title: 'Session refresh loop',     crumb: 'Nexus / Auth', est: 2, planned_day: 1, status: 'done', drift_from: [] },
+        { id: 'a3', kind: 'feat', title: 'List virtual scroll',      crumb: 'Nexus / UI Polish', est: 4, planned_day: 2, status: 'done', drift_from: [1] },
+        { id: 'a5', kind: 'bug',  title: 'Timezone in reports',      crumb: 'Pipeline', est: 2, planned_day: 3, status: 'done', drift_from: [] },
+        { id: 'a4', kind: 'feat', title: 'CSV export',               crumb: 'Pipeline', est: 5, planned_day: 4, status: 'done', drift_from: [] },
+        { id: 'a6', kind: 'feat', title: 'Push notification plumbing', crumb: 'Mobile App', est: 4, planned_day: 5, status: 'done', drift_from: [4] },
       ],
+      actions: [],
     },
     {
       id: 14, name: 'Sprint 14', badge: 'active', badgeText: 'active',
@@ -88,16 +90,17 @@
       },
       retro_note: '',
       items: [
-        { id: 't1', kind: 'feat', title: 'Design tokens',       crumb: 'Nexus / UI Polish', est: 2, planned_day: 0, status: 'done',    actual: 2.5, drift_from: [] },
-        { id: 't2', kind: 'feat', title: 'Toggle component',    crumb: 'Nexus / UI Polish', est: 4, planned_day: 1, status: 'done',    actual: 5,   drift_from: [] },
-        { id: 't3', kind: 'bug',  title: 'Flash of wrong theme',crumb: 'Nexus / UI Polish', est: 1, planned_day: 2, status: 'done',    actual: 1.5, drift_from: [] },
-        { id: 't4', kind: 'feat', title: 'Partitioned ingest',  crumb: 'Pipeline',          est: 6, planned_day: 3, status: 'doing',   actual: 2,   drift_from: [2] },
-        { id: 't5', kind: 'bug',  title: 'OOM on large batch',  crumb: 'Pipeline',          est: 3, planned_day: 4, status: 'todo',    actual: 0,   drift_from: [] },
-        { id: 't6', kind: 'feat', title: 'Auth refactor cleanup', crumb: 'Nexus / Auth',    est: 4, planned_day: 5, status: 'blocked', actual: 0,   drift_from: [], blocker: 'Waiting on SRE review of migration plan.' },
-        { id: 't7', kind: 'feat', title: 'Schema drift alerts', crumb: 'Pipeline',          est: 5, planned_day: 6, status: 'todo',    actual: 0,   drift_from: [] },
-        { id: 't8', kind: 'feat', title: 'Mobile deep links',   crumb: 'Mobile App',        est: 3, planned_day: 5, status: 'todo',    actual: 0,   drift_from: [3] },
-        { id: 't9', kind: 'bug',  title: 'iOS splash flicker',  crumb: 'Mobile App',        est: 2, planned_day: 4, status: 'doing',   actual: 4, drift_from: [2, 3], actuals_by_day: { 2: 2, 3: 2 } },
+        { id: 't1', kind: 'feat', title: 'Design tokens',       crumb: 'Nexus / UI Polish', est: 2, planned_day: 0, status: 'done',    drift_from: [] },
+        { id: 't2', kind: 'feat', title: 'Toggle component',    crumb: 'Nexus / UI Polish', est: 4, planned_day: 1, status: 'done',    drift_from: [] },
+        { id: 't3', kind: 'bug',  title: 'Flash of wrong theme',crumb: 'Nexus / UI Polish', est: 1, planned_day: 2, status: 'done',    drift_from: [] },
+        { id: 't4', kind: 'feat', title: 'Partitioned ingest',  crumb: 'Pipeline',          est: 6, planned_day: 3, status: 'doing',   drift_from: [2] },
+        { id: 't5', kind: 'bug',  title: 'OOM on large batch',  crumb: 'Pipeline',          est: 3, planned_day: 4, status: 'todo',    drift_from: [] },
+        { id: 't6', kind: 'feat', title: 'Auth refactor cleanup', crumb: 'Nexus / Auth',    est: 4, planned_day: 5, status: 'blocked', drift_from: [], blocker: 'Waiting on SRE review of migration plan.' },
+        { id: 't7', kind: 'feat', title: 'Schema drift alerts', crumb: 'Pipeline',          est: 5, planned_day: 6, status: 'todo',    drift_from: [] },
+        { id: 't8', kind: 'feat', title: 'Mobile deep links',   crumb: 'Mobile App',        est: 3, planned_day: 5, status: 'todo',    drift_from: [3] },
+        { id: 't9', kind: 'bug',  title: 'iOS splash flicker',  crumb: 'Mobile App',        est: 2, planned_day: 4, status: 'doing',   drift_from: [2, 3] },
       ],
+      actions: [],
     },
     {
       id: 15, name: 'Sprint 15', badge: 'planned', badgeText: 'planned',
@@ -107,28 +110,86 @@
       day_notes: {},
       retro_note: '',
       items: [
-        { id: 'n1', kind: 'feat', title: 'Onboarding checklist',    crumb: 'Nexus / UI Polish', est: 3, planned_day: 0,    status: 'todo', actual: 0, drift_from: [] },
-        { id: 'n2', kind: 'feat', title: 'Retry dead-letter queue', crumb: 'Pipeline',          est: 4, planned_day: 1,    status: 'todo', actual: 0, drift_from: [] },
-        { id: 'n3', kind: 'bug',  title: 'Android back stack',      crumb: 'Mobile App',        est: 2, planned_day: null, status: 'todo', actual: 0, drift_from: [] },
-        { id: 'n4', kind: 'feat', title: 'Metrics dashboard v1',    crumb: 'Pipeline',          est: 6, planned_day: null, status: 'todo', actual: 0, drift_from: [] },
-        { id: 'n5', kind: 'feat', title: 'Widget refresh',          crumb: 'Mobile App',        est: 3, planned_day: 3,    status: 'todo', actual: 0, drift_from: [] },
+        { id: 'n1', kind: 'feat', title: 'Onboarding checklist',    crumb: 'Nexus / UI Polish', est: 3, planned_day: 0,    status: 'todo', drift_from: [] },
+        { id: 'n2', kind: 'feat', title: 'Retry dead-letter queue', crumb: 'Pipeline',          est: 4, planned_day: 1,    status: 'todo', drift_from: [] },
+        { id: 'n3', kind: 'bug',  title: 'Android back stack',      crumb: 'Mobile App',        est: 2, planned_day: null, status: 'todo', drift_from: [] },
+        { id: 'n4', kind: 'feat', title: 'Metrics dashboard v1',    crumb: 'Pipeline',          est: 6, planned_day: null, status: 'todo', drift_from: [] },
+        { id: 'n5', kind: 'feat', title: 'Widget refresh',          crumb: 'Mobile App',        est: 3, planned_day: 3,    status: 'todo', drift_from: [] },
       ],
+      actions: [],
     },
   ];
+
+  function ensureActions(sp) {
+    if (!Array.isArray(sp.actions)) sp.actions = [];
+  }
+
+  function pushWorkAction(sp, dayIdx, taskId, hours, workDescription) {
+    ensureActions(sp);
+    const slotH = [9, 11, 14, 16];
+    const si = pushWorkAction._slot = (pushWorkAction._slot || 0);
+    pushWorkAction._slot = si + 1;
+    const t0 = new Date(sp.start);
+    t0.setDate(t0.getDate() + dayIdx);
+    t0.setHours(slotH[si % slotH.length], (si % 3) * 10, 0, 0);
+    const t1 = new Date(t0.getTime() + hours * 3600000);
+    const start = t0.toISOString();
+    const end = t1.toISOString();
+    sp.actions.push({
+      id: 'w-' + sp.id + '-' + taskId + '-d' + dayIdx + '-' + si,
+      type: 'Work',
+      start,
+      end,
+      tasks: [{
+        task_id: taskId,
+        work_description: workDescription,
+        time_spent_hours: hours,
+        started_at: start,
+        finished_at: end,
+        marked_done: false,
+      }],
+    });
+  }
+
+  (function seedFixtureWorkActions() {
+    pushWorkAction._slot = 0;
+    const s13 = sprints[0];
+    pushWorkAction(s13, 0, 'a1', 3.25, '');
+    pushWorkAction(s13, 1, 'a2', 1.5, '');
+    pushWorkAction(s13, 2, 'a3', 6.5, '');
+    pushWorkAction(s13, 3, 'a5', 2, '');
+    pushWorkAction(s13, 4, 'a4', 4, '');
+    pushWorkAction(s13, 5, 'a6', 5, '');
+    pushWorkAction._slot = 0;
+    const s14 = sprints[1];
+    pushWorkAction(s14, 0, 't1', 2.5, 'Tokens: palette + CSS vars');
+    pushWorkAction(s14, 1, 't2', 5, 'Toggle: hover + a11y states');
+    pushWorkAction(s14, 2, 't3', 1.5, '');
+    pushWorkAction(s14, 2, 't4', 2, 'Ingest partitioning');
+    pushWorkAction(s14, 2, 't9', 2, 'Splash flicker — partial');
+    pushWorkAction(s14, 3, 't9', 2, 'Splash flicker — continued');
+  })();
 
   let cur = 1;
 
   const viewPlanner = document.getElementById('view-planner');
   const viewSprint = document.getElementById('view-sprint');
+  const viewSprintDay = document.getElementById('view-sprint-day');
   const viewToday = document.getElementById('view-today');
 
   function setView(name) {
-    if (name !== 'sprint') openDay = null;
+    if (name !== 'sprint-day') {
+      openDay = null;
+      openDaySprintIdx = null;
+    }
+    if (name !== 'today') todayBrowseDate = null;
     viewPlanner.hidden = name !== 'planner';
     viewSprint.hidden = name !== 'sprint';
+    if (viewSprintDay) viewSprintDay.hidden = name !== 'sprint-day';
     viewToday.hidden = name !== 'today';
+    const tabName = name === 'sprint-day' ? 'sprint' : name;
     document.querySelectorAll('[data-view]').forEach(btn => {
-      const on = btn.dataset.view === name;
+      const on = btn.dataset.view === tabName;
       btn.classList.toggle('active', on);
       btn.classList.toggle('muted', !on);
     });
@@ -171,21 +232,62 @@
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
-  function itemActual(i) {
-    if (i.actuals_by_day) {
-      return Object.values(i.actuals_by_day).reduce((a, h) => a + h, 0);
+  function actionStartDate(a) {
+    return new Date(a.start);
+  }
+  function actionDayIndex(sp, a) {
+    return dayIndexInSprint(sp, actionStartDate(a));
+  }
+  function actionsOnDay(sp, d) {
+    ensureActions(sp);
+    return sp.actions.filter(a => actionDayIndex(sp, a) === d)
+      .sort((x, y) => actionStartDate(x) - actionStartDate(y));
+  }
+  function runningAction(sp) {
+    ensureActions(sp);
+    for (let i = sp.actions.length - 1; i >= 0; i--) {
+      if (sp.actions[i].end == null) return sp.actions[i];
     }
-    return i.actual || 0;
+    return null;
   }
-  function cumulativeActualUpTo(i, d) {
-    if (!i.actuals_by_day) return d >= (i.planned_day ?? -Infinity) ? (i.actual || 0) : 0;
-    return Object.entries(i.actuals_by_day)
-      .filter(([k]) => parseInt(k, 10) <= d)
-      .reduce((a, [, h]) => a + h, 0);
+  function taskEntriesForTaskOnDay(sp, item, d) {
+    const out = [];
+    actionsOnDay(sp, d).forEach(a => {
+      (a.tasks || []).forEach((t, entryIndex) => {
+        if (t.task_id === item.id) out.push({ action: a, entry: t, entryIndex });
+      });
+    });
+    return out;
   }
-  function dayActualFor(i, d) {
-    if (i.actuals_by_day && i.actuals_by_day[d] != null) return i.actuals_by_day[d];
-    return i.planned_day === d ? (i.actual || 0) : 0;
+  function hoursForTaskOnDay(sp, item, d) {
+    return taskEntriesForTaskOnDay(sp, item, d).reduce((sum, { entry }) =>
+      sum + (Number(entry.time_spent_hours) || 0), 0);
+  }
+  function descriptionsForTaskOnDay(sp, item, d) {
+    const parts = [];
+    taskEntriesForTaskOnDay(sp, item, d).forEach(({ entry }) => {
+      const w = (entry.work_description || '').trim();
+      if (w) parts.push(w);
+    });
+    return parts.join(' · ');
+  }
+  function itemActual(sp, i) {
+    ensureActions(sp);
+    let sum = 0;
+    sp.actions.forEach(a => {
+      (a.tasks || []).forEach(t => {
+        if (t.task_id === i.id) sum += Number(t.time_spent_hours) || 0;
+      });
+    });
+    return sum;
+  }
+  function cumulativeActualUpTo(sp, i, d) {
+    let sum = 0;
+    for (let di = 0; di <= d; di++) sum += hoursForTaskOnDay(sp, i, di);
+    return sum;
+  }
+  function dayActualFor(sp, i, d) {
+    return hoursForTaskOnDay(sp, i, d);
   }
 
   function dayTitle(s, d) {
@@ -203,9 +305,6 @@
     obj[field] = value;
     s.day_notes[d] = obj;
   }
-  function itemDayNote(i, d) { return (i.day_notes && i.day_notes[d]) || ''; }
-  function setItemDayNote(i, d, v) { (i.day_notes = i.day_notes || {})[d] = v; }
-
   function dayIndexInSprint(sp, date) {
     const start = new Date(sp.start);
     start.setHours(0, 0, 0, 0);
@@ -215,9 +314,6 @@
     if (diff < 0 || diff >= sp.len) return null;
     return diff;
   }
-  function todayDayIndex() {
-    return dayIndexInSprint(sprint(), today);
-  }
   function sprintIdxContainingToday() {
     for (let i = 0; i < sprints.length; i++) {
       if (dayIndexInSprint(sprints[i], today) != null) return i;
@@ -225,27 +321,58 @@
     return null;
   }
 
+  function calendarDateAtMidnight(d) {
+    const t = new Date(d);
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }
+  function locateCalendarDateInPlan(dt) {
+    const t = calendarDateAtMidnight(dt);
+    for (let i = 0; i < sprints.length; i++) {
+      const dIdx = dayIndexInSprint(sprints[i], t);
+      if (dIdx != null) return { si: i, d: dIdx, sp: sprints[i] };
+    }
+    return null;
+  }
+  function totalPlanDays() {
+    return sprints.reduce((sum, sp) => sum + sp.len, 0);
+  }
+  function flatDayIndex(si, d) {
+    let sum = 0;
+    for (let i = 0; i < si; i++) sum += sprints[i].len;
+    return sum + d;
+  }
+  function fromFlatDayIndex(flat) {
+    const T = totalPlanDays();
+    if (T === 0 || sprints.length === 0) return { si: 0, d: 0 };
+    let f = flat % T;
+    if (f < 0) f += T;
+    for (let i = 0; i < sprints.length; i++) {
+      const L = sprints[i].len;
+      if (f < L) return { si: i, d: f };
+      f -= L;
+    }
+    return { si: sprints.length - 1, d: Math.max(0, sprints[sprints.length - 1].len - 1) };
+  }
+  function globalDayNav(si, d, delta) {
+    return fromFlatDayIndex(flatDayIndex(si, d) + delta);
+  }
+
   let openDay = null;
+  let openDaySprintIdx = null;
+  let todayBrowseDate = null;
   let pendingTaskPlannedDay = null;
   function openDayDetail(d) {
+    openDaySprintIdx = cur;
     openDay = d;
-    renderAll();
+    setView('sprint-day');
   }
   function closeDayDetail() {
     openDay = null;
-    renderAll();
+    setView('sprint');
   }
 
-  function syncItemActualFromDays(i) {
-    if (i.actuals_by_day && Object.keys(i.actuals_by_day).length) {
-      i.actual = Object.values(i.actuals_by_day).reduce((a, h) => a + h, 0);
-    } else {
-      i.actual = 0;
-      if (i.actuals_by_day) delete i.actuals_by_day;
-    }
-  }
-
-  function dayTaskEntries(list, d) {
+  function dayTaskEntries(sp, list, d) {
     const seen = new Set();
     const out = [];
     function add(item, ghost) {
@@ -258,10 +385,50 @@
       if ((i.drift_from || []).includes(d) && i.planned_day !== d) add(i, true);
     });
     list.forEach(i => {
-      const had = (i.actuals_by_day && i.actuals_by_day[d] > 0);
+      const had = hoursForTaskOnDay(sp, i, d) > 0;
       if (had && i.planned_day !== d && !(i.drift_from || []).includes(d)) add(i, true);
     });
     return out;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatRunSeconds(sec) {
+    if (sec < 3600) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return m + ':' + String(s).padStart(2, '0');
+    }
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  let __runTimer = null;
+  function refreshRunningElapsedLabels() {
+    document.querySelectorAll('[data-running-elapsed]').forEach(el => {
+      const start = parseInt(el.dataset.runningStarted, 10);
+      if (Number.isNaN(start)) return;
+      el.textContent = formatRunSeconds((Date.now() - start) / 1000);
+    });
+  }
+  function startRunTimerIfNeeded() {
+    if (__runTimer) return;
+    refreshRunningElapsedLabels();
+    __runTimer = setInterval(refreshRunningElapsedLabels, 1000);
+  }
+  function stopRunTimer() {
+    if (__runTimer) {
+      clearInterval(__runTimer);
+      __runTimer = null;
+    }
   }
 
   function crumbFromProjectSelect(val) {
@@ -282,7 +449,7 @@
     const sp = si != null ? sprints[si] : null;
     const label = `${MON[today.getMonth()]} ${today.getDate()}`;
     host.innerHTML = `<div class="dd-empty">`
-      + `<p>Today (${label}) is not in <b>${sprint().name}</b>.</p>`
+      + `<p>Today (${label}) is not on any sprint in this mock.</p>`
       + (sp
           ? `<button type="button" class="btn-primary dd-jump-sprint" data-sprint-idx="${si}">Open ${sp.name}</button>`
           : `<p class="dd-empty-sub">No sprint in this mock contains today.</p>`)
@@ -295,9 +462,51 @@
     });
   }
 
-  function renderDayDetail(s, d, mode) {
+  function renderTodayGapPage(dt) {
+    const host = document.getElementById('view-today');
+    if (!host) return;
+    const t = calendarDateAtMidnight(dt);
+    const dow = t.getDay();
+    const isToday = sameDay(t, today);
+    const label = `${DOW[dow]} ${MON[t.getMonth()]} ${t.getDate()}` + (isToday ? ' · today' : '');
+    const siToday = sprintIdxContainingToday();
+    const spToday = siToday != null ? sprints[siToday] : null;
+    host.innerHTML = `<div class="day-page">`
+      + '<div class="dd-head">'
+      + '<div class="dd-day-nav">'
+      + '<button type="button" class="dd-day-arrow" data-today-nav="-1" title="Previous day">&lsaquo;</button>'
+      + '<button type="button" class="dd-day-arrow" data-today-nav="1" title="Next day">&rsaquo;</button>'
+      + '</div>'
+      + `<span class="dd-date">${label} <span class="dd-pill" data-pill="off-plan">off plan</span></span>`
+      + '</div>'
+      + '<div class="dd-gap-body">'
+      + '<p class="dd-gap-msg">No sprint includes this calendar day in the mock data.</p>'
+      + (sameDay(t, today) && spToday
+          ? `<button type="button" class="btn-primary dd-jump-sprint" data-sprint-idx="${siToday}">Open ${escapeHtml(spToday.name)} (contains today)</button>`
+          : '')
+      + '</div>'
+      + '</div>';
+    host.querySelectorAll('[data-today-nav]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const delta = parseInt(e.currentTarget.dataset.todayNav, 10);
+        if (Number.isNaN(delta)) return;
+        const next = new Date(todayBrowseDate || t);
+        next.setDate(next.getDate() + delta);
+        todayBrowseDate = calendarDateAtMidnight(next);
+        renderAll();
+      });
+    });
+    host.querySelector('.dd-jump-sprint')?.addEventListener('click', e => {
+      const btn = e.target.closest('.dd-jump-sprint');
+      if (!btn) return;
+      cur = parseInt(btn.dataset.sprintIdx, 10);
+      setView('sprint');
+    });
+  }
+
+  function renderDayPage(s, d, mode, sprintIdx) {
     const host = mode === 'sprint'
-      ? document.getElementById('sp-day-detail')
+      ? document.getElementById('view-sprint-day')
       : document.getElementById('view-today');
     if (!host) return;
     const list = s.items;
@@ -315,32 +524,39 @@
 
     const dayItems = list.filter(i => i.planned_day === d);
     const planned = dayItems.reduce((a, i) => a + i.est, 0);
-    const actual = list.reduce((a, i) => a + dayActualFor(i, d), 0);
+    const actual = list.reduce((a, i) => a + dayActualFor(s, i, d), 0);
     const doneCount = dayItems.filter(i => i.status === 'done').length;
     const pushedOut = list.filter(i =>
       (i.drift_from || []).includes(d) && i.planned_day !== d).length;
     const rolledIn = list.filter(i =>
       i.planned_day === d && (i.drift_from || []).length > 0).length;
-    const over = planned > DAILY_CAP;
     const actualCls = varianceCls(actual, planned);
 
-    let headHtml = `<div class="dd-head">`;
-    if (mode === 'sprint') {
-      headHtml += `<button type="button" class="dd-back" title="Back to days">&larr; Days</button>`
-        + `<div class="dd-day-nav">`
-        + `<button type="button" class="dd-day-arrow" ${d <= 0 ? 'disabled' : ''} data-dd-nav="${d - 1}" title="Previous day">&lsaquo;</button>`
-        + `<button type="button" class="dd-day-arrow" ${d >= n - 1 ? 'disabled' : ''} data-dd-nav="${d + 1}" title="Next day">&rsaquo;</button>`
-        + `</div>`;
+    let headHtml = '<div class="dd-head">';
+    if (mode === 'sprint' && sprintIdx != null && totalPlanDays() > 0) {
+      const prevG = globalDayNav(sprintIdx, d, -1);
+      const nextG = globalDayNav(sprintIdx, d, 1);
+      headHtml += '<button type="button" class="dd-back" title="Back to Sprint">&larr; Sprint</button>'
+        + '<div class="dd-day-nav">'
+        + `<button type="button" class="dd-day-arrow" data-dd-nav-si="${prevG.si}" data-dd-nav-d="${prevG.d}" title="Previous day">&lsaquo;</button>`
+        + `<button type="button" class="dd-day-arrow" data-dd-nav-si="${nextG.si}" data-dd-nav-d="${nextG.d}" title="Next day">&rsaquo;</button>`
+        + '</div>';
+    }
+    if (mode === 'today') {
+      headHtml += '<div class="dd-day-nav">'
+        + '<button type="button" class="dd-day-arrow" data-today-nav="-1" title="Previous day">&lsaquo;</button>'
+        + '<button type="button" class="dd-day-arrow" data-today-nav="1" title="Next day">&rsaquo;</button>'
+        + '</div>';
     }
     headHtml += `<span class="dd-date">${DOW[dow]} ${MON[dt.getMonth()]} ${dt.getDate()}`
-      + (isToday ? ' · today' : '') + ` <span class="dd-pill">${dayLabel}</span></span>`
-      + `<input type="text" class="dd-title" placeholder="Short title for this day&hellip;" value="${dayTitle(s, d).replace(/"/g, '&quot;')}" data-dd-field="title" />`
-      + `</div>`;
+      + (isToday ? ' · today' : '') + ` <span class="dd-pill" data-pill="${dayLabel}">${dayLabel}</span></span>`
+      + `<input type="text" class="dd-title" placeholder="Short title for this day…" value="${dayTitle(s, d).replace(/"/g, '&quot;')}" data-dd-field="title" />`
+      + '</div>';
 
     let statsHtml = '';
     if (hasHistory && dayItems.length > 0) {
       const doneCls = doneCount === dayItems.length ? '' : 'incomplete';
-      statsHtml = `<div class="dd-stats">`
+      statsHtml = '<div class="dd-stats">'
         + `<span class="stat done ${doneCls}">✓ <b>${doneCount}/${dayItems.length}</b> done</span>`
         + `<span class="stat"><b>${planned}h</b> planned / ${DAILY_CAP}h cap</span>`
         + (actual > 0 || doneCount > 0
@@ -348,12 +564,12 @@
             : '')
         + (pushedOut > 0 ? `<span class="stat pushed">↗ <b>${pushedOut}</b> pushed out</span>` : '')
         + (rolledIn > 0 ? `<span class="stat rolled">↙ <b>${rolledIn}</b> rolled in</span>` : '')
-        + `</div>`;
+        + '</div>';
     } else {
-      statsHtml = `<div class="dd-stats">`
+      statsHtml = '<div class="dd-stats">'
         + `<span class="stat"><b>${planned}h</b> planned / ${DAILY_CAP}h cap</span>`
         + (actual > 0 ? `<span class="stat day-hours-actual ${actualCls}"><b>${actual}h</b> actual</span>` : '')
-        + `</div>`;
+        + '</div>';
     }
 
     const barInner = planned > 0
@@ -361,10 +577,108 @@
       : '';
     const barHtml = `<div class="dd-bar">${barInner}</div>`;
 
-    const entries = dayTaskEntries(list, d);
-    let tasksHtml = `<div class="dd-tasks">`;
+    const ra = runningAction(s);
+    let actionsHtml = '<div class="actions-zone"><div class="actions-zone-head">'
+      + '<h3 class="actions-title">Actions</h3>'
+      + `<button type="button" class="btn-secondary btn-start-work" data-start-work${ra ? ' disabled' : ''}>+ Start Work</button>`
+      + '</div>';
+
+    const pastOnDay = actionsOnDay(s, d).filter(a => a.end != null);
+    pastOnDay.forEach(a => {
+      const dur = hoursBetweenIso(a.start, a.end);
+      const sumSpent = (a.tasks || []).reduce((x, t) => x + (Number(t.time_spent_hours) || 0), 0);
+      const warn = sumSpent > dur + 1e-6;
+      actionsHtml += `<div class="action-card" data-action-id="${a.id}">`
+        + '<div class="action-head">'
+        + `<span>Work · ${fmtClock(a.start)} → ${fmtClock(a.end)} · ${dur.toFixed(1)}h</span>`
+        + '<div class="action-head-btns">'
+        + `<button type="button" class="btn-ghost-sm" data-action-toggle-edit="${a.id}">Edit</button>`
+        + `<button type="button" class="btn-ghost-sm" data-action-delete="${a.id}">Delete</button>`
+        + '</div></div>';
+      if (warn) {
+        actionsHtml += `<div class="action-warn">Logged ${sumSpent.toFixed(1)}h in entries vs ${dur.toFixed(1)}h window</div>`;
+      }
+      actionsHtml += `<div class="action-view-panel" data-action-view="${a.id}">`;
+      (a.tasks || []).forEach((ent, ei) => {
+        const item = list.find(it => it.id === ent.task_id);
+        if (!item) return;
+        const gch = item.kind === 'bug' ? '●' : '◉';
+        actionsHtml += '<div class="action-entry">'
+          + `<span class="g ${item.kind}">${gch}</span> ${escapeHtml(item.title)} · <b>${ent.time_spent_hours}h</b>`
+          + `<div class="action-wd-read">${escapeHtml(ent.work_description)}</div>`
+          + '</div>';
+      });
+      actionsHtml += `<button type="button" class="btn-ghost-sm action-add-inline" data-action-add-task="${a.id}">+ add task to this block</button>`
+        + '</div>';
+      actionsHtml += `<div class="action-edit-panel" data-action-edit="${a.id}">`;
+      (a.tasks || []).forEach((ent, ei) => {
+        const item = list.find(it => it.id === ent.task_id);
+        if (!item) return;
+        actionsHtml += '<div class="action-entry-edit">'
+          + `<span class="ed-title">${escapeHtml(item.title)}</span>`
+          + `<label class="ed-lbl">Hours <input type="number" step="0.25" min="0" data-edit-hours="${a.id}" data-entry-idx="${ei}" value="${ent.time_spent_hours}" /></label>`
+          + `<textarea data-edit-wd="${a.id}" data-entry-idx="${ei}" placeholder="Work description">${escapeHtml(ent.work_description)}</textarea>`
+          + `<button type="button" class="btn-ghost-sm" data-remove-entry="${a.id}" data-entry-idx="${ei}">Remove entry</button>`
+          + '</div>';
+      });
+      actionsHtml += `<button type="button" class="btn-secondary" data-action-save-edit="${a.id}">Done editing</button>`
+        + '</div></div>';
+    });
+
+    if (ra) {
+      const startedMs = new Date(ra.start).getTime();
+      actionsHtml += `<div class="action-card is-running" data-action-id="${ra.id}">`
+        + '<div class="action-head">'
+        + `<span>▶ Work · running <span class="action-run-elapsed" data-running-elapsed data-running-started="${startedMs}">${formatRunSeconds((Date.now() - startedMs) / 1000)}</span></span>`
+        + `<span class="action-started">started ${fmtClock(ra.start)}</span>`
+        + `<button type="button" class="btn-ghost-sm" data-action-stop="${ra.id}">Stop</button>`
+        + '</div><div class="action-body-run">';
+      (ra.tasks || []).forEach((ent, ei) => {
+        if (!ent.finished_at) return;
+        const item = list.find(it => it.id === ent.task_id);
+        if (!item) return;
+        const gch = item.kind === 'bug' ? '●' : '◉';
+        actionsHtml += '<div class="action-entry-done">'
+          + `<span class="g ${item.kind}">${gch}</span> <span>${escapeHtml(item.title)}</span>`
+          + ` · <b>${ent.time_spent_hours}h</b>`
+          + `<div class="action-wd-read">${escapeHtml(ent.work_description)}</div>`
+          + '</div>';
+      });
+      const active = (ra.tasks || []).find(t => !t.finished_at);
+      if (!active && (!ra.tasks || ra.tasks.length === 0)) {
+        actionsHtml += '<div class="action-pick">'
+          + `<label class="pick-lbl">First task</label><select class="action-task-select" data-pick-for="${ra.id}">${taskOptionsHtml(s, d)}</select>`
+          + `<button type="button" class="btn-secondary" data-append-task="${ra.id}">Begin</button>`
+          + '</div>';
+      } else if (active) {
+        const ai = list.find(it => it.id === active.task_id);
+        const eidx = ra.tasks.indexOf(active);
+        const gch = ai.kind === 'bug' ? '●' : '◉';
+        actionsHtml += '<div class="action-task-active">'
+          + `<span class="g ${ai.kind}">${gch}</span> <b>${escapeHtml(ai.title)}</b>`
+          + `<textarea class="action-wd-input" data-active-wd data-action-id="${ra.id}" data-entry-idx="${eidx}" placeholder="What did you finish in this block?">${escapeHtml(active.work_description)}</textarea>`
+          + `<label class="mark-done-lbl"><input type="checkbox" data-mark-done /> Mark task done when finishing</label>`
+          + `<button type="button" class="btn-secondary" data-finish-entry="${ra.id}">Finish & add next task</button>`
+          + '</div>';
+      } else {
+        actionsHtml += '<div class="action-pick">'
+          + `<label class="pick-lbl">Next task</label><select class="action-task-select" data-pick-for="${ra.id}">${taskOptionsHtml(s, d)}</select>`
+          + `<button type="button" class="btn-secondary" data-append-task="${ra.id}">Add task</button>`
+          + '</div>';
+      }
+      actionsHtml += '</div></div>';
+    }
+
+    if (!ra && pastOnDay.length === 0) {
+      actionsHtml += '<div class="actions-zone-empty">No actions logged for this day. Start one above.</div>';
+    }
+    actionsHtml += '</div>';
+
+    const entries = dayTaskEntries(s, list, d);
+    const raActive = ra ? (ra.tasks || []).find(t => !t.finished_at) : null;
+    let tasksHtml = '<div class="dd-tasks"><div class="dd-tasks-section-title">Tasks this day</div>';
     if (entries.length === 0) {
-      tasksHtml += `<div class="dd-tasks-empty">Nothing scheduled or logged on this day.</div>`;
+      tasksHtml += '<div class="dd-tasks-empty">Nothing scheduled or logged on this day.</div>';
     }
     entries.forEach(({ item: i, ghost }) => {
       const g = i.kind === 'bug' ? '●' : '◉';
@@ -382,37 +696,44 @@
       const movedBadge = ghost
           ? `<span class="moved-to">→ ${movedToLabel}</span>`
           : '';
-      const hVal = dayActualFor(i, d);
+      const hToday = dayActualFor(s, i, d);
+      const hTot = itemActual(s, i);
+      const desc = descriptionsForTaskOnDay(s, i, d);
+      const descLine = desc
+        ? `<div class="dd-task-derived">${escapeHtml(desc)}</div>`
+        : '<div class="dd-task-derived muted">(no work descriptions on actions for this day)</div>';
       const chips = ['todo', 'doing', 'done', 'blocked'].map(st =>
         `<button type="button" class="schip ${status === st ? 'active' : ''}" data-task-id="${i.id}" data-status="${st}">${st}</button>`
       ).join('');
       const canPush = onThisDay && !ghost && d + 1 < n;
-      const canPull = ghost && (i.drift_from || []).includes(d) && i.planned_day !== d;
-      const noteEsc = itemDayNote(i, d).replace(/"/g, '&quot;');
+      const canPull = ghost && i.planned_day !== d && ((i.drift_from || []).includes(d) || hoursForTaskOnDay(s, i, d) > 0);
+      const activeHint = raActive && raActive.task_id === i.id
+        ? '<span class="active-in-run">(active in current action)</span>'
+        : '';
       tasksHtml += `<div class="dd-task ${ghost ? 'is-ghost' : ''}" data-task-id="${i.id}">`
-        + `<div class="dd-task-top">`
+        + '<div class="dd-task-top">'
         +   `<span class="status-dot ${status}" title="${status}"></span>`
         +   `<span class="g ${i.kind}">${g}</span>`
-        +   `<div class="dd-task-main">`
-        +     `<div class="dd-task-title-row">`
-        +       `<span class="crumb-inline">${i.crumb}</span>${i.title}`
+        +   '<div class="dd-task-main">'
+        +     '<div class="dd-task-title-row">'
+        +       `<span class="crumb-inline">${escapeHtml(i.crumb)}</span>${escapeHtml(i.title)}`
         +       (drift > 0 && !ghost ? `<span class="drift" title="Postponed ${drift}× · ${driftChain(i)}">↻${drift}</span>` : '')
-        +       fromBadge + movedBadge
-        +       (i.blocker ? `<span class="blocker-dot" title="${i.blocker.replace(/"/g, '&quot;')}"></span>` : '')
-        +     `</div>`
-        +     `<input type="text" class="dd-task-note" placeholder="What happened on this task today?" value="${noteEsc}" data-task-note="${i.id}" />`
-        +   `</div>`
-        + `</div>`
-        + `<div class="dd-hours"><label class="dd-h-lbl"><input type="number" class="dd-h-input" min="0" step="0.25" value="${hVal}" data-task-hours="${i.id}" /> / ${i.est}h</label></div>`
-        + `<div class="dd-actions">`
+        +       fromBadge + movedBadge + activeHint
+        +       (i.blocker ? `<span class="blocker-dot" title="${escapeHtml(i.blocker)}"></span>` : '')
+        +     '</div>'
+        +     descLine
+        +   '</div>'
+        + '</div>'
+        + `<div class="dd-hours-readonly"><b>${hToday}h</b> this day · <b>${hTot}h</b> total · est ${i.est}h</div>`
+        + '<div class="dd-actions">'
         +   `<div class="status-chips">${chips}</div>`
         +   (canPush ? `<button type="button" class="btn-ghost-sm" data-task-push="${i.id}">Push &rarr;</button>` : '')
         +   (canPull ? `<button type="button" class="btn-ghost-sm" data-task-pull="${i.id}">Pull here</button>` : '')
         +   `<button type="button" class="btn-ghost-sm" data-task-block="${i.id}">${i.blocker ? 'Clear block' : 'Block…'}</button>`
-        + `</div>`
-        + `</div>`;
+        + '</div>'
+        + '</div>';
     });
-    tasksHtml += `</div>`;
+    tasksHtml += '</div>';
 
     const addHtml = `<div class="dd-add"><button type="button" class="btn-secondary" data-dd-add="${d}">+ Add task to this day</button></div>`;
 
@@ -420,15 +741,21 @@
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    const journalHtml = `<div class="dd-journal">`
-      + `<label class="dd-journal-label">Day journal</label>`
-      + `<textarea class="dd-body" placeholder="Longer notes for this day&hellip;" data-dd-field="body">${bodyEsc}</textarea>`
-      + `</div>`;
+    const journalHtml = '<div class="dd-journal">'
+      + '<label class="dd-journal-label">Day journal</label>'
+      + `<textarea class="dd-body" placeholder="Longer notes for this day…" data-dd-field="body">${bodyEsc}</textarea>`
+      + '</div>';
 
-    const innerHtml = headHtml + statsHtml + barHtml + tasksHtml + addHtml + journalHtml;
-    host.innerHTML = mode === 'today' ? `<div class="day-detail">${innerHtml}</div>` : innerHtml;
+    const innerHtml = '<div class="day-page">'
+      + headHtml + statsHtml + barHtml
+      + '<div class="day-page-cols">'
+      + '<div class="day-page-left">' + tasksHtml + addHtml + journalHtml + '</div>'
+      + '<aside class="day-page-right">' + actionsHtml + '</aside>'
+      + '</div>'
+      + '</div>';
+    host.innerHTML = innerHtml;
 
-    const bindRoot = mode === 'today' ? host.querySelector('.day-detail') : host;
+    const bindRoot = host;
     bindRoot.querySelector('.dd-title')?.addEventListener('input', e => {
       setDayField(s, d, 'title', e.target.value);
     });
@@ -439,33 +766,189 @@
     bindRoot.querySelectorAll('.dd-back').forEach(btn => {
       btn.addEventListener('click', () => closeDayDetail());
     });
-    bindRoot.querySelectorAll('[data-dd-nav]').forEach(btn => {
+    bindRoot.querySelectorAll('[data-dd-nav-si]').forEach(btn => {
       btn.addEventListener('click', e => {
         const el = e.currentTarget;
-        if (el.disabled) return;
-        const next = parseInt(el.dataset.ddNav, 10);
-        if (!Number.isNaN(next) && next >= 0 && next < n) openDayDetail(next);
-      });
-    });
-
-    bindRoot.querySelectorAll('[data-task-note]').forEach(inp => {
-      inp.addEventListener('input', e => {
-        const it = list.find(x => x.id === e.target.dataset.taskNote);
-        if (it) setItemDayNote(it, d, e.target.value);
-      });
-    });
-    bindRoot.querySelectorAll('[data-task-hours]').forEach(inp => {
-      inp.addEventListener('change', e => {
-        const it = list.find(x => x.id === e.target.dataset.taskHours);
-        if (!it) return;
-        const v = parseFloat(e.target.value);
-        it.actuals_by_day = it.actuals_by_day || {};
-        if (v > 0) it.actuals_by_day[d] = v;
-        else delete it.actuals_by_day[d];
-        syncItemActualFromDays(it);
+        const si = parseInt(el.dataset.ddNavSi, 10);
+        const dNav = parseInt(el.dataset.ddNavD, 10);
+        if (Number.isNaN(si) || Number.isNaN(dNav)) return;
+        if (si < 0 || si >= sprints.length) return;
+        openDaySprintIdx = si;
+        openDay = dNav;
         renderAll();
       });
     });
+    bindRoot.querySelectorAll('[data-today-nav]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const delta = parseInt(e.currentTarget.dataset.todayNav, 10);
+        if (Number.isNaN(delta)) return;
+        const curCal = new Date(s.start);
+        curCal.setDate(curCal.getDate() + d);
+        curCal.setHours(0, 0, 0, 0);
+        const next = new Date(curCal);
+        next.setDate(next.getDate() + delta);
+        todayBrowseDate = calendarDateAtMidnight(next);
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-start-work]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled || runningAction(s)) return;
+        ensureActions(s);
+        s.actions.push({
+          id: 'a-' + Date.now().toString(36),
+          type: 'Work',
+          start: new Date().toISOString(),
+          end: null,
+          tasks: [],
+        });
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-action-stop]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = s.actions.find(x => x.id === btn.dataset.actionStop);
+        if (!act || act.end != null) return;
+        const last = (act.tasks || [])[(act.tasks || []).length - 1];
+        if (last && !last.finished_at) {
+          const now = new Date().toISOString();
+          last.finished_at = now;
+          last.time_spent_hours = hoursBetweenIso(last.started_at, now);
+        }
+        act.end = new Date().toISOString();
+        renderAll();
+      });
+    });
+
+    function appendTaskToRunningAction(act, taskId) {
+      if (!taskId || act.end != null) return;
+      const item = list.find(x => x.id === taskId);
+      if (!item) return;
+      const now = new Date().toISOString();
+      act.tasks = act.tasks || [];
+      act.tasks.push({
+        task_id: taskId,
+        work_description: '',
+        time_spent_hours: 0,
+        started_at: now,
+        finished_at: null,
+        marked_done: false,
+      });
+      if (item.status === 'todo') item.status = 'doing';
+    }
+
+    bindRoot.querySelectorAll('[data-append-task]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = s.actions.find(x => x.id === btn.dataset.appendTask);
+        if (!act) return;
+        const card = btn.closest('.action-card');
+        const sel = card ? card.querySelector(`select[data-pick-for="${act.id}"]`) : null;
+        const tid = sel && sel.value;
+        appendTaskToRunningAction(act, tid);
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-active-wd]').forEach(ta => {
+      ta.addEventListener('change', () => {
+        const act = s.actions.find(x => x.id === ta.dataset.actionId);
+        const ei = parseInt(ta.dataset.entryIdx, 10);
+        const ent = act && act.tasks && act.tasks[ei];
+        if (ent) ent.work_description = ta.value;
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-finish-entry]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = s.actions.find(x => x.id === btn.dataset.finishEntry);
+        if (!act || act.end != null) return;
+        const active = (act.tasks || []).find(t => !t.finished_at);
+        if (!active) return;
+        const card = btn.closest('.action-card');
+        const markDone = card && card.querySelector('[data-mark-done]')?.checked;
+        const now = new Date().toISOString();
+        active.finished_at = now;
+        active.time_spent_hours = hoursBetweenIso(active.started_at, now);
+        active.marked_done = !!markDone;
+        const it = list.find(x => x.id === active.task_id);
+        if (markDone && it) it.status = 'done';
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-action-delete]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.actionDelete;
+        if (!window.confirm('Delete this action?')) return;
+        ensureActions(s);
+        s.actions = s.actions.filter(x => x.id !== id);
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-action-toggle-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.actionToggleEdit;
+        const card = btn.closest('.action-card');
+        if (card) card.classList.toggle('is-editing');
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-action-save-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.actionSaveEdit;
+        const act = s.actions.find(x => x.id === id);
+        if (!act) return;
+        const card = btn.closest('.action-card');
+        card.querySelectorAll('[data-edit-hours]').forEach(inp => {
+          const ei = parseInt(inp.dataset.entryIdx, 10);
+          const ent = act.tasks[ei];
+          if (ent) ent.time_spent_hours = parseFloat(inp.value) || 0;
+        });
+        card.querySelectorAll('[data-edit-wd]').forEach(ta => {
+          const ei = parseInt(ta.dataset.entryIdx, 10);
+          const ent = act.tasks[ei];
+          if (ent) ent.work_description = ta.value;
+        });
+        card.classList.remove('is-editing');
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-remove-entry]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.removeEntry;
+        const ei = parseInt(btn.dataset.entryIdx, 10);
+        const act = s.actions.find(x => x.id === id);
+        if (act && act.tasks) act.tasks.splice(ei, 1);
+        renderAll();
+      });
+    });
+
+    bindRoot.querySelectorAll('[data-action-add-task]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.actionAddTask;
+        const act = s.actions.find(x => x.id === id);
+        if (!act || !act.end) return;
+        const pick = window.prompt('Task id to add (e.g. t1):', '');
+        if (!pick) return;
+        const item = list.find(x => x.id === pick.trim());
+        if (!item) return;
+        act.tasks = act.tasks || [];
+        act.tasks.push({
+          task_id: item.id,
+          work_description: '',
+          time_spent_hours: 0.25,
+          started_at: act.start,
+          finished_at: act.end,
+          marked_done: false,
+        });
+        renderAll();
+      });
+    });
+
     bindRoot.querySelectorAll('.schip[data-status]').forEach(btn => {
       btn.addEventListener('click', e => {
         const b = e.currentTarget;
@@ -513,10 +996,13 @@
     });
     bindRoot.querySelectorAll('[data-dd-add]').forEach(btn => {
       btn.addEventListener('click', e => {
-        pendingTaskPlannedDay = parseInt(e.target.dataset.ddAdd, 10);
+        pendingTaskPlannedDay = parseInt(e.currentTarget.dataset.ddAdd, 10);
         openModal('modal-task');
       });
     });
+
+    if (bindRoot.querySelector('[data-running-elapsed]')) startRunTimerIfNeeded();
+    else stopRunTimer();
   }
 
   function applySprintChrome() {
@@ -550,10 +1036,10 @@
   }
 
   function prevSprint() {
-    if (cur > 0) { cur--; openDay = null; renderAll(); }
+    if (cur > 0) { cur--; openDay = null; setView('sprint'); }
   }
   function nextSprint() {
-    if (cur < sprints.length - 1) { cur++; openDay = null; renderAll(); }
+    if (cur < sprints.length - 1) { cur++; openDay = null; setView('sprint'); }
   }
   document.querySelectorAll('.sprint-chev-prev').forEach(b => b.addEventListener('click', prevSprint));
   document.querySelectorAll('.sprint-chev-next').forEach(b => b.addEventListener('click', nextSprint));
@@ -581,7 +1067,7 @@
     return {
       id: 'pin-' + slug + '-' + Math.random().toString(36).slice(2, 7),
       title, crumb, est: est || 1, kind,
-      planned_day: null, status: 'todo', actual: 0, drift_from: [],
+      planned_day: null, status: 'todo', drift_from: [],
     };
   }
   function removeItemByTitle(sprintIdx, title) {
@@ -774,6 +1260,26 @@
     const dt = dayDate(d);
     return DOW[dt.getDay()] + ' ' + MON[dt.getMonth()] + ' ' + dt.getDate();
   }
+  function fmtClock(iso) {
+    const t = new Date(iso);
+    return t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+  function hoursBetweenIso(startIso, endIso) {
+    return (new Date(endIso) - new Date(startIso)) / 3600000;
+  }
+  function taskOptionsHtml(s, d) {
+    const list = s.items;
+    const onDay = list.filter(i => i.planned_day === d);
+    const rest = list.filter(i => i.planned_day !== d);
+    let h = '<option value="">— Pick task —</option>';
+    onDay.forEach(i => {
+      h += '<option value="' + escapeHtml(i.id) + '">' + escapeHtml(i.title) + '</option>';
+    });
+    rest.forEach(i => {
+      h += '<option value="' + escapeHtml(i.id) + '">' + escapeHtml(i.title) + ' (other day)</option>';
+    });
+    return h;
+  }
   function driftChain(item) {
     const chain = [...(item.drift_from || [])];
     if (item.planned_day != null) chain.push(item.planned_day);
@@ -790,7 +1296,7 @@
     const doing = list.filter(i => i.status === 'doing').length;
     const blocked = list.filter(i => i.status === 'blocked').length;
     const totalEst = list.reduce((a, i) => a + i.est, 0);
-    const totalAct = list.reduce((a, i) => a + itemActual(i), 0);
+    const totalAct = list.reduce((a, i) => a + itemActual(s, i), 0);
     const drifted = list.filter(i => (i.drift_from || []).length > 0).length;
 
     const hoursVar = varianceCls(totalAct, totalEst);
@@ -845,9 +1351,10 @@
 
       const dayItems = list.filter(i => i.planned_day === d);
       const ghostItems = list.filter(i =>
-        (i.drift_from || []).includes(d) && i.planned_day !== d);
+        ((i.drift_from || []).includes(d) && i.planned_day !== d)
+        || (hoursForTaskOnDay(s, i, d) > 0 && i.planned_day !== d && !(i.drift_from || []).includes(d)));
       const planned = dayItems.reduce((a, i) => a + i.est, 0);
-      const actual = list.reduce((a, i) => a + dayActualFor(i, d), 0);
+      const actual = list.reduce((a, i) => a + dayActualFor(s, i, d), 0);
       const doneCount = dayItems.filter(i => i.status === 'done').length;
       const pushedOut = list.filter(i =>
         (i.drift_from || []).includes(d) && i.planned_day !== d).length;
@@ -902,8 +1409,8 @@
           const fromBadge = drift > 0 && lastSrc != null
               ? `<span class="from-day" title="Rolled in from ${fmtDay(lastSrc)}">↙ ${DOW[dayDate(lastSrc).getDay()]} ${dayDate(lastSrc).getDate()}</span>`
               : '';
-          const act = cumulativeActualUpTo(i, d);
-          const todayDelta = dayActualFor(i, d);
+          const act = cumulativeActualUpTo(s, i, d);
+          const todayDelta = dayActualFor(s, i, d);
           const showProg = (act > 0 || status === 'done') && !isPlannedSprint;
           const vCls = varianceCls(act, i.est);
           const hasActual = act > 0;
@@ -938,8 +1445,8 @@
               ? 'unscheduled'
               : `${DOW[dayDate(movedTo).getDay()]} ${dayDate(movedTo).getDate()}`;
           const rowCls = status === 'done' ? 'is-done' : (status === 'blocked' ? 'is-blocked' : '');
-          const cum = cumulativeActualUpTo(i, d);
-          const todayDelta = dayActualFor(i, d);
+          const cum = cumulativeActualUpTo(s, i, d);
+          const todayDelta = dayActualFor(s, i, d);
           const vClsG = varianceCls(cum, i.est);
           const showGhostProg = (cum > 0 || status === 'done') && !isPlannedSprint;
           const hoursCellG = cum > 0
@@ -1047,31 +1554,39 @@
     renderSprintCart();
     renderDays();
 
-    const viewSprintEl = document.getElementById('view-sprint');
-    const daysList = document.getElementById('sp-days-list');
-    const dayDetail = document.getElementById('sp-day-detail');
+    const viewSprintDayEl = document.getElementById('view-sprint-day');
     const viewTodayEl = document.getElementById('view-today');
-    const inSprintDetail = viewSprintEl && !viewSprintEl.hidden && openDay != null;
-
-    if (daysList) daysList.hidden = inSprintDetail;
-    if (dayDetail) dayDetail.hidden = !inSprintDetail;
-
-    if (inSprintDetail && openDay != null) {
-      renderDayDetail(sprint(), openDay, 'sprint');
-    } else if (dayDetail && !inSprintDetail) {
-      dayDetail.innerHTML = '';
+    if (viewSprintDayEl && !viewSprintDayEl.hidden) {
+      if (openDaySprintIdx == null || openDay == null) {
+        openDaySprintIdx = cur;
+        openDay = 0;
+      }
+      const si = openDaySprintIdx;
+      if (si >= 0 && si < sprints.length) {
+        renderDayPage(sprints[si], openDay, 'sprint', si);
+      }
+    } else if (viewSprintDayEl) {
+      viewSprintDayEl.innerHTML = '';
     }
 
     if (viewTodayEl && !viewTodayEl.hidden) {
-      const idx = todayDayIndex();
-      if (idx == null) {
+      if (todayBrowseDate == null) todayBrowseDate = calendarDateAtMidnight(today);
+      const loc = locateCalendarDateInPlan(todayBrowseDate);
+      if (loc) {
+        renderDayPage(loc.sp, loc.d, 'today', loc.si);
+      } else if (sameDay(todayBrowseDate, today) && sprintIdxContainingToday() == null) {
         renderTodayEmptyState();
+        stopRunTimer();
       } else {
-        renderDayDetail(sprint(), idx, 'today');
+        renderTodayGapPage(todayBrowseDate);
+        stopRunTimer();
       }
     } else if (viewTodayEl) {
       viewTodayEl.innerHTML = '';
+      stopRunTimer();
     }
+
+    if (!document.querySelector('[data-running-elapsed]')) stopRunTimer();
   }
 
   // search: live filter + auto-expand + highlight
@@ -1195,7 +1710,6 @@
         est,
         planned_day: pendingTaskPlannedDay,
         status: 'todo',
-        actual: 0,
         drift_from: [],
       });
       pendingTaskPlannedDay = null;
