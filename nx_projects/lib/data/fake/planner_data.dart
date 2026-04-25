@@ -82,6 +82,60 @@ class Planner extends Notifier<PlannerState> {
     }
     return null;
   }
+
+  void updateSprint(Sprint sprint) {
+    final i = state.sprints.indexWhere((s) => s.id == sprint.id);
+    if (i < 0) return;
+    final next = List<Sprint>.from(state.sprints);
+    next[i] = sprint;
+    _set(PlannerState(
+      projects: state.projects,
+      tasks: state.tasks,
+      sprints: next,
+    ));
+  }
+
+  void setDayNote(int sprintId, String ymd, String value) {
+    final s = readSprint(sprintId);
+    if (s == null) return;
+    final t = value.trim();
+    final m = Map<String, String>.from(s.dayNotes);
+    if (t.isEmpty) {
+      m.remove(ymd);
+    } else {
+      m[ymd] = t;
+    }
+    updateSprint(s.copyWith(dayNotes: m));
+  }
+
+  /// Schedules a task on [newYmd] (or unschedules when [newYmd] is null).
+  /// When moving between days, appends the previous `plannedFor` to `driftFrom`
+  /// (deduped, last 5).
+  void moveTaskToDay(String taskId, String? newYmd) {
+    final t = readTask(taskId);
+    if (t == null) return;
+    final old = t.plannedFor;
+    if (old == newYmd) return;
+
+    var drift = List<String>.from(t.driftFrom);
+    if (old != null &&
+        newYmd != null &&
+        old != newYmd &&
+        !drift.contains(old)) {
+      drift = [...drift, old];
+      if (drift.length > 5) {
+        drift = drift.sublist(drift.length - 5);
+      }
+    }
+
+    upsertTask(
+      t.copyWith(
+        plannedFor: newYmd,
+        clearPlannedFor: newYmd == null,
+        driftFrom: drift,
+      ),
+    );
+  }
 }
 
 class FakeProjectRepository implements ProjectRepository {

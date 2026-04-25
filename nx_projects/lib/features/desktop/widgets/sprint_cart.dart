@@ -74,6 +74,7 @@ class SprintCart extends ConsumerWidget {
           _CapBlock(stats: stats, sprint: sp),
           Expanded(
             child: _CartBody(
+              sprint: sp,
               tasks: tasks,
               projects: projects,
             ),
@@ -216,11 +217,40 @@ class _SprintDots extends StatelessWidget {
             ),
           ],
           const SizedBox(width: 4),
-          Text(
-            '+',
-            style: TextStyle(fontSize: 10, color: AppColors.dim),
-          ),
+          const _SprintAddPlus(),
         ],
+      ),
+    );
+  }
+}
+
+class _SprintAddPlus extends StatefulWidget {
+  const _SprintAddPlus();
+
+  @override
+  State<_SprintAddPlus> createState() => _SprintAddPlusState();
+}
+
+class _SprintAddPlusState extends State<_SprintAddPlus> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: () {},
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '+',
+            style: TextStyle(
+              fontSize: 10,
+              color: _hover ? AppColors.text : AppColors.dim,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -317,22 +347,107 @@ String _projectLabelForTask(Task t, List<Project> projects) {
   return p.name;
 }
 
-class _CartBody extends StatelessWidget {
-  const _CartBody({required this.tasks, required this.projects});
+String _topProjectForBreakdown(Task t) {
+  final c = t.crumb.trim();
+  if (c.isEmpty || c == '—' || c == '-') return 'Other';
+  final first = c.split('/').first.trim();
+  return first.isEmpty ? 'Other' : first;
+}
 
+Color _breakdownBarColor(String topProject) {
+  switch (topProject) {
+    case 'Nexus':
+      return AppColors.pNexus;
+    case 'Pipeline':
+      return AppColors.pPipe;
+    case 'Mobile App':
+      return AppColors.pMobile;
+    default:
+      return AppColors.accent;
+  }
+}
+
+String _cartGlyph(Task t) {
+  switch (t.kind) {
+    case TaskKind.bug:
+      return '●';
+    case TaskKind.feat:
+      return '◉';
+    case TaskKind.task:
+      return '▢';
+  }
+}
+
+class _UnscheduledHint extends StatelessWidget {
+  const _UnscheduledHint({required this.n});
+  final int n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(fontSize: 11, height: 1.35),
+        children: [
+          TextSpan(
+            text: '$n unscheduled',
+            style: const TextStyle(
+              color: AppColors.warn,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const TextSpan(
+            text: ' — drag onto a day to plan.',
+            style: TextStyle(color: AppColors.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CartSectionLabel extends StatelessWidget {
+  const _CartSectionLabel(this.text, {this.topPadding = 14});
+  final String text;
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4, topPadding, 4, 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10,
+          letterSpacing: 0.8,
+          color: AppColors.dim,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _CartBody extends ConsumerWidget {
+  const _CartBody({
+    required this.sprint,
+    required this.tasks,
+    required this.projects,
+  });
+
+  final Sprint sprint;
   final List<Task> tasks;
   final List<Project> projects;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (tasks.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'No tasks in this sprint.',
+            'No items in ${sprint.name} yet.\nClick ☆ on a backlog row to add.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.dim,
               fontSize: 12,
               fontStyle: FontStyle.italic,
@@ -347,81 +462,364 @@ class _CartBody extends StatelessWidget {
       groups.putIfAbsent(k, () => []).add(t);
     }
     final keys = groups.keys.toList()..sort();
+    final totalEst = tasks.fold<double>(0, (a, t) => a + t.estimate);
+    final breakdown = <String, double>{};
+    for (final t in tasks) {
+      final p = _topProjectForBreakdown(t);
+      breakdown[p] = (breakdown[p] ?? 0) + t.estimate;
+    }
+    final breakdownKeys = breakdown.keys.toList()..sort();
+    final nUnsched = tasks.where((t) => t.plannedFor == null).length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
       children: [
+        _CartSectionLabel('Items (${tasks.length})', topPadding: 4),
+        if (nUnsched > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+            child: _UnscheduledHint(n: nUnsched),
+          ),
         for (final k in keys) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 14, 6, 4),
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
             child: Text(
-              k.toUpperCase(),
+              k,
               style: const TextStyle(
-                fontSize: 10,
-                letterSpacing: 0.8,
-                color: AppColors.dim,
-                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          for (final t in groups[k]!) _CartTaskRow(task: t),
+          for (final t in groups[k]!)
+            _CartTaskRow(
+              task: t,
+              onUnpin: () {
+                ref
+                    .read(plannerProvider.notifier)
+                    .upsertTask(t.copyWith(clearSprint: true));
+              },
+            ),
         ],
+        const _CartSectionLabel('Breakdown'),
+        _CartBreakdown(
+          totalEst: totalEst,
+          byProject: breakdown,
+          projectKeys: breakdownKeys,
+        ),
+        const _CartSectionLabel('Sprint goal'),
+        _SprintGoalField(key: ValueKey(sprint.id), sprint: sprint),
       ],
     );
   }
 }
 
-class _CartTaskRow extends StatelessWidget {
-  const _CartTaskRow({required this.task});
+class _CartBreakdown extends StatelessWidget {
+  const _CartBreakdown({
+    required this.totalEst,
+    required this.byProject,
+    required this.projectKeys,
+  });
 
-  final Task task;
+  final double totalEst;
+  final Map<String, double> byProject;
+  final List<String> projectKeys;
 
   @override
   Widget build(BuildContext context) {
-    final g = task.kind == TaskKind.feat ? '◉' : '●';
-    final gColor = kindColor(task.kind);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(5),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 14,
-                  child: Text(
-                    g,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: gColor),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: AppColors.text),
-                  ),
-                ),
-                SizedBox(
-                  width: 40,
-                  child: Text(
-                    '${task.estimate % 1 == 0 ? task.estimate.toInt() : task.estimate}h',
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.muted,
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+      child: Column(
+        children: [
+          for (var i = 0; i < projectKeys.length; i++) ...[
+            _BreakdownRow(
+              name: projectKeys[i],
+              hours: byProject[projectKeys[i]]!,
+              total: totalEst,
+              barColor: _breakdownBarColor(projectKeys[i]),
+            ),
+            if (i < projectKeys.length - 1) const SizedBox(height: 6),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BreakdownRow extends StatelessWidget {
+  const _BreakdownRow({
+    required this.name,
+    required this.hours,
+    required this.total,
+    required this.barColor,
+  });
+
+  final String name;
+  final double hours;
+  final double total;
+  final Color barColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total > 0 ? ((hours / total) * 100).round() : 0;
+    final hStr = hours == hours.roundToDouble()
+        ? hours.toInt().toString()
+        : hours.toStringAsFixed(1);
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth * (pct / 100).clamp(0.0, 1.0);
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    height: 5,
+                    width: constraints.maxWidth,
+                    decoration: BoxDecoration(
+                      color: AppColors.panel3,
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-                ),
-              ],
+                  Container(
+                    height: 5,
+                    width: w,
+                    decoration: BoxDecoration(
+                      color: barColor,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          width: 60,
+          child: Text(
+            '$hStr h · $pct%',
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SprintGoalField extends ConsumerStatefulWidget {
+  const _SprintGoalField({super.key, required this.sprint});
+
+  final Sprint sprint;
+
+  @override
+  ConsumerState<_SprintGoalField> createState() => _SprintGoalFieldState();
+}
+
+class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
+  late final TextEditingController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = TextEditingController(text: widget.sprint.goal);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SprintGoalField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sprint.id != widget.sprint.id) {
+      _c.text = widget.sprint.goal;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+      child: TextField(
+        controller: _c,
+        onChanged: (v) {
+          ref.read(plannerProvider.notifier).updateSprint(
+                widget.sprint.copyWith(goal: v),
+              );
+        },
+        minLines: 2,
+        maxLines: 4,
+        style: const TextStyle(fontSize: 13, color: AppColors.text),
+        cursorColor: AppColors.accent,
+        decoration: InputDecoration(
+          hintText: "What's the goal for ${widget.sprint.name}?",
+          hintStyle: const TextStyle(color: AppColors.dim, fontSize: 12),
+          filled: true,
+          fillColor: AppColors.panel2,
+          contentPadding: const EdgeInsets.all(8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(6)),
+            borderSide: BorderSide(color: AppColors.accent),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CartTaskRow extends StatefulWidget {
+  const _CartTaskRow({required this.task, required this.onUnpin});
+
+  final Task task;
+  final VoidCallback onUnpin;
+
+  @override
+  State<_CartTaskRow> createState() => _CartTaskRowState();
+}
+
+class _CartTaskRowState extends State<_CartTaskRow> {
+  bool _rowHover = false;
+  bool _xHover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.task;
+    final g = _cartGlyph(t);
+    final gColor = kindColor(t.kind);
+    final hStr = t.estimate % 1 == 0
+        ? '${t.estimate.toInt()}h'
+        : '${t.estimate}h';
+    final scheduled = t.plannedFor != null;
+    Widget buildRow() {
+      return MouseRegion(
+      onEnter: (_) => setState(() => _rowHover = true),
+      onExit: (_) => setState(() => _rowHover = false),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Material(
+          color: _rowHover ? AppColors.panel2 : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+          child: InkWell(
+            onTap: () {},
+            borderRadius: BorderRadius.circular(5),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    child: Text(
+                      g,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: gColor),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      t.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheduled ? AppColors.muted : AppColors.text,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 36,
+                    child: Text(
+                      hStr,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 16,
+                    child: MouseRegion(
+                      onEnter: (_) => setState(() => _xHover = true),
+                      onExit: (_) => setState(() => _xHover = false),
+                      child: InkWell(
+                        onTap: widget.onUnpin,
+                        child: Center(
+                          child: Text(
+                            '×',
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1,
+                              color: _xHover
+                                  ? const Color(0xFFF87171)
+                                  : AppColors.dim,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+    }
+
+    if (scheduled) {
+      return buildRow();
+    }
+    return Draggable<Task>(
+      data: t,
+      maxSimultaneousDrags: 1,
+      feedback: Material(
+        color: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Card(
+            color: AppColors.panel2,
+            child: ListTile(
+              dense: true,
+              title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: Text(
+                hStr,
+                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+              ),
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.4,
+        child: buildRow(),
+      ),
+      child: buildRow(),
     );
   }
 }

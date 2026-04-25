@@ -17,12 +17,16 @@ class DesktopTaskRow extends StatefulWidget {
     required this.rankLabel,
     this.crumb,
     this.sprintChipLabel,
+    this.isSearchMatch = false,
     this.onMenu,
     this.onRowTap,
   });
 
   final Task task;
   final String rankLabel;
+
+  /// When true, tints the row and title to mirror reference `.row.match` while searching.
+  final bool isSearchMatch;
 
   /// Replaces the default [Text] for [task.crumb] (e.g. bucket pill in Projects tree).
   final Widget? crumb;
@@ -40,6 +44,8 @@ class DesktopTaskRow extends StatefulWidget {
 class _DesktopTaskRowState extends State<DesktopTaskRow> {
   bool _hover = false;
 
+  static const double _kNarrowMaxWidth = 640;
+
   @override
   Widget build(BuildContext context) {
     final t = widget.task;
@@ -53,150 +59,179 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
       glyph = '▢';
     }
 
-    // Fixed grid ~720px; scroll horizontally in narrow parents (e.g. mobile web).
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onRowTap ?? widget.onMenu,
-          borderRadius: BorderRadius.circular(6),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-            decoration: BoxDecoration(
-              color: _hover ? AppColors.panel : null,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < _kNarrowMaxWidth;
+        return MouseRegion(
+          onEnter: (_) => setState(() => _hover = true),
+          onExit: (_) => setState(() => _hover = false),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onRowTap ?? widget.onMenu,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: _hover ? AppColors.border : Colors.transparent,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                decoration: BoxDecoration(
+                  color: widget.isSearchMatch
+                      ? const Color(0x10FBBF24)
+                      : (_hover ? AppColors.panel : null),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: widget.isSearchMatch
+                        ? const Color(0x59FBBF24)
+                        : (_hover ? AppColors.border : Colors.transparent),
+                  ),
+                ),
+                child: narrow
+                    ? SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: 700,
+                          child: _rowInner(
+                            glyph: glyph,
+                            done: done,
+                          ),
+                        ),
+                      )
+                    : _rowInner(
+                        glyph: glyph,
+                        done: done,
+                      ),
               ),
             ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: 700,
-                child: Row(
+          ),
+        );
+      },
+    );
+  }
+
+  /// Narrow mode wraps this in a [SizedBox(width: 700)] + horizontal scroll;
+  /// wide mode lets the [Expanded] title use full pane width.
+  Widget _rowInner({
+    required String glyph,
+    required bool done,
+  }) {
+    final t = widget.task;
+    final match = widget.isSearchMatch;
+    return Row(
+      children: [
+        SizedBox(
+          width: 28,
+          child: Text(
+            widget.rankLabel,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12,
+              color: done ? AppColors.dim : AppColors.dim,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 18,
+          child: Text(
+            glyph,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: done ? AppColors.dim : kindColor(t.kind),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 56,
+          child: _KindPill(kind: t.kind, dim: done),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 200,
+          child: DefaultTextStyle(
+            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            child: widget.crumb ??
+                (t.crumb.isEmpty
+                    ? const SizedBox.shrink()
+                    : Text(
+                        t.crumb,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
               children: [
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    widget.rankLabel,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: done ? AppColors.dim : AppColors.dim,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                TextSpan(
+                  text: t.title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: (match && !done)
+                        ? AppColors.warn
+                        : (done ? AppColors.muted : AppColors.text),
+                    decoration: done ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 18,
-                  child: Text(
-                    glyph,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: done ? AppColors.dim : kindColor(t.kind),
-                    ),
+                if (t.severity != null) ...[
+                  const WidgetSpan(
+                    child: SizedBox(width: 6),
                   ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 56,
-                  child: _KindPill(kind: t.kind, dim: done),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 200,
-                  child: DefaultTextStyle(
-                    style: const TextStyle(fontSize: 11, color: AppColors.muted),
-                    child: widget.crumb ??
-                        (t.crumb.isEmpty
-                            ? const SizedBox.shrink()
-                            : Text(
-                                t.crumb,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              )),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: _SevPill(severity: t.severity!),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: t.title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: done ? AppColors.muted : AppColors.text,
-                            decoration: done ? TextDecoration.lineThrough : null,
-                          ),
-                        ),
-                        if (t.severity != null) ...[
-                          const WidgetSpan(
-                            child: SizedBox(width: 6),
-                          ),
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: _SevPill(severity: t.severity!),
-                          ),
-                        ],
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 56,
-                  child: Text(
-                    formatHours(t.estimate),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: done ? AppColors.dim : AppColors.muted,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 64,
-                  child: _SprintChip(
-                    label: widget.sprintChipLabel ?? '☆',
-                    sprintId: t.sprintId,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                SizedBox(
-                  width: 18,
-                  child: Opacity(
-                    opacity: _hover ? 1 : 0,
-                    child: InkWell(
-                      onTap: widget.onMenu,
-                      child: const Text(
-                        '⋮',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1,
-                          color: AppColors.dim,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                ],
               ],
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 56,
+          child: Text(
+            formatHours(t.estimate),
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12,
+              color: done ? AppColors.dim : AppColors.muted,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 64,
+          child: _SprintChip(
+            label: widget.sprintChipLabel ?? '☆',
+            sprintId: t.sprintId,
+          ),
+        ),
+        const SizedBox(width: 4),
+        SizedBox(
+          width: 18,
+          child: Opacity(
+            opacity: _hover ? 1 : 0,
+            child: InkWell(
+              onTap: widget.onMenu,
+              child: const Text(
+                '⋮',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1,
+                  color: AppColors.dim,
+                ),
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

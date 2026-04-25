@@ -89,8 +89,6 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
   @override
   Widget build(BuildContext context) {
     final mode = ref.watch(desktopPlannerModeProvider);
-    final showFilter =
-        mode == 1 && ref.watch(selectedProjectIdProvider) == null;
     final kind = ref.watch(filterKindProvider);
     final status = ref.watch(filterStatusProvider);
     final kindV = kind == 'all' ? 'All' : (kind == 'feat' ? 'Feature' : 'Bug');
@@ -138,100 +136,79 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
             ],
           ),
         ),
-        if (showFilter)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border)),
-            ),
-            child: Row(
-              children: [
-                _FilterChip(lbl: 'Project', value: 'All ▾', onTap: () => showFilterSheet(context, ref)),
-                const SizedBox(width: 10),
-                _FilterChip(
-                  lbl: 'Kind',
-                  value: '$kindV ▾',
-                  onTap: () => showFilterSheet(context, ref),
-                ),
-                const SizedBox(width: 10),
-                _FilterChip(
-                  lbl: 'Status',
-                  value: '$stV ▾',
-                  onTap: () => showFilterSheet(context, ref),
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: 240,
-                  child: TextField(
-                    controller: _search,
-                    onChanged: (s) => ref.read(searchQueryProvider.notifier).set(s),
-                    style: const TextStyle(color: AppColors.text, fontSize: 12),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: AppColors.panel,
-                      hintText: 'Search ideas…',
-                      hintStyle: const TextStyle(color: AppColors.dim, fontSize: 12),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(6)),
-                        borderSide: BorderSide(color: AppColors.accent),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              children: [
-                const Spacer(),
-                SizedBox(
-                  width: 240,
-                  child: TextField(
-                    controller: _search,
-                    onChanged: (s) => ref.read(searchQueryProvider.notifier).set(s),
-                    style: const TextStyle(color: AppColors.text, fontSize: 12),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: AppColors.panel,
-                      hintText: 'Search ideas…',
-                      hintStyle: const TextStyle(color: AppColors.dim, fontSize: 12),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(6)),
-                        borderSide: BorderSide(color: AppColors.accent),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.border)),
           ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _FilterChip(
+                        lbl: 'Project',
+                        value: 'All ▾',
+                        onTap: () => showFilterSheet(context, ref),
+                      ),
+                      const SizedBox(width: 10),
+                      _FilterChip(
+                        lbl: 'Kind',
+                        value: '$kindV ▾',
+                        onTap: () => showFilterSheet(context, ref),
+                      ),
+                      const SizedBox(width: 10),
+                      _FilterChip(
+                        lbl: 'Status',
+                        value: '$stV ▾',
+                        onTap: () => showFilterSheet(context, ref),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240, minWidth: 80),
+                  child: TextField(
+                    controller: _search,
+                    onChanged: (s) => ref.read(searchQueryProvider.notifier).set(s),
+                    style: const TextStyle(color: AppColors.text, fontSize: 12),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppColors.panel,
+                      hintText: 'Search ideas…',
+                      hintStyle: const TextStyle(color: AppColors.dim, fontSize: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(6)),
+                        borderSide: BorderSide(color: AppColors.accent),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         const Divider(height: 1, color: AppColors.border),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: mode == 0
                 ? PriorityScreen(onOpenTaskMenu: widget.onOpenTaskMenu)
                 : ProjectsScreen(onOpenTaskMenu: widget.onOpenTaskMenu),

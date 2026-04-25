@@ -97,17 +97,19 @@ class DayCapBar extends StatelessWidget {
     super.key,
     required this.ratio,
     this.isOver = false,
+    this.height = 4,
   });
 
   final double ratio;
   final bool isOver;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(2),
       child: SizedBox(
-        height: 4,
+        height: height,
         child: Stack(
           children: [
             const ColoredBox(color: AppColors.panel3, child: SizedBox.expand()),

@@ -86,12 +86,15 @@ class _TopTab extends StatelessWidget {
             color: selected ? AppColors.panel2 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: selected ? AppColors.text : AppColors.muted,
-              fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+          child: Opacity(
+            opacity: selected ? 1 : 0.55,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: selected ? AppColors.text : AppColors.muted,
+                fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+              ),
             ),
           ),
         ),

@@ -156,10 +156,12 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       subProjectId: subId,
       crumb: crumb,
       estimate: est,
+      actualHours: widget.task?.actualHours ?? 0,
       bucket: _bucket,
       status: widget.task?.status ?? TaskStatus.todo,
       sprintId: widget.task?.sprintId,
       plannedFor: widget.task?.plannedFor,
+      driftFrom: widget.task?.driftFrom ?? const [],
       notes: _notes.text,
     );
     if (kind == TaskKind.bug) {

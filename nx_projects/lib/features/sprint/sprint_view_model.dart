@@ -29,13 +29,46 @@ class SprintDaySlice {
     required this.tasks,
     required this.dayHours,
     required this.isToday,
+    required this.isPast,
+    required this.dayActual,
+    required this.doneCount,
+    required this.pushedCount,
+    required this.rolledCount,
   });
 
   final String ymd;
   final List<Task> tasks;
   final double dayHours;
   final bool isToday;
+  final bool isPast;
+  final double dayActual;
+  final int doneCount;
+  final int pushedCount;
+  final int rolledCount;
 }
+
+int sprintDayIndexOneBased(Sprint sp) {
+  final start = parseLocalDate(sp.start);
+  final today = parseLocalDate(kReferenceTodayYmd);
+  var k = 1 + today.difference(start).inDays;
+  if (k < 1) k = 1;
+  if (k > sp.length) k = sp.length;
+  return k;
+}
+
+final sprintDriftCountProvider = Provider<int>((ref) {
+  return ref
+      .watch(sprintTasksProvider)
+      .where((t) => t.driftFrom.isNotEmpty)
+      .length;
+});
+
+final sprintBlockedCountProvider = Provider<int>((ref) {
+  return ref
+      .watch(sprintTasksProvider)
+      .where((t) => t.status == TaskStatus.blocked)
+      .length;
+});
 
 final sprintDaySlicesProvider = Provider<List<SprintDaySlice>>((ref) {
   final sp = ref.watch(currentSprintProvider);
@@ -48,12 +81,29 @@ final sprintDaySlicesProvider = Provider<List<SprintDaySlice>>((ref) {
     final ymd = formatYmd(d);
     final dayTasks = tasks.where((t) => t.plannedFor == ymd).toList();
     final h = dayTasks.fold<double>(0, (a, t) => a + t.estimate);
+    final actual = dayTasks.fold<double>(0, (a, t) => a + t.actualHours);
+    var done = 0, pushed = 0, rolled = 0;
+    for (final t in dayTasks) {
+      if (t.status == TaskStatus.done) done++;
+      if (t.driftFrom.isNotEmpty) rolled++;
+    }
+    for (final t in tasks) {
+      if (t.driftFrom.contains(ymd) && t.plannedFor != ymd) {
+        pushed++;
+      }
+    }
+    final isPast = ymd.compareTo(todayYmd) < 0;
     out.add(
       SprintDaySlice(
         ymd: ymd,
         tasks: dayTasks,
         dayHours: h,
         isToday: ymd == todayYmd,
+        isPast: isPast,
+        dayActual: actual,
+        doneCount: done,
+        pushedCount: pushed,
+        rolledCount: rolled,
       ),
     );
   }

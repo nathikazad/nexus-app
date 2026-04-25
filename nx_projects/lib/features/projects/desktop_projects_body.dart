@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/features/projects/projects_view_model.dart';
 import 'package:nx_projects/features/projects/widgets/bucket_pill.dart';
@@ -18,6 +19,9 @@ class DesktopProjectsBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final q = ref.watch(searchQueryProvider);
+    final searchActive = q.trim().isNotEmpty;
+
     final roots = ref.watch(projectsListProvider).where((p) => p.parentId == null).toList();
     var rank = 0;
 
@@ -45,11 +49,14 @@ class DesktopProjectsBody extends ConsumerWidget {
       final meta = n == 0 ? 'ideation' : '$n items · ${metaH}h est';
 
       children.add(
-        _TreeProjectName(
-          name: project.name,
-          color: Color(project.color),
-          meta: meta,
-          onAdd: () {},
+        Opacity(
+          opacity: searchActive ? 0.5 : 1,
+          child: _TreeProjectName(
+            name: project.name,
+            color: Color(project.color),
+            meta: meta,
+            onAdd: () {},
+          ),
         ),
       );
       final treeChildren = <Widget>[];
@@ -59,10 +66,13 @@ class DesktopProjectsBody extends ConsumerWidget {
         );
         final subMetaH = s.hours % 1 == 0 ? s.hours.toInt().toString() : '${s.hours}';
         treeChildren.add(
-          _TreeSubName(
-            name: s.project.name,
-            meta: '${s.taskCount} items · ${subMetaH}h',
-            onAdd: () {},
+          Opacity(
+            opacity: searchActive ? 0.5 : 1,
+            child: _TreeSubName(
+              name: s.project.name,
+              meta: '${s.taskCount} items · ${subMetaH}h',
+              onAdd: () {},
+            ),
           ),
         );
         final subRows = <Widget>[];
@@ -73,6 +83,7 @@ class DesktopProjectsBody extends ConsumerWidget {
               rankLabel: rankLabelFor(t),
               sprintChipLabel: desktopSprintChipLabelForTask(t),
               crumb: DesktopBucketPill(task: t),
+              isSearchMatch: _titleMatchesSearch(t, q),
               onMenu: () => onOpenTaskMenu(context, ref, t),
             ),
           );
@@ -89,9 +100,12 @@ class DesktopProjectsBody extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ...subRows,
-                  InlineAddRow(
-                    label: 'Add to ${s.project.name}',
-                    onTap: () {},
+                  Opacity(
+                    opacity: searchActive ? 0.5 : 1,
+                    child: InlineAddRow(
+                      label: 'Add to ${s.project.name}',
+                      onTap: () {},
+                    ),
                   ),
                 ],
               ),
@@ -106,14 +120,18 @@ class DesktopProjectsBody extends ConsumerWidget {
             rankLabel: rankLabelFor(t),
             sprintChipLabel: desktopSprintChipLabelForTask(t),
             crumb: DesktopBucketPill(task: t),
+            isSearchMatch: _titleMatchesSearch(t, q),
             onMenu: () => onOpenTaskMenu(context, ref, t),
           ),
         );
       }
       treeChildren.add(
-        InlineAddRow(
-          label: 'Add to ${project.name} (no subproject)',
-          onTap: () {},
+        Opacity(
+          opacity: searchActive ? 0.5 : 1,
+          child: InlineAddRow(
+            label: 'Add to ${project.name} (no subproject)',
+            onTap: () {},
+          ),
         ),
       );
 
@@ -143,10 +161,16 @@ class DesktopProjectsBody extends ConsumerWidget {
       ),
     );
     return ListView(
-      padding: const EdgeInsets.fromLTRB(6, 0, 20, 40),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
       children: children,
     );
   }
+}
+
+bool _titleMatchesSearch(Task t, String q) {
+  final s = q.trim().toLowerCase();
+  if (s.isEmpty) return false;
+  return t.title.toLowerCase().contains(s);
 }
 
 int _bucketIx(TaskBucket b) {

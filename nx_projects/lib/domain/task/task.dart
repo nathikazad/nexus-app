@@ -15,8 +15,10 @@ class Task {
     this.subProjectId,
     this.crumb = '',
     this.estimate = 0,
+    this.actualHours = 0,
     this.sprintId,
     this.plannedFor,
+    this.driftFrom = const [],
     this.notes = '',
   });
 
@@ -30,9 +32,13 @@ class Task {
   final String? subProjectId;
   final String crumb;
   final double estimate;
+  /// Logged or recorded actual hours (simulated in fake data).
+  final double actualHours;
   final int? sprintId;
   /// YYYY-MM-DD
   final String? plannedFor;
+  /// Past `plannedFor` YMDs when the task was moved to another day.
+  final List<String> driftFrom;
   final String notes;
 
   Task copyWith({
@@ -48,10 +54,13 @@ class Task {
     bool clearSubProject = false,
     String? crumb,
     double? estimate,
+    double? actualHours,
     int? sprintId,
     String? plannedFor,
     bool clearSprint = false,
     bool clearPlannedFor = false,
+    List<String>? driftFrom,
+    bool clearDrift = false,
     String? notes,
   }) {
     return Task(
@@ -67,10 +76,14 @@ class Task {
           : (subProjectId ?? this.subProjectId),
       crumb: crumb ?? this.crumb,
       estimate: estimate ?? this.estimate,
+      actualHours: actualHours ?? this.actualHours,
       sprintId: clearSprint ? null : (sprintId ?? this.sprintId),
-      plannedFor: clearPlannedFor
+      plannedFor: clearSprint || clearPlannedFor
           ? null
           : (plannedFor ?? this.plannedFor),
+      driftFrom: clearSprint || clearDrift
+          ? const <String>[]
+          : (driftFrom ?? this.driftFrom),
       notes: notes ?? this.notes,
     );
   }
