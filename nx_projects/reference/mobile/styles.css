@@ -326,6 +326,23 @@ button { background: none; border: 0; cursor: pointer; }
 .date-head .ymd { color: var(--muted); font-size: 12px; }
 .date-head .meta { color: var(--muted); font-size: 11px; }
 
+.daily-summary {
+  padding: 4px 6px 0;
+}
+.daily-summary .progress {
+  height: 6px; background: var(--panel-3);
+  border-radius: 3px; margin: 8px 0 4px; overflow: hidden;
+  display: flex;
+}
+.daily-summary .progress > .seg { height: 100%; }
+.daily-summary .progress > .seg.done  { background: var(--ok); }
+.daily-summary .progress > .seg.doing { background: var(--accent); }
+.daily-summary .progress > .seg.todo  { background: var(--border-2); }
+.daily-summary .progress-meta {
+  display: flex; justify-content: space-between;
+  color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums;
+}
+
 /* sprint day header (within Sprint tab) */
 .day-head {
   display: flex; align-items: baseline; gap: 10px;
@@ -338,6 +355,18 @@ button { background: none; border: 0; cursor: pointer; }
 .day-head.today .dow { color: var(--accent); }
 .day-head .ymd { color: var(--muted); font-size: 11px; }
 .day-head .meta { margin-left: auto; color: var(--dim); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.day-cap {
+  height: 4px; background: var(--panel-3);
+  border-radius: 2px; overflow: hidden;
+  margin: 0 6px 8px;
+  position: relative;
+}
+.day-cap > .fill {
+  position: absolute; inset: 0; right: auto;
+  background: var(--accent); border-radius: 2px;
+}
+.day-cap.over > .fill { background: var(--warn); }
+.day-cap.today > .fill { box-shadow: 0 0 0 1px var(--accent); }
 .day-head .today-pill {
   font-size: 9px; padding: 2px 6px; border-radius: 4px;
   background: var(--accent); color: #0f1115;
@@ -345,22 +374,55 @@ button { background: none; border: 0; cursor: pointer; }
 }
 
 .cap-block {
-  padding: 10px 14px 14px;
+  padding: 12px 14px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
 .cap-row {
-  display: flex; justify-content: space-between;
+  display: flex; justify-content: space-between; align-items: baseline;
   font-size: 12px; color: var(--muted);
 }
-.cap-row b { color: var(--text); font-weight: 600; }
+.cap-row b { color: var(--text); font-weight: 600; font-size: 14px; }
+.cap-row .pct { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
 .cap-bar {
   height: 6px; background: var(--panel-3);
-  border-radius: 3px; margin-top: 6px; overflow: hidden; position: relative;
+  border-radius: 3px; margin-top: 8px; overflow: hidden; position: relative;
+  display: flex;
 }
+.cap-bar > .seg { height: 100%; }
+.cap-bar > .seg.done    { background: var(--ok); }
+.cap-bar > .seg.doing   { background: var(--accent); }
+.cap-bar > .seg.todo    { background: var(--border-2); }
+.cap-bar > .seg.blocked { background: var(--warn); }
 .cap-bar > .fill {
   position: absolute; inset: 0; right: auto;
   background: var(--accent); border-radius: 3px;
+}
+
+.chip-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 10px;
+}
+.summary-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.summary-chip .lbl { color: var(--muted); }
+.summary-chip.todo    { color: var(--muted); }
+.summary-chip.doing   { color: var(--accent); border-color: rgba(106,163,255,0.35); background: var(--accent-soft); }
+.summary-chip.done    { color: var(--ok); border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+.summary-chip.blocked { color: var(--warn); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+.summary-chip.feat    { color: var(--feat); border-color: rgba(106,163,255,0.3); }
+.summary-chip.bug     { color: var(--bug);  border-color: rgba(248,113,113,0.3); }
+.summary-chip .dot-ind {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
 }
 
 .sprint-goal {

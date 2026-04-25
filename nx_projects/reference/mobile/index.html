@@ -237,9 +237,33 @@ const PROJECTS = [
 ];
 
 const SPRINTS = [
-  { id: 13, name: 'Sprint 13', badge: 'done',    dates: 'Apr 13 – Apr 19', goal: 'Shipped auth rewrite, started UI polish.', capH: 24, start: '2026-04-13', length: 7 },
-  { id: 14, name: 'Sprint 14', badge: 'active',  dates: 'Apr 20 – Apr 26', goal: 'Ship dark mode + unblock the pipeline OOM.', capH: 40, start: '2026-04-20', length: 7 },
-  { id: 15, name: 'Sprint 15', badge: 'planned', dates: 'Apr 27 – May 2',  goal: '', capH: 40, start: '2026-04-27', length: 6 },
+  {
+    id: 13, name: 'Sprint 13', badge: 'done', dates: 'Apr 13 – Apr 19',
+    goal: 'Shipped auth rewrite, started UI polish.', capH: 24,
+    start: '2026-04-13', length: 7,
+    retro: 'Auth rewrite landed cleanly. Pipeline work underestimated.',
+    dayNotes: {
+      '2026-04-13': 'Lost most of the afternoon to a cert rotation.',
+      '2026-04-17': 'Good flow day — CSV export came together fast.',
+      '2026-04-18': 'Push plumbing took longer than expected; APNs sandbox gremlins.',
+    },
+  },
+  {
+    id: 14, name: 'Sprint 14', badge: 'active', dates: 'Apr 20 – Apr 26',
+    goal: 'Ship dark mode + unblock the pipeline OOM.', capH: 40,
+    start: '2026-04-20', length: 7,
+    retro: '',
+    dayNotes: {
+      '2026-04-20': 'Strong morning, tokens landed before lunch.',
+      '2026-04-21': 'Toggle ate the afternoon — hover + a11y states tricky.',
+      '2026-04-22': 'Splash flicker partly tracked down. SRE review still pending.',
+      '2026-04-23': 'Dark mode pushing through — refining contrast tokens.',
+    },
+  },
+  {
+    id: 15, name: 'Sprint 15', badge: 'planned', dates: 'Apr 27 – May 2',
+    goal: '', capH: 40, start: '2026-04-27', length: 6, retro: '', dayNotes: {},
+  },
 ];
 
 const TODAY = '2026-04-23';
@@ -497,13 +521,42 @@ function renderSubprojectDetail(projId, subId) {
 function renderSprint() {
   const sp = SPRINTS[sprintIdx];
   const items = TASKS.filter(t => t.sprint === sp.id);
-  const totalEst = items.reduce((a, t) => a + (t.est || 0), 0);
+  const sumStatus = { todo: 0, doing: 0, done: 0, blocked: 0 };
+  const sumKind   = { feat: 0, bug: 0, task: 0 };
+  let critBugs = 0, totalEst = 0;
+  items.forEach(t => {
+    sumStatus[t.status] = (sumStatus[t.status] || 0) + 1;
+    sumKind[t.kind] = (sumKind[t.kind] || 0) + 1;
+    totalEst += t.est || 0;
+    if (t.kind === 'bug' && t.sev === 'crit') critBugs++;
+  });
+  const hByStatus = { todo: 0, doing: 0, done: 0, blocked: 0 };
+  items.forEach(t => { hByStatus[t.status] = (hByStatus[t.status] || 0) + (t.est || 0); });
+  const segPct = (k) => totalEst > 0 ? (hByStatus[k] / sp.capH) * 100 : 0;
   const pct = Math.min(100, Math.round((totalEst / sp.capH) * 100));
 
-  let html = `<div class="cap-block" style="border-bottom:0;padding-top:14px">
-    <div class="cap-row"><span>Planned</span><span><b>${totalEst}h</b> / ${sp.capH}h</span></div>
-    <div class="cap-bar"><div class="fill" style="width:${pct}%"></div></div>
+  let html = `<div class="cap-block" style="border-bottom:0">
+    <div class="cap-row">
+      <span>Planned</span>
+      <span><b>${totalEst}h</b> / ${sp.capH}h <span class="pct">${pct}%</span></span>
+    </div>
+    <div class="cap-bar">
+      <div class="seg done"    style="width:${segPct('done')}%"></div>
+      <div class="seg doing"   style="width:${segPct('doing')}%"></div>
+      <div class="seg blocked" style="width:${segPct('blocked')}%"></div>
+      <div class="seg todo"    style="width:${segPct('todo')}%"></div>
+    </div>
+    <div class="chip-row">
+      ${sumStatus.doing   ? `<span class="summary-chip doing"><span class="dot-ind"></span>${sumStatus.doing} doing</span>` : ''}
+      ${sumStatus.todo    ? `<span class="summary-chip todo"><span class="dot-ind"></span>${sumStatus.todo} todo</span>` : ''}
+      ${sumStatus.blocked ? `<span class="summary-chip blocked"><span class="dot-ind"></span>${sumStatus.blocked} blocked</span>` : ''}
+      ${sumStatus.done    ? `<span class="summary-chip done"><span class="dot-ind"></span>${sumStatus.done} done</span>` : ''}
+      ${sumKind.feat ? `<span class="summary-chip feat">◉ ${sumKind.feat} feat</span>` : ''}
+      ${sumKind.bug  ? `<span class="summary-chip bug">● ${sumKind.bug} bug${critBugs ? ` · ${critBugs} crit` : ''}</span>` : ''}
+    </div>
   </div>`;
+
+  const dailyCap = sp.capH / sp.length;
 
   // one section per day of the sprint
   for (let i = 0; i < sp.length; i++) {
@@ -511,18 +564,23 @@ function renderSprint() {
     const d = parseDate(iso);
     const dayTasks = items.filter(t => t.plannedFor === iso);
     const dayH = dayTasks.reduce((a, t) => a + (t.est || 0), 0);
+    const dayDone = dayTasks.filter(t => t.status === 'done').length;
     const todayCls = isToday(iso) ? ' today' : '';
     const todayPill = isToday(iso) ? `<span class="today-pill">today</span>` : '';
+    const capPct = Math.min(100, (dayH / dailyCap) * 100);
+    const overCls = dayH > dailyCap ? ' over' : '';
+    const dailyTodayCls = isToday(iso) ? ' today' : '';
     html += `<div class="day-head${todayCls}">
       <span class="dow">${DOW_SHORT[d.getDay()]}</span>
       <span class="ymd">${MON_SHORT[d.getMonth()]} ${d.getDate()}</span>
       ${todayPill}
-      <span class="meta">${dayTasks.length} · ${dayH}h</span>
-    </div>`;
+      <span class="meta">${dayTasks.length}${dayTasks.length ? ` · ${dayDone}/${dayTasks.length} done` : ''} · ${dayH}/${dailyCap.toFixed(0)}h</span>
+    </div>
+    <div class="day-cap${overCls}${dailyTodayCls}"><div class="fill" style="width:${capPct}%"></div></div>`;
     if (dayTasks.length) {
       html += dayTasks.map(t => rowHTML(t, { showStatus: true })).join('');
     } else {
-      html += `<div class="empty" style="padding:14px 8px">Nothing planned</div>`;
+      html += `<div class="empty" style="padding:10px 8px">Nothing planned</div>`;
     }
   }
 
@@ -557,6 +615,16 @@ function updateSprintStrip() {
 function renderDaily() {
   const todays = TASKS.filter(t => t.plannedFor === dailyDate);
   const totalEst = todays.reduce((a, t) => a + (t.est || 0), 0);
+  const sumStatus = { todo: 0, doing: 0, done: 0, blocked: 0 };
+  const sumKind   = { feat: 0, bug: 0, task: 0 };
+  const hByStatus = { todo: 0, doing: 0, done: 0, blocked: 0 };
+  let critBugs = 0;
+  todays.forEach(t => {
+    sumStatus[t.status] = (sumStatus[t.status] || 0) + 1;
+    sumKind[t.kind] = (sumKind[t.kind] || 0) + 1;
+    hByStatus[t.status] = (hByStatus[t.status] || 0) + (t.est || 0);
+    if (t.kind === 'bug' && t.sev === 'crit') critBugs++;
+  });
 
   let html = `<div class="date-head">
     <div class="meta">${todays.length} task${todays.length === 1 ? '' : 's'} · ${totalEst}h planned</div>
@@ -566,6 +634,31 @@ function renderDaily() {
     html += `<div class="empty">Nothing planned for this day.</div>`;
     return html;
   }
+
+  const segPct = (k) => totalEst > 0 ? (hByStatus[k] / totalEst) * 100 : 0;
+  const donePct = totalEst > 0 ? Math.round((hByStatus.done / totalEst) * 100) : 0;
+
+  html += `<div class="daily-summary">
+    <div class="progress">
+      <div class="seg done"  style="width:${segPct('done')}%"></div>
+      <div class="seg doing" style="width:${segPct('doing')}%"></div>
+      <div class="seg todo"  style="width:${segPct('todo') + segPct('blocked')}%"></div>
+    </div>
+    <div class="progress-meta">
+      <span>${hByStatus.done}h done</span>
+      <span>${donePct}%</span>
+      <span>${(hByStatus.todo + hByStatus.blocked + hByStatus.doing)}h left</span>
+    </div>
+    <div class="chip-row">
+      ${sumStatus.doing   ? `<span class="summary-chip doing"><span class="dot-ind"></span>${sumStatus.doing} doing</span>` : ''}
+      ${sumStatus.todo    ? `<span class="summary-chip todo"><span class="dot-ind"></span>${sumStatus.todo} todo</span>` : ''}
+      ${sumStatus.blocked ? `<span class="summary-chip blocked"><span class="dot-ind"></span>${sumStatus.blocked} blocked</span>` : ''}
+      ${sumStatus.done    ? `<span class="summary-chip done"><span class="dot-ind"></span>${sumStatus.done} done</span>` : ''}
+      ${sumKind.feat ? `<span class="summary-chip feat">◉ ${sumKind.feat} feat</span>` : ''}
+      ${sumKind.bug  ? `<span class="summary-chip bug">● ${sumKind.bug} bug${critBugs ? ` · ${critBugs} crit` : ''}</span>` : ''}
+    </div>
+  </div>`;
+
   const order = { doing: 0, todo: 1, blocked: 2, done: 3 };
   todays.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
   html += todays.map(t => rowHTML(t, { showStatus: true })).join('');

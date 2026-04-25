@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>nx_cooking — Mobile</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- top bar -->
+  <header class="topbar" id="topbar">
+    <button class="back" id="back-btn" hidden aria-label="Back">‹</button>
+    <div class="logo" id="logo">🍳 Cooking</div>
+    <h1 id="top-title" hidden></h1>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="overflow-btn" hidden aria-label="More">⋯</button>
+    <div class="who" title="@nathik">N</div>
+  </header>
+
+  <!-- subheader: week chevron strip (Week / Buy / Stats) -->
+  <div class="week-strip view hidden" id="week-strip">
+    <button class="chev" id="week-prev" aria-label="Previous week">‹</button>
+    <div class="info">
+      <div class="name"><span id="week-title">Week of Apr 27</span></div>
+      <div class="sub" id="week-sub">Apr 27 – May 3</div>
+    </div>
+    <button class="chev" id="week-next" aria-label="Next week">›</button>
+  </div>
+
+  <!-- subheader: day strip (Week tab only) -->
+  <div class="day-strip view hidden" id="day-strip"></div>
+
+  <!-- subheader: search + sort (Recipes tab only) -->
+  <div class="search-wrap view hidden" id="search-wrap">
+    <input id="recipe-search" class="search" placeholder="Search recipes…" />
+    <div class="sort-toggle">
+      <button id="sort-recent" class="active">Recent</button>
+      <button id="sort-alpha">A–Z</button>
+    </div>
+  </div>
+
+  <!-- content -->
+  <main class="content" id="content">
+    <!-- rendered by JS per tab / view -->
+  </main>
+
+  <!-- FAB (Recipes list only) -->
+  <button class="fab-main fab hidden" id="fab" aria-label="New recipe">+</button>
+
+  <!-- bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="week"><span class="ico">📅</span><span>Week</span></button>
+    <button class="nav-btn" data-tab="recipes"><span class="ico">📖</span><span>Recipes</span></button>
+    <button class="nav-btn" data-tab="buy"><span class="ico">🛒</span><span>Buy</span></button>
+    <button class="nav-btn" data-tab="stats"><span class="ico">📊</span><span>Stats</span></button>
+  </nav>
+
+</div>
+
+<!-- shared backdrop -->
+<div class="sheet-backdrop" id="sheet-backdrop"></div>
+
+<!-- task long-press sheet -->
+<div class="sheet" id="sheet-task" role="dialog" aria-label="Task actions">
+  <div class="grab"></div>
+  <div class="mi-h">Task</div>
+  <div class="mi" data-act="open">Open</div>
+  <div class="mi" data-act="move">Move to other day…</div>
+  <div class="mi-sep"></div>
+  <div class="mi danger" data-act="del">Remove from week</div>
+</div>
+
+<!-- recipe overflow sheet -->
+<div class="sheet" id="sheet-recipe-menu" role="dialog" aria-label="Recipe actions">
+  <div class="grab"></div>
+  <div class="mi" data-act="edit">Edit recipe…</div>
+  <div class="mi-sep"></div>
+  <div class="mi danger" data-act="del">Hide from inventory</div>
+</div>
+
+<!-- task overflow sheet (cooking-task detail) -->
+<div class="sheet" id="sheet-task-menu" role="dialog" aria-label="Task actions">
+  <div class="grab"></div>
+  <div class="mi" data-act="move">Move to other day…</div>
+  <div class="mi-sep"></div>
+  <div class="mi danger" data-act="del">Remove task</div>
+</div>
+
+<!-- date picker sheet (Add to day, Move) -->
+<div class="sheet" id="sheet-cal" role="dialog" aria-label="Pick a day">
+  <div class="grab"></div>
+  <div class="sheet-h">Pick a day</div>
+  <div class="sheet-body">
+    <div class="cal-month-h">
+      <button class="chev" id="cal-prev">‹</button>
+      <div id="cal-month-name">April 2026</div>
+      <button class="chev" id="cal-next">›</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+</div>
+
+<!-- mark-done sheet -->
+<div class="sheet" id="sheet-done" role="dialog" aria-label="Mark cooked">
+  <div class="grab"></div>
+  <div class="sheet-h">Mark as cooked</div>
+  <div class="sheet-body">
+    <div class="field-row" id="done-times">
+      <div class="field" id="done-start-field" hidden>
+        <label class="field-label">Start time</label>
+        <input id="done-start" class="field-input" type="time" />
+      </div>
+      <div class="field">
+        <label class="field-label">End time</label>
+        <input id="done-end" class="field-input" type="time" />
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Modifications</label>
+      <textarea id="done-mods" class="field-input" rows="2" placeholder="What did you change from the recipe?"></textarea>
+    </div>
+    <div class="field">
+      <label class="field-label">How did it go?</label>
+      <textarea id="done-outcome" class="field-input" rows="2" placeholder="optional"></textarea>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn secondary" data-close>Cancel</button>
+    <button class="btn primary" id="done-save">Save</button>
+  </div>
+</div>
+
+<!-- start-cooking sheet (start time prompt) -->
+<div class="sheet" id="sheet-start" role="dialog" aria-label="Start cooking">
+  <div class="grab"></div>
+  <div class="sheet-h">Start cooking</div>
+  <div class="sheet-body">
+    <div class="field">
+      <label class="field-label">Start time</label>
+      <input id="start-time" class="field-input" type="time" />
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn secondary" data-close>Cancel</button>
+    <button class="btn primary" id="start-save">Start</button>
+  </div>
+</div>
+
+<!-- item picker sheet -->
+<div class="sheet" id="sheet-item" role="dialog" aria-label="Pick an ingredient">
+  <div class="grab"></div>
+  <div class="sheet-h">Pick an ingredient</div>
+  <div class="sheet-body">
+    <input id="item-search" class="field-input" placeholder="Search ingredients…" />
+    <div id="item-list"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
