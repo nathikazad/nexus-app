@@ -1,164 +1,523 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>nx_cooking — Mobile</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>nx cooking app</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #f97316;
+      --accent-hover: #fb923c;
+      --accent-soft: #ffedd5;
+    }
+    /* Base & Utilities */
+    body { font-family: 'Inter', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Functional CSS: Tab Switching */
+    #tab-week:checked ~ .app-window #view-week,
+    #tab-recipes:checked ~ .app-window #view-recipes,
+    #tab-buy:checked ~ .app-window #view-buy,
+    #tab-stats:checked ~ .app-window #view-stats { display: flex; }
+
+    #tab-week:checked ~ .app-window .subbar-week,
+    #tab-buy:checked ~ .app-window .subbar-week,
+    #tab-stats:checked ~ .app-window .subbar-week { display: flex; }
+    
+    #tab-recipes:checked ~ .app-window .subbar-recipes { display: flex; }
+
+    /* Functional CSS: Nav Highlighting */
+    #tab-week:checked ~ .app-window .nav-week,
+    #tab-recipes:checked ~ .app-window .nav-recipes,
+    #tab-buy:checked ~ .app-window .nav-buy,
+    #tab-stats:checked ~ .app-window .nav-stats { 
+      color: var(--accent);
+    }
+
+    /* Header: show active tab name (centered) */
+    .header-tab-title { display: none; }
+    #tab-week:checked ~ .app-window .header-tab-title-week { display: flex; }
+    #tab-recipes:checked ~ .app-window .header-tab-title-recipes { display: flex; }
+    #tab-buy:checked ~ .app-window .header-tab-title-buy { display: flex; }
+    #tab-stats:checked ~ .app-window .header-tab-title-stats { display: flex; }
+
+    /* Functional CSS: Modals / Drill-ins */
+    #modal-task:checked ~ .app-window #task-detail-overlay {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #modal-task:not(:checked) ~ .app-window #task-detail-overlay {
+      transform: translateY(10%);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    /* Custom checkmark animation */
+    .custom-check:checked + div svg {
+      stroke-dasharray: 16px;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.25s ease-out;
+    }
+    .custom-check:not(:checked) + div svg {
+      stroke-dasharray: 16px;
+      stroke-dashoffset: 16px;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-orange-100/30 text-zinc-900 antialiased selection:bg-orange-100 selection:text-zinc-900 flex items-center justify-center min-h-screen sm:p-8">
 
-<div class="app">
+  <!-- State Management -->
+  <input type="radio" name="main-tab" id="tab-week" class="hidden" checked>
+  <input type="radio" name="main-tab" id="tab-recipes" class="hidden">
+  <input type="radio" name="main-tab" id="tab-buy" class="hidden">
+  <input type="radio" name="main-tab" id="tab-stats" class="hidden">
+  <input type="checkbox" id="modal-task" class="hidden">
 
-  <!-- top bar -->
-  <header class="topbar" id="topbar">
-    <button class="back" id="back-btn" hidden aria-label="Back">‹</button>
-    <div class="logo" id="logo">🍳 Cooking</div>
-    <h1 id="top-title" hidden></h1>
-    <div class="spacer"></div>
-    <button class="icon-btn" id="overflow-btn" hidden aria-label="More">⋯</button>
-    <div class="who" title="@nathik">N</div>
-  </header>
-
-  <!-- subheader: week chevron strip (Week / Buy / Stats) -->
-  <div class="week-strip view hidden" id="week-strip">
-    <button class="chev" id="week-prev" aria-label="Previous week">‹</button>
-    <div class="info">
-      <div class="name"><span id="week-title">Week of Apr 27</span></div>
-      <div class="sub" id="week-sub">Apr 27 – May 3</div>
-    </div>
-    <button class="chev" id="week-next" aria-label="Next week">›</button>
-  </div>
-
-  <!-- subheader: day strip (Week tab only) -->
-  <div class="day-strip view hidden" id="day-strip"></div>
-
-  <!-- subheader: search + sort (Recipes tab only) -->
-  <div class="search-wrap view hidden" id="search-wrap">
-    <input id="recipe-search" class="search" placeholder="Search recipes…" />
-    <div class="sort-toggle">
-      <button id="sort-recent" class="active">Recent</button>
-      <button id="sort-alpha">A–Z</button>
-    </div>
-  </div>
-
-  <!-- content -->
-  <main class="content" id="content">
-    <!-- rendered by JS per tab / view -->
-  </main>
-
-  <!-- FAB (Recipes list only) -->
-  <button class="fab-main fab hidden" id="fab" aria-label="New recipe">+</button>
-
-  <!-- bottom nav -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" data-tab="week"><span class="ico">📅</span><span>Week</span></button>
-    <button class="nav-btn" data-tab="recipes"><span class="ico">📖</span><span>Recipes</span></button>
-    <button class="nav-btn" data-tab="buy"><span class="ico">🛒</span><span>Buy</span></button>
-    <button class="nav-btn" data-tab="stats"><span class="ico">📊</span><span>Stats</span></button>
-  </nav>
-
-</div>
-
-<!-- shared backdrop -->
-<div class="sheet-backdrop" id="sheet-backdrop"></div>
-
-<!-- task long-press sheet -->
-<div class="sheet" id="sheet-task" role="dialog" aria-label="Task actions">
-  <div class="grab"></div>
-  <div class="mi-h">Task</div>
-  <div class="mi" data-act="open">Open</div>
-  <div class="mi" data-act="move">Move to other day…</div>
-  <div class="mi-sep"></div>
-  <div class="mi danger" data-act="del">Remove from week</div>
-</div>
-
-<!-- recipe overflow sheet -->
-<div class="sheet" id="sheet-recipe-menu" role="dialog" aria-label="Recipe actions">
-  <div class="grab"></div>
-  <div class="mi" data-act="edit">Edit recipe…</div>
-  <div class="mi-sep"></div>
-  <div class="mi danger" data-act="del">Hide from inventory</div>
-</div>
-
-<!-- task overflow sheet (cooking-task detail) -->
-<div class="sheet" id="sheet-task-menu" role="dialog" aria-label="Task actions">
-  <div class="grab"></div>
-  <div class="mi" data-act="move">Move to other day…</div>
-  <div class="mi-sep"></div>
-  <div class="mi danger" data-act="del">Remove task</div>
-</div>
-
-<!-- date picker sheet (Add to day, Move) -->
-<div class="sheet" id="sheet-cal" role="dialog" aria-label="Pick a day">
-  <div class="grab"></div>
-  <div class="sheet-h">Pick a day</div>
-  <div class="sheet-body">
-    <div class="cal-month-h">
-      <button class="chev" id="cal-prev">‹</button>
-      <div id="cal-month-name">April 2026</div>
-      <button class="chev" id="cal-next">›</button>
-    </div>
-    <div class="cal-grid" id="cal-grid"></div>
-  </div>
-</div>
-
-<!-- mark-done sheet -->
-<div class="sheet" id="sheet-done" role="dialog" aria-label="Mark cooked">
-  <div class="grab"></div>
-  <div class="sheet-h">Mark as cooked</div>
-  <div class="sheet-body">
-    <div class="field-row" id="done-times">
-      <div class="field" id="done-start-field" hidden>
-        <label class="field-label">Start time</label>
-        <input id="done-start" class="field-input" type="time" />
+  <!-- App Device Wrapper -->
+  <div class="app-window w-full h-[100dvh] sm:h-[844px] max-w-[390px] bg-white sm:rounded-[2rem] sm:border-[8px] sm:border-zinc-800 sm:shadow-2xl sm:shadow-orange-500/5 relative overflow-hidden flex flex-col">
+    
+    <!-- Top Bar: tab name centered; Stats shows chart icon + label -->
+    <header class="flex items-center justify-between px-6 py-4 bg-white/90 backdrop-blur-md border-b border-orange-100/50 shrink-0 z-20 absolute top-0 w-full">
+      <div class="w-7 shrink-0" aria-hidden="true"></div>
+      <div class="flex-1 flex justify-center min-w-0">
+        <span class="header-tab-title header-tab-title-week items-center justify-center gap-0 font-semibold text-base text-orange-500 tracking-tight">Week</span>
+        <span class="header-tab-title header-tab-title-recipes items-center justify-center gap-0 font-semibold text-base text-orange-500 tracking-tight">Recipes</span>
+        <span class="header-tab-title header-tab-title-buy items-center justify-center gap-0 font-semibold text-base text-orange-500 tracking-tight">Buy</span>
+        <span class="header-tab-title header-tab-title-stats items-center justify-center font-semibold text-base text-orange-500 tracking-tight">Stats</span>
       </div>
-      <div class="field">
-        <label class="field-label">End time</label>
-        <input id="done-end" class="field-input" type="time" />
+      <div class="w-7 h-7 shrink-0 rounded-full bg-orange-50 border border-orange-200/60 flex items-center justify-center text-orange-500/80">
+        <iconify-icon icon="solar:user-rounded-linear" width="16"></iconify-icon>
+      </div>
+    </header>
+
+    <!-- Content padding offset -->
+    <div class="pt-[61px] shrink-0"></div>
+
+    <!-- Sub-bar: Week Strip -->
+    <div class="subbar-week hidden items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-sm border-b border-zinc-100/80 shrink-0 z-10 sticky top-[61px]">
+      <button class="text-zinc-400 hover:text-orange-500 transition-colors">
+        <iconify-icon icon="solar:alt-arrow-left-linear" width="18"></iconify-icon>
+      </button>
+      <span class="text-xs font-semibold tracking-wide text-zinc-800">Oct 16 – 22</span>
+      <button class="text-zinc-400 hover:text-orange-500 transition-colors">
+        <iconify-icon icon="solar:alt-arrow-right-linear" width="18"></iconify-icon>
+      </button>
+    </div>
+
+    <!-- Sub-bar: Recipes Strip -->
+    <div class="subbar-recipes hidden flex-col gap-3 px-5 py-3 bg-white/90 backdrop-blur-sm border-b border-zinc-100 shrink-0 z-10 sticky top-[61px]">
+      <div class="relative w-full">
+        <iconify-icon icon="solar:magnifer-linear" width="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"></iconify-icon>
+        <input type="text" placeholder="Search recipes..." class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg pl-10 pr-4 py-2 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none">
+      </div>
+      <div class="flex items-center justify-between text-[0.7rem] font-semibold tracking-wide text-zinc-500 uppercase">
+        <span>64 recipes</span>
+        <button class="flex items-center gap-1 hover:text-orange-500 transition-colors">
+          Recent <iconify-icon icon="solar:sort-from-top-to-bottom-linear" width="14"></iconify-icon>
+        </button>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">Modifications</label>
-      <textarea id="done-mods" class="field-input" rows="2" placeholder="What did you change from the recipe?"></textarea>
-    </div>
-    <div class="field">
-      <label class="field-label">How did it go?</label>
-      <textarea id="done-outcome" class="field-input" rows="2" placeholder="optional"></textarea>
-    </div>
-  </div>
-  <div class="sheet-foot">
-    <button class="btn secondary" data-close>Cancel</button>
-    <button class="btn primary" id="done-save">Save</button>
-  </div>
-</div>
 
-<!-- start-cooking sheet (start time prompt) -->
-<div class="sheet" id="sheet-start" role="dialog" aria-label="Start cooking">
-  <div class="grab"></div>
-  <div class="sheet-h">Start cooking</div>
-  <div class="sheet-body">
-    <div class="field">
-      <label class="field-label">Start time</label>
-      <input id="start-time" class="field-input" type="time" />
+    <!-- Main Scrollable Area -->
+    <main class="flex-1 overflow-y-auto no-scrollbar pb-24 relative">
+      
+      <!-- ================= TAB 1: WEEK ================= -->
+      <section id="view-week" class="hidden flex-col pt-6">
+
+        <!-- Day: Monday (Cooking) -->
+        <div class="px-5 pb-6">
+          <div class="flex items-baseline justify-between mb-3">
+            <h3 class="text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest">Monday, Oct 16</h3>
+            <span class="text-[0.65rem] font-semibold tracking-wide text-orange-600 bg-orange-100/90 px-2 py-0.5 rounded">TODAY</span>
+          </div>
+          <label for="modal-task" class="block bg-gradient-to-br from-orange-50/80 to-white border border-orange-200/60 rounded-xl p-4 shadow-sm shadow-orange-500/5 hover:border-orange-300/80 active:bg-orange-50/50 transition-all cursor-pointer">
+            <div class="flex justify-between items-start mb-3">
+              <h4 class="text-sm font-semibold text-zinc-900 pr-4 tracking-tight">Spicy Garlic Sesame Noodles</h4>
+              <div class="text-[0.65rem] font-medium text-orange-700 bg-orange-100 px-2 py-0.5 rounded-md shrink-0">3/4 steps</div>
+            </div>
+            <div class="flex items-center text-xs text-zinc-500 gap-2">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-60"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+              </span>
+              <span class="text-orange-700 font-medium">Cooking in progress</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Day: Tuesday (Planned) -->
+        <div class="px-5 pb-6">
+          <h3 class="text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Tuesday, Oct 17</h3>
+          <div class="bg-white border border-zinc-100 rounded-xl p-4 active:bg-zinc-50 transition-colors cursor-pointer">
+            <div class="flex justify-between items-start mb-3">
+              <h4 class="text-sm font-medium text-zinc-900 tracking-tight">Roasted Salmon & Asparagus</h4>
+              <div class="text-[0.65rem] font-medium text-zinc-400 bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-md shrink-0">0/6 items</div>
+            </div>
+            <div class="flex items-center text-xs text-zinc-400 gap-2">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-zinc-200"></span>
+              <span>Needs shopping</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Day: Sunday (Done) -->
+        <div class="px-5 pb-6">
+          <h3 class="text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Sunday, Oct 15</h3>
+          <div class="bg-zinc-50 border border-zinc-100 rounded-xl p-4">
+            <div class="flex justify-between items-start mb-3">
+              <h4 class="text-sm font-medium text-zinc-400 line-through decoration-zinc-300 tracking-tight">Classic Beef Stew</h4>
+              <iconify-icon icon="solar:check-circle-linear" class="text-zinc-400" width="18"></iconify-icon>
+            </div>
+            <div class="flex items-center text-xs text-zinc-400 gap-2">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-zinc-300"></span>
+              <span>Cooked · 2h 15m</span>
+            </div>
+          </div>
+        </div>
+        
+      </section>
+
+      <!-- ================= TAB 2: RECIPES ================= -->
+      <section id="view-recipes" class="hidden flex-col">
+        <div class="flex flex-col divide-y divide-zinc-100">
+          
+          <!-- Recipe Row -->
+          <div class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
+            <div>
+              <h4 class="text-sm font-semibold text-zinc-900 tracking-tight">Spicy Garlic Noodles</h4>
+              <p class="text-xs text-zinc-500 mt-1">4 ingredients · Cooked 2d ago</p>
+            </div>
+            <div class="flex gap-1.5">
+              <span class="px-2 py-1 bg-orange-100 text-orange-800/90 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Asian</span>
+              <span class="px-2 py-1 bg-orange-100/80 text-orange-800/80 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Quick</span>
+            </div>
+          </div>
+
+          <!-- Recipe Row -->
+          <div class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
+            <div>
+              <h4 class="text-sm font-semibold text-zinc-900 tracking-tight">Roasted Salmon</h4>
+              <p class="text-xs text-zinc-500 mt-1">6 ingredients · Never cooked</p>
+            </div>
+            <div class="flex gap-1.5">
+              <span class="px-2 py-1 bg-orange-100 text-orange-800/90 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Healthy</span>
+            </div>
+          </div>
+
+           <!-- Recipe Row -->
+          <div class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
+            <div>
+              <h4 class="text-sm font-semibold text-zinc-900 tracking-tight">Matcha Pancakes</h4>
+              <p class="text-xs text-zinc-500 mt-1">8 ingredients · Cooked 1w ago</p>
+            </div>
+            <div class="flex gap-1.5">
+              <span class="px-2 py-1 bg-orange-100 text-orange-800/90 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Breakfast</span>
+            </div>
+          </div>
+
+          <!-- Recipe Row -->
+          <div class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
+            <div>
+              <h4 class="text-sm font-semibold text-zinc-900 tracking-tight">Classic Beef Stew</h4>
+              <p class="text-xs text-zinc-500 mt-1">12 ingredients · Cooked 3d ago</p>
+            </div>
+            <div class="flex gap-1.5">
+              <span class="px-2 py-1 bg-orange-100 text-orange-800/90 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Slow</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Floating Action Button -->
+        <button class="fixed bottom-24 right-5 w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-orange-500/25 hover:bg-orange-400 active:scale-95 transition-all z-10">
+          <iconify-icon icon="solar:add-linear" width="24"></iconify-icon>
+        </button>
+      </section>
+
+      <!-- ================= TAB 3: BUY ================= -->
+      <section id="view-buy" class="hidden flex-col px-5 pt-6 pb-10">
+        <div class="mb-8">
+          <div class="h-1.5 w-full bg-orange-100 rounded-full overflow-hidden">
+            <div class="h-full bg-orange-500 rounded-full w-[30%] transition-all"></div>
+          </div>
+          <p class="text-xs font-medium text-orange-700/80 mt-2 text-right">3 / 10 items</p>
+        </div>
+
+        <!-- Meal Group 1 -->
+        <div class="mb-8">
+          <h3 class="text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <iconify-icon icon="solar:calendar-linear"></iconify-icon>
+            Mon 16 · Spicy Garlic Noodles
+          </h3>
+          <div class="flex flex-col divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
+            <!-- Item (Checked) -->
+            <label class="flex items-center gap-3 p-3 bg-zinc-50 transition-colors cursor-pointer group">
+              <div class="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" checked class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+              </div>
+              <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                <span class="font-medium">Udon noodles</span>
+                <span class="text-zinc-400 text-xs">200 g</span>
+              </div>
+            </label>
+            
+            <!-- Item (Unchecked) -->
+            <label class="flex items-center gap-3 p-3 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+              <div class="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+              </div>
+              <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                <span class="font-medium text-zinc-900">Garlic cloves</span>
+                <span class="text-zinc-400 text-xs">3</span>
+              </div>
+            </label>
+            
+            <!-- Item (Unchecked) -->
+            <label class="flex items-center gap-3 p-3 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+              <div class="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+              </div>
+              <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                <span class="font-medium text-zinc-900">Chili oil</span>
+                <span class="text-zinc-400 text-xs">2 tbsp</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Meal Group 2 -->
+        <div class="mb-6">
+          <h3 class="text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <iconify-icon icon="solar:calendar-linear"></iconify-icon>
+            Tue 17 · Roasted Salmon & Asparagus
+          </h3>
+          <div class="flex flex-col divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
+            <!-- Item -->
+            <label class="flex items-center gap-3 p-3 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+              <div class="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+              </div>
+              <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                <span class="font-medium text-zinc-900">Salmon fillets</span>
+                <span class="text-zinc-400 text-xs">2 (150g each)</span>
+              </div>
+            </label>
+            <!-- Item -->
+            <label class="flex items-center gap-3 p-3 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+              <div class="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+              </div>
+              <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                <span class="font-medium text-zinc-900">Asparagus</span>
+                <span class="text-zinc-400 text-xs">1 bunch</span>
+              </div>
+            </label>
+            <!-- Item -->
+            <label class="flex items-center gap-3 p-3 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+              <div class="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+              </div>
+              <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                <span class="font-medium text-zinc-900">Lemon</span>
+                <span class="text-zinc-400 text-xs">1</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: STATS ================= -->
+      <section id="view-stats" class="hidden flex-col px-5 pt-6 pb-10">
+        <div class="grid grid-cols-2 gap-3 mb-8">
+          <!-- Stat Card 1 -->
+          <div class="bg-gradient-to-b from-orange-50/50 to-white border border-orange-200/50 rounded-xl p-5 flex flex-col justify-between aspect-square shadow-sm shadow-orange-500/5">
+            <iconify-icon icon="solar:chef-hat-linear" width="22" class="text-orange-500/90"></iconify-icon>
+            <div>
+              <div class="text-3xl font-semibold tracking-tight text-zinc-900 mb-1">2</div>
+              <div class="text-[0.65rem] font-semibold text-zinc-500 uppercase tracking-widest">Meals cooked</div>
+            </div>
+          </div>
+          <!-- Stat Card 2 -->
+          <div class="bg-white border border-zinc-200 rounded-xl p-5 flex flex-col justify-between aspect-square shadow-sm">
+            <iconify-icon icon="solar:stopwatch-linear" width="22" class="text-zinc-400"></iconify-icon>
+            <div>
+              <div class="text-3xl font-semibold tracking-tight text-zinc-900 mb-1">3h 10m</div>
+              <div class="text-[0.65rem] font-semibold text-zinc-500 uppercase tracking-widest">Total time</div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="text-[0.65rem] font-semibold text-orange-800/50 uppercase tracking-widest mb-3">Cooked this week</h3>
+        <div class="bg-white border border-orange-100/40 rounded-xl overflow-hidden shadow-sm shadow-orange-500/5 divide-y divide-zinc-100">
+          <div class="flex justify-between items-center p-4">
+            <div>
+              <h4 class="text-sm font-medium text-zinc-900 tracking-tight">Classic Beef Stew</h4>
+              <p class="text-xs text-zinc-500 mt-0.5">Sunday</p>
+            </div>
+            <span class="text-xs font-semibold text-orange-600">2h 15m</span>
+          </div>
+          <div class="flex justify-between items-center p-4">
+            <div>
+              <h4 class="text-sm font-medium text-zinc-900 tracking-tight">Omelette</h4>
+              <p class="text-xs text-zinc-500 mt-0.5">Monday morning</p>
+            </div>
+            <span class="text-xs font-semibold text-orange-600">15m</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="absolute bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-orange-100/50 flex items-center justify-around pb-6 pt-3 px-2 z-30">
+      <label for="tab-week" class="nav-week flex flex-col items-center gap-1 w-16 text-zinc-400 hover:text-orange-400 cursor-pointer transition-colors">
+        <iconify-icon icon="solar:calendar-linear" width="22"></iconify-icon>
+        <span class="text-[0.65rem] font-medium tracking-wide">Week</span>
+      </label>
+      <label for="tab-recipes" class="nav-recipes flex flex-col items-center gap-1 w-16 text-zinc-400 hover:text-orange-400 cursor-pointer transition-colors">
+        <iconify-icon icon="solar:book-linear" width="22"></iconify-icon>
+        <span class="text-[0.65rem] font-medium tracking-wide">Recipes</span>
+      </label>
+      <label for="tab-buy" class="nav-buy flex flex-col items-center gap-1 w-16 text-zinc-400 hover:text-orange-400 cursor-pointer transition-colors">
+        <iconify-icon icon="solar:cart-large-linear" width="22"></iconify-icon>
+        <span class="text-[0.65rem] font-medium tracking-wide">Buy</span>
+      </label>
+      <label for="tab-stats" class="nav-stats flex flex-col items-center gap-1 w-16 text-zinc-400 hover:text-orange-400 cursor-pointer transition-colors">
+        <iconify-icon icon="solar:pie-chart-linear" class="shrink-0 block" width="22" height="22"></iconify-icon>
+        <span class="text-[0.65rem] font-medium tracking-wide">Stats</span>
+      </label>
+    </nav>
+
+    <!-- ================= DRILL-IN: TASK DETAIL (MODAL) ================= -->
+    <div id="task-detail-overlay" class="absolute inset-0 z-50 bg-white flex flex-col transition-all duration-300">
+      
+      <!-- Top bar -->
+      <header class="flex items-center justify-between px-3 py-3 bg-white/90 backdrop-blur-md border-b border-orange-100/50 shrink-0 sticky top-0 z-20">
+        <label for="modal-task" class="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer rounded-full active:bg-orange-50">
+          <iconify-icon icon="solar:alt-arrow-left-linear" width="22"></iconify-icon>
+        </label>
+        <div class="font-medium text-sm text-zinc-900 truncate px-4 flex-1 text-center tracking-tight">Recipe Details</div>
+        <button class="p-2 text-zinc-500 hover:text-orange-500 transition-colors rounded-full active:bg-orange-50">
+          <iconify-icon icon="solar:menu-dots-circle-linear" width="22"></iconify-icon>
+        </button>
+      </header>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto no-scrollbar pb-32">
+        
+        <!-- Clean Text Header instead of Image -->
+        <div class="pt-8 pb-6 px-6 border-b border-orange-100/40">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 mb-4 rounded-md text-[0.65rem] font-semibold tracking-widest bg-orange-100 text-orange-800 uppercase">
+            <span class="relative flex h-1.5 w-1.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-60"></span>
+              <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span>
+            </span>
+            Cooking
+          </div>
+          <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 mb-2">Spicy Garlic Sesame Noodles</h1>
+          <p class="text-sm text-zinc-500 font-medium">Monday, Oct 16 · Started 6:15 PM</p>
+        </div>
+
+        <div class="px-6 py-8">
+          <!-- Ingredients Section -->
+          <div class="mb-10">
+            <div class="flex items-end justify-between mb-4">
+              <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-400">Ingredients</h2>
+            </div>
+            
+            <div class="flex flex-col border border-zinc-200 rounded-xl overflow-hidden divide-y divide-zinc-100">
+               <label class="flex items-center gap-3 p-4 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div class="relative flex items-center justify-center shrink-0">
+                  <input type="checkbox" checked class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                  <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  </div>
+                </div>
+                <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                  <span class="font-medium text-zinc-900">Udon noodles</span>
+                  <span class="text-zinc-400">200 g</span>
+                </div>
+              </label>
+              <label class="flex items-center gap-3 p-4 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div class="relative flex items-center justify-center shrink-0">
+                  <input type="checkbox" checked class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                  <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  </div>
+                </div>
+                <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                  <span class="font-medium text-zinc-900">Garlic cloves</span>
+                  <span class="text-zinc-400">3</span>
+                </div>
+              </label>
+              <label class="flex items-center gap-3 p-4 bg-white hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div class="relative flex items-center justify-center shrink-0">
+                  <input type="checkbox" class="custom-check appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-orange-500 checked:border-orange-500 transition-colors peer cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-orange-500">
+                  <div class="absolute pointer-events-none text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  </div>
+                </div>
+                <div class="flex-1 flex justify-between items-center text-sm group-has-[:checked]:line-through group-has-[:checked]:text-zinc-400 transition-all">
+                  <span class="font-medium text-zinc-900">Chili oil</span>
+                  <span class="text-zinc-400">2 tbsp</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Instructions Section -->
+          <div>
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-4">Instructions</h2>
+            <div class="space-y-5 text-sm text-zinc-600 leading-relaxed">
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">1.</span> Boil water and cook udon noodles according to package instructions. Drain and set aside.</p>
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">2.</span> Mince the garlic cloves finely.</p>
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">3.</span> Heat a pan, add chili oil and minced garlic. Sauté for 1 minute until fragrant.</p>
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">4.</span> Toss the cooked noodles in the garlic oil until well coated. Serve immediately.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="absolute bottom-0 w-full bg-white/90 border-t border-orange-100/50 backdrop-blur-md pt-4 pb-8 px-5 z-30">
+        <div class="flex gap-3 max-w-sm mx-auto">
+          <button class="flex-1 py-3 px-4 rounded-lg border border-zinc-200 bg-white text-zinc-700 font-semibold text-sm text-center shadow-sm hover:border-orange-200 hover:bg-orange-50/50 active:bg-zinc-100 transition-colors">
+            Cancel
+          </button>
+          <button class="flex-[1.5] py-3 px-4 rounded-lg bg-orange-500 text-white font-semibold text-sm text-center shadow-md shadow-orange-500/20 hover:bg-orange-400 active:scale-[0.98] transition-all">
+            Mark Done
+          </button>
+        </div>
+      </div>
+
     </div>
+    
   </div>
-  <div class="sheet-foot">
-    <button class="btn secondary" data-close>Cancel</button>
-    <button class="btn primary" id="start-save">Start</button>
-  </div>
-</div>
-
-<!-- item picker sheet -->
-<div class="sheet" id="sheet-item" role="dialog" aria-label="Pick an ingredient">
-  <div class="grab"></div>
-  <div class="sheet-h">Pick an ingredient</div>
-  <div class="sheet-body">
-    <input id="item-search" class="field-input" placeholder="Search ingredients…" />
-    <div id="item-list"></div>
-  </div>
-</div>
-
-<script src="app.js"></script>
 </body>
 </html>
