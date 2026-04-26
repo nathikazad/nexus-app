@@ -1,35 +1,93 @@
-import 'package:nx_projects/data/fake/planner_data.dart';
-import 'package:nx_projects/data/planner_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/riverpod.dart';
+
+import 'package:nx_projects/data/projects/kgql_project_repository.dart';
+import 'package:nx_projects/data/projects/project_schema_provider.dart';
+import 'package:nx_projects/data/sprints/kgql_sprint_repository.dart';
+import 'package:nx_projects/data/sprints/sprint_schema_provider.dart';
+import 'package:nx_projects/data/tasks/kgql_task_repository.dart';
+import 'package:nx_projects/data/tasks/task_schema_provider.dart'
+    show
+        bugTaskSchemaProvider,
+        featureTaskSchemaProvider,
+        projectTaskSchemaProvider;
 import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/project/project_repository.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/sprint/sprint_repository.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_repository.dart';
-import 'package:riverpod/riverpod.dart';
 
-final plannerProvider = NotifierProvider<Planner, PlannerState>(Planner.new);
+export 'package:nx_db/riverpod.dart';
 
-final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
-  return FakeProjectRepository(ref.read(plannerProvider.notifier));
+/// KGQL-backed [ProjectRepository].
+final projectRepositoryProvider = Provider<ProjectRepository>(
+  (ref) => KgqlProjectRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadProjectSchema: () => ref.read(projectSchemaProvider.future),
+  ),
+);
+
+/// KGQL-backed [TaskRepository] (`ProjectTask` descendants).
+final taskRepositoryProvider = Provider<TaskRepository>(
+  (ref) => KgqlTaskRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadProjectTaskSchema: () => ref.read(projectTaskSchemaProvider.future),
+    loadBugSchema: () => ref.read(bugTaskSchemaProvider.future),
+    loadFeatureSchema: () => ref.read(featureTaskSchemaProvider.future),
+  ),
+);
+
+/// KGQL-backed [SprintRepository].
+final sprintRepositoryProvider = Provider<SprintRepository>(
+  (ref) => KgqlSprintRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadSprintSchema: () => ref.read(sprintSchemaProvider.future),
+  ),
+);
+
+final projectsListAsyncProvider = FutureProvider<List<Project>>(
+  (ref) => ref.watch(projectRepositoryProvider).listRootProjects(),
+);
+
+/// All root projects and their direct subprojects in one list (replaces the old flat planner list).
+final allProjectsAsyncProvider = FutureProvider<List<Project>>((ref) async {
+  final repo = ref.read(projectRepositoryProvider);
+  final roots = await repo.listRootProjects();
+  final out = <Project>[];
+  for (final r in roots) {
+    out.add(r);
+    out.addAll(await repo.getSubProjects(r.id));
+  }
+  return out;
 });
 
-final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  return FakeTaskRepository(ref.read(plannerProvider.notifier));
-});
+final tasksListAsyncProvider = FutureProvider<List<Task>>(
+  (ref) => ref.watch(taskRepositoryProvider).listAll(),
+);
 
-final sprintRepositoryProvider = Provider<SprintRepository>((ref) {
-  return FakeSprintRepository(ref.read(plannerProvider.notifier));
+final sprintsListAsyncProvider = FutureProvider<List<Sprint>>(
+  (ref) => ref.watch(sprintRepositoryProvider).listSprints(),
+);
+
+/// Sync snapshot: empty list while [FutureProvider] is loading.
+final projectsListProvider = Provider<List<Project>>((ref) {
+  return ref.watch(allProjectsAsyncProvider).maybeWhen(
+        data: (d) => d,
+        orElse: () => const <Project>[],
+      );
 });
 
 final tasksListProvider = Provider<List<Task>>((ref) {
-  return List.unmodifiable(ref.watch(plannerProvider).tasks);
-});
-
-final projectsListProvider = Provider<List<Project>>((ref) {
-  return List.unmodifiable(ref.watch(plannerProvider).projects);
+  return ref.watch(tasksListAsyncProvider).maybeWhen(
+        data: (d) => d,
+        orElse: () => const <Task>[],
+      );
 });
 
 final sprintsListProvider = Provider<List<Sprint>>((ref) {
-  return List.unmodifiable(ref.watch(plannerProvider).sprints);
+  return ref.watch(sprintsListAsyncProvider).maybeWhen(
+        data: (d) => d,
+        orElse: () => const <Sprint>[],
+      );
 });

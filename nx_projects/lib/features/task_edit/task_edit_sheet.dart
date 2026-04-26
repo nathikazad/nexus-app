@@ -14,8 +14,8 @@ Future<void> showTaskEditSheet(
   BuildContext context,
   WidgetRef ref, {
   Task? task,
-  String? defaultProject,
-  String? defaultSub,
+  int? defaultProject,
+  int? defaultSub,
   TaskBucket? defaultBucket,
   required void Function() onSave,
 }) {
@@ -48,8 +48,8 @@ class _TaskEditBody extends ConsumerStatefulWidget {
   });
 
   final Task? task;
-  final String? defaultProject;
-  final String? defaultSub;
+  final int? defaultProject;
+  final int? defaultSub;
   final TaskBucket? defaultBucket;
   final VoidCallback onSave;
 
@@ -62,7 +62,7 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
   late TextEditingController _title;
   late TextEditingController _est;
   late TextEditingController _notes;
-  String? _projectVal;
+  String? _projectVal; // "rootId" or "rootId/subId"
   late TaskBucket _bucket;
   TaskSeverity _sev = TaskSeverity.med;
 
@@ -75,7 +75,7 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       _title = TextEditingController();
       _est = TextEditingController();
       _notes = TextEditingController();
-      _projectVal = _combine(widget.defaultProject, widget.defaultSub);
+      _projectVal = _combineIds(widget.defaultProject, widget.defaultSub);
       _bucket = widget.defaultBucket ?? TaskBucket.next;
     } else {
       _type = t.kind == TaskKind.feat
@@ -88,16 +88,16 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
         text: t.estimate == 0 ? '' : t.estimate.toString(),
       );
       _notes = TextEditingController(text: t.notes);
-      _projectVal = _combine(t.projectId, t.subProjectId);
+      _projectVal = _combineIds(t.projectId, t.subProjectId);
       _bucket = t.bucket;
       if (t.severity != null) _sev = t.severity!;
     }
   }
 
-  String? _combine(String? p, String? s) {
-    if (p == null || p.isEmpty) return null;
-    if (s != null && s.isNotEmpty) return '$p/$s';
-    return p;
+  String? _combineIds(int? p, int? s) {
+    if (p == null) return null;
+    if (s != null) return '$p/$s';
+    return '$p';
   }
 
   @override
@@ -120,20 +120,24 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
     final title = _title.text.trim();
     if (title.isEmpty) return;
     final est = double.tryParse(_est.text.trim()) ?? 0;
-    String? projectId;
-    String? subId;
+    int? projectId;
+    int? subId;
     final pv = _projectVal;
-    if (pv != null && pv.contains('/')) {
-      final p = pv.split('/');
-      projectId = p[0];
-      subId = p[1];
-    } else {
-      projectId = pv;
+    if (pv != null) {
+      if (pv.contains('/')) {
+        final p = pv.split('/');
+        projectId = int.tryParse(p[0]);
+        subId = int.tryParse(p[1]);
+      } else {
+        projectId = int.tryParse(pv);
+      }
     }
     final projects = ref.read(projectsListProvider);
     Project? proj;
-    for (final p in projects) {
-      if (p.id == projectId) proj = p;
+    if (projectId != null) {
+      for (final p in projects) {
+        if (p.id == projectId) proj = p;
+      }
     }
     Project? sub;
     if (subId != null) {
@@ -147,9 +151,8 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
     }
 
     final kind = _mapKind();
-    final id = widget.task?.id ?? 'n${DateTime.now().millisecondsSinceEpoch}';
     var task = Task(
-      id: id,
+      id: widget.task?.id ?? 0,
       title: title,
       kind: kind,
       projectId: projectId,
@@ -170,6 +173,8 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       task = task.copyWith(clearSeverity: true);
     }
     await ref.read(taskRepositoryProvider).upsert(task);
+    ref.invalidate(tasksListAsyncProvider);
+    ref.invalidate(allProjectsAsyncProvider);
     widget.onSave();
     if (mounted) Navigator.of(context).pop();
   }
@@ -238,7 +243,7 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
                 ),
                 for (final p in roots) ...[
                   DropdownMenuItem<String>(
-                    value: p.id,
+                    value: '${p.id}',
                     child: Text('${p.name} (top level)'),
                   ),
                   for (final s in ref.watch(projectsListProvider)

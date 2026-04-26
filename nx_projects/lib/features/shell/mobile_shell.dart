@@ -62,7 +62,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
     r.read(selectedPriorityBucketProvider.notifier).set(null);
   }
 
-  Project? _findProject(List<Project> all, String id) {
+  Project? _findProject(List<Project> all, int id) {
     for (final p in all) {
       if (p.id == id) return p;
     }
@@ -128,7 +128,14 @@ class _MobileShellState extends ConsumerState<MobileShell> {
     final projects = ref.watch(projectsListProvider);
     final sprints = ref.watch(sprintsListProvider);
     final sprintIdx = ref.watch(sprintIndexProvider);
-    final sp = sprintIdx >= 0 && sprintIdx < sprints.length ? sprints[sprintIdx] : sprints[1];
+    if (sprints.isEmpty) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator.adaptive()),
+      );
+    }
+    final sp = sprintIdx >= 0 && sprintIdx < sprints.length
+        ? sprints[sprintIdx]
+        : sprints[math.min(1, sprints.length - 1)];
     final dailyYmd = ref.watch(dailyDateProvider);
     final dailyDate = parseLocalDate(dailyYmd);
 

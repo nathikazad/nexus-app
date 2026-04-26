@@ -1,0 +1,5 @@
+tags:
+  integration:
+    description: >
+      Live PGDB GraphQL tests. Set RUN_NX_PROJECTS_INTEGRATION=true and run
+      against a local server with nx_projects demo seed.

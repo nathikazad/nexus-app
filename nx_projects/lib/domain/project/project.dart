@@ -8,20 +8,20 @@ class Project {
     this.description = '',
   });
 
-  final String id;
+  final int id;
   final String name;
   /// ARGB, e.g. 0xFF6AA3FF
   final int color;
-  final String? parentId;
+  final int? parentId;
   final String description;
 
   bool get isSubProject => parentId != null;
 
   Project copyWith({
-    String? id,
+    int? id,
     String? name,
     int? color,
-    String? parentId,
+    int? parentId,
     bool clearParentId = false,
     String? description,
   }) {

@@ -12,24 +12,24 @@ class MainTabIndex extends Notifier<int> {
 
 final mainTabIndexProvider = NotifierProvider<MainTabIndex, int>(MainTabIndex.new);
 
-class SelectedProjectId extends Notifier<String?> {
+class SelectedProjectId extends Notifier<int?> {
   @override
-  String? build() => null;
+  int? build() => null;
 
-  void set(String? v) => state = v;
+  void set(int? v) => state = v;
 }
 
-final selectedProjectIdProvider = NotifierProvider<SelectedProjectId, String?>(SelectedProjectId.new);
+final selectedProjectIdProvider = NotifierProvider<SelectedProjectId, int?>(SelectedProjectId.new);
 
-class SelectedSubProjectId extends Notifier<String?> {
+class SelectedSubProjectId extends Notifier<int?> {
   @override
-  String? build() => null;
+  int? build() => null;
 
-  void set(String? v) => state = v;
+  void set(int? v) => state = v;
 }
 
 final selectedSubProjectIdProvider =
-    NotifierProvider<SelectedSubProjectId, String?>(SelectedSubProjectId.new);
+    NotifierProvider<SelectedSubProjectId, int?>(SelectedSubProjectId.new);
 
 class SelectedPriorityBucket extends Notifier<TaskBucket?> {
   @override

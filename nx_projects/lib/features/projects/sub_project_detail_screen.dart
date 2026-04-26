@@ -17,8 +17,8 @@ class SubProjectDetailScreen extends ConsumerWidget {
     required this.onOpenTaskMenu,
   });
 
-  final String projectId;
-  final String subId;
+  final int projectId;
+  final int subId;
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
   @override

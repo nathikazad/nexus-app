@@ -12,9 +12,21 @@ import 'package:nx_projects/features/shell/selection_providers.dart';
 
 final currentSprintProvider = Provider<Sprint>((ref) {
   final sprints = ref.watch(sprintsListProvider);
+  if (sprints.isEmpty) {
+    return const Sprint(
+      id: 0,
+      name: '…',
+      dates: '—',
+      badge: '—',
+      start: '2000-01-01',
+      length: 1,
+      capH: 0,
+    );
+  }
   final i = ref.watch(sprintIndexProvider);
-  if (i < 0 || i >= sprints.length) return sprints[1];
-  return sprints[i];
+  final safeIdx =
+      (i >= 0 && i < sprints.length) ? i : (sprints.length > 1 ? 1 : 0);
+  return sprints[safeIdx];
 });
 
 final sprintTasksProvider = Provider<List<Task>>((ref) {

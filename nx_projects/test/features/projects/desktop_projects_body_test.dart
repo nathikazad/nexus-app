@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_projects/features/projects/desktop_projects_body.dart';
+import '../../_support/seed_test_overrides.dart';
 
 void main() {
   testWidgets('DesktopProjectsBody builds', (WidgetTester tester) async {
@@ -10,6 +11,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ProviderScope(
+        overrides: nxProjectsTestSeedOverrides,
         child: MaterialApp(
           home: Scaffold(
             body: DesktopProjectsBody(

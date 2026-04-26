@@ -47,7 +47,7 @@ class MobileProjectsBody extends ConsumerWidget {
 class _ProjectList extends ConsumerWidget {
   const _ProjectList({required this.onPick});
 
-  final void Function(String id) onPick;
+  final void Function(int id) onPick;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

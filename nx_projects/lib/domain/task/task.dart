@@ -20,16 +20,18 @@ class Task {
     this.plannedFor,
     this.driftFrom = const [],
     this.notes = '',
+    this.inProjectRelationId,
+    this.inSprintRelationId,
   });
 
-  final String id;
+  final int id;
   final String title;
   final TaskKind kind;
   final TaskBucket bucket;
   final TaskStatus status;
   final TaskSeverity? severity;
-  final String? projectId;
-  final String? subProjectId;
+  final int? projectId;
+  final int? subProjectId;
   final String crumb;
   final double estimate;
   /// Logged or recorded actual hours (simulated in fake data).
@@ -41,16 +43,22 @@ class Task {
   final List<String> driftFrom;
   final String notes;
 
+  /// KGQL `in_project` relation row id when read from the server (for unlink updates).
+  final int? inProjectRelationId;
+
+  /// KGQL `in_sprint` relation row id when read from the server (for unlink updates).
+  final int? inSprintRelationId;
+
   Task copyWith({
-    String? id,
+    int? id,
     String? title,
     TaskKind? kind,
     TaskBucket? bucket,
     TaskStatus? status,
     TaskSeverity? severity,
     bool clearSeverity = false,
-    String? projectId,
-    String? subProjectId,
+    int? projectId,
+    int? subProjectId,
     bool clearSubProject = false,
     String? crumb,
     double? estimate,
@@ -62,6 +70,10 @@ class Task {
     List<String>? driftFrom,
     bool clearDrift = false,
     String? notes,
+    int? inProjectRelationId,
+    int? inSprintRelationId,
+    bool clearInProjectRelationId = false,
+    bool clearInSprintRelationId = false,
   }) {
     return Task(
       id: id ?? this.id,
@@ -85,6 +97,12 @@ class Task {
           ? const <String>[]
           : (driftFrom ?? this.driftFrom),
       notes: notes ?? this.notes,
+      inProjectRelationId: clearInProjectRelationId
+          ? null
+          : (inProjectRelationId ?? this.inProjectRelationId),
+      inSprintRelationId: clearInSprintRelationId
+          ? null
+          : (inSprintRelationId ?? this.inSprintRelationId),
     );
   }
 }

@@ -48,7 +48,7 @@ final projectListRowsProvider = Provider<List<ProjectListRow>>((ref) {
   }).toList();
 });
 
-final projectDetailTasksProvider = Provider.family<List<Task>, String>((ref, projectId) {
+final projectDetailTasksProvider = Provider.family<List<Task>, int>((ref, projectId) {
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
   final kind = ref.watch(filterKindProvider);
@@ -63,7 +63,7 @@ final projectDetailTasksProvider = Provider.family<List<Task>, String>((ref, pro
       .toList();
 });
 
-final subProjectListRowsProvider = Provider.family<List<ProjectListRow>, String>((ref, parentId) {
+final subProjectListRowsProvider = Provider.family<List<ProjectListRow>, int>((ref, parentId) {
   final projects = ref.watch(projectsListProvider);
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
@@ -84,7 +84,7 @@ final subProjectListRowsProvider = Provider.family<List<ProjectListRow>, String>
 });
 
 final subProjectTasksProvider =
-    Provider.family<List<Task>, ({String projectId, String subId})>((ref, key) {
+    Provider.family<List<Task>, ({int projectId, int subId})>((ref, key) {
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
   final kind = ref.watch(filterKindProvider);

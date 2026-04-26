@@ -57,8 +57,13 @@ class DesktopDayCard extends ConsumerWidget {
           if (d.plannedFor == slice.ymd) return false;
           return d.sprintId == sprint.id;
         },
-        onAcceptWithDetails: (details) {
-          ref.read(plannerProvider.notifier).moveTaskToDay(details.data.id, slice.ymd);
+        onAcceptWithDetails: (details) async {
+          final t = details.data;
+          final cur = await ref.read(taskRepositoryProvider).getById(t.id) ?? t;
+          await ref.read(taskRepositoryProvider).upsert(
+                cur.copyWith(plannedFor: slice.ymd),
+              );
+          ref.invalidate(tasksListAsyncProvider);
         },
         builder: (context, candidate, rejected) {
           final drop = candidate.isNotEmpty;
@@ -286,7 +291,7 @@ class _SprintDayNoteFieldState extends ConsumerState<_SprintDayNoteField> {
       child: TextField(
         controller: _c,
         onChanged: (v) {
-          ref.read(plannerProvider.notifier).setDayNote(widget.sprint.id, widget.ymd, v);
+          // TODO(nx_projects): persist day notes when Sprint.day_notes exists in PGDB
         },
         maxLines: 1,
         style: const TextStyle(fontSize: 11, color: AppColors.muted),

@@ -35,7 +35,12 @@ class SprintCart extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sprints = ref.watch(sprintsListProvider);
     final idx = ref.watch(sprintIndexProvider);
-    final sp = idx >= 0 && idx < sprints.length ? sprints[idx] : sprints[1];
+    if (sprints.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final sp = idx >= 0 && idx < sprints.length
+        ? sprints[idx]
+        : sprints[sprints.length > 1 ? 1 : 0];
     final stats = ref.watch(sprintHeaderStatsProvider);
     final tasks = ref.watch(sprintTasksProvider);
     final projects = ref.watch(projectsListProvider);
@@ -326,7 +331,7 @@ class _CapBlock extends StatelessWidget {
   }
 }
 
-Project? _projectById(List<Project> projects, String id) {
+Project? _projectById(List<Project> projects, int id) {
   for (final p in projects) {
     if (p.id == id) return p;
   }
@@ -494,10 +499,12 @@ class _CartBody extends ConsumerWidget {
           for (final t in groups[k]!)
             _CartTaskRow(
               task: t,
-              onUnpin: () {
-                ref
-                    .read(plannerProvider.notifier)
-                    .upsertTask(t.copyWith(clearSprint: true));
+              onUnpin: () async {
+                final cur = await ref.read(taskRepositoryProvider).getById(t.id) ?? t;
+                await ref.read(taskRepositoryProvider).upsert(
+                      cur.copyWith(clearSprint: true),
+                    );
+                ref.invalidate(tasksListAsyncProvider);
               },
             ),
         ],
@@ -656,9 +663,10 @@ class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
       child: TextField(
         controller: _c,
         onChanged: (v) {
-          ref.read(plannerProvider.notifier).updateSprint(
+          ref.read(sprintRepositoryProvider).update(
                 widget.sprint.copyWith(goal: v),
               );
+          ref.invalidate(sprintsListAsyncProvider);
         },
         minLines: 2,
         maxLines: 4,

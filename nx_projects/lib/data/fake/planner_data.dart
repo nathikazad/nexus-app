@@ -44,7 +44,7 @@ class Planner extends Notifier<PlannerState> {
     ));
   }
 
-  void deleteTask(String id) {
+  void deleteTask(int id) {
     _set(PlannerState(
       projects: state.projects,
       tasks: state.tasks.where((t) => t.id != id).toList(),
@@ -55,19 +55,19 @@ class Planner extends Notifier<PlannerState> {
   List<Project> readRootProjects() =>
       state.projects.where((e) => e.parentId == null).toList();
 
-  Project? readProject(String id) {
+  Project? readProject(int id) {
     for (final p in state.projects) {
       if (p.id == id) return p;
     }
     return null;
   }
 
-  List<Project> readSubProjects(String parentId) =>
+  List<Project> readSubProjects(int parentId) =>
       state.projects.where((e) => e.parentId == parentId).toList();
 
   List<Task> readTasks() => List.unmodifiable(state.tasks);
 
-  Task? readTask(String id) {
+  Task? readTask(int id) {
     for (final t in state.tasks) {
       if (t.id == id) return t;
     }
@@ -111,7 +111,7 @@ class Planner extends Notifier<PlannerState> {
   /// Schedules a task on [newYmd] (or unschedules when [newYmd] is null).
   /// When moving between days, appends the previous `plannedFor` to `driftFrom`
   /// (deduped, last 5).
-  void moveTaskToDay(String taskId, String? newYmd) {
+  void moveTaskToDay(int taskId, String? newYmd) {
     final t = readTask(taskId);
     if (t == null) return;
     final old = t.plannedFor;
@@ -146,10 +146,10 @@ class FakeProjectRepository implements ProjectRepository {
   Future<List<Project>> listRootProjects() async => _planner.readRootProjects();
 
   @override
-  Future<Project?> getProject(String id) async => _planner.readProject(id);
+  Future<Project?> getProject(int id) async => _planner.readProject(id);
 
   @override
-  Future<List<Project>> getSubProjects(String parentId) async =>
+  Future<List<Project>> getSubProjects(int parentId) async =>
       _planner.readSubProjects(parentId);
 
   @override
@@ -159,7 +159,7 @@ class FakeProjectRepository implements ProjectRepository {
   }
 
   @override
-  Future<Project> addSubProject(String parentId, Project sub) async {
+  Future<Project> addSubProject(int parentId, Project sub) async {
     final s = sub.copyWith(parentId: parentId);
     return addProject(s);
   }
@@ -173,7 +173,7 @@ class FakeTaskRepository implements TaskRepository {
   Future<List<Task>> listAll() async => _planner.readTasks();
 
   @override
-  Future<Task?> getById(String id) async => _planner.readTask(id);
+  Future<Task?> getById(int id) async => _planner.readTask(id);
 
   @override
   Future<Task> upsert(Task task) async {
@@ -182,7 +182,7 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<void> delete(int id) async {
     _planner.deleteTask(id);
   }
 }
@@ -196,4 +196,9 @@ class FakeSprintRepository implements SprintRepository {
 
   @override
   Future<Sprint?> getById(int id) async => _planner.readSprint(id);
+
+  @override
+  Future<void> update(Sprint sprint) async {
+    _planner.updateSprint(sprint);
+  }
 }

@@ -77,6 +77,7 @@ Future<void> showTaskContextSheet(
               title: const Text('Delete', style: TextStyle(color: AppColors.crit)),
               onTap: () async {
                 await ref.read(taskRepositoryProvider).delete(task.id);
+                ref.invalidate(tasksListAsyncProvider);
                 onAfterChange();
                 if (ctx.mounted) Navigator.of(ctx).pop();
               },
@@ -123,8 +124,10 @@ Widget _act(
 
 Future<void> _setBucket(WidgetRef ref, Task t, TaskBucket b) async {
   await ref.read(taskRepositoryProvider).upsert(t.copyWith(bucket: b));
+  ref.invalidate(tasksListAsyncProvider);
 }
 
 Future<void> _setStatus(WidgetRef ref, Task t, TaskStatus s) async {
   await ref.read(taskRepositoryProvider).upsert(t.copyWith(status: s));
+  ref.invalidate(tasksListAsyncProvider);
 }

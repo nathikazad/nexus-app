@@ -20,8 +20,8 @@ class ProjectDetailScreen extends ConsumerWidget {
     required this.onOpenTaskMenu,
   });
 
-  final String projectId;
-  final void Function(String subId) onPickSub;
+  final int projectId;
+  final void Function(int subId) onPickSub;
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
   @override

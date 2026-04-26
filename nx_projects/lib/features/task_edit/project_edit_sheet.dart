@@ -34,7 +34,7 @@ class _ProjectEditBody extends ConsumerStatefulWidget {
 
 class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
   bool _topLevel = true;
-  String? _parentId;
+  int? _parentId;
   late TextEditingController _name;
   late TextEditingController _desc;
   int _color = 0xFF6AA3FF;
@@ -71,7 +71,7 @@ class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
     if (_topLevel) {
       await repo.addProject(
         Project(
-          id: 'p-${DateTime.now().millisecondsSinceEpoch}',
+          id: 0,
           name: name,
           color: _color,
           description: _desc.text,
@@ -83,13 +83,15 @@ class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
       await repo.addSubProject(
         parent,
         Project(
-          id: 'sub-${DateTime.now().millisecondsSinceEpoch}',
+          id: 0,
           name: name,
           color: 0xFF6AA3FF,
           parentId: parent,
         ),
       );
     }
+    ref.invalidate(allProjectsAsyncProvider);
+    ref.invalidate(projectsListAsyncProvider);
     widget.onSave();
     if (mounted) Navigator.of(context).pop();
   }
@@ -127,7 +129,7 @@ class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
             ),
             if (!_topLevel) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<int>(
                 value: _parentId,
                 decoration: const InputDecoration(
                   labelText: 'Parent project',
