@@ -73,6 +73,14 @@ From [`lib/features/shell/selection_providers.dart`](../lib/features/shell/selec
 | `desktopViewIndexProvider` | `0` | 0 Planner, 1 Sprint, 2 Today (desktop) |
 | `desktopPlannerModeProvider` | `0` | 0 Projects, 1 Priority (planner left pane) |
 
+**Desktop planner overlays** (no network dependency) — [`lib/features/desktop/desktop_task_drawer_state.dart`](../lib/features/desktop/desktop_task_drawer_state.dart):
+
+| Provider | Type | Meaning |
+|----------|------|---------|
+| `desktopTaskDrawerProvider` | `NotifierProvider<DesktopTaskDrawer, DesktopTaskDrawerState>` | Right-side panel: closed, viewing a task id, editing a `Task`, creating a task (defaults from selection), or creating a project |
+
+`DesktopTaskDrawer` methods: `viewTask`, `editTask`, `newTask`, `newProject`, `close`. Rendered in [`lib/features/desktop/views/planner_view.dart`](../lib/features/desktop/views/planner_view.dart) as a `Stack` layer with [`ReferenceSideDrawer`](../lib/features/desktop/widgets/reference_side_drawer.dart). Task rows on desktop call `viewTask` from [`desktop_projects_body.dart`](../lib/features/projects/desktop_projects_body.dart) and [`desktop_priority_body.dart`](../lib/features/priority/desktop_priority_body.dart). Mobile continues to use bottom sheets for add/edit.
+
 From [`lib/features/filters/filter_state_providers.dart`](../lib/features/filters/filter_state_providers.dart):
 
 | Provider | Default |

@@ -17,7 +17,10 @@ class RecipesPage extends ConsumerWidget {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('Could not load recipes: $e', textAlign: TextAlign.center),
+          child: Text(
+            'Could not load recipes: $e',
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       data: (list) => Stack(

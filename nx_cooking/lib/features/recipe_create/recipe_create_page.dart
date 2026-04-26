@@ -7,9 +7,6 @@ class RecipeCreatePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RecipeFormPage(
-      initial: RecipeFormData.empty(),
-      isCreate: true,
-    );
+    return RecipeFormPage(initial: RecipeFormData.empty(), isCreate: true);
   }
 }

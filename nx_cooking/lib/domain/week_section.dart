@@ -3,10 +3,14 @@ import 'package:nx_cooking/domain/meal_status.dart';
 /// One day block in the Week tab.
 final class WeekDaySection {
   const WeekDaySection({
+    required this.date,
     required this.dayLabel,
     required this.isToday,
     required this.meal,
   });
+
+  /// Local calendar day (this section).
+  final DateTime date;
 
   final String dayLabel;
   final bool isToday;
@@ -17,7 +21,7 @@ final class WeekDaySection {
 
 final class WeekMealCard {
   const WeekMealCard({
-    required this.id,
+    required this.recipeId,
     required this.title,
     required this.kind,
     required this.badge,
@@ -25,7 +29,8 @@ final class WeekMealCard {
     this.showPing = false,
   });
 
-  final String id;
+  /// Recipe to open when the card is tapped.
+  final int recipeId;
   final String title;
   final MealCardKind kind;
 

@@ -11,8 +11,8 @@ class KgqlRecipeRepository implements RecipeRepository {
   KgqlRecipeRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadRecipeSchema,
-  })  : _client = client,
-        _loadRecipeSchema = loadRecipeSchema;
+  }) : _client = client,
+       _loadRecipeSchema = loadRecipeSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadRecipeSchema;
@@ -36,10 +36,7 @@ class KgqlRecipeRepository implements RecipeRepository {
 
   @override
   Future<List<RecipeSummary>> fetchRecipes() async {
-    debugPrint(
-      '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 1) begin '
-      '(Week tab uses fake CookingRepository; this path hits GraphQL)',
-    );
+    debugPrint('[nx_cooking:KgqlRecipeRepository.fetchRecipes] 1) begin');
     try {
       debugPrint(
         '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 2) awaiting '

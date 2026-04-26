@@ -29,8 +29,10 @@ Future<void> showTaskEditSheet(
       barrierColor: const Color(0x99080A0E),
       barrierDismissible: true,
       builder: (ctx) {
-        return _TaskEditBody(
+        return TaskEditForm(
           useReferenceDialog: true,
+          sidePanel: false,
+          onSidePanelClose: null,
           task: task,
           defaultProject: defaultProject,
           defaultSub: defaultSub,
@@ -48,8 +50,10 @@ Future<void> showTaskEditSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
-      return _TaskEditBody(
+      return TaskEditForm(
         useReferenceDialog: false,
+        sidePanel: false,
+        onSidePanelClose: null,
         task: task,
         defaultProject: defaultProject,
         defaultSub: defaultSub,
@@ -60,9 +64,14 @@ Future<void> showTaskEditSheet(
   );
 }
 
-class _TaskEditBody extends ConsumerStatefulWidget {
-  const _TaskEditBody({
+/// Task create/edit form: reference dialog, bottom sheet, or [sidePanel] for desktop
+/// [ReferenceSideDrawer].
+class TaskEditForm extends ConsumerStatefulWidget {
+  const TaskEditForm({
+    super.key,
     required this.useReferenceDialog,
+    this.sidePanel = false,
+    this.onSidePanelClose,
     this.task,
     this.defaultProject,
     this.defaultSub,
@@ -71,6 +80,12 @@ class _TaskEditBody extends ConsumerStatefulWidget {
   });
 
   final bool useReferenceDialog;
+
+  /// When true, this widget fills a parent panel; use [onSidePanelClose] instead
+  /// of [Navigator.pop]. Implies not [useReferenceDialog].
+  final bool sidePanel;
+  final VoidCallback? onSidePanelClose;
+
   final Task? task;
   final int? defaultProject;
   final int? defaultSub;
@@ -78,10 +93,10 @@ class _TaskEditBody extends ConsumerStatefulWidget {
   final VoidCallback onSave;
 
   @override
-  ConsumerState<_TaskEditBody> createState() => _TaskEditBodyState();
+  ConsumerState<TaskEditForm> createState() => _TaskEditFormState();
 }
 
-class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
+class _TaskEditFormState extends ConsumerState<TaskEditForm> {
   late String _type; // task | feature | bug
   late TextEditingController _title;
   late TextEditingController _est;
@@ -224,13 +239,26 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
     ref.invalidate(allProjectsAsyncProvider);
     ref.invalidate(sprintsListAsyncProvider);
     widget.onSave();
-    if (mounted) Navigator.of(context).pop();
+    if (widget.onSidePanelClose != null) {
+      widget.onSidePanelClose!();
+    } else if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
-  void _dismiss() => Navigator.of(context).pop();
+  void _dismiss() {
+    if (widget.onSidePanelClose != null) {
+      widget.onSidePanelClose!();
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.sidePanel) {
+      return _buildSidePanel();
+    }
     if (widget.useReferenceDialog) {
       return ReferenceDialog(
         title: widget.task == null ? 'New task' : 'Edit task',
@@ -242,6 +270,31 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       );
     }
     return _buildSheet();
+  }
+
+  /// Desktop right drawer: scrollable form + foot actions.
+  Widget _buildSidePanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: _buildTaskFormBody(),
+          ),
+        ),
+        const Divider(height: 1, color: AppColors.border),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: RefModalActions(
+            onCancel: _dismiss,
+            onPrimary: _submit,
+            cancelLabel: 'Cancel',
+            primaryLabel: widget.task == null ? 'Create task' : 'Save',
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildTaskFormBody() {

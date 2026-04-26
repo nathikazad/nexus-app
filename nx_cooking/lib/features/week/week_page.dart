@@ -13,16 +13,29 @@ class WeekPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final days = ref.watch(cookingRepositoryProvider).weekDays;
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        CookingLayout.screenPadding,
-        20,
-        CookingLayout.screenPadding,
-        CookingLayout.bottomNavExtra + 88,
+    final async = ref.watch(weekSectionsProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Could not load week.\n$e',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.zinc600),
+          ),
+        ),
       ),
-      itemCount: days.length,
-      itemBuilder: (context, i) => _DayBlock(section: days[i]),
+      data: (days) => ListView.builder(
+        padding: const EdgeInsets.fromLTRB(
+          CookingLayout.screenPadding,
+          20,
+          CookingLayout.screenPadding,
+          CookingLayout.bottomNavExtra + 88,
+        ),
+        itemCount: days.length,
+        itemBuilder: (context, i) => _DayBlock(section: days[i]),
+      ),
     );
   }
 }
@@ -96,7 +109,7 @@ class _MealCardTile extends StatelessWidget {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: () => context.push('/recipe/${meal.id}'),
+        onTap: () => context.push('/recipe/${meal.recipeId}'),
         borderRadius: BorderRadius.circular(14),
         child: Ink(
           decoration: _cardDecoration(),

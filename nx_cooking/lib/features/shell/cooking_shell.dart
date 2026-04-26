@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cooking/core/dates/week_calendar.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
 import 'package:nx_cooking/features/buy/buy_page.dart';
 import 'package:nx_cooking/features/recipes/recipes_page.dart';
 import 'package:nx_cooking/features/stats/stats_page.dart';
 import 'package:nx_cooking/features/week/week_page.dart';
+import 'package:nx_db/auth.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 const _tabTitles = ['Week', 'Recipes', 'Buy', 'Stats'];
@@ -23,13 +25,29 @@ class _CookingShellState extends ConsumerState<CookingShell> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = ref.watch(cookingRepositoryProvider);
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _TopBar(title: _tabTitles[_index]),
-          if (_index == 0) _WeekSubBar(label: repo.weekRangeLabel),
+          _TopBar(
+            title: _tabTitles[_index],
+            onLogout: () => ref.read(authProvider.notifier).logout(),
+          ),
+          if (_index == 0)
+            Consumer(
+              builder: (context, ref, _) {
+                final start = ref.watch(selectedWeekStartProvider);
+                return _WeekSubBar(
+                  label: formatWeekRangeLabel(start),
+                  onPrev: () => ref
+                      .read(selectedWeekStartProvider.notifier)
+                      .shiftWeeks(-1),
+                  onNext: () => ref
+                      .read(selectedWeekStartProvider.notifier)
+                      .shiftWeeks(1),
+                );
+              },
+            ),
           if (_index == 1) const _RecipesSubBar(),
           Expanded(
             child: IndexedStack(
@@ -53,9 +71,10 @@ class _CookingShellState extends ConsumerState<CookingShell> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.title});
+  const _TopBar({required this.title, required this.onLogout});
 
   final String title;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +82,7 @@ class _TopBar extends StatelessWidget {
       color: Colors.white.withValues(alpha: 0.95),
       child: Container(
         decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.orange100),
-          ),
+          border: Border(bottom: BorderSide(color: AppColors.orange100)),
         ),
         child: SafeArea(
           bottom: false,
@@ -85,18 +102,29 @@ class _TopBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.orange50,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.orange200.withValues(alpha: 0.6)),
-                  ),
-                  child: const Icon(
-                    SolarLinearIcons.userRounded,
-                    size: 16,
-                    color: AppColors.orange500,
+                PopupMenuButton<String>(
+                  tooltip: 'Account',
+                  onSelected: (value) {
+                    if (value == 'logout') onLogout();
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'logout', child: Text('Log out')),
+                  ],
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.orange50,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.orange200.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: const Icon(
+                      SolarLinearIcons.userRounded,
+                      size: 16,
+                      color: AppColors.orange500,
+                    ),
                   ),
                 ),
               ],
@@ -109,9 +137,15 @@ class _TopBar extends StatelessWidget {
 }
 
 class _WeekSubBar extends StatelessWidget {
-  const _WeekSubBar({required this.label});
+  const _WeekSubBar({
+    required this.label,
+    required this.onPrev,
+    required this.onNext,
+  });
 
   final String label;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
@@ -121,15 +155,13 @@ class _WeekSubBar extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.zinc100),
-          ),
+          border: Border(bottom: BorderSide(color: AppColors.zinc100)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
-              onPressed: () {},
+              onPressed: onPrev,
               style: IconButton.styleFrom(foregroundColor: AppColors.zinc400),
               icon: const Icon(SolarLinearIcons.altArrowLeft, size: 20),
             ),
@@ -143,7 +175,7 @@ class _WeekSubBar extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: onNext,
               style: IconButton.styleFrom(foregroundColor: AppColors.zinc400),
               icon: const Icon(SolarLinearIcons.altArrowRight, size: 20),
             ),
@@ -165,9 +197,7 @@ class _RecipesSubBar extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
         decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.zinc100),
-          ),
+          border: Border(bottom: BorderSide(color: AppColors.zinc100)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -198,7 +228,10 @@ class _RecipesSubBar extends StatelessWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
+                  borderSide: const BorderSide(
+                    color: AppColors.orange500,
+                    width: 1.2,
+                  ),
                 ),
               ),
             ),
@@ -230,8 +263,17 @@ class _RecipesSubBar extends StatelessWidget {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      icon: const Icon(SolarLinearIcons.sortFromTopToBottom, size: 14),
-                      label: const Text('Recent', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                      icon: const Icon(
+                        SolarLinearIcons.sortFromTopToBottom,
+                        size: 14,
+                      ),
+                      label: const Text(
+                        'Recent',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 );
@@ -245,10 +287,7 @@ class _RecipesSubBar extends StatelessWidget {
 }
 
 class _BottomNav extends StatelessWidget {
-  const _BottomNav({
-    required this.currentIndex,
-    required this.onChanged,
-  });
+  const _BottomNav({required this.currentIndex, required this.onChanged});
 
   final int currentIndex;
   final ValueChanged<int> onChanged;

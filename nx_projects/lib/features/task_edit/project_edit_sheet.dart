@@ -18,8 +18,10 @@ Future<void> showProjectEditSheet(
       barrierColor: const Color(0x99080A0E),
       barrierDismissible: true,
       builder: (ctx) {
-        return _ProjectEditBody(
+        return ProjectEditForm(
           useReferenceDialog: true,
+          sidePanel: false,
+          onSidePanelClose: null,
           onSave: onSave,
         );
       },
@@ -33,28 +35,35 @@ Future<void> showProjectEditSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
-      return _ProjectEditBody(
+      return ProjectEditForm(
         useReferenceDialog: false,
+        sidePanel: false,
+        onSidePanelClose: null,
         onSave: onSave,
       );
     },
   );
 }
 
-class _ProjectEditBody extends ConsumerStatefulWidget {
-  const _ProjectEditBody({
+class ProjectEditForm extends ConsumerStatefulWidget {
+  const ProjectEditForm({
+    super.key,
     required this.useReferenceDialog,
+    this.sidePanel = false,
+    this.onSidePanelClose,
     required this.onSave,
   });
 
   final bool useReferenceDialog;
+  final bool sidePanel;
+  final VoidCallback? onSidePanelClose;
   final VoidCallback onSave;
 
   @override
-  ConsumerState<_ProjectEditBody> createState() => _ProjectEditBodyState();
+  ConsumerState<ProjectEditForm> createState() => _ProjectEditFormState();
 }
 
-class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
+class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
   bool _topLevel = true;
   int? _parentId;
   late TextEditingController _name;
@@ -121,13 +130,26 @@ class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
     ref.invalidate(allProjectsAsyncProvider);
     ref.invalidate(projectsListAsyncProvider);
     widget.onSave();
-    if (mounted) Navigator.of(context).pop();
+    if (widget.onSidePanelClose != null) {
+      widget.onSidePanelClose!();
+    } else if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
-  void _dismiss() => Navigator.of(context).pop();
+  void _dismiss() {
+    if (widget.onSidePanelClose != null) {
+      widget.onSidePanelClose!();
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.sidePanel) {
+      return _buildSidePanel();
+    }
     if (widget.useReferenceDialog) {
       return ReferenceDialog(
         title: 'New project',
@@ -139,6 +161,30 @@ class _ProjectEditBodyState extends ConsumerState<_ProjectEditBody> {
       );
     }
     return _buildSheet();
+  }
+
+  Widget _buildSidePanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: _buildProjectFormBody(),
+          ),
+        ),
+        const Divider(height: 1, color: AppColors.border),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: RefModalActions(
+            onCancel: _dismiss,
+            onPrimary: _submit,
+            cancelLabel: 'Cancel',
+            primaryLabel: 'Create project',
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildProjectFormBody() {

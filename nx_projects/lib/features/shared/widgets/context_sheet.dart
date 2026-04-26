@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:nx_projects/core/layout/is_desktop_layout.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
+import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/task_edit/task_edit_sheet.dart';
 
 Future<void> showTaskContextSheet(
@@ -70,7 +72,16 @@ Future<void> showTaskContextSheet(
               title: const Text('Edit…'),
               onTap: () {
                 Navigator.of(ctx).pop();
-                showTaskEditSheet(context, ref, task: task, onSave: onAfterChange);
+                if (isDesktopLayout(context)) {
+                  ref.read(desktopTaskDrawerProvider.notifier).editTask(task);
+                } else {
+                  showTaskEditSheet(
+                    context,
+                    ref,
+                    task: task,
+                    onSave: onAfterChange,
+                  );
+                }
               },
             ),
             ListTile(

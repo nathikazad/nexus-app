@@ -115,19 +115,10 @@ List<SetModelAttribute> _recipeAttributes(RecipeFormData form) {
       .join('\n');
   return [
     if (prep != null)
-      SetModelAttribute(
-        key: kRecipeAttrPrepTime,
-        value: prep.toDouble(),
-      ),
+      SetModelAttribute(key: kRecipeAttrPrepTime, value: prep.toDouble()),
     if (serv != null)
-      SetModelAttribute(
-        key: kRecipeAttrServings,
-        value: serv.toDouble(),
-      ),
-    SetModelAttribute(
-      key: kRecipeAttrInstructions,
-      value: steps,
-    ),
+      SetModelAttribute(key: kRecipeAttrServings, value: serv.toDouble()),
+    SetModelAttribute(key: kRecipeAttrInstructions, value: steps),
   ];
 }
 
@@ -137,17 +128,15 @@ List<ModelRelation> _ingredientRelationsForCreate(RecipeFormData form) {
     if (line.name.trim().isEmpty) continue;
     final qty = double.tryParse(line.quantityText.trim()) ?? 0;
     final unit = line.unit.trim();
-    final displayAmount = [line.quantityText.trim(), line.unit.trim()]
-        .where((e) => e.isNotEmpty)
-        .join(' ');
+    final displayAmount = [
+      line.quantityText.trim(),
+      line.unit.trim(),
+    ].where((e) => e.isNotEmpty).join(' ');
     out.add(
       ModelRelation(
         modelType: kItemModelTypeName,
         create: [
-          {
-            'name': line.name.trim(),
-            'description': displayAmount,
-          },
+          {'name': line.name.trim(), 'description': displayAmount},
         ],
         attributes: [
           RelationAttribute(
@@ -178,7 +167,8 @@ SetModelRequest setRequestForCreateRecipe(RecipeFormData form) {
 List<ModelRelation> _ingredientRelationDeletes(RecipeDetail existing) {
   return [
     for (final ing in existing.ingredients)
-      if (ing.relationId != null) ModelRelation(id: ing.relationId, delete: true),
+      if (ing.relationId != null)
+        ModelRelation(id: ing.relationId, delete: true),
   ];
 }
 

@@ -89,7 +89,9 @@ final class RecipeFormData {
       prepTimeMinutesText: '',
       servingsText: '',
       notes: '',
-      ingredients: [RecipeIngredientFormLine(name: '', quantityText: '', unit: '')],
+      ingredients: [
+        RecipeIngredientFormLine(name: '', quantityText: '', unit: ''),
+      ],
       instructionSteps: [''],
     );
   }
@@ -101,20 +103,16 @@ final class RecipeFormData {
       prepTimeMinutesText: d.prepTimeMinutes?.toString() ?? '',
       servingsText: d.servings?.toString() ?? '',
       notes: d.notes ?? '',
-      ingredients: d.ingredients
-          .map(
-            (e) {
-              final parts = _splitAmount(e.amount);
-              return RecipeIngredientFormLine(
-                relationId: e.relationId,
-                itemId: e.itemId,
-                name: e.name,
-                quantityText: parts.$1,
-                unit: parts.$2,
-              );
-            },
-          )
-          .toList(),
+      ingredients: d.ingredients.map((e) {
+        final parts = _splitAmount(e.amount);
+        return RecipeIngredientFormLine(
+          relationId: e.relationId,
+          itemId: e.itemId,
+          name: e.name,
+          quantityText: parts.$1,
+          unit: parts.$2,
+        );
+      }).toList(),
       instructionSteps: d.instructionLines.isEmpty
           ? ['']
           : List<String>.from(d.instructionLines),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
@@ -16,9 +17,8 @@ class RecipeViewPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(recipeDetailProvider(recipeId));
     return async.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -43,9 +43,7 @@ class RecipeViewPage extends ConsumerWidget {
                 onPressed: () => context.pop(),
               ),
             ),
-            body: const Center(
-              child: Text('Recipe not found'),
-            ),
+            body: const Center(child: Text('Recipe not found')),
           );
         }
         return _RecipeViewBody(detail: detail, recipeId: recipeId);
@@ -54,14 +52,14 @@ class RecipeViewPage extends ConsumerWidget {
   }
 }
 
-class _RecipeViewBody extends StatelessWidget {
+class _RecipeViewBody extends ConsumerWidget {
   const _RecipeViewBody({required this.detail, required this.recipeId});
 
   final RecipeDetail detail;
   final int recipeId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final paddingBottom = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -76,9 +74,7 @@ class _RecipeViewBody extends StatelessWidget {
           Expanded(
             child: CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
-                  child: _Header(detail: detail),
-                ),
+                SliverToBoxAdapter(child: _Header(detail: detail)),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 120),
                   sliver: SliverList(
@@ -99,15 +95,61 @@ class _RecipeViewBody extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: _FooterActions(
-        onAddToWeek: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add to week (coming soon)')),
+        onPlan: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime.now(),
+            firstDate: DateTime.now().subtract(const Duration(days: 365)),
+            lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+            builder: (context, child) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: ColorScheme.light(
+                    primary: AppColors.orange500,
+                    onPrimary: Colors.white,
+                    surface: Colors.white,
+                    onSurface: AppColors.zinc900,
+                  ),
+                ),
+                child: child!,
+              );
+            },
           );
+          if (picked == null || !context.mounted) {
+            return;
+          }
+          try {
+            await ref
+                .read(cookingPlanRepositoryProvider)
+                .planRecipe(recipeId: recipeId, date: picked);
+            ref
+                .read(selectedWeekStartProvider.notifier)
+                .setToContaining(picked);
+            ref.invalidate(weekSectionsProvider);
+            ref.invalidate(shoppingSnapshotProvider);
+            if (!context.mounted) {
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Planned for ${DateFormat.yMMMd().format(picked)}',
+                ),
+              ),
+            );
+          } catch (e) {
+            if (!context.mounted) {
+              return;
+            }
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Could not plan: $e')));
+          }
         },
-        onCookNow: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cook now (coming soon)')),
-          );
+        onCook: () {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Cook (coming soon)')));
         },
         paddingBottom: paddingBottom,
       ),
@@ -254,11 +296,7 @@ class _Meta extends StatelessWidget {
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
-    return Wrap(
-      spacing: 16,
-      runSpacing: 4,
-      children: items,
-    );
+    return Wrap(spacing: 16, runSpacing: 4, children: items);
   }
 }
 
@@ -447,13 +485,13 @@ class _NotesBlock extends StatelessWidget {
 
 class _FooterActions extends StatelessWidget {
   const _FooterActions({
-    required this.onAddToWeek,
-    required this.onCookNow,
+    required this.onPlan,
+    required this.onCook,
     required this.paddingBottom,
   });
 
-  final VoidCallback onAddToWeek;
-  final VoidCallback onCookNow;
+  final Future<void> Function() onPlan;
+  final VoidCallback onCook;
   final double paddingBottom;
 
   @override
@@ -470,7 +508,7 @@ class _FooterActions extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: onAddToWeek,
+                onPressed: () => onPlan(),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.zinc700,
                   side: const BorderSide(color: AppColors.zinc200),
@@ -478,7 +516,7 @@ class _FooterActions extends StatelessWidget {
                 ),
                 icon: const Icon(SolarLinearIcons.calendarAdd, size: 16),
                 label: const Text(
-                  'Add to Week',
+                  'Plan',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -487,7 +525,7 @@ class _FooterActions extends StatelessWidget {
             Expanded(
               flex: 2,
               child: FilledButton.icon(
-                onPressed: onCookNow,
+                onPressed: onCook,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.orange500,
                   foregroundColor: Colors.white,
@@ -498,7 +536,7 @@ class _FooterActions extends StatelessWidget {
                   size: 16,
                 ),
                 label: const Text(
-                  'Cook Now',
+                  'Cook',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),

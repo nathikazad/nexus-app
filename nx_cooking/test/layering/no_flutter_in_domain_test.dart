@@ -22,10 +22,6 @@ void main() {
         }
       }
     }
-    expect(
-      bad,
-      isEmpty,
-      reason: 'Remove Flutter/Riverpod from domain: $bad',
-    );
+    expect(bad, isEmpty, reason: 'Remove Flutter/Riverpod from domain: $bad');
   });
 }

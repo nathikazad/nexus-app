@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/features/projects/projects_view_model.dart';
@@ -84,6 +85,8 @@ class DesktopProjectsBody extends ConsumerWidget {
               sprintChipLabel: desktopSprintChipLabelForTask(t),
               crumb: DesktopBucketPill(task: t),
               isSearchMatch: _titleMatchesSearch(t, q),
+              onRowTap: () =>
+                  ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
               onMenu: () => onOpenTaskMenu(context, ref, t),
             ),
           );
@@ -121,6 +124,8 @@ class DesktopProjectsBody extends ConsumerWidget {
             sprintChipLabel: desktopSprintChipLabelForTask(t),
             crumb: DesktopBucketPill(task: t),
             isSearchMatch: _titleMatchesSearch(t, q),
+            onRowTap: () =>
+                ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
             onMenu: () => onOpenTaskMenu(context, ref, t),
           ),
         );

@@ -6,22 +6,107 @@ import 'package:nx_cooking/data/providers.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
-class BuyPage extends ConsumerStatefulWidget {
+class BuyPage extends ConsumerWidget {
   const BuyPage({super.key});
 
   @override
-  ConsumerState<BuyPage> createState() => _BuyPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(shoppingSnapshotProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Could not load shopping list.\n$e',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.zinc600),
+          ),
+        ),
+      ),
+      data: (snap) => _BuyListBody(snap: snap),
+    );
+  }
 }
 
-class _BuyPageState extends ConsumerState<BuyPage> {
+class _BuyListBody extends StatefulWidget {
+  const _BuyListBody({required this.snap});
+
+  final ShoppingListSnapshot snap;
+
+  @override
+  State<_BuyListBody> createState() => _BuyListBodyState();
+}
+
+class _BuyListBodyState extends State<_BuyListBody> {
   List<List<bool>>? _checked;
+
+  static List<List<bool>> _fromSnapshot(ShoppingListSnapshot snap) {
+    return snap.groups
+        .map((g) => g.items.map((e) => e.initialChecked).toList())
+        .toList();
+  }
+
+  static String _signature(ShoppingListSnapshot snap) {
+    final b = StringBuffer();
+    for (final g in snap.groups) {
+      b.write(g.header);
+      for (final i in g.items) {
+        b.write('|${i.name}|${i.amount}|${i.initialChecked}');
+      }
+      b.write(';');
+    }
+    return b.toString();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = _fromSnapshot(widget.snap);
+  }
+
+  @override
+  void didUpdateWidget(covariant _BuyListBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_signature(oldWidget.snap) != _signature(widget.snap)) {
+      _checked = _fromSnapshot(widget.snap);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final snap = ref.watch(cookingRepositoryProvider).shopping;
-    _checked ??= snap.groups
-        .map((g) => g.items.map((e) => e.initialChecked).toList())
-        .toList();
+    final snap = widget.snap;
+    _checked ??= _fromSnapshot(snap);
+
+    if (snap.groups.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(
+          CookingLayout.screenPadding,
+          40,
+          CookingLayout.screenPadding,
+          CookingLayout.bottomNavExtra + 88,
+        ),
+        children: const [
+          Icon(SolarLinearIcons.cartLarge, size: 40, color: AppColors.zinc300),
+          SizedBox(height: 16),
+          Text(
+            'Nothing to buy this week',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.zinc600,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Plan a recipe from the Recipes tab to see ingredients here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.zinc500),
+          ),
+        ],
+      );
+    }
 
     final purchased = _checked!.expand((e) => e).where((c) => c).length;
     final total = snap.totalCount;
@@ -62,7 +147,6 @@ class _BuyPageState extends ConsumerState<BuyPage> {
           _GroupHeader(title: snap.groups[g].header),
           const SizedBox(height: 10),
           _ShoppingGroupBox(
-            groupIndex: g,
             group: snap.groups[g],
             checked: _checked![g],
             onToggle: (i, v) {
@@ -110,13 +194,11 @@ class _GroupHeader extends StatelessWidget {
 
 class _ShoppingGroupBox extends StatelessWidget {
   const _ShoppingGroupBox({
-    required this.groupIndex,
     required this.group,
     required this.checked,
     required this.onToggle,
   });
 
-  final int groupIndex;
   final ShoppingMealGroup group;
   final List<bool> checked;
   final void Function(int itemIndex, bool value) onToggle;

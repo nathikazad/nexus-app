@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/bucket_color_palette.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/features/priority/priority_view_model.dart';
@@ -56,6 +57,8 @@ class DesktopPriorityBody extends ConsumerWidget {
             rankLabel: '$rank',
             sprintChipLabel: desktopSprintChipLabelForTask(t),
             isSearchMatch: _titleMatchesSearch(t, q),
+            onRowTap: () =>
+                ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
             onMenu: () => onOpenTaskMenu(context, ref, t),
           ),
         );

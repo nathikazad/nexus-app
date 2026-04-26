@@ -15,9 +15,8 @@ class RecipeEditPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(recipeDetailProvider(recipeId));
     return async.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppBar(
           title: const Text('Edit'),
@@ -155,7 +154,10 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.zinc500)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.zinc500),
+            ),
           ),
         ],
       ),
@@ -199,7 +201,10 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
           if (!_saving)
             TextButton(
               onPressed: _onSave,
-              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             )
           else
             const Padding(
@@ -395,7 +400,10 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.zinc400,
-              side: const BorderSide(color: AppColors.zinc300, style: BorderStyle.solid),
+              side: const BorderSide(
+                color: AppColors.zinc300,
+                style: BorderStyle.solid,
+              ),
             ),
             icon: const Icon(Icons.add, size: 16),
             label: const Text('Add ingredient'),
@@ -464,7 +472,10 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.zinc400,
-              side: const BorderSide(color: AppColors.zinc300, style: BorderStyle.solid),
+              side: const BorderSide(
+                color: AppColors.zinc300,
+                style: BorderStyle.solid,
+              ),
             ),
             icon: const Icon(Icons.add, size: 16),
             label: const Text('Add step'),

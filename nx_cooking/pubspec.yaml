@@ -12,6 +12,7 @@ dependencies:
   flutter_riverpod: ^3.2.0
   go_router: ^17.0.1
   google_fonts: ^8.0.2
+  intl: ^0.20.2
   graphql_flutter: ^5.1.2
   nx_db:
     path: ../nx_db
