@@ -1,5 +1,47 @@
-<!-- + Task modal: pick subtype (Task / Feature / Bug), project, bucket, sprint, etc. -->
-<div id="modal-task" class="modal-backdrop" hidden>
+<!--
+  Task drawer (desktop).
+  - Slides in from the right (same shell as view-task).
+  - Used for both "+ Task" (create) and Edit (pre-filled). Title swaps via #modal-task-title.
+  - IDs preserved (modal-task, task-title, task-project, etc.) so existing openModal/closeModal
+    and the create-submit handler keep working unchanged.
+-->
+<div id="modal-task" class="modal-backdrop drawer-mode" hidden>
+  <style>
+    /* Override centered-modal layout for this one when in drawer-mode. */
+    .modal-backdrop.drawer-mode { padding: 0; place-items: stretch; justify-content: flex-end; }
+    .modal-backdrop.drawer-mode .modal {
+      width: min(560px, 96vw);
+      max-height: 100vh;
+      height: 100vh;
+      border-radius: 0;
+      border-left: 1px solid var(--border-2);
+      box-shadow: -16px 0 40px rgba(0,0,0,.5);
+      animation: drawer-slide 180ms ease-out;
+    }
+    @keyframes drawer-slide {
+      from { transform: translateX(100%); }
+      to   { transform: translateX(0); }
+    }
+    .modal-foot { display: flex; gap: 10px; justify-content: flex-end;
+      padding: 12px 18px; border-top: 1px solid var(--border); }
+    .btn-secondary, .btn-primary {
+      background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+      padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: #0c1018; border-color: transparent; font-weight: 600; }
+    .btn-primary.danger { background: #ff6a6a; color: #fff; }
+    .seg-toggle { display: inline-flex; gap: 4px; }
+    .seg-toggle .seg-btn {
+      background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+      padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .seg-toggle .seg-btn.active { background: var(--accent); color: #0c1018; border-color: transparent; }
+    .seg-glyph.feat { color: var(--accent); }
+    .seg-glyph.bug  { color: #ff6a6a; }
+    .seg-toggle .seg-btn.active .seg-glyph { color: inherit; }
+  </style>
+
   <div class="modal" role="dialog" aria-labelledby="modal-task-title" aria-modal="true">
     <header class="modal-head">
       <h2 id="modal-task-title">New task</h2>
@@ -8,7 +50,7 @@
 
     <div class="modal-body">
 
-      <!-- Subtype selector: drives which subtype-specific fields show. -->
+      <!-- TaskKind: task / feat / bug. Drives subtype-specific fields below. -->
       <div class="field">
         <label class="field-label">Type</label>
         <div class="seg-toggle" id="task-type-toggle" role="tablist">
@@ -25,13 +67,14 @@
         <p class="field-hint" id="task-type-hint">Plain sub-task under a Feature, or a standalone item.</p>
       </div>
 
+      <!-- Task.title -->
       <div class="field">
         <label class="field-label" for="task-title">Title</label>
         <input id="task-title" class="field-input" type="text" placeholder="What needs to get done?" autofocus />
       </div>
 
       <div class="field-row">
-        <!-- in_project (Project + optional subproject in the same picker) -->
+        <!-- Task.projectId / Task.subProjectId (combined picker) -->
         <div class="field">
           <label class="field-label" for="task-project">Project</label>
           <select id="task-project" class="field-input">
@@ -50,7 +93,7 @@
           </select>
         </div>
 
-        <!-- ProjectTask.priority -->
+        <!-- Task.bucket -->
         <div class="field">
           <label class="field-label" for="task-priority">Bucket</label>
           <select id="task-priority" class="field-input">
@@ -64,13 +107,13 @@
       </div>
 
       <div class="field-row">
-        <!-- ProjectTask.estimate_hours -->
+        <!-- Task.estimate -->
         <div class="field">
           <label class="field-label" for="task-estimate">Estimate (hours)</label>
           <input id="task-estimate" class="field-input" type="number" min="0" step="0.5" placeholder="e.g. 4" />
         </div>
 
-        <!-- in_sprint (optional; absence = backlog) -->
+        <!-- Task.sprintId (absence = backlog) -->
         <div class="field">
           <label class="field-label" for="task-sprint">Sprint</label>
           <select id="task-sprint" class="field-input">
@@ -81,7 +124,24 @@
         </div>
       </div>
 
-      <!-- Bug-only: severity (critical / med / low) -->
+      <!-- Edit-mode only: Task.status (todo / doing / done / blocked) -->
+      <div class="field" id="task-status-field" hidden>
+        <label class="field-label">Status</label>
+        <div class="seg-toggle" id="task-status-toggle">
+          <button type="button" class="seg-btn active" data-status="todo">Todo</button>
+          <button type="button" class="seg-btn" data-status="doing">Doing</button>
+          <button type="button" class="seg-btn" data-status="done">Done</button>
+          <button type="button" class="seg-btn" data-status="blocked">Blocked</button>
+        </div>
+      </div>
+
+      <!-- Edit-mode only: Task.plannedFor (YMD) -->
+      <div class="field" id="task-planned-field" hidden>
+        <label class="field-label" for="task-planned">Planned for</label>
+        <input id="task-planned" class="field-input" type="date" />
+      </div>
+
+      <!-- Bug-only: Task.severity (low / med / crit) -->
       <div class="field subtype-field" data-show-when="bug" hidden>
         <label class="field-label">Severity</label>
         <div class="seg-toggle small">
@@ -91,16 +151,18 @@
         </div>
       </div>
 
-      <!-- Feature-only: ideation_status -->
+      <!-- Feature-only: Task.ideationStatus (idea / considering / approved / rejected) -->
       <div class="field subtype-field" data-show-when="feature" hidden>
         <label class="field-label" for="task-ideation">Ideation status</label>
         <select id="task-ideation" class="field-input">
-          <option value="ideated">Ideated</option>
-          <option value="refined">Refined</option>
-          <option value="spec'd">Spec'd</option>
+          <option value="idea">Ideated</option>
+          <option value="considering">Refined</option>
+          <option value="approved">Spec'd</option>
+          <option value="rejected">Rejected</option>
         </select>
       </div>
 
+      <!-- Task.notes -->
       <div class="field">
         <label class="field-label" for="task-notes">Notes <span class="field-opt">(optional)</span></label>
         <textarea id="task-notes" class="field-input" rows="3" placeholder="Acceptance criteria, links, context…"></textarea>
@@ -109,6 +171,8 @@
     </div>
 
     <footer class="modal-foot">
+      <!-- Edit-mode only: Delete -->
+      <button type="button" class="btn-secondary danger" id="task-delete-btn" hidden style="margin-right:auto">Delete</button>
       <button type="button" class="btn-secondary" data-close="modal-task">Cancel</button>
       <button type="button" class="btn-primary" id="task-create-submit">Create task</button>
     </footer>

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_cooking/data/fake_cooking_repository.dart';
@@ -24,9 +25,23 @@ final recipeRepositoryProvider = Provider<RecipeRepository>(
 );
 
 /// Cached list for recipe tab + sub-bar count.
-final recipeListProvider = FutureProvider<List<RecipeSummary>>(
-  (ref) => ref.watch(recipeRepositoryProvider).fetchRecipes(),
-);
+///
+/// [IndexedStack] keeps [RecipesPage] built, so this future runs on cold start
+/// (not only when the Recipes tab is visible). Stuck loading usually means
+/// GraphQL schema load or [fetchKgqlModels] never completed — see debug logs.
+final recipeListProvider = FutureProvider<List<RecipeSummary>>((ref) async {
+  debugPrint('[nx_cooking:recipeListProvider] start');
+  try {
+    final list = await ref.watch(recipeRepositoryProvider).fetchRecipes();
+    debugPrint(
+      '[nx_cooking:recipeListProvider] success count=${list.length}',
+    );
+    return list;
+  } catch (e, st) {
+    debugPrint('[nx_cooking:recipeListProvider] caught: $e\n$st');
+    rethrow;
+  }
+});
 
 /// One recipe (detail screen).
 final recipeDetailProvider = FutureProvider.family<RecipeDetail?, int>((

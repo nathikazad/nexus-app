@@ -40,6 +40,10 @@
     .task-x, .task-close { background: transparent; border: 0; color: inherit;
       font-size: 18px; cursor: pointer; padding: 4px 8px; opacity: .7; }
     .task-x:hover, .task-close:hover { opacity: 1; }
+    .btn-edit-task { background: var(--panel-2, #232732); color: inherit;
+      border: 1px solid var(--border, #2a2e38); padding: 4px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; }
+    .btn-edit-task:hover { border-color: var(--accent, #6aa9ff); color: var(--accent, #6aa9ff); }
     .task-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 12px; padding: 12px; background: var(--panel-2, #232732);
       border-radius: 8px; margin-bottom: 16px; }
@@ -130,7 +134,7 @@
       <button class="pill status doing" data-cycle="status">Doing</button>
       <button class="pill bucket now" data-cycle="bucket">NOW</button>
 
-      <button class="task-x" aria-label="Overflow" data-menu>⋮</button>
+      <button class="btn-edit-task" data-edit-task>Edit</button>
       <button class="task-close" aria-label="Close">×</button>
     </header>
 
@@ -230,6 +234,7 @@
       <span class="sev crit">crit</span>
       <button class="pill status todo">Todo</button>
       <button class="pill bucket now">NOW</button>
+      <button class="btn-edit-task" data-edit-task>Edit</button>
       <button class="task-close" aria-label="Close">×</button>
     </header>
 
@@ -285,6 +290,7 @@
       </div>
       <button class="pill status doing">Doing</button>
       <button class="pill bucket now">NOW</button>
+      <button class="btn-edit-task" data-edit-task>Edit</button>
       <button class="task-close" aria-label="Close">×</button>
     </header>
 

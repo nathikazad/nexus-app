@@ -1757,7 +1757,10 @@
   });
 
   // ---- Task detail drawer --------------------------------------------------
-  function openTaskView({ kind, title, crumb, est, severity, status, bucket, sprint }) {
+  let currentViewTask = null;
+
+  function openTaskView({ kind, title, crumb, est, severity, status, bucket, sprint, notes, plannedFor, ideationStatus }) {
+    currentViewTask = { kind, title, crumb, est, severity, status, bucket, sprint, notes, plannedFor, ideationStatus };
     const drawer = document.getElementById('view-task');
     const backdrop = document.getElementById('view-task-backdrop');
     if (!drawer || !backdrop) return;
@@ -1816,6 +1819,78 @@
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !document.getElementById('view-task').hidden) closeTaskView();
+  });
+
+  // Edit button on task view → open the task drawer pre-filled in edit mode
+  document.querySelectorAll('#view-task [data-edit-task]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!currentViewTask) return;
+      openTaskEdit(currentViewTask);
+    });
+  });
+
+  function openTaskEdit(task) {
+    // Switch the drawer's title + submit label to edit mode
+    const titleEl = document.getElementById('modal-task-title');
+    if (titleEl) titleEl.textContent = 'Edit task';
+    const submitBtn = document.getElementById('task-create-submit');
+    if (submitBtn) submitBtn.textContent = 'Save';
+    document.getElementById('task-status-field')?.removeAttribute('hidden');
+    document.getElementById('task-planned-field')?.removeAttribute('hidden');
+    document.getElementById('task-delete-btn')?.removeAttribute('hidden');
+
+    // Type segmented toggle
+    const wantType = task.kind === 'bug' ? 'bug' : (task.kind === 'feat' || task.kind === 'feature') ? 'feature' : 'task';
+    document.querySelectorAll('#task-type-toggle .seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.type === wantType);
+    });
+    document.querySelectorAll('#modal-task .subtype-field').forEach(f => {
+      f.hidden = f.dataset.showWhen !== wantType;
+    });
+
+    // Pre-fill basic fields
+    const ti = document.getElementById('task-title'); if (ti) ti.value = task.title || '';
+    const pri = document.getElementById('task-priority'); if (pri && task.bucket) pri.value = task.bucket;
+    const est = document.getElementById('task-estimate');
+    if (est) est.value = task.est ? String(task.est).replace(/h$/i, '').trim() : '';
+    const notes = document.getElementById('task-notes'); if (notes) notes.value = task.notes || '';
+    const planned = document.getElementById('task-planned'); if (planned) planned.value = task.plannedFor || '';
+
+    // Status segmented toggle
+    document.querySelectorAll('#task-status-toggle .seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.status === (task.status || 'todo'));
+    });
+
+    // Severity (bug only)
+    if (wantType === 'bug') {
+      document.querySelectorAll('#modal-task [data-sev]').forEach(b => {
+        b.classList.toggle('active', b.dataset.sev === (task.severity || 'med'));
+      });
+    }
+    // Ideation (feature only)
+    if (wantType === 'feature') {
+      const ide = document.getElementById('task-ideation');
+      if (ide && task.ideationStatus) ide.value = task.ideationStatus;
+    }
+
+    closeTaskView();
+    openModal('modal-task');
+  }
+
+  // "+ Task" button (create mode) — reset edit-mode bits before opening
+  function resetTaskDrawerToCreate() {
+    const titleEl = document.getElementById('modal-task-title');
+    if (titleEl) titleEl.textContent = 'New task';
+    const submitBtn = document.getElementById('task-create-submit');
+    if (submitBtn) submitBtn.textContent = 'Create task';
+    document.getElementById('task-status-field')?.setAttribute('hidden', '');
+    document.getElementById('task-planned-field')?.setAttribute('hidden', '');
+    document.getElementById('task-delete-btn')?.setAttribute('hidden', '');
+  }
+  document.querySelectorAll('.head-add-btn').forEach((btn, idx) => {
+    if (idx === 1) {
+      btn.addEventListener('click', resetTaskDrawerToCreate);
+    }
   });
 
   function kindFromGlyph(glyphEl) {

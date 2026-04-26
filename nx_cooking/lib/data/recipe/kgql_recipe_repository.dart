@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_cooking/data/recipe/recipe_attr_keys.dart';
@@ -35,14 +36,41 @@ class KgqlRecipeRepository implements RecipeRepository {
 
   @override
   Future<List<RecipeSummary>> fetchRecipes() async {
-    final schema = await _loadRecipeSchema();
-    final struct = _recipeStruct(schema);
-    final models = await fetchKgqlModels(
-      _client,
-      filter: {'model_type': kRecipeModelTypeName},
-      struct: struct,
+    debugPrint(
+      '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 1) begin '
+      '(Week tab uses fake CookingRepository; this path hits GraphQL)',
     );
-    return models.map(recipeSummaryFromModel).toList();
+    try {
+      debugPrint(
+        '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 2) awaiting '
+        'Recipe ModelType (recipeSchemaProvider / getKgqlModelType)…',
+      );
+      final schema = await _loadRecipeSchema();
+      debugPrint(
+        '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 3) schema ok '
+        'name=${schema.name} id=${schema.id}',
+      );
+      final struct = _recipeStruct(schema);
+      debugPrint(
+        '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 4) calling '
+        'getKgqlModels model_type=$kRecipeModelTypeName…',
+      );
+      final models = await fetchKgqlModels(
+        _client,
+        filter: {'model_type': kRecipeModelTypeName},
+        struct: struct,
+      );
+      debugPrint(
+        '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 5) got ${models.length} '
+        'models',
+      );
+      return models.map(recipeSummaryFromModel).toList();
+    } catch (e, st) {
+      debugPrint(
+        '[nx_cooking:KgqlRecipeRepository.fetchRecipes] ERROR: $e\n$st',
+      );
+      rethrow;
+    }
   }
 
   @override
