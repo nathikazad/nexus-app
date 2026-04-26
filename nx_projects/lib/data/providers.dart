@@ -52,7 +52,10 @@ final projectsListAsyncProvider = FutureProvider<List<Project>>(
 
 /// All root projects and their direct subprojects in one list (replaces the old flat planner list).
 final allProjectsAsyncProvider = FutureProvider<List<Project>>((ref) async {
-  final repo = ref.read(projectRepositoryProvider);
+  // Must watch so this re-runs when [graphqlClientProvider] updates (e.g. auth → session
+  // endpoint). Using [read] pinned the first client (defaults) and project fetches could
+  // keep hitting the wrong host while task fetches used the updated client.
+  final repo = ref.watch(projectRepositoryProvider);
   final roots = await repo.listRootProjects();
   final out = <Project>[];
   for (final r in roots) {

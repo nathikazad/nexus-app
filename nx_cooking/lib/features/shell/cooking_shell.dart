@@ -205,7 +205,11 @@ class _RecipesSubBar extends StatelessWidget {
             const SizedBox(height: 10),
             Consumer(
               builder: (context, ref, _) {
-                final n = ref.watch(cookingRepositoryProvider).recipeListCount;
+                final async = ref.watch(recipeListProvider);
+                final n = async.maybeWhen(
+                  data: (list) => list.length,
+                  orElse: () => 0,
+                );
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

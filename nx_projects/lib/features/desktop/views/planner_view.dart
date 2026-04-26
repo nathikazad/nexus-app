@@ -33,7 +33,12 @@ class PlannerView extends ConsumerWidget {
         Expanded(
           child: _PlannerLeftPane(
             onOpenTaskMenu: _openTaskMenu,
-            onNewProject: () => showProjectEditSheet(context, ref, onSave: () {}),
+            onNewProject: () => showProjectEditSheet(
+              context,
+              ref,
+              onSave: () {},
+              useReferenceDialog: true,
+            ),
             onNewTask: () {
               final pid = ref.read(selectedProjectIdProvider);
               final sid = ref.read(selectedSubProjectIdProvider);
@@ -43,6 +48,7 @@ class PlannerView extends ConsumerWidget {
                 defaultProject: pid,
                 defaultSub: sid,
                 onSave: () {},
+                useReferenceDialog: true,
               );
             },
           ),
@@ -113,23 +119,28 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
                 ),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _PaneToggle(
                     mode: mode,
                     onChanged: (m) =>
                         ref.read(desktopPlannerModeProvider.notifier).setMode(m),
                   ),
-                  _HeadAddButton(
-                    label: 'Project',
-                    onPressed: widget.onNewProject,
-                  ),
-                  _HeadAddButton(
-                    label: 'Task',
-                    onPressed: widget.onNewTask,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _HeadAddButton(
+                        label: 'Project',
+                        onPressed: widget.onNewProject,
+                      ),
+                      const SizedBox(width: 8),
+                      _HeadAddButton(
+                        label: 'Task',
+                        onPressed: widget.onNewTask,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -210,8 +221,8 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: mode == 0
-                ? PriorityScreen(onOpenTaskMenu: widget.onOpenTaskMenu)
-                : ProjectsScreen(onOpenTaskMenu: widget.onOpenTaskMenu),
+                ? ProjectsScreen(onOpenTaskMenu: widget.onOpenTaskMenu)
+                : PriorityScreen(onOpenTaskMenu: widget.onOpenTaskMenu),
           ),
         ),
       ],
@@ -238,12 +249,12 @@ class _PaneToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _SegBtn(
-            label: 'Priority',
+            label: 'Projects',
             selected: mode == 0,
             onTap: () => onChanged(0),
           ),
           _SegBtn(
-            label: 'Projects',
+            label: 'Priority',
             selected: mode == 1,
             onTap: () => onChanged(1),
           ),
@@ -288,38 +299,65 @@ class _SegBtn extends StatelessWidget {
   }
 }
 
-class _HeadAddButton extends StatelessWidget {
+/// Planner header +Project / +Task: matches reference `.head-add-btn` padding
+/// and hover; Material `OutlinedButton` added extra insets vs. the ref.
+class _HeadAddButton extends StatefulWidget {
   const _HeadAddButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
 
   @override
+  State<_HeadAddButton> createState() => _HeadAddButtonState();
+}
+
+class _HeadAddButtonState extends State<_HeadAddButton> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.text,
-        side: const BorderSide(color: AppColors.border),
-        backgroundColor: AppColors.panel,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            '+',
-            style: TextStyle(
-              color: AppColors.accent,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: _hover ? AppColors.panel2 : AppColors.panel,
+              border: Border.all(
+                color: _hover ? AppColors.border2 : AppColors.border,
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '+',
+                  style: TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.0,
+                    color: AppColors.text,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
+        ),
       ),
     );
   }

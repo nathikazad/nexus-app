@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../../core/json/payload_unwrap.dart';
@@ -27,33 +26,18 @@ Future<List<Model>> fetchKgqlModels(
   required Map<String, dynamic> filter,
   required Map<String, dynamic> struct,
 }) async {
-  final sw = Stopwatch()..start();
-  QueryResult result;
-  try {
-    result = await client.query(
-      QueryOptions(
-        document: gql(kgqlGetKgqlModelsQuery),
-        variables: {
-          'filter': filter,
-          'struct': struct,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-  } catch (e, st) {
-    sw.stop();
-    debugPrint(
-      '[nx_db fetchKgqlModels] client.query threw after ${sw.elapsedMilliseconds}ms: $e',
-    );
-    debugPrint('[nx_db fetchKgqlModels] $st');
-    rethrow;
-  }
-  sw.stop();
+  final result = await client.query(
+    QueryOptions(
+      document: gql(kgqlGetKgqlModelsQuery),
+      variables: {
+        'filter': filter,
+        'struct': struct,
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
 
   if (result.hasException) {
-    debugPrint(
-      '[nx_db fetchKgqlModels] ${sw.elapsedMilliseconds}ms GraphQL: ${result.exception}',
-    );
     throw result.exception!;
   }
 
@@ -109,10 +93,6 @@ Future<int> setKgqlModel(
   SetModelRequest request,
 ) async {
   final requestJson = request.toJson();
-  debugPrint(
-    '[setKgqlModel] ${request.delete ? "DELETE" : "save"} '
-    'id=${request.id} modelType=${request.modelType}',
-  );
 
   final result = await client.mutate(
     MutationOptions(
@@ -126,13 +106,11 @@ Future<int> setKgqlModel(
   );
 
   if (result.hasException) {
-    debugPrint('[setKgqlModel] GraphQL exception: ${result.exception}');
     throw result.exception!;
   }
 
   final responseData = result.data?['setKgqlModels'] as Map<String, dynamic>?;
   if (responseData == null) {
-    debugPrint('[setKgqlModel] missing setKgqlModels in result.data=${result.data}');
     throw Exception('No data returned from setKgqlModels mutation');
   }
 
@@ -143,14 +121,12 @@ Future<int> setKgqlModel(
         ? json.decode(jsonResult) as Map<String, dynamic>
         : jsonResult as Map<String, dynamic>;
   }
-  debugPrint('[setKgqlModel] response json field: $jsonData');
 
   if (request.delete) {
     final modelId = jsonData?['id'] as int? ?? request.id;
     if (modelId == null) {
       throw Exception('Delete: no id in response or request');
     }
-    debugPrint('[setKgqlModel] DELETE ok → id=$modelId');
     return modelId;
   }
 

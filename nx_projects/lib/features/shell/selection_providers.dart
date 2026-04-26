@@ -5,7 +5,7 @@ import 'package:riverpod/riverpod.dart';
 /// Bottom tab index: 0 Projects, 1 Priority, 2 Sprint, 3 Daily
 class MainTabIndex extends Notifier<int> {
   @override
-  int build() => 1;
+  int build() => 0;
 
   void setTab(int v) => state = v;
 }
@@ -69,7 +69,7 @@ class DesktopViewIndex extends Notifier<int> {
 
 final desktopViewIndexProvider = NotifierProvider<DesktopViewIndex, int>(DesktopViewIndex.new);
 
-/// Planner left pane: 0 = Priority, 1 = Projects (Priority / Projects toggle).
+/// Planner left pane: 0 = Projects, 1 = Priority.
 class DesktopPlannerMode extends Notifier<int> {
   @override
   int build() => 0;

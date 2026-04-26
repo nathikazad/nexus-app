@@ -48,12 +48,18 @@
     #tab-stats:checked ~ .app-window .header-tab-title-stats { display: flex; }
 
     /* Functional CSS: Modals / Drill-ins */
-    #modal-task:checked ~ .app-window #task-detail-overlay {
+    #modal-task:checked ~ .app-window #task-detail-overlay,
+    #modal-recipe-detail:checked ~ .app-window #recipe-detail-overlay,
+    #modal-recipe-edit:checked ~ .app-window #recipe-edit-overlay,
+    #modal-recipe-create:checked ~ .app-window #recipe-create-overlay {
       transform: translateY(0);
       opacity: 1;
       pointer-events: auto;
     }
-    #modal-task:not(:checked) ~ .app-window #task-detail-overlay {
+    #modal-task:not(:checked) ~ .app-window #task-detail-overlay,
+    #modal-recipe-detail:not(:checked) ~ .app-window #recipe-detail-overlay,
+    #modal-recipe-edit:not(:checked) ~ .app-window #recipe-edit-overlay,
+    #modal-recipe-create:not(:checked) ~ .app-window #recipe-create-overlay {
       transform: translateY(10%);
       opacity: 0;
       pointer-events: none;
@@ -80,6 +86,9 @@
   <input type="radio" name="main-tab" id="tab-buy" class="hidden">
   <input type="radio" name="main-tab" id="tab-stats" class="hidden">
   <input type="checkbox" id="modal-task" class="hidden">
+  <input type="checkbox" id="modal-recipe-detail" class="hidden">
+  <input type="checkbox" id="modal-recipe-edit" class="hidden">
+  <input type="checkbox" id="modal-recipe-create" class="hidden">
 
   <!-- App Device Wrapper -->
   <div class="app-window w-full h-[100dvh] sm:h-[844px] max-w-[390px] bg-white sm:rounded-[2rem] sm:border-[8px] sm:border-zinc-800 sm:shadow-2xl sm:shadow-orange-500/5 relative overflow-hidden flex flex-col">
@@ -189,8 +198,8 @@
       <section id="view-recipes" class="hidden flex-col">
         <div class="flex flex-col divide-y divide-zinc-100">
           
-          <!-- Recipe Row -->
-          <div class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
+          <!-- Recipe Row (opens detail) -->
+          <label for="modal-recipe-detail" class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
             <div>
               <h4 class="text-sm font-semibold text-zinc-900 tracking-tight">Spicy Garlic Noodles</h4>
               <p class="text-xs text-zinc-500 mt-1">4 ingredients · Cooked 2d ago</p>
@@ -199,7 +208,7 @@
               <span class="px-2 py-1 bg-orange-100 text-orange-800/90 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Asian</span>
               <span class="px-2 py-1 bg-orange-100/80 text-orange-800/80 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Quick</span>
             </div>
-          </div>
+          </label>
 
           <!-- Recipe Row -->
           <div class="px-5 py-4 flex items-center justify-between hover:bg-orange-50/40 cursor-pointer transition-colors">
@@ -236,10 +245,10 @@
 
         </div>
 
-        <!-- Floating Action Button -->
-        <button class="fixed bottom-24 right-5 w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-orange-500/25 hover:bg-orange-400 active:scale-95 transition-all z-10">
+        <!-- Floating Action Button (opens create) -->
+        <label for="modal-recipe-create" class="fixed bottom-24 right-5 w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-orange-500/25 hover:bg-orange-400 active:scale-95 transition-all z-10 cursor-pointer">
           <iconify-icon icon="solar:add-linear" width="24"></iconify-icon>
-        </button>
+        </label>
       </section>
 
       <!-- ================= TAB 3: BUY ================= -->
@@ -513,6 +522,380 @@
           <button class="flex-[1.5] py-3 px-4 rounded-lg bg-orange-500 text-white font-semibold text-sm text-center shadow-md shadow-orange-500/20 hover:bg-orange-400 active:scale-[0.98] transition-all">
             Mark Done
           </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= DRILL-IN: RECIPE DETAIL (READ-ONLY) ================= -->
+    <div id="recipe-detail-overlay" class="absolute inset-0 z-50 bg-white flex flex-col transition-all duration-300">
+      
+      <!-- Top bar -->
+      <header class="flex items-center justify-between px-3 py-3 bg-white/90 backdrop-blur-md border-b border-orange-100/50 shrink-0 sticky top-0 z-20">
+        <label for="modal-recipe-detail" class="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer rounded-full active:bg-orange-50">
+          <iconify-icon icon="solar:alt-arrow-left-linear" width="22"></iconify-icon>
+        </label>
+        <div class="font-medium text-sm text-zinc-900 truncate px-4 flex-1 text-center tracking-tight">Recipe</div>
+        <label for="modal-recipe-edit" class="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer rounded-full active:bg-orange-50">
+          <iconify-icon icon="solar:pen-new-round-linear" width="20"></iconify-icon>
+        </label>
+      </header>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto no-scrollbar pb-32">
+        
+        <!-- Header block -->
+        <div class="pt-8 pb-6 px-6 border-b border-orange-100/40">
+          <div class="flex gap-1.5 mb-4">
+            <span class="px-2 py-1 bg-orange-100 text-orange-800/90 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Asian</span>
+            <span class="px-2 py-1 bg-orange-100/80 text-orange-800/80 text-[0.6rem] rounded uppercase tracking-wider font-semibold">Quick</span>
+          </div>
+          <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 mb-3">Spicy Garlic Noodles</h1>
+          <div class="flex items-center gap-4 text-xs text-zinc-500 font-medium">
+            <span class="flex items-center gap-1.5">
+              <iconify-icon icon="solar:stopwatch-linear" width="14" class="text-zinc-400"></iconify-icon>
+              25 min
+            </span>
+            <span class="flex items-center gap-1.5">
+              <iconify-icon icon="solar:users-group-rounded-linear" width="14" class="text-zinc-400"></iconify-icon>
+              2 servings
+            </span>
+            <span class="flex items-center gap-1.5">
+              <iconify-icon icon="solar:chef-hat-linear" width="14" class="text-zinc-400"></iconify-icon>
+              Cooked 2d ago
+            </span>
+          </div>
+        </div>
+
+        <div class="px-6 py-8">
+          <!-- Ingredients -->
+          <div class="mb-10">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-4">Ingredients</h2>
+            <div class="flex flex-col border border-zinc-200 rounded-xl overflow-hidden divide-y divide-zinc-100">
+              <div class="flex justify-between items-center p-4 bg-white">
+                <span class="text-sm font-medium text-zinc-900">Udon noodles</span>
+                <span class="text-sm text-zinc-400">200 g</span>
+              </div>
+              <div class="flex justify-between items-center p-4 bg-white">
+                <span class="text-sm font-medium text-zinc-900">Garlic cloves</span>
+                <span class="text-sm text-zinc-400">3</span>
+              </div>
+              <div class="flex justify-between items-center p-4 bg-white">
+                <span class="text-sm font-medium text-zinc-900">Chili oil</span>
+                <span class="text-sm text-zinc-400">2 tbsp</span>
+              </div>
+              <div class="flex justify-between items-center p-4 bg-white">
+                <span class="text-sm font-medium text-zinc-900">Sesame seeds</span>
+                <span class="text-sm text-zinc-400">1 tbsp</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div class="mb-10">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-4">Instructions</h2>
+            <div class="space-y-5 text-sm text-zinc-600 leading-relaxed">
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">1.</span> Boil water and cook udon noodles according to package instructions. Drain and set aside.</p>
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">2.</span> Mince the garlic cloves finely.</p>
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">3.</span> Heat a pan, add chili oil and minced garlic. Sauté for 1 minute until fragrant.</p>
+              <p><span class="font-semibold text-orange-500 tabular-nums mr-2">4.</span> Toss the cooked noodles in the garlic oil until well coated. Garnish with sesame seeds and serve immediately.</p>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-4">Notes</h2>
+            <p class="text-sm text-zinc-500 leading-relaxed italic">Works great with soba noodles too. Add a fried egg on top for extra protein.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="absolute bottom-0 w-full bg-white/90 border-t border-orange-100/50 backdrop-blur-md pt-4 pb-8 px-5 z-30">
+        <div class="flex gap-3 max-w-sm mx-auto">
+          <button class="flex-1 py-3 px-4 rounded-lg border border-zinc-200 bg-white text-zinc-700 font-semibold text-sm text-center shadow-sm hover:border-orange-200 hover:bg-orange-50/50 active:bg-zinc-100 transition-colors flex items-center justify-center gap-2">
+            <iconify-icon icon="solar:calendar-add-linear" width="16"></iconify-icon>
+            Add to Week
+          </button>
+          <button class="flex-[1.5] py-3 px-4 rounded-lg bg-orange-500 text-white font-semibold text-sm text-center shadow-md shadow-orange-500/20 hover:bg-orange-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <iconify-icon icon="solar:chef-hat-linear" width="16"></iconify-icon>
+            Cook Now
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= DRILL-IN: RECIPE EDIT ================= -->
+    <div id="recipe-edit-overlay" class="absolute inset-0 z-[60] bg-white flex flex-col transition-all duration-300">
+      
+      <!-- Top bar -->
+      <header class="flex items-center justify-between px-3 py-3 bg-white/90 backdrop-blur-md border-b border-orange-100/50 shrink-0 sticky top-0 z-20">
+        <label for="modal-recipe-edit" class="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer rounded-full active:bg-orange-50">
+          <iconify-icon icon="solar:alt-arrow-left-linear" width="22"></iconify-icon>
+        </label>
+        <div class="font-medium text-sm text-zinc-900 truncate px-4 flex-1 text-center tracking-tight">Edit Recipe</div>
+        <button class="px-4 py-1.5 bg-orange-500 text-white text-sm font-semibold rounded-lg shadow-sm shadow-orange-500/20 hover:bg-orange-400 active:scale-[0.98] transition-all">
+          Save
+        </button>
+      </header>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto no-scrollbar pb-10">
+        <div class="px-6 py-6 flex flex-col gap-6">
+
+          <!-- Name -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Name</label>
+            <input type="text" value="Spicy Garlic Noodles" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none">
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Tags</label>
+            <div class="flex flex-wrap gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-800/90 text-xs rounded-lg font-semibold">
+                Asian
+                <button class="text-orange-400 hover:text-orange-600 transition-colors">&times;</button>
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100/80 text-orange-800/80 text-xs rounded-lg font-semibold">
+                Quick
+                <button class="text-orange-400 hover:text-orange-600 transition-colors">&times;</button>
+              </span>
+              <button class="inline-flex items-center gap-1 px-3 py-1.5 border border-dashed border-zinc-300 text-zinc-400 text-xs rounded-lg font-medium hover:border-orange-300 hover:text-orange-500 transition-colors">
+                <iconify-icon icon="solar:add-linear" width="12"></iconify-icon>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <!-- Prep time & Servings row -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Prep Time</label>
+              <input type="text" value="25 min" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none">
+            </div>
+            <div>
+              <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Servings</label>
+              <input type="text" value="2" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none">
+            </div>
+          </div>
+
+          <!-- Ingredients -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Ingredients</label>
+            <div class="flex flex-col gap-2">
+              <!-- Ingredient row -->
+              <div class="flex items-center gap-2">
+                <div class="flex-1 flex gap-2">
+                  <input type="text" value="Udon noodles" class="flex-[2] bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="Ingredient">
+                  <input type="text" value="200" class="w-16 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Qty">
+                  <input type="text" value="g" class="w-14 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Unit">
+                </div>
+                <button class="p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Ingredient row -->
+              <div class="flex items-center gap-2">
+                <div class="flex-1 flex gap-2">
+                  <input type="text" value="Garlic cloves" class="flex-[2] bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="Ingredient">
+                  <input type="text" value="3" class="w-16 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Qty">
+                  <input type="text" value="" class="w-14 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Unit">
+                </div>
+                <button class="p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Ingredient row -->
+              <div class="flex items-center gap-2">
+                <div class="flex-1 flex gap-2">
+                  <input type="text" value="Chili oil" class="flex-[2] bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="Ingredient">
+                  <input type="text" value="2" class="w-16 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Qty">
+                  <input type="text" value="tbsp" class="w-14 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Unit">
+                </div>
+                <button class="p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Ingredient row -->
+              <div class="flex items-center gap-2">
+                <div class="flex-1 flex gap-2">
+                  <input type="text" value="Sesame seeds" class="flex-[2] bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="Ingredient">
+                  <input type="text" value="1" class="w-16 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Qty">
+                  <input type="text" value="tbsp" class="w-14 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Unit">
+                </div>
+                <button class="p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Add ingredient button -->
+              <button class="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-zinc-300 rounded-lg text-sm font-medium text-zinc-400 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50/30 transition-all">
+                <iconify-icon icon="solar:add-linear" width="16"></iconify-icon>
+                Add Ingredient
+              </button>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Instructions</label>
+            <div class="flex flex-col gap-2">
+              <!-- Step row -->
+              <div class="flex items-start gap-2">
+                <span class="mt-3 text-sm font-semibold text-orange-500 tabular-nums shrink-0 w-5 text-right">1.</span>
+                <textarea rows="2" class="flex-1 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none">Boil water and cook udon noodles according to package instructions. Drain and set aside.</textarea>
+                <button class="mt-2.5 p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Step row -->
+              <div class="flex items-start gap-2">
+                <span class="mt-3 text-sm font-semibold text-orange-500 tabular-nums shrink-0 w-5 text-right">2.</span>
+                <textarea rows="1" class="flex-1 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none">Mince the garlic cloves finely.</textarea>
+                <button class="mt-2.5 p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Step row -->
+              <div class="flex items-start gap-2">
+                <span class="mt-3 text-sm font-semibold text-orange-500 tabular-nums shrink-0 w-5 text-right">3.</span>
+                <textarea rows="2" class="flex-1 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none">Heat a pan, add chili oil and minced garlic. Sauté for 1 minute until fragrant.</textarea>
+                <button class="mt-2.5 p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Step row -->
+              <div class="flex items-start gap-2">
+                <span class="mt-3 text-sm font-semibold text-orange-500 tabular-nums shrink-0 w-5 text-right">4.</span>
+                <textarea rows="2" class="flex-1 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none">Toss the cooked noodles in the garlic oil until well coated. Garnish with sesame seeds and serve immediately.</textarea>
+                <button class="mt-2.5 p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Add step button -->
+              <button class="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-zinc-300 rounded-lg text-sm font-medium text-zinc-400 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50/30 transition-all">
+                <iconify-icon icon="solar:add-linear" width="16"></iconify-icon>
+                Add Step
+              </button>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Notes</label>
+            <textarea rows="3" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none" placeholder="Optional notes...">Works great with soba noodles too. Add a fried egg on top for extra protein.</textarea>
+          </div>
+
+          <!-- Danger zone -->
+          <div class="pt-4 border-t border-zinc-100">
+            <button class="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 active:bg-red-100 transition-colors flex items-center justify-center gap-2">
+              <iconify-icon icon="solar:trash-bin-trash-linear" width="16"></iconify-icon>
+              Delete Recipe
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= DRILL-IN: RECIPE CREATE ================= -->
+    <div id="recipe-create-overlay" class="absolute inset-0 z-[60] bg-white flex flex-col transition-all duration-300">
+      
+      <!-- Top bar -->
+      <header class="flex items-center justify-between px-3 py-3 bg-white/90 backdrop-blur-md border-b border-orange-100/50 shrink-0 sticky top-0 z-20">
+        <label for="modal-recipe-create" class="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer rounded-full active:bg-orange-50">
+          <iconify-icon icon="solar:alt-arrow-left-linear" width="22"></iconify-icon>
+        </label>
+        <div class="font-medium text-sm text-zinc-900 truncate px-4 flex-1 text-center tracking-tight">New Recipe</div>
+        <button class="px-4 py-1.5 bg-orange-500 text-white text-sm font-semibold rounded-lg shadow-sm shadow-orange-500/20 hover:bg-orange-400 active:scale-[0.98] transition-all">
+          Save
+        </button>
+      </header>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto no-scrollbar pb-10">
+        <div class="px-6 py-6 flex flex-col gap-6">
+
+          <!-- Name -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Name</label>
+            <input type="text" value="" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="Recipe name">
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Tags</label>
+            <div class="flex flex-wrap gap-2">
+              <button class="inline-flex items-center gap-1 px-3 py-1.5 border border-dashed border-zinc-300 text-zinc-400 text-xs rounded-lg font-medium hover:border-orange-300 hover:text-orange-500 transition-colors">
+                <iconify-icon icon="solar:add-linear" width="12"></iconify-icon>
+                Add Tag
+              </button>
+            </div>
+          </div>
+
+          <!-- Prep time & Servings row -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Prep Time</label>
+              <input type="text" value="" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="e.g. 30 min">
+            </div>
+            <div>
+              <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Servings</label>
+              <input type="text" value="" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="e.g. 4">
+            </div>
+          </div>
+
+          <!-- Ingredients -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Ingredients</label>
+            <div class="flex flex-col gap-2">
+              <!-- Empty ingredient row -->
+              <div class="flex items-center gap-2">
+                <div class="flex-1 flex gap-2">
+                  <input type="text" value="" class="flex-[2] bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none" placeholder="Ingredient">
+                  <input type="text" value="" class="w-16 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Qty">
+                  <input type="text" value="" class="w-14 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 text-center placeholder:text-zinc-400 transition-all outline-none" placeholder="Unit">
+                </div>
+                <button class="p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Add ingredient button -->
+              <button class="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-zinc-300 rounded-lg text-sm font-medium text-zinc-400 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50/30 transition-all">
+                <iconify-icon icon="solar:add-linear" width="16"></iconify-icon>
+                Add Ingredient
+              </button>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Instructions</label>
+            <div class="flex flex-col gap-2">
+              <!-- Empty step row -->
+              <div class="flex items-start gap-2">
+                <span class="mt-3 text-sm font-semibold text-orange-500 tabular-nums shrink-0 w-5 text-right">1.</span>
+                <textarea rows="2" class="flex-1 bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none" placeholder="Describe this step..."></textarea>
+                <button class="mt-2.5 p-1.5 text-zinc-300 hover:text-red-400 transition-colors shrink-0">
+                  <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
+                </button>
+              </div>
+              <!-- Add step button -->
+              <button class="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-zinc-300 rounded-lg text-sm font-medium text-zinc-400 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50/30 transition-all">
+                <iconify-icon icon="solar:add-linear" width="16"></iconify-icon>
+                Add Step
+              </button>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label class="block text-[0.65rem] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Notes</label>
+            <textarea rows="3" class="w-full bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-4 py-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 transition-all outline-none resize-none" placeholder="Tips, variations, or anything to remember..."></textarea>
+          </div>
+
         </div>
       </div>
 

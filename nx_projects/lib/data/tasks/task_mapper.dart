@@ -2,6 +2,7 @@ import 'package:nx_db/kgql.dart';
 
 import 'package:nx_projects/data/projects/project_attr_keys.dart';
 import 'package:nx_projects/data/tasks/task_attr_keys.dart';
+import 'package:nx_projects/domain/task/ideation_status.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
@@ -88,6 +89,12 @@ TaskSeverity? _severityFromModel(Model m) {
   };
 }
 
+IdeationStatus? _ideationFromModel(Model m) {
+  if (_kindFromModel(m) != TaskKind.feat) return null;
+  return IdeationStatus.tryParse(m.attrString(kTaskAttrIdeationStatus)) ??
+      IdeationStatus.idea;
+}
+
 String? _ymdFromModel(Model m) {
   final d = m.attrDateTime(kTaskAttrDate);
   if (d == null) return null;
@@ -131,6 +138,7 @@ Task taskFromModel(Model m) {
       m,
       kTaskSprintLinkKey,
     ),
+    ideationStatus: _ideationFromModel(m),
   );
 }
 
@@ -192,6 +200,14 @@ List<SetModelAttribute> _taskAttributesForSave(Task t) {
   if (t.kind == TaskKind.bug && t.severity != null) {
     attrs.add(
       SetModelAttribute(key: kTaskAttrSeverity, value: _severityToDb(t.severity!)),
+    );
+  }
+  if (t.kind == TaskKind.feat && t.ideationStatus != null) {
+    attrs.add(
+      SetModelAttribute(
+        key: kTaskAttrIdeationStatus,
+        value: t.ideationStatus!.dbValue,
+      ),
     );
   }
   return attrs;

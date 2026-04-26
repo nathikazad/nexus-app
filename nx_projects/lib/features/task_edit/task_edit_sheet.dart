@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/project/project.dart';
+import 'package:nx_projects/domain/task/ideation_status.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/domain/task/task_severity.dart';
+import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
+import 'package:nx_projects/features/task_edit/reference_dialog_shell.dart';
 
 Future<void> showTaskEditSheet(
   BuildContext context,
@@ -18,7 +21,25 @@ Future<void> showTaskEditSheet(
   int? defaultSub,
   TaskBucket? defaultBucket,
   required void Function() onSave,
+  bool useReferenceDialog = false,
 }) {
+  if (useReferenceDialog) {
+    return showDialog<void>(
+      context: context,
+      barrierColor: const Color(0x99080A0E),
+      barrierDismissible: true,
+      builder: (ctx) {
+        return _TaskEditBody(
+          useReferenceDialog: true,
+          task: task,
+          defaultProject: defaultProject,
+          defaultSub: defaultSub,
+          defaultBucket: defaultBucket,
+          onSave: onSave,
+        );
+      },
+    );
+  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -28,6 +49,7 @@ Future<void> showTaskEditSheet(
     ),
     builder: (ctx) {
       return _TaskEditBody(
+        useReferenceDialog: false,
         task: task,
         defaultProject: defaultProject,
         defaultSub: defaultSub,
@@ -40,6 +62,7 @@ Future<void> showTaskEditSheet(
 
 class _TaskEditBody extends ConsumerStatefulWidget {
   const _TaskEditBody({
+    required this.useReferenceDialog,
     this.task,
     this.defaultProject,
     this.defaultSub,
@@ -47,6 +70,7 @@ class _TaskEditBody extends ConsumerStatefulWidget {
     required this.onSave,
   });
 
+  final bool useReferenceDialog;
   final Task? task;
   final int? defaultProject;
   final int? defaultSub;
@@ -65,6 +89,8 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
   String? _projectVal; // "rootId" or "rootId/subId"
   late TaskBucket _bucket;
   TaskSeverity _sev = TaskSeverity.med;
+  int? _sprintId;
+  IdeationStatus _ideation = IdeationStatus.idea;
 
   @override
   void initState() {
@@ -77,6 +103,8 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       _notes = TextEditingController();
       _projectVal = _combineIds(widget.defaultProject, widget.defaultSub);
       _bucket = widget.defaultBucket ?? TaskBucket.next;
+      _sprintId = null;
+      _ideation = IdeationStatus.idea;
     } else {
       _type = t.kind == TaskKind.feat
           ? 'feature'
@@ -90,7 +118,13 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       _notes = TextEditingController(text: t.notes);
       _projectVal = _combineIds(t.projectId, t.subProjectId);
       _bucket = t.bucket;
+      _sprintId = t.sprintId;
       if (t.severity != null) _sev = t.severity!;
+      if (t.kind == TaskKind.feat) {
+        _ideation = t.ideationStatus ?? IdeationStatus.idea;
+      } else {
+        _ideation = IdeationStatus.idea;
+      }
     }
   }
 
@@ -106,6 +140,14 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
     _est.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  String _typeHint() {
+    return switch (_type) {
+      'bug' => 'A defect or regression; includes severity.',
+      'feature' => 'A user-facing deliverable, usually with estimate.',
+      _ => 'Plain sub-task under a Feature, or a standalone item.',
+    };
   }
 
   TaskKind _mapKind() {
@@ -162,183 +204,423 @@ class _TaskEditBodyState extends ConsumerState<_TaskEditBody> {
       actualHours: widget.task?.actualHours ?? 0,
       bucket: _bucket,
       status: widget.task?.status ?? TaskStatus.todo,
-      sprintId: widget.task?.sprintId,
+      sprintId: _sprintId,
       plannedFor: widget.task?.plannedFor,
       driftFrom: widget.task?.driftFrom ?? const [],
       notes: _notes.text,
     );
     if (kind == TaskKind.bug) {
-      task = task.copyWith(severity: _sev);
+      task = task.copyWith(severity: _sev, clearIdeationStatus: true);
+    } else if (kind == TaskKind.feat) {
+      task = task.copyWith(
+        clearSeverity: true,
+        ideationStatus: _ideation,
+      );
     } else {
-      task = task.copyWith(clearSeverity: true);
+      task = task.copyWith(clearSeverity: true, clearIdeationStatus: true);
     }
     await ref.read(taskRepositoryProvider).upsert(task);
     ref.invalidate(tasksListAsyncProvider);
     ref.invalidate(allProjectsAsyncProvider);
+    ref.invalidate(sprintsListAsyncProvider);
     widget.onSave();
     if (mounted) Navigator.of(context).pop();
   }
 
+  void _dismiss() => Navigator.of(context).pop();
+
   @override
   Widget build(BuildContext context) {
+    if (widget.useReferenceDialog) {
+      return ReferenceDialog(
+        title: widget.task == null ? 'New task' : 'Edit task',
+        onClose: _dismiss,
+        primaryLabel: widget.task == null ? 'Create task' : 'Save',
+        cancelLabel: 'Cancel',
+        onPrimary: _submit,
+        child: _buildTaskFormBody(),
+      );
+    }
+    return _buildSheet();
+  }
+
+  Widget _buildTaskFormBody() {
     final roots = ref.watch(projectsListProvider).where((p) => p.parentId == null).toList();
+    final sprints = ref.watch(sprintsListProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Type'),
+        const SizedBox(height: 6),
+        _refTypeSeg(),
+        const SizedBox(height: 4),
+        Text(
+          _typeHint(),
+          style: const TextStyle(fontSize: 11, color: AppColors.dim, height: 1.4),
+        ),
+        const SizedBox(height: 14),
+        const RefFieldLabel('Title'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _title,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(null, hint: 'What needs to get done?'),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _refProjectField(roots)),
+            const SizedBox(width: 12),
+            Expanded(child: _refBucketField()),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _refEstimateField()),
+            const SizedBox(width: 12),
+            Expanded(child: _refSprintField(sprints)),
+          ],
+        ),
+        if (_type == 'bug') ...[
+          const SizedBox(height: 14),
+          const RefFieldLabel('Severity'),
+          const SizedBox(height: 6),
+          _refSeveritySeg(),
+        ],
+        if (_type == 'feature') ...[
+          const SizedBox(height: 14),
+          _refIdeationField(),
+        ],
+        const SizedBox(height: 14),
+        const RefFieldLabel('Notes', suffixOpt: true),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _notes,
+          minLines: 3,
+          maxLines: 5,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(null, hint: 'Acceptance criteria, links, context…', isDense: false),
+        ),
+      ],
+    );
+  }
+
+  Widget _refTypeSeg() {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.panel2,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _refSegBtn(
+            value: 'task',
+            label: 'Task',
+            glyph: '▢',
+            glyphColor: AppColors.dim,
+            selected: _type == 'task',
+            onTap: () => setState(() => _type = 'task'),
+          ),
+          _refSegBtn(
+            value: 'feature',
+            label: 'Feature',
+            glyph: '◉',
+            glyphColor: AppColors.feat,
+            selected: _type == 'feature',
+            onTap: () => setState(() => _type = 'feature'),
+          ),
+          _refSegBtn(
+            value: 'bug',
+            label: 'Bug',
+            glyph: '●',
+            glyphColor: AppColors.bug,
+            selected: _type == 'bug',
+            onTap: () => setState(() => _type = 'bug'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _refSegBtn({
+    required String value,
+    required String label,
+    required String glyph,
+    required Color glyphColor,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected ? AppColors.panel3 : Colors.transparent,
+      borderRadius: BorderRadius.circular(5),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(5),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                glyph,
+                style: TextStyle(fontSize: 10, color: glyphColor, height: 1),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: selected ? AppColors.text : AppColors.muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _refSeveritySeg() {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.panel2,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final e in <(String, TaskSeverity)>[
+            ('Low', TaskSeverity.low),
+            ('Medium', TaskSeverity.med),
+            ('Critical', TaskSeverity.crit),
+          ])
+            _refSevBtn(e.$2, e.$1, _sev == e.$2, () => setState(() => _sev = e.$2)),
+        ],
+      ),
+    );
+  }
+
+  Widget _refSevBtn(TaskSeverity sev, String label, bool selected, VoidCallback onTap) {
+    return Material(
+      color: selected ? AppColors.panel3 : Colors.transparent,
+      borderRadius: BorderRadius.circular(5),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(5),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: selected ? AppColors.text : AppColors.muted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _refProjectField(List<Project> roots) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Project'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: _projectVal,
+          isExpanded: true,
+          isDense: true,
+          decoration: refFieldDecoration(null),
+          dropdownColor: AppColors.panel2,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          items: [
+            const DropdownMenuItem<String>(
+              value: null,
+              child: Text('— No project —', overflow: TextOverflow.ellipsis),
+            ),
+            for (final p in roots) ...[
+              DropdownMenuItem<String>(
+                value: '${p.id}',
+                child: Text('${p.name} (top level)', overflow: TextOverflow.ellipsis),
+              ),
+              for (final s in ref.watch(projectsListProvider).where((x) => x.parentId == p.id))
+                DropdownMenuItem<String>(
+                  value: '${p.id}/${s.id}',
+                  child: Text('${p.name} / ${s.name}', overflow: TextOverflow.ellipsis),
+                ),
+            ],
+          ],
+          onChanged: (v) => setState(() => _projectVal = v),
+        ),
+      ],
+    );
+  }
+
+  Widget _refBucketField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Bucket'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<TaskBucket>(
+          value: _bucket,
+          isExpanded: true,
+          isDense: true,
+          decoration: refFieldDecoration(null),
+          dropdownColor: AppColors.panel2,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          items: TaskBucket.values
+              .map(
+                (b) => DropdownMenuItem(
+                  value: b,
+                  child: Text(
+                    switch (b) {
+                      TaskBucket.now => 'Now (this sprint)',
+                      TaskBucket.next => 'Next (1–2 sprints out)',
+                      TaskBucket.later => 'Later',
+                      TaskBucket.someday => 'Someday',
+                      TaskBucket.unsorted => 'Unsorted',
+                    },
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (v) {
+            if (v != null) setState(() => _bucket = v);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _refEstimateField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Estimate (hours)'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _est,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(null, hint: 'e.g. 4'),
+        ),
+      ],
+    );
+  }
+
+  Widget _refSprintField(List<Sprint> sprints) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Sprint'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<int?>(
+          value: _sprintId,
+          isExpanded: true,
+          isDense: true,
+          decoration: refFieldDecoration(null),
+          dropdownColor: AppColors.panel2,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('— Backlog (no sprint) —', overflow: TextOverflow.ellipsis),
+            ),
+            for (final sp in sprints)
+              DropdownMenuItem<int?>(
+                value: sp.id,
+                child: Text('${sp.name} (${sp.dates})', overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: (v) => setState(() => _sprintId = v),
+        ),
+      ],
+    );
+  }
+
+  Widget _refIdeationField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Ideation status'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<IdeationStatus>(
+          value: _ideation,
+          isExpanded: true,
+          isDense: true,
+          decoration: refFieldDecoration(null),
+          dropdownColor: AppColors.panel2,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          items: IdeationStatus.values
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e.displayLabel, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: (v) {
+            if (v != null) setState(() => _ideation = v);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSheet() {
     return Padding(
       padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
+        left: 18,
+        right: 18,
+        top: 14,
         bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
       ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.border2,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             Text(
               widget.task == null ? 'New task' : 'Edit task',
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: AppColors.text,
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'TYPE',
-              style: TextStyle(fontSize: 11, color: AppColors.muted),
-            ),
-            const SizedBox(height: 6),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'task', label: Text('Task')),
-                ButtonSegment(value: 'feature', label: Text('Feature')),
-                ButtonSegment(value: 'bug', label: Text('Bug')),
-              ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() => _type = s.first),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _title,
-              style: const TextStyle(color: AppColors.text),
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                labelStyle: TextStyle(color: AppColors.muted),
-                border: OutlineInputBorder(),
-              ),
-            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: _projectVal,
-              decoration: const InputDecoration(
-                labelText: 'Project',
-                labelStyle: TextStyle(color: AppColors.muted),
-                border: OutlineInputBorder(),
-              ),
-              dropdownColor: AppColors.panel2,
-              style: const TextStyle(color: AppColors.text),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('— No project —'),
-                ),
-                for (final p in roots) ...[
-                  DropdownMenuItem<String>(
-                    value: '${p.id}',
-                    child: Text('${p.name} (top level)'),
-                  ),
-                  for (final s in ref.watch(projectsListProvider)
-                      .where((x) => x.parentId == p.id))
-                    DropdownMenuItem<String>(
-                      value: '${p.id}/${s.id}',
-                      child: Text('${p.name} / ${s.name}'),
-                    ),
-                ],
-              ],
-              onChanged: (v) => setState(() => _projectVal = v),
-            ),
+            _buildTaskFormBody(),
             const SizedBox(height: 12),
-            DropdownButtonFormField<TaskBucket>(
-              value: _bucket,
-              decoration: const InputDecoration(
-                labelText: 'Bucket',
-                labelStyle: TextStyle(color: AppColors.muted),
-                border: OutlineInputBorder(),
-              ),
-              dropdownColor: AppColors.panel2,
-              style: const TextStyle(color: AppColors.text),
-              items: TaskBucket.values
-                  .where((b) => b != TaskBucket.unsorted)
-                  .map(
-                    (b) => DropdownMenuItem(
-                      value: b,
-                      child: Text(switch (b) {
-                        TaskBucket.now => 'Now',
-                        TaskBucket.next => 'Next',
-                        TaskBucket.later => 'Later',
-                        TaskBucket.someday => 'Someday',
-                        TaskBucket.unsorted => 'Unsorted',
-                      }),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _bucket = v);
-              },
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _est,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: AppColors.text),
-              decoration: const InputDecoration(
-                labelText: 'Estimate (hours)',
-                labelStyle: TextStyle(color: AppColors.muted),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            if (_type == 'bug') ...[
-              const SizedBox(height: 12),
-              const Text('SEVERITY', style: TextStyle(fontSize: 11, color: AppColors.muted)),
-              const SizedBox(height: 6),
-              SegmentedButton<TaskSeverity>(
-                segments: const [
-                  ButtonSegment(value: TaskSeverity.low, label: Text('Low')),
-                  ButtonSegment(value: TaskSeverity.med, label: Text('Med')),
-                  ButtonSegment(value: TaskSeverity.crit, label: Text('Crit')),
-                ],
-                selected: {_sev},
-                onSelectionChanged: (s) => setState(() => _sev = s.first),
-              ),
-            ],
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notes,
-              minLines: 2,
-              maxLines: 4,
-              style: const TextStyle(color: AppColors.text),
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                labelStyle: TextStyle(color: AppColors.muted),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _submit,
-                    child: Text(widget.task == null ? 'Create' : 'Save'),
-                  ),
-                ),
-              ],
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 8),
+            RefModalActions(
+              onCancel: _dismiss,
+              onPrimary: _submit,
+              cancelLabel: 'Cancel',
+              primaryLabel: widget.task == null ? 'Create task' : 'Save',
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:nx_projects/domain/task/ideation_status.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/domain/task/task_severity.dart';
@@ -22,6 +23,7 @@ class Task {
     this.notes = '',
     this.inProjectRelationId,
     this.inSprintRelationId,
+    this.ideationStatus,
   });
 
   final int id;
@@ -49,6 +51,9 @@ class Task {
   /// KGQL `in_sprint` relation row id when read from the server (for unlink updates).
   final int? inSprintRelationId;
 
+  /// [Feature] only: `ideation_status` in the database.
+  final IdeationStatus? ideationStatus;
+
   Task copyWith({
     int? id,
     String? title,
@@ -74,6 +79,8 @@ class Task {
     int? inSprintRelationId,
     bool clearInProjectRelationId = false,
     bool clearInSprintRelationId = false,
+    IdeationStatus? ideationStatus,
+    bool clearIdeationStatus = false,
   }) {
     return Task(
       id: id ?? this.id,
@@ -103,6 +110,9 @@ class Task {
       inSprintRelationId: clearInSprintRelationId
           ? null
           : (inSprintRelationId ?? this.inSprintRelationId),
+      ideationStatus: clearIdeationStatus
+          ? null
+          : (ideationStatus ?? this.ideationStatus),
     );
   }
 }

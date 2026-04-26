@@ -1,7 +1,5 @@
 import 'package:nx_cooking/domain/cooking_repository.dart';
 import 'package:nx_cooking/domain/meal_status.dart';
-import 'package:nx_cooking/domain/recipe.dart';
-import 'package:nx_cooking/domain/recipe_detail.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:nx_cooking/domain/stats.dart';
 import 'package:nx_cooking/domain/week_section.dart';
@@ -10,13 +8,8 @@ import 'package:nx_cooking/domain/week_section.dart';
 final class FakeCookingRepository implements CookingRepository {
   FakeCookingRepository();
 
-  static const _spicyGarlicId = 'spicy-garlic-sesame-noodles';
-
   @override
   String get weekRangeLabel => 'Oct 16 – 22';
-
-  @override
-  int get recipeListCount => 64;
 
   @override
   List<WeekDaySection> get weekDays => const [
@@ -24,7 +17,7 @@ final class FakeCookingRepository implements CookingRepository {
       dayLabel: 'Monday, Oct 16',
       isToday: true,
       meal: WeekMealCard(
-        id: _spicyGarlicId,
+        id: '1',
         title: 'Spicy Garlic Sesame Noodles',
         kind: MealCardKind.cookingInProgress,
         badge: '3/4 steps',
@@ -36,7 +29,7 @@ final class FakeCookingRepository implements CookingRepository {
       dayLabel: 'Tuesday, Oct 17',
       isToday: false,
       meal: WeekMealCard(
-        id: 'roasted-salmon',
+        id: '2',
         title: 'Roasted Salmon & Asparagus',
         kind: MealCardKind.planned,
         badge: '0/6 items',
@@ -48,41 +41,13 @@ final class FakeCookingRepository implements CookingRepository {
       dayLabel: 'Sunday, Oct 15',
       isToday: false,
       meal: WeekMealCard(
-        id: 'classic-beef-stew',
+        id: '4',
         title: 'Classic Beef Stew',
         kind: MealCardKind.done,
         badge: '',
         subtitle: 'Cooked · 2h 15m',
         showPing: false,
       ),
-    ),
-  ];
-
-  @override
-  List<RecipeSummary> get recipes => const [
-    RecipeSummary(
-      id: 'spicy-garlic-noodles',
-      title: 'Spicy Garlic Noodles',
-      metaLine: '4 ingredients · Cooked 2d ago',
-      tags: ['Asian', 'Quick'],
-    ),
-    RecipeSummary(
-      id: 'roasted-salmon',
-      title: 'Roasted Salmon',
-      metaLine: '6 ingredients · Never cooked',
-      tags: ['Healthy'],
-    ),
-    RecipeSummary(
-      id: 'matcha-pancakes',
-      title: 'Matcha Pancakes',
-      metaLine: '8 ingredients · Cooked 1w ago',
-      tags: ['Breakfast'],
-    ),
-    RecipeSummary(
-      id: 'classic-beef-stew',
-      title: 'Classic Beef Stew',
-      metaLine: '12 ingredients · Cooked 3d ago',
-      tags: ['Slow'],
     ),
   ];
 
@@ -147,40 +112,4 @@ final class FakeCookingRepository implements CookingRepository {
       ),
     ],
   );
-
-  @override
-  RecipeDetail? recipeDetailById(String id) {
-    if (id == _spicyGarlicId || id == 'spicy-garlic-noodles') {
-      return const RecipeDetail(
-        id: _spicyGarlicId,
-        title: 'Spicy Garlic Sesame Noodles',
-        headerLine: 'Monday, Oct 16 · Started 6:15 PM',
-        statusChip: 'Cooking',
-        ingredients: [
-          IngredientLine(
-            name: 'Udon noodles',
-            amount: '200 g',
-            initialChecked: true,
-          ),
-          IngredientLine(
-            name: 'Garlic cloves',
-            amount: '3',
-            initialChecked: true,
-          ),
-          IngredientLine(
-            name: 'Chili oil',
-            amount: '2 tbsp',
-            initialChecked: false,
-          ),
-        ],
-        instructionLines: [
-          'Boil water and cook udon noodles according to package instructions. Drain and set aside.',
-          'Mince the garlic cloves finely.',
-          'Heat a pan, add chili oil and minced garlic. Sauté for 1 minute until fragrant.',
-          'Toss the cooked noodles in the garlic oil until well coated. Serve immediately.',
-        ],
-      );
-    }
-    return null;
-  }
 }

@@ -1,5 +1,5 @@
 name: nx_cooking
-description: Cooking app UI — week / recipes / buy / stats (local fake data; PGDB later).
+description: Cooking app UI — week / recipes / buy / stats; recipes from PGDB via nx_db.
 publish_to: "none"
 version: 0.1.0+1
 
@@ -12,12 +12,19 @@ dependencies:
   flutter_riverpod: ^3.2.0
   go_router: ^17.0.1
   google_fonts: ^8.0.2
+  graphql_flutter: ^5.1.2
+  nx_db:
+    path: ../nx_db
   solar_icon_pack: ^0.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+
+# Match nx_time: older Xcode may fail on connectivity_plus; pin until toolchains catch up.
+dependency_overrides:
+  connectivity_plus: 6.1.5
 
 flutter:
   uses-material-design: true

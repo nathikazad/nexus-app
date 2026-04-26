@@ -11,6 +11,9 @@ const String kTaskAttrEstimateHours = 'estimate_hours';
 const String kTaskAttrDate = 'date';
 const String kTaskAttrSeverity = 'severity';
 
+/// [Feature] only; see `ideation_status` in PG.
+const String kTaskAttrIdeationStatus = 'ideation_status';
+
 /// Nested [Project] from `in_project` uses this struct key in responses.
 const String kTaskProjectLinkKey = 'Project';
 

@@ -1,0 +1,314 @@
+<!--
+  Task detail view (desktop).
+  Renders as a right-hand drawer over the planner so the list stays visible.
+  Same partial covers all three kinds — irrelevant blocks are hidden via data-show-when.
+  Three example bodies (task / feature / bug) are inlined for design review.
+-->
+<div id="view-task-backdrop" class="task-backdrop" hidden></div>
+<aside id="view-task" class="task-drawer" role="dialog" aria-label="Task detail" hidden>
+  <style>
+    .task-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 90; }
+    .task-backdrop[hidden] { display: none; }
+    .task-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 96vw);
+      background: var(--panel, #1a1d24); color: var(--text, #e7e9ee); z-index: 91;
+      border-left: 1px solid var(--border, #2a2e38); box-shadow: -16px 0 40px rgba(0,0,0,.5);
+      overflow-y: auto; padding: 16px 20px; }
+    .task-drawer[hidden] { display: none; }
+    .task-view[hidden] { display: none; }
+    .task-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border, #2a2e38); margin-bottom: 12px; }
+    .task-head .glyph { font-size: 18px; }
+    .task-head .glyph.feat { color: var(--accent, #6aa9ff); }
+    .task-head .glyph.bug { color: #ff6a6a; }
+    .task-head .kind { font-size: 11px; text-transform: uppercase; opacity: .7; padding: 2px 6px;
+      border: 1px solid var(--border, #2a2e38); border-radius: 4px; }
+    .task-head .kind.feat { color: var(--accent, #6aa9ff); border-color: currentColor; }
+    .task-head .kind.bug { color: #ff6a6a; border-color: currentColor; }
+    .task-title-wrap { flex: 1; min-width: 240px; }
+    .task-title { width: 100%; background: transparent; border: 0; color: inherit;
+      font-size: 18px; font-weight: 600; padding: 4px 0; outline: none; }
+    .task-title:focus { background: var(--panel-2, #232732); padding: 4px 6px; border-radius: 4px; }
+    .crumb-link { font-size: 12px; opacity: .75; }
+    .crumb-link a { color: inherit; text-decoration: none; border-bottom: 1px dotted; }
+    .crumb-link .sep { opacity: .5; padding: 0 4px; }
+    .pill { background: transparent; border: 1px solid var(--border, #2a2e38); color: inherit;
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; cursor: pointer; }
+    .pill.status.doing { background: rgba(255,193,7,.15); border-color: #c89400; }
+    .pill.status.done { background: rgba(76,175,80,.15); border-color: #3a8a3e; }
+    .pill.bucket.now { background: rgba(255,82,82,.12); border-color: #b04a4a; }
+    .pill.bucket.next { background: rgba(106,169,255,.12); border-color: var(--accent, #6aa9ff); }
+    .task-x, .task-close { background: transparent; border: 0; color: inherit;
+      font-size: 18px; cursor: pointer; padding: 4px 8px; opacity: .7; }
+    .task-x:hover, .task-close:hover { opacity: 1; }
+    .task-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px; padding: 12px; background: var(--panel-2, #232732);
+      border-radius: 8px; margin-bottom: 16px; }
+    .task-meta .meta-cell.wide { grid-column: span 2; }
+    .task-meta .meta-label { font-size: 10px; text-transform: uppercase; opacity: .6; margin-bottom: 4px; }
+    .task-meta .meta-val { font-size: 13px; }
+    .task-meta .meta-val.warn { color: #ffb454; }
+    .task-meta .meta-val .num { width: 36px; background: transparent; border: 1px solid var(--border, #2a2e38);
+      color: inherit; padding: 2px 4px; border-radius: 4px; }
+    .task-meta .progress { height: 6px; background: var(--border, #2a2e38); border-radius: 3px; overflow: hidden; }
+    .task-meta .progress-fill { height: 100%; background: var(--accent, #6aa9ff); }
+    .task-meta .muted { opacity: .55; font-weight: normal; font-size: 11px; }
+    .task-section { margin-bottom: 18px; }
+    .task-section .sec-h { font-size: 11px; text-transform: uppercase; opacity: .6;
+      letter-spacing: .04em; margin-bottom: 8px; }
+    .task-section .sec-h .count { opacity: .55; padding-left: 4px; }
+    .task-section.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .md-editor { padding: 10px 12px; background: var(--panel-2, #232732);
+      border: 1px solid var(--border, #2a2e38); border-radius: 6px; min-height: 56px; line-height: 1.45;
+      font-size: 13px; outline: none; }
+    .md-editor:focus { border-color: var(--accent, #6aa9ff); }
+    .drift-list { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+    .drift-list li { padding: 3px 0 3px 10px; border-left: 2px solid var(--border, #2a2e38); margin-left: 4px; }
+    .drift-list .t { opacity: .6; padding-right: 8px; font-variant-numeric: tabular-nums; }
+    .pill.status.blocked { background: rgba(255,82,82,.15); border-color: #b04a4a; }
+    /* Subtask rows — own flex layout so the global .row grid doesn't overlap kind+title. */
+    .task-section .subtask {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 8px; border-bottom: 1px solid var(--border, #2a2e38);
+      font-size: 13px;
+    }
+    .task-section .subtask:last-of-type { border-bottom: 0; }
+    .task-section .subtask .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+    .task-section .subtask .status-dot.todo { background: #6b7280; }
+    .task-section .subtask .status-dot.doing { background: #f5b400; }
+    .task-section .subtask .status-dot.done { background: #4caf50; }
+    .task-section .subtask .status-dot.blocked { background: #ff6a6a; }
+    .task-section .subtask .glyph { font-size: 14px; flex: 0 0 auto; }
+    .task-section .subtask .glyph.feat { color: var(--accent, #6aa9ff); }
+    .task-section .subtask .glyph.bug { color: #ff6a6a; }
+    .task-section .subtask .kind {
+      font-size: 10px; text-transform: uppercase; opacity: .7;
+      padding: 1px 5px; border: 1px solid var(--border, #2a2e38); border-radius: 3px; flex: 0 0 auto;
+    }
+    .task-section .subtask .kind.bug { color: #ff6a6a; border-color: currentColor; opacity: 1; }
+    .task-section .subtask .title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-section .subtask .est { opacity: .7; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+    .inline-add { padding: 6px 8px; opacity: .7; font-size: 12px; cursor: pointer; }
+    .inline-add .p { color: var(--accent, #6aa9ff); padding-right: 6px; }
+    .seg-toggle.small { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+    .seg-toggle.small .seg-btn { background: transparent; border: 1px solid var(--border, #2a2e38);
+      color: inherit; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .seg-toggle.small .seg-btn.active { background: var(--accent, #6aa9ff); color: #0c1018; border-color: transparent; }
+    .seg-toggle.small .seg-btn.active.danger { background: #ff6a6a; }
+    .sev { font-size: 10px; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; font-weight: 600; }
+    .sev.crit { background: #ff6a6a; color: #fff; }
+    .sev.med { background: #f5b400; color: #1a1d24; }
+    .sev.low { background: #4caf50; color: #fff; }
+  </style>
+
+  <!--
+    Field map (matches lib/domain/task/task.dart):
+      title · kind · bucket · status · severity (bug)
+      crumb (projectId / subProjectId)
+      estimate · actualHours
+      sprintId · plannedFor (YMD) · driftFrom (List<YMD>)
+      notes · ideationStatus (feature)
+    Subtasks are rendered for Feature; user is adding the parent/child relation to the model.
+  -->
+
+  <!-- =====================================================================
+       Example 1 — FEATURE
+       ===================================================================== -->
+  <article class="task-view" data-kind="feature">
+
+    <header class="task-head">
+      <button class="task-back" aria-label="Back">‹</button>
+      <div class="glyph feat">◉</div>
+      <div class="kind feat">Feature</div>
+
+      <div class="task-title-wrap">
+        <input class="task-title" value="Add dark mode" aria-label="Title" />
+        <div class="crumb-link">
+          <a href="#">Nexus</a> <span class="sep">/</span> <a href="#">UI Polish</a>
+        </div>
+      </div>
+
+      <button class="pill status doing" data-cycle="status">Doing</button>
+      <button class="pill bucket now" data-cycle="bucket">NOW</button>
+
+      <button class="task-x" aria-label="Overflow" data-menu>⋮</button>
+      <button class="task-close" aria-label="Close">×</button>
+    </header>
+
+    <!-- Meta strip: estimate, actualHours, sprintId, plannedFor, drift count -->
+    <section class="task-meta">
+      <div class="meta-cell">
+        <div class="meta-label">Estimate</div>
+        <div class="meta-val"><input class="num" value="8" /> h</div>
+      </div>
+      <div class="meta-cell wide">
+        <div class="meta-label">Actual <span class="muted">2.5h logged</span></div>
+        <div class="progress"><div class="progress-fill" style="width:31%"></div></div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Sprint</div>
+        <div class="meta-val"><span class="chip s14">S14</span></div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Planned for</div>
+        <div class="meta-val">2026-04-23</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Drift</div>
+        <div class="meta-val warn">↻ 2×</div>
+      </div>
+    </section>
+
+    <!-- Feature-only: ideationStatus (idea / considering / approved / rejected) -->
+    <section class="task-section" data-show-when="feature">
+      <div class="sec-h">Ideation</div>
+      <div class="seg-toggle small">
+        <button class="seg-btn">Ideated</button>
+        <button class="seg-btn active">Refined</button>
+        <button class="seg-btn">Spec'd</button>
+        <button class="seg-btn">Rejected</button>
+      </div>
+    </section>
+
+    <!-- notes -->
+    <section class="task-section">
+      <div class="sec-h">Notes</div>
+      <div class="md-editor" contenteditable="true">
+        Toggle persisted in localStorage; respect <code>prefers-color-scheme</code> on first load.
+        Ship behind a feature flag; default OFF for week 1.
+      </div>
+    </section>
+
+    <!-- Subtasks (feature only) — parent/child relation to be added to model -->
+    <section class="task-section" data-show-when="feature">
+      <div class="sec-h">Subtasks <span class="count">3</span></div>
+      <div class="subtask">
+        <span class="status-dot doing" title="doing"></span>
+        <span class="glyph">▢</span><span class="kind">Task</span>
+        <span class="title">Tokenize color palette</span>
+        <span class="est">2h</span>
+      </div>
+      <div class="subtask">
+        <span class="status-dot todo" title="todo"></span>
+        <span class="glyph">▢</span><span class="kind">Task</span>
+        <span class="title">Topbar toggle + persistence</span>
+        <span class="est">3h</span>
+      </div>
+      <div class="subtask">
+        <span class="status-dot todo" title="todo"></span>
+        <span class="glyph bug">●</span><span class="kind bug">Bug</span>
+        <span class="title">Flash of wrong theme</span>
+        <span class="sev med">med</span>
+        <span class="est">2h</span>
+      </div>
+      <div class="inline-add"><span class="p">+</span> Add subtask</div>
+    </section>
+
+    <!-- Drift history (driftFrom: List<YMD>) -->
+    <section class="task-section">
+      <div class="sec-h">Drift history</div>
+      <ul class="drift-list">
+        <li><span class="t">2026-04-21</span> rolled over</li>
+        <li><span class="t">2026-04-22</span> rolled over</li>
+      </ul>
+    </section>
+
+  </article>
+
+  <!-- =====================================================================
+       Example 2 — BUG
+       ===================================================================== -->
+  <article class="task-view" data-kind="bug" hidden>
+
+    <header class="task-head">
+      <button class="task-back" aria-label="Back">‹</button>
+      <div class="glyph bug">●</div>
+      <div class="kind bug">Bug</div>
+      <div class="task-title-wrap">
+        <input class="task-title" value="Nightly job OOM" />
+        <div class="crumb-link"><a href="#">Pipeline</a></div>
+      </div>
+      <span class="sev crit">crit</span>
+      <button class="pill status todo">Todo</button>
+      <button class="pill bucket now">NOW</button>
+      <button class="task-close" aria-label="Close">×</button>
+    </header>
+
+    <section class="task-meta">
+      <div class="meta-cell"><div class="meta-label">Estimate</div><div class="meta-val">6h</div></div>
+      <div class="meta-cell"><div class="meta-label">Actual</div><div class="meta-val">0h</div></div>
+      <div class="meta-cell"><div class="meta-label">Sprint</div><div class="meta-val"><span class="chip s14">S14</span></div></div>
+      <div class="meta-cell"><div class="meta-label">Planned for</div><div class="meta-val">2026-04-24</div></div>
+    </section>
+
+    <!-- Bug-only: severity (low / med / crit) -->
+    <section class="task-section" data-show-when="bug">
+      <div class="sec-h">Severity</div>
+      <div class="seg-toggle small">
+        <button class="seg-btn">Low</button>
+        <button class="seg-btn">Med</button>
+        <button class="seg-btn active danger">Crit</button>
+      </div>
+    </section>
+
+    <!-- notes (free-form: repro, expected, actual all live here) -->
+    <section class="task-section">
+      <div class="sec-h">Notes</div>
+      <div class="md-editor" contenteditable="true">
+        Repro: run nightly-ingest against prod snapshot &gt; 4GB → worker dies with SIGKILL (137) at ~3.8GB.
+        Expected: peak under 2GB. Actual: OOMKilled, partial commit leaves orphan rows.
+      </div>
+    </section>
+
+    <section class="task-section">
+      <div class="sec-h">Drift history</div>
+      <ul class="drift-list">
+        <li class="muted" style="opacity:.6">no drift yet</li>
+      </ul>
+    </section>
+
+  </article>
+
+  <!-- =====================================================================
+       Example 3 — TASK (plain task; sits under a Feature once parent relation is in model)
+       ===================================================================== -->
+  <article class="task-view" data-kind="task" hidden>
+
+    <header class="task-head">
+      <button class="task-back" aria-label="Back">‹</button>
+      <div class="glyph">▢</div>
+      <div class="kind">Task</div>
+      <div class="task-title-wrap">
+        <input class="task-title" value="Tokenize color palette" />
+        <div class="crumb-link">
+          <a href="#">Nexus</a> <span class="sep">/</span> <a href="#">UI Polish</a>
+        </div>
+      </div>
+      <button class="pill status doing">Doing</button>
+      <button class="pill bucket now">NOW</button>
+      <button class="task-close" aria-label="Close">×</button>
+    </header>
+
+    <section class="task-meta">
+      <div class="meta-cell"><div class="meta-label">Estimate</div><div class="meta-val">2h</div></div>
+      <div class="meta-cell"><div class="meta-label">Actual</div><div class="meta-val">1.5h</div></div>
+      <div class="meta-cell"><div class="meta-label">Sprint</div><div class="meta-val"><span class="chip s14">S14</span></div></div>
+      <div class="meta-cell"><div class="meta-label">Planned for</div><div class="meta-val">2026-04-23</div></div>
+    </section>
+
+    <section class="task-section">
+      <div class="sec-h">Notes</div>
+      <div class="md-editor" contenteditable="true">
+        Pull palette from Figma file → emit as CSS custom properties on <code>:root</code> and <code>[data-theme="dark"]</code>.
+      </div>
+    </section>
+
+    <section class="task-section">
+      <div class="sec-h">Drift history</div>
+      <ul class="drift-list">
+        <li class="muted" style="opacity:.6">no drift yet</li>
+      </ul>
+    </section>
+
+  </article>
+
+</aside>

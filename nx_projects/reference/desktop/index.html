@@ -35,6 +35,7 @@
     'partials/menu-row-context.html',
     'partials/modal-task-create.html',
     'partials/modal-project-create.html',
+    'partials/view-task.html',
   ];
 
   async function loadPartials() {
@@ -1753,6 +1754,146 @@
     if (!payload.name) { document.getElementById('project-name').focus(); return; }
     console.log('[mockup] create project', payload);
     closeModal('modal-project');
+  });
+
+  // ---- Task detail drawer --------------------------------------------------
+  function openTaskView({ kind, title, crumb, est, severity, status, bucket, sprint }) {
+    const drawer = document.getElementById('view-task');
+    const backdrop = document.getElementById('view-task-backdrop');
+    if (!drawer || !backdrop) return;
+
+    // Pick which sample article matches the kind
+    const articles = drawer.querySelectorAll('.task-view');
+    const want = kind === 'bug' ? 'bug' : (kind === 'feat' || kind === 'feature') ? 'feature' : 'task';
+    let shown = null;
+    articles.forEach(a => {
+      const match = a.dataset.kind === want;
+      a.hidden = !match;
+      if (match) shown = a;
+    });
+    if (!shown) return;
+
+    // Patch in the clicked task's data
+    const titleInp = shown.querySelector('.task-title');
+    if (titleInp) titleInp.value = title || titleInp.value;
+    const crumbEl = shown.querySelector('.crumb-link');
+    if (crumbEl && crumb) {
+      const parts = crumb.split('/').map(s => s.trim()).filter(Boolean);
+      crumbEl.innerHTML = parts.map(p => `<a href="#">${escapeHtml(p)}</a>`).join(' <span class="sep">/</span> ');
+    }
+    const sevEl = shown.querySelector('.task-head .sev');
+    if (sevEl && severity) {
+      sevEl.className = 'sev ' + severity;
+      sevEl.textContent = severity;
+    }
+    const statusPill = shown.querySelector('.pill.status');
+    if (statusPill && status) {
+      statusPill.classList.remove('todo', 'doing', 'done', 'blocked');
+      statusPill.classList.add(status);
+      statusPill.textContent = status[0].toUpperCase() + status.slice(1);
+    }
+    const bucketPill = shown.querySelector('.pill.bucket');
+    if (bucketPill && bucket) {
+      bucketPill.classList.remove('now', 'next', 'later', 'someday');
+      bucketPill.classList.add(bucket);
+      bucketPill.textContent = bucket.toUpperCase();
+    }
+
+    backdrop.hidden = false;
+    drawer.hidden = false;
+  }
+
+  function closeTaskView() {
+    const drawer = document.getElementById('view-task');
+    const backdrop = document.getElementById('view-task-backdrop');
+    if (drawer) drawer.hidden = true;
+    if (backdrop) backdrop.hidden = true;
+  }
+
+  document.getElementById('view-task-backdrop')?.addEventListener('click', closeTaskView);
+  document.querySelectorAll('#view-task .task-close, #view-task .task-back').forEach(b => {
+    b.addEventListener('click', closeTaskView);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('view-task').hidden) closeTaskView();
+  });
+
+  function kindFromGlyph(glyphEl) {
+    if (!glyphEl) return 'task';
+    if (glyphEl.classList.contains('bug')) return 'bug';
+    if (glyphEl.classList.contains('feat')) return 'feat';
+    return 'task';
+  }
+
+  // Backlog rows (Priority + Projects panes)
+  document.querySelectorAll('#pane-priority .row, #pane-projects .row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('[data-menu]')) return;
+      if (e.target.closest('.chip')) return;
+      const glyph = row.querySelector('.glyph');
+      const sevEl = row.querySelector('.sev');
+      const sev = sevEl ? (sevEl.classList.contains('crit') ? 'crit'
+                       : sevEl.classList.contains('med') ? 'med' : 'low') : null;
+      // Bucket inferred from preceding bucket-h
+      let bucket = 'next';
+      let p = row.previousElementSibling;
+      while (p) {
+        if (p.classList && p.classList.contains('bucket-h')) {
+          const t = p.textContent.toLowerCase();
+          if (t.includes('now')) bucket = 'now';
+          else if (t.includes('next')) bucket = 'next';
+          else if (t.includes('later')) bucket = 'later';
+          else if (t.includes('someday')) bucket = 'someday';
+          break;
+        }
+        p = p.previousElementSibling;
+      }
+      openTaskView({
+        kind: kindFromGlyph(glyph),
+        title: row.dataset.title || row.querySelector('.title')?.firstChild?.textContent?.trim(),
+        crumb: row.querySelector('.crumb')?.textContent.trim(),
+        est: row.querySelector('.est')?.textContent.trim(),
+        severity: sev,
+        status: 'todo',
+        bucket,
+      });
+    });
+  });
+
+  // Day items in sprint planner
+  document.addEventListener('click', e => {
+    const di = e.target.closest('.day-item');
+    if (!di || e.target.closest('.x') || e.target.closest('[data-unschedule]')) return;
+    if (!di.closest('#sp-days-list')) return;
+    const id = di.dataset.id;
+    const it = items().find(x => x.id === id);
+    if (!it) return;
+    openTaskView({
+      kind: it.kind,
+      title: it.title,
+      crumb: it.crumb,
+      status: it.status,
+      bucket: 'now',
+    });
+  });
+
+  // Day-page tasks (dd-task)
+  document.addEventListener('click', e => {
+    const t = e.target.closest('.dd-task');
+    if (!t) return;
+    if (e.target.closest('.dd-actions')) return;
+    if (e.target.closest('.schip')) return;
+    const id = t.dataset.taskId;
+    const sp = openDaySprintIdx != null ? sprints[openDaySprintIdx] : sprint();
+    const it = sp.items.find(x => x.id === id);
+    if (!it) return;
+    openTaskView({
+      kind: it.kind,
+      title: it.title,
+      crumb: it.crumb,
+      status: it.status,
+      bucket: 'now',
+    });
   });
 
   setView('planner');
