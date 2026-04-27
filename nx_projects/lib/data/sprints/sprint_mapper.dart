@@ -35,6 +35,17 @@ String _ymd(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
+String _isoNoon(String ymd) {
+  final d = DateTime.tryParse('${ymd}T12:00:00') ?? DateTime.now();
+  return DateTime(d.year, d.month, d.day, 12).toIso8601String();
+}
+
+String _sprintEndYmd(Sprint s) {
+  final start = DateTime.tryParse('${s.start}T12:00:00') ?? DateTime.now();
+  final length = s.length < 1 ? 1 : s.length;
+  return _ymd(start.add(Duration(days: length - 1)));
+}
+
 Sprint sprintFromModel(Model m) {
   final start = m.attrDateTime(kSprintAttrStartDate) ?? DateTime.now();
   final end = m.attrDateTime(kSprintAttrEndDate) ?? start;
@@ -65,12 +76,29 @@ Sprint sprintFromModel(Model m) {
   );
 }
 
+List<SetModelAttribute> setModelAttributesForSprintCreate(Sprint s) {
+  return [
+    SetModelAttribute(key: kSprintAttrStartDate, value: _isoNoon(s.start)),
+    SetModelAttribute(
+      key: kSprintAttrEndDate,
+      value: _isoNoon(_sprintEndYmd(s)),
+    ),
+    SetModelAttribute(key: kSprintAttrGoal, value: s.goal),
+    SetModelAttribute(key: kSprintAttrStatus, value: _stateToAttr(s.state)),
+  ];
+}
+
+SetModelRequest setModelRequestForCreateSprint(Sprint s) {
+  return SetModelRequest(
+    modelType: kSprintModelTypeName,
+    name: s.name,
+    attributes: setModelAttributesForSprintCreate(s),
+  );
+}
+
 List<SetModelAttribute> setModelAttributesForSprintUpdate(Sprint s) {
   return [
     SetModelAttribute(key: kSprintAttrGoal, value: s.goal),
-    SetModelAttribute(
-      key: kSprintAttrStatus,
-      value: _stateToAttr(s.state),
-    ),
+    SetModelAttribute(key: kSprintAttrStatus, value: _stateToAttr(s.state)),
   ];
 }

@@ -6,10 +6,10 @@ import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/formatting/sprint_variance.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/widgets/capacity_bar.dart';
-import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/sprint/sprint_state.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/sprint/assign_task_to_sprint_day.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
 import 'package:nx_projects/features/sprint/widgets/day_item_row.dart';
 
@@ -39,10 +39,14 @@ class DesktopDayCard extends ConsumerWidget {
     final isToday = slice.isToday;
     final ghosts = allTasks
         .where(
-          (t) => t.driftFrom.contains(slice.ymd) && t.plannedFor != null && t.plannedFor != slice.ymd,
+          (t) =>
+              t.driftFrom.contains(slice.ymd) &&
+              t.plannedFor != null &&
+              t.plannedFor != slice.ymd,
         )
         .toList();
-    final showStats = slice.isPast &&
+    final showStats =
+        slice.isPast &&
         (slice.doneCount + slice.pushedCount + slice.rolledCount > 0);
     final showDayNote = slice.isPast || sprint.state == SprintState.done;
     final actualLineCls = dayH > 0
@@ -58,12 +62,12 @@ class DesktopDayCard extends ConsumerWidget {
           return d.sprintId == sprint.id;
         },
         onAcceptWithDetails: (details) async {
-          final t = details.data;
-          final cur = await ref.read(taskRepositoryProvider).getById(t.id) ?? t;
-          await ref.read(taskRepositoryProvider).upsert(
-                cur.copyWith(plannedFor: slice.ymd),
-              );
-          ref.invalidate(tasksListAsyncProvider);
+          await assignTaskToSprintDay(
+            ref: ref,
+            task: details.data,
+            sprint: sprint,
+            ymd: slice.ymd,
+          );
         },
         builder: (context, candidate, rejected) {
           final drop = candidate.isNotEmpty;
@@ -106,7 +110,9 @@ class DesktopDayCard extends ConsumerWidget {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: isToday ? AppColors.accent : AppColors.text,
+                                  color: isToday
+                                      ? AppColors.accent
+                                      : AppColors.text,
                                 ),
                               ),
                               TextSpan(
@@ -140,9 +146,13 @@ class DesktopDayCard extends ConsumerWidget {
                                   text: _fmtH(dayH),
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isOver ? AppColors.warn : AppColors.text,
+                                    color: isOver
+                                        ? AppColors.warn
+                                        : AppColors.text,
                                     fontWeight: FontWeight.w600,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                                 TextSpan(
@@ -150,7 +160,9 @@ class DesktopDayCard extends ConsumerWidget {
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AppColors.muted,
-                                    fontFeatures: [FontFeature.tabularFigures()],
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -163,7 +175,9 @@ class DesktopDayCard extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 10,
                                 color: varianceColorForClass(actualLineCls),
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ],
@@ -188,7 +202,10 @@ class DesktopDayCard extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
                     child: Text(
                       'done ${slice.doneCount} · pushed ${slice.pushedCount} · rolled ${slice.rolledCount}',
-                      style: const TextStyle(fontSize: 11, color: AppColors.dim),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.dim,
+                      ),
                     ),
                   ),
                 if (slice.tasks.isNotEmpty || ghosts.isNotEmpty)
@@ -252,13 +269,18 @@ class DesktopDayCard extends ConsumerWidget {
 }
 
 class _SprintDayNoteField extends ConsumerStatefulWidget {
-  const _SprintDayNoteField({super.key, required this.sprint, required this.ymd});
+  const _SprintDayNoteField({
+    super.key,
+    required this.sprint,
+    required this.ymd,
+  });
 
   final Sprint sprint;
   final String ymd;
 
   @override
-  ConsumerState<_SprintDayNoteField> createState() => _SprintDayNoteFieldState();
+  ConsumerState<_SprintDayNoteField> createState() =>
+      _SprintDayNoteFieldState();
 }
 
 class _SprintDayNoteFieldState extends ConsumerState<_SprintDayNoteField> {
@@ -297,7 +319,10 @@ class _SprintDayNoteFieldState extends ConsumerState<_SprintDayNoteField> {
         style: const TextStyle(fontSize: 11, color: AppColors.muted),
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 6,
+          ),
           filled: true,
           fillColor: AppColors.panel2,
           border: OutlineInputBorder(

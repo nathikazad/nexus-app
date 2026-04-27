@@ -9,12 +9,9 @@ import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/features/priority/priority_screen.dart';
 import 'package:nx_projects/features/projects/projects_screen.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
-import 'package:nx_projects/features/desktop/widgets/reference_side_drawer.dart';
+import 'package:nx_projects/features/desktop/widgets/desktop_drawer_layer.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/shared/widgets/context_sheet.dart';
-import 'package:nx_projects/features/task_edit/project_edit_sheet.dart';
-import 'package:nx_projects/features/task_edit/task_edit_sheet.dart';
-import 'package:nx_projects/features/task_view/task_view_drawer.dart';
 
 /// `reference/desktop/` Planner: left backlog + right sprint cart.
 class PlannerView extends ConsumerWidget {
@@ -30,7 +27,8 @@ class PlannerView extends ConsumerWidget {
       ref.read(desktopViewIndexProvider.notifier).setView(1);
     }
 
-    final drawerOpen = ref.watch(desktopTaskDrawerProvider) is! DesktopTaskDrawerClosed;
+    final drawerOpen =
+        ref.watch(desktopTaskDrawerProvider) is! DesktopTaskDrawerClosed;
 
     return Stack(
       children: [
@@ -44,7 +42,9 @@ class PlannerView extends ConsumerWidget {
                   ref.read(desktopTaskDrawerProvider.notifier).newProject();
                 },
                 onNewTask: () {
-                  ref.read(desktopTaskDrawerProvider.notifier).newTask(
+                  ref
+                      .read(desktopTaskDrawerProvider.notifier)
+                      .newTask(
                         defaultProject: ref.read(selectedProjectIdProvider),
                         defaultSub: ref.read(selectedSubProjectIdProvider),
                       );
@@ -57,77 +57,9 @@ class PlannerView extends ConsumerWidget {
             ),
           ],
         ),
-        if (drawerOpen) const Positioned.fill(child: _DesktopTaskDrawerLayer()),
+        if (drawerOpen) const Positioned.fill(child: DesktopDrawerLayer()),
       ],
     );
-  }
-}
-
-class _DesktopTaskDrawerLayer extends ConsumerWidget {
-  const _DesktopTaskDrawerLayer();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(desktopTaskDrawerProvider);
-    void close() => ref.read(desktopTaskDrawerProvider.notifier).close();
-
-    return switch (s) {
-      DesktopTaskDrawerClosed() => const SizedBox.shrink(),
-      DesktopTaskViewing(:final taskId) => ReferenceSideDrawer(
-          onClose: close,
-          showHeader: false,
-          widthMode: ReferenceSideDrawerWidth.wide,
-          child: TaskViewDrawerContent(
-            taskId: taskId,
-            onClose: close,
-          ),
-        ),
-      DesktopTaskEditing(:final task) => ReferenceSideDrawer(
-          onClose: close,
-          title: 'Edit task',
-          widthMode: ReferenceSideDrawerWidth.narrow,
-          child: TaskEditForm(
-            key: ValueKey<Object>('e-${task.id}'),
-            useReferenceDialog: false,
-            sidePanel: true,
-            onSidePanelClose: close,
-            task: task,
-            onSave: () {},
-          ),
-        ),
-      DesktopTaskCreating(
-        :final defaultProject,
-        :final defaultSub,
-        :final defaultBucket,
-      ) =>
-        ReferenceSideDrawer(
-          onClose: close,
-          title: 'New task',
-          widthMode: ReferenceSideDrawerWidth.narrow,
-          child: TaskEditForm(
-            key: ObjectKey('new-$defaultProject-$defaultSub-$defaultBucket'),
-            useReferenceDialog: false,
-            sidePanel: true,
-            onSidePanelClose: close,
-            task: null,
-            defaultProject: defaultProject,
-            defaultSub: defaultSub,
-            defaultBucket: defaultBucket,
-            onSave: () {},
-          ),
-        ),
-      DesktopProjectCreating() => ReferenceSideDrawer(
-          onClose: close,
-          title: 'New project',
-          widthMode: ReferenceSideDrawerWidth.narrow,
-          child: ProjectEditForm(
-            useReferenceDialog: false,
-            sidePanel: true,
-            onSidePanelClose: close,
-            onSave: () {},
-          ),
-        ),
-    };
   }
 }
 
@@ -167,9 +99,7 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
     final kind = ref.watch(filterKindProvider);
     final status = ref.watch(filterStatusProvider);
     final kindV = kind == 'all' ? 'All' : (kind == 'feat' ? 'Feature' : 'Bug');
-    final stV = status == 'all'
-        ? 'All'
-        : (status == 'open' ? 'Open' : 'Done');
+    final stV = status == 'all' ? 'All' : (status == 'open' ? 'Open' : 'Done');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -194,8 +124,9 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
                 children: [
                   _PaneToggle(
                     mode: mode,
-                    onChanged: (m) =>
-                        ref.read(desktopPlannerModeProvider.notifier).setMode(m),
+                    onChanged: (m) => ref
+                        .read(desktopPlannerModeProvider.notifier)
+                        .setMode(m),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -254,18 +185,28 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
               const SizedBox(width: 10),
               Flexible(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 240, minWidth: 80),
+                  constraints: const BoxConstraints(
+                    maxWidth: 240,
+                    minWidth: 80,
+                  ),
                   child: TextField(
                     controller: _search,
-                    onChanged: (s) => ref.read(searchQueryProvider.notifier).set(s),
+                    onChanged: (s) =>
+                        ref.read(searchQueryProvider.notifier).set(s),
                     style: const TextStyle(color: AppColors.text, fontSize: 12),
                     decoration: InputDecoration(
                       isDense: true,
                       filled: true,
                       fillColor: AppColors.panel,
                       hintText: 'Search ideas…',
-                      hintStyle: const TextStyle(color: AppColors.dim, fontSize: 12),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      hintStyle: const TextStyle(
+                        color: AppColors.dim,
+                        fontSize: 12,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide: const BorderSide(color: AppColors.border),

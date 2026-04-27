@@ -11,6 +11,7 @@ import 'package:nx_projects/domain/task/task_severity.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/shared/widgets/desktop_task_row.dart';
+import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
 
 /// Read-only task detail for the desktop right-side drawer (`reference/desktop/view-task.html`).
 class TaskViewDrawerContent extends ConsumerWidget {
@@ -52,20 +53,12 @@ class TaskViewDrawerContent extends ConsumerWidget {
         }
       }
     }
-    return _TaskViewBody(
-      task: t,
-      sprint: sp,
-      onClose: onClose,
-    );
+    return _TaskViewBody(task: t, sprint: sp, onClose: onClose);
   }
 }
 
 class _TaskViewBody extends ConsumerWidget {
-  const _TaskViewBody({
-    required this.task,
-    this.sprint,
-    required this.onClose,
-  });
+  const _TaskViewBody({required this.task, this.sprint, required this.onClose});
 
   final Task task;
   final Sprint? sprint;
@@ -98,10 +91,7 @@ class _TaskViewBody extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
           child: Row(
             children: [
-              TextButton(
-                onPressed: onClose,
-                child: const Text('Back'),
-              ),
+              TextButton(onPressed: onClose, child: const Text('Back')),
               const Spacer(),
               FilledButton(
                 onPressed: () {
@@ -123,7 +113,11 @@ class _TaskViewBody extends ConsumerWidget {
                   children: [
                     Text(
                       glyph,
-                      style: TextStyle(fontSize: 18, color: gColor, height: 1.1),
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: gColor,
+                        height: 1.1,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -154,7 +148,9 @@ class _TaskViewBody extends ConsumerWidget {
                     IconButton(
                       onPressed: onClose,
                       icon: const Icon(Icons.close, size: 20),
-                      style: IconButton.styleFrom(foregroundColor: AppColors.muted),
+                      style: IconButton.styleFrom(
+                        foregroundColor: AppColors.muted,
+                      ),
                     ),
                   ],
                 ),
@@ -162,7 +158,10 @@ class _TaskViewBody extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     task.crumb,
-                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 10),
@@ -170,8 +169,14 @@ class _TaskViewBody extends ConsumerWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _pill('Status: ${_statusLabel(task.status)}', AppColors.panel2),
-                    _pill('Bucket: ${_bucketLabel(task.bucket)}', AppColors.panel2),
+                    _pill(
+                      'Status: ${_statusLabel(task.status)}',
+                      AppColors.panel2,
+                    ),
+                    _pill(
+                      'Bucket: ${_bucketLabel(task.bucket)}',
+                      AppColors.panel2,
+                    ),
                     _pill(
                       sprint == null
                           ? 'Sprint: ${desktopSprintChipLabelForTask(task)} (backlog)'
@@ -181,10 +186,27 @@ class _TaskViewBody extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                _metaRow('Estimate', task.estimate == 0 ? '—' : '${task.estimate}h'),
+                if (sprint != null) ...[
+                  Row(
+                    children: [
+                      const Text(
+                        'Sprint day',
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
+                      ),
+                      const SizedBox(width: 12),
+                      SprintDayPickerButton(task: task, sprint: sprint),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                _metaRow(
+                  'Estimate',
+                  task.estimate == 0 ? '—' : '${task.estimate}h',
+                ),
                 if (task.actualHours > 0)
                   _metaRow('Actual', '${task.actualHours}h'),
-                if (task.plannedFor != null) _metaRow('Planned', task.plannedFor!),
+                if (task.plannedFor != null)
+                  _metaRow('Planned', task.plannedFor!),
                 if (task.driftFrom.isNotEmpty)
                   _metaRow('Drift from', task.driftFrom.join(', ')),
                 if (task.kind == TaskKind.bug) ...[
@@ -227,7 +249,11 @@ class _TaskViewBody extends ConsumerWidget {
                 const SizedBox(height: 24),
                 const Text(
                   'Sub-tasks, drift map, and history are not available in the app data model yet.',
-                  style: TextStyle(fontSize: 11, color: AppColors.dim, height: 1.4),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.dim,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -247,7 +273,11 @@ class _TaskViewBody extends ConsumerWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 10, color: AppColors.muted, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          fontSize: 10,
+          color: AppColors.muted,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -262,7 +292,11 @@ class _TaskViewBody extends ConsumerWidget {
             width: 120,
             child: Text(
               k,
-              style: const TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           Expanded(

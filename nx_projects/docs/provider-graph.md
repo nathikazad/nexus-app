@@ -77,9 +77,13 @@ From [`lib/features/shell/selection_providers.dart`](../lib/features/shell/selec
 
 | Provider | Type | Meaning |
 |----------|------|---------|
-| `desktopTaskDrawerProvider` | `NotifierProvider<DesktopTaskDrawer, DesktopTaskDrawerState>` | Right-side panel: closed, viewing a task id, editing a `Task`, creating a task (defaults from selection), or creating a project |
+| `desktopTaskDrawerProvider` | `NotifierProvider<DesktopTaskDrawer, DesktopTaskDrawerState>` | Right-side panel: closed, viewing a task id, editing a `Task`, creating a task (defaults from selection), creating a project, or creating a sprint |
 
-`DesktopTaskDrawer` methods: `viewTask`, `editTask`, `newTask`, `newProject`, `close`. Rendered in [`lib/features/desktop/views/planner_view.dart`](../lib/features/desktop/views/planner_view.dart) as a `Stack` layer with [`ReferenceSideDrawer`](../lib/features/desktop/widgets/reference_side_drawer.dart). Task rows on desktop call `viewTask` from [`desktop_projects_body.dart`](../lib/features/projects/desktop_projects_body.dart) and [`desktop_priority_body.dart`](../lib/features/priority/desktop_priority_body.dart). Mobile continues to use bottom sheets for add/edit.
+`DesktopTaskDrawer` methods: `viewTask`, `editTask`, `newTask`, `newProject`, `newSprint`, `close`. Rendered in [`lib/features/desktop/views/planner_view.dart`](../lib/features/desktop/views/planner_view.dart) and [`lib/features/desktop/views/sprint_view.dart`](../lib/features/desktop/views/sprint_view.dart) as a `Stack` layer with [`ReferenceSideDrawer`](../lib/features/desktop/widgets/reference_side_drawer.dart). Task rows on desktop call `viewTask` from [`desktop_projects_body.dart`](../lib/features/projects/desktop_projects_body.dart) and [`desktop_priority_body.dart`](../lib/features/priority/desktop_priority_body.dart). The sprint cart plus opens `newSprint`, whose panel calls `sprintRepositoryProvider.create`, refreshes `sprintsListAsyncProvider`, and selects the created sprint via `sprintIndexProvider`. Mobile continues to use bottom sheets for task/project add/edit and does not expose the desktop sprint drawer.
+
+**Desktop sprint day assignment** — [`lib/features/sprint/assign_task_to_sprint_day.dart`](../lib/features/sprint/assign_task_to_sprint_day.dart):
+
+`assignTaskToSprintDay` requires the task to already belong to the target sprint, updates only `Task.plannedFor` for the selected sprint date, appends the previous planned day to `driftFrom` when moving between days, and invalidates `tasksListAsyncProvider`. It is shared by drag-and-drop day cards and the explicit day picker in [`lib/features/sprint/widgets/sprint_day_picker_menu.dart`](../lib/features/sprint/widgets/sprint_day_picker_menu.dart).
 
 From [`lib/features/filters/filter_state_providers.dart`](../lib/features/filters/filter_state_providers.dart):
 

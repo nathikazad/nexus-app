@@ -22,11 +22,13 @@ class Planner extends Notifier<PlannerState> {
   void _set(PlannerState next) => state = next;
 
   void addProject(Project project) {
-    _set(PlannerState(
-      projects: [...state.projects, project],
-      tasks: state.tasks,
-      sprints: state.sprints,
-    ));
+    _set(
+      PlannerState(
+        projects: [...state.projects, project],
+        tasks: state.tasks,
+        sprints: state.sprints,
+      ),
+    );
   }
 
   void upsertTask(Task task) {
@@ -37,19 +39,23 @@ class Planner extends Notifier<PlannerState> {
     } else {
       next[i] = task;
     }
-    _set(PlannerState(
-      projects: state.projects,
-      tasks: next,
-      sprints: state.sprints,
-    ));
+    _set(
+      PlannerState(
+        projects: state.projects,
+        tasks: next,
+        sprints: state.sprints,
+      ),
+    );
   }
 
   void deleteTask(int id) {
-    _set(PlannerState(
-      projects: state.projects,
-      tasks: state.tasks.where((t) => t.id != id).toList(),
-      sprints: state.sprints,
-    ));
+    _set(
+      PlannerState(
+        projects: state.projects,
+        tasks: state.tasks.where((t) => t.id != id).toList(),
+        sprints: state.sprints,
+      ),
+    );
   }
 
   List<Project> readRootProjects() =>
@@ -83,16 +89,29 @@ class Planner extends Notifier<PlannerState> {
     return null;
   }
 
+  Sprint addSprint(Sprint sprint) {
+    final nextId =
+        state.sprints.fold<int>(0, (maxId, s) => s.id > maxId ? s.id : maxId) +
+        1;
+    final created = sprint.copyWith(id: sprint.id == 0 ? nextId : sprint.id);
+    _set(
+      PlannerState(
+        projects: state.projects,
+        tasks: state.tasks,
+        sprints: [...state.sprints, created],
+      ),
+    );
+    return created;
+  }
+
   void updateSprint(Sprint sprint) {
     final i = state.sprints.indexWhere((s) => s.id == sprint.id);
     if (i < 0) return;
     final next = List<Sprint>.from(state.sprints);
     next[i] = sprint;
-    _set(PlannerState(
-      projects: state.projects,
-      tasks: state.tasks,
-      sprints: next,
-    ));
+    _set(
+      PlannerState(projects: state.projects, tasks: state.tasks, sprints: next),
+    );
   }
 
   void setDayNote(int sprintId, String ymd, String value) {
@@ -196,6 +215,9 @@ class FakeSprintRepository implements SprintRepository {
 
   @override
   Future<Sprint?> getById(int id) async => _planner.readSprint(id);
+
+  @override
+  Future<Sprint> create(Sprint sprint) async => _planner.addSprint(sprint);
 
   @override
   Future<void> update(Sprint sprint) async {

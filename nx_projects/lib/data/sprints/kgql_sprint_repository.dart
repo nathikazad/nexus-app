@@ -10,8 +10,8 @@ class KgqlSprintRepository implements SprintRepository {
   KgqlSprintRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadSprintSchema,
-  })  : _client = client,
-        _loadSprintSchema = loadSprintSchema;
+  }) : _client = client,
+       _loadSprintSchema = loadSprintSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadSprintSchema;
@@ -43,6 +43,19 @@ class KgqlSprintRepository implements SprintRepository {
       struct: struct,
     );
     return m == null ? null : sprintFromModel(m);
+  }
+
+  @override
+  Future<Sprint> create(Sprint sprint) async {
+    final id = await setKgqlModel(
+      _client,
+      setModelRequestForCreateSprint(sprint),
+    );
+    final created = await getById(id);
+    if (created == null) {
+      throw StateError('Created sprint $id but failed to re-fetch');
+    }
+    return created;
   }
 
   @override

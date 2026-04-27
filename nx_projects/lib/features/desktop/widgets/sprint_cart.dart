@@ -8,8 +8,10 @@ import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
+import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
+import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
 
 /// Which edge has the 1px separator toward the main content.
 enum SprintCartBorder {
@@ -75,14 +77,12 @@ class SprintCart extends ConsumerWidget {
             sprints: sprints,
             currentIdx: idx,
             onPick: (i) => ref.read(sprintIndexProvider.notifier).set(i),
+            onAdd: () =>
+                ref.read(desktopTaskDrawerProvider.notifier).newSprint(),
           ),
           _CapBlock(stats: stats, sprint: sp),
           Expanded(
-            child: _CartBody(
-              sprint: sp,
-              tasks: tasks,
-              projects: projects,
-            ),
+            child: _CartBody(sprint: sp, tasks: tasks, projects: projects),
           ),
           _CartFooter(onSprintView: onGoToSprintView),
         ],
@@ -152,7 +152,11 @@ class _SprintNavStrip extends StatelessWidget {
 }
 
 class _Chev extends StatelessWidget {
-  const _Chev({required this.label, required this.enabled, required this.onTap});
+  const _Chev({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
 
   final String label;
   final bool enabled;
@@ -188,11 +192,13 @@ class _SprintDots extends StatelessWidget {
     required this.sprints,
     required this.currentIdx,
     required this.onPick,
+    required this.onAdd,
   });
 
   final List<Sprint> sprints;
   final int currentIdx;
   final ValueChanged<int> onPick;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +220,9 @@ class _SprintDots extends StatelessWidget {
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: i == currentIdx ? AppColors.accent : AppColors.border2,
+                    color: i == currentIdx
+                        ? AppColors.accent
+                        : AppColors.border2,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -222,7 +230,7 @@ class _SprintDots extends StatelessWidget {
             ),
           ],
           const SizedBox(width: 4),
-          const _SprintAddPlus(),
+          _SprintAddPlus(onTap: onAdd),
         ],
       ),
     );
@@ -230,7 +238,9 @@ class _SprintDots extends StatelessWidget {
 }
 
 class _SprintAddPlus extends StatefulWidget {
-  const _SprintAddPlus();
+  const _SprintAddPlus({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   State<_SprintAddPlus> createState() => _SprintAddPlusState();
@@ -245,7 +255,7 @@ class _SprintAddPlusState extends State<_SprintAddPlus> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: InkWell(
-        onTap: () {},
+        onTap: widget.onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
@@ -285,7 +295,10 @@ class _CapBlock extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Capacity', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              const Text(
+                'Capacity',
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
               Text.rich(
                 TextSpan(
                   children: [
@@ -299,7 +312,10 @@ class _CapBlock extends StatelessWidget {
                     ),
                     TextSpan(
                       text: ' / ${cap.toInt()}h',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                      ),
                     ),
                   ],
                 ),
@@ -500,10 +516,11 @@ class _CartBody extends ConsumerWidget {
             _CartTaskRow(
               task: t,
               onUnpin: () async {
-                final cur = await ref.read(taskRepositoryProvider).getById(t.id) ?? t;
-                await ref.read(taskRepositoryProvider).upsert(
-                      cur.copyWith(clearSprint: true),
-                    );
+                final cur =
+                    await ref.read(taskRepositoryProvider).getById(t.id) ?? t;
+                await ref
+                    .read(taskRepositoryProvider)
+                    .upsert(cur.copyWith(clearSprint: true));
                 ref.invalidate(tasksListAsyncProvider);
               },
             ),
@@ -663,9 +680,9 @@ class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
       child: TextField(
         controller: _c,
         onChanged: (v) {
-          ref.read(sprintRepositoryProvider).update(
-                widget.sprint.copyWith(goal: v),
-              );
+          ref
+              .read(sprintRepositoryProvider)
+              .update(widget.sprint.copyWith(goal: v));
           ref.invalidate(sprintsListAsyncProvider);
         },
         minLines: 2,
@@ -721,83 +738,91 @@ class _CartTaskRowState extends State<_CartTaskRow> {
     final scheduled = t.plannedFor != null;
     Widget buildRow() {
       return MouseRegion(
-      onEnter: (_) => setState(() => _rowHover = true),
-      onExit: (_) => setState(() => _rowHover = false),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Material(
-          color: _rowHover ? AppColors.panel2 : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          child: InkWell(
-            onTap: () {},
+        onEnter: (_) => setState(() => _rowHover = true),
+        onExit: (_) => setState(() => _rowHover = false),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Material(
+            color: _rowHover ? AppColors.panel2 : Colors.transparent,
             borderRadius: BorderRadius.circular(5),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 14,
-                    child: Text(
-                      g,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: gColor),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      t.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheduled ? AppColors.muted : AppColors.text,
+            child: InkWell(
+              onTap: () {},
+              borderRadius: BorderRadius.circular(5),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      child: Text(
+                        g,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 11, color: gColor),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 36,
-                    child: Text(
-                      hStr,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.muted,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        t.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheduled ? AppColors.muted : AppColors.text,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  SizedBox(
-                    width: 16,
-                    child: MouseRegion(
-                      onEnter: (_) => setState(() => _xHover = true),
-                      onExit: (_) => setState(() => _xHover = false),
-                      child: InkWell(
-                        onTap: widget.onUnpin,
-                        child: Center(
-                          child: Text(
-                            '×',
-                            style: TextStyle(
-                              fontSize: 16,
-                              height: 1,
-                              color: _xHover
-                                  ? const Color(0xFFF87171)
-                                  : AppColors.dim,
-                              fontWeight: FontWeight.w500,
+                    const SizedBox(width: 6),
+                    SizedBox(
+                      width: 36,
+                      child: Text(
+                        hStr,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 62,
+                      child: SprintDayPickerButton(
+                        task: t,
+                        child: _CartDayChip(task: t),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 16,
+                      child: MouseRegion(
+                        onEnter: (_) => setState(() => _xHover = true),
+                        onExit: (_) => setState(() => _xHover = false),
+                        child: InkWell(
+                          onTap: widget.onUnpin,
+                          child: Center(
+                            child: Text(
+                              '×',
+                              style: TextStyle(
+                                fontSize: 16,
+                                height: 1,
+                                color: _xHover
+                                    ? const Color(0xFFF87171)
+                                    : AppColors.dim,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
     }
 
     if (scheduled) {
@@ -814,7 +839,11 @@ class _CartTaskRowState extends State<_CartTaskRow> {
             color: AppColors.panel2,
             child: ListTile(
               dense: true,
-              title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              title: Text(
+                t.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               trailing: Text(
                 hStr,
                 style: const TextStyle(fontSize: 11, color: AppColors.muted),
@@ -823,11 +852,35 @@ class _CartTaskRowState extends State<_CartTaskRow> {
           ),
         ),
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.4,
-        child: buildRow(),
-      ),
+      childWhenDragging: Opacity(opacity: 0.4, child: buildRow()),
       child: buildRow(),
+    );
+  }
+}
+
+class _CartDayChip extends StatelessWidget {
+  const _CartDayChip({required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context) {
+    final planned = task.plannedFor;
+    final label = planned == null || planned.isEmpty
+        ? 'day'
+        : planned.substring(planned.length - 5);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.panel2,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 10, color: AppColors.muted),
+      ),
     );
   }
 }

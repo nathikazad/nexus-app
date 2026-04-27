@@ -37,6 +37,10 @@ class DesktopProjectCreating extends DesktopTaskDrawerState {
   const DesktopProjectCreating();
 }
 
+class DesktopSprintCreating extends DesktopTaskDrawerState {
+  const DesktopSprintCreating();
+}
+
 class DesktopTaskDrawer extends Notifier<DesktopTaskDrawerState> {
   @override
   DesktopTaskDrawerState build() => const DesktopTaskDrawerClosed();
@@ -49,7 +53,11 @@ class DesktopTaskDrawer extends Notifier<DesktopTaskDrawerState> {
     state = DesktopTaskEditing(task);
   }
 
-  void newTask({int? defaultProject, int? defaultSub, TaskBucket? defaultBucket}) {
+  void newTask({
+    int? defaultProject,
+    int? defaultSub,
+    TaskBucket? defaultBucket,
+  }) {
     state = DesktopTaskCreating(
       defaultProject: defaultProject,
       defaultSub: defaultSub,
@@ -61,6 +69,10 @@ class DesktopTaskDrawer extends Notifier<DesktopTaskDrawerState> {
     state = const DesktopProjectCreating();
   }
 
+  void newSprint() {
+    state = const DesktopSprintCreating();
+  }
+
   void close() {
     state = const DesktopTaskDrawerClosed();
   }
@@ -68,6 +80,6 @@ class DesktopTaskDrawer extends Notifier<DesktopTaskDrawerState> {
 
 final desktopTaskDrawerProvider =
     NotifierProvider<DesktopTaskDrawer, DesktopTaskDrawerState>(
-  DesktopTaskDrawer.new,
-  name: 'desktopTaskDrawerProvider',
-);
+      DesktopTaskDrawer.new,
+      name: 'desktopTaskDrawerProvider',
+    );
