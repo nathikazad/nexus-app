@@ -29,16 +29,16 @@ class BuyPage extends ConsumerWidget {
   }
 }
 
-class _BuyListBody extends StatefulWidget {
+class _BuyListBody extends ConsumerStatefulWidget {
   const _BuyListBody({required this.snap});
 
   final ShoppingListSnapshot snap;
 
   @override
-  State<_BuyListBody> createState() => _BuyListBodyState();
+  ConsumerState<_BuyListBody> createState() => _BuyListBodyState();
 }
 
-class _BuyListBodyState extends State<_BuyListBody> {
+class _BuyListBodyState extends ConsumerState<_BuyListBody> {
   List<List<bool>>? _checked;
 
   static List<List<bool>> _fromSnapshot(ShoppingListSnapshot snap) {
@@ -52,7 +52,9 @@ class _BuyListBodyState extends State<_BuyListBody> {
     for (final g in snap.groups) {
       b.write(g.header);
       for (final i in g.items) {
-        b.write('|${i.name}|${i.amount}|${i.initialChecked}');
+        b.write(
+          '|${i.name}|${i.amount}|${i.groupName ?? ''}|${i.preparation ?? ''}|${i.initialChecked}',
+        );
       }
       b.write(';');
     }
@@ -70,6 +72,51 @@ class _BuyListBodyState extends State<_BuyListBody> {
     super.didUpdateWidget(oldWidget);
     if (_signature(oldWidget.snap) != _signature(widget.snap)) {
       _checked = _fromSnapshot(widget.snap);
+    }
+  }
+
+  Future<void> _onToggleGroupItem(int g, int i, bool v) async {
+    final snap = widget.snap;
+    final group = snap.groups[g];
+    if (group.taskRelationId == 0) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update (missing link).')),
+      );
+      return;
+    }
+    final prev = _checked![g][i];
+    setState(() {
+      _checked![g][i] = v;
+    });
+    final m = <String, bool>{};
+    for (var j = 0; j < group.items.length; j++) {
+      m['${group.items[j].itemId}'] = _checked![g][j];
+    }
+    try {
+      await ref.read(cookingPlanRepositoryProvider).updateIngredientChecks(
+        group.taskId,
+        group.taskRelationId,
+        m,
+      );
+      if (!context.mounted) {
+        return;
+      }
+      ref.invalidate(weekSectionsProvider);
+      ref.invalidate(shoppingSnapshotProvider);
+      ref.invalidate(cookingTaskDetailProvider(group.taskId));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _checked![g][i] = prev;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
     }
   }
 
@@ -149,11 +196,7 @@ class _BuyListBodyState extends State<_BuyListBody> {
           _ShoppingGroupBox(
             group: snap.groups[g],
             checked: _checked![g],
-            onToggle: (i, v) {
-              setState(() {
-                _checked![g][i] = v;
-              });
-            },
+            onToggle: (i, v) => _onToggleGroupItem(g, i, v),
           ),
         ],
       ],
@@ -270,14 +313,53 @@ class _ItemRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  item.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: checked ? AppColors.zinc400 : AppColors.zinc900,
-                    decoration: checked ? TextDecoration.lineThrough : null,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (item.groupName != null &&
+                        item.groupName!.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          item.groupName!.trim(),
+                          style: TextStyle(
+                            fontSize: 10.4,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4,
+                            color: checked
+                                ? AppColors.zinc400
+                                : AppColors.zinc500,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      item.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: checked
+                            ? AppColors.zinc400
+                            : AppColors.zinc900,
+                        decoration: checked
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    if (item.preparation != null &&
+                        item.preparation!.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          item.preparation!.trim(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: checked
+                                ? AppColors.zinc400
+                                : AppColors.zinc500,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Text(

@@ -8,3 +8,4 @@ const String kSprintAttrStartDate = 'start_date';
 const String kSprintAttrEndDate = 'end_date';
 const String kSprintAttrGoal = 'goal';
 const String kSprintAttrStatus = 'status';
+const String kSprintAttrAllocatedHours = 'allocated_hours';

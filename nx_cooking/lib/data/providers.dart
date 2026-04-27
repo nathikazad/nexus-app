@@ -10,6 +10,7 @@ import 'package:nx_cooking/data/recipe/kgql_recipe_repository.dart';
 import 'package:nx_cooking/data/recipe/recipe_schema_provider.dart';
 import 'package:nx_cooking/domain/cooking_plan_repository.dart';
 import 'package:nx_cooking/domain/cooking_repository.dart';
+import 'package:nx_cooking/domain/cooking_task_detail.dart';
 import 'package:nx_cooking/domain/recipe.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
 import 'package:nx_cooking/domain/recipe_repository.dart';
@@ -92,6 +93,15 @@ final recipeDetailProvider = FutureProvider.family<RecipeDetail?, int>((
     'preset=${user.preset.key} recipe=$id',
   );
   return ref.watch(recipeRepositoryProvider).fetchRecipeDetail(id);
+});
+
+/// One planned [CookingTask] for [CookingTaskViewPage] (by task id).
+final cookingTaskDetailProvider = FutureProvider.family<CookingTaskDetail?, int>((
+  ref,
+  taskId,
+) async {
+  await ref.watch(authenticatedUserProvider.future);
+  return ref.watch(cookingPlanRepositoryProvider).fetchTaskDetail(taskId);
 });
 
 /// Week tab: seven day rows from `CookingTask` in PGDB.

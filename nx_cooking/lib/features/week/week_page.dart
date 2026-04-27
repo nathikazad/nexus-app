@@ -26,16 +26,54 @@ class WeekPage extends ConsumerWidget {
           ),
         ),
       ),
-      data: (days) => ListView.builder(
-        padding: const EdgeInsets.fromLTRB(
-          CookingLayout.screenPadding,
-          20,
-          CookingLayout.screenPadding,
-          CookingLayout.bottomNavExtra + 88,
-        ),
-        itemCount: days.length,
-        itemBuilder: (context, i) => _DayBlock(section: days[i]),
-      ),
+      data: (days) {
+        final withMeals =
+            days.where((d) => d.meal != null).toList(growable: false);
+        final bottomPad = CookingLayout.bottomNavExtra + 88;
+        if (withMeals.isEmpty) {
+          return ListView(
+            padding: EdgeInsets.fromLTRB(
+              CookingLayout.screenPadding,
+              40,
+              CookingLayout.screenPadding,
+              bottomPad,
+            ),
+            children: const [
+              Icon(
+                SolarLinearIcons.calendar,
+                size: 40,
+                color: AppColors.zinc300,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Nothing planned this week',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.zinc600,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Plan a recipe from the Recipes tab or pick a different week.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: AppColors.zinc500),
+              ),
+            ],
+          );
+        }
+        return ListView.builder(
+          padding: EdgeInsets.fromLTRB(
+            CookingLayout.screenPadding,
+            20,
+            CookingLayout.screenPadding,
+            bottomPad,
+          ),
+          itemCount: withMeals.length,
+          itemBuilder: (context, i) => _DayBlock(section: withMeals[i]),
+        );
+      },
     );
   }
 }
@@ -109,7 +147,7 @@ class _MealCardTile extends StatelessWidget {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: () => context.push('/recipe/${meal.recipeId}'),
+        onTap: () => context.push('/task/${meal.taskId}'),
         borderRadius: BorderRadius.circular(14),
         child: Ink(
           decoration: _cardDecoration(),

@@ -60,8 +60,6 @@ class _RecipeViewBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final paddingBottom = MediaQuery.paddingOf(context).bottom;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -151,7 +149,6 @@ class _RecipeViewBody extends ConsumerWidget {
             context,
           ).showSnackBar(const SnackBar(content: Text('Cook (coming soon)')));
         },
-        paddingBottom: paddingBottom,
       ),
     );
   }
@@ -361,16 +358,49 @@ class _ReadOnlyIngredients extends StatelessWidget {
                     vertical: 16,
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
-                          ingredients[i].name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.zinc900,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (ingredients[i].groupName != null &&
+                                ingredients[i].groupName!.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  ingredients[i].groupName!.trim(),
+                                  style: const TextStyle(
+                                    fontSize: 10.4,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.4,
+                                    color: AppColors.zinc500,
+                                  ),
+                                ),
+                              ),
+                            Text(
+                              ingredients[i].name,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.zinc900,
+                              ),
+                            ),
+                            if (ingredients[i].preparation != null &&
+                                ingredients[i].preparation!.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  ingredients[i].preparation!.trim(),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.zinc500,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -487,61 +517,61 @@ class _FooterActions extends StatelessWidget {
   const _FooterActions({
     required this.onPlan,
     required this.onCook,
-    required this.paddingBottom,
   });
 
   final Future<void> Function() onPlan;
   final VoidCallback onCook;
-  final double paddingBottom;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white.withValues(alpha: 0.95),
       elevation: 8,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(18, 12, 18, 22 + paddingBottom),
+      child: DecoratedBox(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.orange100)),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => onPlan(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.zinc700,
-                  side: const BorderSide(color: AppColors.zinc200),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: const Icon(SolarLinearIcons.calendarAdd, size: 16),
-                label: const Text(
-                  'Plan',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: FilledButton.icon(
-                onPressed: onCook,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.orange500,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: const Icon(
-                  SolarLinearIcons.chefHatMinimalistic,
-                  size: 16,
-                ),
-                label: const Text(
-                  'Cook',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => onPlan(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.zinc700,
+                    side: const BorderSide(color: AppColors.zinc200),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(SolarLinearIcons.calendarAdd, size: 16),
+                  label: const Text(
+                    'Plan',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onCook,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange500,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(
+                    SolarLinearIcons.chefHatMinimalistic,
+                    size: 16,
+                  ),
+                  label: const Text(
+                    'Cook',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

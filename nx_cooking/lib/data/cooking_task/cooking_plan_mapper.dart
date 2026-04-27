@@ -1,31 +1,96 @@
+import 'dart:convert';
+
 import 'package:intl/intl.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_cooking/core/dates/week_calendar.dart';
 import 'package:nx_cooking/data/cooking_task/cooking_task_attr_keys.dart';
+import 'package:nx_cooking/data/recipe/ingredient_from_relation.dart';
+import 'package:nx_cooking/data/recipe/instruction_lines.dart';
 import 'package:nx_cooking/data/recipe/recipe_attr_keys.dart';
+import 'package:nx_cooking/domain/cooking_task_detail.dart';
 import 'package:nx_cooking/domain/meal_status.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:nx_cooking/domain/week_section.dart';
 
-String _ingredientAmountFromDescription(String? description) {
-  if (description == null) {
-    return '';
+/// `for_recipe` edge to the recipe (for relation id + `ingredient_checks` JSON).
+Relation? _forRecipeRelationFromTask(Model task) {
+  final list = task.relationsList;
+  if (list == null) {
+    return null;
   }
-  final t = description.trim();
-  if (t.isEmpty) {
-    return '';
+  for (final r in list) {
+    if (r.modelType == kRecipeModelTypeName) {
+      return r;
+    }
   }
-  final idx = t.indexOf(' · ');
-  if (idx == -1) {
-    return t;
-  }
-  return t.substring(0, idx).trim();
+  return null;
 }
 
-/// Per-item buy state when backend exposes `ingredient_checks` on relations.
 Map<String, bool>? _ingredientChecksFromTask(Model task) {
-  // KGQL read path does not yet surface relation attributes on `relationsList`.
+  final rel = _forRecipeRelationFromTask(task);
+  final raw = rel?.relationAttributes?[kForRecipeRelationAttrIngredientChecks];
+  if (raw == null) {
+    return null;
+  }
+  final checks = _checksMapFromRaw(raw);
+  if (checks == null) {
+    return null;
+  }
+  final out = <String, bool>{};
+  for (final e in checks.entries) {
+    final k = e.key.toString();
+    final v = e.value;
+    if (v is bool) {
+      out[k] = v;
+    } else if (v is num) {
+      out[k] = v != 0;
+    } else {
+      final s = v.toString().toLowerCase();
+      if (s == 'true') {
+        out[k] = true;
+      } else if (s == 'false') {
+        out[k] = false;
+      }
+    }
+  }
+  return out.isEmpty ? <String, bool>{} : out;
+}
+
+Map<dynamic, dynamic>? _checksMapFromRaw(dynamic raw) {
+  if (raw is Map) {
+    return raw;
+  }
+  if (raw is String) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return const {};
+    }
+    final decoded = jsonDecode(trimmed);
+    if (decoded is Map) {
+      return decoded;
+    }
+  }
   return null;
+}
+
+int? _intAttr(Model m, String key) {
+  final d = m.attrDouble(key);
+  if (d == null) {
+    return null;
+  }
+  return d.round();
+}
+
+List<String> _tagListFromModel(Model m) {
+  final tags = m.tags;
+  if (tags == null || tags.isEmpty) {
+    return const [];
+  }
+  final out = <String>[];
+  for (final e in tags.entries) {
+    out.addAll(e.value);
+  }
+  return out;
 }
 
 (int checked, int total) _checkCounts(
@@ -76,6 +141,7 @@ WeekMealCard? weekMealCardFromTask(Model task) {
   };
 
   return WeekMealCard(
+    taskId: task.id,
     recipeId: recipe.id,
     title: recipe.name,
     kind: kind,
@@ -173,21 +239,37 @@ ShoppingListSnapshot buildShoppingSnapshot({
     if (items.isEmpty) {
       continue;
     }
+    final recipeRelList = recipe.relationsList ?? const <Relation>[];
     final checks = _ingredientChecksFromTask(t);
+    final forRecipe = _forRecipeRelationFromTask(t);
+    final taskRelId = forRecipe?.relationId ?? 0;
     final header = '${DateFormat('EEE d').format(day)} · ${recipe.name}';
     final shopItems = <ShoppingItem>[];
     for (final it in items) {
       final idStr = '${it.id}';
       final initial = checks != null && checks[idStr] == true;
+      final edge = relationForItemModel(recipeRelList, it.id);
       shopItems.add(
         ShoppingItem(
+          taskId: t.id,
+          taskRelationId: taskRelId,
+          itemId: it.id,
           name: it.name,
-          amount: _ingredientAmountFromDescription(it.description),
+          amount: ingredientAmountDisplay(edge, it.description),
           initialChecked: initial,
+          groupName: ingredientGroupName(edge),
+          preparation: ingredientPreparation(edge),
         ),
       );
     }
-    groups.add(ShoppingMealGroup(header: header, items: shopItems));
+    groups.add(
+      ShoppingMealGroup(
+        header: header,
+        taskId: t.id,
+        taskRelationId: taskRelId,
+        items: shopItems,
+      ),
+    );
   }
 
   var purchased = 0;
@@ -205,5 +287,53 @@ ShoppingListSnapshot buildShoppingSnapshot({
     purchasedCount: purchased,
     totalCount: total,
     groups: groups,
+  );
+}
+
+/// Full task + recipe for [CookingTaskViewPage]. Returns null if task has no recipe link.
+CookingTaskDetail? cookingTaskDetailFromModel(Model task) {
+  final recipe = task.relations?[kRecipeModelTypeName]?.firstOrNull;
+  final forRecipe = _forRecipeRelationFromTask(task);
+  if (recipe == null || forRecipe == null) {
+    return null;
+  }
+  final planned = task.attrDateTime(kTaskAttrDate);
+  if (planned == null) {
+    return null;
+  }
+  final status = task.attrString(kCookingTaskAttrStatus) ?? 'planned';
+  final checks = _ingredientChecksFromTask(task) ?? <String, bool>{};
+  final itemModels = recipe.relations?[kItemModelTypeName] ?? const <Model>[];
+  final relList = recipe.relationsList ?? const <Relation>[];
+  final ingredients = <TaskIngredient>[];
+  for (final it in itemModels) {
+    final idStr = '${it.id}';
+    final edge = relationForItemModel(relList, it.id);
+    ingredients.add(
+      TaskIngredient(
+        itemId: it.id,
+        name: it.name,
+        amount: ingredientAmountDisplay(edge, it.description),
+        checked: checks[idStr] == true,
+        groupName: ingredientGroupName(edge),
+        preparation: ingredientPreparation(edge),
+      ),
+    );
+  }
+  return CookingTaskDetail(
+    taskId: task.id,
+    taskRelationId: forRecipe.relationId,
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+    plannedDate: planned,
+    status: status,
+    tags: _tagListFromModel(recipe),
+    prepTimeMinutes: _intAttr(recipe, kRecipeAttrPrepTime),
+    servings: _intAttr(recipe, kRecipeAttrServings),
+    notes: task.attrString(kCookingTaskAttrNotes),
+    ingredients: ingredients,
+    instructionLines: instructionLinesFromRaw(
+      recipe.attrString(kRecipeAttrInstructions),
+    ),
   );
 }

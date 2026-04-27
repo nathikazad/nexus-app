@@ -1,11 +1,15 @@
 import 'package:nx_db/kgql.dart';
+import 'package:nx_cooking/data/recipe/ingredient_from_relation.dart';
+import 'package:nx_cooking/data/recipe/instruction_lines.dart';
 import 'package:nx_cooking/data/recipe/recipe_attr_keys.dart';
 import 'package:nx_cooking/domain/recipe.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
 
 List<String> _tagListFromModel(Model m) {
   final tags = m.tags;
-  if (tags == null || tags.isEmpty) return const [];
+  if (tags == null || tags.isEmpty) {
+    return const [];
+  }
   final out = <String>[];
   for (final e in tags.entries) {
     out.addAll(e.value);
@@ -15,7 +19,9 @@ List<String> _tagListFromModel(Model m) {
 
 int? _intAttr(Model m, String key) {
   final d = m.attrDouble(key);
-  if (d == null) return null;
+  if (d == null) {
+    return null;
+  }
   return d.round();
 }
 
@@ -38,13 +44,7 @@ RecipeSummary recipeSummaryFromModel(Model m) {
 }
 
 List<String> _instructionLinesFromModel(Model m) {
-  final raw = m.attrString(kRecipeAttrInstructions);
-  if (raw == null || raw.trim().isEmpty) return const [];
-  return raw
-      .split('\n')
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toList();
+  return instructionLinesFromRaw(m.attrString(kRecipeAttrInstructions));
 }
 
 RecipeDetail recipeDetailFromModel(Model m) {
@@ -53,14 +53,15 @@ RecipeDetail recipeDetailFromModel(Model m) {
 
   final lines = <IngredientLine>[];
   for (final item in items) {
-    final rel = _relationForItem(relList, item.id);
-    final amount = _ingredientAmountDisplay(item.description);
+    final rel = relationForItemModel(relList, item.id);
     lines.add(
       IngredientLine(
         name: item.name,
-        amount: amount,
+        amount: ingredientAmountDisplay(rel, item.description),
         relationId: rel?.relationId,
         itemId: item.id,
+        groupName: ingredientGroupName(rel),
+        preparation: ingredientPreparation(rel),
       ),
     );
   }
@@ -72,6 +73,7 @@ RecipeDetail recipeDetailFromModel(Model m) {
     prepTimeMinutes: _intAttr(m, kRecipeAttrPrepTime),
     servings: _intAttr(m, kRecipeAttrServings),
     notes: _recipeUserNotes(m.description),
+    crawlerPayload: crawlerPayloadFromModelAttributes(m.attributes),
     ingredients: lines,
     instructionLines: _instructionLinesFromModel(m),
   );
@@ -79,31 +81,17 @@ RecipeDetail recipeDetailFromModel(Model m) {
 
 /// Item.description may be `"{amount} · {seed label}"` from demo seed; prefer left side.
 String? _recipeUserNotes(String? description) {
-  if (description == null) return null;
+  if (description == null) {
+    return null;
+  }
   final t = description.trim();
-  if (t.isEmpty) return null;
+  if (t.isEmpty) {
+    return null;
+  }
   if (t.contains('nx_cooking demo seed')) {
     return null;
   }
   return t;
-}
-
-String _ingredientAmountDisplay(String? description) {
-  if (description == null) return '';
-  final t = description.trim();
-  if (t.isEmpty) return '';
-  final idx = t.indexOf(' · ');
-  if (idx == -1) return t;
-  return t.substring(0, idx).trim();
-}
-
-Relation? _relationForItem(List<Relation> relList, int itemId) {
-  for (final r in relList) {
-    if (r.modelId == itemId && r.modelType == kItemModelTypeName) {
-      return r;
-    }
-  }
-  return null;
 }
 
 List<SetModelAttribute> _recipeAttributes(RecipeFormData form) {
@@ -122,12 +110,32 @@ List<SetModelAttribute> _recipeAttributes(RecipeFormData form) {
   ];
 }
 
+List<RelationAttribute> _hasIngredientRelationAttributes(
+  RecipeIngredientFormLine line,
+  String displayAmount,
+) {
+  return [
+    RelationAttribute(
+      key: kHasIngredientRelationAttrQuantity,
+      value: displayAmount.isEmpty ? ' ' : displayAmount,
+    ),
+    RelationAttribute(
+      key: kHasIngredientRelationAttrGroupName,
+      value: line.groupName.trim(),
+    ),
+    RelationAttribute(
+      key: kHasIngredientRelationAttrNotes,
+      value: line.preparation.trim(),
+    ),
+  ];
+}
+
 List<ModelRelation> _ingredientRelationsForCreate(RecipeFormData form) {
   final out = <ModelRelation>[];
   for (final line in form.ingredients) {
-    if (line.name.trim().isEmpty) continue;
-    final qty = double.tryParse(line.quantityText.trim()) ?? 0;
-    final unit = line.unit.trim();
+    if (line.name.trim().isEmpty) {
+      continue;
+    }
     final displayAmount = [
       line.quantityText.trim(),
       line.unit.trim(),
@@ -138,16 +146,7 @@ List<ModelRelation> _ingredientRelationsForCreate(RecipeFormData form) {
         create: [
           {'name': line.name.trim(), 'description': displayAmount},
         ],
-        attributes: [
-          RelationAttribute(
-            key: kHasIngredientRelationAttrQuantity,
-            value: qty,
-          ),
-          RelationAttribute(
-            key: kHasIngredientRelationAttrUnit,
-            value: unit.isEmpty ? ' ' : unit,
-          ),
-        ],
+        attributes: _hasIngredientRelationAttributes(line, displayAmount),
       ),
     );
   }

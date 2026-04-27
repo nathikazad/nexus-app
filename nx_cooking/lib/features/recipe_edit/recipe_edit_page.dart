@@ -93,6 +93,8 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
               name: e.name,
               quantityText: e.quantityText,
               unit: e.unit,
+              groupName: e.groupName,
+              preparation: e.preparation,
             ),
           )
           .toList(),
@@ -338,49 +340,77 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
           const SizedBox(height: 6),
           ...List.generate(_form.ingredients.length, (i) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      initialValue: _form.ingredients[i].name,
-                      onChanged: (v) => _form.ingredients[i].name = v,
-                      decoration: _inputDecoration('Ingredient'),
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          initialValue: _form.ingredients[i].name,
+                          onChanged: (v) => _form.ingredients[i].name = v,
+                          decoration: _inputDecoration('Ingredient'),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 56,
+                        child: TextFormField(
+                          initialValue: _form.ingredients[i].quantityText,
+                          onChanged: (v) =>
+                              _form.ingredients[i].quantityText = v,
+                          decoration: _inputDecoration('Qty'),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 52,
+                        child: TextFormField(
+                          initialValue: _form.ingredients[i].unit,
+                          onChanged: (v) => _form.ingredients[i].unit = v,
+                          decoration: _inputDecoration('Unit'),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          SolarLinearIcons.closeCircle,
+                          size: 20,
+                          color: AppColors.zinc300,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (_form.ingredients.length > 1) {
+                              _form.ingredients.removeAt(i);
+                            }
+                          });
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 56,
-                    child: TextFormField(
-                      initialValue: _form.ingredients[i].quantityText,
-                      onChanged: (v) => _form.ingredients[i].quantityText = v,
-                      decoration: _inputDecoration('Qty'),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 52,
-                    child: TextFormField(
-                      initialValue: _form.ingredients[i].unit,
-                      onChanged: (v) => _form.ingredients[i].unit = v,
-                      decoration: _inputDecoration('Unit'),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      SolarLinearIcons.closeCircle,
-                      size: 20,
-                      color: AppColors.zinc300,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        if (_form.ingredients.length > 1) {
-                          _form.ingredients.removeAt(i);
-                        }
-                      });
-                    },
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: _form.ingredients[i].groupName,
+                          onChanged: (v) =>
+                              _form.ingredients[i].groupName = v,
+                          decoration: _inputDecoration('Group (optional)'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: _form.ingredients[i].preparation,
+                          onChanged: (v) =>
+                              _form.ingredients[i].preparation = v,
+                          decoration: _inputDecoration('Prep note (optional)'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -394,6 +424,8 @@ class _RecipeFormPageState extends ConsumerState<RecipeFormPage> {
                     name: '',
                     quantityText: '',
                     unit: '',
+                    groupName: '',
+                    preparation: '',
                   ),
                 );
               });

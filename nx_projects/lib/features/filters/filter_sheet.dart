@@ -4,6 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 
+bool _isMobileStatusOpenSet(Set<String> s) {
+  return s.length == 3 &&
+      s.contains('todo') &&
+      s.contains('doing') &&
+      s.contains('blocked');
+}
+
+bool _isMobileStatusDoneSet(Set<String> s) {
+  return s.length == 1 && s.contains('done');
+}
+
 Future<void> showFilterSheet(BuildContext context, WidgetRef ref) {
   return showModalBottomSheet<void>(
     context: context,
@@ -30,20 +41,23 @@ Future<void> showFilterSheet(BuildContext context, WidgetRef ref) {
                     ),
                   ),
                   _h('KIND'),
-                  _tile(ctx, r, 'kind', 'all', 'All kinds'),
-                  _tile(ctx, r, 'kind', 'feat', 'Features only'),
-                  _tile(ctx, r, 'kind', 'bug', 'Bugs only'),
+                  _tileKind(ctx, r, 'all', 'All kinds'),
+                  _tileKind(ctx, r, 'feat', 'Features only'),
+                  _tileKind(ctx, r, 'bug', 'Bugs only'),
                   const Divider(color: AppColors.border),
                   _h('STATUS'),
-                  _tile(ctx, r, 'status', 'all', 'All'),
-                  _tile(ctx, r, 'status', 'open', 'Open (not done)'),
-                  _tile(ctx, r, 'status', 'done', 'Done'),
+                  _tileStatus(ctx, r, 'all', 'All'),
+                  _tileStatus(ctx, r, 'open', 'Open (not done)'),
+                  _tileStatus(ctx, r, 'done', 'Done'),
                   const Divider(color: AppColors.border),
                   ListTile(
-                    title: const Text('Reset filters', style: TextStyle(color: AppColors.accent)),
+                    title: const Text(
+                      'Reset filters',
+                      style: TextStyle(color: AppColors.accent),
+                    ),
                     onTap: () {
-                      r.read(filterKindProvider.notifier).set('all');
-                      r.read(filterStatusProvider.notifier).set('all');
+                      r.read(filterKindSetProvider.notifier).clear();
+                      r.read(filterStatusSetProvider.notifier).clear();
                       Navigator.of(ctx).pop();
                     },
                   ),
@@ -74,24 +88,47 @@ Widget _h(String t) {
   );
 }
 
-Widget _tile(
+Widget _tileKind(
   BuildContext context,
   WidgetRef ref,
-  String field,
   String value,
   String label,
 ) {
-  final cur = field == 'kind' ? ref.watch(filterKindProvider) : ref.watch(filterStatusProvider);
-  final selected = cur == value;
+  final cur = ref.watch(filterKindSetProvider);
+  final selected = switch (value) {
+    'all' => cur.isEmpty,
+    'feat' => cur.length == 1 && cur.contains('feat'),
+    'bug' => cur.length == 1 && cur.contains('bug'),
+    _ => false,
+  };
   return ListTile(
     title: Text(label),
     trailing: selected ? const Icon(Icons.check, color: AppColors.accent) : null,
     onTap: () {
-      if (field == 'kind') {
-        ref.read(filterKindProvider.notifier).set(value);
-      } else {
-        ref.read(filterStatusProvider.notifier).set(value);
-      }
+      ref.read(filterKindSetProvider.notifier).setMobileKind(value);
+      Navigator.of(context).pop();
+    },
+  );
+}
+
+Widget _tileStatus(
+  BuildContext context,
+  WidgetRef ref,
+  String value,
+  String label,
+) {
+  final cur = ref.watch(filterStatusSetProvider);
+  final selected = switch (value) {
+    'all' => cur.isEmpty,
+    'open' => _isMobileStatusOpenSet(cur),
+    'done' => _isMobileStatusDoneSet(cur),
+    _ => false,
+  };
+  return ListTile(
+    title: Text(label),
+    trailing: selected ? const Icon(Icons.check, color: AppColors.accent) : null,
+    onTap: () {
+      ref.read(filterStatusSetProvider.notifier).setMobileStatus(value);
       Navigator.of(context).pop();
     },
   );

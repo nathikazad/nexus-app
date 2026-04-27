@@ -27,7 +27,7 @@ class DesktopBucketPill extends StatelessWidget {
       );
     }
     return Text(
-      b.name,
+      b.name.toUpperCase(),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(

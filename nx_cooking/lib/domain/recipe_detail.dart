@@ -5,6 +5,8 @@ final class IngredientLine {
     this.initialChecked = false,
     this.relationId,
     this.itemId,
+    this.groupName,
+    this.preparation,
   });
 
   final String name;
@@ -14,6 +16,12 @@ final class IngredientLine {
   /// Present when loaded from KGQL (for edit round-trip).
   final int? relationId;
   final int? itemId;
+
+  /// `has_ingredient.group_name` (e.g. ingredient section from crawler).
+  final String? groupName;
+
+  /// `has_ingredient.preparation` (e.g. "diced", "optional").
+  final String? preparation;
 }
 
 /// Full recipe view (read-only detail + mapping from KGQL).
@@ -28,6 +36,7 @@ final class RecipeDetail {
     this.lastCookedLabel,
     this.headerLine,
     this.statusChip,
+    this.crawlerPayload,
     required this.ingredients,
     required this.instructionLines,
   });
@@ -41,6 +50,10 @@ final class RecipeDetail {
   final String? lastCookedLabel;
   final String? headerLine;
   final String? statusChip;
+
+  /// Raw crawler `RecipeExtraction` JSON when present (`Recipe.crawler_payload`).
+  final Map<String, dynamic>? crawlerPayload;
+
   final List<IngredientLine> ingredients;
   final List<String> instructionLines;
 }
@@ -53,6 +66,8 @@ final class RecipeIngredientFormLine {
     required this.name,
     required this.quantityText,
     required this.unit,
+    this.groupName = '',
+    this.preparation = '',
   });
 
   int? relationId;
@@ -60,6 +75,12 @@ final class RecipeIngredientFormLine {
   String name;
   String quantityText;
   String unit;
+
+  /// Maps to `has_ingredient.group_name`.
+  String groupName;
+
+  /// Maps to `has_ingredient.notes` (prep / descriptors).
+  String preparation;
 }
 
 /// Form state for create and update.
@@ -111,6 +132,8 @@ final class RecipeFormData {
           name: e.name,
           quantityText: parts.$1,
           unit: parts.$2,
+          groupName: e.groupName ?? '',
+          preparation: e.preparation ?? '',
         );
       }).toList(),
       instructionSteps: d.instructionLines.isEmpty
@@ -123,9 +146,13 @@ final class RecipeFormData {
 /// Best-effort split of a single display string into quantity + unit.
 (String, String) _splitAmount(String amount) {
   final t = amount.trim();
-  if (t.isEmpty) return ('', '');
+  if (t.isEmpty) {
+    return ('', '');
+  }
   final space = RegExp(r'\s+');
   final parts = t.split(space);
-  if (parts.length == 1) return (parts[0], '');
+  if (parts.length == 1) {
+    return (parts[0], '');
+  }
   return (parts.first, parts.sublist(1).join(' '));
 }

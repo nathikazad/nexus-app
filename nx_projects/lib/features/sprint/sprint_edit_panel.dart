@@ -22,6 +22,7 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
   late final TextEditingController _name;
   late final TextEditingController _start;
   late final TextEditingController _length;
+  late final TextEditingController _capacity;
   late final TextEditingController _goal;
   SprintState _state = SprintState.planned;
   bool _saving = false;
@@ -40,6 +41,10 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
     _name = TextEditingController(text: _defaultName(start));
     _start = TextEditingController(text: formatYmd(start));
     _length = TextEditingController(text: (current?.length ?? 7).toString());
+    final defaultCapacity = current != null && current.capH > 0
+        ? current.capH
+        : 40.0;
+    _capacity = TextEditingController(text: _formatHours(defaultCapacity));
     _goal = TextEditingController();
   }
 
@@ -48,6 +53,7 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
     _name.dispose();
     _start.dispose();
     _length.dispose();
+    _capacity.dispose();
     _goal.dispose();
     super.dispose();
   }
@@ -55,6 +61,7 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
   Future<void> _save() async {
     if (_saving || !(_formKey.currentState?.validate() ?? false)) return;
     final length = int.parse(_length.text.trim());
+    final capacity = double.parse(_capacity.text.trim());
     setState(() => _saving = true);
     try {
       final created = await ref
@@ -67,7 +74,7 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
               badge: _state.name,
               start: _start.text.trim(),
               length: length,
-              capH: 0,
+              capH: capacity,
               state: _state,
               goal: _goal.text.trim(),
             ),
@@ -117,6 +124,20 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
                   validator: (v) {
                     final n = int.tryParse(v?.trim() ?? '');
                     if (n == null || n < 1) return 'Enter at least 1 day';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                _field(
+                  controller: _capacity,
+                  label: 'Allocated hours',
+                  hint: '40',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (v) {
+                    final n = double.tryParse(v?.trim() ?? '');
+                    if (n == null || n < 0) return 'Enter 0 or more hours';
                     return null;
                   },
                 ),
@@ -173,6 +194,10 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
 
   String _defaultName(DateTime start) {
     return 'Sprint ${formatYmd(start).substring(5)}';
+  }
+
+  String _formatHours(double v) {
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   }
 
   String? _validateYmd(String? v) {

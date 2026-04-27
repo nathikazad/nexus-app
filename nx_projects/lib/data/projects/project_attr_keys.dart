@@ -3,6 +3,8 @@ library;
 
 const String kProjectModelTypeName = 'Project';
 
+const String kProjectAttrColor = 'color';
+
 /// `RelationshipType.relation_name` for parent project to subproject.
 const String kProjectRelationName = 'has_subproject';
 

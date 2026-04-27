@@ -141,8 +141,9 @@ class _MobileShellState extends ConsumerState<MobileShell> {
 
     final showSearchRow = tab == 0 || tab == 1;
     final showFilter = tab == 0 && ref.watch(selectedProjectIdProvider) == null;
-    final hasActiveFilter = ref.watch(filterKindProvider) != 'all' ||
-        ref.watch(filterStatusProvider) != 'all';
+    final hasActiveFilter = ref.watch(filterKindSetProvider).isNotEmpty ||
+        ref.watch(filterStatusSetProvider).isNotEmpty ||
+        ref.watch(filterProjectIdsProvider).isNotEmpty;
     final showBack = _showBack(ref, tab);
     final title = _title(ref, tab, projects);
 

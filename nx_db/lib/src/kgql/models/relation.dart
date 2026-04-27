@@ -12,6 +12,9 @@ class Relation {
   /// or `'child'` relative to the fetched model. Null for cross-type relations.
   final String? relation;
 
+  /// Flat key → value from `relation_attributes` on the `relations` struct node.
+  final Map<String, dynamic>? relationAttributes;
+
   Relation({
     required this.relationId,
     required this.modelId,
@@ -19,6 +22,7 @@ class Relation {
     this.name,
     this.description,
     this.relation,
+    this.relationAttributes,
   });
 
   factory Relation.fromJson(Map<String, dynamic> json) {
@@ -29,7 +33,33 @@ class Relation {
       name: parseOptionalStringField(json['name']),
       description: parseOptionalStringField(json['description']),
       relation: parseOptionalStringField(json['relation']),
+      relationAttributes: _parseRelationAttributes(json),
     );
+  }
+
+  static Map<String, dynamic>? _parseRelationAttributes(Map<String, dynamic> json) {
+    final raw = json['relation_attributes'] ?? json['relationAttributes'];
+    if (raw == null) {
+      return null;
+    }
+    if (raw is! List) {
+      return null;
+    }
+    final out = <String, dynamic>{};
+    for (final e in raw) {
+      if (e is! Map) {
+        continue;
+      }
+      final m = Map<String, dynamic>.from(e);
+      final key = m['key']?.toString();
+      if (key == null || key.isEmpty) {
+        continue;
+      }
+      if (m.containsKey('value')) {
+        out[key] = m['value'];
+      }
+    }
+    return out.isEmpty ? null : out;
   }
 
   Map<String, dynamic> toJson() {
@@ -40,6 +70,7 @@ class Relation {
       'name': name,
       'description': description,
       if (relation != null) 'relation': relation,
+      if (relationAttributes != null) 'relation_attributes': relationAttributes,
     };
   }
 }

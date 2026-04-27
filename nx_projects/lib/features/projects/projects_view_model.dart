@@ -3,24 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/task/task.dart';
-import 'package:nx_projects/domain/task/task_kind.dart';
-import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 
 class ProjectListRow {
-  const ProjectListRow({required this.project, required this.taskCount, required this.hours});
+  const ProjectListRow({
+    required this.project,
+    required this.taskCount,
+    required this.hours,
+  });
 
   final Project project;
   final int taskCount;
   final double hours;
 }
 
-bool _passesFilters(Task t, String kind, String status) {
-  if (kind == 'feat' && t.kind != TaskKind.feat) return false;
-  if (kind == 'bug' && t.kind != TaskKind.bug) return false;
-  if (status == 'open' && t.status == TaskStatus.done) return false;
-  if (status == 'done' && t.status != TaskStatus.done) return false;
-  return true;
+bool _passesKindFilter(Task t, Set<String> kinds) {
+  if (kinds.isEmpty) return true;
+  return kinds.contains(t.kind.name);
+}
+
+bool _passesStatusFilter(Task t, Set<String> statuses) {
+  if (statuses.isEmpty) return true;
+  return statuses.contains(t.status.name);
+}
+
+bool _passesProjectFilter(Task t, Set<int> selectedProjects) {
+  if (selectedProjects.isEmpty) return true;
+  return (t.projectId != null && selectedProjects.contains(t.projectId)) ||
+      (t.subProjectId != null && selectedProjects.contains(t.subProjectId));
 }
 
 bool _matchQuery(Task t, String q) {
@@ -32,13 +42,17 @@ final projectListRowsProvider = Provider<List<ProjectListRow>>((ref) {
   final projects = ref.watch(projectsListProvider);
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
-  final kind = ref.watch(filterKindProvider);
-  final status = ref.watch(filterStatusProvider);
+  final kind = ref.watch(filterKindSetProvider);
+  final status = ref.watch(filterStatusSetProvider);
+  final selectedProjects = ref.watch(filterProjectIdsProvider);
   final roots = projects.where((p) => p.parentId == null).toList();
   return roots.map((p) {
     final pTasks = tasks.where((t) {
       if (t.projectId != p.id) return false;
-      return _matchQuery(t, q) && _passesFilters(t, kind, status);
+      return _matchQuery(t, q) &&
+          _passesKindFilter(t, kind) &&
+          _passesStatusFilter(t, status) &&
+          _passesProjectFilter(t, selectedProjects);
     });
     return ProjectListRow(
       project: p,
@@ -48,32 +62,45 @@ final projectListRowsProvider = Provider<List<ProjectListRow>>((ref) {
   }).toList();
 });
 
-final projectDetailTasksProvider = Provider.family<List<Task>, int>((ref, projectId) {
+final projectDetailTasksProvider = Provider.family<List<Task>, int>((
+  ref,
+  projectId,
+) {
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
-  final kind = ref.watch(filterKindProvider);
-  final status = ref.watch(filterStatusProvider);
+  final kind = ref.watch(filterKindSetProvider);
+  final status = ref.watch(filterStatusSetProvider);
+  final selectedProjects = ref.watch(filterProjectIdsProvider);
   return tasks
       .where(
         (t) =>
             t.projectId == projectId &&
             _matchQuery(t, q) &&
-            _passesFilters(t, kind, status),
+            _passesKindFilter(t, kind) &&
+            _passesStatusFilter(t, status) &&
+            _passesProjectFilter(t, selectedProjects),
       )
       .toList();
 });
 
-final subProjectListRowsProvider = Provider.family<List<ProjectListRow>, int>((ref, parentId) {
+final subProjectListRowsProvider = Provider.family<List<ProjectListRow>, int>((
+  ref,
+  parentId,
+) {
   final projects = ref.watch(projectsListProvider);
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
-  final kind = ref.watch(filterKindProvider);
-  final status = ref.watch(filterStatusProvider);
+  final kind = ref.watch(filterKindSetProvider);
+  final status = ref.watch(filterStatusSetProvider);
+  final selectedProjects = ref.watch(filterProjectIdsProvider);
   final subs = projects.where((p) => p.parentId == parentId).toList();
   return subs.map((sp) {
     final sTasks = tasks.where((t) {
       if (t.projectId != parentId || t.subProjectId != sp.id) return false;
-      return _matchQuery(t, q) && _passesFilters(t, kind, status);
+      return _matchQuery(t, q) &&
+          _passesKindFilter(t, kind) &&
+          _passesStatusFilter(t, status) &&
+          _passesProjectFilter(t, selectedProjects);
     });
     return ProjectListRow(
       project: sp,
@@ -85,17 +112,20 @@ final subProjectListRowsProvider = Provider.family<List<ProjectListRow>, int>((r
 
 final subProjectTasksProvider =
     Provider.family<List<Task>, ({int projectId, int subId})>((ref, key) {
-  final tasks = ref.watch(tasksListProvider);
-  final q = ref.watch(searchQueryProvider).trim().toLowerCase();
-  final kind = ref.watch(filterKindProvider);
-  final status = ref.watch(filterStatusProvider);
-  return tasks
-      .where(
-        (t) =>
-            t.projectId == key.projectId &&
-            t.subProjectId == key.subId &&
-            _matchQuery(t, q) &&
-            _passesFilters(t, kind, status),
-      )
-      .toList();
-});
+      final tasks = ref.watch(tasksListProvider);
+      final q = ref.watch(searchQueryProvider).trim().toLowerCase();
+      final kind = ref.watch(filterKindSetProvider);
+      final status = ref.watch(filterStatusSetProvider);
+      final selectedProjects = ref.watch(filterProjectIdsProvider);
+      return tasks
+          .where(
+            (t) =>
+                t.projectId == key.projectId &&
+                t.subProjectId == key.subId &&
+                _matchQuery(t, q) &&
+                _passesKindFilter(t, kind) &&
+                _passesStatusFilter(t, status) &&
+                _passesProjectFilter(t, selectedProjects),
+          )
+          .toList();
+    });

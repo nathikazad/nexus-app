@@ -6,6 +6,7 @@ import 'package:nx_cooking/data/cooking_task/cooking_plan_mapper.dart';
 import 'package:nx_cooking/data/cooking_task/cooking_task_attr_keys.dart';
 import 'package:nx_cooking/data/recipe/recipe_attr_keys.dart';
 import 'package:nx_cooking/domain/cooking_plan_repository.dart';
+import 'package:nx_cooking/domain/cooking_task_detail.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:nx_cooking/domain/week_section.dart';
 
@@ -22,13 +23,37 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
   Map<String, dynamic> _cookingTaskStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
+    merged['relations'] = {
+      'relation_id': true,
+      'model_id': true,
+      'model_type': true,
+      'name': true,
+      'description': true,
+      'relation_attributes': {
+        'key': true,
+        'value': true,
+        'value_type': true,
+      },
+    };
     merged[kRecipeModelTypeName] = {
       'id': true,
       'name': true,
       'description': true,
+      kRecipeAttrPrepTime: true,
+      kRecipeAttrServings: true,
+      kRecipeAttrInstructions: true,
       kItemModelTypeName: {'id': true, 'name': true, 'description': true},
       'tags': true,
-      'relations': {'relation_id': true, 'model_id': true, 'model_type': true},
+      'relations': {
+        'relation_id': true,
+        'model_id': true,
+        'model_type': true,
+        'relation_attributes': {
+          'key': true,
+          'value': true,
+          'value_type': true,
+        },
+      },
     };
     return merged;
   }
@@ -77,6 +102,22 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
   }
 
   @override
+  Future<CookingTaskDetail?> fetchTaskDetail(int taskId) async {
+    final schema = await _loadCookingTaskSchema();
+    final struct = _cookingTaskStruct(schema);
+    final task = await fetchKgqlModelById(
+      _client,
+      modelTypeName: kCookingTaskModelTypeName,
+      id: taskId,
+      struct: struct,
+    );
+    if (task == null) {
+      return null;
+    }
+    return cookingTaskDetailFromModel(task);
+  }
+
+  @override
   Future<int> planRecipe({
     required int recipeId,
     required DateTime date,
@@ -114,5 +155,90 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       ],
     );
     return setKgqlModel(_client, req);
+  }
+
+  @override
+  Future<void> updateIngredientChecks(
+    int taskId,
+    int forRecipeRelationId,
+    Map<String, bool> checks,
+  ) async {
+    if (forRecipeRelationId == 0) {
+      throw StateError('Missing for_recipe relation id');
+    }
+    final value = <String, dynamic>{
+      for (final e in checks.entries) e.key: e.value,
+    };
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: taskId,
+        relations: [
+          ModelRelation(
+            id: forRecipeRelationId,
+            attributes: [
+              RelationAttribute(
+                key: kForRecipeRelationAttrIngredientChecks,
+                value: value,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteTask(int taskId) async {
+    await setKgqlModel(
+      _client,
+      SetModelRequest(id: taskId, delete: true),
+    );
+  }
+
+  @override
+  Future<void> updateTaskDate(int taskId, DateTime newDate) async {
+    final day = dateOnly(newDate);
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: taskId,
+        attributes: [
+          SetModelAttribute(
+            key: kTaskAttrDate,
+            value: DateTime(day.year, day.month, day.day).toIso8601String(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> updateTaskNotes(int taskId, String? notes) async {
+    final t = notes?.trim();
+    if (t == null || t.isEmpty) {
+      await setKgqlModel(
+        _client,
+        SetModelRequest(
+          id: taskId,
+          attributes: [
+            SetModelAttribute(
+              key: kCookingTaskAttrNotes,
+              delete: true,
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: taskId,
+        attributes: [
+          SetModelAttribute(key: kCookingTaskAttrNotes, value: t),
+        ],
+      ),
+    );
   }
 }

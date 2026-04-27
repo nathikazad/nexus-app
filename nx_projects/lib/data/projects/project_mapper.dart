@@ -19,7 +19,8 @@ int? _parentProjectIdFromModel(Model m) {
   final list = m.relationsList;
   if (list == null || list.isEmpty) return null;
   for (final r in list) {
-    if ((r.modelType == kProjectRelationKey || r.modelType == kProjectModelTypeName) &&
+    if ((r.modelType == kProjectRelationKey ||
+            r.modelType == kProjectModelTypeName) &&
         r.relation == 'parent') {
       return r.modelId;
     }
@@ -31,17 +32,14 @@ Project projectFromModel(Model m) {
   return Project(
     id: m.id,
     name: m.name,
-    color: m.attrInt('color') ?? 0xFF6AA3FF,
+    color: m.attrInt(kProjectAttrColor) ?? 0xFF6AA3FF,
     parentId: _parentProjectIdFromModel(m),
     description: m.description?.trim() ?? '',
   );
 }
 
 List<SetModelAttribute> setModelAttributesForProject(Project p) {
-  return [
-    if (p.color != 0xFF6AA3FF)
-      SetModelAttribute(key: 'color', value: p.color),
-  ];
+  return [SetModelAttribute(key: kProjectAttrColor, value: p.color)];
 }
 
 SetModelRequest setModelRequestForCreateProject(Project p) {
@@ -49,7 +47,9 @@ SetModelRequest setModelRequestForCreateProject(Project p) {
     modelType: kProjectModelTypeName,
     name: p.name,
     description: p.description.isEmpty ? null : p.description,
-    attributes: setModelAttributesForProject(p).isEmpty ? null : setModelAttributesForProject(p),
+    attributes: setModelAttributesForProject(p).isEmpty
+        ? null
+        : setModelAttributesForProject(p),
   );
 }
 
@@ -58,6 +58,8 @@ SetModelRequest setModelRequestForUpdateProject(Project p) {
     id: p.id,
     name: p.name,
     description: p.description.isEmpty ? null : p.description,
-    attributes: setModelAttributesForProject(p).isEmpty ? null : setModelAttributesForProject(p),
+    attributes: setModelAttributesForProject(p).isEmpty
+        ? null
+        : setModelAttributesForProject(p),
   );
 }

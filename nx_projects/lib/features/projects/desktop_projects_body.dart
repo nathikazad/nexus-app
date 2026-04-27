@@ -13,17 +13,57 @@ import 'package:nx_projects/features/priority/widgets/inline_add_row.dart';
 import 'package:nx_projects/features/shared/widgets/desktop_task_row.dart';
 
 /// Desktop: full project / subproject tree with dense rows (`reference/desktop` pane-projects).
-class DesktopProjectsBody extends ConsumerWidget {
+class DesktopProjectsBody extends ConsumerStatefulWidget {
   const DesktopProjectsBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DesktopProjectsBody> createState() =>
+      _DesktopProjectsBodyState();
+}
+
+class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
+  /// Collapsed root projects (content hidden; header stays visible).
+  final Set<int> _collapsedProjectIds = {};
+
+  /// Collapsed subprojects (task list + inline add hidden; header stays visible).
+  final Set<int> _collapsedSubProjectIds = {};
+
+  void _toggleProject(int id) {
+    setState(() {
+      if (_collapsedProjectIds.contains(id)) {
+        _collapsedProjectIds.remove(id);
+      } else {
+        _collapsedProjectIds.add(id);
+      }
+    });
+  }
+
+  void _toggleSubProject(int id) {
+    setState(() {
+      if (_collapsedSubProjectIds.contains(id)) {
+        _collapsedSubProjectIds.remove(id);
+      } else {
+        _collapsedSubProjectIds.add(id);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final q = ref.watch(searchQueryProvider);
     final searchActive = q.trim().isNotEmpty;
+    final kindFilterActive = ref.watch(filterKindSetProvider).isNotEmpty;
+    final statusFilterActive = ref.watch(filterStatusSetProvider).isNotEmpty;
+    final taskFilterActive =
+        searchActive || kindFilterActive || statusFilterActive;
+    final selectedProjects = ref.watch(filterProjectIdsProvider);
 
-    final roots = ref.watch(projectsListProvider).where((p) => p.parentId == null).toList();
+    final roots = ref
+        .watch(projectsListProvider)
+        .where((p) => p.parentId == null)
+        .toList();
     var rank = 0;
 
     String rankLabelFor(Task t) {
@@ -36,8 +76,14 @@ class DesktopProjectsBody extends ConsumerWidget {
 
     final children = <Widget>[];
     for (final project in roots) {
+      final expanded = !_collapsedProjectIds.contains(project.id);
       final subs = ref.watch(subProjectListRowsProvider(project.id));
       final allForProject = ref.watch(projectDetailTasksProvider(project.id));
+      final selectedInTree =
+          selectedProjects.contains(project.id) ||
+          subs.any((s) => selectedProjects.contains(s.project.id));
+      if (selectedProjects.isNotEmpty && !selectedInTree) continue;
+      if (taskFilterActive && allForProject.isEmpty) continue;
       final directTasks = _sortByBucket(
         allForProject.where((t) => t.subProjectId == null).toList(),
       );
@@ -46,7 +92,9 @@ class DesktopProjectsBody extends ConsumerWidget {
         totalH += t.estimate;
       }
       final n = allForProject.length;
-      final metaH = totalH % 1 == 0 ? totalH.toInt().toString() : totalH.toString();
+      final metaH = totalH % 1 == 0
+          ? totalH.toInt().toString()
+          : totalH.toString();
       final meta = n == 0 ? 'ideation' : '$n items · ${metaH}h est';
 
       children.add(
@@ -56,26 +104,47 @@ class DesktopProjectsBody extends ConsumerWidget {
             name: project.name,
             color: Color(project.color),
             meta: meta,
+            isExpanded: expanded,
+            onToggle: () => _toggleProject(project.id),
             onAdd: () {},
           ),
         ),
       );
+      if (!expanded) continue;
+
       final treeChildren = <Widget>[];
       for (final s in subs) {
+        final subExpanded = !_collapsedSubProjectIds.contains(s.project.id);
         final tasks = _sortByBucket(
-          ref.watch(subProjectTasksProvider((projectId: project.id, subId: s.project.id))),
+          ref.watch(
+            subProjectTasksProvider((
+              projectId: project.id,
+              subId: s.project.id,
+            )),
+          ),
         );
-        final subMetaH = s.hours % 1 == 0 ? s.hours.toInt().toString() : '${s.hours}';
+        final subMetaH = s.hours % 1 == 0
+            ? s.hours.toInt().toString()
+            : '${s.hours}';
+        if (selectedProjects.isNotEmpty &&
+            !selectedProjects.contains(project.id) &&
+            !selectedProjects.contains(s.project.id)) {
+          continue;
+        }
         treeChildren.add(
           Opacity(
             opacity: searchActive ? 0.5 : 1,
             child: _TreeSubName(
               name: s.project.name,
               meta: '${s.taskCount} items · ${subMetaH}h',
+              isExpanded: subExpanded,
+              onToggle: () => _toggleSubProject(s.project.id),
               onAdd: () {},
             ),
           ),
         );
+        if (!subExpanded) continue;
+
         final subRows = <Widget>[];
         for (final t in tasks) {
           subRows.add(
@@ -87,7 +156,7 @@ class DesktopProjectsBody extends ConsumerWidget {
               isSearchMatch: _titleMatchesSearch(t, q),
               onRowTap: () =>
                   ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
-              onMenu: () => onOpenTaskMenu(context, ref, t),
+              onMenu: () => widget.onOpenTaskMenu(context, ref, t),
             ),
           );
         }
@@ -126,7 +195,7 @@ class DesktopProjectsBody extends ConsumerWidget {
             isSearchMatch: _titleMatchesSearch(t, q),
             onRowTap: () =>
                 ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
-            onMenu: () => onOpenTaskMenu(context, ref, t),
+            onMenu: () => widget.onOpenTaskMenu(context, ref, t),
           ),
         );
       }
@@ -189,11 +258,12 @@ int _bucketIx(TaskBucket b) {
 }
 
 List<Task> _sortByBucket(List<Task> tasks) {
-  final copy = [...tasks]..sort((a, b) {
-        final c = _bucketIx(a.bucket).compareTo(_bucketIx(b.bucket));
-        if (c != 0) return c;
-        return a.title.compareTo(b.title);
-      });
+  final copy = [...tasks]
+    ..sort((a, b) {
+      final c = _bucketIx(a.bucket).compareTo(_bucketIx(b.bucket));
+      if (c != 0) return c;
+      return a.title.compareTo(b.title);
+    });
   return copy;
 }
 
@@ -202,20 +272,39 @@ class _TreeProjectName extends StatelessWidget {
     required this.name,
     required this.color,
     required this.meta,
+    required this.isExpanded,
+    required this.onToggle,
     required this.onAdd,
   });
 
   final String name;
   final Color color;
   final String meta;
+  final bool isExpanded;
+  final VoidCallback onToggle;
   final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+      padding: const EdgeInsets.fromLTRB(2, 8, 6, 4),
       child: Row(
         children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              tooltip: isExpanded ? 'Collapse project' : 'Expand project',
+              onPressed: onToggle,
+              icon: Icon(
+                isExpanded ? Icons.expand_more : Icons.chevron_right,
+                size: 18,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 2),
           Container(
             width: 8,
             height: 8,
@@ -247,20 +336,38 @@ class _TreeSubName extends StatelessWidget {
   const _TreeSubName({
     required this.name,
     required this.meta,
+    required this.isExpanded,
+    required this.onToggle,
     required this.onAdd,
   });
 
   final String name;
   final String meta;
+  final bool isExpanded;
+  final VoidCallback onToggle;
   final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+      padding: const EdgeInsets.fromLTRB(2, 8, 4, 4),
       child: Row(
         children: [
-          const Text('▾ ', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              tooltip: isExpanded ? 'Collapse subproject' : 'Expand subproject',
+              onPressed: onToggle,
+              icon: Icon(
+                isExpanded ? Icons.expand_more : Icons.chevron_right,
+                size: 18,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 2),
           Expanded(
             child: Text(
               name,
@@ -271,7 +378,10 @@ class _TreeSubName extends StatelessWidget {
               ),
             ),
           ),
-          Text(meta, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+          Text(
+            meta,
+            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
           _HoverAdd(onTap: onAdd),
         ],
       ),

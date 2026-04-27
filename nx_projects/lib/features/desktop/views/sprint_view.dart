@@ -6,6 +6,7 @@ import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/desktop/widgets/desktop_drawer_layer.dart';
 import 'package:nx_projects/features/desktop/widgets/sprint_cart.dart';
 import 'package:nx_projects/features/shared/widgets/context_sheet.dart';
+import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/sprint/sprint_screen.dart';
 
 /// Desktop Sprint: cart on the left + day list (reference `.body.sprint-plan-body`).
@@ -28,8 +29,9 @@ class DesktopSprintView extends ConsumerWidget {
           children: [
             SprintCart(
               border: SprintCartBorder.right,
-              onGoToSprintView: () {
-                // Already on Sprint view; reference keeps the control.
+              surface: SprintCartSurface.sprint,
+              onFooter: () {
+                ref.read(desktopViewIndexProvider.notifier).setView(0);
               },
             ),
             Expanded(child: SprintScreen(onOpenTaskMenu: _openTaskMenu)),

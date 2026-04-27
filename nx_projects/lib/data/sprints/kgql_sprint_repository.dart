@@ -17,7 +17,10 @@ class KgqlSprintRepository implements SprintRepository {
   final Future<ModelType> Function() _loadSprintSchema;
 
   Map<String, dynamic> _sprintStruct(ModelType schema) {
-    return buildKgqlStructFromSchema(schema);
+    final base = buildKgqlStructFromSchema(schema);
+    final merged = Map<String, dynamic>.from(base);
+    merged[kSprintAttrAllocatedHours] = true;
+    return merged;
   }
 
   @override

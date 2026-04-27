@@ -11,8 +11,8 @@ class KgqlProjectRepository implements ProjectRepository {
   KgqlProjectRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadProjectSchema,
-  })  : _client = client,
-        _loadProjectSchema = loadProjectSchema;
+  }) : _client = client,
+       _loadProjectSchema = loadProjectSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadProjectSchema;
@@ -20,6 +20,7 @@ class KgqlProjectRepository implements ProjectRepository {
   Map<String, dynamic> _projectFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
+    merged[kProjectAttrColor] = true;
     merged[kProjectRelationKey] = {'id': true, 'name': true, 'relation': true};
     return merged;
   }
@@ -84,10 +85,7 @@ class KgqlProjectRepository implements ProjectRepository {
       SetModelRequest(
         id: parentId,
         relations: [
-          ModelRelation(
-            modelType: kProjectRelationKey,
-            link: [newId],
-          ),
+          ModelRelation(modelType: kProjectRelationKey, link: [newId]),
         ],
       ),
     );

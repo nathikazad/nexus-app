@@ -68,7 +68,7 @@ Sprint sprintFromModel(Model m) {
     badge: _badgeFor(state),
     start: _ymd(startDay),
     length: length,
-    capH: 0,
+    capH: m.attrDouble(kSprintAttrAllocatedHours) ?? 0,
     state: state,
     goal: m.attrString(kSprintAttrGoal) ?? '',
     retro: '',
@@ -85,6 +85,7 @@ List<SetModelAttribute> setModelAttributesForSprintCreate(Sprint s) {
     ),
     SetModelAttribute(key: kSprintAttrGoal, value: s.goal),
     SetModelAttribute(key: kSprintAttrStatus, value: _stateToAttr(s.state)),
+    SetModelAttribute(key: kSprintAttrAllocatedHours, value: s.capH),
   ];
 }
 
@@ -100,5 +101,6 @@ List<SetModelAttribute> setModelAttributesForSprintUpdate(Sprint s) {
   return [
     SetModelAttribute(key: kSprintAttrGoal, value: s.goal),
     SetModelAttribute(key: kSprintAttrStatus, value: _stateToAttr(s.state)),
+    SetModelAttribute(key: kSprintAttrAllocatedHours, value: s.capH),
   ];
 }

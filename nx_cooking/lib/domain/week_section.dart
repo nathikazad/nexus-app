@@ -21,6 +21,7 @@ final class WeekDaySection {
 
 final class WeekMealCard {
   const WeekMealCard({
+    required this.taskId,
     required this.recipeId,
     required this.title,
     required this.kind,
@@ -29,7 +30,10 @@ final class WeekMealCard {
     this.showPing = false,
   });
 
-  /// Recipe to open when the card is tapped.
+  /// [CookingTask] id; open [CookingTaskViewPage] for this.
+  final int taskId;
+
+  /// Recipe to open from task detail or recipes tab.
   final int recipeId;
   final String title;
   final MealCardKind kind;

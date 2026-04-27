@@ -30,6 +30,11 @@ class KgqlRecipeRepository implements RecipeRepository {
       'relation_id': true,
       'model_id': true,
       'model_type': true,
+      'relation_attributes': {
+        'key': true,
+        'value': true,
+        'value_type': true,
+      },
     };
     return merged;
   }

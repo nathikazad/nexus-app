@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_cooking/features/auth/cooking_login_screen.dart';
+import 'package:nx_cooking/features/cooking_task/cooking_task_view_page.dart';
 import 'package:nx_cooking/features/recipe_create/recipe_create_page.dart';
 import 'package:nx_cooking/features/recipe_detail/recipe_view_page.dart';
 import 'package:nx_cooking/features/recipe_edit/recipe_edit_page.dart';
@@ -37,6 +38,13 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CookingLoginScreen(),
       ),
       GoRoute(path: '/', builder: (context, state) => const CookingShell()),
+      GoRoute(
+        path: '/task/:id',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return CookingTaskViewPage(taskId: id);
+        },
+      ),
       GoRoute(
         path: '/recipe/new',
         builder: (context, state) => const RecipeCreatePage(),

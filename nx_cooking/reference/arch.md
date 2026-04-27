@@ -272,10 +272,10 @@ Cooked this week
   ▢ Pasta Carbonara   Sat · 60m   (cooked again)
 ```
 
-- **Meals cooked**: `count(CookingAction)` whose `start_time` falls
+- **Meals cooked**: `count(Cooking)` whose `start_time` falls
   in the selected week.
 - **Total time**: Σ `(end_time − start_time)` across those actions.
-- **Cooked this week list**: one row per `CookingAction`. Tap → the
+- **Cooked this week list**: one row per `Cooking`. Tap → the
   cooking-task detail of the linked task (if any).
 - **Skipped tasks** are **not** counted; they don't appear in the
   list either.
@@ -313,8 +313,8 @@ the per-task ingredient checkboxes.
 
 | Current status | Footer buttons                           | Result                                                                                  |
 | -------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
-| `planned`      | [ Start cooking ]   [ Mark done ]   [ Skip ] | *Start* → status `cooking`, creates open `CookingAction`. *Mark done* → prompts for both start and end times, then status `done`. *Skip* → status `skipped`. |
-| `cooking`      | [ Mark done ]   [ Cancel cooking ]       | *Mark done* → prompts for end time only, fills modifications + outcome, status `done`. *Cancel* → discards open `CookingAction`, status `planned`. |
+| `planned`      | [ Start cooking ]   [ Mark done ]   [ Skip ] | *Start* → status `cooking`, creates open `Cooking`. *Mark done* → prompts for both start and end times, then status `done`. *Skip* → status `skipped`. |
+| `cooking`      | [ Mark done ]   [ Cancel cooking ]       | *Mark done* → prompts for end time only, fills modifications + outcome, status `done`. *Cancel* → discards open `Cooking`, status `planned`. |
 | `done`         | [ Edit log ]                             | Opens the modifications + outcome editor. Status sticks at `done`.                      |
 | `skipped`      | [ Restore ]                              | Status `planned`.                                                                       |
 
@@ -330,8 +330,8 @@ How did it go?    [____________]  (optional)
                                    [ Save ]
 ```
 
-The two text fields write to `CookingAction.modifications` and
-`CookingAction.outcome`. Skipping them is fine.
+The two text fields write to `Cooking.modifications` and
+`Cooking.outcome`. Skipping them is fine.
 
 ### Ingredient checkboxes
 Tapping a checkbox toggles the boolean immediately, same write path
@@ -339,7 +339,7 @@ as Buy tab. The two views stay in sync.
 
 ### Overflow ⋯
 *Move to other day* (future-only date picker) / *Remove* (deletes
-the task; if a `CookingAction` exists, the action is **not** deleted —
+the task; if a `Cooking` exists, the action is **not** deleted —
 it stands on its own and still counts in Stats).
 
 ## Bottom sheets (shared)
@@ -415,7 +415,7 @@ step is testable on its own:
    ingredient checkboxes. Wire the status state machine in JS.
 7. **Buy tab** — group by recipe, render rows from the week's tasks,
    wire checkbox writes into the same JS state as step 6.
-8. **Stats tab** — count CookingActions, sum durations, render two
+8. **Stats tab** — count `Cooking` models, sum durations, render two
    numbers + the cooked-this-week list.
 9. **Bottom sheets** — day picker, mark-done sheet, unit picker,
    confirm-delete. Drive from one sheet manager.

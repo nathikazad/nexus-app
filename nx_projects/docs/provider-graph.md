@@ -89,9 +89,12 @@ From [`lib/features/filters/filter_state_providers.dart`](../lib/features/filter
 
 | Provider | Default |
 |----------|---------|
-| `filterKindProvider` | `'all'` |
-| `filterStatusProvider` | `'all'` |
+| `filterKindSetProvider` | empty `Set<String>` = all kinds (`feat` / `bug` / `task`) |
+| `filterStatusSetProvider` | empty `Set<String>` = all statuses (`todo` / `doing` / `done` / `blocked`) |
+| `filterProjectIdsProvider` | empty `Set<int>` = all projects |
 | `searchQueryProvider` | `''` |
+
+Project checklist filtering is UI state only: the selected project/subproject ids live in `filterProjectIdsProvider`, and the project view-model providers in [`lib/features/projects/projects_view_model.dart`](../lib/features/projects/projects_view_model.dart) derive visible rows from `projectsListProvider`, `tasksListProvider`, search, kind/status, and that id set. The desktop popup itself should not own filtering state; it only reads/toggles this provider.
 
 ## View-model providers (derived)
 

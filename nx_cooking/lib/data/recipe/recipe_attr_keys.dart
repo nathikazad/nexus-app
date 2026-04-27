@@ -11,6 +11,11 @@ const String kRecipeAttrServings = 'servings';
 
 const String kRecipeAttrInstructions = 'instructions';
 
+/// Full crawler `RecipeExtraction` payload (json attribute on Recipe).
+const String kRecipeAttrCrawlerPayload = 'crawler_payload';
+
 const String kHasIngredientRelationAttrQuantity = 'quantity';
 
-const String kHasIngredientRelationAttrUnit = 'unit';
+const String kHasIngredientRelationAttrGroupName = 'group_name';
+
+const String kHasIngredientRelationAttrNotes = 'notes';

@@ -89,16 +89,10 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
                           width: 700,
-                          child: _rowInner(
-                            glyph: glyph,
-                            done: done,
-                          ),
+                          child: _rowInner(glyph: glyph, done: done),
                         ),
                       )
-                    : _rowInner(
-                        glyph: glyph,
-                        done: done,
-                      ),
+                    : _rowInner(glyph: glyph, done: done),
               ),
             ),
           ),
@@ -109,10 +103,7 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
 
   /// Narrow mode wraps this in a [SizedBox(width: 700)] + horizontal scroll;
   /// wide mode lets the [Expanded] title use full pane width.
-  Widget _rowInner({
-    required String glyph,
-    required bool done,
-  }) {
+  Widget _rowInner({required String glyph, required bool done}) {
     final t = widget.task;
     final match = widget.isSearchMatch;
     return Row(
@@ -142,16 +133,22 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
           ),
         ),
         const SizedBox(width: 10),
+        // Reference `.row .kind`: fixed grid column, badge `justify-self: start` (hug
+        // content, not full column width).
         SizedBox(
           width: 56,
-          child: _KindPill(kind: t.kind, dim: done),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _KindPill(kind: t.kind, dim: done),
+          ),
         ),
         const SizedBox(width: 10),
         SizedBox(
           width: 200,
           child: DefaultTextStyle(
             style: const TextStyle(fontSize: 11, color: AppColors.muted),
-            child: widget.crumb ??
+            child:
+                widget.crumb ??
                 (t.crumb.isEmpty
                     ? const SizedBox.shrink()
                     : Text(
@@ -177,9 +174,7 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
                   ),
                 ),
                 if (t.severity != null) ...[
-                  const WidgetSpan(
-                    child: SizedBox(width: 6),
-                  ),
+                  const WidgetSpan(child: SizedBox(width: 6)),
                   WidgetSpan(
                     alignment: PlaceholderAlignment.middle,
                     child: _SevPill(severity: t.severity!),
@@ -222,11 +217,7 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
               child: const Text(
                 '⋮',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1,
-                  color: AppColors.dim,
-                ),
+                style: TextStyle(fontSize: 14, height: 1, color: AppColors.dim),
               ),
             ),
           ),
@@ -251,10 +242,10 @@ class _KindPill extends StatelessWidget {
           color: dim
               ? AppColors.border
               : (kind == TaskKind.feat
-                  ? const Color(0x4D6AA3FF)
-                  : kind == TaskKind.bug
-                      ? const Color(0x4DF87171)
-                      : AppColors.border),
+                    ? const Color(0x4D6AA3FF)
+                    : kind == TaskKind.bug
+                    ? const Color(0x4DF87171)
+                    : AppColors.border),
         ),
         borderRadius: BorderRadius.circular(4),
       ),
@@ -290,14 +281,11 @@ class _SevPill extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        switch (severity) {
-          TaskSeverity.crit => 'crit',
-          TaskSeverity.med => 'med',
-          TaskSeverity.low => 'low',
-        },
-        style: TextStyle(fontSize: 10, color: fg),
-      ),
+      child: Text(switch (severity) {
+        TaskSeverity.crit => 'crit',
+        TaskSeverity.med => 'med',
+        TaskSeverity.low => 'low',
+      }, style: TextStyle(fontSize: 10, color: fg)),
     );
   }
 }
@@ -319,16 +307,16 @@ class _SprintChip extends StatelessWidget {
         color: s14
             ? const Color(0x1E6AA3FF)
             : s15
-                ? const Color(0x1AC084FC)
-                : Colors.transparent,
+            ? const Color(0x1AC084FC)
+            : Colors.transparent,
         border: Border.all(
           color: isStar
               ? AppColors.border
               : s14
-                  ? const Color(0x596AA3FF)
-                  : s15
-                      ? const Color(0x59C084FC)
-                      : AppColors.border,
+              ? const Color(0x596AA3FF)
+              : s15
+              ? const Color(0x59C084FC)
+              : AppColors.border,
         ),
         borderRadius: BorderRadius.circular(999),
       ),
@@ -340,7 +328,9 @@ class _SprintChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             letterSpacing: 0.4,
-            color: isStar ? AppColors.dim : (s14 ? AppColors.accent : AppColors.text),
+            color: isStar
+                ? AppColors.dim
+                : (s14 ? AppColors.accent : AppColors.text),
             fontWeight: FontWeight.w500,
           ),
         ),

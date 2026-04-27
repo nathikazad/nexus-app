@@ -11,7 +11,8 @@ import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
-import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
+// Temporarily unused while the cart row day picker is hidden to match reference.
+// import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
 
 /// Which edge has the 1px separator toward the main content.
 enum SprintCartBorder {
@@ -22,16 +23,27 @@ enum SprintCartBorder {
   right,
 }
 
+/// Whether the cart is shown beside Planner (backlog) or beside Sprint (day plan).
+enum SprintCartSurface {
+  /// Unpin (×) on each row; no unscheduled day indicator; footer → Sprint.
+  planner,
+
+  /// Unscheduled day indicator in the trailing column instead of ×; footer → Planner.
+  sprint,
+}
+
 /// `reference/desktop/partials/panel-sprint-cart.html` — sprint nav, dots, capacity, list, footer.
 class SprintCart extends ConsumerWidget {
   const SprintCart({
     super.key,
     required this.border,
-    required this.onGoToSprintView,
+    required this.surface,
+    required this.onFooter,
   });
 
   final SprintCartBorder border;
-  final VoidCallback onGoToSprintView;
+  final SprintCartSurface surface;
+  final VoidCallback onFooter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -82,9 +94,14 @@ class SprintCart extends ConsumerWidget {
           ),
           _CapBlock(stats: stats, sprint: sp),
           Expanded(
-            child: _CartBody(sprint: sp, tasks: tasks, projects: projects),
+            child: _CartBody(
+              sprint: sp,
+              tasks: tasks,
+              projects: projects,
+              surface: surface,
+            ),
           ),
-          _CartFooter(onSprintView: onGoToSprintView),
+          _CartFooter(surface: surface, onPressed: onFooter),
         ],
       ),
     );
@@ -271,19 +288,126 @@ class _SprintAddPlusState extends State<_SprintAddPlus> {
   }
 }
 
-class _CapBlock extends StatelessWidget {
+class _CapBlock extends ConsumerStatefulWidget {
   const _CapBlock({required this.stats, required this.sprint});
 
   final SprintHeaderStats stats;
   final Sprint sprint;
 
   @override
+  ConsumerState<_CapBlock> createState() => _CapBlockState();
+}
+
+class _CapBlockState extends ConsumerState<_CapBlock> {
+  late final TextEditingController _capController;
+  late final FocusNode _capFocus;
+  bool _editing = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _capController = TextEditingController(
+      text: _formatHours(widget.sprint.capH),
+    );
+    _capFocus = FocusNode();
+    _capFocus.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_capFocus.hasFocus || !_editing) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_capFocus.hasFocus || !_editing) return;
+      _saveCapacity();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _CapBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing &&
+        (oldWidget.sprint.id != widget.sprint.id ||
+            oldWidget.sprint.capH != widget.sprint.capH)) {
+      _capController.text = _formatHours(widget.sprint.capH);
+    }
+  }
+
+  @override
+  void dispose() {
+    _capFocus.removeListener(_onFocusChange);
+    _capFocus.dispose();
+    _capController.dispose();
+    super.dispose();
+  }
+
+  String _formatHours(double v) {
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+  }
+
+  void _beginEdit() {
+    if (_editing) return;
+    setState(() {
+      _editing = true;
+      _capController.text = _formatHours(widget.sprint.capH);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _capFocus.requestFocus();
+      _capController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _capController.text.length,
+      );
+    });
+  }
+
+  Future<void> _saveCapacity() async {
+    if (_saving) return;
+    final parsed = double.tryParse(_capController.text.trim());
+    if (parsed == null || parsed < 0) {
+      setState(() {
+        _editing = false;
+        _capController.text = _formatHours(widget.sprint.capH);
+      });
+      return;
+    }
+
+    if (parsed == widget.sprint.capH) {
+      setState(() => _editing = false);
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(sprintRepositoryProvider)
+          .update(widget.sprint.copyWith(capH: parsed));
+      ref.invalidate(sprintsListAsyncProvider);
+      if (mounted) {
+        setState(() {
+          _editing = false;
+          _capController.text = _formatHours(parsed);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final totalLabel = stats.totalH == stats.totalH.roundToDouble()
-        ? '${stats.totalH.toInt()}'
-        : stats.totalH.toStringAsFixed(1);
-    final cap = sprint.capH;
-    final pct = cap > 0 ? (stats.totalH / cap * 100).clamp(0, 100) : 0.0;
+    final totalLabel =
+        widget.stats.totalH == widget.stats.totalH.roundToDouble()
+        ? '${widget.stats.totalH.toInt()}'
+        : widget.stats.totalH.toStringAsFixed(1);
+    final cap = widget.sprint.capH;
+    double fillRatio = 0.0;
+    if (cap > 0 && widget.stats.totalH.isFinite) {
+      final raw = widget.stats.totalH / cap;
+      if (raw.isFinite) {
+        fillRatio = raw.clamp(0.0, 1.0).toDouble();
+      }
+    }
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
@@ -295,31 +419,114 @@ class _CapBlock extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Capacity',
-                style: TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${totalLabel}h',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' / ${cap.toInt()}h',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
+              InkWell(
+                onTap: _beginEdit,
+                borderRadius: BorderRadius.circular(4),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                  child: Text(
+                    'Capacity',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
                 ),
               ),
+              _editing
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${totalLabel}h / ',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 48,
+                          height: 24,
+                          child: TextField(
+                            controller: _capController,
+                            focusNode: _capFocus,
+                            enabled: !_saving,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            onSubmitted: (_) => _saveCapacity(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.text,
+                            ),
+                            cursorColor: AppColors.accent,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              filled: true,
+                              fillColor: AppColors.panel2,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 5,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(5),
+                                borderSide: const BorderSide(
+                                  color: AppColors.border,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(5),
+                                borderSide: const BorderSide(
+                                  color: AppColors.border,
+                                ),
+                              ),
+                              focusedBorder: const OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(5),
+                                ),
+                                borderSide: BorderSide(color: AppColors.accent),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          'h',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    )
+                  : InkWell(
+                      onTap: _beginEdit,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 1,
+                        ),
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${totalLabel}h',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' / ${_formatHours(cap)}h',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
             ],
           ),
           const SizedBox(height: 6),
@@ -327,17 +534,27 @@ class _CapBlock extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: SizedBox(
               height: 8,
-              child: Stack(
-                children: [
-                  const ColoredBox(
-                    color: AppColors.panel3,
-                    child: SizedBox.expand(),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: pct / 100,
-                    child: const ColoredBox(color: AppColors.accent),
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxW = constraints.maxWidth.isFinite
+                      ? constraints.maxWidth
+                      : 0.0;
+                  final fillW = (maxW * fillRatio).clamp(0.0, maxW).toDouble();
+                  return Stack(
+                    children: [
+                      const Positioned.fill(
+                        child: ColoredBox(color: AppColors.panel3),
+                      ),
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: fillW,
+                        child: const ColoredBox(color: AppColors.accent),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -399,33 +616,6 @@ String _cartGlyph(Task t) {
   }
 }
 
-class _UnscheduledHint extends StatelessWidget {
-  const _UnscheduledHint({required this.n});
-  final int n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        style: const TextStyle(fontSize: 11, height: 1.35),
-        children: [
-          TextSpan(
-            text: '$n unscheduled',
-            style: const TextStyle(
-              color: AppColors.warn,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const TextSpan(
-            text: ' — drag onto a day to plan.',
-            style: TextStyle(color: AppColors.muted),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CartSectionLabel extends StatelessWidget {
   const _CartSectionLabel(this.text, {this.topPadding = 14});
   final String text;
@@ -453,11 +643,13 @@ class _CartBody extends ConsumerWidget {
     required this.sprint,
     required this.tasks,
     required this.projects,
+    required this.surface,
   });
 
   final Sprint sprint;
   final List<Task> tasks;
   final List<Project> projects;
+  final SprintCartSurface surface;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -490,16 +682,10 @@ class _CartBody extends ConsumerWidget {
       breakdown[p] = (breakdown[p] ?? 0) + t.estimate;
     }
     final breakdownKeys = breakdown.keys.toList()..sort();
-    final nUnsched = tasks.where((t) => t.plannedFor == null).length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
       children: [
         _CartSectionLabel('Items (${tasks.length})', topPadding: 4),
-        if (nUnsched > 0)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
-            child: _UnscheduledHint(n: nUnsched),
-          ),
         for (final k in keys) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
@@ -515,6 +701,7 @@ class _CartBody extends ConsumerWidget {
           for (final t in groups[k]!)
             _CartTaskRow(
               task: t,
+              surface: surface,
               onUnpin: () async {
                 final cur =
                     await ref.read(taskRepositoryProvider).getById(t.id) ?? t;
@@ -631,7 +818,7 @@ class _BreakdownRow extends StatelessWidget {
         SizedBox(
           width: 60,
           child: Text(
-            '$hStr h · $pct%',
+            '${hStr}h · $pct%',
             textAlign: TextAlign.right,
             style: const TextStyle(fontSize: 11, color: AppColors.muted),
           ),
@@ -714,9 +901,14 @@ class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
 }
 
 class _CartTaskRow extends StatefulWidget {
-  const _CartTaskRow({required this.task, required this.onUnpin});
+  const _CartTaskRow({
+    required this.task,
+    required this.surface,
+    required this.onUnpin,
+  });
 
   final Task task;
+  final SprintCartSurface surface;
   final VoidCallback onUnpin;
 
   @override
@@ -766,9 +958,9 @@ class _CartTaskRowState extends State<_CartTaskRow> {
                         t.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: scheduled ? AppColors.muted : AppColors.text,
+                          color: AppColors.text,
                         ),
                       ),
                     ),
@@ -784,38 +976,59 @@ class _CartTaskRowState extends State<_CartTaskRow> {
                         ),
                       ),
                     ),
+                    // Temporarily hidden to match the reference cart row shape.
+                    // const SizedBox(width: 4),
+                    // SizedBox(
+                    //   width: 62,
+                    //   child: SprintDayPickerButton(
+                    //     task: t,
+                    //     child: _CartDayChip(task: t),
+                    //   ),
+                    // ),
                     const SizedBox(width: 4),
-                    SizedBox(
-                      width: 62,
-                      child: SprintDayPickerButton(
-                        task: t,
-                        child: _CartDayChip(task: t),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    SizedBox(
-                      width: 16,
-                      child: MouseRegion(
-                        onEnter: (_) => setState(() => _xHover = true),
-                        onExit: (_) => setState(() => _xHover = false),
-                        child: InkWell(
-                          onTap: widget.onUnpin,
-                          child: Center(
-                            child: Text(
-                              '×',
-                              style: TextStyle(
-                                fontSize: 16,
-                                height: 1,
-                                color: _xHover
-                                    ? const Color(0xFFF87171)
-                                    : AppColors.dim,
-                                fontWeight: FontWeight.w500,
+                    if (widget.surface == SprintCartSurface.planner)
+                      SizedBox(
+                        width: 16,
+                        child: MouseRegion(
+                          onEnter: (_) => setState(() => _xHover = true),
+                          onExit: (_) => setState(() => _xHover = false),
+                          child: InkWell(
+                            onTap: widget.onUnpin,
+                            child: Center(
+                              child: Text(
+                                '×',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  height: 1,
+                                  color: _xHover
+                                      ? const Color(0xFFF87171)
+                                      : AppColors.dim,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
                         ),
+                      )
+                    else
+                      SizedBox(
+                        width: 16,
+                        child: Center(
+                          child: !scheduled
+                              ? Tooltip(
+                                  message: 'No day assigned',
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.warn,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -858,40 +1071,45 @@ class _CartTaskRowState extends State<_CartTaskRow> {
   }
 }
 
-class _CartDayChip extends StatelessWidget {
-  const _CartDayChip({required this.task});
-
-  final Task task;
-
-  @override
-  Widget build(BuildContext context) {
-    final planned = task.plannedFor;
-    final label = planned == null || planned.isEmpty
-        ? 'day'
-        : planned.substring(planned.length - 5);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.panel2,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 10, color: AppColors.muted),
-      ),
-    );
-  }
-}
+// Temporarily hidden to match the reference cart row shape.
+// class _CartDayChip extends StatelessWidget {
+//   const _CartDayChip({required this.task});
+//
+//   final Task task;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final planned = task.plannedFor;
+//     final label = planned == null || planned.isEmpty
+//         ? 'day'
+//         : planned.substring(planned.length - 5);
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+//       decoration: BoxDecoration(
+//         color: AppColors.panel2,
+//         border: Border.all(color: AppColors.border),
+//         borderRadius: BorderRadius.circular(999),
+//       ),
+//       child: Text(
+//         label,
+//         textAlign: TextAlign.center,
+//         style: const TextStyle(fontSize: 10, color: AppColors.muted),
+//       ),
+//     );
+//   }
+// }
 
 class _CartFooter extends StatelessWidget {
-  const _CartFooter({required this.onSprintView});
+  const _CartFooter({required this.surface, required this.onPressed});
 
-  final VoidCallback onSprintView;
+  final SprintCartSurface surface;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final label = surface == SprintCartSurface.planner
+        ? 'Sprint View'
+        : 'Planner View';
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: const BoxDecoration(
@@ -901,14 +1119,14 @@ class _CartFooter extends StatelessWidget {
         color: AppColors.accent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
-          onTap: onSprintView,
+          onTap: onPressed,
           borderRadius: BorderRadius.circular(6),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
             child: Center(
               child: Text(
-                'Sprint View',
-                style: TextStyle(
+                label,
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                   color: AppColors.bg,
@@ -941,7 +1159,7 @@ class _Badge extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        label,
+        label.toUpperCase(),
         style: TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w600,
