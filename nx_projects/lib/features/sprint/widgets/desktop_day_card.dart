@@ -47,7 +47,9 @@ class DesktopDayCard extends ConsumerWidget {
         .toList();
     final showStats =
         slice.isPast &&
-        (slice.doneCount + slice.pushedCount + slice.rolledCount > 0);
+        (slice.tasks.isNotEmpty ||
+            slice.pushedCount > 0 ||
+            slice.rolledCount > 0);
     final showDayNote = slice.isPast || sprint.state == SprintState.done;
     final actualLineCls = dayH > 0
         ? varianceClass(dayActual, dayH)
@@ -71,190 +73,190 @@ class DesktopDayCard extends ConsumerWidget {
         },
         builder: (context, candidate, rejected) {
           final drop = candidate.isNotEmpty;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            decoration: BoxDecoration(
-              color: drop ? AppColors.accentSoft : AppColors.panel,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: drop ? AppColors.accent : AppColors.border,
+          final borderColor = drop
+              ? AppColors.accent
+              : (isToday ? AppColors.border2 : AppColors.border);
+          return Opacity(
+            opacity: slice.isPast ? 0.65 : 1.0,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              decoration: BoxDecoration(
+                color: drop ? AppColors.accentSoft : AppColors.panel,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderColor),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 22,
-                        child: Text(
-                          shortDowLabel(d).toUpperCase(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.dim,
-                            letterSpacing: 0.8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 30,
+                          child: Text(
+                            DateFormat('EEE').format(d).toUpperCase(),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.visible,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.dim,
+                              letterSpacing: 0.2,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: DateFormat('EEE').format(d),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isToday
-                                      ? AppColors.accent
-                                      : AppColors.text,
-                                ),
-                              ),
-                              TextSpan(
-                                text: '  ${DateFormat('d').format(d)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.muted,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              TextSpan(
-                                text: '  ${DateFormat('MMM').format(d)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.muted,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text.rich(
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text.rich(
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: _fmtH(dayH),
+                                  text: DateFormat('MMM').format(d),
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: isOver
-                                        ? AppColors.warn
-                                        : AppColors.text,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
+                                    color: isToday
+                                        ? AppColors.accent
+                                        : AppColors.text,
                                   ),
                                 ),
                                 TextSpan(
-                                  text: ' / ${dailyCap.toStringAsFixed(0)}h',
+                                  text: ' ${DateFormat('d').format(d)}',
                                   style: const TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     color: AppColors.muted,
-                                    fontFeatures: [
-                                      FontFeature.tabularFigures(),
-                                    ],
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
+                                if (isToday)
+                                  const TextSpan(
+                                    text: '  · today',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.accent,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
-                          if (dayH > 0 && (slice.isPast || dayActual > 0)) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '${_fmtH(dayActual)}h actual',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: varianceColorForClass(actualLineCls),
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: _fmtH(dayH),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isOver
+                                          ? AppColors.warn
+                                          : AppColors.text,
+                                      fontWeight: FontWeight.w600,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' / ${dailyCap.toStringAsFixed(0)}h',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.muted,
+                                      fontFeatures: [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
+                            if (dayH > 0 &&
+                                (slice.isPast || dayActual > 0)) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_fmtH(dayActual)}h actual',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: varianceColorForClass(actualLineCls),
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Transform.translate(
-                  offset: const Offset(2, 0),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                    child: DayCapBar(
-                      ratio: dailyCap > 0 ? (dayH / dailyCap) : 0,
-                      isOver: isOver,
-                      height: 3,
-                    ),
-                  ),
-                ),
-                if (showStats)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-                    child: Text(
-                      'done ${slice.doneCount} · pushed ${slice.pushedCount} · rolled ${slice.rolledCount}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.dim,
-                      ),
-                    ),
-                  ),
-                if (slice.tasks.isNotEmpty || ghosts.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-                    child: Column(
-                      children: [
-                        for (final t in slice.tasks)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: DayItemRow(
-                              task: t,
-                              onMenu: () => onOpenTaskMenu(t),
-                            ),
-                          ),
-                        for (final t in ghosts)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: DayItemRow(
-                              task: t,
-                              isGhost: true,
-                              movedToYmd: t.plannedFor!,
-                            ),
-                          ),
+                        ),
                       ],
                     ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                    child: Text(
-                      drop
-                          ? 'Drop here'
-                          : 'Drop tasks here to schedule (drag from cart or another day).',
-                      style: const TextStyle(
-                        color: AppColors.dim,
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
+                  ),
+                  Transform.translate(
+                    offset: const Offset(2, 0),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                      child: DayCapBar(
+                        ratio: dailyCap > 0 ? (dayH / dailyCap) : 0,
+                        isOver: isOver,
+                        height: 3,
                       ),
                     ),
                   ),
-                if (showDayNote)
-                  _SprintDayNoteField(
-                    key: ValueKey('${sprint.id}_${slice.ymd}'),
-                    sprint: sprint,
-                    ymd: slice.ymd,
-                  ),
-                const SizedBox(height: 2),
-              ],
+                  if (showStats)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                      child: _DayStatsLine(slice: slice, dayActual: dayActual),
+                    ),
+                  if (slice.tasks.isNotEmpty || ghosts.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+                      child: Column(
+                        children: [
+                          for (final t in slice.tasks)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: DayItemRow(
+                                task: t,
+                                onMenu: () => onOpenTaskMenu(t),
+                              ),
+                            ),
+                          for (final t in ghosts)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: DayItemRow(
+                                task: t,
+                                isGhost: true,
+                                movedToYmd: t.plannedFor!,
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                      child: Text(
+                        drop ? 'Drop here' : 'Nothing scheduled.',
+                        style: const TextStyle(
+                          color: AppColors.dim,
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  if (showDayNote)
+                    _SprintDayNoteField(
+                      key: ValueKey('${sprint.id}_${slice.ymd}'),
+                      sprint: sprint,
+                      ymd: slice.ymd,
+                    ),
+                  const SizedBox(height: 2),
+                ],
+              ),
             ),
           );
         },
@@ -266,6 +268,130 @@ class DesktopDayCard extends ConsumerWidget {
     if (h == h.roundToDouble()) return h.toInt().toString();
     return h.toStringAsFixed(1);
   }
+}
+
+class _DayStatsLine extends StatelessWidget {
+  const _DayStatsLine({required this.slice, required this.dayActual});
+
+  final SprintDaySlice slice;
+  final double dayActual;
+
+  @override
+  Widget build(BuildContext context) {
+    final allDone =
+        slice.tasks.isNotEmpty && slice.doneCount == slice.tasks.length;
+    return Wrap(
+      spacing: 14,
+      runSpacing: 4,
+      children: [
+        _DayStatText(
+          icon: '✓',
+          value: '${slice.doneCount}/${slice.tasks.length}',
+          label: 'done',
+          color: allDone ? AppColors.ok : AppColors.warn,
+        ),
+        if (slice.pushedCount > 0)
+          _DayStatText(
+            icon: '↗',
+            value: '${slice.pushedCount}',
+            label: 'pushed out',
+            color: AppColors.warn,
+          ),
+        if (slice.rolledCount > 0)
+          _DayStatText(
+            icon: '↙',
+            value: '${slice.rolledCount}',
+            label: 'rolled in',
+            color: AppColors.accent,
+          ),
+        if (slice.isPast && dayActual == 0)
+          const Text(
+            '· no logged work',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.dim,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DayStatText extends StatelessWidget {
+  const _DayStatText({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$icon ',
+            style: TextStyle(color: color),
+          ),
+          TextSpan(
+            text: value,
+            style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          ),
+          TextSpan(
+            text: ' $label',
+            style: TextStyle(color: color),
+          ),
+        ],
+      ),
+      style: const TextStyle(
+        fontSize: 11,
+        color: AppColors.muted,
+        fontFeatures: [FontFeature.tabularFigures()],
+      ),
+    );
+  }
+}
+
+class _DashedLine extends StatelessWidget {
+  const _DashedLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(double.infinity, 1),
+      painter: _DashedLinePainter(),
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.border
+      ..strokeWidth = 1;
+    const dash = 4.0;
+    const gap = 3.0;
+    var x = 0.0;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset((x + dash).clamp(0, size.width), 0),
+        paint,
+      );
+      x += dash + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SprintDayNoteField extends ConsumerStatefulWidget {
@@ -309,37 +435,35 @@ class _SprintDayNoteFieldState extends ConsumerState<_SprintDayNoteField> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
-      child: TextField(
-        controller: _c,
-        onChanged: (v) {
-          // TODO(nx_projects): persist day notes when Sprint.day_notes exists in PGDB
-        },
-        maxLines: 1,
-        style: const TextStyle(fontSize: 11, color: AppColors.muted),
-        decoration: InputDecoration(
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 6,
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+      child: Column(
+        children: [
+          const _DashedLine(),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _c,
+            onChanged: (v) {
+              // TODO(nx_projects): persist day notes when Sprint.day_notes exists in PGDB
+            },
+            maxLines: 1,
+            style: const TextStyle(fontSize: 11, color: AppColors.text),
+            cursorColor: AppColors.accent,
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              hintText: 'Short title for this day…',
+              hintStyle: TextStyle(
+                color: AppColors.dim,
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
-          filled: true,
-          fillColor: AppColors.panel2,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: AppColors.accent, width: 0.5),
-          ),
-          hintText: 'Day note…',
-          hintStyle: const TextStyle(color: AppColors.dim, fontSize: 11),
-        ),
+        ],
       ),
     );
   }

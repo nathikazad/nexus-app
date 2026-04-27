@@ -24,6 +24,14 @@ final class IngredientLine {
   final String? preparation;
 }
 
+/// One row from crawler `nutrition_per_serving` for display.
+final class NutritionServingFact {
+  const NutritionServingFact({required this.label, required this.amount});
+
+  final String label;
+  final String amount;
+}
+
 /// Full recipe view (read-only detail + mapping from KGQL).
 final class RecipeDetail {
   const RecipeDetail({
@@ -37,6 +45,10 @@ final class RecipeDetail {
     this.headerLine,
     this.statusChip,
     this.crawlerPayload,
+    this.prepTimeDisplay,
+    this.cookTimeDisplay,
+    this.totalTimeDisplay,
+    this.nutritionPerServingHighlights = const [],
     required this.ingredients,
     required this.instructionLines,
   });
@@ -53,6 +65,18 @@ final class RecipeDetail {
 
   /// Raw crawler `RecipeExtraction` JSON when present (`Recipe.crawler_payload`).
   final Map<String, dynamic>? crawlerPayload;
+
+  /// Human-readable prep from crawler `prep_time`, else `"$prepTimeMinutes min"` when set.
+  final String? prepTimeDisplay;
+
+  /// Crawler `cook_time` when present.
+  final String? cookTimeDisplay;
+
+  /// Crawler `total_time` when present.
+  final String? totalTimeDisplay;
+
+  /// Subset of crawler `nutrition_per_serving` (Calories, Carbs, Protein, Fat) when present.
+  final List<NutritionServingFact> nutritionPerServingHighlights;
 
   final List<IngredientLine> ingredients;
   final List<String> instructionLines;

@@ -8,7 +8,6 @@ import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
 import 'package:nx_projects/features/sprint/widgets/desktop_day_card.dart';
 import 'package:nx_projects/features/sprint/widgets/sprint_summary_strip.dart';
-import 'package:nx_projects/features/sprint/widgets/day_item_row.dart';
 
 /// Desktop: sprint summary, plan heading, bordered day cards.
 class DesktopSprintBody extends ConsumerWidget {
@@ -23,17 +22,16 @@ class DesktopSprintBody extends ConsumerWidget {
     final allTasks = ref.watch(sprintTasksProvider);
     final driftN = ref.watch(sprintDriftCountProvider);
     final blockedN = ref.watch(sprintBlockedCountProvider);
-    final unscheduled =
-        allTasks.where((t) => t.plannedFor == null || t.plannedFor!.isEmpty).toList();
-    final unscheduledH = unscheduled.fold<double>(0, (a, t) => a + t.estimate);
     final scheduledH = allTasks
         .where((t) => t.plannedFor != null && t.plannedFor!.isNotEmpty)
         .fold<double>(0, (a, t) => a + t.estimate);
     final dailyCap = sp.length > 0 ? sp.capH / sp.length : 0.0;
     final nDone = allTasks.where((t) => t.status == TaskStatus.done).length;
+    final nDoing = allTasks.where((t) => t.status == TaskStatus.doing).length;
     final nTotal = allTasks.length;
     final actualSum = allTasks.fold<double>(0, (a, t) => a + t.actualHours);
     final plannedSum = allTasks.fold<double>(0, (a, t) => a + t.estimate);
+    final dayIndex = sprintDayIndexOneBased(sp);
 
     return SafeArea(
       child: CustomScrollView(
@@ -50,12 +48,10 @@ class DesktopSprintBody extends ConsumerWidget {
                   plannedH: plannedSum,
                   driftCount: driftN,
                   blockedCount: blockedN,
+                  doingCount: nDoing,
+                  dayIndex: dayIndex,
                 ),
-                _DaysHead(
-                  sprint: sp,
-                  scheduledH: scheduledH,
-                  unscheduledH: unscheduledH,
-                ),
+                _DaysHead(sprint: sp, scheduledH: scheduledH),
                 for (final day in days)
                   DesktopDayCard(
                     slice: day,
@@ -64,35 +60,16 @@ class DesktopSprintBody extends ConsumerWidget {
                     dailyCap: dailyCap,
                     onOpenTaskMenu: (t) => onOpenTaskMenu(context, ref, t),
                   ),
-                if (unscheduled.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(2, 8, 2, 6),
-                    child: Text(
-                      'UNSCHEDULED',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppColors.dim,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  for (final t in unscheduled)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: DayItemRow(
-                        task: t,
-                        onMenu: () => onOpenTaskMenu(context, ref, t),
-                      ),
-                    ),
-                ],
                 if (allTasks.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(32),
                     child: Center(
                       child: Text(
                         'No tasks in this sprint yet.',
-                        style: TextStyle(color: AppColors.dim, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          color: AppColors.dim,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ),
@@ -106,15 +83,10 @@ class DesktopSprintBody extends ConsumerWidget {
 }
 
 class _DaysHead extends StatelessWidget {
-  const _DaysHead({
-    required this.sprint,
-    required this.scheduledH,
-    required this.unscheduledH,
-  });
+  const _DaysHead({required this.sprint, required this.scheduledH});
 
   final Sprint sprint;
   final double scheduledH;
-  final double unscheduledH;
 
   String _fmt(double h) {
     if (h == h.roundToDouble()) return h.toInt().toString();
@@ -123,78 +95,59 @@ class _DaysHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final k = sprintDayIndexOneBased(sprint);
     return Padding(
       padding: const EdgeInsets.fromLTRB(2, 0, 2, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              const Text(
-                'Plan',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Plan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' · ${sprint.name}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                '${sprint.name} · Day $k of ${sprint.length}',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              _LegendChip(
-                color: AppColors.accent,
-                text: 'Scheduled · ${_fmt(scheduledH)}h',
-              ),
-              _LegendChip(
-                color: unscheduledH > 0 ? AppColors.warn : AppColors.dim,
-                text: 'Unsched · ${_fmt(unscheduledH)}h',
-              ),
-            ],
+          Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: 'Total: '),
+                TextSpan(
+                  text: '${_fmt(scheduledH)}h',
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const TextSpan(text: ' scheduled'),
+              ],
+            ),
+            style: const TextStyle(fontSize: 11, color: AppColors.dim),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LegendChip extends StatelessWidget {
-  const _LegendChip({required this.color, required this.text});
-
-  final Color color;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(fontSize: 11, color: AppColors.dim),
-        ),
-      ],
     );
   }
 }

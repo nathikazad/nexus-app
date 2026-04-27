@@ -27,8 +27,15 @@ int? _intAttr(Model m, String key) {
 
 String _metaLine(Model m) {
   final n = m.relations?[kItemModelTypeName]?.length ?? 0;
+  final payload = crawlerPayloadFromModelAttributes(m.attributes);
+  final total = crawlerPayloadNonEmptyString(payload, 'total_time');
+  if (total != null) {
+    return '$n ingredients · $total total';
+  }
   final prep = _intAttr(m, kRecipeAttrPrepTime);
-  final prepStr = prep != null ? '$prep min prep' : '—';
+  final prepFromPayload = crawlerPayloadNonEmptyString(payload, 'prep_time');
+  final prepStr =
+      prepFromPayload ?? (prep != null ? '$prep min prep' : '—');
   return '$n ingredients · $prepStr';
 }
 
@@ -47,9 +54,58 @@ List<String> _instructionLinesFromModel(Model m) {
   return instructionLinesFromRaw(m.attrString(kRecipeAttrInstructions));
 }
 
+const _nutritionHighlightLabels = [
+  'Calories',
+  'Carbohydrates',
+  'Protein',
+  'Fat',
+];
+
+List<NutritionServingFact> _nutritionHighlightsFromPayload(
+  Map<String, dynamic>? payload,
+) {
+  if (payload == null) {
+    return const [];
+  }
+  final raw = payload['nutrition_per_serving'];
+  if (raw is! List) {
+    return const [];
+  }
+  final byLowerNutrient = <String, String>{};
+  for (final item in raw) {
+    if (item is! Map) {
+      continue;
+    }
+    final map = Map<String, dynamic>.from(item);
+    final nutrientRaw = map['nutrient'];
+    final amountRaw = map['amount'];
+    if (nutrientRaw == null || amountRaw == null) {
+      continue;
+    }
+    final nutrient = nutrientRaw.toString().trim();
+    final amount = amountRaw.toString().trim();
+    if (nutrient.isEmpty || amount.isEmpty) {
+      continue;
+    }
+    byLowerNutrient[nutrient.toLowerCase()] = amount;
+  }
+  final out = <NutritionServingFact>[];
+  for (final label in _nutritionHighlightLabels) {
+    final amount = byLowerNutrient[label.toLowerCase()];
+    if (amount != null) {
+      out.add(NutritionServingFact(label: label, amount: amount));
+    }
+  }
+  return out;
+}
+
 RecipeDetail recipeDetailFromModel(Model m) {
   final items = m.relations?[kItemModelTypeName] ?? const <Model>[];
   final relList = m.relationsList ?? const <Relation>[];
+  final prepMin = _intAttr(m, kRecipeAttrPrepTime);
+  final payload = crawlerPayloadFromModelAttributes(m.attributes);
+  final prepDisplay = crawlerPayloadNonEmptyString(payload, 'prep_time') ??
+      (prepMin != null ? '$prepMin min' : null);
 
   final lines = <IngredientLine>[];
   for (final item in items) {
@@ -70,10 +126,14 @@ RecipeDetail recipeDetailFromModel(Model m) {
     id: m.id,
     title: m.name,
     tags: _tagListFromModel(m),
-    prepTimeMinutes: _intAttr(m, kRecipeAttrPrepTime),
+    prepTimeMinutes: prepMin,
     servings: _intAttr(m, kRecipeAttrServings),
     notes: _recipeUserNotes(m.description),
-    crawlerPayload: crawlerPayloadFromModelAttributes(m.attributes),
+    crawlerPayload: payload,
+    prepTimeDisplay: prepDisplay,
+    cookTimeDisplay: crawlerPayloadNonEmptyString(payload, 'cook_time'),
+    totalTimeDisplay: crawlerPayloadNonEmptyString(payload, 'total_time'),
+    nutritionPerServingHighlights: _nutritionHighlightsFromPayload(payload),
     ingredients: lines,
     instructionLines: _instructionLinesFromModel(m),
   );

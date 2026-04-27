@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:intl/intl.dart';
+
+import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/kind_color_palette.dart';
 import 'package:nx_projects/data/providers.dart';
@@ -11,8 +14,6 @@ import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
-// Temporarily unused while the cart row day picker is hidden to match reference.
-// import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
 
 /// Which edge has the 1px separator toward the main content.
 enum SprintCartBorder {
@@ -710,6 +711,11 @@ class _CartBody extends ConsumerWidget {
                     .upsert(cur.copyWith(clearSprint: true));
                 ref.invalidate(tasksListAsyncProvider);
               },
+              onTap: surface == SprintCartSurface.sprint
+                  ? () => ref
+                      .read(desktopTaskDrawerProvider.notifier)
+                      .viewTask(t.id)
+                  : null,
             ),
         ],
         const _CartSectionLabel('Breakdown'),
@@ -905,11 +911,13 @@ class _CartTaskRow extends StatefulWidget {
     required this.task,
     required this.surface,
     required this.onUnpin,
+    this.onTap,
   });
 
   final Task task;
   final SprintCartSurface surface;
   final VoidCallback onUnpin;
+  final VoidCallback? onTap;
 
   @override
   State<_CartTaskRow> createState() => _CartTaskRowState();
@@ -938,7 +946,7 @@ class _CartTaskRowState extends State<_CartTaskRow> {
             color: _rowHover ? AppColors.panel2 : Colors.transparent,
             borderRadius: BorderRadius.circular(5),
             child: InkWell(
-              onTap: () {},
+              onTap: widget.onTap,
               borderRadius: BorderRadius.circular(5),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -1012,10 +1020,10 @@ class _CartTaskRowState extends State<_CartTaskRow> {
                       )
                     else
                       SizedBox(
-                        width: 16,
-                        child: Center(
-                          child: !scheduled
-                              ? Tooltip(
+                        width: 40,
+                        child: !scheduled
+                            ? Center(
+                                child: Tooltip(
                                   message: 'No day assigned',
                                   child: Container(
                                     width: 8,
@@ -1025,9 +1033,13 @@ class _CartTaskRowState extends State<_CartTaskRow> {
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                                ),
+                              )
+                            : Align(
+                                alignment: Alignment.centerRight,
+                                child: _TinyDateChip(
+                                    date: parseLocalDate(t.plannedFor!)),
+                              ),
                       ),
                   ],
                 ),
@@ -1134,6 +1146,33 @@ class _CartFooter extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TinyDateChip extends StatelessWidget {
+  const _TinyDateChip({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = DateFormat('MMM d').format(date);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.panel2,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 9,
+          color: AppColors.muted,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

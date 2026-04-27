@@ -16,6 +16,8 @@ class SprintSummaryStrip extends StatelessWidget {
     required this.plannedH,
     required this.driftCount,
     required this.blockedCount,
+    required this.doingCount,
+    required this.dayIndex,
   });
 
   final Sprint sprint;
@@ -25,13 +27,16 @@ class SprintSummaryStrip extends StatelessWidget {
   final double plannedH;
   final int driftCount;
   final int blockedCount;
+  final int doingCount;
+  final int dayIndex;
 
   @override
   Widget build(BuildContext context) {
     final phase = switch (sprint.state) {
-      SprintState.active => 'In flight — mid-sprint',
-      SprintState.planned => 'Planning',
-      SprintState.done => 'Done',
+      SprintState.active =>
+        'Day $dayIndex of ${sprint.length} · $doingCount in flight',
+      SprintState.planned => 'Not started — planning only',
+      SprintState.done => 'Sprint complete',
     };
     final allDone = nTotal > 0 && nDone == nTotal;
     final hoursValColor = varianceColorForPair(actualH, plannedH);
@@ -48,6 +53,7 @@ class SprintSummaryStrip extends StatelessWidget {
           _Stat(
             label: 'Done',
             value: nTotal == 0 ? '—' : '$nDone/$nTotal',
+            sub: nTotal == 0 ? null : 'items',
             valueStyle: TextStyle(
               color: allDone ? AppColors.ok : AppColors.text,
               fontWeight: FontWeight.w500,
@@ -55,20 +61,21 @@ class SprintSummaryStrip extends StatelessWidget {
           ),
           const _VertDivider(),
           _Stat(
-            label: 'Hours',
-            value: '${_fmt(actualH)}/${_fmt(plannedH)}h',
+            label: 'Hours actual / planned',
+            value: '${_fmt(actualH)}h',
             valueStyle: TextStyle(
               color: hoursValColor,
               fontWeight: FontWeight.w500,
             ),
-            sub: 'act / pln',
+            sub: '/ ${_fmt(plannedH)}h',
           ),
           const _VertDivider(),
           _Stat(
             label: 'Drift',
             value: '$driftCount',
+            sub: 'item${driftCount == 1 ? '' : 's'} moved',
             valueStyle: const TextStyle(
-              color: AppColors.text,
+              color: AppColors.warn,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -106,7 +113,12 @@ class SprintSummaryStrip extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, required this.valueStyle, this.sub});
+  const _Stat({
+    required this.label,
+    required this.value,
+    required this.valueStyle,
+    this.sub,
+  });
 
   final String label;
   final String value;
@@ -120,7 +132,7 @@ class _Stat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label,
+          label.toUpperCase(),
           style: const TextStyle(
             fontSize: 10,
             color: AppColors.dim,
@@ -136,9 +148,18 @@ class _Stat extends StatelessWidget {
               if (sub != null)
                 TextSpan(
                   text: ' $sub',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
             ],
+          ),
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.text,
+            fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
       ],

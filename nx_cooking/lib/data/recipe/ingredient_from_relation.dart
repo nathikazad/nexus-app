@@ -61,6 +61,22 @@ Map<String, dynamic>? crawlerPayloadFromModelAttributes(
   return null;
 }
 
+/// Non-empty string value for [key] in a decoded crawler payload map.
+String? crawlerPayloadNonEmptyString(Map<String, dynamic>? payload, String key) {
+  if (payload == null) {
+    return null;
+  }
+  final raw = payload[key];
+  if (raw == null) {
+    return null;
+  }
+  final s = raw is String ? raw.trim() : raw.toString().trim();
+  if (s.isEmpty) {
+    return null;
+  }
+  return s;
+}
+
 String? _relationString(Relation? rel, String key) {
   final raw = rel?.relationAttributes?[key];
   return _stringFromDynamic(raw);

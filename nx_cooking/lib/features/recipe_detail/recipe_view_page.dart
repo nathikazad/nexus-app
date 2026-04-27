@@ -80,6 +80,12 @@ class _RecipeViewBody extends ConsumerWidget {
                       _ReadOnlyIngredients(ingredients: detail.ingredients),
                       const SizedBox(height: 28),
                       _InstructionsBlock(lines: detail.instructionLines),
+                      if (detail.nutritionPerServingHighlights.isNotEmpty) ...[
+                        const SizedBox(height: 28),
+                        _NutritionBlock(
+                          facts: detail.nutritionPerServingHighlights,
+                        ),
+                      ],
                       if (detail.notes != null && detail.notes!.isNotEmpty) ...[
                         const SizedBox(height: 28),
                         _NotesBlock(notes: detail.notes!),
@@ -266,11 +272,27 @@ class _Meta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[];
-    if (detail.prepTimeMinutes != null) {
+    if (detail.prepTimeDisplay != null) {
       items.add(
         _MetaItem(
           icon: SolarLinearIcons.stopwatch,
-          text: '${detail.prepTimeMinutes} min',
+          text: detail.prepTimeDisplay!,
+        ),
+      );
+    }
+    if (detail.cookTimeDisplay != null) {
+      items.add(
+        _MetaItem(
+          icon: SolarLinearIcons.fireMinimalistic,
+          text: detail.cookTimeDisplay!,
+        ),
+      );
+    }
+    if (detail.totalTimeDisplay != null) {
+      items.add(
+        _MetaItem(
+          icon: SolarLinearIcons.clockCircle,
+          text: detail.totalTimeDisplay!,
         ),
       );
     }
@@ -323,6 +345,34 @@ class _MetaItem extends StatelessWidget {
   }
 }
 
+/// Merges ingredients by trimmed [IngredientLine.groupName].
+///
+/// Section order follows **first appearance** of each distinct group in
+/// [ingredients]. Within a section, items keep **relative order** among rows
+/// that share that group (same group may be interleaved in the API list; they
+/// are collected into one block).
+List<({String header, List<IngredientLine> items})> _ingredientGroups(
+  List<IngredientLine> ingredients,
+) {
+  if (ingredients.isEmpty) {
+    return const [];
+  }
+  final sectionOrder = <String>[];
+  final buckets = <String, List<IngredientLine>>{};
+  for (final ing in ingredients) {
+    final h = ing.groupName?.trim() ?? '';
+    if (!buckets.containsKey(h)) {
+      sectionOrder.add(h);
+      buckets[h] = [];
+    }
+    buckets[h]!.add(ing);
+  }
+  return [
+    for (final header in sectionOrder)
+      (header: header, items: buckets[header]!),
+  ];
+}
+
 class _ReadOnlyIngredients extends StatelessWidget {
   const _ReadOnlyIngredients({required this.ingredients});
 
@@ -330,6 +380,52 @@ class _ReadOnlyIngredients extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ingredients.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'INGREDIENTS',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+              color: AppColors.zinc400,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No ingredients',
+            style: TextStyle(color: AppColors.zinc500, fontSize: 14),
+          ),
+        ],
+      );
+    }
+
+    final groups = _ingredientGroups(ingredients);
+    final children = <Widget>[];
+    var needsDivider = false;
+    for (final g in groups) {
+      if (g.header.isNotEmpty) {
+        if (needsDivider) {
+          children.add(
+            const Divider(height: 1, thickness: 1, color: AppColors.zinc100),
+          );
+        }
+        children.add(_IngredientGroupHeader(title: g.header));
+        needsDivider = false;
+      }
+      for (final ing in g.items) {
+        if (needsDivider) {
+          children.add(
+            const Divider(height: 1, thickness: 1, color: AppColors.zinc100),
+          );
+        }
+        children.add(_IngredientOneLine(ingredient: ing));
+        needsDivider = true;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -348,78 +444,96 @@ class _ReadOnlyIngredients extends StatelessWidget {
             border: Border.all(color: AppColors.zinc200),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Column(
-            children: [
-              for (var i = 0; i < ingredients.length; i++) ...[
-                if (i > 0) const Divider(height: 1, color: AppColors.zinc100),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (ingredients[i].groupName != null &&
-                                ingredients[i].groupName!.trim().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(
-                                  ingredients[i].groupName!.trim(),
-                                  style: const TextStyle(
-                                    fontSize: 10.4,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.4,
-                                    color: AppColors.zinc500,
-                                  ),
-                                ),
-                              ),
-                            Text(
-                              ingredients[i].name,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.zinc900,
-                              ),
-                            ),
-                            if (ingredients[i].preparation != null &&
-                                ingredients[i].preparation!.trim().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  ingredients[i].preparation!.trim(),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.zinc500,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (ingredients[i].amount.isNotEmpty)
-                        Text(
-                          ingredients[i].amount,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.zinc400,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: children,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _IngredientGroupHeader extends StatelessWidget {
+  const _IngredientGroupHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.zinc50,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Text(
+          title.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10.4,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: AppColors.zinc500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IngredientOneLine extends StatelessWidget {
+  const _IngredientOneLine({required this.ingredient});
+
+  final IngredientLine ingredient;
+
+  @override
+  Widget build(BuildContext context) {
+    final note = ingredient.preparation?.trim();
+    final amount = ingredient.amount.trim();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text.rich(
+        TextSpan(
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.35,
+          ),
+          children: [
+            if (amount.isNotEmpty)
+              TextSpan(
+                text: '$amount ',
+                style: const TextStyle(
+                  color: AppColors.zinc500,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            TextSpan(
+              text: ingredient.name,
+              style: const TextStyle(color: AppColors.zinc900),
+            ),
+            if (note != null && note.isNotEmpty)
+              TextSpan(
+                children: [
+                  const TextSpan(text: ' · '),
+                  TextSpan(
+                    text: note,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 13,
+                      color: AppColors.zinc500,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+        softWrap: true,
+      ),
     );
   }
 }
@@ -474,6 +588,84 @@ class _InstructionsBlock extends StatelessWidget {
             ),
           );
         }),
+      ],
+    );
+  }
+}
+
+class _NutritionBlock extends StatelessWidget {
+  const _NutritionBlock({required this.facts});
+
+  final List<NutritionServingFact> facts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'NUTRITION (PER SERVING)',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.2,
+            color: AppColors.zinc400,
+          ),
+        ),
+        const SizedBox(height: 12),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.zinc200),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < facts.length; i++) ...[
+                  if (i > 0)
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppColors.zinc100,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            facts[i].label,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.zinc900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          facts[i].amount,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.zinc600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

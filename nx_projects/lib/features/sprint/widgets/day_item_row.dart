@@ -49,12 +49,7 @@ class _DayItemRowState extends State<DayItemRow> {
       return _ghostRow(t, glyph, done);
     }
     Widget buildMain() {
-      return _mainRow(
-        t: t,
-        done: done,
-        blocked: blocked,
-        glyph: glyph,
-      );
+      return _mainRow(t: t, done: done, blocked: blocked, glyph: glyph);
     }
 
     if (widget.enableDrag) {
@@ -62,10 +57,7 @@ class _DayItemRowState extends State<DayItemRow> {
         data: t,
         maxSimultaneousDrags: 1,
         feedback: _dragFeedback(t, done, glyph),
-        childWhenDragging: Opacity(
-          opacity: 0.4,
-          child: buildMain(),
-        ),
+        childWhenDragging: Opacity(opacity: 0.4, child: buildMain()),
         child: buildMain(),
       );
     }
@@ -110,10 +102,7 @@ class _DayItemRowState extends State<DayItemRow> {
                 '${t.title}  ${_movedToLabel()}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.muted,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
           ],
@@ -143,6 +132,8 @@ class _DayItemRowState extends State<DayItemRow> {
     required bool blocked,
     required String glyph,
   }) {
+    final doneNoActual = done && t.actualHours <= 0;
+    final actualForProgress = doneNoActual ? t.estimate : t.actualHours;
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
@@ -157,24 +148,25 @@ class _DayItemRowState extends State<DayItemRow> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(5),
               border: blocked
-                  ? Border.all(
-                      color: const Color(0x40FF6B6B),
-                      width: 1,
-                    )
+                  ? Border.all(color: const Color(0x40FF6B6B), width: 1)
                   : null,
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _StatusDot(status: t.status),
                 const SizedBox(width: 8),
-                SizedBox(
-                  width: 14,
-                  child: Text(
-                    glyph,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: done ? AppColors.dim : kindColor(t.kind),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: SizedBox(
+                    width: 14,
+                    child: Text(
+                      glyph,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: done ? AppColors.dim : kindColor(t.kind),
+                      ),
                     ),
                   ),
                 ),
@@ -194,26 +186,19 @@ class _DayItemRowState extends State<DayItemRow> {
                           decoration: done ? TextDecoration.lineThrough : null,
                         ),
                       ),
-                      if (t.estimate > 0 && t.actualHours > 0) ...[
-                        const SizedBox(height: 2),
-                        TaskProgressSegments(estimate: t.estimate, actual: t.actualHours),
+                      if (t.estimate > 0 && actualForProgress > 0) ...[
+                        const SizedBox(height: 4),
+                        TaskProgressSegments(
+                          estimate: t.estimate,
+                          actual: actualForProgress,
+                          doneNoActual: doneNoActual,
+                        ),
                       ],
                     ],
                   ),
                 ),
                 const SizedBox(width: 6),
-                SizedBox(
-                  width: 40,
-                  child: Text(
-                    formatHours(t.estimate),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.muted,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
+                SizedBox(width: 66, child: _HoursCell(task: t)),
                 const SizedBox(width: 4),
                 SizedBox(
                   width: 16,
@@ -221,7 +206,11 @@ class _DayItemRowState extends State<DayItemRow> {
                     onTap: widget.onMenu,
                     child: const Text(
                       '⋮',
-                      style: TextStyle(fontSize: 14, color: AppColors.dim, height: 1),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.dim,
+                        height: 1,
+                      ),
                     ),
                   ),
                 ),
@@ -259,13 +248,64 @@ class _StatusDot extends StatelessWidget {
     return Container(
       width: 7,
       height: 7,
-      margin: const EdgeInsets.only(top: 2),
+      margin: const EdgeInsets.only(top: 5),
       decoration: BoxDecoration(
         color: c,
         shape: BoxShape.circle,
         boxShadow: status == TaskStatus.doing
-            ? [BoxShadow(color: AppColors.accent.withValues(alpha: 0.25), blurRadius: 0, spreadRadius: 2)]
+            ? [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.25),
+                  blurRadius: 0,
+                  spreadRadius: 2,
+                ),
+              ]
             : null,
+      ),
+    );
+  }
+}
+
+class _HoursCell extends StatelessWidget {
+  const _HoursCell({required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context) {
+    if (task.actualHours <= 0) {
+      return Text(
+        formatHours(task.estimate),
+        textAlign: TextAlign.right,
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppColors.muted,
+          fontFeatures: [FontFeature.tabularFigures()],
+        ),
+      );
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: formatHours(task.actualHours),
+            style: TextStyle(
+              color: varianceColorForPair(task.actualHours, task.estimate),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          TextSpan(
+            text: ' / ${formatHours(task.estimate)}',
+            style: const TextStyle(color: AppColors.dim),
+          ),
+        ],
+      ),
+      textAlign: TextAlign.right,
+      style: const TextStyle(
+        fontSize: 11,
+        color: AppColors.muted,
+        fontFeatures: [FontFeature.tabularFigures()],
       ),
     );
   }
