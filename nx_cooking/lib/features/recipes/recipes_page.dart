@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_cooking/core/layout/layout.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
-import 'package:nx_cooking/data/recipe/get_recipe_api.dart';
+import 'package:nx_cooking/data/recipe/import_recipe_api.dart';
 import 'package:nx_db/auth.dart';
 
 class RecipesPage extends ConsumerStatefulWidget {
@@ -181,7 +181,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
       if (imageBaseUrl == null || userId == null) {
         throw StateError('Not logged in');
       }
-      final result = await getRecipeFromUrl(
+      final result = await importRecipeFromUrl(
         imageBaseUrl: imageBaseUrl,
         userId: userId,
         recipeUrl: url,
@@ -213,7 +213,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
       if (imageBaseUrl == null || userId == null) {
         throw StateError('Not logged in');
       }
-      final result = await getRecipeFromPastedText(
+      final result = await importRecipeFromPastedText(
         imageBaseUrl: imageBaseUrl,
         userId: userId,
         recipeText: text,
