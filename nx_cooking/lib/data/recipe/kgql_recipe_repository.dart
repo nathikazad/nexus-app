@@ -61,10 +61,25 @@ class KgqlRecipeRepository implements RecipeRepository {
         '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 4) calling '
         'getKgqlModels model_type=$kRecipeModelTypeName…',
       );
+      final ing = filter?.ingredientFilters;
       final filterMap = <String, dynamic>{
         'model_type': kRecipeModelTypeName,
         if (filter?.tagFilters != null && filter!.tagFilters!.isNotEmpty)
           'tag_filters': filter.tagFilters,
+        if (ing != null && ing.isNotEmpty)
+          'relation_filters': [
+            for (final row in ing)
+              <String, dynamic>{
+                'model_type': kItemModelTypeName,
+                'filters': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'key': 'id',
+                    'op': '=',
+                    'value': row['id'],
+                  },
+                ],
+              },
+          ],
       };
       final models = await fetchKgqlModels(
         _client,

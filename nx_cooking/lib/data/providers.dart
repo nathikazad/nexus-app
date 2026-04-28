@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/kgql.dart';
 import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_cooking/core/dates/week_calendar.dart';
@@ -28,6 +29,29 @@ export 'package:nx_cooking/data/recipe/recipe_schema_provider.dart';
 final recipeSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
   final m = await ref.watch(recipeSchemaProvider.future);
   return modelTypeViewFromKgql(m);
+});
+
+/// All [Item] models with the CookingItem trait (ingredient catalog).
+final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((ref) async {
+  await ref.watch(authenticatedUserProvider.future);
+  final client = ref.watch(graphqlClientProvider);
+  final models = await fetchKgqlModels(
+    client,
+    filter: <String, dynamic>{
+      'model_type': 'Item',
+      'relation_filters': <Map<String, dynamic>>[
+        <String, dynamic>{'model_type': 'CookingItem'},
+      ],
+    },
+    struct: <String, dynamic>{'id': true, 'name': true},
+  );
+  final list = models
+      .map(
+        (m) => CookingItemEntry(id: m.id, name: m.name),
+      )
+      .toList()
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return list;
 });
 
 class RecipeListFilterNotifier extends Notifier<RecipeFilter?> {

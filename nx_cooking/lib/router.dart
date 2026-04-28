@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_cooking/features/auth/cooking_login_screen.dart';
 import 'package:nx_cooking/features/cooking_task/cooking_task_view_page.dart';
+import 'package:nx_cooking/features/ingredient/ingredients_page.dart';
 import 'package:nx_cooking/features/recipe_detail/recipe_view_page.dart';
 import 'package:nx_cooking/features/recipe_edit/recipe_edit_page.dart';
 import 'package:nx_cooking/features/shell/cooking_shell.dart';
@@ -59,6 +60,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           final id = int.parse(state.pathParameters['id']!);
           return RecipeEditPage(recipeId: id);
         },
+      ),
+      GoRoute(
+        path: '/ingredients',
+        builder: (context, state) => const IngredientsPage(),
       ),
       GoRoute(
         path: '/tag-systems',

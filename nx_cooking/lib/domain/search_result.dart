@@ -1,3 +1,11 @@
+/// An [Item] with the CookingItem trait (ingredient catalog entry).
+class CookingItemEntry {
+  const CookingItemEntry({required this.id, required this.name});
+
+  final int id;
+  final String name;
+}
+
 /// One row from `app.search_recipes` (PostGraphile `searchRecipes`).
 sealed class RecipeSearchResult {
   const RecipeSearchResult();

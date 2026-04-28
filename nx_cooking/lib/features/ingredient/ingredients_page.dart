@@ -4,29 +4,49 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
-import 'package:nx_cooking/domain/schema/model_type_view.dart';
 
-/// Tag systems defined on the Recipe model type (KGQL schema).
-class TagSystemsScreen extends ConsumerWidget {
-  const TagSystemsScreen({super.key});
+/// Lists all [Item] models with the CookingItem trait (searchable).
+class IngredientsPage extends ConsumerStatefulWidget {
+  const IngredientsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final schemaAsync = ref.watch(recipeSchemaViewProvider);
+  ConsumerState<IngredientsPage> createState() => _IngredientsPageState();
+}
 
-    return schemaAsync.when(
+class _IngredientsPageState extends ConsumerState<IngredientsPage> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(cookingItemsProvider);
+    final q = _searchController.text.trim().toLowerCase();
+
+    return async.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
-      data: (schema) {
-        final systems = schema.tagSystems;
+      data: (items) {
+        final filtered = q.isEmpty
+            ? items
+            : items
+                .where(
+                  (e) => e.name.toLowerCase().contains(q),
+                )
+                .toList();
+
         final body = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 20, 16),
+                padding: const EdgeInsets.fromLTRB(8, 8, 20, 12),
                 child: Row(
                   children: [
                     if (context.canPop())
@@ -45,7 +65,7 @@ class TagSystemsScreen extends ConsumerWidget {
                       ),
                     Expanded(
                       child: Text(
-                        'Tag systems',
+                        'Ingredients',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -57,30 +77,66 @@ class TagSystemsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Search ingredients…',
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.zinc400,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.zinc400,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.zinc50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.zinc200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.zinc200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AppColors.orange500,
+                      width: 1.2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             const Divider(height: 1, color: AppColors.zinc100),
             Expanded(
               child: ColoredBox(
                 color: AppColors.zinc50.withValues(alpha: 0.5),
-                child: systems.isEmpty
+                child: filtered.isEmpty
                     ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Text(
-                            'No Recipe tag systems yet.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: AppColors.zinc500,
-                            ),
+                        child: Text(
+                          items.isEmpty
+                              ? 'No ingredients yet.'
+                              : 'No matches',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppColors.zinc500,
                           ),
                         ),
                       )
                     : ListView.separated(
-                        itemCount: systems.length,
+                        itemCount: filtered.length,
                         separatorBuilder: (_, __) =>
                             const Divider(height: 1, color: AppColors.zinc100),
                         itemBuilder: (context, i) {
-                          final ts = systems[i];
+                          final e = filtered[i];
                           return Material(
                             color: Colors.white,
                             child: ListTile(
@@ -89,31 +145,13 @@ class TagSystemsScreen extends ConsumerWidget {
                                 vertical: 8,
                               ),
                               title: Text(
-                                ts.name,
+                                e.name,
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.zinc900,
                                 ),
                               ),
-                              subtitle: Text(
-                                '${ts.selectionMode} · ${ts.isHierarchical ? "tree" : "flat"} · ${countTagNodes(ts)} nodes',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.zinc400,
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: AppColors.zinc300,
-                                size: 22,
-                              ),
-                              onTap: ts.id == null
-                                  ? null
-                                  : () => context.push(
-                                      '/tag-system/form/${ts.id}',
-                                    ),
                             ),
                           );
                         },
@@ -126,13 +164,6 @@ class TagSystemsScreen extends ConsumerWidget {
         return Scaffold(
           backgroundColor: Colors.white,
           body: body,
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => context.push('/tag-system/form'),
-            backgroundColor: AppColors.orange500,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            child: const Icon(Icons.add, size: 28),
-          ),
         );
       },
     );

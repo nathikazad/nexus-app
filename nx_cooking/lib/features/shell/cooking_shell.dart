@@ -38,6 +38,7 @@ class _CookingShellState extends ConsumerState<CookingShell> {
             title: _tabTitles[_index],
             onLogout: () => ref.read(authProvider.notifier).logout(),
             onOpenTagSystems: () => context.push('/tag-systems'),
+            onOpenIngredients: () => context.push('/ingredients'),
           ),
           if (_index == 0)
             Consumer(
@@ -81,11 +82,13 @@ class _TopBar extends StatelessWidget {
     required this.title,
     required this.onLogout,
     required this.onOpenTagSystems,
+    required this.onOpenIngredients,
   });
 
   final String title;
   final VoidCallback onLogout;
   final VoidCallback onOpenTagSystems;
+  final VoidCallback onOpenIngredients;
 
   @override
   Widget build(BuildContext context) {
@@ -117,10 +120,15 @@ class _TopBar extends StatelessWidget {
                   tooltip: 'Account',
                   onSelected: (value) {
                     if (value == 'tags') onOpenTagSystems();
+                    if (value == 'ingredients') onOpenIngredients();
                     if (value == 'logout') onLogout();
                   },
                   itemBuilder: (context) => const [
                     PopupMenuItem(value: 'tags', child: Text('Tags')),
+                    PopupMenuItem(
+                      value: 'ingredients',
+                      child: Text('Ingredients'),
+                    ),
                     PopupMenuItem(value: 'logout', child: Text('Log out')),
                   ],
                   child: Container(
@@ -243,14 +251,41 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
           m['node'] == nextEntry['node'],
     );
     if (!dup) maps.add(nextEntry);
+    final ing = current?.ingredientFilters;
+    final nextFilter = RecipeFilter(
+      tagFilters: maps.isEmpty ? null : maps,
+      ingredientFilters: ing,
+    );
     ref.read(recipeListFilterProvider.notifier).setFilter(
-          maps.isEmpty ? null : RecipeFilter(tagFilters: maps),
+          nextFilter.isEmpty ? null : nextFilter,
+        );
+  }
+
+  void _mergeIngredientFilter(CookingItemSearchHit hit) {
+    final current = ref.read(recipeListFilterProvider);
+    final rows = <Map<String, dynamic>>[
+      if (current?.ingredientFilters != null) ...current!.ingredientFilters!,
+    ];
+    final nextEntry = <String, dynamic>{
+      'id': hit.id,
+      'name': hit.name,
+    };
+    final dup = rows.any((m) => m['id'] == nextEntry['id']);
+    if (!dup) rows.add(nextEntry);
+    final tags = current?.tagFilters;
+    final nextFilter = RecipeFilter(
+      tagFilters: tags,
+      ingredientFilters: rows.isEmpty ? null : rows,
+    );
+    ref.read(recipeListFilterProvider.notifier).setFilter(
+          nextFilter.isEmpty ? null : nextFilter,
         );
   }
 
   Future<void> _openFilterSheet() async {
     try {
       final schema = await ref.read(recipeSchemaViewProvider.future);
+      final ingredients = await ref.read(cookingItemsProvider.future);
       if (!mounted) return;
       await showModalBottomSheet<void>(
         context: context,
@@ -258,6 +293,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
         backgroundColor: Colors.transparent,
         builder: (ctx) => RecipeTagFilterSheet(
           schema: schema,
+          ingredients: ingredients,
           initial: ref.read(recipeListFilterProvider),
           onApply: (f) {
             ref.read(recipeListFilterProvider.notifier).setFilter(f);
@@ -267,7 +303,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load tag schema')),
+          const SnackBar(content: Text('Could not load filters')),
         );
       }
     }
@@ -277,6 +313,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
   Widget build(BuildContext context) {
     final filter = ref.watch(recipeListFilterProvider);
     final tagFilters = filter?.tagFilters;
+    final ingredientFilters = filter?.ingredientFilters;
     final searchQuery = ref.watch(recipeSearchQueryProvider);
     final searchAsync = ref.watch(recipeSearchResultsProvider);
     final showSearchOverlay = searchQuery.trim().isNotEmpty;
@@ -408,25 +445,28 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
                                         context.push('/recipe/$id');
                                       },
                                     );
-                                  case CookingItemSearchHit(:final name):
+                                  case CookingItemSearchHit hit:
                                     return ListTile(
                                       dense: true,
-                                      enabled: false,
                                       title: Text(
-                                        name,
+                                        hit.name,
                                         style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
-                                          color: AppColors.zinc400,
+                                          color: AppColors.zinc900,
                                         ),
                                       ),
                                       subtitle: Text(
-                                        'Ingredient',
+                                        'Ingredient · tap to filter',
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
-                                          color: AppColors.zinc400,
+                                          color: AppColors.zinc500,
                                         ),
                                       ),
+                                      onTap: () {
+                                        _mergeIngredientFilter(hit);
+                                        _clearSearch();
+                                      },
                                     );
                                   case final TagSearchHit tag:
                                     return ListTile(
@@ -519,7 +559,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       icon: const Icon(Icons.filter_list, size: 20),
-                      tooltip: 'Filter by tag',
+                      tooltip: 'Filter recipes',
                     ),
                     TextButton.icon(
                       onPressed: () {},
@@ -545,32 +585,60 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
                 ),
               ],
             ),
-            if (tagFilters != null && tagFilters.isNotEmpty) ...[
+            if ((tagFilters != null && tagFilters.isNotEmpty) ||
+                (ingredientFilters != null && ingredientFilters.isNotEmpty)) ...[
               const SizedBox(height: 8),
               SizedBox(
                 height: 30,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    for (var i = 0; i < tagFilters.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: _FilterTagChip(
-                          label: tagFilterLabel(tagFilters[i]),
-                          onRemove: () {
-                            final next = List<Map<String, dynamic>>.from(
-                              tagFilters,
-                            )..removeAt(i);
-                            ref
-                                .read(recipeListFilterProvider.notifier)
-                                .setFilter(
-                                  next.isEmpty
-                                      ? null
-                                      : RecipeFilter(tagFilters: next),
-                                );
-                          },
+                    if (tagFilters != null)
+                      for (var i = 0; i < tagFilters.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: _FilterTagChip(
+                            label: tagFilterLabel(tagFilters[i]),
+                            onRemove: () {
+                              final nextTags = List<Map<String, dynamic>>.from(
+                                tagFilters,
+                              )..removeAt(i);
+                              final next = RecipeFilter(
+                                tagFilters: nextTags.isEmpty ? null : nextTags,
+                                ingredientFilters: ingredientFilters,
+                              );
+                              ref
+                                  .read(recipeListFilterProvider.notifier)
+                                  .setFilter(
+                                    next.isEmpty ? null : next,
+                                  );
+                            },
+                          ),
                         ),
-                      ),
+                    if (ingredientFilters != null)
+                      for (var j = 0; j < ingredientFilters.length; j++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: _FilterTagChip(
+                            label: ingredientFilterLabel(ingredientFilters[j]),
+                            onRemove: () {
+                              final nextIng =
+                                  List<Map<String, dynamic>>.from(
+                                ingredientFilters,
+                              )..removeAt(j);
+                              final next = RecipeFilter(
+                                tagFilters: tagFilters,
+                                ingredientFilters:
+                                    nextIng.isEmpty ? null : nextIng,
+                              );
+                              ref
+                                  .read(recipeListFilterProvider.notifier)
+                                  .setFilter(
+                                    next.isEmpty ? null : next,
+                                  );
+                            },
+                          ),
+                        ),
                     TextButton(
                       onPressed: () {
                         ref
