@@ -38,6 +38,7 @@ final class RecipeDetail {
     required this.id,
     required this.title,
     this.tags = const [],
+    this.tagsMap = const <String, List<String>>{},
     this.prepTimeMinutes,
     this.servings,
     this.notes,
@@ -56,6 +57,9 @@ final class RecipeDetail {
   final int id;
   final String title;
   final List<String> tags;
+
+  /// Per tag system name → selected node names (from [Model.tags]).
+  final Map<String, List<String>> tagsMap;
   final int? prepTimeMinutes;
   final int? servings;
   final String? notes;

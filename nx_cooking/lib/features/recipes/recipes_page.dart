@@ -61,58 +61,24 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
                       horizontal: 20,
                       vertical: 16,
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                r.title,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.zinc900,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                r.metaLine,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.zinc500,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          r.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.zinc900,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Wrap(
-                          spacing: 5,
-                          children: r.tags
-                              .map(
-                                (t) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.orange100,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    t.toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 9.6,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                      color: AppColors.orange800,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                        const SizedBox(height: 4),
+                        Text(
+                          r.metaLine,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.zinc500,
+                          ),
                         ),
                       ],
                     ),

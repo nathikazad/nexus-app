@@ -3,7 +3,6 @@ final class RecipeSummary {
     required this.id,
     required this.title,
     required this.metaLine,
-    required this.tags,
     this.ingredientCount = 0,
     this.prepTimeMinutes,
   });
@@ -12,7 +11,6 @@ final class RecipeSummary {
   final String id;
   final String title;
   final String metaLine;
-  final List<String> tags;
   final int ingredientCount;
   final int? prepTimeMinutes;
 }

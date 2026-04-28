@@ -8,17 +8,73 @@ import 'package:nx_cooking/data/cooking_task/kgql_cooking_plan_repository.dart';
 import 'package:nx_cooking/data/fake_cooking_repository.dart';
 import 'package:nx_cooking/data/recipe/kgql_recipe_repository.dart';
 import 'package:nx_cooking/data/recipe/recipe_schema_provider.dart';
+import 'package:nx_cooking/data/schema/model_type_view_mapper.dart';
 import 'package:nx_cooking/domain/cooking_plan_repository.dart';
 import 'package:nx_cooking/domain/cooking_repository.dart';
 import 'package:nx_cooking/domain/cooking_task_detail.dart';
 import 'package:nx_cooking/domain/recipe.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
+import 'package:nx_cooking/domain/recipe_filter.dart';
 import 'package:nx_cooking/domain/recipe_repository.dart';
+import 'package:nx_cooking/domain/schema/model_type_view.dart';
+import 'package:nx_cooking/domain/search_result.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:nx_cooking/domain/week_section.dart';
 
 export 'package:nx_cooking/data/cooking_task/cooking_task_schema_provider.dart';
 export 'package:nx_cooking/data/recipe/recipe_schema_provider.dart';
+
+/// Recipe [ModelType] mapped for tag UI (filter sheet, tag admin).
+final recipeSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
+  final m = await ref.watch(recipeSchemaProvider.future);
+  return modelTypeViewFromKgql(m);
+});
+
+class RecipeListFilterNotifier extends Notifier<RecipeFilter?> {
+  @override
+  RecipeFilter? build() => null;
+
+  void setFilter(RecipeFilter? value) => state = value;
+}
+
+/// Active tag filters for recipe list (server-side KGQL `tag_filters`).
+final recipeListFilterProvider =
+    NotifierProvider<RecipeListFilterNotifier, RecipeFilter?>(
+      RecipeListFilterNotifier.new,
+    );
+
+class RecipeSearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setQuery(String value) => state = value;
+
+  void clear() => state = '';
+}
+
+/// Raw text in the Recipes sub-bar search field.
+final recipeSearchQueryProvider =
+    NotifierProvider<RecipeSearchQueryNotifier, String>(
+      RecipeSearchQueryNotifier.new,
+    );
+
+/// Debounced results for [recipeSearchQueryProvider]. `null` when the query
+/// is empty (hide overlay). Otherwise a (possibly empty) list from the server.
+final recipeSearchResultsProvider =
+    FutureProvider.autoDispose<List<RecipeSearchResult>?>((ref) async {
+  var q = ref.watch(recipeSearchQueryProvider);
+  for (;;) {
+    final t = q.trim();
+    if (t.isEmpty) return null;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (ref.read(recipeSearchQueryProvider).trim() != t) {
+      q = ref.read(recipeSearchQueryProvider);
+      continue;
+    }
+    await ref.watch(authenticatedUserProvider.future);
+    return ref.read(recipeRepositoryProvider).searchRecipes(t);
+  }
+});
 
 /// Stats tab only (in-memory).
 final cookingRepositoryProvider = Provider<CookingRepository>(
@@ -73,7 +129,10 @@ final recipeListProvider = FutureProvider<List<RecipeSummary>>((ref) async {
       '[nx_cooking:recipeListProvider] authenticated user=${user.userId} '
       'preset=${user.preset.key}',
     );
-    final list = await ref.watch(recipeRepositoryProvider).fetchRecipes();
+    final filter = ref.watch(recipeListFilterProvider);
+    final list = await ref.watch(recipeRepositoryProvider).fetchRecipes(
+          filter: filter,
+        );
     debugPrint('[nx_cooking:recipeListProvider] success count=${list.length}');
     return list;
   } catch (e, st) {

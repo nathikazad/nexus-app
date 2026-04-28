@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_cooking/data/recipe/documents/search_recipes.graphql.dart';
 import 'package:nx_cooking/data/recipe/recipe_attr_keys.dart';
 import 'package:nx_cooking/data/recipe/recipe_mapper.dart';
+import 'package:nx_cooking/data/recipe/search_result_mapper.dart';
 import 'package:nx_cooking/domain/recipe.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
+import 'package:nx_cooking/domain/recipe_filter.dart';
 import 'package:nx_cooking/domain/recipe_repository.dart';
+import 'package:nx_cooking/domain/search_result.dart';
 
 class KgqlRecipeRepository implements RecipeRepository {
   KgqlRecipeRepository({
@@ -40,7 +44,7 @@ class KgqlRecipeRepository implements RecipeRepository {
   }
 
   @override
-  Future<List<RecipeSummary>> fetchRecipes() async {
+  Future<List<RecipeSummary>> fetchRecipes({RecipeFilter? filter}) async {
     debugPrint('[nx_cooking:KgqlRecipeRepository.fetchRecipes] 1) begin');
     try {
       debugPrint(
@@ -57,9 +61,14 @@ class KgqlRecipeRepository implements RecipeRepository {
         '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 4) calling '
         'getKgqlModels model_type=$kRecipeModelTypeName…',
       );
+      final filterMap = <String, dynamic>{
+        'model_type': kRecipeModelTypeName,
+        if (filter?.tagFilters != null && filter!.tagFilters!.isNotEmpty)
+          'tag_filters': filter.tagFilters,
+      };
       final models = await fetchKgqlModels(
         _client,
-        filter: {'model_type': kRecipeModelTypeName},
+        filter: filterMap,
         struct: struct,
       );
       debugPrint(
@@ -73,6 +82,30 @@ class KgqlRecipeRepository implements RecipeRepository {
       );
       rethrow;
     }
+  }
+
+  @override
+  Future<List<RecipeSearchResult>> searchRecipes(
+    String term, {
+    int limitPer = 10,
+  }) async {
+    final trimmed = term.trim();
+    if (trimmed.isEmpty) return const [];
+    final result = await _client.query(
+      QueryOptions(
+        document: gql(searchRecipesQuery),
+        variables: <String, dynamic>{
+          'searchTerm': trimmed,
+          'limitPer': limitPer,
+        },
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
+    );
+    if (result.hasException) {
+      throw result.exception!;
+    }
+    final raw = result.data?['searchRecipes'];
+    return searchResultsFromJson(raw);
   }
 
   @override
@@ -92,6 +125,16 @@ class KgqlRecipeRepository implements RecipeRepository {
   Future<int> createRecipe(RecipeFormData form) async {
     final req = setRequestForCreateRecipe(form);
     return setKgqlModel(_client, req);
+  }
+
+  @override
+  Future<void> updateRecipeMeta(
+    int id,
+    String name,
+    Map<String, List<String>> tags,
+  ) async {
+    final req = setRequestForUpdateRecipeMeta(id, name, tags);
+    await setKgqlModel(_client, req);
   }
 
   @override

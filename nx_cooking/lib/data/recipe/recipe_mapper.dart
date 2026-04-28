@@ -17,6 +17,17 @@ List<String> _tagListFromModel(Model m) {
   return out;
 }
 
+/// Per-system tag assignments for edit UI and [RecipeDetail.tagsMap].
+Map<String, List<String>> recipeTagMapFromModel(Model m) {
+  final tags = m.tags;
+  if (tags == null || tags.isEmpty) {
+    return const {};
+  }
+  return {
+    for (final e in tags.entries) e.key: List<String>.from(e.value),
+  };
+}
+
 int? _intAttr(Model m, String key) {
   final d = m.attrDouble(key);
   if (d == null) {
@@ -44,7 +55,6 @@ RecipeSummary recipeSummaryFromModel(Model m) {
     id: m.id.toString(),
     title: m.name,
     metaLine: _metaLine(m),
-    tags: _tagListFromModel(m),
     ingredientCount: m.relations?[kItemModelTypeName]?.length ?? 0,
     prepTimeMinutes: _intAttr(m, kRecipeAttrPrepTime),
   );
@@ -126,6 +136,7 @@ RecipeDetail recipeDetailFromModel(Model m) {
     id: m.id,
     title: m.name,
     tags: _tagListFromModel(m),
+    tagsMap: recipeTagMapFromModel(m),
     prepTimeMinutes: prepMin,
     servings: _intAttr(m, kRecipeAttrServings),
     notes: _recipeUserNotes(m.description),
@@ -254,4 +265,22 @@ SetModelRequest setRequestForUpdateRecipeWithIngredients(
 
 SetModelRequest setRequestForDeleteRecipe(int id) {
   return SetModelRequest(id: id, delete: true);
+}
+
+SetModelRequest setRequestForUpdateRecipeMeta(
+  int id,
+  String name,
+  Map<String, List<String>> tags,
+) {
+  return SetModelRequest(
+    id: id,
+    name: name.trim(),
+    tags: [
+      for (final e in tags.entries)
+        if (e.value.isNotEmpty)
+          SetModelTag(system: e.key, nodes: e.value)
+        else
+          SetModelTag(system: e.key, nodes: const [], clear: true),
+    ],
+  );
 }

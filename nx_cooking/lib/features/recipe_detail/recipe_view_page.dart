@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
+import 'package:nx_cooking/domain/schema/model_type_view.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 /// Read-only recipe detail (HTML reference: recipe detail overlay).
@@ -64,12 +66,17 @@ class _RecipeViewBody extends ConsumerWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _TopBar(onBack: () => context.pop()),
+          _TopBar(
+            onBack: () => context.pop(),
+            onEdit: () => context.push('/recipe/$recipeId/edit'),
+          ),
           const Divider(height: 1, color: AppColors.orange100),
           Expanded(
             child: CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(child: _Header(detail: detail)),
+                SliverToBoxAdapter(
+                  child: _Header(detail: detail),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 120),
                   sliver: SliverList(
@@ -158,9 +165,10 @@ class _RecipeViewBody extends ConsumerWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onBack});
+  const _TopBar({required this.onBack, required this.onEdit});
 
   final VoidCallback onBack;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +194,11 @@ class _TopBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 48),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 22),
+              color: AppColors.zinc500,
+              onPressed: onEdit,
+            ),
           ],
         ),
       ),
@@ -194,10 +206,67 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({required this.detail});
 
   final RecipeDetail detail;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final schemaAsync = ref.watch(recipeSchemaViewProvider);
+
+    return schemaAsync.when(
+      loading: () => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.orange100)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              detail.title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+                color: AppColors.zinc900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _Meta(detail: detail),
+          ],
+        ),
+      ),
+      error: (_, __) => _HeaderContent(
+        detail: detail,
+        schema: null,
+      ),
+      data: (ModelTypeView? schema) {
+        return _HeaderContent(
+          detail: detail,
+          schema: schema,
+        );
+      },
+    );
+  }
+}
+
+class _HeaderContent extends StatelessWidget {
+  const _HeaderContent({required this.detail, this.schema});
+
+  final RecipeDetail detail;
+  final ModelTypeView? schema;
+
+  bool get _hasAnyTags {
+    for (final e in detail.tagsMap.entries) {
+      if (e.value.isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,35 +279,6 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (detail.tags.isNotEmpty)
-            Wrap(
-              spacing: 5,
-              runSpacing: 5,
-              children: detail.tags
-                  .map(
-                    (t) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.orange100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        t.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 9.6,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                          color: AppColors.orange800,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          if (detail.tags.isNotEmpty) const SizedBox(height: 12),
           Text(
             detail.title,
             style: const TextStyle(
@@ -248,10 +288,140 @@ class _Header extends StatelessWidget {
               color: AppColors.zinc900,
             ),
           ),
+          if (_hasAnyTags) const SizedBox(height: 12),
+          if (_hasAnyTags) _TagGroupsBySystem(detail: detail, schema: schema),
           const SizedBox(height: 8),
           _Meta(detail: detail),
         ],
       ),
+    );
+  }
+}
+
+class _TagGroupsBySystem extends StatelessWidget {
+  const _TagGroupsBySystem({required this.detail, this.schema});
+
+  final RecipeDetail detail;
+  final ModelTypeView? schema;
+
+  @override
+  Widget build(BuildContext context) {
+    final map = detail.tagsMap;
+    final order = <String, List<String>>{};
+    final seen = <String>{};
+
+    if (schema != null) {
+      for (final s in schema!.tagSystems) {
+        final nodes = map[s.name];
+        if (nodes != null && nodes.isNotEmpty) {
+          order[s.name] = nodes;
+          seen.add(s.name);
+        }
+      }
+    }
+    for (final e in map.entries) {
+      if (e.value.isNotEmpty && !seen.contains(e.key)) {
+        order[e.key] = e.value;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final e in order.entries) ...[
+          Text(
+            e.key,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: AppColors.zinc500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final node in e.value)
+                _RecipeTagChip(
+                  systemName: e.key,
+                  node: node,
+                  schema: schema,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _RecipeTagChip extends StatelessWidget {
+  const _RecipeTagChip({
+    required this.systemName,
+    required this.node,
+    this.schema,
+  });
+
+  final String systemName;
+  final String node;
+  final ModelTypeView? schema;
+
+  TagSystemView? get _system {
+    if (schema == null) {
+      return null;
+    }
+    for (final s in schema!.tagSystems) {
+      if (s.name == systemName) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sys = _system;
+    final path = sys != null ? tagBreadcrumbPath(sys, node) : null;
+    final chipTextStyle = GoogleFonts.inter(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: AppColors.zinc700,
+    );
+    final sepStyle = chipTextStyle.copyWith(color: AppColors.zinc400);
+    final decoration = BoxDecoration(
+      color: AppColors.zinc100,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(
+        color: AppColors.zinc200.withValues(alpha: 0.6),
+      ),
+    );
+
+    if (path != null && path.length > 1) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: decoration,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < path.length; i++) ...[
+              if (i > 0) Text(' \u203A ', style: sepStyle),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                child: Text(path[i], style: chipTextStyle),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    final label =
+        path != null && path.isNotEmpty ? path.join(' \u203A ') : node;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: decoration,
+      child: Text(label, style: chipTextStyle),
     );
   }
 }
