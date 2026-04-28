@@ -64,10 +64,7 @@ class _RecipeViewBody extends ConsumerWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _TopBar(
-            onBack: () => context.pop(),
-            onEdit: () => context.push('/recipe/$recipeId/edit'),
-          ),
+          _TopBar(onBack: () => context.pop()),
           const Divider(height: 1, color: AppColors.orange100),
           Expanded(
             child: CustomScrollView(
@@ -161,10 +158,9 @@ class _RecipeViewBody extends ConsumerWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onBack, required this.onEdit});
+  const _TopBar({required this.onBack});
 
   final VoidCallback onBack;
-  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -190,11 +186,7 @@ class _TopBar extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(SolarLinearIcons.penNewRound, size: 20),
-              color: AppColors.zinc500,
-              onPressed: onEdit,
-            ),
+            const SizedBox(width: 48),
           ],
         ),
       ),

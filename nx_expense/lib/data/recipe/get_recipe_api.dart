@@ -1,0 +1,176 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:nx_db/auth.dart';
+
+/// Same host normalization as [uploadExpenseSnapshot] / [postTellerSync] (MCP `http_server.py`).
+String _normalizeImageBaseForCf(String url) {
+  var ep = url;
+  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
+    ep = ep.replaceFirst('http://', 'https://');
+  }
+  return ep;
+}
+
+String _trimBase(String imageBaseUrl) {
+  return imageBaseUrl.endsWith('/')
+      ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
+      : imageBaseUrl;
+}
+
+Map<String, String> _mcpHeaders(String base, String userId, {bool jsonBody = false}) {
+  final headers = <String, String>{
+    'x-user-id': userId,
+  };
+  if (jsonBody) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (CfAccess.shouldAttachHeaders(base)) {
+    headers.addAll(CfAccess.headers);
+  }
+  return headers;
+}
+
+/// Parsed success payload from `GET`/`POST` `/get-recipe` (MCP `http_server.py`: `get_recipe`).
+class GetRecipeHttpResult {
+  const GetRecipeHttpResult({
+    required this.recipeId,
+    required this.createdItemIds,
+    required this.recipe,
+  });
+
+  final int recipeId;
+  final List<int> createdItemIds;
+  final Map<String, dynamic> recipe;
+}
+
+GetRecipeHttpResult _parseOkBody(Map<String, dynamic> decoded) {
+  final rid = decoded['recipe_id'];
+  if (rid is! int && rid is! num) {
+    throw StateError('get-recipe: missing recipe_id');
+  }
+  final recipeId = rid is int ? rid : (rid as num).toInt();
+
+  final rawIds = decoded['created_item_ids'];
+  final created = <int>[];
+  if (rawIds is List<dynamic>) {
+    for (final x in rawIds) {
+      if (x is int) {
+        created.add(x);
+      } else if (x is num) {
+        created.add(x.toInt());
+      }
+    }
+  }
+
+  final recipe = decoded['recipe'];
+  if (recipe is! Map<String, dynamic>) {
+    throw StateError('get-recipe: missing or invalid recipe');
+  }
+
+  return GetRecipeHttpResult(
+    recipeId: recipeId,
+    createdItemIds: created,
+    recipe: recipe,
+  );
+}
+
+Never _throwFromResponse(http.Response resp) {
+  Map<String, dynamic>? decoded;
+  try {
+    final o = jsonDecode(resp.body);
+    if (o is Map<String, dynamic>) {
+      decoded = o;
+    }
+  } catch (_) {
+    // ignore
+  }
+  final msg = decoded?['error']?.toString() ??
+      (resp.body.isNotEmpty ? resp.body : 'HTTP ${resp.statusCode}');
+  throw StateError('get-recipe failed (${resp.statusCode}): $msg');
+}
+
+/// `GET {imageBaseUrl}/get-recipe?url=...` — fetch page and import (crawler + KGQL).
+///
+/// Equivalent to:
+/// `curl -sS -H 'x-user-id: …' 'http://127.0.0.1:8001/get-recipe?url=…'`
+Future<GetRecipeHttpResult> getRecipeFromUrl({
+  required String imageBaseUrl,
+  required String userId,
+  required String recipeUrl,
+}) async {
+  final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
+  final uri = Uri.parse('$base/get-recipe').replace(
+    queryParameters: <String, String>{'url': recipeUrl},
+  );
+  final resp = await http.get(uri, headers: _mcpHeaders(base, userId));
+  if (resp.statusCode < 200 || resp.statusCode >= 300) {
+    _throwFromResponse(resp);
+  }
+  final decoded = jsonDecode(resp.body);
+  if (decoded is! Map<String, dynamic>) {
+    throw StateError('Invalid get-recipe response');
+  }
+  if (decoded['ok'] != true) {
+    _throwFromResponse(resp);
+  }
+  return _parseOkBody(decoded);
+}
+
+/// `POST {imageBaseUrl}/get-recipe` with body `{"text":"..."}` — paste recipe text (skips fetch).
+///
+/// Equivalent to:
+/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"text":"…"}' …/get-recipe`
+Future<GetRecipeHttpResult> getRecipeFromPastedText({
+  required String imageBaseUrl,
+  required String userId,
+  required String recipeText,
+}) async {
+  final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
+  final uri = Uri.parse('$base/get-recipe');
+  final resp = await http.post(
+    uri,
+    headers: _mcpHeaders(base, userId, jsonBody: true),
+    body: jsonEncode(<String, dynamic>{'text': recipeText}),
+  );
+  if (resp.statusCode < 200 || resp.statusCode >= 300) {
+    _throwFromResponse(resp);
+  }
+  final decoded = jsonDecode(resp.body);
+  if (decoded is! Map<String, dynamic>) {
+    throw StateError('Invalid get-recipe response');
+  }
+  if (decoded['ok'] != true) {
+    _throwFromResponse(resp);
+  }
+  return _parseOkBody(decoded);
+}
+
+/// `POST {imageBaseUrl}/get-recipe` with body `{"url":"..."}` — same as [getRecipeFromUrl] but via POST JSON.
+///
+/// Equivalent to:
+/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"url":"…"}' …/get-recipe`
+Future<GetRecipeHttpResult> getRecipeFromUrlPostBody({
+  required String imageBaseUrl,
+  required String userId,
+  required String recipeUrl,
+}) async {
+  final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
+  final uri = Uri.parse('$base/get-recipe');
+  final resp = await http.post(
+    uri,
+    headers: _mcpHeaders(base, userId, jsonBody: true),
+    body: jsonEncode(<String, dynamic>{'url': recipeUrl}),
+  );
+  if (resp.statusCode < 200 || resp.statusCode >= 300) {
+    _throwFromResponse(resp);
+  }
+  final decoded = jsonDecode(resp.body);
+  if (decoded is! Map<String, dynamic>) {
+    throw StateError('Invalid get-recipe response');
+  }
+  if (decoded['ok'] != true) {
+    _throwFromResponse(resp);
+  }
+  return _parseOkBody(decoded);
+}

@@ -17,6 +17,7 @@ dependencies:
   nx_db:
     path: ../nx_db
   solar_icon_pack: ^0.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
