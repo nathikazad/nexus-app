@@ -15,7 +15,10 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         authProvider.overrideWith(
-          () => AuthController(initialDelay: Duration.zero, skipBackendPing: true),
+          () => AuthController(
+            initialDelay: Duration.zero,
+            skipBackendPing: true,
+          ),
         ),
       ],
     );
@@ -24,15 +27,19 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: TimeLoginScreen(),
-        ),
+        child: const MaterialApp(home: TimeLoginScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Log In'), findsOneWidget);
-    expect(find.byType(TextFormField), findsOneWidget);
+    expect(find.text('Nathik'), findsOneWidget);
+    expect(find.text('Yareni'), findsNothing);
+    expect(find.byType(TextFormField), findsNothing);
+    expect(
+      find.byType(DropdownButtonFormField<AuthLoginProfile>),
+      findsOneWidget,
+    );
     expect(find.byType(DropdownButtonFormField<BackendPreset>), findsOneWidget);
   });
 }

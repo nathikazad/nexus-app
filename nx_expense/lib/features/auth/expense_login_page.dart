@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:nx_db/auth.dart';
 
-import 'package:nx_expense/core/config/login_defaults.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 
@@ -19,27 +18,20 @@ class ExpenseLoginScreen extends ConsumerStatefulWidget {
 
 class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _userIdController = TextEditingController();
+  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
-
-  @override
-  void initState() {
-    super.initState();
-    _userIdController.text = kDefaultLoginUserId;
-  }
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    final userId = _userIdController.text.trim();
 
-    final errorMessage =
-        await ref.read(authProvider.notifier).login(userId, _selectedPreset);
+    final errorMessage = await ref
+        .read(authProvider.notifier)
+        .login(
+          _selectedProfile.userId,
+          _selectedPreset,
+          _selectedProfile.personalDomainId,
+          _selectedProfile.homeDomainId,
+        );
 
     if (errorMessage == null) {
       // Login succeeded — navigation handled by auth state listener / router.
@@ -74,7 +66,10 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
         prefixIcon: prefix,
         filled: true,
         fillColor: AppColors.slate50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -111,7 +106,11 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 32),
+                  child: const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: Colors.white,
+                    size: 32,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -126,29 +125,48 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Track your spending privately.',
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate500),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate500,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('USER ID', style: labelStyle),
+                  child: Text('PERSON', style: labelStyle),
                 ),
                 const SizedBox(height: 6),
-                TextFormField(
-                  controller: _userIdController,
-                  enabled: !loading,
-                  keyboardType: TextInputType.text,
+                DropdownButtonFormField<AuthLoginProfile>(
+                  isExpanded: true,
+                  initialValue: _selectedProfile,
                   style: GoogleFonts.inter(fontSize: 14),
                   decoration: fieldDeco(
-                    'Enter user ID',
+                    'Select person',
                     prefix: const Padding(
                       padding: EdgeInsets.only(left: 12, right: 8),
-                      child: Icon(Icons.person_outline, color: AppColors.slate400, size: 20),
+                      child: Icon(
+                        Icons.person_outline,
+                        color: AppColors.slate400,
+                        size: 20,
+                      ),
                     ),
                   ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'User ID is required' : null,
+                  items: authLoginProfiles
+                      .map(
+                        (profile) => DropdownMenuItem<AuthLoginProfile>(
+                          value: profile,
+                          child: Text(profile.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: loading
+                      ? null
+                      : (AuthLoginProfile? profile) {
+                          if (profile != null) {
+                            setState(() => _selectedProfile = profile);
+                          }
+                        },
                 ),
                 const SizedBox(height: 16),
                 Align(
@@ -162,10 +180,17 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                     'Select backend',
                     prefix: const Padding(
                       padding: EdgeInsets.only(left: 12, right: 8),
-                      child: Icon(Icons.dns_outlined, color: AppColors.slate400, size: 20),
+                      child: Icon(
+                        Icons.dns_outlined,
+                        color: AppColors.slate400,
+                        size: 20,
+                      ),
                     ),
                   ),
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate900,
+                  ),
                   items: BackendPreset.values
                       .map(
                         (p) => DropdownMenuItem<BackendPreset>(
@@ -191,9 +216,18 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                         ? const SizedBox(
                             width: 22,
                             height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : Text('Log In', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                        : Text(
+                            'Log In',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
                   ),
                 ),
                 if (authState.hasError)
@@ -201,7 +235,10 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                     padding: const EdgeInsets.only(top: 20),
                     child: Text(
                       'Error: ${authState.error}',
-                      style: GoogleFonts.inter(color: AppColors.red600, fontSize: 13),
+                      style: GoogleFonts.inter(
+                        color: AppColors.red600,
+                        fontSize: 13,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),

@@ -93,10 +93,11 @@ Never _throwFromResponse(http.Response resp) {
 /// `POST {imageBaseUrl}/import-recipe` with body `{"url":"..."}` — fetch page and import (crawler + KGQL).
 ///
 /// Equivalent to:
-/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"url":"…"}' …/import-recipe`
+/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"url":"…","domainId":…}' …/import-recipe`
 Future<ImportRecipeHttpResult> importRecipeFromUrl({
   required String imageBaseUrl,
   required String userId,
+  required int domainId,
   required String recipeUrl,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
@@ -104,7 +105,10 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
   final resp = await http.post(
     uri,
     headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{'url': recipeUrl}),
+    body: jsonEncode(<String, dynamic>{
+      'url': recipeUrl,
+      'domainId': domainId,
+    }),
   );
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     _throwFromResponse(resp);
@@ -122,10 +126,11 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
 /// `POST {imageBaseUrl}/import-recipe` with body `{"text":"..."}` — paste recipe text (skips fetch).
 ///
 /// Equivalent to:
-/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"text":"…"}' …/import-recipe`
+/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"text":"…","domainId":…}' …/import-recipe`
 Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   required String imageBaseUrl,
   required String userId,
+  required int domainId,
   required String recipeText,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
@@ -133,7 +138,10 @@ Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   final resp = await http.post(
     uri,
     headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{'text': recipeText}),
+    body: jsonEncode(<String, dynamic>{
+      'text': recipeText,
+      'domainId': domainId,
+    }),
   );
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     _throwFromResponse(resp);

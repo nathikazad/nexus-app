@@ -1,6 +1,6 @@
-/// PostGraphile root query for `app.search_recipes(search_term, limit_per)`.
+/// PostGraphile root query for `app.search_recipes`.
 const String searchRecipesQuery = '''
-query SearchRecipes(\$searchTerm: String!, \$limitPer: Int) {
-  searchRecipes(searchTerm: \$searchTerm, limitPer: \$limitPer)
+query SearchRecipes(\$searchTerm: String!, \$domainId: Int!, \$limitPer: Int) {
+  searchRecipes(searchTerm: \$searchTerm, domainId: \$domainId, limitPer: \$limitPer)
 }
 ''';

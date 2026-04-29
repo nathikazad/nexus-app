@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_time/data/goals/kgql_goal_repository.dart';
@@ -15,6 +16,17 @@ import 'package:nx_time/domain/goals/goal_selected_attribute.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
 import '../../_support/mock_graphql_client.dart';
+
+class _AuthLoggedIn extends AuthController {
+  _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
+  @override
+  Future<User?> build() async => User(
+        userId: '1',
+        personalDomainId: 1,
+        homeDomainId: 1,
+        preset: BackendPreset.localhost,
+      );
+}
 
 const _week = r'''
 { "week_start": "2026-04-20", "items": [] }
@@ -31,9 +43,13 @@ void main() {
       }),
     );
     final container = ProviderContainer(
-      overrides: [graphqlClientProvider.overrideWithValue(mock)],
+      overrides: [
+        authProvider.overrideWith(_AuthLoggedIn.new),
+        graphqlClientProvider.overrideWithValue(mock),
+      ],
     );
     addTearDown(container.dispose);
+    await container.read(authProvider.future);
     final repo = container.read(goalRepositoryProvider);
     final w = await repo.getActionGoalsWeek(weekStart: DateTime(2026, 4, 20));
     expect(w.items, isEmpty);
@@ -51,6 +67,7 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
+      domainId: 1,
     );
     final t = await repo.getActionGoalsTrend(goalId: 1, weeks: 2);
     expect(t.goalId, 1);
@@ -88,6 +105,7 @@ void main() {
         name: 'Goal',
         attributes: [AttributeDefinition(key: kGoalAttrLabel, valueType: 'string')],
       ),
+      domainId: 1,
     );
     final g = await repo.getById(7);
     expect(g, isNotNull);
@@ -110,6 +128,7 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
+      domainId: 1,
     );
     final id = await repo.create(
       Goal(
@@ -145,6 +164,7 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
+      domainId: 1,
     );
     final id = await repo.update(
       Goal(
@@ -180,6 +200,7 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
+      domainId: 1,
     );
     await repo.delete(9);
     final captured = verify(() => mock.mutate(captureAny())).captured.single

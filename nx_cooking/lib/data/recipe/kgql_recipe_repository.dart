@@ -15,11 +15,14 @@ class KgqlRecipeRepository implements RecipeRepository {
   KgqlRecipeRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadRecipeSchema,
-  }) : _client = client,
-       _loadRecipeSchema = loadRecipeSchema;
+    required int domainId,
+  })  : _client = client,
+        _loadRecipeSchema = loadRecipeSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadRecipeSchema;
+  final int _domainId;
 
   Map<String, dynamic> _recipeStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -85,6 +88,7 @@ class KgqlRecipeRepository implements RecipeRepository {
         _client,
         filter: filterMap,
         struct: struct,
+        domainId: _domainId,
       );
       debugPrint(
         '[nx_cooking:KgqlRecipeRepository.fetchRecipes] 5) got ${models.length} '
@@ -111,6 +115,7 @@ class KgqlRecipeRepository implements RecipeRepository {
         document: gql(searchRecipesQuery),
         variables: <String, dynamic>{
           'searchTerm': trimmed,
+          'domainId': _domainId,
           'limitPer': limitPer,
         },
         fetchPolicy: FetchPolicy.networkOnly,
@@ -132,6 +137,7 @@ class KgqlRecipeRepository implements RecipeRepository {
       modelTypeName: kRecipeModelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
     return m == null ? null : recipeDetailFromModel(m);
   }
@@ -139,7 +145,7 @@ class KgqlRecipeRepository implements RecipeRepository {
   @override
   Future<int> createRecipe(RecipeFormData form) async {
     final req = setRequestForCreateRecipe(form);
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
@@ -149,7 +155,7 @@ class KgqlRecipeRepository implements RecipeRepository {
     Map<String, List<String>> tags,
   ) async {
     final req = setRequestForUpdateRecipeMeta(id, name, tags);
-    await setKgqlModel(_client, req);
+    await setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
@@ -159,11 +165,11 @@ class KgqlRecipeRepository implements RecipeRepository {
       throw StateError('Recipe $id not found');
     }
     final req = setRequestForUpdateRecipeWithIngredients(id, form, previous);
-    await setKgqlModel(_client, req);
+    await setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
   Future<void> deleteRecipe(int id) async {
-    await setKgqlModel(_client, setRequestForDeleteRecipe(id));
+    await setKgqlModel(_client, setRequestForDeleteRecipe(id), domainId: _domainId);
   }
 }

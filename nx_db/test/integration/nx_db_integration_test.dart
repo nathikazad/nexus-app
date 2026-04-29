@@ -32,6 +32,9 @@ GraphQLClient _integrationClient() {
   return createClient(graphqlHttp, userId);
 }
 
+int get _integrationDomainId =>
+    int.tryParse(Platform.environment['NX_DB_INTEGRATION_DOMAIN_ID'] ?? '') ?? 1;
+
 void main() {
   group('IN13 integration (RUN_NX_DB_INTEGRATION=true, localhost PGDB)', () {
     late GraphQLClient client;
@@ -44,6 +47,7 @@ void main() {
       final result = await client.query(
         QueryOptions(
           document: gql(getAllModelTypesQuery),
+          variables: {'domainId': _integrationDomainId},
           fetchPolicy: FetchPolicy.networkOnly,
         ),
       );
@@ -63,6 +67,7 @@ void main() {
           variables: {
             'filter': {'model_type': 'Expense'},
             'struct': {'id': true, 'name': true},
+            'domainId': _integrationDomainId,
           },
           fetchPolicy: FetchPolicy.networkOnly,
         ),
@@ -82,6 +87,7 @@ void main() {
         client,
         {'model_type': 'Expense'},
         {'metric': 'count', 'key': null, 'group': null},
+        domainId: _integrationDomainId,
       );
       expect(out, isNotEmpty);
     });

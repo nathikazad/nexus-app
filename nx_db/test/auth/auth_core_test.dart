@@ -48,11 +48,18 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final err = await container.read(authProvider.notifier).login('77', BackendPreset.laptop);
+      final err = await container.read(authProvider.notifier).login(
+            '77',
+            BackendPreset.laptop,
+            1,
+            1,
+          );
       expect(err, isNull);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(PrefsKeys.userId), '77');
+      expect(prefs.getInt(PrefsKeys.personalDomainId), 1);
+      expect(prefs.getInt(PrefsKeys.homeDomainId), 1);
       expect(prefs.getString(PrefsKeys.backendPreset), BackendPreset.laptop.key);
       expect(prefs.getString(PrefsKeys.endpoint), isNotEmpty);
       expect(prefs.getString(PrefsKeys.sockWsUrl), isNotEmpty);
@@ -61,6 +68,8 @@ void main() {
     test('CR11.6 logout clears prefs', () async {
       SharedPreferences.setMockInitialValues({
         PrefsKeys.userId: '1',
+        PrefsKeys.personalDomainId: 1,
+        PrefsKeys.homeDomainId: 1,
         PrefsKeys.endpoint: 'http://x/graphql',
         PrefsKeys.backendPreset: BackendPreset.laptop.key,
         PrefsKeys.sockWsUrl: 'ws://x',
@@ -79,6 +88,8 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(PrefsKeys.userId), isNull);
+      expect(prefs.getInt(PrefsKeys.personalDomainId), isNull);
+      expect(prefs.getInt(PrefsKeys.homeDomainId), isNull);
       expect(prefs.getString(PrefsKeys.endpoint), isNull);
       expect(prefs.getString(PrefsKeys.backendPreset), isNull);
       expect(prefs.getString(PrefsKeys.sockWsUrl), isNull);
@@ -95,8 +106,10 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(authProvider.notifier).login('88', BackendPreset.laptop);
+      await container.read(authProvider.notifier).login('88', BackendPreset.laptop, 1, 1);
       expect(container.read(userIdProvider), '88');
+      expect(container.read(personalDomainIdProvider), 1);
+      expect(container.read(homeDomainIdProvider), 1);
     });
 
     test('CR11.8 appStatusProvider initializing then authenticated', () async {
@@ -115,8 +128,33 @@ void main() {
       await container.read(authProvider.future);
       expect(container.read(appStatusProvider), AppStatus.unauthenticated);
 
-      await container.read(authProvider.notifier).login('1', BackendPreset.laptop);
+      await container.read(authProvider.notifier).login('1', BackendPreset.laptop, 1, 1);
       expect(container.read(appStatusProvider), AppStatus.authenticated);
+    });
+
+    test('CR11.9 restore migrates missing domain prefs to defaults', () async {
+      SharedPreferences.setMockInitialValues({
+        PrefsKeys.userId: '1',
+        PrefsKeys.endpoint: 'http://x/graphql',
+        PrefsKeys.backendPreset: BackendPreset.laptop.key,
+        PrefsKeys.sockWsUrl: 'ws://x',
+      });
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => AuthController(initialDelay: Duration.zero, skipBackendPing: true),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(authProvider.future);
+      expect(container.read(personalDomainIdProvider), 1);
+      expect(container.read(homeDomainIdProvider), 1);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt(PrefsKeys.personalDomainId), 1);
+      expect(prefs.getInt(PrefsKeys.homeDomainId), 1);
     });
   });
 }

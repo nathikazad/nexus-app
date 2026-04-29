@@ -39,6 +39,8 @@ void main() {
         authenticatedUserProvider.overrideWith(
           (ref) async => User(
             userId: '1',
+            personalDomainId: 1,
+            homeDomainId: 1,
             preset: BackendPreset.localhost,
           ),
         ),
@@ -67,6 +69,8 @@ void main() {
         authenticatedUserProvider.overrideWith(
           (ref) async => User(
             userId: '1',
+            personalDomainId: 1,
+            homeDomainId: 1,
             preset: BackendPreset.localhost,
           ),
         ),

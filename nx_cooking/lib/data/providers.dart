@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
@@ -35,6 +36,10 @@ final recipeSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
 final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
   final client = ref.watch(graphqlClientProvider);
+  final home = ref.watch(homeDomainIdProvider);
+  if (home == null) {
+    throw StateError('homeDomainId required (login)');
+  }
   final models = await fetchKgqlModels(
     client,
     filter: <String, dynamic>{
@@ -44,6 +49,7 @@ final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((ref) async 
       ],
     },
     struct: <String, dynamic>{'id': true, 'name': true},
+    domainId: home,
   );
   final list = models
       .map(
@@ -126,17 +132,31 @@ class SelectedWeekStartNotifier extends Notifier<DateTime> {
 
 /// Recipe CRUD via PGDB KGQL.
 final recipeRepositoryProvider = Provider<RecipeRepository>(
-  (ref) => KgqlRecipeRepository(
-    client: ref.watch(graphqlClientProvider),
-    loadRecipeSchema: () => ref.read(recipeSchemaProvider.future),
-  ),
+  (ref) {
+    final home = ref.watch(homeDomainIdProvider);
+    if (home == null) {
+      throw StateError('homeDomainId required (login)');
+    }
+    return KgqlRecipeRepository(
+      client: ref.watch(graphqlClientProvider),
+      loadRecipeSchema: () => ref.read(recipeSchemaProvider.future),
+      domainId: home,
+    );
+  },
 );
 
 final cookingPlanRepositoryProvider = Provider<CookingPlanRepository>(
-  (ref) => KgqlCookingPlanRepository(
-    client: ref.watch(graphqlClientProvider),
-    loadCookingTaskSchema: () => ref.read(cookingTaskSchemaProvider.future),
-  ),
+  (ref) {
+    final home = ref.watch(homeDomainIdProvider);
+    if (home == null) {
+      throw StateError('homeDomainId required (login)');
+    }
+    return KgqlCookingPlanRepository(
+      client: ref.watch(graphqlClientProvider),
+      loadCookingTaskSchema: () => ref.read(cookingTaskSchemaProvider.future),
+      domainId: home,
+    );
+  },
 );
 
 /// Cached list for recipe tab + sub-bar count.

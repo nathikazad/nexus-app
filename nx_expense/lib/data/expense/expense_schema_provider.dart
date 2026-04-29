@@ -6,5 +6,5 @@ import 'package:nx_expense/domain/expense/model_names.dart';
 
 final expenseModelTypeKgqlProvider =
     FutureProvider<ModelType>((ref) async {
-  return ref.watch(modelTypeByNameProvider(kExpenseModelTypeName).future);
+  return ref.watch(kgqlModelTypeForHomeDomain(kExpenseModelTypeName).future);
 });

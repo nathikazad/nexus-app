@@ -18,11 +18,14 @@ class KgqlPersonRepository implements PersonRepository {
   KgqlPersonRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadPersonSchema,
+    required int domainId,
   })  : _client = client,
-        _loadPersonSchema = loadPersonSchema;
+        _loadPersonSchema = loadPersonSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadPersonSchema;
+  final int _domainId;
 
   @override
   Future<Person?> getMain() async {
@@ -32,6 +35,7 @@ class KgqlPersonRepository implements PersonRepository {
       _client,
       filter: const {'model_type': 'Person'},
       struct: struct,
+      domainId: _domainId,
     );
     if (list.isEmpty) return null;
     return personFromModel(list.first);
@@ -56,6 +60,7 @@ class KgqlPersonRepository implements PersonRepository {
           ),
         ],
       ),
+      domainId: _domainId,
     );
     return person.copyWith(preference: Map<String, dynamic>.from(preference));
   }

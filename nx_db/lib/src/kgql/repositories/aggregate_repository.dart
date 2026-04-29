@@ -9,14 +9,16 @@ import '../documents/get_kgql_aggregate.graphql.dart';
 Future<Map<String, dynamic>> getKgqlAggregate(
   GraphQLClient client,
   Map<String, dynamic> filterKgql,
-  Map<String, dynamic> aggregate,
-) async {
+  Map<String, dynamic> aggregate, {
+  required int domainId,
+}) async {
   final result = await client.query(
     QueryOptions(
       document: gql(getKgqlAggregateQuery),
       variables: {
         'filterkgql': filterKgql,
         'aggregate': aggregate,
+        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),

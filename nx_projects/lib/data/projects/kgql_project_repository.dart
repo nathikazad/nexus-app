@@ -11,11 +11,14 @@ class KgqlProjectRepository implements ProjectRepository {
   KgqlProjectRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadProjectSchema,
+    required int domainId,
   }) : _client = client,
-       _loadProjectSchema = loadProjectSchema;
+       _loadProjectSchema = loadProjectSchema,
+       _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadProjectSchema;
+  final int _domainId;
 
   Map<String, dynamic> _projectFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -38,6 +41,7 @@ class KgqlProjectRepository implements ProjectRepository {
       _client,
       filter: {'model_type': kProjectModelTypeName},
       struct: struct,
+      domainId: _domainId,
     );
     return models.map(projectFromModel).toList();
   }
@@ -51,6 +55,7 @@ class KgqlProjectRepository implements ProjectRepository {
       modelTypeName: kProjectModelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
     return m == null ? null : projectFromModel(m);
   }
@@ -66,6 +71,7 @@ class KgqlProjectRepository implements ProjectRepository {
     final newId = await setKgqlModel(
       _client,
       setModelRequestForCreateProject(project),
+      domainId: _domainId,
     );
     final created = await getProject(newId);
     if (created == null) {
@@ -79,6 +85,7 @@ class KgqlProjectRepository implements ProjectRepository {
     final newId = await setKgqlModel(
       _client,
       setModelRequestForCreateProject(sub),
+      domainId: _domainId,
     );
     await setKgqlModel(
       _client,
@@ -88,6 +95,7 @@ class KgqlProjectRepository implements ProjectRepository {
           ModelRelation(modelType: kProjectRelationKey, link: [newId]),
         ],
       ),
+      domainId: _domainId,
     );
     final created = await getProject(newId);
     if (created == null) {

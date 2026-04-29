@@ -58,11 +58,15 @@ class KgqlModelTypeRepository implements ModelTypeWriteRepository {
     );
 
     final requestJson = request.toJson();
+    final domainId = _ref.read(nx.personalDomainIdProvider);
+    if (domainId == null) {
+      throw StateError('personalDomainId required (login)');
+    }
     final result = await client.mutate(
       MutationOptions(
         document: gql(_setKgqlModelTypesMutation),
         variables: {
-          'input': {'data': requestJson},
+          'input': {'data': requestJson, 'domainId': domainId},
         },
       ),
     );

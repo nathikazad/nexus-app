@@ -60,11 +60,15 @@ void main() {
         client,
         {'model_type': 'Expense'},
         {'metric': 'sum', 'key': 'cost', 'group': null},
+        domainId: 1,
       );
       expect(out['aggregated_value'], 1457);
       final captured =
           verify(() => client.query(captureAny())).captured.single as QueryOptions;
-      expect(captured.variables.keys, containsAll(['filterkgql', 'aggregate']));
+      expect(
+        captured.variables.keys,
+        containsAll(['filterkgql', 'aggregate', 'domainId']),
+      );
       expect(captured.variables['filterkgql'], {'model_type': 'Expense'});
       expect(
         captured.variables['aggregate'],
@@ -88,6 +92,7 @@ void main() {
           client,
           {'model_type': 'Expense'},
           {'metric': 'count', 'key': null, 'group': null},
+          domainId: 1,
         ),
         throwsA(isA<OperationException>()),
       );

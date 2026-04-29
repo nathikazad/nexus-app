@@ -17,11 +17,14 @@ class KgqlTransferRepository implements TransferRepository {
   KgqlTransferRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadTransferSchema,
+    required int domainId,
   })  : _client = client,
-        _loadTransferSchema = loadTransferSchema;
+        _loadTransferSchema = loadTransferSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadTransferSchema;
+  final int _domainId;
 
   SetModelRequest _transferRequest(TransferUpsert u) {
     final base = buildExpenseSetModelRequest(u);
@@ -63,6 +66,7 @@ class KgqlTransferRepository implements TransferRepository {
         ],
       },
       struct: struct,
+      domainId: _domainId,
     );
     return rows.map(transferFromModel).toList();
   }
@@ -76,6 +80,7 @@ class KgqlTransferRepository implements TransferRepository {
       modelTypeName: kTransferModelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
     return m == null ? null : transferFromModel(m);
   }
@@ -83,12 +88,12 @@ class KgqlTransferRepository implements TransferRepository {
   @override
   Future<int> upsert(TransferUpsert payload) async {
     final req = _transferRequest(payload);
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
   Future<void> deleteById(int id) async {
-    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+    await setKgqlModel(_client, SetModelRequest(id: id, delete: true), domainId: _domainId);
   }
 
   @override

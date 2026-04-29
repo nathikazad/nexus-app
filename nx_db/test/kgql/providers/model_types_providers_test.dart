@@ -5,11 +5,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:test/test.dart' show Tags;
 
 import '../../_support/mock_graphql_client.dart';
+
+class _AuthLoggedIn extends AuthController {
+  _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
+  @override
+  Future<User?> build() async => User(
+        userId: '1',
+        personalDomainId: 1,
+        homeDomainId: 1,
+        preset: BackendPreset.localhost,
+      );
+}
 
 void main() {
   setUpAll(registerGraphqlFallbacks);
@@ -26,9 +38,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final roots = await container.read(modelTypesProvider.future);
       expect(roots.length, 1);
@@ -38,7 +54,10 @@ void main() {
     test('PT8.5 updateModelType requires id', () async {
       final mock = MockGraphQLClient();
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -64,9 +83,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final id = await createModelType(
         container,

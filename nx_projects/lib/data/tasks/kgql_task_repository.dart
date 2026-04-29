@@ -61,15 +61,18 @@ class KgqlTaskRepository implements TaskRepository {
     required Future<ModelType> Function() loadProjectTaskSchema,
     required Future<ModelType> Function() loadBugSchema,
     required Future<ModelType> Function() loadFeatureSchema,
+    required int domainId,
   })  : _client = client,
         _loadProjectTaskSchema = loadProjectTaskSchema,
         _loadBugSchema = loadBugSchema,
-        _loadFeatureSchema = loadFeatureSchema;
+        _loadFeatureSchema = loadFeatureSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadProjectTaskSchema;
   final Future<ModelType> Function() _loadBugSchema;
   final Future<ModelType> Function() _loadFeatureSchema;
+  final int _domainId;
 
   Future<Model?> _fetchModelByType(
     int id, {
@@ -83,6 +86,7 @@ class KgqlTaskRepository implements TaskRepository {
       modelTypeName: modelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
   }
 
@@ -111,11 +115,13 @@ class KgqlTaskRepository implements TaskRepository {
       _client,
       filter: {'model_type': kBugModelTypeName},
       struct: bugStruct,
+      domainId: _domainId,
     );
     final features = await fetchKgqlModels(
       _client,
       filter: {'model_type': kFeatureModelTypeName},
       struct: featureStruct,
+      domainId: _domainId,
     );
 
     final byId = <int, Model>{};
@@ -132,6 +138,7 @@ class KgqlTaskRepository implements TaskRepository {
       _client,
       filter: {'model_type': kTaskBaseModelTypeName},
       struct: plainStruct,
+      domainId: _domainId,
     );
     for (final m in onlyProjectTask) {
       final n = m.modelType?.name;
@@ -157,6 +164,7 @@ class KgqlTaskRepository implements TaskRepository {
       final newId = await setKgqlModel(
         _client,
         setModelRequestForCreateTask(task),
+        domainId: _domainId,
       );
       final created = await getById(newId);
       if (created == null) {
@@ -175,6 +183,7 @@ class KgqlTaskRepository implements TaskRepository {
     await setKgqlModel(
       _client,
       setModelRequestForUpdateTask(task, m, relationDeltas: deltas),
+      domainId: _domainId,
     );
     final u = await getById(task.id);
     if (u == null) {
@@ -185,6 +194,6 @@ class KgqlTaskRepository implements TaskRepository {
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setKgqlDelete(id));
+    await setKgqlModel(_client, setKgqlDelete(id), domainId: _domainId);
   }
 }

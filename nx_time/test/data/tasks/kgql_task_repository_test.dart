@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_time/data/providers.dart';
@@ -11,6 +12,17 @@ import 'package:nx_time/data/tasks/task_attr_keys.dart';
 import 'package:nx_time/domain/tasks/task_status.dart';
 
 import '../../_support/mock_graphql_client.dart';
+
+class _AuthLoggedIn extends AuthController {
+  _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
+  @override
+  Future<User?> build() async => User(
+        userId: '1',
+        personalDomainId: 1,
+        homeDomainId: 2,
+        preset: BackendPreset.localhost,
+      );
+}
 
 ModelType _minimalTaskSchema() => ModelType(id: 1, name: 'Task');
 
@@ -27,16 +39,19 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        authProvider.overrideWith(_AuthLoggedIn.new),
         graphqlClientProvider.overrideWithValue(mock),
       ],
     );
     addTearDown(container.dispose);
+    await container.read(authProvider.future);
 
     final repo = container.read(taskRepositoryProvider);
     final tasks = await repo.listForPicker();
     expect(tasks.length, 1);
     expect(tasks.first.name, 'Refactor token validation');
     expect(tasks.first.modelTypeId, 9);
+    verify(() => mock.query(any())).called(2);
   });
 
   test('linkChildTask sends set_kgql_models with Task link', () async {
@@ -50,6 +65,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     final id = await repo.linkChildTask(parentId: 10, childId: 20);
@@ -76,6 +93,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     await repo.unlinkChildTask(parentId: 10, relationId: 777);
@@ -101,6 +120,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     await repo.linkProject(taskId: 5, projectId: 8);
@@ -125,6 +146,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     await repo.linkActivity(
@@ -184,12 +207,14 @@ void main() {
           Map<String, dynamic>.from(rows.first as Map),
         );
       },
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     final list = await repo.listAll(status: TaskStatus.todo);
     expect(list.length, 1);
     expect(list.first.name, 'Do thing');
-    expect(queryCount, 2);
+    expect(queryCount, 3);
   });
 
   test('updateStatus sends only status attribute', () async {
@@ -203,6 +228,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     final id = await repo.updateStatus(id: 7, status: TaskStatus.done);
@@ -238,6 +265,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     await repo.moveTaskToProject(taskId: 5, projectId: 10);
@@ -271,6 +300,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     await repo.moveTaskToProject(taskId: 5, projectId: 99);
@@ -320,6 +351,8 @@ void main() {
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
+      personalDomainId: 1,
+      homeDomainId: 2,
     );
 
     await repo.moveTaskToProject(taskId: 5, projectId: null);

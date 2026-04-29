@@ -27,6 +27,7 @@ Future<ModelType> fetchKgqlModelTypeByName(
   GraphQLClient client,
   String modelTypeName, {
   Map<String, dynamic>? struct,
+  required int domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -36,6 +37,7 @@ Future<ModelType> fetchKgqlModelTypeByName(
           'model_types': [modelTypeName],
           'struct': struct ?? kgqlFullModelTypeStruct,
         },
+        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -65,10 +67,14 @@ Future<ModelType> fetchKgqlModelTypeByName(
 }
 
 /// All root model types (same query as [modelTypesProvider]).
-Future<List<ModelType>> fetchAllModelTypes(GraphQLClient client) async {
+Future<List<ModelType>> fetchAllModelTypes(
+  GraphQLClient client, {
+  required int domainId,
+}) async {
   final result = await client.query(
     QueryOptions(
       document: gql(getAllModelTypesQuery),
+      variables: {'domainId': domainId},
       fetchPolicy: FetchPolicy.networkOnly,
     ),
   );
@@ -109,8 +115,9 @@ Future<List<ModelType>> fetchAllModelTypes(GraphQLClient client) async {
 /// Loads a single [ModelType] by numeric id.
 Future<ModelType?> fetchKgqlModelTypeById(
   GraphQLClient client,
-  int modelTypeId,
-) async {
+  int modelTypeId, {
+  required int domainId,
+}) async {
   final result = await client.query(
     QueryOptions(
       document: gql(kgqlGetKgqlModelTypeQuery),
@@ -130,6 +137,7 @@ Future<ModelType?> fetchKgqlModelTypeById(
             'tag_systems': true,
           },
         },
+        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -170,8 +178,9 @@ Future<ModelType?> fetchKgqlModelTypeById(
 /// Creates or updates a model type via `set_kgql_model_types`.
 Future<int> setKgqlModelType(
   GraphQLClient client,
-  SetModelTypeRequest request,
-) async {
+  SetModelTypeRequest request, {
+  required int domainId,
+}) async {
   final requestJson = request.toJson();
 
   try {
@@ -181,6 +190,7 @@ Future<int> setKgqlModelType(
         variables: {
           'input': {
             'data': requestJson,
+            'domainId': domainId,
           },
         },
       ),

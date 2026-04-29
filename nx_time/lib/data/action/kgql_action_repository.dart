@@ -11,11 +11,14 @@ class KgqlActionRepository implements ActionRepository {
   KgqlActionRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadActionSchema,
+    required int domainId,
   })  : _client = client,
-        _loadActionSchema = loadActionSchema;
+        _loadActionSchema = loadActionSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadActionSchema;
+  final int _domainId;
 
   Map<String, dynamic> _actionFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -52,10 +55,11 @@ class KgqlActionRepository implements ActionRepository {
         ],
       },
       struct: struct,
+      domainId: _domainId,
     );
 
-    return models
-        .map(actionFromModel)
+    final actions = models.map(actionFromModel).toList();
+    return actions
         .where((a) => actionOverlapsLocalCalendarDay(a, dayLocal))
         .toList();
   }
@@ -87,6 +91,7 @@ class KgqlActionRepository implements ActionRepository {
         ],
       },
       struct: struct,
+      domainId: _domainId,
     );
 
     return models.map(actionFromModel).toList();
@@ -104,6 +109,7 @@ class KgqlActionRepository implements ActionRepository {
       modelTypeName: modelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
     return m == null ? null : actionFromModel(m);
   }
@@ -121,7 +127,7 @@ class KgqlActionRepository implements ActionRepository {
             parentActionId: parentActionId,
           )
         : setModelRequestForCreate(action, modelTypeName);
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
@@ -135,12 +141,13 @@ class KgqlActionRepository implements ActionRepository {
         action,
         modelTypeNameIfChanged: modelTypeNameIfChanged,
       ),
+      domainId: _domainId,
     );
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDelete(id));
+    await setKgqlModel(_client, setModelRequestForDelete(id), domainId: _domainId);
   }
 
   @override
@@ -159,6 +166,7 @@ class KgqlActionRepository implements ActionRepository {
           ),
         ],
       ),
+      domainId: _domainId,
     );
   }
 
@@ -178,6 +186,7 @@ class KgqlActionRepository implements ActionRepository {
           ),
         ],
       ),
+      domainId: _domainId,
     );
   }
 }

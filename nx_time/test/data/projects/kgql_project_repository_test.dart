@@ -21,6 +21,7 @@ void main() {
     final repo = KgqlProjectRepository(
       client: mock,
       loadProjectSchema: () async => throw UnsupportedError('not used'),
+      domainId: 1,
     );
 
     final id = await repo.linkChildProject(parentId: 10, childId: 20);
@@ -75,6 +76,7 @@ void main() {
           Map<String, dynamic>.from(rows.first as Map),
         );
       },
+      domainId: 1,
     );
 
     final list = await repo.listAll();

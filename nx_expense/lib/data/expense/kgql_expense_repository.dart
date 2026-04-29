@@ -19,11 +19,14 @@ class KgqlExpenseRepository implements ExpenseRepository {
   KgqlExpenseRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadExpenseSchema,
+    required int domainId,
   })  : _client = client,
-        _loadExpenseSchema = loadExpenseSchema;
+        _loadExpenseSchema = loadExpenseSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadExpenseSchema;
+  final int _domainId;
 
   @override
   Future<List<Expense>> list({
@@ -50,7 +53,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         },
       ],
     };
-    final rows = await fetchKgqlModels(_client, filter: filterMap, struct: struct);
+    final rows = await fetchKgqlModels(_client, filter: filterMap, struct: struct, domainId: _domainId);
     return rows.map(expenseFromModel).toList();
   }
 
@@ -63,6 +66,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       modelTypeName: kExpenseModelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
     return m == null ? null : expenseFromModel(m);
   }
@@ -70,12 +74,12 @@ class KgqlExpenseRepository implements ExpenseRepository {
   @override
   Future<int> upsert(ExpenseUpsert payload) async {
     final req = buildExpenseSetModelRequest(payload);
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
   Future<void> deleteById(int id) async {
-    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+    await setKgqlModel(_client, SetModelRequest(id: id, delete: true), domainId: _domainId);
   }
 
   @override
@@ -155,6 +159,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       _client,
       {'model_type': kExpenseModelTypeName},
       {'metric': 'count', 'key': null, 'group': null},
+      domainId: _domainId,
     );
     final count = (countMap['aggregated_value'] as num?)?.toInt() ?? 0;
 
@@ -164,6 +169,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         _client,
         {'model_type': kExpenseModelTypeName},
         {'metric': 'sum', 'key': key, 'group': null},
+        domainId: _domainId,
       );
       sum = sumMap['aggregated_value'] as num?;
     }
@@ -190,7 +196,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       'metric': 'count',
       'key': null,
       'group': null,
-    });
+    }, domainId: _domainId);
     final count = (countMap['aggregated_value'] as num?)?.toInt() ?? 0;
 
     num? sum;
@@ -199,7 +205,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'metric': 'sum',
         'key': key,
         'group': null,
-      });
+      }, domainId: _domainId);
       sum = sumMap['aggregated_value'] as num?;
     }
 
@@ -225,6 +231,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'key': key,
         'group': {'key': 'date'},
       },
+      domainId: _domainId,
     );
   }
 
@@ -265,7 +272,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       'metric': 'sum',
       'key': key,
       'group': group,
-    });
+    }, domainId: _domainId);
   }
 
   @override
@@ -289,6 +296,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'key': key,
         'group': {'key': '$targetTypeName.name'},
       },
+      domainId: _domainId,
     );
   }
 }

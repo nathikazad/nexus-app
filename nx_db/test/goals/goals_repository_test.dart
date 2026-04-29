@@ -24,6 +24,7 @@ void main() {
     final r = await fetchActionGoalsWeek(
       mock,
       weekStart: DateTime.parse('2026-04-20'),
+      domainId: 3,
       goalId: 101,
     );
     expect(r.items, isEmpty);
@@ -31,6 +32,7 @@ void main() {
     final cap = verify(() => mock.query(captureAny())).captured.single
         as QueryOptions;
     expect(cap.variables?['weekStart'], '2026-04-20');
+    expect(cap.variables?['domainId'], 3);
     expect(cap.variables?['goalId'], 101);
   });
 
@@ -45,11 +47,12 @@ void main() {
           },
         }));
 
-    await fetchActionGoalsTrend(mock, goalId: 42, weeks: 4);
+    await fetchActionGoalsTrend(mock, goalId: 42, weeks: 4, domainId: 2);
     final cap = verify(() => mock.query(captureAny())).captured.single
         as QueryOptions;
     expect(cap.variables?['goalId'], 42);
     expect(cap.variables?['weeks'], 4);
+    expect(cap.variables?['domainId'], 2);
   });
 
   test('fetchExpenseGoalsMonth passes monthStart and null goalId', () async {
@@ -64,10 +67,12 @@ void main() {
     await fetchExpenseGoalsMonth(
       mock,
       monthStart: DateTime.parse('2026-04-01'),
+      domainId: 5,
     );
     final cap = verify(() => mock.query(captureAny())).captured.single
         as QueryOptions;
     expect(cap.variables?['monthStart'], '2026-04-01');
+    expect(cap.variables?['domainId'], 5);
     expect(cap.variables?['goalId'], isNull);
   });
 
@@ -85,6 +90,7 @@ void main() {
       () => fetchActionGoalsWeek(
         mock,
         weekStart: DateTime.parse('2026-04-20'),
+        domainId: 1,
       ),
       throwsA(isA<OperationException>()),
     );

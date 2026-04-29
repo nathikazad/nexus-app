@@ -8,6 +8,17 @@ import 'package:nx_db/nx_db.dart';
 
 import '../../_support/mock_graphql_client.dart';
 
+class _AuthLoggedIn extends AuthController {
+  _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
+  @override
+  Future<User?> build() async => User(
+        userId: '1',
+        personalDomainId: 1,
+        homeDomainId: 1,
+        preset: BackendPreset.localhost,
+      );
+}
+
 void main() {
   setUpAll(registerGraphqlFallbacks);
 
@@ -25,9 +36,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final repo = container.read(modelTypeWriteRepositoryProvider);
       final id = await repo.setModelType(
@@ -55,9 +70,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final repo = container.read(modelTypeWriteRepositoryProvider);
       final id = await repo.setModelType(
@@ -83,9 +102,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final repo = container.read(modelTypeWriteRepositoryProvider);
       expect(
@@ -112,9 +135,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final repo = container.read(modelTypeWriteRepositoryProvider);
       expect(
@@ -143,9 +170,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final repo = container.read(modelTypeWriteRepositoryProvider);
       await repo.deleteModelType(7);
@@ -163,9 +194,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final repo = container.read(modelTypeWriteRepositoryProvider);
       expect(() => repo.deleteModelType(1), throwsException);

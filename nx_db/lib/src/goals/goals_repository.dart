@@ -53,6 +53,7 @@ ExpenseGoalMonthResponse parseGetExpenseGoalsMonthResult(
 Future<ActionGoalWeekResponse> fetchActionGoalsWeek(
   GraphQLClient client, {
   required DateTime weekStart,
+  required int domainId,
   int? goalId,
 }) async {
   final result = await client.query(
@@ -60,6 +61,7 @@ Future<ActionGoalWeekResponse> fetchActionGoalsWeek(
       document: gql(getActionGoalsWeekQuery),
       variables: {
         'weekStart': formatGraphqlDate(weekStart),
+        'domainId': domainId,
         'goalId': goalId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
@@ -81,6 +83,7 @@ Future<ActionGoalTrendResponse> fetchActionGoalsTrend(
   GraphQLClient client, {
   required int goalId,
   required int weeks,
+  required int domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -88,6 +91,7 @@ Future<ActionGoalTrendResponse> fetchActionGoalsTrend(
       variables: {
         'goalId': goalId,
         'weeks': weeks,
+        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -104,6 +108,7 @@ Future<ActionGoalTrendResponse> fetchActionGoalsTrend(
 Future<ExpenseGoalMonthResponse> fetchExpenseGoalsMonth(
   GraphQLClient client, {
   required DateTime monthStart,
+  required int domainId,
   int? goalId,
 }) async {
   final result = await client.query(
@@ -111,6 +116,7 @@ Future<ExpenseGoalMonthResponse> fetchExpenseGoalsMonth(
       document: gql(getExpenseGoalsMonthQuery),
       variables: {
         'monthStart': formatGraphqlDate(monthStart),
+        'domainId': domainId,
         'goalId': goalId,
       },
       fetchPolicy: FetchPolicy.networkOnly,

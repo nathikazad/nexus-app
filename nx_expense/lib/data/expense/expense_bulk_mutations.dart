@@ -1,6 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart'
-    show SetModelRequest, SetModelTag, ModelRelation, createModel;
+    show
+        SetModelRequest,
+        SetModelTag,
+        ModelRelation,
+        createModel,
+        homeDomainIdProvider;
 
 /// Bulk tag / relation updates for expenses (KGQL).
 class ExpenseBulkMutationResult {
@@ -18,6 +23,10 @@ Future<ExpenseBulkMutationResult> bulkApplyExpenseTags({
   required List<String> nodes,
 }) async {
   final failures = <int, String>{};
+  final home = container.read(homeDomainIdProvider);
+  if (home == null) {
+    throw StateError('homeDomainId required (login)');
+  }
   for (final id in ids) {
     try {
       final tags = <SetModelTag>[
@@ -29,6 +38,7 @@ Future<ExpenseBulkMutationResult> bulkApplyExpenseTags({
       await createModel(
         container,
         SetModelRequest(id: id, tags: tags),
+        domainId: home,
       );
     } catch (e) {
       failures[id] = e.toString();
@@ -44,6 +54,10 @@ Future<ExpenseBulkMutationResult> bulkApplyExpenseRelations({
   required List<int> linkIds,
 }) async {
   final failures = <int, String>{};
+  final home = container.read(homeDomainIdProvider);
+  if (home == null) {
+    throw StateError('homeDomainId required (login)');
+  }
   for (final id in ids) {
     try {
       await createModel(
@@ -57,6 +71,7 @@ Future<ExpenseBulkMutationResult> bulkApplyExpenseRelations({
             ),
           ],
         ),
+        domainId: home,
       );
     } catch (e) {
       failures[id] = e.toString();

@@ -18,28 +18,18 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _userIdController = TextEditingController();
+  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
 
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
-  @override
-  void initState() {
-    super.initState();
-    _userIdController.text = '1';
-  }
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
-
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final userId = _userIdController.text.trim();
-
-      final errorMessage =
-          await ref.read(authProvider.notifier).login(userId, _selectedPreset);
+      final errorMessage = await ref.read(authProvider.notifier).login(
+            _selectedProfile.userId,
+            _selectedPreset,
+            _selectedProfile.personalDomainId,
+            _selectedProfile.homeDomainId,
+          );
 
       if (errorMessage == null) {
         final urls = resolve(_selectedPreset);
@@ -87,22 +77,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
-                TextFormField(
-                  controller: _userIdController,
+                DropdownButtonFormField<AuthLoginProfile>(
+                  initialValue: _selectedProfile,
+                  style: dropdownTextStyle,
+                  iconEnabledColor: theme.colorScheme.onSurfaceVariant,
+                  dropdownColor: theme.colorScheme.surface,
                   decoration: const InputDecoration(
-                    labelText: 'User ID',
-                    hintText: '1',
+                    labelText: 'Person',
                     border: OutlineInputBorder(),
-                    helperText: 'User ID to send in x-user-id header',
+                    helperText: 'Select the fixed user/domain profile',
                   ),
-                  keyboardType: TextInputType.text,
-                  enabled: !isLoading,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'User ID is required';
-                    }
-                    return null;
-                  },
+                  items: authLoginProfiles
+                      .map(
+                        (profile) => DropdownMenuItem<AuthLoginProfile>(
+                          value: profile,
+                          child: Text(profile.label, style: dropdownTextStyle),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: isLoading
+                      ? null
+                      : (AuthLoginProfile? profile) {
+                          if (profile != null) {
+                            setState(() => _selectedProfile = profile);
+                          }
+                        },
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<BackendPreset>(

@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:gql/language.dart' show printNode;
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../config/backend_presets.dart';
@@ -5,6 +9,40 @@ import '../config/cf_access.dart';
 import '../config/graphql_http_config.dart';
 
 export '../config/graphql_http_config.dart';
+
+const bool _kLogKgqlFromDefine = bool.fromEnvironment(
+  'NX_GRAPHQL_LOG',
+  defaultValue: false,
+);
+
+bool _shouldLogKgqlQueries() => kDebugMode || _kLogKgqlFromDefine;
+
+void _logOutgoingGraphQlRequest(Request request) {
+  final name = request.operation.operationName ?? '(anonymous)';
+  final doc = printNode(request.operation.document);
+  String vars;
+  try {
+    vars = const JsonEncoder.withIndent('  ').convert(request.variables);
+  } catch (_) {
+    vars = request.variables.toString();
+  }
+  debugPrint('[nx_db:GraphQL] → $name\n$doc');
+  debugPrint('[nx_db:GraphQL] variables:\n$vars');
+}
+
+Link _kgqlRequestLogLink() {
+  return Link.function((Request request, [NextLink? forward]) {
+    if (forward == null) {
+      return Stream<Response>.error(
+        StateError('KgqlRequestLogLink: forward is null'),
+      );
+    }
+    if (_shouldLogKgqlQueries()) {
+      _logOutgoingGraphQlRequest(request);
+    }
+    return forward(request);
+  });
+}
 
 class GraphQLConfig {
   static String get defaultEndpoint =>
@@ -36,11 +74,16 @@ GraphQLClient createClient(String endpoint, String userId) {
     ),
   );
 
-  final link = Link.split(
+  final transport = Link.split(
     (request) => request.isSubscription,
     wsLink,
     httpLink,
   );
+
+  final link = Link.from([
+    _kgqlRequestLogLink(),
+    transport,
+  ]);
 
   return GraphQLClient(
     link: link,

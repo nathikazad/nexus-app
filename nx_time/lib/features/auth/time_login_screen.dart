@@ -17,27 +17,20 @@ class TimeLoginScreen extends ConsumerStatefulWidget {
 
 class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _userIdController = TextEditingController();
+  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
-
-  @override
-  void initState() {
-    super.initState();
-    _userIdController.text = '1';
-  }
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    final userId = _userIdController.text.trim();
 
-    final errorMessage =
-        await ref.read(authProvider.notifier).login(userId, _selectedPreset);
+    final errorMessage = await ref
+        .read(authProvider.notifier)
+        .login(
+          _selectedProfile.userId,
+          _selectedPreset,
+          _selectedProfile.personalDomainId,
+          _selectedProfile.homeDomainId,
+        );
 
     if (errorMessage == null) {
       return;
@@ -71,8 +64,10 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
         prefixIcon: prefix,
         filled: true,
         fillColor: AppColors.slate50,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -128,23 +123,24 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to load your day from the backend.',
-                  style:
-                      GoogleFonts.inter(fontSize: 14, color: AppColors.slate500),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate500,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('USER ID', style: labelStyle),
+                  child: Text('PERSON', style: labelStyle),
                 ),
                 const SizedBox(height: 6),
-                TextFormField(
-                  controller: _userIdController,
-                  enabled: !loading,
-                  keyboardType: TextInputType.text,
+                DropdownButtonFormField<AuthLoginProfile>(
+                  isExpanded: true,
+                  initialValue: _selectedProfile,
                   style: GoogleFonts.inter(fontSize: 14),
                   decoration: fieldDeco(
-                    'Enter user ID',
+                    'Select person',
                     prefix: const Padding(
                       padding: EdgeInsets.only(left: 12, right: 8),
                       child: Icon(
@@ -154,8 +150,21 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
                       ),
                     ),
                   ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'User ID is required' : null,
+                  items: authLoginProfiles
+                      .map(
+                        (profile) => DropdownMenuItem<AuthLoginProfile>(
+                          value: profile,
+                          child: Text(profile.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: loading
+                      ? null
+                      : (AuthLoginProfile? profile) {
+                          if (profile != null) {
+                            setState(() => _selectedProfile = profile);
+                          }
+                        },
                 ),
                 const SizedBox(height: 16),
                 Align(

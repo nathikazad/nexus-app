@@ -2,12 +2,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_time/data/action/action_attr_keys.dart';
 import 'package:nx_time/data/action/kgql_action_repository.dart';
 import 'package:nx_time/data/providers.dart';
 
 import '../../_support/mock_graphql_client.dart';
+
+class _AuthLoggedIn extends AuthController {
+  _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
+  @override
+  Future<User?> build() async => User(
+        userId: '1',
+        personalDomainId: 1,
+        homeDomainId: 1,
+        preset: BackendPreset.localhost,
+      );
+}
 
 void main() {
   setUpAll(registerGraphqlFallbacks);
@@ -23,6 +35,7 @@ void main() {
     final repo = KgqlActionRepository(
       client: mock,
       loadActionSchema: () async => throw UnsupportedError('not used'),
+      domainId: 1,
     );
 
     final id = await repo.linkChildAction(parentId: 10, childId: 20);
@@ -49,6 +62,7 @@ void main() {
     final repo = KgqlActionRepository(
       client: mock,
       loadActionSchema: () async => throw UnsupportedError('not used'),
+      domainId: 1,
     );
 
     await repo.unlinkChildAction(parentId: 10, relationId: 777);
@@ -97,10 +111,12 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        authProvider.overrideWith(_AuthLoggedIn.new),
         graphqlClientProvider.overrideWithValue(mock),
       ],
     );
     addTearDown(container.dispose);
+    await container.read(authProvider.future);
 
     final repo = container.read(actionRepositoryProvider);
     final list = await repo.listForCalendarDay(DateTime(2026, 4, 18));

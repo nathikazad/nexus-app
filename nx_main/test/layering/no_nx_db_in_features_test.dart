@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-      'lib/features may only import package:nx_db/auth.dart (no kgql/riverpod/nx_db)',
+      'lib/features may only import package:nx_db/auth.dart '
+      '(schema_navigator may also import riverpod for shared KGQL providers)',
       () {
     final dir = Directory('lib/features');
     expect(dir.existsSync(), isTrue);
@@ -17,6 +18,8 @@ void main() {
         if (!t.startsWith('import ') && !t.startsWith('export ')) continue;
         if (!t.contains('package:nx_db/')) continue;
         if (t.contains("package:nx_db/auth.dart'")) continue;
+        if (entity.path.contains('/schema_navigator/') &&
+            t.contains("package:nx_db/riverpod.dart'")) continue;
         offenders.add('${entity.path}: $t');
       }
     }

@@ -25,6 +25,7 @@ Future<List<Model>> fetchKgqlModels(
   GraphQLClient client, {
   required Map<String, dynamic> filter,
   required Map<String, dynamic> struct,
+  required int domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -32,6 +33,7 @@ Future<List<Model>> fetchKgqlModels(
       variables: {
         'filter': filter,
         'struct': struct,
+        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -50,6 +52,7 @@ Future<Model?> fetchKgqlModelById(
   required String modelTypeName,
   required int id,
   required Map<String, dynamic> struct,
+  required int domainId,
 }) async {
   final list = await fetchKgqlModels(
     client,
@@ -60,6 +63,7 @@ Future<Model?> fetchKgqlModelById(
       ],
     },
     struct: struct,
+    domainId: domainId,
   );
   if (list.isEmpty) return null;
   return list.first;
@@ -78,20 +82,23 @@ Map<String, dynamic> get kgqlRelationPickerModelStruct => const {
 /// Lists all models of [modelTypeName] for pickers (no date filter).
 Future<List<Model>> fetchKgqlModelsForRelationPicker(
   GraphQLClient client,
-  String modelTypeName,
-) async {
+  String modelTypeName, {
+  required int domainId,
+}) async {
   return fetchKgqlModels(
     client,
     filter: {'model_type': modelTypeName},
     struct: kgqlRelationPickerModelStruct,
+    domainId: domainId,
   );
 }
 
 /// Creates or updates a model via `set_kgql_models`. Returns the model id.
 Future<int> setKgqlModel(
   GraphQLClient client,
-  SetModelRequest request,
-) async {
+  SetModelRequest request, {
+  required int domainId,
+}) async {
   final requestJson = request.toJson();
 
   final result = await client.mutate(
@@ -100,6 +107,7 @@ Future<int> setKgqlModel(
       variables: {
         'input': {
           'data': requestJson,
+          'domainId': domainId,
         },
       },
     ),

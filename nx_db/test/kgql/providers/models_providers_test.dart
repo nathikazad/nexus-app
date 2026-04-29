@@ -5,11 +5,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:test/test.dart' show Tags;
 
 import '../../_support/mock_graphql_client.dart';
+
+class _AuthLoggedIn extends AuthController {
+  _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
+  @override
+  Future<User?> build() async => User(
+        userId: '1',
+        personalDomainId: 1,
+        homeDomainId: 1,
+        preset: BackendPreset.localhost,
+      );
+}
 
 void main() {
   setUpAll(registerGraphqlFallbacks);
@@ -28,15 +40,20 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       await container.read(modelsProvider(9).future);
 
       expect(captured, isNotNull);
       expect(captured!.variables['filter'], containsPair('model_type', 9));
       expect(captured!.variables['struct'], isNotNull);
+      expect(captured!.variables['domainId'], 1);
     });
 
     test('modelsProvider filters list to matching modelTypeId', () async {
@@ -51,9 +68,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final list = await container.read(modelsProvider(9).future);
       expect(list.length, 1);
@@ -73,9 +94,13 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       await container.read(modelProvider(42).future);
 
@@ -98,9 +123,13 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [graphqlClientProvider.overrideWithValue(mock)],
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
       );
       addTearDown(container.dispose);
+      await container.read(authProvider.future);
 
       final id = await createModel(
         container,

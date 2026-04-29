@@ -3,6 +3,8 @@ abstract final class PrefsKeys {
   PrefsKeys._();
 
   static const userId = 'auth_user_id';
+  static const personalDomainId = 'auth_personal_domain_id';
+  static const homeDomainId = 'auth_home_domain_id';
   static const endpoint = 'auth_endpoint';
   static const backendPreset = 'auth_backend_preset';
   static const sockWsUrl = 'auth_sock_ws_url';

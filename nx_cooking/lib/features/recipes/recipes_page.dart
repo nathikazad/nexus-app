@@ -95,15 +95,21 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (_importMenuOpen) ...[
-                  _FabChoice(label: 'URL', onTap: () {
-                    setState(() => _importMenuOpen = false);
-                    _showUrlSheet(context);
-                  }),
+                  _FabChoice(
+                    label: 'URL',
+                    onTap: () {
+                      setState(() => _importMenuOpen = false);
+                      _showUrlSheet(context);
+                    },
+                  ),
                   const SizedBox(height: 10),
-                  _FabChoice(label: 'Note', onTap: () {
-                    setState(() => _importMenuOpen = false);
-                    _showNoteSheet(context);
-                  }),
+                  _FabChoice(
+                    label: 'Note',
+                    onTap: () {
+                      setState(() => _importMenuOpen = false);
+                      _showNoteSheet(context);
+                    },
+                  ),
                   const SizedBox(height: 12),
                 ],
                 Material(
@@ -112,7 +118,8 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
                   elevation: 4,
                   shadowColor: AppColors.orange500.withValues(alpha: 0.25),
                   child: InkWell(
-                    onTap: () => setState(() => _importMenuOpen = !_importMenuOpen),
+                    onTap: () =>
+                        setState(() => _importMenuOpen = !_importMenuOpen),
                     customBorder: const CircleBorder(),
                     child: SizedBox(
                       width: 48,
@@ -144,12 +151,14 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
     try {
       final imageBaseUrl = ref.read(imageBaseUrlProvider);
       final userId = ref.read(userIdProvider);
-      if (imageBaseUrl == null || userId == null) {
+      final domainId = ref.read(homeDomainIdProvider);
+      if (imageBaseUrl == null || userId == null || domainId == null) {
         throw StateError('Not logged in');
       }
       final result = await importRecipeFromUrl(
         imageBaseUrl: imageBaseUrl,
         userId: userId,
+        domainId: domainId,
         recipeUrl: url,
       );
       scaffold.hideCurrentSnackBar();
@@ -159,9 +168,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
       }
     } catch (e) {
       scaffold.hideCurrentSnackBar();
-      scaffold.showSnackBar(
-        SnackBar(content: Text('Import failed: $e')),
-      );
+      scaffold.showSnackBar(SnackBar(content: Text('Import failed: $e')));
     }
   }
 
@@ -176,12 +183,14 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
     try {
       final imageBaseUrl = ref.read(imageBaseUrlProvider);
       final userId = ref.read(userIdProvider);
-      if (imageBaseUrl == null || userId == null) {
+      final domainId = ref.read(homeDomainIdProvider);
+      if (imageBaseUrl == null || userId == null || domainId == null) {
         throw StateError('Not logged in');
       }
       final result = await importRecipeFromPastedText(
         imageBaseUrl: imageBaseUrl,
         userId: userId,
+        domainId: domainId,
         recipeText: text,
       );
       scaffold.hideCurrentSnackBar();
@@ -191,9 +200,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
       }
     } catch (e) {
       scaffold.hideCurrentSnackBar();
-      scaffold.showSnackBar(
-        SnackBar(content: Text('Import failed: $e')),
-      );
+      scaffold.showSnackBar(SnackBar(content: Text('Import failed: $e')));
     }
   }
 
@@ -299,8 +306,10 @@ class _UrlSheetBodyState extends State<_UrlSheetBody> {
             decoration: InputDecoration(
               hintText: 'https://example.com/my-recipe',
               hintStyle: inter.copyWith(fontSize: 14, color: AppColors.zinc400),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 14,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: AppColors.zinc200),
@@ -311,8 +320,10 @@ class _UrlSheetBodyState extends State<_UrlSheetBody> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: AppColors.orange500, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppColors.orange500,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -420,8 +431,10 @@ class _NoteSheetBodyState extends State<_NoteSheetBody> {
                 style: inter.copyWith(fontSize: 14, color: AppColors.zinc900),
                 decoration: InputDecoration(
                   hintText: 'Chocolate Cake\n\nIngredients:\n2 cups flour\n...',
-                  hintStyle:
-                      inter.copyWith(fontSize: 14, color: AppColors.zinc400),
+                  hintStyle: inter.copyWith(
+                    fontSize: 14,
+                    color: AppColors.zinc400,
+                  ),
                   alignLabelWithHint: true,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
@@ -435,7 +448,9 @@ class _NoteSheetBodyState extends State<_NoteSheetBody> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(
-                        color: AppColors.orange500, width: 1.5),
+                      color: AppColors.orange500,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -444,8 +459,7 @@ class _NoteSheetBodyState extends State<_NoteSheetBody> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style:
-                    inter.copyWith(fontSize: 13, color: AppColors.orange700),
+                style: inter.copyWith(fontSize: 13, color: AppColors.orange700),
               ),
             ],
             const SizedBox(height: 20),

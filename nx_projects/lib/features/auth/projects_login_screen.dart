@@ -11,32 +11,26 @@ class ProjectsLoginScreen extends ConsumerStatefulWidget {
   const ProjectsLoginScreen({super.key});
 
   @override
-  ConsumerState<ProjectsLoginScreen> createState() => _ProjectsLoginScreenState();
+  ConsumerState<ProjectsLoginScreen> createState() =>
+      _ProjectsLoginScreenState();
 }
 
 class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _userIdController = TextEditingController();
+  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
-
-  @override
-  void initState() {
-    super.initState();
-    _userIdController.text = '1';
-  }
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    final userId = _userIdController.text.trim();
 
-    final errorMessage =
-        await ref.read(authProvider.notifier).login(userId, _selectedPreset);
+    final errorMessage = await ref
+        .read(authProvider.notifier)
+        .login(
+          _selectedProfile.userId,
+          _selectedPreset,
+          _selectedProfile.personalDomainId,
+          _selectedProfile.homeDomainId,
+        );
 
     if (errorMessage == null) {
       return;
@@ -44,10 +38,7 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: AppColors.crit,
-        ),
+        SnackBar(content: Text(errorMessage), backgroundColor: AppColors.crit),
       );
     }
   }
@@ -71,8 +62,10 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
         prefixIcon: prefix,
         filled: true,
         fillColor: AppColors.panel,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -137,16 +130,15 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
                 const SizedBox(height: 48),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('USER ID', style: labelStyle),
+                  child: Text('PERSON', style: labelStyle),
                 ),
                 const SizedBox(height: 6),
-                TextFormField(
-                  controller: _userIdController,
-                  enabled: !loading,
-                  keyboardType: TextInputType.text,
+                DropdownButtonFormField<AuthLoginProfile>(
+                  isExpanded: true,
+                  initialValue: _selectedProfile,
                   style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
                   decoration: fieldDeco(
-                    'Enter user ID',
+                    'Select person',
                     prefix: const Padding(
                       padding: EdgeInsets.only(left: 12, right: 8),
                       child: Icon(
@@ -156,9 +148,22 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
                       ),
                     ),
                   ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? 'User ID is required'
-                      : null,
+                  dropdownColor: AppColors.panel2,
+                  items: authLoginProfiles
+                      .map(
+                        (profile) => DropdownMenuItem<AuthLoginProfile>(
+                          value: profile,
+                          child: Text(profile.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: loading
+                      ? null
+                      : (AuthLoginProfile? profile) {
+                          if (profile != null) {
+                            setState(() => _selectedProfile = profile);
+                          }
+                        },
                 ),
                 const SizedBox(height: 16),
                 Align(
@@ -182,10 +187,7 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
                     ),
                   ),
                   dropdownColor: AppColors.panel2,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppColors.text,
-                  ),
+                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
                   items: BackendPreset.values
                       .map(
                         (p) => DropdownMenuItem<BackendPreset>(

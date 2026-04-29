@@ -14,7 +14,12 @@ class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {
     // Return user immediately without SharedPreferences delay
-    return User(userId: '1', preset: BackendPreset.piLan);
+    return User(
+      userId: '1',
+      personalDomainId: 1,
+      homeDomainId: 1,
+      preset: BackendPreset.piLan,
+    );
   }
 }
 

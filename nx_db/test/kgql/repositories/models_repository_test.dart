@@ -62,11 +62,13 @@ void main() {
         mock,
         filter: {'model_type': 'Expense'},
         struct: const {'id': true},
+        domainId: 1,
       );
 
       expect(captured, isNotNull);
       expect(captured!.variables['filter'], {'model_type': 'Expense'});
       expect(captured!.variables['struct'], {'id': true});
+      expect(captured!.variables['domainId'], 1);
     });
   });
 
@@ -88,6 +90,7 @@ void main() {
         modelTypeName: 'Person',
         id: 42,
         struct: const {'id': true},
+        domainId: 1,
       );
 
       expect(m, isNotNull);
@@ -121,12 +124,14 @@ void main() {
       final id = await setKgqlModel(
         mock,
         SetModelRequest(modelType: 'Person', name: 'Bob'),
+        domainId: 1,
       );
 
       expect(id, 5);
       final input = captured!.variables['input'] as Map<String, dynamic>;
       final data = input['data'] as Map<String, dynamic>;
       expect(data['model_type'], 'Person');
+      expect(input['domainId'], 1);
     });
 
     test('parses id from map json field', () async {
@@ -146,6 +151,7 @@ void main() {
       final id = await setKgqlModel(
         mock,
         SetModelRequest(name: 'X', modelType: 'Y'),
+        domainId: 1,
       );
       expect(id, 101);
     });
@@ -167,6 +173,7 @@ void main() {
       final id = await setKgqlModel(
         mock,
         SetModelRequest(id: 7, delete: true),
+        domainId: 1,
       );
 
       expect(id, 3);
@@ -188,7 +195,7 @@ void main() {
       );
 
       expect(
-        () => setKgqlModel(mock, SetModelRequest(modelType: 'P', name: 'n')),
+        () => setKgqlModel(mock, SetModelRequest(modelType: 'P', name: 'n'), domainId: 1),
         throwsA(isA<OperationException>()),
       );
     });
@@ -206,7 +213,7 @@ void main() {
       );
 
       expect(
-        () => setKgqlModel(mock, SetModelRequest(modelType: 'P', name: 'n')),
+        () => setKgqlModel(mock, SetModelRequest(modelType: 'P', name: 'n'), domainId: 1),
         throwsA(isA<Exception>().having((e) => e.toString(), 'msg', contains('No ID returned'))),
       );
     });

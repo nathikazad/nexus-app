@@ -8,16 +8,25 @@ import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/domain/tasks/task_status.dart';
 
-/// Loads Task rows via `get_kgql_models` and mutates via `set_kgql_models`.
+/// Loads Task rows from **personal** and **home** domains (merged), writes to [writeDomainId].
 class KgqlTaskRepository implements TaskRepository {
   KgqlTaskRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadTaskSchema,
+    required int personalDomainId,
+    required int homeDomainId,
+    int? writeDomainId,
   })  : _client = client,
-        _loadTaskSchema = loadTaskSchema;
+        _loadTaskSchema = loadTaskSchema,
+        _personalDomainId = personalDomainId,
+        _homeDomainId = homeDomainId,
+        _writeDomainId = writeDomainId ?? personalDomainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadTaskSchema;
+  final int _personalDomainId;
+  final int _homeDomainId;
+  final int _writeDomainId;
 
   Map<String, dynamic> _taskFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -27,13 +36,54 @@ class KgqlTaskRepository implements TaskRepository {
     return merged;
   }
 
+  Future<List<Model>> _fetchTasksForDomains({
+    required Map<String, dynamic> filter,
+    required Map<String, dynamic> struct,
+  }) async {
+    final a = await fetchKgqlModels(
+      _client,
+      filter: filter,
+      struct: struct,
+      domainId: _personalDomainId,
+    );
+    final b = await fetchKgqlModels(
+      _client,
+      filter: filter,
+      struct: struct,
+      domainId: _homeDomainId,
+    );
+    final byId = <int, Model>{};
+    for (final m in a) {
+      byId[m.id] = m;
+    }
+    for (final m in b) {
+      byId.putIfAbsent(m.id, () => m);
+    }
+    final out = byId.values.toList()..sort((x, y) => x.id.compareTo(y.id));
+    return out;
+  }
+
   @override
   Future<List<Task>> listForPicker() async {
-    final models = await fetchKgqlModelsForRelationPicker(
+    final a = await fetchKgqlModelsForRelationPicker(
       _client,
       kTaskModelTypeName,
+      domainId: _personalDomainId,
     );
-    return models.map(taskFromModel).toList();
+    final b = await fetchKgqlModelsForRelationPicker(
+      _client,
+      kTaskModelTypeName,
+      domainId: _homeDomainId,
+    );
+    final byId = <int, Task>{};
+    for (final m in a) {
+      byId[m.id] = taskFromModel(m);
+    }
+    for (final m in b) {
+      byId.putIfAbsent(m.id, () => taskFromModel(m));
+    }
+    final out = byId.values.toList()..sort((x, y) => x.id.compareTo(y.id));
+    return out;
   }
 
   @override
@@ -67,8 +117,7 @@ class KgqlTaskRepository implements TaskRepository {
       });
     }
 
-    final models = await fetchKgqlModels(
-      _client,
+    final models = await _fetchTasksForDomains(
       filter: {
         'model_type': kTaskModelTypeName,
         if (filters.isNotEmpty) 'filters': filters,
@@ -82,13 +131,17 @@ class KgqlTaskRepository implements TaskRepository {
   Future<Task?> getById(int id) async {
     final schema = await _loadTaskSchema();
     final struct = _taskFetchStruct(schema);
-    final m = await fetchKgqlModelById(
-      _client,
-      modelTypeName: kTaskModelTypeName,
-      id: id,
-      struct: struct,
-    );
-    return m == null ? null : taskFromModel(m);
+    for (final dom in [_personalDomainId, _homeDomainId]) {
+      final m = await fetchKgqlModelById(
+        _client,
+        modelTypeName: kTaskModelTypeName,
+        id: id,
+        struct: struct,
+        domainId: dom,
+      );
+      if (m != null) return taskFromModel(m);
+    }
+    return null;
   }
 
   @override
@@ -102,7 +155,7 @@ class KgqlTaskRepository implements TaskRepository {
       parentTaskId: parentTaskId,
       projectId: projectId,
     );
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: _writeDomainId);
   }
 
   @override
@@ -110,6 +163,7 @@ class KgqlTaskRepository implements TaskRepository {
     return setKgqlModel(
       _client,
       setModelRequestForUpdateTask(task, includeAttributes: includeAttributes),
+      domainId: _writeDomainId,
     );
   }
 
@@ -123,6 +177,7 @@ class KgqlTaskRepository implements TaskRepository {
           SetModelAttribute(key: kTaskAttrStatus, value: status.kgqlValue),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 
@@ -147,7 +202,11 @@ class KgqlTaskRepository implements TaskRepository {
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDeleteTask(id));
+    await setKgqlModel(
+      _client,
+      setModelRequestForDeleteTask(id),
+      domainId: _writeDomainId,
+    );
   }
 
   @override
@@ -166,6 +225,7 @@ class KgqlTaskRepository implements TaskRepository {
           ),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 
@@ -185,6 +245,7 @@ class KgqlTaskRepository implements TaskRepository {
           ),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 
@@ -204,6 +265,7 @@ class KgqlTaskRepository implements TaskRepository {
           ),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 
@@ -223,6 +285,7 @@ class KgqlTaskRepository implements TaskRepository {
           ),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 
@@ -243,6 +306,7 @@ class KgqlTaskRepository implements TaskRepository {
           ),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 
@@ -262,6 +326,7 @@ class KgqlTaskRepository implements TaskRepository {
           ),
         ],
       ),
+      domainId: _writeDomainId,
     );
   }
 }

@@ -18,20 +18,19 @@ class CookingLoginScreen extends ConsumerStatefulWidget {
 
 class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _userIdController = TextEditingController(text: '1');
+  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.localhost;
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(_userIdController.text.trim(), _selectedPreset);
+        .login(
+          _selectedProfile.userId,
+          _selectedPreset,
+          _selectedProfile.personalDomainId,
+          _selectedProfile.homeDomainId,
+        );
 
     if (errorMessage == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -95,23 +94,33 @@ class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
                   style: TextStyle(fontSize: 14, color: AppColors.zinc500),
                 ),
                 const SizedBox(height: 44),
-                const _FieldLabel('USER ID'),
+                const _FieldLabel('PERSON'),
                 const SizedBox(height: 6),
-                TextFormField(
-                  controller: _userIdController,
-                  enabled: !loading,
-                  keyboardType: TextInputType.number,
+                DropdownButtonFormField<AuthLoginProfile>(
+                  initialValue: _selectedProfile,
                   decoration: _fieldDecoration(
-                    'Enter user ID',
+                    'Select person',
                     prefix: const Icon(
                       SolarLinearIcons.userRounded,
                       color: AppColors.zinc400,
                       size: 20,
                     ),
                   ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? 'User ID is required'
-                      : null,
+                  items: authLoginProfiles
+                      .map(
+                        (profile) => DropdownMenuItem<AuthLoginProfile>(
+                          value: profile,
+                          child: Text(profile.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: loading
+                      ? null
+                      : (profile) {
+                          if (profile != null) {
+                            setState(() => _selectedProfile = profile);
+                          }
+                        },
                 ),
                 const SizedBox(height: 16),
                 const _FieldLabel('BACKEND'),

@@ -12,11 +12,14 @@ class KgqlGoalRepository implements GoalRepository {
   KgqlGoalRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadGoalSchema,
+    required int domainId,
   })  : _client = client,
-        _loadGoalSchema = loadGoalSchema;
+        _loadGoalSchema = loadGoalSchema,
+        _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadGoalSchema;
+  final int _domainId;
 
   Map<String, dynamic> _goalFetchStruct(ModelType schema) {
     return buildKgqlStructFromSchema(schema);
@@ -30,6 +33,7 @@ class KgqlGoalRepository implements GoalRepository {
     final w = await nx.fetchActionGoalsWeek(
       _client,
       weekStart: weekStart,
+      domainId: _domainId,
       goalId: goalId,
     );
     return actionGoalsWeekFromWire(w);
@@ -44,6 +48,7 @@ class KgqlGoalRepository implements GoalRepository {
       _client,
       goalId: goalId,
       weeks: weeks,
+      domainId: _domainId,
     );
     return actionGoalsTrendFromWire(
       w,
@@ -60,6 +65,7 @@ class KgqlGoalRepository implements GoalRepository {
     final w = await nx.fetchExpenseGoalsMonth(
       _client,
       monthStart: monthStart,
+      domainId: _domainId,
       goalId: goalId,
     );
     return expenseGoalsMonthFromWire(w);
@@ -74,22 +80,23 @@ class KgqlGoalRepository implements GoalRepository {
       modelTypeName: kGoalModelTypeName,
       id: id,
       struct: struct,
+      domainId: _domainId,
     );
     return m == null ? null : goalFromModel(m);
   }
 
   @override
   Future<int> create(Goal goal) {
-    return setKgqlModel(_client, setModelRequestForCreateGoal(goal));
+    return setKgqlModel(_client, setModelRequestForCreateGoal(goal), domainId: _domainId);
   }
 
   @override
   Future<int> update(Goal goal) {
-    return setKgqlModel(_client, setModelRequestForUpdateGoal(goal));
+    return setKgqlModel(_client, setModelRequestForUpdateGoal(goal), domainId: _domainId);
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDeleteGoal(id));
+    await setKgqlModel(_client, setModelRequestForDeleteGoal(id), domainId: _domainId);
   }
 }

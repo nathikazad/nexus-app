@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 
@@ -29,22 +30,32 @@ final expenseGraphqlClientProvider = Provider<GraphQLClient>(
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
   final client = ref.watch(graphqlClientProvider);
+  final home = ref.watch(homeDomainIdProvider);
+  if (home == null) {
+    throw StateError('homeDomainId required (login)');
+  }
   return KgqlExpenseRepository(
     client: client,
     loadExpenseSchema: () => ref.read(expenseSchemaProvider.future),
+    domainId: home,
   );
 });
 
 final transferRepositoryProvider = Provider<TransferRepository>((ref) {
   final client = ref.watch(graphqlClientProvider);
+  final home = ref.watch(homeDomainIdProvider);
+  if (home == null) {
+    throw StateError('homeDomainId required (login)');
+  }
   return KgqlTransferRepository(
     client: client,
     loadTransferSchema: () => ref.read(transferSchemaProvider.future),
+    domainId: home,
   );
 });
 
-final expenseSchemaProvider = modelTypeByNameProvider(kExpenseModelTypeName);
-final transferSchemaProvider = modelTypeByNameProvider(kTransferModelTypeName);
+final expenseSchemaProvider = kgqlModelTypeForHomeDomain(kExpenseModelTypeName);
+final transferSchemaProvider = kgqlModelTypeForHomeDomain(kTransferModelTypeName);
 
 final expenseSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
   final m = await ref.watch(expenseSchemaProvider.future);
@@ -190,10 +201,15 @@ final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
 final relatedModelsForTypeProvider =
     FutureProvider.family<List<RelatedModel>, String>((ref, typeName) async {
   final client = ref.watch(expenseGraphqlClientProvider);
+  final home = ref.watch(homeDomainIdProvider);
+  if (home == null) {
+    throw StateError('homeDomainId required (login)');
+  }
   final models = await fetchKgqlModels(
     client,
     filter: {'model_type': typeName},
     struct: const {'id': true, 'name': true},
+    domainId: home,
   );
   return [
     for (final m in models)

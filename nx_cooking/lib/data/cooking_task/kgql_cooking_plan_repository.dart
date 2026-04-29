@@ -14,11 +14,14 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
   KgqlCookingPlanRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadCookingTaskSchema,
+    required int domainId,
   }) : _client = client,
-       _loadCookingTaskSchema = loadCookingTaskSchema;
+       _loadCookingTaskSchema = loadCookingTaskSchema,
+       _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadCookingTaskSchema;
+  final int _domainId;
 
   Map<String, dynamic> _cookingTaskStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -80,6 +83,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
         ],
       },
       struct: struct,
+      domainId: _domainId,
     );
   }
 
@@ -110,6 +114,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       modelTypeName: kCookingTaskModelTypeName,
       id: taskId,
       struct: struct,
+      domainId: _domainId,
     );
     if (task == null) {
       return null;
@@ -128,6 +133,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       modelTypeName: kRecipeModelTypeName,
       id: recipeId,
       struct: const {'id': true, 'name': true},
+      domainId: _domainId,
     );
     final recipeName = recipe?.name ?? 'Recipe';
     final label = DateFormat('MMM d').format(day);
@@ -154,7 +160,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
         ),
       ],
     );
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: _domainId);
   }
 
   @override
@@ -185,6 +191,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
           ),
         ],
       ),
+      domainId: _domainId,
     );
   }
 
@@ -193,6 +200,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
     await setKgqlModel(
       _client,
       SetModelRequest(id: taskId, delete: true),
+      domainId: _domainId,
     );
   }
 
@@ -210,6 +218,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
           ),
         ],
       ),
+      domainId: _domainId,
     );
   }
 
@@ -228,6 +237,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
             ),
           ],
         ),
+        domainId: _domainId,
       );
       return;
     }
@@ -239,6 +249,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
           SetModelAttribute(key: kCookingTaskAttrNotes, value: t),
         ],
       ),
+      domainId: _domainId,
     );
   }
 }

@@ -7,7 +7,12 @@ import 'package:nx_db/auth.dart';
 class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {
-    return User(userId: '1', preset: BackendPreset.laptop);
+    return User(
+      userId: '1',
+      personalDomainId: 1,
+      homeDomainId: 1,
+      preset: BackendPreset.laptop,
+    );
   }
 }
 

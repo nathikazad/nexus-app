@@ -4,4 +4,5 @@ library;
 export 'src/core/client/graphql_client_provider.dart';
 export 'src/kgql/providers/models_providers.dart';
 export 'src/kgql/providers/model_types_providers.dart';
+export 'src/kgql/providers/kgql_schema_by_name_providers.dart';
 export 'src/kgql/providers/relation_picker_providers.dart';

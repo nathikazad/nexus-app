@@ -13,6 +13,7 @@ void main() {
       expect(d.definitions, isNotEmpty);
       expect(kgqlGetKgqlModelsQuery, contains(r'$filter'));
       expect(kgqlGetKgqlModelsQuery, contains(r'$struct'));
+      expect(kgqlGetKgqlModelsQuery, contains(r'$domainId'));
     });
 
     test('set_kgql_models', () {
@@ -22,12 +23,13 @@ void main() {
 
     test('get_kgql_model_type', () {
       gql(kgqlGetKgqlModelTypeQuery);
-      expect(kgqlGetKgqlModelTypeQuery, contains(r'$input'));
+      expect(kgqlGetKgqlModelTypeQuery, contains(r'$domainId'));
     });
 
     test('get_all_model_types', () {
       gql(getAllModelTypesQuery);
       expect(getAllModelTypesQuery, contains('getKgqlModelType'));
+      expect(getAllModelTypesQuery, contains(r'$domainId'));
     });
 
     test('set_kgql_model_type', () {
@@ -39,6 +41,7 @@ void main() {
       gql(getKgqlAggregateQuery);
       expect(getKgqlAggregateQuery, contains(r'$filterkgql'));
       expect(getKgqlAggregateQuery, contains(r'$aggregate'));
+      expect(getKgqlAggregateQuery, contains(r'$domainId'));
     });
 
     test('get_current_transcript', () {
