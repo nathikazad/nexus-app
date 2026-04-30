@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/features/images/images_page.dart';
 import 'package:nx_time/features/settings/action_colors_page.dart';
 
-/// Hamburger menu (aligned with `nx_expense` [ExpenseAppMenuButton]); opens Colors + Logout.
+/// Hamburger menu (aligned with `nx_expense` [ExpenseAppMenuButton]); opens Colors, Images, Logout.
 class NxAppMenuButton extends ConsumerWidget {
   const NxAppMenuButton({super.key});
 
@@ -25,6 +26,12 @@ class NxAppMenuButton extends ConsumerWidget {
       onSelected: (value) async {
         if (value == 'colors') {
           _onColors(context);
+        } else if (value == 'images') {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const ImagesPage(),
+            ),
+          );
         } else if (value == 'logout') {
           await ref.read(authProvider.notifier).logout();
           if (context.mounted) {
@@ -38,6 +45,10 @@ class NxAppMenuButton extends ConsumerWidget {
         PopupMenuItem<String>(
           value: 'colors',
           child: Text('Colors'),
+        ),
+        PopupMenuItem<String>(
+          value: 'images',
+          child: Text('Images'),
         ),
         PopupMenuItem<String>(
           value: 'logout',

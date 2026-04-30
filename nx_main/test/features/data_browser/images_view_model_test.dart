@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
-import 'package:nexus_voice_assistant/data/providers.dart';
-import 'package:nexus_voice_assistant/domain/images/image_entry.dart';
+import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/features/data_browser/images_view_model.dart';
 
 import '../../_support/fake_image_repository.dart';

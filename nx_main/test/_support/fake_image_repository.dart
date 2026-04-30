@@ -1,5 +1,4 @@
-import 'package:nexus_voice_assistant/domain/images/image_entry.dart';
-import 'package:nexus_voice_assistant/domain/images/image_repository.dart';
+import 'package:nx_db/nx_db.dart';
 
 class FakeImageRepository implements ImageRepository {
   FakeImageRepository({

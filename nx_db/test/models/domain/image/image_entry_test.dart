@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexus_voice_assistant/domain/images/image_entry.dart';
+import 'package:nx_db/nx_db.dart';
 
 void main() {
   test('ImageEntry exposes url and minutes', () {

@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_voice_assistant/data/battery/battery_chart_service.dart';
-import 'package:nexus_voice_assistant/data/images/image_service.dart';
+import 'package:nx_db/nx_db.dart';
 
 /// Live HTTP checks against the image/battery JSON API.
 ///

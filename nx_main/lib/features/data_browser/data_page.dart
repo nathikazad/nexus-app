@@ -22,7 +22,7 @@ class DataPage extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) =>
-                      const ImagesPage(source: 'necklace'),
+                      const ImagesPage(initialSource: 'necklace'),
                 ),
               );
             },
@@ -35,7 +35,7 @@ class DataPage extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) =>
-                      const ImagesPage(source: 'desktop'),
+                      const ImagesPage(initialSource: 'desktop'),
                 ),
               );
             },

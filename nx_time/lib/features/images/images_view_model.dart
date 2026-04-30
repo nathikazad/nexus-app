@@ -1,10 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
-
-import 'package:nexus_voice_assistant/data/image_exports.dart';
-import 'package:nexus_voice_assistant/data/providers.dart';
+import 'package:nx_db/nx_db.dart';
 
 const Object _imagesCopyUnset = Object();
 

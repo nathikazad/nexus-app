@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:nx_db/auth.dart';
-import 'package:nexus_voice_assistant/core/widgets/timeline_slider.dart';
-import 'package:nexus_voice_assistant/data/image_exports.dart';
-import 'package:nexus_voice_assistant/features/data_browser/images_view_model.dart';
+import 'package:nx_db/nx_db.dart';
+import 'package:nx_time/core/widgets/timeline_slider.dart';
+import 'package:nx_time/features/images/images_view_model.dart';
 
 /// Browse images by day for necklace or desktop capture sources.
 class ImagesPage extends ConsumerStatefulWidget {
   const ImagesPage({
     super.key,
-    this.initialSource = 'necklace',
+    this.initialSource = 'desktop',
   }) : assert(
           initialSource == 'necklace' || initialSource == 'desktop',
           'initialSource must be necklace or desktop',
@@ -21,6 +20,7 @@ class ImagesPage extends ConsumerStatefulWidget {
   /// Starting capture channel; use the app bar action to switch at runtime.
   ///
   /// Matches server `source` query param (`necklace` | `desktop`).
+  /// Copy this screen and change [initialSource] for a different default (e.g. necklace).
   final String initialSource;
 
   @override

@@ -22,7 +22,7 @@ Future<ActionCategoryOption?> showActionCategoryPicker(
   );
 }
 
-class _CategoryPickerBody extends StatelessWidget {
+class _CategoryPickerBody extends StatefulWidget {
   const _CategoryPickerBody({
     required this.categories,
     this.selected,
@@ -32,8 +32,34 @@ class _CategoryPickerBody extends StatelessWidget {
   final ActionCategoryOption? selected;
 
   @override
+  State<_CategoryPickerBody> createState() => _CategoryPickerBodyState();
+}
+
+class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  List<ActionCategoryOption> get _filtered {
+    final q = _search.text.trim().toLowerCase();
+    if (q.isEmpty) return widget.categories;
+    return widget.categories
+        .where((c) => c.name.toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final screenH = MediaQuery.sizeOf(context).height;
+    /// Fixed allocation for rows so the sheet height does not change when the
+    /// filtered list shrinks or is empty (content scrolls inside).
+    final listAreaHeight = screenH * 0.42;
+
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: Container(
@@ -69,46 +95,74 @@ class _CategoryPickerBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.slate200),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'Search types…',
-                    style: TextStyle(
+                TextField(
+                  controller: _search,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Search types…',
+                    hintStyle: const TextStyle(
                       fontSize: 14,
                       color: AppColors.slate400,
                     ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.slate200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.slate200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.sky600),
+                    ),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.slate900,
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (categories.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Text(
-                      'No action types loaded. Check connection and try again.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: AppColors.slate500),
-                    ),
-                  )
-                else
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.sizeOf(context).height * 0.42,
-                    ),
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: [
-                        for (final c in categories)
-                          _CategoryRow(
-                            option: c,
-                            isSelected: selected?.modelTypeId == c.modelTypeId,
+                SizedBox(
+                  height: listAreaHeight,
+                  child: widget.categories.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No action types loaded. Check connection and try again.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.slate500,
+                            ),
                           ),
-                      ],
-                    ),
-                  ),
+                        )
+                      : _filtered.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No types match your search.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.slate500,
+                                ),
+                              ),
+                            )
+                          : ListView(
+                              children: [
+                                for (final c in _filtered)
+                                  _CategoryRow(
+                                    option: c,
+                                    isSelected: widget.selected?.modelTypeId ==
+                                        c.modelTypeId,
+                                  ),
+                              ],
+                            ),
+                ),
               ],
             ),
           ),

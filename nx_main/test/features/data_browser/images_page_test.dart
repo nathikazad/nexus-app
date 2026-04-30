@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/features/data_browser/images_page.dart';
@@ -12,7 +11,7 @@ void main() {
     final fake = FakeImageRepository(availableDates: const []);
     await pumpMaterialWithProviders(
       tester,
-      const ImagesPage(source: 'necklace'),
+      const ImagesPage(initialSource: 'necklace'),
       overrides: [
         imageRepositoryProvider.overrideWithValue(fake),
         imageBaseUrlProvider.overrideWith((ref) => 'http://img.test'),

@@ -1,6 +1,6 @@
-import 'package:nexus_voice_assistant/data/images/image_service.dart' as svc;
-import 'package:nexus_voice_assistant/domain/images/image_entry.dart';
-import 'package:nexus_voice_assistant/domain/images/image_repository.dart';
+import 'package:nx_db/src/models/data/image/image_service.dart' as svc;
+import 'package:nx_db/src/models/domain/image/image_entry.dart';
+import 'package:nx_db/src/models/domain/image/image_repository.dart';
 
 /// HTTP implementation of [ImageRepository] (delegates to [svc]).
 class HttpImageRepository implements ImageRepository {

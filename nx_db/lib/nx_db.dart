@@ -48,6 +48,13 @@ export 'src/models/data/person/person_mapper.dart';
 export 'src/models/data/person/kgql_person_repository.dart';
 export 'src/models/data/person/person_providers.dart';
 
+// Images (MCP snapshot HTTP browser — shared by nx_main / nx_time)
+export 'src/models/domain/image/image_entry.dart';
+export 'src/models/domain/image/image_repository.dart';
+export 'src/models/data/image/image_service.dart';
+export 'src/models/data/image/http_image_repository.dart';
+export 'src/models/data/image/image_providers.dart';
+
 // Transcript (current user conversation)
 export 'src/models/domain/transcript/transcript.dart';
 export 'src/models/domain/transcript/transcript_repository.dart';

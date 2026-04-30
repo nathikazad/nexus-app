@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:nx_db/nx_db.dart';
-import 'package:nexus_voice_assistant/domain/images/image_entry.dart';
+import 'package:nx_db/src/core/config/cf_access.dart';
+import 'package:nx_db/src/models/domain/image/image_entry.dart';
 
-/// Disk cache for image GETs (lazy-loaded by [CachedNetworkImage]).
+/// Disk cache for image GETs (lazy-loaded by [CachedNetworkImage] in app UIs).
 final imageCacheManager = CacheManager(
   Config(
     'nexus_images',

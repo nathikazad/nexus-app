@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/domain/battery/battery_repository.dart';
-import 'package:nexus_voice_assistant/domain/images/image_repository.dart';
+import 'package:nx_db/nx_db.dart';
 
 void main() {
   test('provider container resolves image and battery repositories', () {

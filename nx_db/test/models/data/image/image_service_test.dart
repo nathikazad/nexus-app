@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:nexus_voice_assistant/data/images/image_service.dart';
+import 'package:nx_db/nx_db.dart';
 
 void main() {
   group('minutesFromImageFilename', () {
@@ -37,7 +37,8 @@ void main() {
     test('throws ImageServiceException on bad status', () async {
       final mock = MockClient((request) async => http.Response('err', 500));
       expect(
-        () => fetchAvailableDates('https://h', 'u', 'necklace', httpClient: mock),
+        () =>
+            fetchAvailableDates('https://h', 'u', 'necklace', httpClient: mock),
         throwsA(isA<ImageServiceException>()),
       );
     });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/features/action_edit/action_category_option.dart';
@@ -9,7 +10,8 @@ import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/tasks/task_picker_page.dart';
 import 'package:nx_time/features/tasks/task_view_models.dart';
-import 'package:nx_time/features/action_create/add_child_actions_page.dart';
+import 'package:nx_time/features/action_detail/action_detail_page.dart';
+import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 import 'package:nx_time/features/action_edit/widgets/action_category_picker.dart';
 import 'package:nx_time/features/action_edit/widgets/action_datetime_picker.dart';
@@ -265,9 +267,16 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
           startTime: action.startTime,
           endTime: action.endTime,
         );
+        final colors = modelTypeColorsOrFallback(
+          ref.read(modelTypeColorsProvider),
+        );
+        final dayLabel = DateFormat.MMMd().format(
+          created.startTime ?? DateTime.now(),
+        );
+        final args = activityDetailArgsForAction(created, dayLabel, colors);
         await Navigator.of(context).push<void>(
           MaterialPageRoute<void>(
-            builder: (_) => AddChildActionsPage(parent: created),
+            builder: (_) => ActivityDetailPage(args: args),
           ),
         );
         return;
