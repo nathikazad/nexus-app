@@ -34,7 +34,7 @@ class BleClient {
   StreamSubscription<List<int>>? _fileTxNotificationSubscription;
   StreamSubscription<List<int>>? _cameraStatusNotificationSubscription;
   StreamSubscription<List<int>>? _batteryNotificationSubscription;
-  
+
   BleConnectionState _state = BleConnectionState.idle;
 
   /// When set (or loaded from [PairedDeviceStorage]), only that peripheral is used.
@@ -55,12 +55,12 @@ class BleClient {
     if (pref == null || pref.isEmpty) return false;
     return device.remoteId.str == pref;
   }
-  
+
   BleConnectionState get state => _state;
   bool get isConnected => _state == BleConnectionState.connected;
   BluetoothDevice? get device => _device;
   BluetoothCharacteristic? get audioRxCharacteristic => _audioRxCharacteristic;
-  
+
   // Direct callback properties for event handling
   void Function(BleConnectionState)? onConnectionStateChanged;
   void Function(Uint8List)? onAudioPacketReceived;
@@ -90,19 +90,19 @@ class BleClient {
   // ===========================================================================
   // INITIALIZATION
   // ===========================================================================
-  
+
   Future<bool> initialize() async {
     try {
       // Configure FlutterBluePlus for background operation
       await FlutterBluePlus.setOptions(restoreState: true);
-      
+
       // Check if Bluetooth is available
       if (await FlutterBluePlus.isSupported == false) {
         _log('Bluetooth not supported');
         onError?.call('Bluetooth not supported');
         return false;
       }
-      
+
       _listenForGlobalConnectionEvents();
       _log('BLE initialized');
       return true;
@@ -112,14 +112,15 @@ class BleClient {
       return false;
     }
   }
-  
+
   // ===========================================================================
   // GLOBAL CONNECTION LISTENER
   // ===========================================================================
 
   void _listenForGlobalConnectionEvents() {
     _globalConnectionSubscription?.cancel();
-    _globalConnectionSubscription = FlutterBluePlus.events.onConnectionStateChanged.listen(
+    _globalConnectionSubscription =
+        FlutterBluePlus.events.onConnectionStateChanged.listen(
       (event) async {
         if (event.connectionState == BluetoothConnectionState.connected) {
           await reloadPreferredFromStorage();
@@ -128,7 +129,8 @@ class BleClient {
             return;
           }
           _log('Global event: device connected: ${event.device.platformName}');
-          if (_state == BleConnectionState.connected || _state == BleConnectionState.connecting) {
+          if (_state == BleConnectionState.connected ||
+              _state == BleConnectionState.connecting) {
             _log('Already handling a connection, ignoring');
             return;
           }
@@ -143,7 +145,7 @@ class BleClient {
   // ===========================================================================
   // SCANNING
   // ===========================================================================
-  
+
   Future<void> startScan() async {
     if (_state == BleConnectionState.scanning) {
       _log('Already scanning');
@@ -151,22 +153,23 @@ class BleClient {
     }
     await reloadPreferredFromStorage();
     if (_preferredRemoteId == null || _preferredRemoteId!.isEmpty) {
-      _diagnosticLog('Cannot scan: no paired device ID. Select a device in the app first.');
+      _diagnosticLog(
+          'Cannot scan: no paired device ID. Select a device in the app first.');
       return;
     }
 
     _setState(BleConnectionState.scanning);
     _diagnosticLog('Starting scan for paired Nexus device...');
-    
+
     try {
       // Wait for Bluetooth adapter to be on
       await FlutterBluePlus.adapterState
           .where((val) => val == BluetoothAdapterState.on)
           .first;
-      
+
       // Start scanning with service filter
       final serviceGuid = Guid(BleConstants.serviceUuid);
-      
+
       // Listen to scan results
       _scanSubscription = FlutterBluePlus.scanResults.listen(
         (results) async {
@@ -192,12 +195,12 @@ class BleClient {
           onError?.call('Scan error: $e');
         },
       );
-      
+
       // Start the scan indefinitely (no timeout - will scan until device found or manually stopped)
       await FlutterBluePlus.startScan(
         withServices: [serviceGuid],
       );
-      
+
       // Note: Scan will continue indefinitely until:
       // 1. A device is found (handled in scan listener above)
       // 2. stopScan() is called manually
@@ -210,7 +213,7 @@ class BleClient {
       onError?.call('Scan error: $e');
     }
   }
-  
+
   Future<void> stopScan() async {
     if (_state == BleConnectionState.scanning) {
       await _scanSubscription?.cancel();
@@ -220,7 +223,7 @@ class BleClient {
       _log('Scan stopped');
     }
   }
-  
+
   // ===========================================================================
   // CONNECTION
   // ===========================================================================
@@ -330,11 +333,11 @@ class BleClient {
       }
 
       final services = await _device!.discoverServices();
-      _log('Discovered ${services.length} services');
 
       BluetoothService? targetService;
       for (BluetoothService service in services) {
-        if (service.uuid.toString().toLowerCase() == BleConstants.serviceUuid.toLowerCase()) {
+        if (service.uuid.toString().toLowerCase() ==
+            BleConstants.serviceUuid.toLowerCase()) {
           targetService = service;
           break;
         }
@@ -351,42 +354,40 @@ class BleClient {
         final uuid = char.uuid.toString().toLowerCase();
         if (uuid == BleConstants.audioTxCharacteristicUuid.toLowerCase()) {
           _audioTxCharacteristic = char;
-          _log('Found Audio TX characteristic');
-        } else if (uuid == BleConstants.audioRxCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.audioRxCharacteristicUuid.toLowerCase()) {
           _audioRxCharacteristic = char;
-          _log('Found Audio RX characteristic');
-        } else if (uuid == BleConstants.batteryCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.batteryCharacteristicUuid.toLowerCase()) {
           _batteryCharacteristic = char;
-          _log('Found Battery characteristic');
-        } else if (uuid == BleConstants.hapticCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.hapticCharacteristicUuid.toLowerCase()) {
           _hapticCharacteristic = char;
-          _log('Found Haptic characteristic');
         } else if (uuid == BleConstants.rtcCharacteristicUuid.toLowerCase()) {
           _rtcCharacteristic = char;
-          _log('Found RTC characteristic');
-        } else if (uuid == BleConstants.deviceNameCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.deviceNameCharacteristicUuid.toLowerCase()) {
           _deviceNameCharacteristic = char;
-          _log('Found Device Name characteristic');
-        } else if (uuid == BleConstants.fileTxCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.fileTxCharacteristicUuid.toLowerCase()) {
           _fileTxCharacteristic = char;
-          _log('Found File TX characteristic');
-        } else if (uuid == BleConstants.fileRxCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.fileRxCharacteristicUuid.toLowerCase()) {
           _fileRxCharacteristic = char;
-          _log('Found File RX characteristic');
-        } else if (uuid == BleConstants.cameraCmdCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.cameraCmdCharacteristicUuid.toLowerCase()) {
           _cameraCmdCharacteristic = char;
-          _log('Found Camera CMD characteristic');
-        } else if (uuid == BleConstants.cameraStatusCharacteristicUuid.toLowerCase()) {
+        } else if (uuid ==
+            BleConstants.cameraStatusCharacteristicUuid.toLowerCase()) {
           _cameraStatusCharacteristic = char;
-          _log('Found Camera Status characteristic');
         }
       }
 
       if (_rtcCharacteristic != null) {
         try {
           final rtcTime = RTCTime.fromDateTime(DateTime.now());
-          await _rtcCharacteristic!.write(rtcTime.toBytes(), withoutResponse: false);
-          _log('RTC synced: ${rtcTime.toString()}');
+          await _rtcCharacteristic!
+              .write(rtcTime.toBytes(), withoutResponse: false);
         } catch (e) {
           _log('RTC sync failed (non-fatal): $e');
         }
@@ -415,22 +416,23 @@ class BleClient {
       return false;
     }
   }
-  
+
   Future<void> _subscribeToAudioNotifications() async {
     if (_audioTxCharacteristic == null) {
       _log('Cannot subscribe: Audio TX characteristic not found');
       return;
     }
-    
+
     try {
       await _audioTxCharacteristic!.setNotifyValue(true);
-      
-      _notificationSubscription = _audioTxCharacteristic!.onValueReceived.listen(
+
+      _notificationSubscription =
+          _audioTxCharacteristic!.onValueReceived.listen(
         (value) {
           if (value.isEmpty) return;
-          
+
           final data = Uint8List.fromList(value);
-          
+
           // Parse and forward audio data
           _handleAudioNotification(data);
         },
@@ -439,29 +441,28 @@ class BleClient {
           onError?.call('Notification error: $error');
         },
       );
-      
-      _log('Subscribed to audio notifications');
     } catch (e) {
       _log('Error subscribing to notifications: $e');
       onError?.call('Error subscribing: $e');
     }
   }
-  
+
   void _handleAudioNotification(Uint8List data) {
     // Forward the raw data via callback
     onAudioPacketReceived?.call(data);
   }
-  
+
   Future<void> _subscribeToFileTxNotifications() async {
     if (_fileTxCharacteristic == null) {
       _log('Cannot subscribe: File TX characteristic not found');
       return;
     }
-    
+
     try {
       await _fileTxCharacteristic!.setNotifyValue(true);
-      
-      _fileTxNotificationSubscription = _fileTxCharacteristic!.lastValueStream.listen(
+
+      _fileTxNotificationSubscription =
+          _fileTxCharacteristic!.lastValueStream.listen(
         (value) {
           if (value.isEmpty) return;
           final data = Uint8List.fromList(value);
@@ -473,27 +474,27 @@ class BleClient {
           onError?.call('File TX notification error: $error');
         },
       );
-      
-      _log('Subscribed to file TX notifications');
     } catch (e) {
       _log('Error subscribing to file TX notifications: $e');
       onError?.call('Error subscribing to file TX: $e');
     }
   }
-  
+
   Future<void> _subscribeToCameraStatusNotifications() async {
     if (_cameraStatusCharacteristic == null) {
       _log('Cannot subscribe: Camera Status characteristic not found');
       return;
     }
-    
+
     try {
       await _cameraStatusCharacteristic!.setNotifyValue(true);
-      
-      _cameraStatusNotificationSubscription = _cameraStatusCharacteristic!.lastValueStream.listen(
+
+      _cameraStatusNotificationSubscription =
+          _cameraStatusCharacteristic!.lastValueStream.listen(
         (value) {
           if (value.isEmpty) return;
-          final (isRecording, periodSec) = BleClient.parseCameraStatus(Uint8List.fromList(value));
+          final (isRecording, periodSec) =
+              BleClient.parseCameraStatus(Uint8List.fromList(value));
           onCameraStatusReceived?.call(isRecording, periodSec);
         },
         onError: (error) {
@@ -501,8 +502,6 @@ class BleClient {
           onError?.call('Camera status notification error: $error');
         },
       );
-      
-      _log('Subscribed to camera status notifications');
     } catch (e) {
       _log('Error subscribing to camera status notifications: $e');
       onError?.call('Error subscribing to camera status: $e');
@@ -518,7 +517,8 @@ class BleClient {
     try {
       await _batteryCharacteristic!.setNotifyValue(true);
 
-      _batteryNotificationSubscription = _batteryCharacteristic!.lastValueStream.listen(
+      _batteryNotificationSubscription =
+          _batteryCharacteristic!.lastValueStream.listen(
         (value) {
           if (value.isEmpty) return;
           onBatteryReceived?.call(Uint8List.fromList(value));
@@ -528,8 +528,6 @@ class BleClient {
           onError?.call('Battery notification error: $error');
         },
       );
-
-      _log('Subscribed to battery notifications');
     } catch (e) {
       _log('Error subscribing to battery notifications: $e');
       onError?.call('Error subscribing to battery: $e');
@@ -557,11 +555,11 @@ class BleClient {
       _setState(BleConnectionState.idle);
     }
   }
-  
+
   // ===========================================================================
   // PUBLIC METHODS
   // ===========================================================================
-  
+
   /// Connect to the saved [PairedDeviceStorage] device.
   ///
   /// Tries a direct connect first (device may be in range). On failure, falls
@@ -578,7 +576,8 @@ class BleClient {
       await reloadPreferredFromStorage();
     }
     if (_preferredRemoteId == null || _preferredRemoteId!.isEmpty) {
-      _diagnosticLog('No paired device ID. Select your Nexus in the hardware screen.');
+      _diagnosticLog(
+          'No paired device ID. Select your Nexus in the hardware screen.');
       return false;
     }
 
@@ -604,7 +603,7 @@ class BleClient {
     await _reconnectToPairedDevice();
     return isConnected;
   }
-  
+
   /// Check for already connected devices (important for iOS background mode)
   Future<bool> _checkForAlreadyConnectedDevice() async {
     try {
@@ -612,16 +611,17 @@ class BleClient {
         return false;
       }
       _log('Checking for already-connected paired device...');
-      
+
       // Wait for Bluetooth adapter to be on first
       await FlutterBluePlus.adapterState
           .where((val) => val == BluetoothAdapterState.on)
           .first
           .timeout(const Duration(seconds: 5));
-      
+
       final serviceGuid = Guid(BleConstants.serviceUuid);
-      final connectedDevices = await FlutterBluePlus.systemDevices([serviceGuid]);
-      
+      final connectedDevices =
+          await FlutterBluePlus.systemDevices([serviceGuid]);
+
       for (final device in connectedDevices) {
         if (!_matchesPreferred(device)) {
           continue;
@@ -638,7 +638,7 @@ class BleClient {
     }
     return false;
   }
-  
+
   /// Disconnect from device.
   ///
   /// When [intentional] is true (explicit user/caller action like "stop" or
@@ -677,24 +677,22 @@ class BleClient {
       _log('Error disconnecting: $e');
     }
   }
-  
+
   /// Send data to the device (via Audio RX characteristic)
   Future<void> sendAudio(Uint8List data) async {
-    print('Sending data: ${data.length} bytes');
     if (!isConnected || _audioRxCharacteristic == null) {
       _log('Cannot send: not connected');
       return;
     }
-    
+
     try {
-      print('Writing data: ${data.length} bytes');
       await _audioRxCharacteristic!.write(data, withoutResponse: true);
     } catch (e) {
       _log('Send error: $e');
       rethrow;
     }
   }
-  
+
   /// Read battery raw bytes from GATT (see [parseBatteryStatus]).
   Future<Uint8List?> readBattery() async {
     if (!isConnected || _batteryCharacteristic == null) {
@@ -742,7 +740,8 @@ class BleClient {
       final sign = tzH >= 0 ? '+' : '-';
       final ah = tzH.abs();
       final am = tzM.abs();
-      timezone = 'UTC$sign${ah.toString().padLeft(2, '0')}:${am.toString().padLeft(2, '0')}';
+      timezone =
+          'UTC$sign${ah.toString().padLeft(2, '0')}:${am.toString().padLeft(2, '0')}';
     }
     return (
       voltageMv: voltageMv,
@@ -759,7 +758,7 @@ class BleClient {
     final am = tzM.abs();
     return '$sign${ah.toString().padLeft(2, '0')}:${am.toString().padLeft(2, '0')}';
   }
-  
+
   /// Write haptic effect
   Future<bool> writeHaptic(int effectId) async {
     if (!isConnected || _hapticCharacteristic == null) {
@@ -767,7 +766,8 @@ class BleClient {
       return false;
     }
     try {
-      await _hapticCharacteristic!.write(Uint8List.fromList([effectId]), withoutResponse: true);
+      await _hapticCharacteristic!
+          .write(Uint8List.fromList([effectId]), withoutResponse: true);
       return true;
     } catch (e) {
       _log('Error writing haptic: $e');
@@ -785,7 +785,8 @@ class BleClient {
   /// [data] is the raw payload (e.g. from [CameraCommand.toBytes]).
   Future<bool> writeCamera(Uint8List data) async {
     if (!isConnected || _cameraCmdCharacteristic == null) {
-      _log('Cannot write camera: not connected or characteristic not available');
+      _log(
+          'Cannot write camera: not connected or characteristic not available');
       return false;
     }
     try {
@@ -809,7 +810,8 @@ class BleClient {
   /// Read camera status (is recording, period in seconds).
   Future<(bool isRecording, int periodSec)?> readCameraStatus() async {
     if (!isConnected || _cameraStatusCharacteristic == null) {
-      _log('Cannot read camera status: not connected or characteristic not available');
+      _log(
+          'Cannot read camera status: not connected or characteristic not available');
       return null;
     }
     try {
@@ -820,7 +822,7 @@ class BleClient {
       return null;
     }
   }
-  
+
   /// Read RTC time
   Future<Uint8List?> readRTC() async {
     if (!isConnected || _rtcCharacteristic == null) {
@@ -835,7 +837,7 @@ class BleClient {
       return null;
     }
   }
-  
+
   /// Write RTC time
   Future<bool> writeRTC(Uint8List data) async {
     if (!isConnected || _rtcCharacteristic == null) {
@@ -850,7 +852,7 @@ class BleClient {
       return false;
     }
   }
-  
+
   /// Read device name
   Future<String?> readDeviceName() async {
     if (!isConnected || _deviceNameCharacteristic == null) {
@@ -866,7 +868,7 @@ class BleClient {
       return null;
     }
   }
-  
+
   /// Write device name
   Future<bool> writeDeviceName(String name) async {
     if (!isConnected || _deviceNameCharacteristic == null) {
@@ -878,14 +880,15 @@ class BleClient {
       return false;
     }
     try {
-      await _deviceNameCharacteristic!.write(Uint8List.fromList(name.codeUnits), withoutResponse: false);
+      await _deviceNameCharacteristic!
+          .write(Uint8List.fromList(name.codeUnits), withoutResponse: false);
       return true;
     } catch (e) {
       _log('Error writing device name: $e');
       return false;
     }
   }
-  
+
   /// Write file RX data
   Future<bool> writeFileRx(Uint8List data) async {
     if (!isConnected || _fileRxCharacteristic == null) {
@@ -900,7 +903,7 @@ class BleClient {
       return false;
     }
   }
-  
+
   /// Read file control
   Future<Uint8List?> readFileCtrl() async {
     if (!isConnected || _fileCtrlCharacteristic == null) {
@@ -915,7 +918,7 @@ class BleClient {
       return null;
     }
   }
-  
+
   /// Write file control
   Future<bool> writeFileCtrl(Uint8List data) async {
     if (!isConnected || _fileCtrlCharacteristic == null) {
@@ -930,13 +933,13 @@ class BleClient {
       return false;
     }
   }
-  
+
   /// Get effective MTU (MTU - 3 bytes for ATT overhead)
   Future<int> getEffectiveMtu() async {
     if (_device == null) {
       return 20; // Default: 23 - 3
     }
-    
+
     try {
       final mtu = await _device!.mtu.first.timeout(const Duration(seconds: 2));
       print('MTU: $mtu');
@@ -946,7 +949,7 @@ class BleClient {
       return 20; // Default: 23 - 3
     }
   }
-  
+
   /// Dispose resources
   Future<void> dispose() async {
     await _globalConnectionSubscription?.cancel();
@@ -958,4 +961,3 @@ class BleClient {
     onError = null;
   }
 }
-

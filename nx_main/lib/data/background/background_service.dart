@@ -9,7 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
-import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart' show BleClient;
+import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
+    show BleClient;
 import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 import 'package:nexus_voice_assistant/domain/ble/ble_connection_state.dart';
@@ -23,7 +24,7 @@ class BleBackgroundService {
     // ============================================================================
     // 1. INITIALIZATION
     // ============================================================================
-    
+
     final bleClient = BleClient();
     final socketClient = SocketClient();
     final prefs = await SharedPreferences.getInstance();
@@ -32,48 +33,72 @@ class BleBackgroundService {
     final userId = prefs.getString(PrefsKeys.userId) ?? '1';
     final socketHeaders = <String, String>{
       'X-User-Id': userId,
+      'Authorization': 'Bearer dev',
       if (CfAccess.shouldAttachHeaders(sockUrl)) ...CfAccess.headers,
     };
 
     await socketClient.connect(sockUrl, headers: socketHeaders);
-    
+
     // ============================================================================
     // 2. BLE CONFIGURATION
     // ============================================================================
-    
+
     int packetCount = 0;
     int textPacketCount = 0;
     int imagePacketCount = 0;
     int audioPacketCount = 0;
+    bool audioSendActive = false;
+    int audioSendPacketCount = 0;
+    int audioSendByteCount = 0;
+
+    String utcNow() => DateTime.now().toUtc().toIso8601String();
 
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
       service.invoke('ble.status', {'status': state.name});
     };
-    
+
     bleClient.onAudioPacketReceived = (data) {
       packetCount++;
       // Byte 2 is 1-byte packet_index from ESP32 (format: [0x01][0x00][packet_index][size:2][opus])
       final packetIndex = data.length >= 3 ? data[2] : 0;
-      debugPrint("[BLE BG] Packet $packetCount (packet_index=$packetIndex): ${data.length} bytes");
       service.invoke('ble.packet', {
         'count': packetCount,
         'packet_index': packetIndex,
         'size': data.length,
       });
-      
+
+      final isAudioEof = data.length == 2 && data[0] == 0xFC && data[1] == 0xFF;
+      if (!audioSendActive) {
+        audioSendActive = true;
+        audioSendPacketCount = 0;
+        audioSendByteCount = 0;
+        debugPrint("[BLE BG] ${utcNow()} UTC audio packets sending started");
+      }
+      audioSendPacketCount++;
+      // Count WebSocket wire bytes: 6-byte OPUS_AUDIO_PACKET wrapper + BLE payload.
+      audioSendByteCount += 6 + data.length;
+
       // Forward BLE payload with 4B index (consistent with text/image/EOF)
       audioPacketCount++;
       socketClient.sendPacket(data, index: audioPacketCount);
+      if (isAudioEof) {
+        debugPrint(
+          "[BLE BG] ${utcNow()} UTC audio packets sending finished "
+          "$audioSendPacketCount packets, $audioSendByteCount bytes",
+        );
+        audioSendActive = false;
+      }
       // Send ACK back to the device
-      bleClient.sendAudio(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
+      bleClient
+          .sendAudio(Uint8List.fromList([0x41, 0x43, 0x4B])); // "ACK" in ASCII
     };
-    
+
     bleClient.onError = (error) {
       debugPrint("[BLE BG] Error: $error");
       service.invoke('ble.error', {'error': error});
     };
-    
+
     bleClient.onCameraStatusReceived = (isRecording, periodSec) {
       service.invoke('device.push', {
         'type': 'camera',
@@ -102,11 +127,11 @@ class BleBackgroundService {
     };
 
     await bleClient.initialize();
-    
+
     // ============================================================================
     // 3. SOCKET CONFIGURATION
     // ============================================================================
-    
+
     // Forward packets from server to BLE
     socketClient.onPacketFromServer = (packet) => bleClient.sendAudio(packet);
 
@@ -115,7 +140,8 @@ class BleBackgroundService {
       try {
         switch (action) {
           case 'take_photo':
-            final success = await bleClient.writeCamera(CameraCommand.capture.toBytes());
+            final success =
+                await bleClient.writeCamera(CameraCommand.capture.toBytes());
             return jsonEncode({'success': success});
           case 'get_camera_status':
             final st = await bleClient.readCameraStatus();
@@ -129,18 +155,22 @@ class BleBackgroundService {
           case 'start_record':
             final periodSec = (params['periodSec'] as num?)?.toInt() ?? 60;
             final periodOk = await bleClient.writeCamera(
-              CameraCommand.setRecordPeriod.toBytes(period: periodSec.clamp(1, 1000)),
+              CameraCommand.setRecordPeriod
+                  .toBytes(period: periodSec.clamp(1, 1000)),
             );
             if (!periodOk) return jsonEncode({'success': false});
-            final startOk = await bleClient.writeCamera(CameraCommand.startRecord.toBytes());
+            final startOk = await bleClient
+                .writeCamera(CameraCommand.startRecord.toBytes());
             return jsonEncode({'success': startOk});
           case 'stop_record':
-            final success = await bleClient.writeCamera(CameraCommand.stopRecord.toBytes());
+            final success =
+                await bleClient.writeCamera(CameraCommand.stopRecord.toBytes());
             return jsonEncode({'success': success});
           case 'set_record_period':
             final periodSec = (params['periodSec'] as num?)?.toInt();
             if (periodSec == null || periodSec < 1 || periodSec > 1000) {
-              return jsonEncode({'success': false, 'error': 'periodSec required (1-1000)'});
+              return jsonEncode(
+                  {'success': false, 'error': 'periodSec required (1-1000)'});
             }
             final success = await bleClient.writeCamera(
               CameraCommand.setRecordPeriod.toBytes(period: periodSec),
@@ -148,11 +178,14 @@ class BleBackgroundService {
             return jsonEncode({'success': success});
           case 'get_battery':
             final raw = await bleClient.readBattery();
-            final parsed = raw != null ? BleClient.parseBatteryStatus(raw) : null;
+            final parsed =
+                raw != null ? BleClient.parseBatteryStatus(raw) : null;
             if (parsed == null) {
-              return jsonEncode({'success': false, 'error': 'battery unavailable'});
+              return jsonEncode(
+                  {'success': false, 'error': 'battery unavailable'});
             }
-            final (:voltageMv, :percent, :charging, :timeIso, :timezone) = parsed;
+            final (:voltageMv, :percent, :charging, :timeIso, :timezone) =
+                parsed;
             final out = <String, dynamic>{
               'success': true,
               'voltageMv': voltageMv,
@@ -179,11 +212,11 @@ class BleBackgroundService {
         return jsonEncode({'success': false, 'error': e.toString()});
       }
     };
-    
+
     // ============================================================================
     // 4. SERVICE EVENT HANDLERS
     // ============================================================================
-    
+
     // BLE control events
     service.on('ble.start').listen((event) async {
       await bleClient.scanAndConnect();
@@ -204,11 +237,11 @@ class BleBackgroundService {
     service.on('ble.syncStatus').listen((event) {
       service.invoke('ble.status', {'status': bleClient.state.name});
     });
-    
+
     service.on('ble.stop').listen((event) async {
       await bleClient.disconnect(intentional: true);
     });
-    
+
     // Socket control events
     service.on('socket.connect').listen((event) async {
       final url = event?['url'] as String? ?? sockUrl;
@@ -216,25 +249,27 @@ class BleBackgroundService {
       final uid = freshPrefs.getString(PrefsKeys.userId) ?? '1';
       final headers = <String, String>{
         'X-User-Id': uid,
+        'Authorization': 'Bearer dev',
         if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
       await socketClient.connect(url, headers: headers);
     });
-    
+
     service.on('socket.disconnect').listen((event) async {
       await socketClient.disconnect();
     });
-    
+
     // Socket text events
     service.on('socket.sendText').listen((event) {
       final text = event?['text'] as String?;
       if (text != null && text.isNotEmpty) {
         textPacketCount++;
         socketClient.sendTextPacket(text, textPacketCount);
-        debugPrint("[BLE BG] Sent text packet #$textPacketCount: ${text.length} chars");
+        debugPrint(
+            "[BLE BG] Sent text packet #$textPacketCount: ${text.length} chars");
       }
     });
-    
+
     service.on('socket.sendEof').listen((event) {
       textPacketCount++;
       socketClient.sendTextEofPacket(textPacketCount);
@@ -242,20 +277,20 @@ class BleBackgroundService {
       // Reset counter after EOF for next turn
       textPacketCount = 0;
     });
-    
+
     // Service lifecycle events
     service.on('stop').listen((event) async {
       await bleClient.disconnect(intentional: true);
       await socketClient.disconnect();
       service.stopSelf();
     });
-    
+
     // Unified BLE command handler
     service.on('ble.command').listen((event) async {
       final command = event?['command'] as String?;
       final requestId = event?['requestId'] as int?;
       final data = event?['data'];
-      
+
       // Helper to send response with request ID
       void sendResult(Map<String, dynamic> result) {
         result['command'] = command;
@@ -264,7 +299,7 @@ class BleBackgroundService {
         }
         service.invoke('ble.command.result', result);
       }
-      
+
       try {
         switch (command) {
           case 'writeHaptic':
@@ -278,7 +313,8 @@ class BleBackgroundService {
               sendResult({'success': false});
               return;
             }
-            final success = await bleClient.writeCamera(Uint8List.fromList(List<int>.from(rawData)));
+            final success = await bleClient
+                .writeCamera(Uint8List.fromList(List<int>.from(rawData)));
             sendResult({'success': success});
             break;
           case 'readBattery':
@@ -313,12 +349,12 @@ class BleBackgroundService {
             break;
           case 'writeRTC':
             final rtcBytes = data?['data'];
-            
+
             if (rtcBytes == null) {
               sendResult({'success': false});
               return;
             }
-            
+
             // Handle List<dynamic> -> List<int> conversion
             List<int>? intList;
             if (rtcBytes is List) {
@@ -332,8 +368,9 @@ class BleBackgroundService {
               sendResult({'success': false, 'error': 'Data is not a list'});
               return;
             }
-            
-            final success = await bleClient.writeRTC(Uint8List.fromList(intList));
+
+            final success =
+                await bleClient.writeRTC(Uint8List.fromList(intList));
             sendResult({'success': success});
             break;
           case 'readDeviceName':
@@ -358,7 +395,8 @@ class BleBackgroundService {
               sendResult({'success': false});
               return;
             }
-            final success = await bleClient.writeFileRx(Uint8List.fromList(fileRxBytes));
+            final success =
+                await bleClient.writeFileRx(Uint8List.fromList(fileRxBytes));
             sendResult({'success': success});
             break;
           case 'readFileCtrl':
@@ -374,7 +412,8 @@ class BleBackgroundService {
               sendResult({'success': false});
               return;
             }
-            final success = await bleClient.writeFileCtrl(Uint8List.fromList(fileCtrlBytes));
+            final success = await bleClient
+                .writeFileCtrl(Uint8List.fromList(fileCtrlBytes));
             sendResult({'success': success});
             break;
           default:
@@ -384,7 +423,7 @@ class BleBackgroundService {
         sendResult({'success': false, 'error': e.toString()});
       }
     });
-    
+
     // File TX stream handler - forward to socket with image header, and to main app for display
     bleClient.onFileTxDataReceived = (data) {
       if (data.length >= 5 && data[0] == 0x00 && data[1] == 0x01) {
@@ -393,19 +432,19 @@ class BleBackgroundService {
       }
       service.invoke('ble.fileTx.data', {'data': data.toList()});
     };
-    
+
     // ============================================================================
     // 5. BACKGROUND MAINTENANCE
     // ============================================================================
-    
+
     Timer.periodic(const Duration(seconds: 60), (_) {
       debugPrint("[BLE BG] background tick");
     });
-    
+
     // ============================================================================
     // 6. STARTUP
     // ============================================================================
-    
+
     await bleClient.scanAndConnect();
   }
 
@@ -415,9 +454,12 @@ class BleBackgroundService {
   StreamSubscription? _commandResultSubscription;
   final Map<int, Completer<Map<String, dynamic>?>> _pendingRequests = {};
 
-  final StreamController<BleConnectionState> _statusController = StreamController<BleConnectionState>.broadcast();
-  final StreamController<Uint8List> _fileTxDataController = StreamController<Uint8List>.broadcast();
-  final StreamController<Map<String, dynamic>> _devicePushController = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<BleConnectionState> _statusController =
+      StreamController<BleConnectionState>.broadcast();
+  final StreamController<Uint8List> _fileTxDataController =
+      StreamController<Uint8List>.broadcast();
+  final StreamController<Map<String, dynamic>> _devicePushController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   /// Last BLE state from the background isolate. Updated on every [statusStream] event.
   /// Use this for [isConnected] checks: broadcast streams do not replay, so subscribers
@@ -426,7 +468,8 @@ class BleBackgroundService {
 
   Stream<BleConnectionState> get statusStream => _statusController.stream;
   Stream<Uint8List> get fileTxStream => _fileTxDataController.stream;
-  Stream<Map<String, dynamic>> get devicePushStream => _devicePushController.stream;
+  Stream<Map<String, dynamic>> get devicePushStream =>
+      _devicePushController.stream;
 
   Future<void> init({
     required Future<void> Function(ServiceInstance) onStart,
@@ -511,7 +554,8 @@ class BleBackgroundService {
 
     // Set up single shared subscription for command results
     _commandResultSubscription?.cancel();
-    _commandResultSubscription = _service.on('ble.command.result').listen((event) {
+    _commandResultSubscription =
+        _service.on('ble.command.result').listen((event) {
       final requestId = event?['requestId'] as int?;
       if (requestId != null && _pendingRequests.containsKey(requestId)) {
         final completer = _pendingRequests.remove(requestId);
@@ -570,10 +614,10 @@ class BleBackgroundService {
   }) async {
     final requestId = ++_requestIdCounter;
     final completer = Completer<Map<String, dynamic>?>();
-    
+
     // Register pending request BEFORE sending command to avoid race condition
     _pendingRequests[requestId] = completer;
-    
+
     final commandData = <String, dynamic>{
       'command': command,
       'requestId': requestId,
@@ -581,26 +625,26 @@ class BleBackgroundService {
     if (data != null) {
       commandData['data'] = data;
     }
-    
+
     // Send command after subscription is ready
     _service.invoke('ble.command', commandData);
-    
+
     try {
       final event = await completer.future.timeout(timeout, onTimeout: () {
         _pendingRequests.remove(requestId);
         return null;
       });
-      
+
       if (event == null) {
         return timeoutValue?.call();
       }
-      
+
       // Verify command matches (safety check)
       final eventCommand = event['command'] as String?;
       if (eventCommand != command) {
         return timeoutValue?.call();
       }
-      
+
       return responseParser(event);
     } catch (e) {
       _pendingRequests.remove(requestId);
@@ -611,22 +655,24 @@ class BleBackgroundService {
   /// Write haptic effect
   Future<bool> writeHaptic(int effectId) async {
     return await _sendCommand<bool>(
-      command: 'writeHaptic',
-      data: {'effectId': effectId},
-      responseParser: (event) => event?['success'] as bool? ?? false,
-      timeoutValue: () => false,
-    ) ?? false;
+          command: 'writeHaptic',
+          data: {'effectId': effectId},
+          responseParser: (event) => event?['success'] as bool? ?? false,
+          timeoutValue: () => false,
+        ) ??
+        false;
   }
 
   /// Write to camera characteristic.
   /// [data] is the raw payload from [CameraCommand.toBytes].
   Future<bool> writeCamera(Uint8List data) async {
     return await _sendCommand<bool>(
-      command: 'writeCamera',
-      data: {'data': data.toList()},
-      responseParser: (event) => event?['success'] as bool? ?? false,
-      timeoutValue: () => false,
-    ) ?? false;
+          command: 'writeCamera',
+          data: {'data': data.toList()},
+          responseParser: (event) => event?['success'] as bool? ?? false,
+          timeoutValue: () => false,
+        ) ??
+        false;
   }
 
   /// Read battery data
@@ -680,11 +726,12 @@ class BleBackgroundService {
   /// Write RTC time
   Future<bool> writeRTC(Uint8List data) async {
     return await _sendCommand<bool>(
-      command: 'writeRTC',
-      data: {'data': data.toList()},
-      responseParser: (event) => event?['success'] as bool? ?? false,
-      timeoutValue: () => false,
-    ) ?? false;
+          command: 'writeRTC',
+          data: {'data': data.toList()},
+          responseParser: (event) => event?['success'] as bool? ?? false,
+          timeoutValue: () => false,
+        ) ??
+        false;
   }
 
   /// Read device name
@@ -699,21 +746,23 @@ class BleBackgroundService {
   /// Write device name
   Future<bool> writeDeviceName(String name) async {
     return await _sendCommand<bool>(
-      command: 'writeDeviceName',
-      data: {'name': name},
-      responseParser: (event) => event?['success'] as bool? ?? false,
-      timeoutValue: () => false,
-    ) ?? false;
+          command: 'writeDeviceName',
+          data: {'name': name},
+          responseParser: (event) => event?['success'] as bool? ?? false,
+          timeoutValue: () => false,
+        ) ??
+        false;
   }
 
   /// Write file RX data
   Future<bool> writeFileRx(Uint8List data) async {
     return await _sendCommand<bool>(
-      command: 'writeFileRx',
-      data: {'data': data.toList()},
-      responseParser: (event) => event?['success'] as bool? ?? false,
-      timeoutValue: () => false,
-    ) ?? false;
+          command: 'writeFileRx',
+          data: {'data': data.toList()},
+          responseParser: (event) => event?['success'] as bool? ?? false,
+          timeoutValue: () => false,
+        ) ??
+        false;
   }
 
   /// Read file control
@@ -734,11 +783,12 @@ class BleBackgroundService {
   /// Write file control
   Future<bool> writeFileCtrl(Uint8List data) async {
     return await _sendCommand<bool>(
-      command: 'writeFileCtrl',
-      data: {'data': data.toList()},
-      responseParser: (event) => event?['success'] as bool? ?? false,
-      timeoutValue: () => false,
-    ) ?? false;
+          command: 'writeFileCtrl',
+          data: {'data': data.toList()},
+          responseParser: (event) => event?['success'] as bool? ?? false,
+          timeoutValue: () => false,
+        ) ??
+        false;
   }
 
   void dispose() {
@@ -749,4 +799,3 @@ class BleBackgroundService {
     _devicePushController.close();
   }
 }
-

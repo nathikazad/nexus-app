@@ -13,24 +13,33 @@ class _QueuedPacket {
 }
 
 class SocketClient {
+  static const int _opusAudioPacket = 0x0001;
+  static const int _audioEofPacket = 0xFFFC;
+
   WebSocketChannel? _channel;
   String? _url;
   Map<String, String>? _accessHeaders;
   bool _isConnected = false;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
+  bool _audioReceiveActive = false;
+  int _audioReceivePacketCount = 0;
+  int _audioReceiveByteCount = 0;
   static const int maxReconnectAttempts = 5;
   static const Duration reconnectDelay = Duration(seconds: 3);
-  
+
   // Packet queue for when socket is disconnected
   final List<_QueuedPacket> _packetQueue = [];
-  static const int maxQueueSize = 1000; // Limit queue size to prevent memory issues
-  
+  static const int maxQueueSize =
+      1000; // Limit queue size to prevent memory issues
+
   // Callback to forward packets from server to BLE
   Future<void> Function(Uint8List)? onPacketFromServer;
 
   /// Callback to handle device requests (e.g. take_photo). Returns response payload or null.
-  Future<String?> Function(int requestId, String action, Map<String, dynamic> params)? onDeviceRequest;
+  Future<String?> Function(
+          int requestId, String action, Map<String, dynamic> params)?
+      onDeviceRequest;
 
   bool get isConnected => _isConnected;
   int get queuedPacketCount => _packetQueue.length;
@@ -54,7 +63,7 @@ class SocketClient {
 
     try {
       debugPrint("[Socket] Connecting to $_url...");
-      
+
       _channel = IOWebSocketChannel.connect(
         _url!,
         headers: _accessHeaders,
@@ -65,9 +74,9 @@ class SocketClient {
       await _channel!.ready;
       _isConnected = true;
       _reconnectAttempts = 0;
-      
+
       debugPrint("[Socket] Connected to $_url");
-      
+
       // Send queued packets if any
       _flushPacketQueue();
 
@@ -79,10 +88,11 @@ class SocketClient {
             if (await _handleDeviceRequestIfNeeded(message)) {
               return;
             }
-            // Forward other binary packets from server to BLE
-            debugPrint("[Socket] Received binary packet: ${message.length} bytes");
+            final blePayload = _serverAudioPacketToBlePayload(message);
+            // Forward server audio payloads to BLE after removing the WebSocket
+            // protocol envelope. Non-audio binary packets are forwarded as-is.
             if (onPacketFromServer != null) {
-              onPacketFromServer!(message).catchError((e) {
+              onPacketFromServer!(blePayload).catchError((e) {
                 debugPrint("[Socket] Error forwarding packet to BLE: $e");
               });
             } else {
@@ -128,7 +138,7 @@ class SocketClient {
       _handleDisconnection();
     }
   }
-  
+
   void _sendPacketData(Uint8List data, int? index) {
     if (index != null) {
       // Format: [header_type 2B][index 4B] + [payload]. OPUS_AUDIO_PACKET = 0x0001
@@ -144,38 +154,39 @@ class SocketClient {
       _channel!.sink.add(data);
     }
   }
-  
+
   void _queuePacket(Uint8List data, int? index) {
     // Limit queue size to prevent memory issues
     if (_packetQueue.length >= maxQueueSize) {
-      debugPrint("[Socket] Queue full (${_packetQueue.length} packets), dropping oldest packet");
+      debugPrint(
+          "[Socket] Queue full (${_packetQueue.length} packets), dropping oldest packet");
       _packetQueue.removeAt(0);
     }
-    
+
     // Create a copy of the data to avoid issues if the original is modified
     final dataCopy = Uint8List.fromList(data);
     _packetQueue.add(_QueuedPacket(dataCopy, index));
-    
+
     if (_packetQueue.length == 1) {
       debugPrint("[Socket] Queueing packet (queue size: 1)");
     } else if (_packetQueue.length % 100 == 0) {
       debugPrint("[Socket] Queue size: ${_packetQueue.length} packets");
     }
   }
-  
+
   void _flushPacketQueue() {
     if (_packetQueue.isEmpty) {
       return;
     }
-    
+
     final queueSize = _packetQueue.length;
     debugPrint("[Socket] Flushing $queueSize queued packets...");
-    
+
     try {
       for (final packet in _packetQueue) {
         _sendPacketData(packet.data, packet.index);
       }
-      
+
       debugPrint("[Socket] Successfully sent $queueSize queued packets");
       _packetQueue.clear();
     } catch (e) {
@@ -183,6 +194,74 @@ class SocketClient {
       // Keep remaining packets in queue for next connection attempt
       _handleDisconnection();
     }
+  }
+
+  Uint8List _serverAudioPacketToBlePayload(Uint8List packet) {
+    if (packet.length < 2) return packet;
+
+    final byteData = ByteData.sublistView(packet);
+    final headerType = byteData.getUint16(0, Endian.little);
+
+    if (headerType == _audioEofPacket) {
+      _finishAudioReception();
+      return Uint8List.fromList([
+        _audioEofPacket & 0xFF,
+        (_audioEofPacket >> 8) & 0xFF,
+      ]);
+    }
+
+    if (headerType != _opusAudioPacket || packet.length < 11) {
+      return packet;
+    }
+
+    _recordAudioReception(packet.length);
+
+    final streamIndex = byteData.getUint32(2, Endian.little);
+    final packetIndex = packet[8];
+    final opusSize = byteData.getUint16(9, Endian.little);
+    final opusStart = 11;
+    final opusEnd = opusStart + opusSize;
+    if (opusEnd > packet.length) {
+      debugPrint(
+        "[Socket] Incomplete server audio packet: need $opusEnd got ${packet.length}",
+      );
+      return packet;
+    }
+
+    final meta = (streamIndex & 0x07) | ((packetIndex & 0x1FFF) << 3);
+    final blePayload = Uint8List(4 + opusSize);
+    final out = ByteData.sublistView(blePayload);
+    out.setUint16(0, opusSize, Endian.little);
+    out.setUint16(2, meta, Endian.little);
+    blePayload.setRange(4, 4 + opusSize, packet, opusStart);
+    return blePayload;
+  }
+
+  String _utcNow() => DateTime.now().toUtc().toIso8601String();
+
+  void _recordAudioReception(int packetBytes) {
+    if (!_audioReceiveActive) {
+      _audioReceiveActive = true;
+      _audioReceivePacketCount = 0;
+      _audioReceiveByteCount = 0;
+      debugPrint("[BLE BG] ${_utcNow()} UTC audio packets reception started");
+    }
+    _audioReceivePacketCount++;
+    _audioReceiveByteCount += packetBytes;
+  }
+
+  void _finishAudioReception() {
+    if (!_audioReceiveActive) return;
+    // Count WebSocket wire EOF packet: [header_type 2B][stream_index 4B].
+    _audioReceivePacketCount++;
+    _audioReceiveByteCount += 6;
+    debugPrint(
+      "[BLE BG] ${_utcNow()} UTC audio packets reception finished "
+      "$_audioReceivePacketCount packets, $_audioReceiveByteCount bytes",
+    );
+    _audioReceiveActive = false;
+    _audioReceivePacketCount = 0;
+    _audioReceiveByteCount = 0;
   }
 
   void sendText(String message) {
@@ -222,7 +301,8 @@ class SocketClient {
       packet.setRange(8, 8 + packetSize, utf8Bytes);
 
       _channel!.sink.add(packet);
-      debugPrint("[Socket] Sent text packet #$index: ${text.length} chars (${packetSize} bytes)");
+      debugPrint(
+          "[Socket] Sent text packet #$index: ${text.length} chars (${packetSize} bytes)");
     } catch (e) {
       debugPrint("[Socket] Error sending text packet: $e");
       _handleDisconnection();
@@ -246,7 +326,8 @@ class SocketClient {
     packet.setRange(8, 8 + packetSize, data);
 
     if (!_isConnected || _channel == null) {
-      _queuePacket(packet, null); // index=null so full packet sent as-is when flushed
+      _queuePacket(
+          packet, null); // index=null so full packet sent as-is when flushed
       return;
     }
 
@@ -392,7 +473,7 @@ class SocketClient {
 
   void _handleDisconnection() {
     if (!_isConnected) return;
-    
+
     _isConnected = false;
     _channel = null;
     _scheduleReconnect();
@@ -415,7 +496,7 @@ class SocketClient {
   Future<void> disconnect() async {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    
+
     if (_channel != null) {
       try {
         await _channel!.sink.close();
@@ -424,11 +505,12 @@ class SocketClient {
       }
       _channel = null;
     }
-    
+
     _isConnected = false;
-    debugPrint("[Socket] Disconnected (${_packetQueue.length} packets in queue)");
+    debugPrint(
+        "[Socket] Disconnected (${_packetQueue.length} packets in queue)");
   }
-  
+
   /// Clear the packet queue (useful for testing or when you want to drop queued packets)
   void clearQueue() {
     final count = _packetQueue.length;
@@ -437,6 +519,4 @@ class SocketClient {
       debugPrint("[Socket] Cleared $count queued packets");
     }
   }
-  
 }
-
