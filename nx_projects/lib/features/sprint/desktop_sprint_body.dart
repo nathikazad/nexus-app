@@ -5,18 +5,53 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
+import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
+import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
 import 'package:nx_projects/features/sprint/widgets/desktop_day_card.dart';
 import 'package:nx_projects/features/sprint/widgets/sprint_summary_strip.dart';
 
 /// Desktop: sprint summary, plan heading, bordered day cards.
-class DesktopSprintBody extends ConsumerWidget {
+class DesktopSprintBody extends ConsumerStatefulWidget {
   const DesktopSprintBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DesktopSprintBody> createState() => _DesktopSprintBodyState();
+}
+
+class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
+  ProviderSubscription<DesktopTaskLocatorState>? _locatorSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _locatorSub = ref.listenManual<DesktopTaskLocatorState>(
+      desktopTaskLocatorProvider,
+      (previous, next) {
+        final request = next.scrollRequest;
+        if (request == null ||
+            request.surface != DesktopTaskLocatorSurface.sprint ||
+            previous?.scrollRequest?.serial == request.serial) {
+          return;
+        }
+        scrollLocatedTaskIntoView(
+          surface: DesktopTaskLocatorSurface.sprint,
+          taskId: request.taskId,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _locatorSub?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final sp = ref.watch(currentSprintProvider);
     final days = ref.watch(sprintDaySlicesProvider);
     final allTasks = ref.watch(sprintTasksProvider);
@@ -34,49 +69,48 @@ class DesktopSprintBody extends ConsumerWidget {
     final dayIndex = sprintDayIndexOneBased(sp);
 
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                SprintSummaryStrip(
-                  sprint: sp,
-                  nDone: nDone,
-                  nTotal: nTotal,
-                  actualH: actualSum,
-                  plannedH: plannedSum,
-                  driftCount: driftN,
-                  blockedCount: blockedN,
-                  doingCount: nDoing,
-                  dayIndex: dayIndex,
-                ),
-                _DaysHead(sprint: sp, scheduledH: scheduledH),
-                for (final day in days)
-                  DesktopDayCard(
-                    slice: day,
-                    sprint: sp,
-                    allTasks: allTasks,
-                    dailyCap: dailyCap,
-                    onOpenTaskMenu: (t) => onOpenTaskMenu(context, ref, t),
-                  ),
-                if (allTasks.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(
-                      child: Text(
-                        'No tasks in this sprint yet.',
-                        style: TextStyle(
-                          color: AppColors.dim,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SprintSummaryStrip(
+              sprint: sp,
+              nDone: nDone,
+              nTotal: nTotal,
+              actualH: actualSum,
+              plannedH: plannedSum,
+              driftCount: driftN,
+              blockedCount: blockedN,
+              doingCount: nDoing,
+              dayIndex: dayIndex,
+            ),
+            _DaysHead(sprint: sp, scheduledH: scheduledH),
+            for (final day in days)
+              DesktopDayCard(
+                slice: day,
+                sprint: sp,
+                allTasks: allTasks,
+                dailyCap: dailyCap,
+                onOpenTaskMenu: (t) => widget.onOpenTaskMenu(context, ref, t),
+                onOpenTask: (t) =>
+                    ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
+              ),
+            if (allTasks.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(
+                  child: Text(
+                    'No tasks in this sprint yet.',
+                    style: TextStyle(
+                      color: AppColors.dim,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
-              ]),
-            ),
-          ),
-        ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

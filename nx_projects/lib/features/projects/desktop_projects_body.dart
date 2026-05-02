@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
@@ -29,6 +30,34 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
 
   /// Collapsed subprojects (task list + inline add hidden; header stays visible).
   final Set<int> _collapsedSubProjectIds = {};
+
+  ProviderSubscription<DesktopTaskLocatorState>? _locatorSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _locatorSub = ref.listenManual<DesktopTaskLocatorState>(
+      desktopTaskLocatorProvider,
+      (previous, next) {
+        final request = next.scrollRequest;
+        if (request == null ||
+            request.surface != DesktopTaskLocatorSurface.planner ||
+            previous?.scrollRequest?.serial == request.serial) {
+          return;
+        }
+        scrollLocatedTaskIntoView(
+          surface: DesktopTaskLocatorSurface.planner,
+          taskId: request.taskId,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _locatorSub?.close();
+    super.dispose();
+  }
 
   void _toggleProject(int id) {
     setState(() {
@@ -59,6 +88,8 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
     final taskFilterActive =
         searchActive || kindFilterActive || statusFilterActive;
     final selectedProjects = ref.watch(filterProjectIdsProvider);
+    final sprints = ref.watch(sprintsListProvider);
+    final locator = ref.watch(desktopTaskLocatorProvider);
 
     final roots = ref
         .watch(projectsListProvider)
@@ -106,7 +137,9 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
             meta: meta,
             isExpanded: expanded,
             onToggle: () => _toggleProject(project.id),
-            onAdd: () {},
+            onAdd: () => ref
+                .read(desktopTaskDrawerProvider.notifier)
+                .newTask(defaultProject: project.id),
           ),
         ),
       );
@@ -139,7 +172,12 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
               meta: '${s.taskCount} items · ${subMetaH}h',
               isExpanded: subExpanded,
               onToggle: () => _toggleSubProject(s.project.id),
-              onAdd: () {},
+              onAdd: () => ref
+                  .read(desktopTaskDrawerProvider.notifier)
+                  .newTask(
+                    defaultProject: project.id,
+                    defaultSub: s.project.id,
+                  ),
             ),
           ),
         );
@@ -148,15 +186,20 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
         final subRows = <Widget>[];
         for (final t in tasks) {
           subRows.add(
-            DesktopTaskRow(
-              task: t,
-              rankLabel: rankLabelFor(t),
-              sprintChipLabel: desktopSprintChipLabelForTask(t),
-              crumb: DesktopBucketPill(task: t),
-              isSearchMatch: _titleMatchesSearch(t, q),
-              onRowTap: () =>
-                  ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
-              onMenu: () => widget.onOpenTaskMenu(context, ref, t),
+            TaskLocatorTarget(
+              surface: DesktopTaskLocatorSurface.planner,
+              taskId: t.id,
+              child: DesktopTaskRow(
+                task: t,
+                rankLabel: rankLabelFor(t),
+                sprintChipLabel: desktopSprintChipLabelForTask(t, sprints),
+                crumb: DesktopBucketPill(task: t),
+                isSearchMatch: _titleMatchesSearch(t, q),
+                isLocated: locator.isHighlighted(t.id),
+                onRowTap: () =>
+                    ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
+                onMenu: () => widget.onOpenTaskMenu(context, ref, t),
+              ),
             ),
           );
         }
@@ -176,7 +219,12 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
                     opacity: searchActive ? 0.5 : 1,
                     child: InlineAddRow(
                       label: 'Add to ${s.project.name}',
-                      onTap: () {},
+                      onTap: () => ref
+                          .read(desktopTaskDrawerProvider.notifier)
+                          .newTask(
+                            defaultProject: project.id,
+                            defaultSub: s.project.id,
+                          ),
                     ),
                   ),
                 ],
@@ -187,15 +235,20 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
       }
       for (final t in directTasks) {
         treeChildren.add(
-          DesktopTaskRow(
-            task: t,
-            rankLabel: rankLabelFor(t),
-            sprintChipLabel: desktopSprintChipLabelForTask(t),
-            crumb: DesktopBucketPill(task: t),
-            isSearchMatch: _titleMatchesSearch(t, q),
-            onRowTap: () =>
-                ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
-            onMenu: () => widget.onOpenTaskMenu(context, ref, t),
+          TaskLocatorTarget(
+            surface: DesktopTaskLocatorSurface.planner,
+            taskId: t.id,
+            child: DesktopTaskRow(
+              task: t,
+              rankLabel: rankLabelFor(t),
+              sprintChipLabel: desktopSprintChipLabelForTask(t, sprints),
+              crumb: DesktopBucketPill(task: t),
+              isSearchMatch: _titleMatchesSearch(t, q),
+              isLocated: locator.isHighlighted(t.id),
+              onRowTap: () =>
+                  ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
+              onMenu: () => widget.onOpenTaskMenu(context, ref, t),
+            ),
           ),
         );
       }
@@ -204,7 +257,9 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
           opacity: searchActive ? 0.5 : 1,
           child: InlineAddRow(
             label: 'Add to ${project.name} (no subproject)',
-            onTap: () {},
+            onTap: () => ref
+                .read(desktopTaskDrawerProvider.notifier)
+                .newTask(defaultProject: project.id),
           ),
         ),
       );
@@ -234,9 +289,12 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
         ),
       ),
     );
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
-      children: children,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 }

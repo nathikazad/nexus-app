@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:nx_db/auth.dart';
 
 import 'package:nx_projects/core/theme/app_theme.dart';
 
 /// Reference `reference/desktop/styles.css` `.topbar` + `.top-tab` / `.top-tab.active`.
-class DesktopTopBar extends StatelessWidget {
+class DesktopTopBar extends ConsumerWidget {
   const DesktopTopBar({
     super.key,
     required this.activeIndex,
@@ -18,7 +20,7 @@ class DesktopTopBar extends StatelessWidget {
   static const _labels = <String>['Planner', 'Sprint', 'Today'];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Material(
       color: AppColors.panel,
       child: Container(
@@ -51,11 +53,66 @@ class DesktopTopBar extends StatelessWidget {
               ),
             ],
             const Spacer(),
-            const Text(
-              '@nathik',
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            _AccountButton(
+              onLogout: () => ref.read(authProvider.notifier).logout(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountButton extends StatelessWidget {
+  const _AccountButton({required this.onLogout});
+
+  final Future<void> Function() onLogout;
+
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppColors.panel,
+          title: const Text(
+            '@nathik',
+            style: TextStyle(color: AppColors.text, fontSize: 16),
+          ),
+          content: const Text(
+            'Logout',
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await onLogout();
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showLogoutDialog(context),
+        borderRadius: BorderRadius.circular(6),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: Text(
+            '@nathik',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
         ),
       ),
     );

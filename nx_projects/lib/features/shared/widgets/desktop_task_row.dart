@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nx_projects/core/formatting/hours_format.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/kind_color_palette.dart';
+import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/domain/task/task_severity.dart';
@@ -18,6 +19,7 @@ class DesktopTaskRow extends StatefulWidget {
     this.crumb,
     this.sprintChipLabel,
     this.isSearchMatch = false,
+    this.isLocated = false,
     this.onMenu,
     this.onRowTap,
   });
@@ -28,10 +30,13 @@ class DesktopTaskRow extends StatefulWidget {
   /// When true, tints the row and title to mirror reference `.row.match` while searching.
   final bool isSearchMatch;
 
+  /// Temporary cross-panel locator highlight from the sprint cart.
+  final bool isLocated;
+
   /// Replaces the default [Text] for [task.crumb] (e.g. bucket pill in Projects tree).
   final Widget? crumb;
 
-  /// Shown in the sprint column: `S14`, `S15`, or `☆` when unscheduled.
+  /// Shown in the sprint column: sprint-name abbreviation, or `☆` when unscheduled.
   final String? sprintChipLabel;
 
   final VoidCallback? onMenu;
@@ -50,6 +55,7 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
   Widget build(BuildContext context) {
     final t = widget.task;
     final done = t.status == TaskStatus.done;
+    final highlighted = widget.isSearchMatch || widget.isLocated;
     final String glyph;
     if (t.kind == TaskKind.bug) {
       glyph = '●';
@@ -74,12 +80,12 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
                 duration: const Duration(milliseconds: 120),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                 decoration: BoxDecoration(
-                  color: widget.isSearchMatch
+                  color: highlighted
                       ? const Color(0x10FBBF24)
                       : (_hover ? AppColors.panel : null),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: widget.isSearchMatch
+                    color: highlighted
                         ? const Color(0x59FBBF24)
                         : (_hover ? AppColors.border : Colors.transparent),
                   ),
@@ -105,7 +111,7 @@ class _DesktopTaskRowState extends State<DesktopTaskRow> {
   /// wide mode lets the [Expanded] title use full pane width.
   Widget _rowInner({required String glyph, required bool done}) {
     final t = widget.task;
-    final match = widget.isSearchMatch;
+    final match = widget.isSearchMatch || widget.isLocated;
     return Row(
       children: [
         SizedBox(
@@ -339,8 +345,22 @@ class _SprintChip extends StatelessWidget {
   }
 }
 
-/// Sprint column label: `S{id}` for assigned sprint, else `☆`.
-String desktopSprintChipLabelForTask(Task t) {
+/// Sprint column label: first char + last two chars of sprint name, else `☆`.
+String desktopSprintChipLabelForTask(
+  Task t, [
+  List<Sprint> sprints = const [],
+]) {
   if (t.sprintId == null) return '☆';
+  for (final sprint in sprints) {
+    if (sprint.id == t.sprintId) {
+      return _shortSprintName(sprint.name);
+    }
+  }
   return 'S${t.sprintId}';
+}
+
+String _shortSprintName(String name) {
+  final compact = name.replaceAll(RegExp(r'\s+'), '');
+  if (compact.length <= 3) return compact;
+  return '${compact[0]}${compact.substring(compact.length - 2)}';
 }

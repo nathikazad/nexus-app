@@ -11,6 +11,7 @@ import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
+import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
@@ -109,7 +110,7 @@ class SprintCart extends ConsumerWidget {
   }
 }
 
-class _SprintNavStrip extends StatelessWidget {
+class _SprintNavStrip extends ConsumerStatefulWidget {
   const _SprintNavStrip({
     required this.sp,
     required this.sprintIdx,
@@ -125,9 +126,101 @@ class _SprintNavStrip extends StatelessWidget {
   final VoidCallback onNext;
 
   @override
+  ConsumerState<_SprintNavStrip> createState() => _SprintNavStripState();
+}
+
+class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
+  late final TextEditingController _nameController;
+  late final FocusNode _nameFocus;
+  bool _editing = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.sp.name);
+    _nameFocus = FocusNode();
+    _nameFocus.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_nameFocus.hasFocus || !_editing) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_nameFocus.hasFocus || !_editing) return;
+      _saveName();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _SprintNavStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing &&
+        (oldWidget.sp.id != widget.sp.id ||
+            oldWidget.sp.name != widget.sp.name)) {
+      _nameController.text = widget.sp.name;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameFocus.removeListener(_onFocusChange);
+    _nameFocus.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _beginEdit() {
+    if (_editing) return;
+    setState(() {
+      _editing = true;
+      _nameController.text = widget.sp.name;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _nameFocus.requestFocus();
+      _nameController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _nameController.text.length,
+      );
+    });
+  }
+
+  Future<void> _saveName() async {
+    if (_saving) return;
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() {
+        _editing = false;
+        _nameController.text = widget.sp.name;
+      });
+      return;
+    }
+    if (name == widget.sp.name) {
+      setState(() => _editing = false);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(sprintRepositoryProvider)
+          .update(widget.sp.copyWith(name: name));
+      ref.invalidate(sprintsListAsyncProvider);
+      if (mounted) {
+        setState(() {
+          _editing = false;
+          _nameController.text = name;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final canPrev = sprintIdx > 0;
-    final canNext = sprintIdx < sprints.length - 1;
+    final canPrev = widget.sprintIdx > 0;
+    final canNext = widget.sprintIdx < widget.sprints.length - 1;
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
       decoration: const BoxDecoration(
@@ -135,34 +228,94 @@ class _SprintNavStrip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _Chev(label: '‹', enabled: canPrev, onTap: onPrev),
+          _Chev(label: '‹', enabled: canPrev, onTap: widget.onPrev),
           Expanded(
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      sp.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: AppColors.text,
-                      ),
+                    Flexible(
+                      child: _editing
+                          ? SizedBox(
+                              height: 28,
+                              child: TextField(
+                                controller: _nameController,
+                                focusNode: _nameFocus,
+                                enabled: !_saving,
+                                onSubmitted: (_) => _saveName(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.text,
+                                ),
+                                cursorColor: AppColors.accent,
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  filled: true,
+                                  fillColor: AppColors.panel2,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                  focusedBorder: const OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(5),
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : InkWell(
+                              onTap: _beginEdit,
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                child: Text(
+                                  widget.sp.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppColors.text,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                     const SizedBox(width: 8),
-                    _Badge(label: sp.badge),
+                    _Badge(label: widget.sp.badge),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  sp.dates,
+                  widget.sp.dates,
                   style: const TextStyle(fontSize: 11, color: AppColors.muted),
                 ),
               ],
             ),
           ),
-          _Chev(label: '›', enabled: canNext, onTap: onNext),
+          _Chev(label: '›', enabled: canNext, onTap: widget.onNext),
         ],
       ),
     );
@@ -711,11 +864,6 @@ class _CartBody extends ConsumerWidget {
                     .upsert(cur.copyWith(clearSprint: true));
                 ref.invalidate(tasksListAsyncProvider);
               },
-              onTap: surface == SprintCartSurface.sprint
-                  ? () => ref
-                      .read(desktopTaskDrawerProvider.notifier)
-                      .viewTask(t.id)
-                  : null,
             ),
         ],
         const _CartSectionLabel('Breakdown'),
@@ -906,26 +1054,37 @@ class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
   }
 }
 
-class _CartTaskRow extends StatefulWidget {
+class _CartTaskRow extends ConsumerStatefulWidget {
   const _CartTaskRow({
     required this.task,
     required this.surface,
     required this.onUnpin,
-    this.onTap,
   });
 
   final Task task;
   final SprintCartSurface surface;
   final VoidCallback onUnpin;
-  final VoidCallback? onTap;
 
   @override
-  State<_CartTaskRow> createState() => _CartTaskRowState();
+  ConsumerState<_CartTaskRow> createState() => _CartTaskRowState();
 }
 
-class _CartTaskRowState extends State<_CartTaskRow> {
+class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
   bool _rowHover = false;
   bool _xHover = false;
+
+  void _locateTask() {
+    final surface = widget.surface == SprintCartSurface.sprint
+        ? DesktopTaskLocatorSurface.sprint
+        : DesktopTaskLocatorSurface.planner;
+    ref
+        .read(desktopTaskLocatorProvider.notifier)
+        .locate(surface: surface, taskId: widget.task.id);
+  }
+
+  void _openTask() {
+    ref.read(desktopTaskDrawerProvider.notifier).viewTask(widget.task.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -938,15 +1097,22 @@ class _CartTaskRowState extends State<_CartTaskRow> {
     final scheduled = t.plannedFor != null;
     Widget buildRow() {
       return MouseRegion(
-        onEnter: (_) => setState(() => _rowHover = true),
-        onExit: (_) => setState(() => _rowHover = false),
+        onEnter: (_) {
+          setState(() => _rowHover = true);
+          ref.read(desktopTaskLocatorProvider.notifier).hover(t.id);
+        },
+        onExit: (_) {
+          setState(() => _rowHover = false);
+          ref.read(desktopTaskLocatorProvider.notifier).hover(null);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Material(
             color: _rowHover ? AppColors.panel2 : Colors.transparent,
             borderRadius: BorderRadius.circular(5),
             child: InkWell(
-              onTap: widget.onTap,
+              onTap: _locateTask,
+              onDoubleTap: _openTask,
               borderRadius: BorderRadius.circular(5),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -1038,7 +1204,8 @@ class _CartTaskRowState extends State<_CartTaskRow> {
                             : Align(
                                 alignment: Alignment.centerRight,
                                 child: _TinyDateChip(
-                                    date: parseLocalDate(t.plannedFor!)),
+                                  date: parseLocalDate(t.plannedFor!),
+                                ),
                               ),
                       ),
                   ],

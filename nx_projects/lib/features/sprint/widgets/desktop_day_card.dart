@@ -9,6 +9,7 @@ import 'package:nx_projects/core/widgets/capacity_bar.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/sprint/sprint_state.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
 import 'package:nx_projects/features/sprint/assign_task_to_sprint_day.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
 import 'package:nx_projects/features/sprint/widgets/day_item_row.dart';
@@ -22,6 +23,7 @@ class DesktopDayCard extends ConsumerWidget {
     required this.allTasks,
     required this.dailyCap,
     required this.onOpenTaskMenu,
+    required this.onOpenTask,
   });
 
   final SprintDaySlice slice;
@@ -29,10 +31,12 @@ class DesktopDayCard extends ConsumerWidget {
   final List<Task> allTasks;
   final double dailyCap;
   final void Function(Task t) onOpenTaskMenu;
+  final void Function(Task t) onOpenTask;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final d = parseLocalDate(slice.ymd);
+    final locator = ref.watch(desktopTaskLocatorProvider);
     final dayH = slice.dayHours;
     final dayActual = slice.dayActual;
     final isOver = dailyCap > 0 && dayH > dailyCap;
@@ -219,9 +223,15 @@ class DesktopDayCard extends ConsumerWidget {
                           for (final t in slice.tasks)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 4),
-                              child: DayItemRow(
-                                task: t,
-                                onMenu: () => onOpenTaskMenu(t),
+                              child: TaskLocatorTarget(
+                                surface: DesktopTaskLocatorSurface.sprint,
+                                taskId: t.id,
+                                child: DayItemRow(
+                                  task: t,
+                                  isLocated: locator.isHighlighted(t.id),
+                                  onTap: () => onOpenTask(t),
+                                  onMenu: () => onOpenTaskMenu(t),
+                                ),
                               ),
                             ),
                           for (final t in ghosts)

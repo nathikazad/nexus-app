@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/project/project.dart';
@@ -101,10 +103,12 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
   late TextEditingController _title;
   late TextEditingController _est;
   late TextEditingController _notes;
-  String? _projectVal; // "rootId" or "rootId/subId"
+  int? _projectId;
+  int? _subProjectId;
   late TaskBucket _bucket;
   TaskSeverity _sev = TaskSeverity.med;
   int? _sprintId;
+  String? _plannedFor;
   IdeationStatus _ideation = IdeationStatus.idea;
 
   @override
@@ -116,24 +120,28 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       _title = TextEditingController();
       _est = TextEditingController();
       _notes = TextEditingController();
-      _projectVal = _combineIds(widget.defaultProject, widget.defaultSub);
-      _bucket = widget.defaultBucket ?? TaskBucket.next;
+      _projectId = widget.defaultProject;
+      _subProjectId = widget.defaultSub;
+      _bucket = widget.defaultBucket ?? TaskBucket.unsorted;
       _sprintId = null;
+      _plannedFor = null;
       _ideation = IdeationStatus.idea;
     } else {
       _type = t.kind == TaskKind.feat
           ? 'feature'
           : t.kind == TaskKind.bug
-              ? 'bug'
-              : 'task';
+          ? 'bug'
+          : 'task';
       _title = TextEditingController(text: t.title);
       _est = TextEditingController(
         text: t.estimate == 0 ? '' : t.estimate.toString(),
       );
       _notes = TextEditingController(text: t.notes);
-      _projectVal = _combineIds(t.projectId, t.subProjectId);
+      _projectId = t.projectId;
+      _subProjectId = t.subProjectId;
       _bucket = t.bucket;
       _sprintId = t.sprintId;
+      _plannedFor = t.plannedFor;
       if (t.severity != null) _sev = t.severity!;
       if (t.kind == TaskKind.feat) {
         _ideation = t.ideationStatus ?? IdeationStatus.idea;
@@ -141,12 +149,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         _ideation = IdeationStatus.idea;
       }
     }
-  }
-
-  String? _combineIds(int? p, int? s) {
-    if (p == null) return null;
-    if (s != null) return '$p/$s';
-    return '$p';
   }
 
   @override
@@ -177,19 +179,14 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     final title = _title.text.trim();
     if (title.isEmpty) return;
     final est = double.tryParse(_est.text.trim()) ?? 0;
-    int? projectId;
-    int? subId;
-    final pv = _projectVal;
-    if (pv != null) {
-      if (pv.contains('/')) {
-        final p = pv.split('/');
-        projectId = int.tryParse(p[0]);
-        subId = int.tryParse(p[1]);
-      } else {
-        projectId = int.tryParse(pv);
-      }
-    }
+    final projectId = _projectId;
+    var subId = _subProjectId;
+    final plannedFor = _sprintId == null ? null : _plannedFor;
     final projects = ref.read(projectsListProvider);
+    if (subId != null &&
+        !projects.any((p) => p.id == subId && p.parentId == projectId)) {
+      subId = null;
+    }
     Project? proj;
     if (projectId != null) {
       for (final p in projects) {
@@ -206,6 +203,15 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     if (proj != null) {
       crumb = sub != null ? '${proj.name} / ${sub.name}' : proj.name;
     }
+    final driftFrom = [...?widget.task?.driftFrom];
+    final oldPlannedFor = widget.task?.plannedFor;
+    if (oldPlannedFor != null &&
+        oldPlannedFor.isNotEmpty &&
+        plannedFor != null &&
+        oldPlannedFor != plannedFor &&
+        !driftFrom.contains(oldPlannedFor)) {
+      driftFrom.add(oldPlannedFor);
+    }
 
     final kind = _mapKind();
     var task = Task(
@@ -220,17 +226,14 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       bucket: _bucket,
       status: widget.task?.status ?? TaskStatus.todo,
       sprintId: _sprintId,
-      plannedFor: widget.task?.plannedFor,
-      driftFrom: widget.task?.driftFrom ?? const [],
+      plannedFor: plannedFor,
+      driftFrom: driftFrom,
       notes: _notes.text,
     );
     if (kind == TaskKind.bug) {
       task = task.copyWith(severity: _sev, clearIdeationStatus: true);
     } else if (kind == TaskKind.feat) {
-      task = task.copyWith(
-        clearSeverity: true,
-        ideationStatus: _ideation,
-      );
+      task = task.copyWith(clearSeverity: true, ideationStatus: _ideation);
     } else {
       task = task.copyWith(clearSeverity: true, clearIdeationStatus: true);
     }
@@ -298,8 +301,12 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
   }
 
   Widget _buildTaskFormBody() {
-    final roots = ref.watch(projectsListProvider).where((p) => p.parentId == null).toList();
+    final roots = ref
+        .watch(projectsListProvider)
+        .where((p) => p.parentId == null)
+        .toList();
     final sprints = ref.watch(sprintsListProvider);
+    final selectedSprint = _sprintById(sprints, _sprintId);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -309,7 +316,11 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         const SizedBox(height: 4),
         Text(
           _typeHint(),
-          style: const TextStyle(fontSize: 11, color: AppColors.dim, height: 1.4),
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.dim,
+            height: 1.4,
+          ),
         ),
         const SizedBox(height: 14),
         const RefFieldLabel('Title'),
@@ -328,6 +339,17 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             Expanded(child: _refBucketField()),
           ],
         ),
+        if (_subProjectsForSelected(roots).isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _refSubProjectField()),
+              const SizedBox(width: 12),
+              const Spacer(),
+            ],
+          ),
+        ],
         const SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,6 +359,10 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             Expanded(child: _refSprintField(sprints)),
           ],
         ),
+        if (selectedSprint != null) ...[
+          const SizedBox(height: 14),
+          _refSprintDayField(selectedSprint),
+        ],
         if (_type == 'bug') ...[
           const SizedBox(height: 14),
           const RefFieldLabel('Severity'),
@@ -355,7 +381,11 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
           minLines: 3,
           maxLines: 5,
           style: const TextStyle(color: AppColors.text, fontSize: 13),
-          decoration: refFieldDecoration(null, hint: 'Acceptance criteria, links, context…', isDense: false),
+          decoration: refFieldDecoration(
+            null,
+            hint: 'Acceptance criteria, links, context…',
+            isDense: false,
+          ),
         ),
       ],
     );
@@ -455,13 +485,23 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             ('Medium', TaskSeverity.med),
             ('Critical', TaskSeverity.crit),
           ])
-            _refSevBtn(e.$2, e.$1, _sev == e.$2, () => setState(() => _sev = e.$2)),
+            _refSevBtn(
+              e.$2,
+              e.$1,
+              _sev == e.$2,
+              () => setState(() => _sev = e.$2),
+            ),
         ],
       ),
     );
   }
 
-  Widget _refSevBtn(TaskSeverity sev, String label, bool selected, VoidCallback onTap) {
+  Widget _refSevBtn(
+    TaskSeverity sev,
+    String label,
+    bool selected,
+    VoidCallback onTap,
+  ) {
     return Material(
       color: selected ? AppColors.panel3 : Colors.transparent,
       borderRadius: BorderRadius.circular(5),
@@ -489,7 +529,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         const RefFieldLabel('Project'),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: _projectVal,
+          initialValue: _projectId?.toString(),
           isExpanded: true,
           isDense: true,
           decoration: refFieldDecoration(null),
@@ -500,19 +540,65 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
               value: null,
               child: Text('— No project —', overflow: TextOverflow.ellipsis),
             ),
-            for (final p in roots) ...[
+            for (final p in roots)
               DropdownMenuItem<String>(
                 value: '${p.id}',
-                child: Text('${p.name} (top level)', overflow: TextOverflow.ellipsis),
+                child: Text(p.name, overflow: TextOverflow.ellipsis),
               ),
-              for (final s in ref.watch(projectsListProvider).where((x) => x.parentId == p.id))
-                DropdownMenuItem<String>(
-                  value: '${p.id}/${s.id}',
-                  child: Text('${p.name} / ${s.name}', overflow: TextOverflow.ellipsis),
-                ),
-            ],
           ],
-          onChanged: (v) => setState(() => _projectVal = v),
+          onChanged: (v) => setState(() {
+            _projectId = v == null ? null : int.tryParse(v);
+            _subProjectId = null;
+          }),
+        ),
+      ],
+    );
+  }
+
+  List<Project> _subProjectsForSelected(List<Project> roots) {
+    final selected = _projectId;
+    if (selected == null) return const [];
+    if (!roots.any((p) => p.id == selected)) return const [];
+    return ref
+        .watch(projectsListProvider)
+        .where((p) => p.parentId == selected)
+        .toList();
+  }
+
+  Widget _refSubProjectField() {
+    final subs = _subProjectsForSelected(
+      ref.watch(projectsListProvider).where((p) => p.parentId == null).toList(),
+    );
+    final validSub = subs.any((p) => p.id == _subProjectId)
+        ? _subProjectId?.toString()
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Subproject'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          key: ValueKey('subproject-$_projectId-$validSub'),
+          initialValue: validSub,
+          isExpanded: true,
+          isDense: true,
+          decoration: refFieldDecoration(null),
+          dropdownColor: AppColors.panel2,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          items: [
+            const DropdownMenuItem<String>(
+              value: null,
+              child: Text('— No subproject —', overflow: TextOverflow.ellipsis),
+            ),
+            for (final s in subs)
+              DropdownMenuItem<String>(
+                value: '${s.id}',
+                child: Text(s.name, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: (v) => setState(() {
+            _subProjectId = v == null ? null : int.tryParse(v);
+          }),
         ),
       ],
     );
@@ -525,7 +611,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         const RefFieldLabel('Bucket'),
         const SizedBox(height: 6),
         DropdownButtonFormField<TaskBucket>(
-          value: _bucket,
+          initialValue: _bucket,
           isExpanded: true,
           isDense: true,
           decoration: refFieldDecoration(null),
@@ -535,16 +621,13 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
               .map(
                 (b) => DropdownMenuItem(
                   value: b,
-                  child: Text(
-                    switch (b) {
-                      TaskBucket.now => 'Now (this sprint)',
-                      TaskBucket.next => 'Next (1–2 sprints out)',
-                      TaskBucket.later => 'Later',
-                      TaskBucket.someday => 'Someday',
-                      TaskBucket.unsorted => 'Unsorted',
-                    },
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(switch (b) {
+                    TaskBucket.now => 'Now (this sprint)',
+                    TaskBucket.next => 'Next (1–2 sprints out)',
+                    TaskBucket.later => 'Later',
+                    TaskBucket.someday => 'Someday',
+                    TaskBucket.unsorted => 'Unsorted',
+                  }, overflow: TextOverflow.ellipsis),
                 ),
               )
               .toList(),
@@ -579,7 +662,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         const RefFieldLabel('Sprint'),
         const SizedBox(height: 6),
         DropdownButtonFormField<int?>(
-          value: _sprintId,
+          initialValue: _sprintId,
           isExpanded: true,
           isDense: true,
           decoration: refFieldDecoration(null),
@@ -588,15 +671,88 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
           items: [
             const DropdownMenuItem<int?>(
               value: null,
-              child: Text('— Backlog (no sprint) —', overflow: TextOverflow.ellipsis),
+              child: Text(
+                '— Backlog (no sprint) —',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             for (final sp in sprints)
               DropdownMenuItem<int?>(
                 value: sp.id,
-                child: Text('${sp.name} (${sp.dates})', overflow: TextOverflow.ellipsis),
+                child: Text(
+                  '${sp.name} (${sp.dates})',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
           ],
-          onChanged: (v) => setState(() => _sprintId = v),
+          onChanged: (v) => setState(() {
+            _sprintId = v;
+            final sp = _sprintById(sprints, v);
+            if (sp == null || !_sprintContainsDay(sp, _plannedFor)) {
+              _plannedFor = null;
+            }
+          }),
+        ),
+      ],
+    );
+  }
+
+  Sprint? _sprintById(List<Sprint> sprints, int? id) {
+    if (id == null) return null;
+    for (final sp in sprints) {
+      if (sp.id == id) return sp;
+    }
+    return null;
+  }
+
+  bool _sprintContainsDay(Sprint sprint, String? ymd) {
+    if (ymd == null || ymd.isEmpty) return true;
+    final start = parseLocalDate(sprint.start);
+    for (var i = 0; i < sprint.length; i++) {
+      if (formatYmd(start.add(Duration(days: i))) == ymd) return true;
+    }
+    return false;
+  }
+
+  Widget _refSprintDayField(Sprint sprint) {
+    final start = parseLocalDate(sprint.start);
+    final validValue = _sprintContainsDay(sprint, _plannedFor)
+        ? _plannedFor
+        : null;
+    if (validValue == null && _plannedFor != null) {
+      _plannedFor = null;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RefFieldLabel('Sprint day'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String?>(
+          key: ValueKey('sprint-day-${sprint.id}-$validValue'),
+          initialValue: validValue,
+          isExpanded: true,
+          isDense: true,
+          decoration: refFieldDecoration(null),
+          dropdownColor: AppColors.panel2,
+          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text(
+                '— Unscheduled in sprint —',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            for (var i = 0; i < sprint.length; i++)
+              DropdownMenuItem<String?>(
+                value: formatYmd(start.add(Duration(days: i))),
+                child: Text(
+                  '${DateFormat('EEE, MMM d').format(start.add(Duration(days: i)))} · ${formatYmd(start.add(Duration(days: i)))}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (v) => setState(() => _plannedFor = v),
         ),
       ],
     );
@@ -609,7 +765,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         const RefFieldLabel('Ideation status'),
         const SizedBox(height: 6),
         DropdownButtonFormField<IdeationStatus>(
-          value: _ideation,
+          initialValue: _ideation,
           isExpanded: true,
           isDense: true,
           decoration: refFieldDecoration(null),

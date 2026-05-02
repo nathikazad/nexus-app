@@ -16,16 +16,20 @@ class DayItemRow extends StatefulWidget {
     super.key,
     required this.task,
     this.onMenu,
+    this.onTap,
     this.isGhost = false,
     this.movedToYmd,
     this.enableDrag = true,
+    this.isLocated = false,
   });
 
   final Task task;
   final VoidCallback? onMenu;
+  final VoidCallback? onTap;
   final bool isGhost;
   final String? movedToYmd;
   final bool enableDrag;
+  final bool isLocated;
 
   @override
   State<DayItemRow> createState() => _DayItemRowState();
@@ -141,13 +145,16 @@ class _DayItemRowState extends State<DayItemRow> {
         color: _h ? AppColors.panel3 : AppColors.panel2,
         borderRadius: BorderRadius.circular(5),
         child: InkWell(
-          onTap: widget.onMenu,
+          onTap: widget.onTap ?? widget.onMenu,
           borderRadius: BorderRadius.circular(5),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
+              color: widget.isLocated ? const Color(0x10FBBF24) : null,
               borderRadius: BorderRadius.circular(5),
-              border: blocked
+              border: widget.isLocated
+                  ? Border.all(color: const Color(0x59FBBF24), width: 1)
+                  : blocked
                   ? Border.all(color: const Color(0x40FF6B6B), width: 1)
                   : null,
             ),
@@ -203,7 +210,11 @@ class _DayItemRowState extends State<DayItemRow> {
                 SizedBox(
                   width: 16,
                   child: InkWell(
-                    onTap: widget.onMenu,
+                    onTap: widget.onMenu == null
+                        ? null
+                        : () {
+                            widget.onMenu!();
+                          },
                     child: const Text(
                       '⋮',
                       style: TextStyle(

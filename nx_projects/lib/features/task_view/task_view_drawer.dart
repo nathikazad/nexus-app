@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_projects/core/theme/app_theme.dart';
+import 'package:nx_projects/core/theme/status_color_palette.dart'
+    as status_palette;
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task.dart';
@@ -11,7 +13,6 @@ import 'package:nx_projects/domain/task/task_severity.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/shared/widgets/desktop_task_row.dart';
-import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
 
 /// Read-only task detail for the desktop right-side drawer (`reference/desktop/view-task.html`).
 class TaskViewDrawerContent extends ConsumerWidget {
@@ -170,35 +171,20 @@ class _TaskViewBody extends ConsumerWidget {
                   runSpacing: 6,
                   children: [
                     _pill(
-                      'Status: ${_statusLabel(task.status)}',
-                      AppColors.panel2,
-                    ),
-                    _pill(
                       'Bucket: ${_bucketLabel(task.bucket)}',
                       AppColors.panel2,
                     ),
                     _pill(
                       sprint == null
-                          ? 'Sprint: ${desktopSprintChipLabelForTask(task)} (backlog)'
+                          ? 'Sprint: ${desktopSprintChipLabelForTask(task, ref.watch(sprintsListProvider))} (backlog)'
                           : 'Sprint: ${sprint!.name} (${sprint!.dates})',
                       AppColors.panel2,
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                _StatusChanger(task: task),
                 const SizedBox(height: 20),
-                if (sprint != null) ...[
-                  Row(
-                    children: [
-                      const Text(
-                        'Sprint day',
-                        style: TextStyle(fontSize: 12, color: AppColors.muted),
-                      ),
-                      const SizedBox(width: 12),
-                      SprintDayPickerButton(task: task, sprint: sprint),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ],
                 _metaRow(
                   'Estimate',
                   task.estimate == 0 ? '—' : '${task.estimate}h',
@@ -321,6 +307,90 @@ class _TaskViewBody extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _StatusChanger extends ConsumerWidget {
+  const _StatusChanger({required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        const SizedBox(
+          width: 88,
+          child: Text(
+            'Status',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final status in TaskStatus.values)
+                _StatusButton(
+                  status: status,
+                  selected: task.status == status,
+                  onTap: () => _setTaskStatus(ref, task, status),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusButton extends StatelessWidget {
+  const _StatusButton({
+    required this.status,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TaskStatus status;
+  final bool selected;
+  final Future<void> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = status_palette.statusForeground(status);
+    final bg = selected
+        ? status_palette.statusBackground(status) ?? AppColors.panel3
+        : AppColors.panel2;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: selected ? null : onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: selected ? fg : AppColors.border),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            _statusLabel(status),
+            style: TextStyle(
+              color: selected ? fg : AppColors.muted,
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _setTaskStatus(WidgetRef ref, Task task, TaskStatus status) async {
+  if (task.status == status) return;
+  await ref.read(taskRepositoryProvider).upsert(task.copyWith(status: status));
+  ref.invalidate(tasksListAsyncProvider);
 }
 
 String _statusLabel(TaskStatus s) {
