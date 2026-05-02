@@ -33,7 +33,6 @@ class BleBackgroundService {
     final userId = prefs.getString(PrefsKeys.userId) ?? '1';
     final socketHeaders = <String, String>{
       'X-User-Id': userId,
-      'Authorization': 'Bearer dev',
       if (CfAccess.shouldAttachHeaders(sockUrl)) ...CfAccess.headers,
     };
 
@@ -249,7 +248,6 @@ class BleBackgroundService {
       final uid = freshPrefs.getString(PrefsKeys.userId) ?? '1';
       final headers = <String, String>{
         'X-User-Id': uid,
-        'Authorization': 'Bearer dev',
         if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
       await socketClient.connect(url, headers: headers);
@@ -466,6 +464,9 @@ class BleBackgroundService {
   /// that attach after `connected` was already emitted would otherwise see [idle] forever.
   BleConnectionState lastKnownBleStatus = BleConnectionState.idle;
 
+  /// For concise File TX logs; refreshed in [start] and [connectSocket].
+  String _fileTxLogUserId = '1';
+
   Stream<BleConnectionState> get statusStream => _statusController.stream;
   Stream<Uint8List> get fileTxStream => _fileTxDataController.stream;
   Stream<Map<String, dynamic>> get devicePushStream =>
@@ -497,6 +498,9 @@ class BleBackgroundService {
 
   Future<void> start() async {
     await _service.startService();
+
+    final prefs = await SharedPreferences.getInstance();
+    _fileTxLogUserId = prefs.getString(PrefsKeys.userId) ?? '1';
 
     _service.on('ble.status').listen((event) {
       final statusStr = event?['status'] as String? ?? 'scanning';
@@ -543,7 +547,13 @@ class BleBackgroundService {
       int end = 4;
       while (end < data.length && data[end] != 0) end++;
       final filename = String.fromCharCodes(data.sublist(4, end));
-      debugPrint('[File TX] $filename packet ${pktNum + 1}/$totalPkts');
+      if (pktNum == 0) {
+        debugPrint(
+            '[File TX] sending image $filename $totalPkts as $_fileTxLogUserId');
+      }
+      if (pktNum + 1 == totalPkts) {
+        debugPrint('[File TX] finished sent $totalPkts packets');
+      }
     });
 
     _service.on('device.push').listen((event) {
@@ -587,6 +597,9 @@ class BleBackgroundService {
   }
 
   void connectSocket(String url) {
+    SharedPreferences.getInstance().then((p) {
+      _fileTxLogUserId = p.getString(PrefsKeys.userId) ?? '1';
+    });
     _service.invoke('socket.connect', {'url': url});
   }
 
