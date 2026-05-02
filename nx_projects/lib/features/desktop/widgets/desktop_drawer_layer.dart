@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:nx_projects/features/desktop/desktop_drawer_controller.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/features/desktop/widgets/reference_side_drawer.dart';
 import 'package:nx_projects/features/sprint/sprint_edit_panel.dart';
@@ -14,7 +15,7 @@ class DesktopDrawerLayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(desktopTaskDrawerProvider);
-    void close() => ref.read(desktopTaskDrawerProvider.notifier).close();
+    void close() => ref.read(desktopDrawerControllerProvider).close();
 
     return switch (s) {
       DesktopTaskDrawerClosed() => const SizedBox.shrink(),

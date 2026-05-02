@@ -5,7 +5,8 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
-import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
+import 'package:nx_projects/features/desktop/desktop_drawer_controller.dart';
+import 'package:nx_projects/features/desktop/desktop_pane_task_scroller.dart';
 import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
 import 'package:nx_projects/features/sprint/widgets/desktop_day_card.dart';
@@ -23,6 +24,7 @@ class DesktopSprintBody extends ConsumerStatefulWidget {
 
 class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
   ProviderSubscription<DesktopTaskLocatorState>? _locatorSub;
+  final DesktopPaneTaskScroller _taskScroller = DesktopPaneTaskScroller();
 
   @override
   void initState() {
@@ -30,16 +32,13 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
     _locatorSub = ref.listenManual<DesktopTaskLocatorState>(
       desktopTaskLocatorProvider,
       (previous, next) {
-        final request = next.scrollRequest;
-        if (request == null ||
-            request.surface != DesktopTaskLocatorSurface.sprint ||
-            previous?.scrollRequest?.serial == request.serial) {
+        final effect = next.locateEffect;
+        if (effect == null ||
+            effect.surface != DesktopTaskLocatorSurface.sprint ||
+            previous?.locateEffect?.serial == effect.serial) {
           return;
         }
-        scrollLocatedTaskIntoView(
-          surface: DesktopTaskLocatorSurface.sprint,
-          taskId: request.taskId,
-        );
+        _taskScroller.scrollToTask(effect.taskId, isMounted: () => mounted);
       },
     );
   }
@@ -47,6 +46,7 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
   @override
   void dispose() {
     _locatorSub?.close();
+    _taskScroller.dispose();
     super.dispose();
   }
 
@@ -70,6 +70,7 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
 
     return SafeArea(
       child: SingleChildScrollView(
+        controller: _taskScroller.controller,
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,9 +93,10 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
                 sprint: sp,
                 allTasks: allTasks,
                 dailyCap: dailyCap,
+                taskRowKeyFor: _taskScroller.rowKeyFor,
                 onOpenTaskMenu: (t) => widget.onOpenTaskMenu(context, ref, t),
                 onOpenTask: (t) =>
-                    ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
+                    ref.read(desktopDrawerControllerProvider).viewTask(t.id),
               ),
             if (allTasks.isEmpty)
               const Padding(

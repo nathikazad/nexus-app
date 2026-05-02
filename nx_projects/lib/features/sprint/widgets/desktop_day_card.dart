@@ -22,6 +22,7 @@ class DesktopDayCard extends ConsumerWidget {
     required this.sprint,
     required this.allTasks,
     required this.dailyCap,
+    required this.taskRowKeyFor,
     required this.onOpenTaskMenu,
     required this.onOpenTask,
   });
@@ -30,6 +31,7 @@ class DesktopDayCard extends ConsumerWidget {
   final Sprint sprint;
   final List<Task> allTasks;
   final double dailyCap;
+  final GlobalKey Function(int taskId) taskRowKeyFor;
   final void Function(Task t) onOpenTaskMenu;
   final void Function(Task t) onOpenTask;
 
@@ -223,9 +225,8 @@ class DesktopDayCard extends ConsumerWidget {
                           for (final t in slice.tasks)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 4),
-                              child: TaskLocatorTarget(
-                                surface: DesktopTaskLocatorSurface.sprint,
-                                taskId: t.id,
+                              child: SizedBox(
+                                key: taskRowKeyFor(t.id),
                                 child: DayItemRow(
                                   task: t,
                                   isLocated: locator.isHighlighted(t.id),

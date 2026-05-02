@@ -5,8 +5,9 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/bucket_color_palette.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/task/task.dart';
+import 'package:nx_projects/features/desktop/desktop_drawer_controller.dart';
+import 'package:nx_projects/features/desktop/desktop_pane_task_scroller.dart';
 import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
-import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/features/priority/priority_view_model.dart';
@@ -27,6 +28,7 @@ class DesktopPriorityBody extends ConsumerStatefulWidget {
 
 class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
   ProviderSubscription<DesktopTaskLocatorState>? _locatorSub;
+  final DesktopPaneTaskScroller _taskScroller = DesktopPaneTaskScroller();
 
   @override
   void initState() {
@@ -34,16 +36,13 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
     _locatorSub = ref.listenManual<DesktopTaskLocatorState>(
       desktopTaskLocatorProvider,
       (previous, next) {
-        final request = next.scrollRequest;
-        if (request == null ||
-            request.surface != DesktopTaskLocatorSurface.planner ||
-            previous?.scrollRequest?.serial == request.serial) {
+        final effect = next.locateEffect;
+        if (effect == null ||
+            effect.surface != DesktopTaskLocatorSurface.planner ||
+            previous?.locateEffect?.serial == effect.serial) {
           return;
         }
-        scrollLocatedTaskIntoView(
-          surface: DesktopTaskLocatorSurface.planner,
-          taskId: request.taskId,
-        );
+        _taskScroller.scrollToTask(effect.taskId, isMounted: () => mounted);
       },
     );
   }
@@ -51,6 +50,7 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
   @override
   void dispose() {
     _locatorSub?.close();
+    _taskScroller.dispose();
     super.dispose();
   }
 
@@ -90,9 +90,8 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
       for (final t in tasks) {
         rank += 1;
         children.add(
-          TaskLocatorTarget(
-            surface: DesktopTaskLocatorSurface.planner,
-            taskId: t.id,
+          SizedBox(
+            key: _taskScroller.rowKeyFor(t.id),
             child: DesktopTaskRow(
               task: t,
               rankLabel: '$rank',
@@ -100,7 +99,7 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
               isSearchMatch: _titleMatchesSearch(t, q),
               isLocated: locator.isHighlighted(t.id),
               onRowTap: () =>
-                  ref.read(desktopTaskDrawerProvider.notifier).viewTask(t.id),
+                  ref.read(desktopDrawerControllerProvider).viewTask(t.id),
               onMenu: () => widget.onOpenTaskMenu(context, ref, t),
             ),
           ),
@@ -125,6 +124,7 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
     );
 
     return SingleChildScrollView(
+      controller: _taskScroller.controller,
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
