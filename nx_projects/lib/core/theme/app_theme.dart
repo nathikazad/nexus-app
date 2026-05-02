@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stable brand/status colors and default dark fallback values.
 abstract final class AppColors {
@@ -191,16 +194,60 @@ extension AppThemeColors on BuildContext {
       Theme.of(this).extension<AppPalette>() ?? AppPalette.dark;
 }
 
+const _appThemeModePreferenceKey = 'nx_projects.theme_mode';
+
+var _appThemeModeMemory = ThemeMode.dark;
+
+Future<void> initializeAppThemeMode() async {
+  try {
+    final saved = await SharedPreferencesAsync().getString(
+      _appThemeModePreferenceKey,
+    );
+    _appThemeModeMemory = _decodeThemeMode(saved) ?? ThemeMode.dark;
+  } catch (_) {
+    _appThemeModeMemory = ThemeMode.dark;
+  }
+}
+
+ThemeMode? _decodeThemeMode(String? value) {
+  return switch (value) {
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => null,
+  };
+}
+
+String _encodeThemeMode(ThemeMode mode) {
+  return switch (mode) {
+    ThemeMode.light => 'light',
+    ThemeMode.dark => 'dark',
+    ThemeMode.system => 'system',
+  };
+}
+
+Future<void> _persistThemeMode(ThemeMode mode) async {
+  try {
+    await SharedPreferencesAsync().setString(
+      _appThemeModePreferenceKey,
+      _encodeThemeMode(mode),
+    );
+  } catch (_) {
+    // Persistence failure should not block an in-session theme change.
+  }
+}
+
 class AppThemeMode extends Notifier<ThemeMode> {
   @override
-  ThemeMode build() => ThemeMode.dark;
+  ThemeMode build() => _appThemeModeMemory;
 
   void toggle() {
-    state = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    set(state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
   }
 
   void set(ThemeMode mode) {
+    _appThemeModeMemory = mode;
     state = mode;
+    unawaited(_persistThemeMode(mode));
   }
 }
 

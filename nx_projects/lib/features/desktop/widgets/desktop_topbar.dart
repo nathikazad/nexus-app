@@ -98,9 +98,9 @@ class _AccountButtonState extends ConsumerState<_AccountButton> {
             CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
-              targetAnchor: Alignment.centerLeft,
-              followerAnchor: Alignment.centerRight,
-              offset: Offset(-8, 0),
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: Offset(0, 6),
               child: _AccountMenu(
                 light: light,
                 onToggleTheme: () {
@@ -126,7 +126,7 @@ class _AccountButtonState extends ConsumerState<_AccountButton> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
       child: Material(
