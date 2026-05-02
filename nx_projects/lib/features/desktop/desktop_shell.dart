@@ -12,21 +12,21 @@ import 'package:nx_projects/features/shell/selection_providers.dart';
 
 /// Reference `reference/desktop/` — 44px top tabs + three full views.
 class DesktopShell extends ConsumerWidget {
-  const DesktopShell({super.key});
+  DesktopShell({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final view = ref.watch(desktopViewIndexProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: AppColors.panel,
+      value: SystemUiOverlayStyle(
+        statusBarColor: context.colors.panel,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: AppColors.bg,
+        systemNavigationBarColor: context.colors.bg,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: context.colors.bg,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,11 +40,7 @@ class DesktopShell extends ConsumerWidget {
               child: IndexedStack(
                 index: view,
                 sizing: StackFit.expand,
-                children: const [
-                  PlannerView(),
-                  DesktopSprintView(),
-                  TodayView(),
-                ],
+                children: [PlannerView(), DesktopSprintView(), TodayView()],
               ),
             ),
           ],

@@ -13,7 +13,7 @@ import 'package:nx_projects/features/shared/widgets/drill_row.dart';
 import 'package:nx_projects/features/shared/widgets/task_row.dart';
 
 class ProjectDetailScreen extends ConsumerWidget {
-  const ProjectDetailScreen({
+  ProjectDetailScreen({
     super.key,
     required this.projectId,
     required this.onPickSub,
@@ -35,7 +35,12 @@ class ProjectDetailScreen extends ConsumerWidget {
       }
     }
     if (p == null) {
-      return const Center(child: Text('Unknown project', style: TextStyle(color: AppColors.muted)));
+      return Center(
+        child: Text(
+          'Unknown project',
+          style: TextStyle(color: context.colors.muted),
+        ),
+      );
     }
     final subs = ref.watch(subProjectListRowsProvider(projectId));
     final tasks = ref.watch(projectDetailTasksProvider(projectId));
@@ -48,7 +53,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       children: [
         for (final s in subs)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: DrillRow(
               title: s.project.name,
               meta: '${s.taskCount} · ${s.hours}h',
@@ -56,10 +61,11 @@ class ProjectDetailScreen extends ConsumerWidget {
               onTap: () => onPickSub(s.project.id),
             ),
           ),
-        if (feats.isNotEmpty) ProjectKindSection(title: 'FEATURES', count: feats.length),
+        if (feats.isNotEmpty)
+          ProjectKindSection(title: 'FEATURES', count: feats.length),
         for (final t in feats)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showBucket: true,
@@ -68,10 +74,11 @@ class ProjectDetailScreen extends ConsumerWidget {
               onMenu: () => onOpenTaskMenu(context, ref, t),
             ),
           ),
-        if (bugs.isNotEmpty) ProjectKindSection(title: 'BUGS', count: bugs.length),
+        if (bugs.isNotEmpty)
+          ProjectKindSection(title: 'BUGS', count: bugs.length),
         for (final t in bugs)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showBucket: true,
@@ -80,10 +87,11 @@ class ProjectDetailScreen extends ConsumerWidget {
               onMenu: () => onOpenTaskMenu(context, ref, t),
             ),
           ),
-        if (other.isNotEmpty) ProjectKindSection(title: 'TASKS', count: other.length),
+        if (other.isNotEmpty)
+          ProjectKindSection(title: 'TASKS', count: other.length),
         for (final t in other)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showBucket: true,
@@ -93,10 +101,16 @@ class ProjectDetailScreen extends ConsumerWidget {
             ),
           ),
         if (tasks.isEmpty && subs.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(32),
             child: Center(
-              child: Text('No tasks yet.', style: TextStyle(color: AppColors.dim, fontStyle: FontStyle.italic)),
+              child: Text(
+                'No tasks yet.',
+                style: TextStyle(
+                  color: context.colors.dim,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ),
       ],

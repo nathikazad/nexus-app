@@ -1,7 +1,2 @@
 /// Task status.
-enum TaskStatus {
-  todo,
-  doing,
-  done,
-  blocked,
-}
+enum TaskStatus { todo, doing, done, blocked }

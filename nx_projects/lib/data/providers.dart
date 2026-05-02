@@ -22,51 +22,45 @@ import 'package:nx_projects/domain/task/task_repository.dart';
 export 'package:nx_db/riverpod.dart';
 
 /// KGQL-backed [ProjectRepository].
-final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlProjectRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadProjectSchema: () => ref.read(projectSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
+  final personal = ref.watch(personalDomainIdProvider);
+  if (personal == null) {
+    throw StateError('personalDomainId required (login)');
+  }
+  return KgqlProjectRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadProjectSchema: () => ref.read(projectSchemaProvider.future),
+    domainId: personal,
+  );
+});
 
 /// KGQL-backed [TaskRepository] (`ProjectTask` descendants).
-final taskRepositoryProvider = Provider<TaskRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlTaskRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadProjectTaskSchema: () => ref.read(projectTaskSchemaProvider.future),
-      loadBugSchema: () => ref.read(bugTaskSchemaProvider.future),
-      loadFeatureSchema: () => ref.read(featureTaskSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final taskRepositoryProvider = Provider<TaskRepository>((ref) {
+  final personal = ref.watch(personalDomainIdProvider);
+  if (personal == null) {
+    throw StateError('personalDomainId required (login)');
+  }
+  return KgqlTaskRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadProjectTaskSchema: () => ref.read(projectTaskSchemaProvider.future),
+    loadBugSchema: () => ref.read(bugTaskSchemaProvider.future),
+    loadFeatureSchema: () => ref.read(featureTaskSchemaProvider.future),
+    domainId: personal,
+  );
+});
 
 /// KGQL-backed [SprintRepository].
-final sprintRepositoryProvider = Provider<SprintRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlSprintRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadSprintSchema: () => ref.read(sprintSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final sprintRepositoryProvider = Provider<SprintRepository>((ref) {
+  final personal = ref.watch(personalDomainIdProvider);
+  if (personal == null) {
+    throw StateError('personalDomainId required (login)');
+  }
+  return KgqlSprintRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadSprintSchema: () => ref.read(sprintSchemaProvider.future),
+    domainId: personal,
+  );
+});
 
 final projectsListAsyncProvider = FutureProvider<List<Project>>(
   (ref) => ref.watch(projectRepositoryProvider).listRootProjects(),
@@ -97,22 +91,19 @@ final sprintsListAsyncProvider = FutureProvider<List<Sprint>>(
 
 /// Sync snapshot: empty list while [FutureProvider] is loading.
 final projectsListProvider = Provider<List<Project>>((ref) {
-  return ref.watch(allProjectsAsyncProvider).maybeWhen(
-        data: (d) => d,
-        orElse: () => const <Project>[],
-      );
+  return ref
+      .watch(allProjectsAsyncProvider)
+      .maybeWhen(data: (d) => d, orElse: () => const <Project>[]);
 });
 
 final tasksListProvider = Provider<List<Task>>((ref) {
-  return ref.watch(tasksListAsyncProvider).maybeWhen(
-        data: (d) => d,
-        orElse: () => const <Task>[],
-      );
+  return ref
+      .watch(tasksListAsyncProvider)
+      .maybeWhen(data: (d) => d, orElse: () => const <Task>[]);
 });
 
 final sprintsListProvider = Provider<List<Sprint>>((ref) {
-  return ref.watch(sprintsListAsyncProvider).maybeWhen(
-        data: (d) => d,
-        orElse: () => const <Sprint>[],
-      );
+  return ref
+      .watch(sprintsListAsyncProvider)
+      .maybeWhen(data: (d) => d, orElse: () => const <Sprint>[]);
 });

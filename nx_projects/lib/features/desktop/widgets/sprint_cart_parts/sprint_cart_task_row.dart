@@ -1,7 +1,7 @@
 part of '../sprint_cart.dart';
 
 class _CartTaskRow extends ConsumerStatefulWidget {
-  const _CartTaskRow({
+  _CartTaskRow({
     required this.task,
     required this.surface,
     required this.onUnpin,
@@ -40,7 +40,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
   Widget build(BuildContext context) {
     final t = widget.task;
     final g = _cartGlyph(t);
-    final gColor = kindColor(t.kind);
+    final gColor = kindColor(context, t.kind);
     final hStr = t.estimate % 1 == 0
         ? '${t.estimate.toInt()}h'
         : '${t.estimate}h';
@@ -56,16 +56,16 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
           ref.read(desktopTaskLocatorProvider.notifier).hover(null);
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
+          padding: EdgeInsets.symmetric(vertical: 2),
           child: Material(
-            color: _rowHover ? AppColors.panel2 : Colors.transparent,
+            color: _rowHover ? context.colors.panel2 : Colors.transparent,
             borderRadius: BorderRadius.circular(5),
             child: InkWell(
               onTap: _locateTask,
               onDoubleTap: _openTask,
               borderRadius: BorderRadius.circular(5),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                 child: Row(
                   children: [
                     SizedBox(
@@ -76,32 +76,32 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
                         style: TextStyle(fontSize: 11, color: gColor),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         t.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.text,
+                          color: context.colors.text,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     SizedBox(
                       width: 36,
                       child: Text(
                         hStr,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.muted,
+                          color: context.colors.muted,
                         ),
                       ),
                     ),
                     // Temporarily hidden to match the reference cart row shape.
-                    // const SizedBox(width: 4),
+                    // SizedBox(width: 4),
                     // SizedBox(
                     //   width: 62,
                     //   child: SprintDayPickerButton(
@@ -109,7 +109,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
                     //     child: _CartDayChip(task: t),
                     //   ),
                     // ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     if (widget.surface == SprintCartSurface.planner)
                       SizedBox(
                         width: 16,
@@ -125,8 +125,8 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
                                   fontSize: 16,
                                   height: 1,
                                   color: _xHover
-                                      ? const Color(0xFFF87171)
-                                      : AppColors.dim,
+                                      ? Color(0xFFF87171)
+                                      : context.colors.dim,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -145,7 +145,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
                                     width: 8,
                                     height: 8,
                                     decoration: BoxDecoration(
-                                      color: AppColors.warn,
+                                      color: context.colors.warn,
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
@@ -176,9 +176,9 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
       feedback: Material(
         color: Colors.transparent,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
+          constraints: BoxConstraints(maxWidth: 360),
           child: Card(
-            color: AppColors.panel2,
+            color: context.colors.panel2,
             child: ListTile(
               dense: true,
               title: Text(
@@ -188,7 +188,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
               ),
               trailing: Text(
                 hStr,
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
               ),
             ),
           ),
@@ -202,7 +202,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
 
 // Temporarily hidden to match the reference cart row shape.
 // class _CartDayChip extends StatelessWidget {
-//   const _CartDayChip({required this.task});
+//   _CartDayChip({required this.task});
 //
 //   final Task task;
 //
@@ -213,16 +213,16 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
 //         ? 'day'
 //         : planned.substring(planned.length - 5);
 //     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+//       padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
 //       decoration: BoxDecoration(
-//         color: AppColors.panel2,
-//         border: Border.all(color: AppColors.border),
+//         color: context.colors.panel2,
+//         border: Border.all(color: context.colors.border),
 //         borderRadius: BorderRadius.circular(999),
 //       ),
 //       child: Text(
 //         label,
 //         textAlign: TextAlign.center,
-//         style: const TextStyle(fontSize: 10, color: AppColors.muted),
+//         style: TextStyle(fontSize: 10, color: context.colors.muted),
 //       ),
 //     );
 //   }

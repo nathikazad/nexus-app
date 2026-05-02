@@ -13,7 +13,7 @@ import 'package:nx_projects/features/shell/selection_providers.dart';
 
 /// Mobile: bucket list → drill into one bucket's tasks.
 class MobilePriorityBody extends ConsumerWidget {
-  const MobilePriorityBody({super.key, required this.onOpenTaskMenu});
+  MobilePriorityBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
@@ -27,15 +27,12 @@ class MobilePriorityBody extends ConsumerWidget {
         },
       );
     }
-    return _BucketTasks(
-      bucket: bucket,
-      onOpenTaskMenu: onOpenTaskMenu,
-    );
+    return _BucketTasks(bucket: bucket, onOpenTaskMenu: onOpenTaskMenu);
   }
 }
 
 class _BucketList extends ConsumerWidget {
-  const _BucketList({required this.onPick});
+  _BucketList({required this.onPick});
 
   final void Function(TaskBucket) onPick;
 
@@ -47,12 +44,12 @@ class _BucketList extends ConsumerWidget {
       children: [
         for (final s in summaries)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: BucketDrillRow(
               label: bucketLabel(s.bucket),
               count: s.count,
               hours: s.hours,
-              dotColor: bucketColor(s.bucket),
+              dotColor: bucketColor(context, s.bucket),
               onTap: () => onPick(s.bucket),
             ),
           ),
@@ -62,10 +59,7 @@ class _BucketList extends ConsumerWidget {
 }
 
 class _BucketTasks extends ConsumerWidget {
-  const _BucketTasks({
-    required this.bucket,
-    required this.onOpenTaskMenu,
-  });
+  _BucketTasks({required this.bucket, required this.onOpenTaskMenu});
 
   final TaskBucket bucket;
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
@@ -74,10 +68,13 @@ class _BucketTasks extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasks = ref.watch(priorityBucketTasksProvider(bucket));
     if (tasks.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No tasks in this bucket.',
-          style: TextStyle(color: AppColors.dim, fontStyle: FontStyle.italic),
+          style: TextStyle(
+            color: context.colors.dim,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       );
     }
@@ -86,7 +83,7 @@ class _BucketTasks extends ConsumerWidget {
       children: [
         for (final t in tasks)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showStatus: true,

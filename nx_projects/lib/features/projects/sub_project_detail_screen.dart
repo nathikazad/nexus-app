@@ -10,7 +10,7 @@ import 'package:nx_projects/features/projects/widgets/project_kind_section.dart'
 import 'package:nx_projects/features/shared/widgets/task_row.dart';
 
 class SubProjectDetailScreen extends ConsumerWidget {
-  const SubProjectDetailScreen({
+  SubProjectDetailScreen({
     super.key,
     required this.projectId,
     required this.subId,
@@ -33,10 +33,11 @@ class SubProjectDetailScreen extends ConsumerWidget {
     return ListView(
       padding: NxLayout.contentPadding,
       children: [
-        if (feats.isNotEmpty) ProjectKindSection(title: 'FEATURES', count: feats.length),
+        if (feats.isNotEmpty)
+          ProjectKindSection(title: 'FEATURES', count: feats.length),
         for (final t in feats)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showBucket: true,
@@ -45,10 +46,11 @@ class SubProjectDetailScreen extends ConsumerWidget {
               onMenu: () => onOpenTaskMenu(context, ref, t),
             ),
           ),
-        if (bugs.isNotEmpty) ProjectKindSection(title: 'BUGS', count: bugs.length),
+        if (bugs.isNotEmpty)
+          ProjectKindSection(title: 'BUGS', count: bugs.length),
         for (final t in bugs)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showBucket: true,
@@ -57,10 +59,11 @@ class SubProjectDetailScreen extends ConsumerWidget {
               onMenu: () => onOpenTaskMenu(context, ref, t),
             ),
           ),
-        if (other.isNotEmpty) ProjectKindSection(title: 'TASKS', count: other.length),
+        if (other.isNotEmpty)
+          ProjectKindSection(title: 'TASKS', count: other.length),
         for (final t in other)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showBucket: true,
@@ -70,12 +73,15 @@ class SubProjectDetailScreen extends ConsumerWidget {
             ),
           ),
         if (tasks.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(32),
             child: Center(
               child: Text(
                 'No tasks in this subproject.',
-                style: TextStyle(color: AppColors.dim, fontStyle: FontStyle.italic),
+                style: TextStyle(
+                  color: context.colors.dim,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           ),

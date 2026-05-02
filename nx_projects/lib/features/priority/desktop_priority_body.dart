@@ -17,7 +17,7 @@ import 'package:nx_projects/features/shared/widgets/desktop_task_row.dart';
 
 /// Desktop: all priority buckets stacked with dense rows (`reference/desktop` pane-priority).
 class DesktopPriorityBody extends ConsumerStatefulWidget {
-  const DesktopPriorityBody({super.key, required this.onOpenTaskMenu});
+  DesktopPriorityBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
@@ -61,7 +61,7 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
     final sprints = ref.watch(sprintsListProvider);
     final locator = ref.watch(desktopTaskLocatorProvider);
 
-    const order = <TaskBucket>[
+    final order = <TaskBucket>[
       TaskBucket.now,
       TaskBucket.next,
       TaskBucket.later,
@@ -114,18 +114,22 @@ class _DesktopPriorityBodyState extends ConsumerState<DesktopPriorityBody> {
     }
 
     children.add(
-      const Padding(
+      Padding(
         padding: EdgeInsets.fromLTRB(4, 16, 4, 40),
         child: Text(
           '● bug    ◉ feature    sprint chip = first + last two chars of sprint name    ☆ = not in any sprint',
-          style: TextStyle(fontSize: 11, color: AppColors.dim, height: 1.6),
+          style: TextStyle(
+            fontSize: 11,
+            color: context.colors.dim,
+            height: 1.6,
+          ),
         ),
       ),
     );
 
     return SingleChildScrollView(
       controller: _taskScroller.controller,
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
+      padding: EdgeInsets.fromLTRB(0, 0, 0, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,

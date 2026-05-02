@@ -16,7 +16,7 @@ import 'package:nx_projects/features/sprint/widgets/day_item_row.dart';
 
 /// Bordered day card for desktop sprint plan (`reference/desktop` `.day`).
 class DesktopDayCard extends ConsumerWidget {
-  const DesktopDayCard({
+  DesktopDayCard({
     super.key,
     required this.slice,
     required this.sprint,
@@ -62,7 +62,7 @@ class DesktopDayCard extends ConsumerWidget {
         : (dayActual > 0 ? 'over' : '');
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: DragTarget<Task>(
         onWillAcceptWithDetails: (details) {
           final d = details.data;
@@ -80,14 +80,14 @@ class DesktopDayCard extends ConsumerWidget {
         builder: (context, candidate, rejected) {
           final drop = candidate.isNotEmpty;
           final borderColor = drop
-              ? AppColors.accent
-              : (isToday ? AppColors.border2 : AppColors.border);
+              ? context.colors.accent
+              : (isToday ? context.colors.border2 : context.colors.border);
           return Opacity(
             opacity: slice.isPast ? 0.65 : 1.0,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
+              duration: Duration(milliseconds: 120),
               decoration: BoxDecoration(
-                color: drop ? AppColors.accentSoft : AppColors.panel,
+                color: drop ? context.colors.accentSoft : context.colors.panel,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: borderColor),
               ),
@@ -95,7 +95,7 @@ class DesktopDayCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                    padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -106,14 +106,14 @@ class DesktopDayCard extends ConsumerWidget {
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.visible,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
-                              color: AppColors.dim,
+                              color: context.colors.dim,
                               letterSpacing: 0.2,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text.rich(
                             TextSpan(
@@ -124,24 +124,24 @@ class DesktopDayCard extends ConsumerWidget {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: isToday
-                                        ? AppColors.accent
-                                        : AppColors.text,
+                                        ? context.colors.accent
+                                        : context.colors.text,
                                   ),
                                 ),
                                 TextSpan(
                                   text: ' ${DateFormat('d').format(d)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.muted,
+                                    color: context.colors.muted,
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
                                 if (isToday)
-                                  const TextSpan(
+                                  TextSpan(
                                     text: '  · today',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: AppColors.accent,
+                                      color: context.colors.accent,
                                       fontWeight: FontWeight.w400,
                                     ),
                                   ),
@@ -149,7 +149,7 @@ class DesktopDayCard extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -161,19 +161,19 @@ class DesktopDayCard extends ConsumerWidget {
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isOver
-                                          ? AppColors.warn
-                                          : AppColors.text,
+                                          ? context.colors.warn
+                                          : context.colors.text,
                                       fontWeight: FontWeight.w600,
-                                      fontFeatures: const [
+                                      fontFeatures: [
                                         FontFeature.tabularFigures(),
                                       ],
                                     ),
                                   ),
                                   TextSpan(
                                     text: ' / ${dailyCap.toStringAsFixed(0)}h',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: AppColors.muted,
+                                      color: context.colors.muted,
                                       fontFeatures: [
                                         FontFeature.tabularFigures(),
                                       ],
@@ -184,15 +184,16 @@ class DesktopDayCard extends ConsumerWidget {
                             ),
                             if (dayH > 0 &&
                                 (slice.isPast || dayActual > 0)) ...[
-                              const SizedBox(height: 2),
+                              SizedBox(height: 2),
                               Text(
                                 '${_fmtH(dayActual)}h actual',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: varianceColorForClass(actualLineCls),
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
+                                  color: varianceColorForClass(
+                                    context,
+                                    actualLineCls,
+                                  ),
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
                             ],
@@ -202,9 +203,9 @@ class DesktopDayCard extends ConsumerWidget {
                     ),
                   ),
                   Transform.translate(
-                    offset: const Offset(2, 0),
+                    offset: Offset(2, 0),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                      padding: EdgeInsets.fromLTRB(10, 0, 10, 8),
                       child: DayCapBar(
                         ratio: dailyCap > 0 ? (dayH / dailyCap) : 0,
                         isOver: isOver,
@@ -214,17 +215,17 @@ class DesktopDayCard extends ConsumerWidget {
                   ),
                   if (showStats)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                      padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
                       child: _DayStatsLine(slice: slice, dayActual: dayActual),
                     ),
                   if (slice.tasks.isNotEmpty || ghosts.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+                      padding: EdgeInsets.fromLTRB(6, 0, 6, 8),
                       child: Column(
                         children: [
                           for (final t in slice.tasks)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
+                              padding: EdgeInsets.only(bottom: 4),
                               child: SizedBox(
                                 key: taskRowKeyFor(t.id),
                                 child: DayItemRow(
@@ -237,7 +238,7 @@ class DesktopDayCard extends ConsumerWidget {
                             ),
                           for (final t in ghosts)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
+                              padding: EdgeInsets.only(bottom: 4),
                               child: DayItemRow(
                                 task: t,
                                 isGhost: true,
@@ -249,11 +250,11 @@ class DesktopDayCard extends ConsumerWidget {
                     )
                   else
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                      padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
                       child: Text(
                         drop ? 'Drop here' : 'Nothing scheduled.',
-                        style: const TextStyle(
-                          color: AppColors.dim,
+                        style: TextStyle(
+                          color: context.colors.dim,
                           fontSize: 11,
                           fontStyle: FontStyle.italic,
                         ),
@@ -265,7 +266,7 @@ class DesktopDayCard extends ConsumerWidget {
                       sprint: sprint,
                       ymd: slice.ymd,
                     ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                 ],
               ),
             ),
@@ -282,7 +283,7 @@ class DesktopDayCard extends ConsumerWidget {
 }
 
 class _DayStatsLine extends StatelessWidget {
-  const _DayStatsLine({required this.slice, required this.dayActual});
+  _DayStatsLine({required this.slice, required this.dayActual});
 
   final SprintDaySlice slice;
   final double dayActual;
@@ -299,28 +300,28 @@ class _DayStatsLine extends StatelessWidget {
           icon: '✓',
           value: '${slice.doneCount}/${slice.tasks.length}',
           label: 'done',
-          color: allDone ? AppColors.ok : AppColors.warn,
+          color: allDone ? context.colors.ok : context.colors.warn,
         ),
         if (slice.pushedCount > 0)
           _DayStatText(
             icon: '↗',
             value: '${slice.pushedCount}',
             label: 'pushed out',
-            color: AppColors.warn,
+            color: context.colors.warn,
           ),
         if (slice.rolledCount > 0)
           _DayStatText(
             icon: '↙',
             value: '${slice.rolledCount}',
             label: 'rolled in',
-            color: AppColors.accent,
+            color: context.colors.accent,
           ),
         if (slice.isPast && dayActual == 0)
-          const Text(
+          Text(
             '· no logged work',
             style: TextStyle(
               fontSize: 11,
-              color: AppColors.dim,
+              color: context.colors.dim,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -330,7 +331,7 @@ class _DayStatsLine extends StatelessWidget {
 }
 
 class _DayStatText extends StatelessWidget {
-  const _DayStatText({
+  _DayStatText({
     required this.icon,
     required this.value,
     required this.label,
@@ -361,9 +362,9 @@ class _DayStatText extends StatelessWidget {
           ),
         ],
       ),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
-        color: AppColors.muted,
+        color: context.colors.muted,
         fontFeatures: [FontFeature.tabularFigures()],
       ),
     );
@@ -371,25 +372,29 @@ class _DayStatText extends StatelessWidget {
 }
 
 class _DashedLine extends StatelessWidget {
-  const _DashedLine();
+  _DashedLine();
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: const Size(double.infinity, 1),
-      painter: _DashedLinePainter(),
+      size: Size(double.infinity, 1),
+      painter: _DashedLinePainter(context.colors.border),
     );
   }
 }
 
 class _DashedLinePainter extends CustomPainter {
+  _DashedLinePainter(this.color);
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.border
+      ..color = color
       ..strokeWidth = 1;
-    const dash = 4.0;
-    const gap = 3.0;
+    final dash = 4.0;
+    final gap = 3.0;
     var x = 0.0;
     while (x < size.width) {
       canvas.drawLine(
@@ -406,11 +411,7 @@ class _DashedLinePainter extends CustomPainter {
 }
 
 class _SprintDayNoteField extends ConsumerStatefulWidget {
-  const _SprintDayNoteField({
-    super.key,
-    required this.sprint,
-    required this.ymd,
-  });
+  _SprintDayNoteField({super.key, required this.sprint, required this.ymd});
 
   final Sprint sprint;
   final String ymd;
@@ -446,20 +447,20 @@ class _SprintDayNoteFieldState extends ConsumerState<_SprintDayNoteField> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+      padding: EdgeInsets.fromLTRB(12, 2, 12, 8),
       child: Column(
         children: [
-          const _DashedLine(),
-          const SizedBox(height: 6),
+          _DashedLine(),
+          SizedBox(height: 6),
           TextField(
             controller: _c,
             onChanged: (v) {
               // TODO(nx_projects): persist day notes when Sprint.day_notes exists in PGDB
             },
             maxLines: 1,
-            style: const TextStyle(fontSize: 11, color: AppColors.text),
-            cursorColor: AppColors.accent,
-            decoration: const InputDecoration(
+            style: TextStyle(fontSize: 11, color: context.colors.text),
+            cursorColor: context.colors.accent,
+            decoration: InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.zero,
               filled: false,
@@ -468,7 +469,7 @@ class _SprintDayNoteFieldState extends ConsumerState<_SprintDayNoteField> {
               focusedBorder: InputBorder.none,
               hintText: 'Short title for this day…',
               hintStyle: TextStyle(
-                color: AppColors.dim,
+                color: context.colors.dim,
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
               ),

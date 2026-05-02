@@ -5,7 +5,7 @@ import 'package:nx_projects/features/daily/daily_view_model.dart';
 
 /// Stat chips row under `DdHead` (`reference/desktop` `.dd-stats`).
 class DdStats extends StatelessWidget {
-  const DdStats({super.key, required this.stats});
+  DdStats({super.key, required this.stats});
 
   final DailyHeaderStats stats;
 
@@ -17,18 +17,12 @@ class DdStats extends StatelessWidget {
       children: [
         _StatChip(
           label: 'Done',
-          value: '${stats.nDone} / ${stats.nTodo + stats.nDoing + stats.nBlocked + stats.nDone}',
-          dot: AppColors.ok,
+          value:
+              '${stats.nDone} / ${stats.nTodo + stats.nDoing + stats.nBlocked + stats.nDone}',
+          dot: context.colors.ok,
         ),
-        _StatChip(
-          label: 'Pushed',
-          value: '0',
-          isWarn: true,
-        ),
-        _StatChip(
-          label: 'Rolled',
-          value: '0',
-        ),
+        _StatChip(label: 'Pushed', value: '0', isWarn: true),
+        _StatChip(label: 'Rolled', value: '0'),
         _StatChip(
           label: 'Day hours',
           value: '${stats.totalEst.toStringAsFixed(0)}h planned',
@@ -39,7 +33,7 @@ class DdStats extends StatelessWidget {
 }
 
 class _StatChip extends StatelessWidget {
-  const _StatChip({
+  _StatChip({
     required this.label,
     required this.value,
     this.dot,
@@ -54,11 +48,11 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.panel2,
+        color: context.colors.panel2,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -67,20 +61,20 @@ class _StatChip extends StatelessWidget {
             Container(
               width: 6,
               height: 6,
-              margin: const EdgeInsets.only(right: 6),
+              margin: EdgeInsets.only(right: 6),
               decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
             ),
           ],
           Text(
             '$label  ',
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(fontSize: 11, color: context.colors.muted),
           ),
           Text(
             value,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isWarn ? AppColors.warn : AppColors.text,
+              color: isWarn ? context.colors.warn : context.colors.text,
             ),
           ),
         ],

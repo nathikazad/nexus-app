@@ -15,7 +15,7 @@ Future<void> showProjectEditSheet(
   if (useReferenceDialog) {
     return showDialog<void>(
       context: context,
-      barrierColor: const Color(0x99080A0E),
+      barrierColor: Color(0x99080A0E),
       barrierDismissible: true,
       builder: (ctx) {
         return ProjectEditForm(
@@ -30,8 +30,8 @@ Future<void> showProjectEditSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.panel,
-    shape: const RoundedRectangleBorder(
+    backgroundColor: context.colors.panel,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
@@ -46,7 +46,7 @@ Future<void> showProjectEditSheet(
 }
 
 class ProjectEditForm extends ConsumerStatefulWidget {
-  const ProjectEditForm({
+  ProjectEditForm({
     super.key,
     required this.useReferenceDialog,
     this.sidePanel = false,
@@ -70,7 +70,7 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
   late TextEditingController _desc;
   int _color = 0xFF6AA3FF;
 
-  static const _swatches = <int>[
+  static final _swatches = <int>[
     0xFF6AA3FF,
     0xFFF59E0B,
     0xFFC084FC,
@@ -84,7 +84,10 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
     super.initState();
     _name = TextEditingController();
     _desc = TextEditingController();
-    final roots = ref.read(projectsListProvider).where((p) => p.parentId == null).toList();
+    final roots = ref
+        .read(projectsListProvider)
+        .where((p) => p.parentId == null)
+        .toList();
     _parentId = roots.isNotEmpty ? roots.first.id : null;
   }
 
@@ -107,24 +110,14 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
     final repo = ref.read(projectRepositoryProvider);
     if (_topLevel) {
       await repo.addProject(
-        Project(
-          id: 0,
-          name: name,
-          color: _color,
-          description: _desc.text,
-        ),
+        Project(id: 0, name: name, color: _color, description: _desc.text),
       );
     } else {
       final parent = _parentId;
       if (parent == null) return;
       await repo.addSubProject(
         parent,
-        Project(
-          id: 0,
-          name: name,
-          color: 0xFF6AA3FF,
-          parentId: parent,
-        ),
+        Project(id: 0, name: name, color: 0xFF6AA3FF, parentId: parent),
       );
     }
     ref.invalidate(allProjectsAsyncProvider);
@@ -169,13 +162,13 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: _buildProjectFormBody(),
           ),
         ),
-        const Divider(height: 1, color: AppColors.border),
+        Divider(height: 1, color: context.colors.border),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: RefModalActions(
             onCancel: _dismiss,
             onPrimary: _submit,
@@ -188,47 +181,63 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
   }
 
   Widget _buildProjectFormBody() {
-    final roots = ref.watch(projectsListProvider).where((p) => p.parentId == null).toList();
+    final roots = ref
+        .watch(projectsListProvider)
+        .where((p) => p.parentId == null)
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Scope'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Scope'),
+        SizedBox(height: 6),
         _refScopeSeg(),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           _scopeHint(),
-          style: const TextStyle(fontSize: 11, color: AppColors.dim, height: 1.4),
+          style: TextStyle(
+            fontSize: 11,
+            color: context.colors.dim,
+            height: 1.4,
+          ),
         ),
         if (!_topLevel) ...[
-          const SizedBox(height: 14),
-          const RefFieldLabel('Parent project'),
-          const SizedBox(height: 6),
+          SizedBox(height: 14),
+          RefFieldLabel('Parent project'),
+          SizedBox(height: 6),
           DropdownButtonFormField<int>(
             value: _parentId,
             isExpanded: true,
             isDense: true,
-            decoration: refFieldDecoration(null),
-            dropdownColor: AppColors.panel2,
-            style: const TextStyle(color: AppColors.text, fontSize: 13),
+            decoration: refFieldDecoration(context, null),
+            dropdownColor: context.colors.panel2,
+            style: TextStyle(color: context.colors.text, fontSize: 13),
             items: roots
-                .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, overflow: TextOverflow.ellipsis)))
+                .map(
+                  (p) => DropdownMenuItem(
+                    value: p.id,
+                    child: Text(p.name, overflow: TextOverflow.ellipsis),
+                  ),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _parentId = v),
           ),
         ],
-        const SizedBox(height: 14),
-        const RefFieldLabel('Name'),
-        const SizedBox(height: 6),
+        SizedBox(height: 14),
+        RefFieldLabel('Name'),
+        SizedBox(height: 6),
         TextField(
           controller: _name,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
-          decoration: refFieldDecoration(null, hint: 'e.g. Billing v2'),
+          style: TextStyle(color: context.colors.text, fontSize: 13),
+          decoration: refFieldDecoration(
+            context,
+            null,
+            hint: 'e.g. Billing v2',
+          ),
         ),
         if (_topLevel) ...[
-          const SizedBox(height: 14),
-          const RefFieldLabel('Color'),
-          const SizedBox(height: 6),
+          SizedBox(height: 14),
+          RefFieldLabel('Color'),
+          SizedBox(height: 6),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -244,11 +253,18 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
                     color: Color(c),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: sel ? AppColors.text : Colors.transparent,
+                      color: sel ? context.colors.text : Colors.transparent,
                       width: 2,
                     ),
                     boxShadow: sel
-                        ? [BoxShadow(color: AppColors.accent.withValues(alpha: 0.4), blurRadius: 3)]
+                        ? [
+                            BoxShadow(
+                              color: context.colors.accent.withValues(
+                                alpha: 0.4,
+                              ),
+                              blurRadius: 3,
+                            ),
+                          ]
                         : null,
                   ),
                 ),
@@ -256,15 +272,20 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
             }).toList(),
           ),
         ],
-        const SizedBox(height: 14),
-        const RefFieldLabel('Description', suffixOpt: true),
-        const SizedBox(height: 6),
+        SizedBox(height: 14),
+        RefFieldLabel('Description', suffixOpt: true),
+        SizedBox(height: 6),
         TextField(
           controller: _desc,
           minLines: 3,
           maxLines: 5,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
-          decoration: refFieldDecoration(null, hint: 'What this project is about…', isDense: false),
+          style: TextStyle(color: context.colors.text, fontSize: 13),
+          decoration: refFieldDecoration(
+            context,
+            null,
+            hint: 'What this project is about…',
+            isDense: false,
+          ),
         ),
       ],
     );
@@ -272,10 +293,10 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
 
   Widget _refScopeSeg() {
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.panel2,
-        border: Border.all(color: AppColors.border),
+        color: context.colors.panel2,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(7),
       ),
       child: Row(
@@ -302,18 +323,18 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: selected ? AppColors.panel3 : Colors.transparent,
+      color: selected ? context.colors.panel3 : Colors.transparent,
       borderRadius: BorderRadius.circular(5),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: selected ? AppColors.text : AppColors.muted,
+              color: selected ? context.colors.text : context.colors.muted,
             ),
           ),
         ),
@@ -337,28 +358,28 @@ class _ProjectEditFormState extends ConsumerState<ProjectEditForm> {
               child: Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.border2,
+                  color: context.colors.border2,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const Text(
+            Text(
               'New project',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: AppColors.text,
+                color: context.colors.text,
               ),
             ),
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: 12),
+            SizedBox(height: 8),
+            Divider(height: 1, color: context.colors.border),
+            SizedBox(height: 12),
             _buildProjectFormBody(),
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: 8),
+            SizedBox(height: 12),
+            Divider(height: 1, color: context.colors.border),
+            SizedBox(height: 8),
             RefModalActions(
               onCancel: _dismiss,
               onPrimary: _submit,

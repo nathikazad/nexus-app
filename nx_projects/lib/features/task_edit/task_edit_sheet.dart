@@ -28,7 +28,7 @@ Future<void> showTaskEditSheet(
   if (useReferenceDialog) {
     return showDialog<void>(
       context: context,
-      barrierColor: const Color(0x99080A0E),
+      barrierColor: Color(0x99080A0E),
       barrierDismissible: true,
       builder: (ctx) {
         return TaskEditForm(
@@ -47,8 +47,8 @@ Future<void> showTaskEditSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.panel,
-    shape: const RoundedRectangleBorder(
+    backgroundColor: context.colors.panel,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
@@ -69,7 +69,7 @@ Future<void> showTaskEditSheet(
 /// Task create/edit form: reference dialog, bottom sheet, or [sidePanel] for desktop
 /// [ReferenceSideDrawer].
 class TaskEditForm extends ConsumerStatefulWidget {
-  const TaskEditForm({
+  TaskEditForm({
     super.key,
     required this.useReferenceDialog,
     this.sidePanel = false,
@@ -282,13 +282,13 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: _buildTaskFormBody(),
           ),
         ),
-        const Divider(height: 1, color: AppColors.border),
+        Divider(height: 1, color: context.colors.border),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: RefModalActions(
             onCancel: _dismiss,
             onPrimary: _submit,
@@ -310,78 +310,80 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Type'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Type'),
+        SizedBox(height: 6),
         _refTypeSeg(),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           _typeHint(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            color: AppColors.dim,
+            color: context.colors.dim,
             height: 1.4,
           ),
         ),
-        const SizedBox(height: 14),
-        const RefFieldLabel('Title'),
-        const SizedBox(height: 6),
+        SizedBox(height: 14),
+        RefFieldLabel('Title'),
+        SizedBox(height: 6),
         TextField(
           controller: _title,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
-          decoration: refFieldDecoration(null, hint: 'What needs to get done?'),
+          style: TextStyle(color: context.colors.text, fontSize: 13),
+          decoration: refFieldDecoration(
+            context,
+            null,
+            hint: 'What needs to get done?',
+          ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _refProjectField(roots)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: _refBucketField()),
           ],
         ),
         if (_subProjectsForSelected(roots).isNotEmpty) ...[
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _refSubProjectField()),
-              const SizedBox(width: 12),
-              const Spacer(),
+              SizedBox(width: 12),
+              Spacer(),
             ],
           ),
         ],
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _refEstimateField()),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: _refSprintField(sprints)),
           ],
         ),
         if (selectedSprint != null) ...[
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           _refSprintDayField(selectedSprint),
         ],
         if (_type == 'bug') ...[
-          const SizedBox(height: 14),
-          const RefFieldLabel('Severity'),
-          const SizedBox(height: 6),
+          SizedBox(height: 14),
+          RefFieldLabel('Severity'),
+          SizedBox(height: 6),
           _refSeveritySeg(),
         ],
-        if (_type == 'feature') ...[
-          const SizedBox(height: 14),
-          _refIdeationField(),
-        ],
-        const SizedBox(height: 14),
-        const RefFieldLabel('Notes', suffixOpt: true),
-        const SizedBox(height: 6),
+        if (_type == 'feature') ...[SizedBox(height: 14), _refIdeationField()],
+        SizedBox(height: 14),
+        RefFieldLabel('Notes', suffixOpt: true),
+        SizedBox(height: 6),
         TextField(
           controller: _notes,
           minLines: 3,
           maxLines: 5,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           decoration: refFieldDecoration(
+            context,
             null,
             hint: 'Acceptance criteria, links, context…',
             isDense: false,
@@ -393,10 +395,10 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
 
   Widget _refTypeSeg() {
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.panel2,
-        border: Border.all(color: AppColors.border),
+        color: context.colors.panel2,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(7),
       ),
       child: Row(
@@ -406,7 +408,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             value: 'task',
             label: 'Task',
             glyph: '▢',
-            glyphColor: AppColors.dim,
+            glyphColor: context.colors.dim,
             selected: _type == 'task',
             onTap: () => setState(() => _type = 'task'),
           ),
@@ -414,7 +416,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             value: 'feature',
             label: 'Feature',
             glyph: '◉',
-            glyphColor: AppColors.feat,
+            glyphColor: context.colors.feat,
             selected: _type == 'feature',
             onTap: () => setState(() => _type = 'feature'),
           ),
@@ -422,7 +424,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             value: 'bug',
             label: 'Bug',
             glyph: '●',
-            glyphColor: AppColors.bug,
+            glyphColor: context.colors.bug,
             selected: _type == 'bug',
             onTap: () => setState(() => _type = 'bug'),
           ),
@@ -440,13 +442,13 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: selected ? AppColors.panel3 : Colors.transparent,
+      color: selected ? context.colors.panel3 : Colors.transparent,
       borderRadius: BorderRadius.circular(5),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -454,12 +456,12 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
                 glyph,
                 style: TextStyle(fontSize: 10, color: glyphColor, height: 1),
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: selected ? AppColors.text : AppColors.muted,
+                  color: selected ? context.colors.text : context.colors.muted,
                 ),
               ),
             ],
@@ -471,10 +473,10 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
 
   Widget _refSeveritySeg() {
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.panel2,
-        border: Border.all(color: AppColors.border),
+        color: context.colors.panel2,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(7),
       ),
       child: Row(
@@ -503,18 +505,18 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     VoidCallback onTap,
   ) {
     return Material(
-      color: selected ? AppColors.panel3 : Colors.transparent,
+      color: selected ? context.colors.panel3 : Colors.transparent,
       borderRadius: BorderRadius.circular(5),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 11,
-              color: selected ? AppColors.text : AppColors.muted,
+              color: selected ? context.colors.text : context.colors.muted,
             ),
           ),
         ),
@@ -526,17 +528,17 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Project'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Project'),
+        SizedBox(height: 6),
         DropdownButtonFormField<String>(
           initialValue: _projectId?.toString(),
           isExpanded: true,
           isDense: true,
-          decoration: refFieldDecoration(null),
-          dropdownColor: AppColors.panel2,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null),
+          dropdownColor: context.colors.panel2,
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           items: [
-            const DropdownMenuItem<String>(
+            DropdownMenuItem<String>(
               value: null,
               child: Text('— No project —', overflow: TextOverflow.ellipsis),
             ),
@@ -557,8 +559,8 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
 
   List<Project> _subProjectsForSelected(List<Project> roots) {
     final selected = _projectId;
-    if (selected == null) return const [];
-    if (!roots.any((p) => p.id == selected)) return const [];
+    if (selected == null) return [];
+    if (!roots.any((p) => p.id == selected)) return [];
     return ref
         .watch(projectsListProvider)
         .where((p) => p.parentId == selected)
@@ -575,18 +577,18 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Subproject'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Subproject'),
+        SizedBox(height: 6),
         DropdownButtonFormField<String>(
           key: ValueKey('subproject-$_projectId-$validSub'),
           initialValue: validSub,
           isExpanded: true,
           isDense: true,
-          decoration: refFieldDecoration(null),
-          dropdownColor: AppColors.panel2,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null),
+          dropdownColor: context.colors.panel2,
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           items: [
-            const DropdownMenuItem<String>(
+            DropdownMenuItem<String>(
               value: null,
               child: Text('— No subproject —', overflow: TextOverflow.ellipsis),
             ),
@@ -608,15 +610,15 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Bucket'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Bucket'),
+        SizedBox(height: 6),
         DropdownButtonFormField<TaskBucket>(
           initialValue: _bucket,
           isExpanded: true,
           isDense: true,
-          decoration: refFieldDecoration(null),
-          dropdownColor: AppColors.panel2,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null),
+          dropdownColor: context.colors.panel2,
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           items: TaskBucket.values
               .map(
                 (b) => DropdownMenuItem(
@@ -643,13 +645,13 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Estimate (hours)'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Estimate (hours)'),
+        SizedBox(height: 6),
         TextField(
           controller: _est,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
-          decoration: refFieldDecoration(null, hint: 'e.g. 4'),
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
+          style: TextStyle(color: context.colors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null, hint: 'e.g. 4'),
         ),
       ],
     );
@@ -659,17 +661,17 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Sprint'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Sprint'),
+        SizedBox(height: 6),
         DropdownButtonFormField<int?>(
           initialValue: _sprintId,
           isExpanded: true,
           isDense: true,
-          decoration: refFieldDecoration(null),
-          dropdownColor: AppColors.panel2,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null),
+          dropdownColor: context.colors.panel2,
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           items: [
-            const DropdownMenuItem<int?>(
+            DropdownMenuItem<int?>(
               value: null,
               child: Text(
                 '— Backlog (no sprint) —',
@@ -725,18 +727,18 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Sprint day'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Sprint day'),
+        SizedBox(height: 6),
         DropdownButtonFormField<String?>(
           key: ValueKey('sprint-day-${sprint.id}-$validValue'),
           initialValue: validValue,
           isExpanded: true,
           isDense: true,
-          decoration: refFieldDecoration(null),
-          dropdownColor: AppColors.panel2,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null),
+          dropdownColor: context.colors.panel2,
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           items: [
-            const DropdownMenuItem<String?>(
+            DropdownMenuItem<String?>(
               value: null,
               child: Text(
                 '— Unscheduled in sprint —',
@@ -762,15 +764,15 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RefFieldLabel('Ideation status'),
-        const SizedBox(height: 6),
+        RefFieldLabel('Ideation status'),
+        SizedBox(height: 6),
         DropdownButtonFormField<IdeationStatus>(
           initialValue: _ideation,
           isExpanded: true,
           isDense: true,
-          decoration: refFieldDecoration(null),
-          dropdownColor: AppColors.panel2,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
+          decoration: refFieldDecoration(context, null),
+          dropdownColor: context.colors.panel2,
+          style: TextStyle(color: context.colors.text, fontSize: 13),
           items: IdeationStatus.values
               .map(
                 (e) => DropdownMenuItem(
@@ -803,28 +805,28 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
               child: Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.border2,
+                  color: context.colors.border2,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Text(
               widget.task == null ? 'New task' : 'Edit task',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: AppColors.text,
+                color: context.colors.text,
               ),
             ),
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: 12),
+            SizedBox(height: 8),
+            Divider(height: 1, color: context.colors.border),
+            SizedBox(height: 12),
             _buildTaskFormBody(),
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: 8),
+            SizedBox(height: 12),
+            Divider(height: 1, color: context.colors.border),
+            SizedBox(height: 8),
             RefModalActions(
               onCancel: _dismiss,
               onPrimary: _submit,

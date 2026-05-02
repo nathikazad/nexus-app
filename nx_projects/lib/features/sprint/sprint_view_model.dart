@@ -24,8 +24,9 @@ final currentSprintProvider = Provider<Sprint>((ref) {
     );
   }
   final i = ref.watch(sprintIndexProvider);
-  final safeIdx =
-      (i >= 0 && i < sprints.length) ? i : (sprints.length > 1 ? 1 : 0);
+  final safeIdx = (i >= 0 && i < sprints.length)
+      ? i
+      : (sprints.length > 1 ? 1 : 0);
   return sprints[safeIdx];
 });
 
@@ -89,7 +90,11 @@ final sprintDaySlicesProvider = Provider<List<SprintDaySlice>>((ref) {
   final out = <SprintDaySlice>[];
   final start = parseLocalDate(sp.start);
   for (var i = 0; i < sp.length; i++) {
-    final d = DateTime(start.year, start.month, start.day).add(Duration(days: i));
+    final d = DateTime(
+      start.year,
+      start.month,
+      start.day,
+    ).add(Duration(days: i));
     final ymd = formatYmd(d);
     final dayTasks = tasks.where((t) => t.plannedFor == ymd).toList();
     final h = dayTasks.fold<double>(0, (a, t) => a + t.estimate);
@@ -149,7 +154,13 @@ final sprintHeaderStatsProvider = Provider<SprintHeaderStats>((ref) {
   final sp = ref.watch(currentSprintProvider);
   final items = ref.watch(sprintTasksProvider);
   var todoH = 0.0, doingH = 0.0, blockedH = 0.0, doneH = 0.0;
-  var nTodo = 0, nDoing = 0, nBlocked = 0, nDone = 0, nFeat = 0, nBug = 0, critBugs = 0;
+  var nTodo = 0,
+      nDoing = 0,
+      nBlocked = 0,
+      nDone = 0,
+      nFeat = 0,
+      nBug = 0,
+      critBugs = 0;
   for (final t in items) {
     if (t.status == TaskStatus.todo) {
       nTodo++;
@@ -171,7 +182,9 @@ final sprintHeaderStatsProvider = Provider<SprintHeaderStats>((ref) {
     }
   }
   final totalH = items.fold<double>(0, (a, t) => a + t.estimate);
-  final pct = sp.capH > 0 ? ((totalH / sp.capH) * 100).round().clamp(0, 100) : 0;
+  final pct = sp.capH > 0
+      ? ((totalH / sp.capH) * 100).round().clamp(0, 100)
+      : 0;
   return SprintHeaderStats(
     totalH: totalH,
     pct: pct,

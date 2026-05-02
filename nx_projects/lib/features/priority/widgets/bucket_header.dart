@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
+
 /// `reference/desktop/styles.css` `.bucket-h`
 class BucketHeader extends StatelessWidget {
-  const BucketHeader({
+  BucketHeader({
     super.key,
     required this.label,
     required this.count,
@@ -23,45 +24,45 @@ class BucketHeader extends StatelessWidget {
     return InkWell(
       onTap: onToggle,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
+        padding: EdgeInsets.fromLTRB(4, 14, 4, 6),
         child: Row(
           children: [
             SizedBox(
               width: 10,
               child: Text(
                 expanded ? '▾' : '▸',
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 letterSpacing: 0.8,
-                color: AppColors.muted,
+                color: context.colors.muted,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+              padding: EdgeInsets.symmetric(horizontal: 7, vertical: 1),
               decoration: BoxDecoration(
-                color: AppColors.panel2,
+                color: context.colors.panel2,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '$count',
-                style: const TextStyle(fontSize: 10, color: AppColors.muted),
+                style: TextStyle(fontSize: 10, color: context.colors.muted),
               ),
             ),
             if (hint != null && hint!.isNotEmpty) ...[
-              const Spacer(),
+              Spacer(),
               Text(
                 hint!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
-                  color: AppColors.dim,
+                  color: context.colors.dim,
                   letterSpacing: 0.4,
                 ),
               ),

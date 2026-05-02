@@ -18,8 +18,8 @@ bool _isMobileStatusDoneSet(Set<String> s) {
 Future<void> showFilterSheet(BuildContext context, WidgetRef ref) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: AppColors.panel,
-    shape: const RoundedRectangleBorder(
+    backgroundColor: context.colors.panel,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
@@ -27,33 +27,33 @@ Future<void> showFilterSheet(BuildContext context, WidgetRef ref) {
         child: Consumer(
           builder: (c, r, _) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
+              padding: EdgeInsets.fromLTRB(8, 8, 8, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     width: 40,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.border2,
+                      color: context.colors.border2,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  _h('KIND'),
+                  _h(ctx, 'KIND'),
                   _tileKind(ctx, r, 'all', 'All kinds'),
                   _tileKind(ctx, r, 'feat', 'Features only'),
                   _tileKind(ctx, r, 'bug', 'Bugs only'),
-                  const Divider(color: AppColors.border),
-                  _h('STATUS'),
+                  Divider(color: context.colors.border),
+                  _h(ctx, 'STATUS'),
                   _tileStatus(ctx, r, 'all', 'All'),
                   _tileStatus(ctx, r, 'open', 'Open (not done)'),
                   _tileStatus(ctx, r, 'done', 'Done'),
-                  const Divider(color: AppColors.border),
+                  Divider(color: context.colors.border),
                   ListTile(
-                    title: const Text(
+                    title: Text(
                       'Reset filters',
-                      style: TextStyle(color: AppColors.accent),
+                      style: TextStyle(color: context.colors.accent),
                     ),
                     onTap: () {
                       r.read(filterKindSetProvider.notifier).clear();
@@ -71,17 +71,17 @@ Future<void> showFilterSheet(BuildContext context, WidgetRef ref) {
   );
 }
 
-Widget _h(String t) {
+Widget _h(BuildContext context, String t) {
   return Padding(
-    padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+    padding: EdgeInsets.fromLTRB(14, 10, 14, 4),
     child: Align(
       alignment: Alignment.centerLeft,
       child: Text(
         t,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           letterSpacing: 0.6,
-          color: AppColors.dim,
+          color: context.colors.dim,
         ),
       ),
     ),
@@ -103,7 +103,7 @@ Widget _tileKind(
   };
   return ListTile(
     title: Text(label),
-    trailing: selected ? const Icon(Icons.check, color: AppColors.accent) : null,
+    trailing: selected ? Icon(Icons.check, color: context.colors.accent) : null,
     onTap: () {
       ref.read(filterKindSetProvider.notifier).setMobileKind(value);
       Navigator.of(context).pop();
@@ -126,7 +126,7 @@ Widget _tileStatus(
   };
   return ListTile(
     title: Text(label),
-    trailing: selected ? const Icon(Icons.check, color: AppColors.accent) : null,
+    trailing: selected ? Icon(Icons.check, color: context.colors.accent) : null,
     onTap: () {
       ref.read(filterStatusSetProvider.notifier).setMobileStatus(value);
       Navigator.of(context).pop();

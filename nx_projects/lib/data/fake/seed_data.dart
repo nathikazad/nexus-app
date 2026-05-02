@@ -19,11 +19,7 @@ const int kSeedMobileId = 104;
 
 List<Project> buildSeedProjects() {
   return [
-    const Project(
-      id: kSeedNexusId,
-      name: 'Nexus Web App',
-      color: 0xFF6AA3FF,
-    ),
+    const Project(id: kSeedNexusId, name: 'Nexus Web App', color: 0xFF6AA3FF),
     const Project(
       id: kSeedUiPolishId,
       name: 'UI Polish',
@@ -41,11 +37,7 @@ List<Project> buildSeedProjects() {
       name: 'Data Pipeline v2',
       color: 0xFFF59E0B,
     ),
-    const Project(
-      id: kSeedMobileId,
-      name: 'Mobile App',
-      color: 0xFFC084FC,
-    ),
+    const Project(id: kSeedMobileId, name: 'Mobile App', color: 0xFFC084FC),
   ];
 }
 
@@ -65,7 +57,8 @@ List<Sprint> buildSeedSprints() {
       dayNotes: {
         '2026-04-13': 'Lost most of the afternoon to a cert rotation.',
         '2026-04-17': 'Good flow day — CSV export came together fast.',
-        '2026-04-18': 'Push plumbing took longer than expected; APNs sandbox gremlins.',
+        '2026-04-18':
+            'Push plumbing took longer than expected; APNs sandbox gremlins.',
       },
     ),
     Sprint(
@@ -82,7 +75,8 @@ List<Sprint> buildSeedSprints() {
       dayNotes: {
         '2026-04-20': 'Strong morning, tokens landed before lunch.',
         '2026-04-21': 'Toggle ate the afternoon — hover + a11y states tricky.',
-        '2026-04-22': 'Splash flicker partly tracked down. SRE review still pending.',
+        '2026-04-22':
+            'Splash flicker partly tracked down. SRE review still pending.',
         '2026-04-23': 'Dark mode pushing through — refining contrast tokens.',
       },
     ),

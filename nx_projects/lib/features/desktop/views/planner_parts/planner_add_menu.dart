@@ -1,7 +1,7 @@
 part of '../planner_view.dart';
 
 class _PlannerAddMenuButton extends StatefulWidget {
-  const _PlannerAddMenuButton({
+  _PlannerAddMenuButton({
     required this.onNewProject,
     required this.onNewTask,
     required this.onNewSprint,
@@ -21,20 +21,18 @@ class _PlannerAddMenuButtonState extends State<_PlannerAddMenuButton> {
   @override
   Widget build(BuildContext context) {
     return MenuAnchor(
-      alignmentOffset: const Offset(-186, 6),
+      alignmentOffset: Offset(-186, 6),
       style: MenuStyle(
-        backgroundColor: const WidgetStatePropertyAll(AppColors.panel),
-        elevation: const WidgetStatePropertyAll(12),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(vertical: 6),
-        ),
+        backgroundColor: WidgetStatePropertyAll(context.colors.panel),
+        elevation: WidgetStatePropertyAll(12),
+        padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 6)),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: context.colors.border),
           ),
         ),
-        minimumSize: const WidgetStatePropertyAll(Size(210, 0)),
+        minimumSize: WidgetStatePropertyAll(Size(210, 0)),
       ),
       menuChildren: [
         _PlannerAddMenuItem(
@@ -75,13 +73,15 @@ class _PlannerAddMenuButtonState extends State<_PlannerAddMenuButton> {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: _hover ? AppColors.panel2 : AppColors.panel,
+                  color: _hover ? context.colors.panel2 : context.colors.panel,
                   border: Border.all(
-                    color: _hover ? AppColors.border2 : AppColors.border,
+                    color: _hover
+                        ? context.colors.border2
+                        : context.colors.border,
                   ),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.add, size: 18, color: AppColors.accent),
+                child: Icon(Icons.add, size: 18, color: context.colors.accent),
               ),
             ),
           ),
@@ -92,7 +92,7 @@ class _PlannerAddMenuButtonState extends State<_PlannerAddMenuButton> {
 }
 
 class _PlannerAddMenuItem extends StatelessWidget {
-  const _PlannerAddMenuItem({
+  _PlannerAddMenuItem({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -109,14 +109,14 @@ class _PlannerAddMenuItem extends StatelessWidget {
     return MenuItemButton(
       onPressed: onPressed,
       style: ButtonStyle(
-        padding: const WidgetStatePropertyAll(
+        padding: WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         ),
-        backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+        backgroundColor: WidgetStatePropertyAll(Colors.transparent),
         overlayColor: WidgetStatePropertyAll(
-          AppColors.panel3.withValues(alpha: 0.55),
+          context.colors.panel3.withValues(alpha: 0.55),
         ),
-        foregroundColor: const WidgetStatePropertyAll(AppColors.text),
+        foregroundColor: WidgetStatePropertyAll(context.colors.text),
       ),
       child: SizedBox(
         width: 190,
@@ -126,13 +126,13 @@ class _PlannerAddMenuItem extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: AppColors.panel3,
-                border: Border.all(color: AppColors.border),
+                color: context.colors.panel3,
+                border: Border.all(color: context.colors.border),
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(icon, size: 16, color: AppColors.accent),
+              child: Icon(icon, size: 16, color: context.colors.accent),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -140,22 +140,22 @@ class _PlannerAddMenuItem extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.1,
-                      color: AppColors.text,
+                      color: context.colors.text,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
                       height: 1.1,
-                      color: AppColors.dim,
+                      color: context.colors.dim,
                     ),
                   ),
                 ],

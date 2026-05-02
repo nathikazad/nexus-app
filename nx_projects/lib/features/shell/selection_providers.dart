@@ -10,7 +10,9 @@ class MainTabIndex extends Notifier<int> {
   void setTab(int v) => state = v;
 }
 
-final mainTabIndexProvider = NotifierProvider<MainTabIndex, int>(MainTabIndex.new);
+final mainTabIndexProvider = NotifierProvider<MainTabIndex, int>(
+  MainTabIndex.new,
+);
 
 class SelectedProjectId extends Notifier<int?> {
   @override
@@ -19,7 +21,9 @@ class SelectedProjectId extends Notifier<int?> {
   void set(int? v) => state = v;
 }
 
-final selectedProjectIdProvider = NotifierProvider<SelectedProjectId, int?>(SelectedProjectId.new);
+final selectedProjectIdProvider = NotifierProvider<SelectedProjectId, int?>(
+  SelectedProjectId.new,
+);
 
 class SelectedSubProjectId extends Notifier<int?> {
   @override
@@ -39,7 +43,9 @@ class SelectedPriorityBucket extends Notifier<TaskBucket?> {
 }
 
 final selectedPriorityBucketProvider =
-    NotifierProvider<SelectedPriorityBucket, TaskBucket?>(SelectedPriorityBucket.new);
+    NotifierProvider<SelectedPriorityBucket, TaskBucket?>(
+      SelectedPriorityBucket.new,
+    );
 
 class SprintIndex extends Notifier<int> {
   @override
@@ -67,7 +73,9 @@ class DesktopViewIndex extends Notifier<int> {
   void setView(int v) => state = v;
 }
 
-final desktopViewIndexProvider = NotifierProvider<DesktopViewIndex, int>(DesktopViewIndex.new);
+final desktopViewIndexProvider = NotifierProvider<DesktopViewIndex, int>(
+  DesktopViewIndex.new,
+);
 
 /// Planner left pane: 0 = Projects, 1 = Priority.
 class DesktopPlannerMode extends Notifier<int> {
@@ -77,4 +85,6 @@ class DesktopPlannerMode extends Notifier<int> {
   void setMode(int v) => state = v;
 }
 
-final desktopPlannerModeProvider = NotifierProvider<DesktopPlannerMode, int>(DesktopPlannerMode.new);
+final desktopPlannerModeProvider = NotifierProvider<DesktopPlannerMode, int>(
+  DesktopPlannerMode.new,
+);

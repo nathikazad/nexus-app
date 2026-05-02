@@ -5,9 +5,5 @@ import 'package:nx_projects/app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    const ProviderScope(
-      child: NexusProjectsApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: NexusProjectsApp()));
 }

@@ -6,7 +6,7 @@ import 'package:nx_projects/data/fake/seed_data.dart';
 
 /// Sticky day header (`reference/desktop` `.dd-head`).
 class DdHead extends StatelessWidget {
-  const DdHead({
+  DdHead({
     super.key,
     required this.dailyDate,
     required this.onPrev,
@@ -26,16 +26,22 @@ class DdHead extends StatelessWidget {
     final pill = cmp == 0
         ? _PillKind.today
         : cmp < 0
-            ? _PillKind.past
-            : _PillKind.future;
+        ? _PillKind.past
+        : _PillKind.future;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      padding: EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: BoxDecoration(
-        color: AppColors.bg.withValues(alpha: 0.92),
+        color: context.colors.bg.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [BoxShadow(blurRadius: 24, offset: Offset(0, 4), color: Color(0x40000000))],
+        border: Border.all(color: context.colors.border),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 24,
+            offset: Offset(0, 4),
+            color: Color(0x40000000),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,39 +55,49 @@ class DdHead extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onBack,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.muted,
-                    side: const BorderSide(color: AppColors.border),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    foregroundColor: context.colors.muted,
+                    side: BorderSide(color: context.colors.border),
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
-                  child: const Text('Back', style: TextStyle(fontSize: 12)),
+                  child: Text('Back', style: TextStyle(fontSize: 12)),
                 ),
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: context.colors.border),
                   borderRadius: BorderRadius.circular(999),
-                  color: AppColors.panel2,
+                  color: context.colors.panel2,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _ArrowBtn(icon: Icons.chevron_left, onPressed: onPrev),
-                    Container(width: 1, height: 28, color: AppColors.border),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: context.colors.border,
+                    ),
                     _ArrowBtn(icon: Icons.chevron_right, onPressed: onNext),
                   ],
                 ),
               ),
               Text(
                 longDowLabel(dailyDate),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.text),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.text,
+                ),
               ),
               _DdPill(kind: pill),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             fullDateLine(dailyDate),
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: context.colors.muted),
           ),
         ],
       ),
@@ -92,7 +108,7 @@ class DdHead extends StatelessWidget {
 enum _PillKind { today, past, future }
 
 class _DdPill extends StatelessWidget {
-  const _DdPill({required this.kind});
+  _DdPill({required this.kind});
 
   final _PillKind kind;
 
@@ -100,26 +116,26 @@ class _DdPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, bg, border, fg) = switch (kind) {
       _PillKind.today => (
-          'TODAY',
-          AppColors.accentSoft,
-          const Color(0x596AA3FF),
-          AppColors.accent,
-        ),
+        'TODAY',
+        context.colors.accentSoft,
+        Color(0x596AA3FF),
+        context.colors.accent,
+      ),
       _PillKind.past => (
-          'PAST',
-          AppColors.panel3,
-          AppColors.border,
-          AppColors.dim,
-        ),
+        'PAST',
+        context.colors.panel3,
+        context.colors.border,
+        context.colors.dim,
+      ),
       _PillKind.future => (
-          'FUTURE',
-          const Color(0x26FBBF24),
-          const Color(0x59FBBF24),
-          AppColors.warn,
-        ),
+        'FUTURE',
+        Color(0x26FBBF24),
+        Color(0x59FBBF24),
+        context.colors.warn,
+      ),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(6),
@@ -139,7 +155,7 @@ class _DdPill extends StatelessWidget {
 }
 
 class _ArrowBtn extends StatelessWidget {
-  const _ArrowBtn({required this.icon, required this.onPressed});
+  _ArrowBtn({required this.icon, required this.onPressed});
 
   final IconData icon;
   final VoidCallback onPressed;
@@ -153,7 +169,7 @@ class _ArrowBtn extends StatelessWidget {
         child: SizedBox(
           width: 36,
           height: 36,
-          child: Icon(icon, size: 20, color: AppColors.text),
+          child: Icon(icon, size: 20, color: context.colors.text),
         ),
       ),
     );

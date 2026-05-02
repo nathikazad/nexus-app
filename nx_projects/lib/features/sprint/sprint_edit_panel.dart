@@ -9,7 +9,7 @@ import 'package:nx_projects/domain/sprint/sprint_state.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 
 class SprintCreatePanel extends ConsumerStatefulWidget {
-  const SprintCreatePanel({super.key, required this.onClose});
+  SprintCreatePanel({super.key, required this.onClose});
 
   final VoidCallback onClose;
 
@@ -99,7 +99,7 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
         children: [
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+              padding: EdgeInsets.fromLTRB(16, 14, 16, 20),
               children: [
                 _field(
                   controller: _name,
@@ -108,14 +108,14 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
                       ? 'Name is required'
                       : null,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _field(
                   controller: _start,
                   label: 'Start date',
                   hint: 'YYYY-MM-DD',
                   validator: _validateYmd,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _field(
                   controller: _length,
                   label: 'Length',
@@ -127,26 +127,24 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _field(
                   controller: _capacity,
                   label: 'Allocated hours',
                   hint: '40',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   validator: (v) {
                     final n = double.tryParse(v?.trim() ?? '');
                     if (n == null || n < 0) return 'Enter 0 or more hours';
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 DropdownButtonFormField<SprintState>(
                   initialValue: _state,
-                  dropdownColor: AppColors.panel2,
+                  dropdownColor: context.colors.panel2,
                   decoration: _inputDecoration('Status'),
-                  items: const [
+                  items: [
                     DropdownMenuItem(
                       value: SprintState.planned,
                       child: Text('Planned'),
@@ -164,22 +162,22 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
                     if (v != null) setState(() => _state = v);
                   },
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _field(controller: _goal, label: 'Goal', maxLines: 4),
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Divider(height: 1, color: context.colors.border),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: _saving ? null : widget.onClose,
-                  child: const Text('Cancel'),
+                  child: Text('Cancel'),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 FilledButton(
                   onPressed: _saving ? null : _save,
                   child: Text(_saving ? 'Saving…' : 'Create sprint'),
@@ -222,8 +220,8 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(color: AppColors.text, fontSize: 13),
-      cursorColor: AppColors.accent,
+      style: TextStyle(color: context.colors.text, fontSize: 13),
+      cursorColor: context.colors.accent,
       decoration: _inputDecoration(label, hint: hint),
     );
   }
@@ -232,21 +230,21 @@ class _SprintCreatePanelState extends ConsumerState<SprintCreatePanel> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(color: AppColors.muted),
-      hintStyle: const TextStyle(color: AppColors.dim),
+      labelStyle: TextStyle(color: context.colors.muted),
+      hintStyle: TextStyle(color: context.colors.dim),
       filled: true,
-      fillColor: AppColors.panel2,
+      fillColor: context.colors.panel2,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: context.colors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: context.colors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: AppColors.accent),
+        borderSide: BorderSide(color: context.colors.accent),
       ),
     );
   }

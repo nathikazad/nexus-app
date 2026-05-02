@@ -10,7 +10,7 @@ import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/features/sprint/assign_task_to_sprint_day.dart';
 
 class SprintDayPickerButton extends ConsumerWidget {
-  const SprintDayPickerButton({
+  SprintDayPickerButton({
     super.key,
     required this.task,
     this.sprint,
@@ -19,7 +19,7 @@ class SprintDayPickerButton extends ConsumerWidget {
     this.onChanged,
   });
 
-  static const String _unscheduled = '__unscheduled__';
+  static String _unscheduled = '__unscheduled__';
 
   final Task task;
   final Sprint? sprint;
@@ -30,11 +30,11 @@ class SprintDayPickerButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sp = sprint ?? _sprintForTask(ref.watch(sprintsListProvider), task);
-    if (sp == null) return const SizedBox.shrink();
+    if (sp == null) return SizedBox.shrink();
 
     return PopupMenuButton<String>(
       tooltip: 'Assign sprint day',
-      color: AppColors.panel2,
+      color: context.colors.panel2,
       onSelected: (value) async {
         await assignTaskToSprintDay(
           ref: ref,
@@ -55,7 +55,7 @@ class SprintDayPickerButton extends ConsumerWidget {
               selected: task.plannedFor == null || task.plannedFor!.isEmpty,
             ),
           ),
-          const PopupMenuDivider(),
+          PopupMenuDivider(),
           for (final d in days)
             PopupMenuItem<String>(
               value: d.ymd,
@@ -100,24 +100,24 @@ class SprintDayPickerButton extends ConsumerWidget {
 }
 
 class _SprintDayOption {
-  const _SprintDayOption({required this.ymd, required this.title});
+  _SprintDayOption({required this.ymd, required this.title});
 
   final String ymd;
   final String title;
 }
 
 class _DefaultPickerChip extends StatelessWidget {
-  const _DefaultPickerChip({required this.label});
+  _DefaultPickerChip({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.panel2,
-        border: Border.all(color: AppColors.border),
+        color: context.colors.panel2,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -125,10 +125,10 @@ class _DefaultPickerChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: AppColors.text),
+            style: TextStyle(fontSize: 12, color: context.colors.text),
           ),
-          const SizedBox(width: 6),
-          const Icon(Icons.expand_more, size: 14, color: AppColors.dim),
+          SizedBox(width: 6),
+          Icon(Icons.expand_more, size: 14, color: context.colors.dim),
         ],
       ),
     );
@@ -136,7 +136,7 @@ class _DefaultPickerChip extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({
+  _MenuRow({
     required this.title,
     required this.subtitle,
     required this.selected,
@@ -153,20 +153,20 @@ class _MenuRow extends StatelessWidget {
         SizedBox(
           width: 20,
           child: selected
-              ? const Icon(Icons.check, size: 16, color: AppColors.accent)
-              : const SizedBox.shrink(),
+              ? Icon(Icons.check, size: 16, color: context.colors.accent)
+              : SizedBox.shrink(),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 13, color: AppColors.text),
+              style: TextStyle(fontSize: 13, color: context.colors.text),
             ),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 11, color: AppColors.dim),
+              style: TextStyle(fontSize: 11, color: context.colors.dim),
             ),
           ],
         ),

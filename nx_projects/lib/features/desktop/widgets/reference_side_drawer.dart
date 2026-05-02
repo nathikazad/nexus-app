@@ -7,7 +7,7 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 /// Right-side overlay matching `reference/desktop` task drawers: dim backdrop,
 /// fixed right panel, header + body.
 class ReferenceSideDrawer extends StatelessWidget {
-  const ReferenceSideDrawer({
+  ReferenceSideDrawer({
     super.key,
     required this.onClose,
     this.title = '',
@@ -46,7 +46,7 @@ class ReferenceSideDrawer extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onClose,
-              child: const ColoredBox(color: Color(0x99080A0E)),
+              child: ColoredBox(color: Color(0x99080A0E)),
             ),
           ),
         ),
@@ -55,15 +55,15 @@ class ReferenceSideDrawer extends StatelessWidget {
           top: 0,
           bottom: 0,
           child: Material(
-            color: AppColors.panel,
+            color: context.colors.panel,
             elevation: 8,
             child: SizedBox(
               width: maxW,
               height: h,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: AppColors.border),
+                    left: BorderSide(color: context.colors.border),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -78,29 +78,31 @@ class ReferenceSideDrawer extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                            padding: EdgeInsets.fromLTRB(16, 12, 8, 12),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       if (title.isNotEmpty)
                                         Text(
                                           title,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
-                                            color: AppColors.text,
+                                            color: context.colors.text,
                                           ),
                                         ),
                                       if (subtitle != null) ...[
-                                        if (title.isNotEmpty) const SizedBox(height: 4),
+                                        if (title.isNotEmpty)
+                                          SizedBox(height: 4),
                                         Text(
                                           subtitle!,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 12,
-                                            color: AppColors.dim,
+                                            color: context.colors.dim,
                                           ),
                                         ),
                                       ],
@@ -110,17 +112,17 @@ class ReferenceSideDrawer extends StatelessWidget {
                                 if (trailing != null) ...trailing!,
                                 IconButton(
                                   onPressed: onClose,
-                                  icon: const Icon(Icons.close, size: 20),
+                                  icon: Icon(Icons.close, size: 20),
                                   style: IconButton.styleFrom(
-                                    minimumSize: const Size(32, 32),
+                                    minimumSize: Size(32, 32),
                                     padding: EdgeInsets.zero,
-                                    foregroundColor: AppColors.muted,
+                                    foregroundColor: context.colors.muted,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Divider(height: 1, color: AppColors.border),
+                          Divider(height: 1, color: context.colors.border),
                           Expanded(child: child),
                         ],
                       )

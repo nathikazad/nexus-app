@@ -31,11 +31,7 @@ DateTime parseLocalDate(String ymd) {
   if (p.length != 3) {
     return DateTime.now();
   }
-  return DateTime(
-    int.parse(p[0]),
-    int.parse(p[1]),
-    int.parse(p[2]),
-  );
+  return DateTime(int.parse(p[0]), int.parse(p[1]), int.parse(p[2]));
 }
 
 String formatYmd(DateTime d) {

@@ -7,42 +7,38 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 
 /// Reference `reference/desktop/styles.css` `.topbar` + `.top-tab` / `.top-tab.active`.
 class DesktopTopBar extends ConsumerWidget {
-  const DesktopTopBar({
-    super.key,
-    required this.activeIndex,
-    required this.onSelect,
-  });
+  DesktopTopBar({super.key, required this.activeIndex, required this.onSelect});
 
   /// 0 = Planner, 1 = Sprint, 2 = Today
   final int activeIndex;
   final ValueChanged<int> onSelect;
 
-  static const _labels = <String>['Planner', 'Sprint', 'Today'];
+  static final _labels = <String>['Planner', 'Sprint', 'Today'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       child: Container(
         height: 44,
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.colors.border)),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: EdgeInsets.symmetric(horizontal: 18),
         child: Row(
           children: [
-            const Text(
+            Text(
               '◆ Nexus',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
                 fontSize: 14,
-                color: AppColors.text,
+                color: context.colors.text,
               ),
             ),
-            const SizedBox(width: 24),
+            SizedBox(width: 24),
             for (var i = 0; i < _labels.length; i++) ...[
-              if (i > 0) const SizedBox(width: 4),
+              if (i > 0) SizedBox(width: 4),
               _TopTab(
                 label: _labels[i],
                 selected: activeIndex == i,
@@ -52,10 +48,8 @@ class DesktopTopBar extends ConsumerWidget {
                 },
               ),
             ],
-            const Spacer(),
-            _AccountButton(
-              onLogout: () => ref.read(authProvider.notifier).logout(),
-            ),
+            Spacer(),
+            _AccountButton(),
           ],
         ),
       ),
@@ -63,56 +57,157 @@ class DesktopTopBar extends ConsumerWidget {
   }
 }
 
-class _AccountButton extends StatelessWidget {
-  const _AccountButton({required this.onLogout});
+class _AccountButton extends ConsumerStatefulWidget {
+  _AccountButton();
 
-  final Future<void> Function() onLogout;
+  @override
+  ConsumerState<_AccountButton> createState() => _AccountButtonState();
+}
 
-  Future<void> _showLogoutDialog(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: AppColors.panel,
-          title: const Text(
-            '@nathik',
-            style: TextStyle(color: AppColors.text, fontSize: 16),
-          ),
-          content: const Text(
-            'Logout',
-            style: TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
+class _AccountButtonState extends ConsumerState<_AccountButton> {
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _menuEntry;
+
+  @override
+  void dispose() {
+    _closeMenu();
+    super.dispose();
+  }
+
+  void _toggleMenu() {
+    if (_menuEntry == null) {
+      _openMenu();
+    } else {
+      _closeMenu();
+    }
+  }
+
+  void _openMenu() {
+    final overlay = Overlay.of(context);
+    _menuEntry = OverlayEntry(
+      builder: (overlayContext) {
+        final light = ref.watch(appThemeModeProvider) == ThemeMode.light;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _closeMenu,
+              ),
             ),
-            FilledButton(
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                await onLogout();
-              },
-              child: const Text('Logout'),
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.centerLeft,
+              followerAnchor: Alignment.centerRight,
+              offset: Offset(-8, 0),
+              child: _AccountMenu(
+                light: light,
+                onToggleTheme: () {
+                  _closeMenu();
+                  ref.read(appThemeModeProvider.notifier).toggle();
+                },
+                onLogout: () async {
+                  _closeMenu();
+                  await ref.read(authProvider.notifier).logout();
+                },
+              ),
             ),
           ],
         );
       },
     );
+    overlay.insert(_menuEntry!);
   }
+
+  void _closeMenu() {
+    _menuEntry?.remove();
+    _menuEntry = null;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _toggleMenu,
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            child: Text(
+              '@nathik',
+              style: TextStyle(color: context.colors.muted, fontSize: 12),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountMenu extends StatelessWidget {
+  _AccountMenu({
+    required this.light,
+    required this.onToggleTheme,
+    required this.onLogout,
+  });
+
+  final bool light;
+  final VoidCallback onToggleTheme;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showLogoutDialog(context),
-        borderRadius: BorderRadius.circular(6),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          child: Text(
-            '@nathik',
-            style: TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
+      child: Container(
+        width: 150,
+        padding: EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: context.colors.panel,
+          border: Border.all(color: context.colors.border),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _AccountMenuItem(
+              label: light ? 'Dark mode' : 'Light mode',
+              onTap: onToggleTheme,
+            ),
+            _AccountMenuItem(label: 'Logout', onTap: onLogout),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountMenuItem extends StatelessWidget {
+  _AccountMenuItem({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          label,
+          style: TextStyle(color: context.colors.text, fontSize: 12),
         ),
       ),
     );
@@ -120,11 +215,7 @@ class _AccountButton extends StatelessWidget {
 }
 
 class _TopTab extends StatelessWidget {
-  const _TopTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  _TopTab({required this.label, required this.selected, required this.onTap});
 
   final String label;
   final bool selected;
@@ -138,9 +229,9 @@ class _TopTab extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? AppColors.panel2 : Colors.transparent,
+            color: selected ? context.colors.panel2 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Opacity(
@@ -149,7 +240,7 @@ class _TopTab extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 13,
-                color: selected ? AppColors.text : AppColors.muted,
+                color: selected ? context.colors.text : context.colors.muted,
                 fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
               ),
             ),

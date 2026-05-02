@@ -1,7 +1,7 @@
 part of '../sprint_cart.dart';
 
 class _SprintNavStrip extends ConsumerStatefulWidget {
-  const _SprintNavStrip({
+  _SprintNavStrip({
     required this.sp,
     required this.sprintIdx,
     required this.sprints,
@@ -112,9 +112,9 @@ class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
     final canPrev = widget.sprintIdx > 0;
     final canNext = widget.sprintIdx < widget.sprints.length - 1;
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      padding: EdgeInsets.fromLTRB(10, 12, 10, 6),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -135,38 +135,38 @@ class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
                                 enabled: !_saving,
                                 onSubmitted: (_) => _saveName(),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
-                                  color: AppColors.text,
+                                  color: context.colors.text,
                                 ),
-                                cursorColor: AppColors.accent,
+                                cursorColor: context.colors.accent,
                                 decoration: InputDecoration(
                                   isDense: true,
                                   filled: true,
-                                  fillColor: AppColors.panel2,
-                                  contentPadding: const EdgeInsets.symmetric(
+                                  fillColor: context.colors.panel2,
+                                  contentPadding: EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 6,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(5),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.border,
+                                    borderSide: BorderSide(
+                                      color: context.colors.border,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(5),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.border,
+                                    borderSide: BorderSide(
+                                      color: context.colors.border,
                                     ),
                                   ),
-                                  focusedBorder: const OutlineInputBorder(
+                                  focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.all(
                                       Radius.circular(5),
                                     ),
                                     borderSide: BorderSide(
-                                      color: AppColors.accent,
+                                      color: context.colors.accent,
                                     ),
                                   ),
                                 ),
@@ -176,7 +176,7 @@ class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
                               onTap: _beginEdit,
                               borderRadius: BorderRadius.circular(4),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(
+                                padding: EdgeInsets.symmetric(
                                   horizontal: 4,
                                   vertical: 2,
                                 ),
@@ -184,23 +184,23 @@ class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
                                   widget.sp.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
-                                    color: AppColors.text,
+                                    color: context.colors.text,
                                   ),
                                 ),
                               ),
                             ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     _Badge(label: widget.sp.badge),
                   ],
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   widget.sp.dates,
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                  style: TextStyle(fontSize: 11, color: context.colors.muted),
                 ),
               ],
             ),
@@ -213,11 +213,7 @@ class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
 }
 
 class _Chev extends StatelessWidget {
-  const _Chev({
-    required this.label,
-    required this.enabled,
-    required this.onTap,
-  });
+  _Chev({required this.label, required this.enabled, required this.onTap});
 
   final String label;
   final bool enabled;
@@ -238,7 +234,7 @@ class _Chev extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 16,
-                color: enabled ? AppColors.muted : AppColors.dim,
+                color: enabled ? context.colors.muted : context.colors.dim,
               ),
             ),
           ),
@@ -249,7 +245,7 @@ class _Chev extends StatelessWidget {
 }
 
 class _SprintDots extends StatelessWidget {
-  const _SprintDots({
+  _SprintDots({
     required this.sprints,
     required this.currentIdx,
     required this.onPick,
@@ -264,33 +260,33 @@ class _SprintDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      padding: EdgeInsets.fromLTRB(10, 4, 10, 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (var i = 0; i < sprints.length; i++) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: EdgeInsets.symmetric(horizontal: 2),
               child: InkWell(
                 onTap: () => onPick(i),
-                customBorder: const CircleBorder(),
+                customBorder: CircleBorder(),
                 child: Container(
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
                     color: i == currentIdx
-                        ? AppColors.accent
-                        : AppColors.border2,
+                        ? context.colors.accent
+                        : context.colors.border2,
                     shape: BoxShape.circle,
                   ),
                 ),
               ),
             ),
           ],
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           _SprintAddPlus(onTap: onAdd),
         ],
       ),
@@ -299,7 +295,7 @@ class _SprintDots extends StatelessWidget {
 }
 
 class _SprintAddPlus extends StatefulWidget {
-  const _SprintAddPlus({required this.onTap});
+  _SprintAddPlus({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -318,12 +314,12 @@ class _SprintAddPlusState extends State<_SprintAddPlus> {
       child: InkWell(
         onTap: widget.onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             '+',
             style: TextStyle(
               fontSize: 10,
-              color: _hover ? AppColors.text : AppColors.dim,
+              color: _hover ? context.colors.text : context.colors.dim,
             ),
           ),
         ),
@@ -333,7 +329,7 @@ class _SprintAddPlusState extends State<_SprintAddPlus> {
 }
 
 class _CapBlock extends ConsumerStatefulWidget {
-  const _CapBlock({required this.stats, required this.sprint});
+  _CapBlock({required this.stats, required this.sprint});
 
   final SprintHeaderStats stats;
   final Sprint sprint;
@@ -453,9 +449,9 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
       }
     }
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -466,11 +462,11 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
               InkWell(
                 onTap: _beginEdit,
                 borderRadius: BorderRadius.circular(4),
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 2, vertical: 1),
                   child: Text(
                     'Capacity',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: context.colors.muted),
                   ),
                 ),
               ),
@@ -480,10 +476,10 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
                       children: [
                         Text(
                           '${totalLabel}h / ',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.text,
+                            color: context.colors.text,
                           ),
                         ),
                         SizedBox(
@@ -493,49 +489,51 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
                             controller: _capController,
                             focusNode: _capFocus,
                             enabled: !_saving,
-                            keyboardType: const TextInputType.numberWithOptions(
+                            keyboardType: TextInputType.numberWithOptions(
                               decimal: true,
                             ),
                             onSubmitted: (_) => _saveCapacity(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.text,
+                              color: context.colors.text,
                             ),
-                            cursorColor: AppColors.accent,
+                            cursorColor: context.colors.accent,
                             decoration: InputDecoration(
                               isDense: true,
                               filled: true,
-                              fillColor: AppColors.panel2,
-                              contentPadding: const EdgeInsets.symmetric(
+                              fillColor: context.colors.panel2,
+                              contentPadding: EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 5,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(5),
-                                borderSide: const BorderSide(
-                                  color: AppColors.border,
+                                borderSide: BorderSide(
+                                  color: context.colors.border,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(5),
-                                borderSide: const BorderSide(
-                                  color: AppColors.border,
+                                borderSide: BorderSide(
+                                  color: context.colors.border,
                                 ),
                               ),
-                              focusedBorder: const OutlineInputBorder(
+                              focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(5),
                                 ),
-                                borderSide: BorderSide(color: AppColors.accent),
+                                borderSide: BorderSide(
+                                  color: context.colors.accent,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                        const Text(
+                        Text(
                           'h',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.muted,
+                            color: context.colors.muted,
                           ),
                         ),
                       ],
@@ -544,7 +542,7 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
                       onTap: _beginEdit,
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 2,
                           vertical: 1,
                         ),
@@ -553,17 +551,17 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
                             children: [
                               TextSpan(
                                 text: '${totalLabel}h',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.text,
+                                  color: context.colors.text,
                                 ),
                               ),
                               TextSpan(
                                 text: ' / ${_formatHours(cap)}h',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.muted,
+                                  color: context.colors.muted,
                                 ),
                               ),
                             ],
@@ -573,7 +571,7 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
                     ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: SizedBox(
@@ -586,15 +584,15 @@ class _CapBlockState extends ConsumerState<_CapBlock> {
                   final fillW = (maxW * fillRatio).clamp(0.0, maxW).toDouble();
                   return Stack(
                     children: [
-                      const Positioned.fill(
-                        child: ColoredBox(color: AppColors.panel3),
+                      Positioned.fill(
+                        child: ColoredBox(color: context.colors.panel3),
                       ),
                       Positioned(
                         left: 0,
                         top: 0,
                         bottom: 0,
                         width: fillW,
-                        child: const ColoredBox(color: AppColors.accent),
+                        child: ColoredBox(color: context.colors.accent),
                       ),
                     ],
                   );

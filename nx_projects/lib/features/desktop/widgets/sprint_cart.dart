@@ -42,7 +42,7 @@ enum SprintCartSurface {
 
 /// `reference/desktop/partials/panel-sprint-cart.html` — sprint nav, dots, capacity, list, footer.
 class SprintCart extends ConsumerWidget {
-  const SprintCart({
+  SprintCart({
     super.key,
     required this.border,
     required this.surface,
@@ -58,7 +58,7 @@ class SprintCart extends ConsumerWidget {
     final sprints = ref.watch(sprintsListProvider);
     final idx = ref.watch(sprintIndexProvider);
     if (sprints.isEmpty) {
-      return const SizedBox.shrink();
+      return SizedBox.shrink();
     }
     final sp = idx >= 0 && idx < sprints.length
         ? sprints[idx]
@@ -68,10 +68,10 @@ class SprintCart extends ConsumerWidget {
     final projects = ref.watch(projectsListProvider);
 
     final box = BoxDecoration(
-      color: AppColors.panel,
+      color: context.colors.panel,
       border: border == SprintCartBorder.left
-          ? const Border(left: BorderSide(color: AppColors.border))
-          : const Border(right: BorderSide(color: AppColors.border)),
+          ? Border(left: BorderSide(color: context.colors.border))
+          : Border(right: BorderSide(color: context.colors.border)),
     );
 
     return Container(

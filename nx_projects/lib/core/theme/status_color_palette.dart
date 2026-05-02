@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 
-Color statusForeground(TaskStatus s) {
+Color statusForeground(BuildContext context, TaskStatus s) {
   return switch (s) {
-    TaskStatus.todo => AppColors.muted,
-    TaskStatus.doing => AppColors.accent,
-    TaskStatus.done => AppColors.ok,
-    TaskStatus.blocked => AppColors.warn,
+    TaskStatus.todo => context.colors.muted,
+    TaskStatus.doing => context.colors.accent,
+    TaskStatus.done => context.colors.ok,
+    TaskStatus.blocked => context.colors.warn,
   };
 }
 
-Color? statusBackground(TaskStatus s) {
+Color? statusBackground(BuildContext context, TaskStatus s) {
   return switch (s) {
     TaskStatus.todo => null,
-    TaskStatus.doing => AppColors.accentSoft,
-    TaskStatus.done => const Color(0x1E4ADE80),
-    TaskStatus.blocked => const Color(0x1EFBBF24),
+    TaskStatus.doing => context.colors.accentSoft,
+    TaskStatus.done => Color(0x1E4ADE80),
+    TaskStatus.blocked => Color(0x1EFBBF24),
   };
 }
 

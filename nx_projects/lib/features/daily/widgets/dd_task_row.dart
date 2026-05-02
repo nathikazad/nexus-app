@@ -9,7 +9,7 @@ import 'package:nx_projects/domain/task/task_status.dart';
 
 /// One task card in desktop daily left column (`reference/desktop` `.dd-task` simplified).
 class DdTaskRow extends StatelessWidget {
-  const DdTaskRow({super.key, required this.task, this.onMenu});
+  DdTaskRow({super.key, required this.task, this.onMenu});
 
   final Task task;
   final VoidCallback? onMenu;
@@ -27,30 +27,30 @@ class DdTaskRow extends StatelessWidget {
       glyph = '▢';
     }
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onMenu,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.colors.border),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _StatusDot(status: t.status),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Text(
                 glyph,
                 style: TextStyle(
                   fontSize: 16,
-                  color: done ? AppColors.dim : kindColor(t.kind),
+                  color: done ? context.colors.dim : kindColor(context, t.kind),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,15 +61,22 @@ class DdTaskRow extends StatelessWidget {
                           if (t.crumb.isNotEmpty)
                             TextSpan(
                               text: '${t.crumb}  ',
-                              style: const TextStyle(fontSize: 10, color: AppColors.dim),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: context.colors.dim,
+                              ),
                             ),
                           TextSpan(
                             text: t.title,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: done ? AppColors.muted : AppColors.text,
-                              decoration: done ? TextDecoration.lineThrough : null,
+                              color: done
+                                  ? context.colors.muted
+                                  : context.colors.text,
+                              decoration: done
+                                  ? TextDecoration.lineThrough
+                                  : null,
                             ),
                           ),
                         ],
@@ -78,13 +85,10 @@ class DdTaskRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 formatHours(t.estimate),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.muted,
-                ),
+                style: TextStyle(fontSize: 12, color: context.colors.muted),
               ),
             ],
           ),
@@ -95,34 +99,39 @@ class DdTaskRow extends StatelessWidget {
 }
 
 class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.status});
+  _StatusDot({required this.status});
 
   final TaskStatus status;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: EdgeInsets.only(top: 6),
       child: Container(
         width: 9,
         height: 9,
         decoration: BoxDecoration(
-          color: _dotColor(status),
+          color: _dotColor(context, status),
           shape: BoxShape.circle,
           boxShadow: status == TaskStatus.doing
-              ? [BoxShadow(color: AppColors.accent.withValues(alpha: 0.3), spreadRadius: 2)]
+              ? [
+                  BoxShadow(
+                    color: context.colors.accent.withValues(alpha: 0.3),
+                    spreadRadius: 2,
+                  ),
+                ]
               : null,
         ),
       ),
     );
   }
 
-  Color _dotColor(TaskStatus s) {
+  Color _dotColor(BuildContext context, TaskStatus s) {
     return switch (s) {
-      TaskStatus.todo => AppColors.dim,
-      TaskStatus.doing => AppColors.accent,
-      TaskStatus.done => AppColors.ok,
-      TaskStatus.blocked => AppColors.crit,
+      TaskStatus.todo => context.colors.dim,
+      TaskStatus.doing => context.colors.accent,
+      TaskStatus.done => context.colors.ok,
+      TaskStatus.blocked => context.colors.crit,
     };
   }
 }

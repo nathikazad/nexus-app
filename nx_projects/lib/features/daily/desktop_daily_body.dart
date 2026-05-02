@@ -15,7 +15,7 @@ import 'package:nx_projects/features/shell/selection_providers.dart';
 
 /// Desktop two-column day page + journal (`reference/desktop` `view-today` layout, simplified).
 class DesktopDailyBody extends ConsumerWidget {
-  const DesktopDailyBody({super.key, required this.onOpenTaskMenu});
+  DesktopDailyBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
@@ -29,30 +29,30 @@ class DesktopDailyBody extends ConsumerWidget {
     return CustomScrollView(
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          padding: EdgeInsets.fromLTRB(24, 16, 24, 24),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               DdHead(
                 dailyDate: dailyDate,
                 onPrev: () {
-                  final d = dailyDate.subtract(const Duration(days: 1));
+                  final d = dailyDate.subtract(Duration(days: 1));
                   ref.read(dailyDateProvider.notifier).set(formatYmd(d));
                 },
                 onNext: () {
-                  final d = dailyDate.add(const Duration(days: 1));
+                  final d = dailyDate.add(Duration(days: 1));
                   ref.read(dailyDateProvider.notifier).set(formatYmd(d));
                 },
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               DdStats(stats: stats),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               DailyProgressBar(
                 todoH: stats.hTodo,
                 doingH: stats.hDoing,
                 blockedH: stats.hBlocked,
                 doneH: stats.hDone,
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -64,16 +64,13 @@ class DesktopDailyBody extends ConsumerWidget {
                         onOpenTaskMenu: onOpenTaskMenu,
                       ),
                     ),
-                    const SizedBox(width: 24),
-                    const Expanded(
-                      flex: 40,
-                      child: ActionsZonePlaceholder(),
-                    ),
+                    SizedBox(width: 24),
+                    Expanded(flex: 40, child: ActionsZonePlaceholder()),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const DdJournal(),
+              SizedBox(height: 16),
+              DdJournal(),
             ]),
           ),
         ),
@@ -83,10 +80,7 @@ class DesktopDailyBody extends ConsumerWidget {
 }
 
 class _TasksColumn extends ConsumerWidget {
-  const _TasksColumn({
-    required this.tasks,
-    required this.onOpenTaskMenu,
-  });
+  _TasksColumn({required this.tasks, required this.onOpenTaskMenu});
 
   final List<Task> tasks;
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
@@ -98,36 +92,40 @@ class _TasksColumn extends ConsumerWidget {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'TASKS',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
-                color: AppColors.muted,
+                color: context.colors.muted,
               ),
             ),
-            const Expanded(
+            Expanded(
               child: Padding(
                 padding: EdgeInsets.only(left: 12),
-                child: Divider(color: AppColors.border, height: 1),
+                child: Divider(color: context.colors.border, height: 1),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         if (tasks.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Text(
               'Nothing planned for this day.',
-              style: TextStyle(color: AppColors.dim, fontStyle: FontStyle.italic, fontSize: 13),
+              style: TextStyle(
+                color: context.colors.dim,
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+              ),
             ),
           )
         else
           ...tasks.map(
             (t) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: 10),
               child: DdTaskRow(
                 task: t,
                 onMenu: () => onOpenTaskMenu(context, ref, t),

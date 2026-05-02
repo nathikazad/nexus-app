@@ -4,7 +4,7 @@ import 'package:nx_projects/core/formatting/hours_format.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 
 class ProjectRow extends StatelessWidget {
-  const ProjectRow({
+  ProjectRow({
     super.key,
     required this.name,
     required this.color,
@@ -22,31 +22,31 @@ class ProjectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.colors.border),
           ),
           child: Row(
             children: [
               Container(
                 width: 10,
                 height: 10,
-                margin: const EdgeInsets.only(right: 10),
+                margin: EdgeInsets.only(right: 10),
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               Expanded(
                 child: Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.text,
+                    color: context.colors.text,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -54,13 +54,10 @@ class ProjectRow extends StatelessWidget {
               ),
               Text(
                 '$count · ${formatHours(hours)}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.muted,
-                ),
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: AppColors.dim, size: 20),
+              SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: context.colors.dim, size: 20),
             ],
           ),
         ),

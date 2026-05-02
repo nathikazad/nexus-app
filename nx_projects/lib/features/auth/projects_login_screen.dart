@@ -8,7 +8,7 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 /// Login (user id + backend preset), same flow as
 /// [nx_time TimeLoginScreen] / nx_expense ExpenseLoginScreen, dark theme.
 class ProjectsLoginScreen extends ConsumerStatefulWidget {
-  const ProjectsLoginScreen({super.key});
+  ProjectsLoginScreen({super.key});
 
   @override
   ConsumerState<ProjectsLoginScreen> createState() =>
@@ -38,7 +38,10 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppColors.crit),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: context.colors.crit,
+        ),
       );
     }
   }
@@ -51,104 +54,104 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
     final labelStyle = GoogleFonts.inter(
       fontSize: 11,
       fontWeight: FontWeight.w600,
-      color: AppColors.muted,
+      color: context.colors.muted,
       letterSpacing: 1.2,
     );
 
     InputDecoration fieldDeco(String hint, {Widget? prefix}) {
       return InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.dim),
+        hintStyle: GoogleFonts.inter(fontSize: 14, color: context.colors.dim),
         prefixIcon: prefix,
         filled: true,
-        fillColor: AppColors.panel,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 14,
-        ),
+        fillColor: context.colors.panel,
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: context.colors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1),
+          borderSide: BorderSide(color: context.colors.accent, width: 1),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.colors.bg,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: Form(
             key: _formKey,
             child: Column(
               children: [
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
                 Container(
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: AppColors.accent,
+                    color: context.colors.accent,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.view_kanban_outlined,
-                    color: AppColors.bg,
+                    color: context.colors.bg,
                     size: 32,
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 Text(
                   'Nexus Projects',
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.5,
-                    color: AppColors.text,
+                    color: context.colors.text,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   'Sign in to load your planner from the backend.',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: AppColors.muted,
+                    color: context.colors.muted,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text('PERSON', style: labelStyle),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 DropdownButtonFormField<AuthLoginProfile>(
                   isExpanded: true,
                   initialValue: _selectedProfile,
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: context.colors.text,
+                  ),
                   decoration: fieldDeco(
                     'Select person',
-                    prefix: const Padding(
+                    prefix: Padding(
                       padding: EdgeInsets.only(left: 12, right: 8),
                       child: Icon(
                         Icons.person_outline,
-                        color: AppColors.muted,
+                        color: context.colors.muted,
                         size: 20,
                       ),
                     ),
                   ),
-                  dropdownColor: AppColors.panel2,
+                  dropdownColor: context.colors.panel2,
                   items: authLoginProfiles
                       .map(
                         (profile) => DropdownMenuItem<AuthLoginProfile>(
@@ -165,29 +168,32 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
                           }
                         },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text('BACKEND', style: labelStyle),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 DropdownButtonFormField<BackendPreset>(
                   isExpanded: true,
                   key: ValueKey<BackendPreset>(_selectedPreset),
                   initialValue: _selectedPreset,
                   decoration: fieldDeco(
                     'Select backend',
-                    prefix: const Padding(
+                    prefix: Padding(
                       padding: EdgeInsets.only(left: 12, right: 8),
                       child: Icon(
                         Icons.dns_outlined,
-                        color: AppColors.muted,
+                        color: context.colors.muted,
                         size: 20,
                       ),
                     ),
                   ),
-                  dropdownColor: AppColors.panel2,
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
+                  dropdownColor: context.colors.panel2,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: context.colors.text,
+                  ),
                   items: BackendPreset.values
                       .map(
                         (p) => DropdownMenuItem<BackendPreset>(
@@ -204,18 +210,18 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
                           }
                         },
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: loading ? null : _handleLogin,
                     child: loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.bg,
+                              color: context.colors.bg,
                             ),
                           )
                         : Text(
@@ -229,17 +235,17 @@ class _ProjectsLoginScreenState extends ConsumerState<ProjectsLoginScreen> {
                 ),
                 if (authState.hasError)
                   Padding(
-                    padding: const EdgeInsets.only(top: 20),
+                    padding: EdgeInsets.only(top: 20),
                     child: Text(
                       'Error: ${authState.error}',
                       style: GoogleFonts.inter(
-                        color: AppColors.crit,
+                        color: context.colors.crit,
                         fontSize: 13,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
               ],
             ),
           ),

@@ -30,7 +30,7 @@ String _plannerFilterChipValue(Set<String> selected) {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.lbl, required this.value, this.onTap});
+  _FilterChip({required this.lbl, required this.value, this.onTap});
 
   final String lbl;
   final String value;
@@ -44,19 +44,19 @@ class _FilterChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.panel,
-            border: Border.all(color: AppColors.border),
+            color: context.colors.panel,
+            border: Border.all(color: context.colors.border),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text.rich(
             TextSpan(
-              style: const TextStyle(fontSize: 12, color: AppColors.text),
+              style: TextStyle(fontSize: 12, color: context.colors.text),
               children: [
                 TextSpan(
                   text: '$lbl ',
-                  style: const TextStyle(color: AppColors.muted),
+                  style: TextStyle(color: context.colors.muted),
                 ),
                 TextSpan(text: value),
               ],
@@ -69,7 +69,7 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _ProjectFilterChip extends ConsumerStatefulWidget {
-  const _ProjectFilterChip();
+  _ProjectFilterChip();
 
   @override
   ConsumerState<_ProjectFilterChip> createState() => _ProjectFilterChipState();
@@ -89,19 +89,19 @@ class _ProjectFilterChipState extends ConsumerState<_ProjectFilterChip> {
 
     return MenuAnchor(
       controller: _menu,
-      alignmentOffset: const Offset(0, 6),
+      alignmentOffset: Offset(0, 6),
       style: MenuStyle(
-        backgroundColor: const WidgetStatePropertyAll(AppColors.panel),
-        elevation: const WidgetStatePropertyAll(8),
-        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        backgroundColor: WidgetStatePropertyAll(context.colors.panel),
+        elevation: WidgetStatePropertyAll(8),
+        padding: WidgetStatePropertyAll(EdgeInsets.zero),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: context.colors.border),
           ),
         ),
       ),
-      menuChildren: const [_ProjectFilterMenu()],
+      menuChildren: [_ProjectFilterMenu()],
       builder: (context, controller, child) {
         return _FilterChip(
           lbl: 'Project',
@@ -120,7 +120,7 @@ class _ProjectFilterChipState extends ConsumerState<_ProjectFilterChip> {
 }
 
 class _KindFilterChip extends ConsumerStatefulWidget {
-  const _KindFilterChip();
+  _KindFilterChip();
 
   @override
   ConsumerState<_KindFilterChip> createState() => _KindFilterChipState();
@@ -136,19 +136,19 @@ class _KindFilterChipState extends ConsumerState<_KindFilterChip> {
 
     return MenuAnchor(
       controller: _menu,
-      alignmentOffset: const Offset(0, 6),
+      alignmentOffset: Offset(0, 6),
       style: MenuStyle(
-        backgroundColor: const WidgetStatePropertyAll(AppColors.panel),
-        elevation: const WidgetStatePropertyAll(8),
-        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        backgroundColor: WidgetStatePropertyAll(context.colors.panel),
+        elevation: WidgetStatePropertyAll(8),
+        padding: WidgetStatePropertyAll(EdgeInsets.zero),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: context.colors.border),
           ),
         ),
       ),
-      menuChildren: const [_KindFilterMenu()],
+      menuChildren: [_KindFilterMenu()],
       builder: (context, controller, child) {
         return _FilterChip(
           lbl: 'Kind',
@@ -167,7 +167,7 @@ class _KindFilterChipState extends ConsumerState<_KindFilterChip> {
 }
 
 class _StatusFilterChip extends ConsumerStatefulWidget {
-  const _StatusFilterChip();
+  _StatusFilterChip();
 
   @override
   ConsumerState<_StatusFilterChip> createState() => _StatusFilterChipState();
@@ -183,19 +183,19 @@ class _StatusFilterChipState extends ConsumerState<_StatusFilterChip> {
 
     return MenuAnchor(
       controller: _menu,
-      alignmentOffset: const Offset(0, 6),
+      alignmentOffset: Offset(0, 6),
       style: MenuStyle(
-        backgroundColor: const WidgetStatePropertyAll(AppColors.panel),
-        elevation: const WidgetStatePropertyAll(8),
-        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        backgroundColor: WidgetStatePropertyAll(context.colors.panel),
+        elevation: WidgetStatePropertyAll(8),
+        padding: WidgetStatePropertyAll(EdgeInsets.zero),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: context.colors.border),
           ),
         ),
       ),
-      menuChildren: const [_StatusFilterMenu()],
+      menuChildren: [_StatusFilterMenu()],
       builder: (context, controller, child) {
         return _FilterChip(
           lbl: 'Status',
@@ -214,7 +214,7 @@ class _StatusFilterChipState extends ConsumerState<_StatusFilterChip> {
 }
 
 class _ProjectFilterMenu extends ConsumerWidget {
-  const _ProjectFilterMenu();
+  _ProjectFilterMenu();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -223,9 +223,9 @@ class _ProjectFilterMenu extends ConsumerWidget {
     final roots = projects.where((p) => p.parentId == null).toList();
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 420, minWidth: 320),
+      constraints: BoxConstraints(maxHeight: 420, minWidth: 320),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -243,7 +243,7 @@ class _ProjectFilterMenu extends ConsumerWidget {
                 ref.read(filterProjectIdsProvider.notifier).setAll(allIds);
               },
             ),
-            const Divider(height: 1, color: AppColors.border),
+            Divider(height: 1, color: context.colors.border),
             for (final root in roots) ...[
               _ProjectFilterRow(
                 project: root,
@@ -269,7 +269,7 @@ class _ProjectFilterMenu extends ConsumerWidget {
 }
 
 class _KindFilterMenu extends ConsumerWidget {
-  const _KindFilterMenu();
+  _KindFilterMenu();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -279,9 +279,9 @@ class _KindFilterMenu extends ConsumerWidget {
         selected.length == all.length && all.every((k) => selected.contains(k));
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 360, minWidth: 240),
+      constraints: BoxConstraints(maxHeight: 360, minWidth: 240),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -295,8 +295,8 @@ class _KindFilterMenu extends ConsumerWidget {
               selected: allSelected,
               onTap: () => ref.read(filterKindSetProvider.notifier).setAll(),
             ),
-            const Divider(height: 1, color: AppColors.border),
-            for (final k in const ['feat', 'bug', 'task'])
+            Divider(height: 1, color: context.colors.border),
+            for (final k in ['feat', 'bug', 'task'])
               _FilterMenuActionRow(
                 label: _plannerKindMenuLabel(k),
                 selected: selected.contains(k),
@@ -310,7 +310,7 @@ class _KindFilterMenu extends ConsumerWidget {
 }
 
 class _StatusFilterMenu extends ConsumerWidget {
-  const _StatusFilterMenu();
+  _StatusFilterMenu();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -320,9 +320,9 @@ class _StatusFilterMenu extends ConsumerWidget {
         selected.length == all.length && all.every((k) => selected.contains(k));
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 400, minWidth: 240),
+      constraints: BoxConstraints(maxHeight: 400, minWidth: 240),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -336,8 +336,8 @@ class _StatusFilterMenu extends ConsumerWidget {
               selected: allSelected,
               onTap: () => ref.read(filterStatusSetProvider.notifier).setAll(),
             ),
-            const Divider(height: 1, color: AppColors.border),
-            for (final s in const ['todo', 'doing', 'done', 'blocked'])
+            Divider(height: 1, color: context.colors.border),
+            for (final s in ['todo', 'doing', 'done', 'blocked'])
               _FilterMenuActionRow(
                 label: _plannerStatusMenuLabel(s),
                 selected: selected.contains(s),
@@ -352,7 +352,7 @@ class _StatusFilterMenu extends ConsumerWidget {
 }
 
 class _FilterMenuActionRow extends StatelessWidget {
-  const _FilterMenuActionRow({
+  _FilterMenuActionRow({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -367,20 +367,20 @@ class _FilterMenuActionRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
             Icon(
               selected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 18,
-              color: selected ? AppColors.accent : AppColors.dim,
+              color: selected ? context.colors.accent : context.colors.dim,
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: selected ? AppColors.text : AppColors.muted,
+                color: selected ? context.colors.text : context.colors.muted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -392,7 +392,7 @@ class _FilterMenuActionRow extends StatelessWidget {
 }
 
 class _ProjectFilterRow extends StatelessWidget {
-  const _ProjectFilterRow({
+  _ProjectFilterRow({
     required this.project,
     required this.selected,
     required this.onTap,
@@ -409,16 +409,16 @@ class _ProjectFilterRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         child: Row(
           children: [
             SizedBox(width: indent ? 22 : 0),
             Icon(
               selected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 18,
-              color: selected ? AppColors.accent : AppColors.dim,
+              color: selected ? context.colors.accent : context.colors.dim,
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             if (!indent) ...[
               Container(
                 width: 8,
@@ -428,14 +428,14 @@ class _ProjectFilterRow extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
             ] else ...[
-              const Icon(
+              Icon(
                 Icons.subdirectory_arrow_right,
                 size: 14,
-                color: AppColors.dim,
+                color: context.colors.dim,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
             ],
             Expanded(
               child: Text(
@@ -444,7 +444,7 @@ class _ProjectFilterRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  color: indent ? AppColors.muted : AppColors.text,
+                  color: indent ? context.colors.muted : context.colors.text,
                   fontWeight: indent ? FontWeight.w400 : FontWeight.w500,
                 ),
               ),

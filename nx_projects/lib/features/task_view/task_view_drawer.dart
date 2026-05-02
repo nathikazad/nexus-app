@@ -16,7 +16,7 @@ import 'package:nx_projects/features/shared/widgets/desktop_task_row.dart';
 
 /// Read-only task detail for the desktop right-side drawer (`reference/desktop/view-task.html`).
 class TaskViewDrawerContent extends ConsumerWidget {
-  const TaskViewDrawerContent({
+  TaskViewDrawerContent({
     super.key,
     required this.taskId,
     required this.onClose,
@@ -37,10 +37,10 @@ class TaskViewDrawerContent extends ConsumerWidget {
     }
     if (t == null) {
       return Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Text(
           'Task #$taskId not found (it may have been removed).',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: context.colors.muted, fontSize: 13),
         ),
       );
     }
@@ -59,7 +59,7 @@ class TaskViewDrawerContent extends ConsumerWidget {
 }
 
 class _TaskViewBody extends ConsumerWidget {
-  const _TaskViewBody({required this.task, this.sprint, required this.onClose});
+  _TaskViewBody({required this.task, this.sprint, required this.onClose});
 
   final Task task;
   final Sprint? sprint;
@@ -74,38 +74,38 @@ class _TaskViewBody extends ConsumerWidget {
       case TaskKind.bug:
         glyph = '●';
         kindLabel = 'Bug';
-        gColor = AppColors.bug;
+        gColor = context.colors.bug;
       case TaskKind.feat:
         glyph = '◉';
         kindLabel = 'Feature';
-        gColor = AppColors.feat;
+        gColor = context.colors.feat;
       case TaskKind.task:
         glyph = '▢';
         kindLabel = 'Task';
-        gColor = AppColors.dim;
+        gColor = context.colors.dim;
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          padding: EdgeInsets.fromLTRB(16, 8, 8, 8),
           child: Row(
             children: [
-              TextButton(onPressed: onClose, child: const Text('Back')),
-              const Spacer(),
+              TextButton(onPressed: onClose, child: Text('Back')),
+              Spacer(),
               FilledButton(
                 onPressed: () {
                   ref.read(desktopTaskDrawerProvider.notifier).editTask(task);
                 },
-                child: const Text('Edit', style: TextStyle(fontSize: 12)),
+                child: Text('Edit', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
         ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -120,7 +120,7 @@ class _TaskViewBody extends ConsumerWidget {
                         height: 1.1,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,13 +134,13 @@ class _TaskViewBody extends ConsumerWidget {
                               color: gColor,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2),
                           Text(
                             task.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.text,
+                              color: context.colors.text,
                             ),
                           ),
                         ],
@@ -148,96 +148,96 @@ class _TaskViewBody extends ConsumerWidget {
                     ),
                     IconButton(
                       onPressed: onClose,
-                      icon: const Icon(Icons.close, size: 20),
+                      icon: Icon(Icons.close, size: 20),
                       style: IconButton.styleFrom(
-                        foregroundColor: AppColors.muted,
+                        foregroundColor: context.colors.muted,
                       ),
                     ),
                   ],
                 ),
                 if (task.crumb.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     task.crumb,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: context.colors.muted),
                   ),
                 ],
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
                     _pill(
+                      context,
                       'Bucket: ${_bucketLabel(task.bucket)}',
-                      AppColors.panel2,
+                      context.colors.panel2,
                     ),
                     _pill(
+                      context,
                       sprint == null
                           ? 'Sprint: ${desktopSprintChipLabelForTask(task, ref.watch(sprintsListProvider))} (backlog)'
                           : 'Sprint: ${sprint!.name} (${sprint!.dates})',
-                      AppColors.panel2,
+                      context.colors.panel2,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _StatusChanger(task: task),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 _metaRow(
+                  context,
                   'Estimate',
                   task.estimate == 0 ? '—' : '${task.estimate}h',
                 ),
                 if (task.actualHours > 0)
-                  _metaRow('Actual', '${task.actualHours}h'),
+                  _metaRow(context, 'Actual', '${task.actualHours}h'),
                 if (task.plannedFor != null)
-                  _metaRow('Planned', task.plannedFor!),
+                  _metaRow(context, 'Planned', task.plannedFor!),
                 if (task.driftFrom.isNotEmpty)
-                  _metaRow('Drift from', task.driftFrom.join(', ')),
+                  _metaRow(context, 'Drift from', task.driftFrom.join(', ')),
                 if (task.kind == TaskKind.bug) ...[
-                  const SizedBox(height: 8),
-                  _sectionTitle('Severity'),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 8),
+                  _sectionTitle(context, 'Severity'),
+                  SizedBox(height: 4),
                   Text(
                     task.severity == null
                         ? '—'
                         : _severityLabel(task.severity!),
-                    style: const TextStyle(color: AppColors.text, fontSize: 13),
+                    style: TextStyle(color: context.colors.text, fontSize: 13),
                   ),
                 ],
                 if (task.kind == TaskKind.feat) ...[
-                  const SizedBox(height: 8),
-                  _sectionTitle('Ideation'),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 8),
+                  _sectionTitle(context, 'Ideation'),
+                  SizedBox(height: 4),
                   Text(
                     task.ideationStatus?.displayLabel ?? '—',
-                    style: const TextStyle(color: AppColors.text, fontSize: 13),
+                    style: TextStyle(color: context.colors.text, fontSize: 13),
                   ),
                 ],
-                const SizedBox(height: 16),
-                _sectionTitle('Notes'),
-                const SizedBox(height: 6),
+                SizedBox(height: 16),
+                _sectionTitle(context, 'Notes'),
+                SizedBox(height: 6),
                 if (task.notes.isEmpty)
-                  const Text(
+                  Text(
                     '—',
-                    style: TextStyle(color: AppColors.dim, fontSize: 13),
+                    style: TextStyle(color: context.colors.dim, fontSize: 13),
                   )
                 else
                   Text(
                     task.notes,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: context.colors.text,
                       fontSize: 13,
                       height: 1.5,
                     ),
                   ),
-                const SizedBox(height: 24),
-                const Text(
+                SizedBox(height: 24),
+                Text(
                   'Sub-tasks, drift map, and history are not available in the app data model yet.',
                   style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.dim,
+                    color: context.colors.dim,
                     height: 1.4,
                   ),
                 ),
@@ -249,28 +249,28 @@ class _TaskViewBody extends ConsumerWidget {
     );
   }
 
-  static Widget _pill(String text, Color bg) {
+  static Widget _pill(BuildContext context, String text, Color bg) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
-          color: AppColors.muted,
+          color: context.colors.muted,
           fontWeight: FontWeight.w500,
         ),
       ),
     );
   }
 
-  static Widget _metaRow(String k, String v) {
+  static Widget _metaRow(BuildContext context, String k, String v) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -278,9 +278,9 @@ class _TaskViewBody extends ConsumerWidget {
             width: 120,
             child: Text(
               k,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: AppColors.muted,
+                color: context.colors.muted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -288,7 +288,7 @@ class _TaskViewBody extends ConsumerWidget {
           Expanded(
             child: Text(
               v,
-              style: const TextStyle(fontSize: 12, color: AppColors.text),
+              style: TextStyle(fontSize: 12, color: context.colors.text),
             ),
           ),
         ],
@@ -296,12 +296,12 @@ class _TaskViewBody extends ConsumerWidget {
     );
   }
 
-  static Widget _sectionTitle(String t) {
+  static Widget _sectionTitle(BuildContext context, String t) {
     return Text(
       t,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
-        color: AppColors.muted,
+        color: context.colors.muted,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.4,
       ),
@@ -310,7 +310,7 @@ class _TaskViewBody extends ConsumerWidget {
 }
 
 class _StatusChanger extends ConsumerWidget {
-  const _StatusChanger({required this.task});
+  _StatusChanger({required this.task});
 
   final Task task;
 
@@ -318,11 +318,11 @@ class _StatusChanger extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
-        const SizedBox(
+        SizedBox(
           width: 88,
           child: Text(
             'Status',
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: context.colors.muted),
           ),
         ),
         Expanded(
@@ -345,7 +345,7 @@ class _StatusChanger extends ConsumerWidget {
 }
 
 class _StatusButton extends StatelessWidget {
-  const _StatusButton({
+  _StatusButton({
     required this.status,
     required this.selected,
     required this.onTap,
@@ -357,10 +357,11 @@ class _StatusButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = status_palette.statusForeground(status);
+    final fg = status_palette.statusForeground(context, status);
     final bg = selected
-        ? status_palette.statusBackground(status) ?? AppColors.panel3
-        : AppColors.panel2;
+        ? status_palette.statusBackground(context, status) ??
+              context.colors.panel3
+        : context.colors.panel2;
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(999),
@@ -368,15 +369,15 @@ class _StatusButton extends StatelessWidget {
         onTap: selected ? null : onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            border: Border.all(color: selected ? fg : AppColors.border),
+            border: Border.all(color: selected ? fg : context.colors.border),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             _statusLabel(status),
             style: TextStyle(
-              color: selected ? fg : AppColors.muted,
+              color: selected ? fg : context.colors.muted,
               fontSize: 11,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             ),

@@ -1,5 +1,1 @@
-enum SprintState {
-  planned,
-  active,
-  done,
-}
+enum SprintState { planned, active, done }

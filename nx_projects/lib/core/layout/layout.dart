@@ -14,7 +14,5 @@ abstract final class NxLayout {
 
   /// `.content` padding
   static const EdgeInsets contentPadding = EdgeInsets.fromLTRB(12, 4, 12, 16);
-  static const BorderRadius cardRadius = BorderRadius.all(
-    Radius.circular(10),
-  );
+  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(10));
 }

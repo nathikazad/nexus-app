@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 
 class ProjectKindSection extends StatelessWidget {
-  const ProjectKindSection({super.key, required this.title, required this.count});
+  ProjectKindSection({super.key, required this.title, required this.count});
 
   final String title;
   final int count;
@@ -11,26 +11,29 @@ class ProjectKindSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 20, 6, 8),
+      padding: EdgeInsets.fromLTRB(6, 20, 6, 8),
       child: Row(
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               letterSpacing: 0.8,
-              color: AppColors.muted,
+              color: context.colors.muted,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.panel2,
+              color: context.colors.panel2,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text('$count', style: const TextStyle(fontSize: 10, color: AppColors.muted)),
+            child: Text(
+              '$count',
+              style: TextStyle(fontSize: 10, color: context.colors.muted),
+            ),
           ),
         ],
       ),

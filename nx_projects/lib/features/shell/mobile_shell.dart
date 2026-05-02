@@ -25,7 +25,7 @@ import 'package:nx_projects/features/task_edit/project_edit_sheet.dart';
 import 'package:nx_projects/features/task_edit/task_edit_sheet.dart';
 
 class MobileShell extends ConsumerStatefulWidget {
-  const MobileShell({super.key});
+  MobileShell({super.key});
 
   @override
   ConsumerState<MobileShell> createState() => _MobileShellState();
@@ -48,12 +48,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   }
 
   void _openTaskMenu(BuildContext context, WidgetRef r, Task t) {
-    showTaskContextSheet(
-      context,
-      r,
-      task: t,
-      onAfterChange: () {},
-    );
+    showTaskContextSheet(context, r, task: t, onAfterChange: () {});
   }
 
   void _resetDrillOnTabChange(WidgetRef r) {
@@ -129,7 +124,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
     final sprints = ref.watch(sprintsListProvider);
     final sprintIdx = ref.watch(sprintIndexProvider);
     if (sprints.isEmpty) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(child: CircularProgressIndicator.adaptive()),
       );
     }
@@ -141,7 +136,8 @@ class _MobileShellState extends ConsumerState<MobileShell> {
 
     final showSearchRow = tab == 0 || tab == 1;
     final showFilter = tab == 0 && ref.watch(selectedProjectIdProvider) == null;
-    final hasActiveFilter = ref.watch(filterKindSetProvider).isNotEmpty ||
+    final hasActiveFilter =
+        ref.watch(filterKindSetProvider).isNotEmpty ||
         ref.watch(filterStatusSetProvider).isNotEmpty ||
         ref.watch(filterProjectIdsProvider).isNotEmpty;
     final showBack = _showBack(ref, tab);
@@ -150,25 +146,25 @@ class _MobileShellState extends ConsumerState<MobileShell> {
     final showFab = tab == 0 && ref.watch(selectedProjectIdProvider) != null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: AppColors.panel,
+      value: SystemUiOverlayStyle(
+        statusBarColor: context.colors.panel,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: AppColors.panel,
+        systemNavigationBarColor: context.colors.panel,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: context.colors.bg,
         body: LayoutBuilder(
           builder: (context, constraints) {
             final colW = math.min(NxLayout.maxAppWidth, constraints.maxWidth);
             return Center(
               child: Container(
                 width: colW,
-                decoration: const BoxDecoration(
-                  color: AppColors.bg,
+                decoration: BoxDecoration(
+                  color: context.colors.bg,
                   border: Border(
-                    left: BorderSide(color: AppColors.border),
-                    right: BorderSide(color: AppColors.border),
+                    left: BorderSide(color: context.colors.border),
+                    right: BorderSide(color: context.colors.border),
                   ),
                 ),
                 child: Column(
@@ -185,29 +181,35 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                         canNext: sprintIdx < sprints.length - 1,
                         onPrev: () {
                           if (sprintIdx > 0) {
-                            ref.read(sprintIndexProvider.notifier).set(sprintIdx - 1);
+                            ref
+                                .read(sprintIndexProvider.notifier)
+                                .set(sprintIdx - 1);
                           }
                         },
                         onNext: () {
                           if (sprintIdx < sprints.length - 1) {
-                            ref.read(sprintIndexProvider.notifier).set(sprintIdx + 1);
+                            ref
+                                .read(sprintIndexProvider.notifier)
+                                .set(sprintIdx + 1);
                           }
                         },
                       ),
                     if (tab == 2 && sp.goal.isNotEmpty)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                        decoration: const BoxDecoration(
-                          color: AppColors.panel,
-                          border: Border(bottom: BorderSide(color: AppColors.border)),
+                        padding: EdgeInsets.fromLTRB(14, 10, 14, 10),
+                        decoration: BoxDecoration(
+                          color: context.colors.panel,
+                          border: Border(
+                            bottom: BorderSide(color: context.colors.border),
+                          ),
                         ),
                         child: Text(
                           sp.goal,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
-                            color: AppColors.muted,
+                            color: context.colors.muted,
                           ),
                         ),
                       ),
@@ -217,17 +219,21 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                         line: fullDateLine(dailyDate),
                         isToday: dailyYmd == kReferenceTodayYmd,
                         onPrev: () {
-                          final d = dailyDate.subtract(const Duration(days: 1));
-                          ref.read(dailyDateProvider.notifier).set(formatYmd(d));
+                          final d = dailyDate.subtract(Duration(days: 1));
+                          ref
+                              .read(dailyDateProvider.notifier)
+                              .set(formatYmd(d));
                         },
                         onNext: () {
-                          final d = dailyDate.add(const Duration(days: 1));
-                          ref.read(dailyDateProvider.notifier).set(formatYmd(d));
+                          final d = dailyDate.add(Duration(days: 1));
+                          ref
+                              .read(dailyDateProvider.notifier)
+                              .set(formatYmd(d));
                         },
                       ),
                     if (showSearchRow)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                        padding: EdgeInsets.fromLTRB(14, 10, 14, 4),
                         child: Row(
                           children: [
                             Expanded(
@@ -236,48 +242,69 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                                 onChanged: (s) {
                                   ref.read(searchQueryProvider.notifier).set(s);
                                 },
-                                style: const TextStyle(
-                                    color: AppColors.text, fontSize: 14, height: 1.45),
-                                cursorColor: AppColors.accent,
+                                style: TextStyle(
+                                  color: context.colors.text,
+                                  fontSize: 14,
+                                  height: 1.45,
+                                ),
+                                cursorColor: context.colors.accent,
                                 decoration: InputDecoration(
                                   hintText: 'Search tasks…',
-                                  hintStyle: const TextStyle(
-                                      color: AppColors.muted, fontSize: 14, height: 1.45),
+                                  hintStyle: TextStyle(
+                                    color: context.colors.muted,
+                                    fontSize: 14,
+                                    height: 1.45,
+                                  ),
                                   filled: true,
-                                  fillColor: AppColors.panel,
+                                  fillColor: context.colors.panel,
                                   isDense: true,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: AppColors.border),
+                                    borderSide: BorderSide(
+                                      color: context.colors.border,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: AppColors.border),
+                                    borderSide: BorderSide(
+                                      color: context.colors.border,
+                                    ),
                                   ),
-                                  focusedBorder: const OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                                    borderSide: BorderSide(color: AppColors.accent, width: 1),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(10),
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: context.colors.accent,
+                                      width: 1,
+                                    ),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                 ),
                               ),
                             ),
                             if (showFilter) ...[
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Stack(
                                 clipBehavior: Clip.none,
                                 children: [
                                   _FilterButton(
                                     hasActive: hasActiveFilter,
-                                    onPressed: () => showFilterSheet(context, ref),
+                                    onPressed: () =>
+                                        showFilterSheet(context, ref),
                                   ),
                                   if (hasActiveFilter)
-                                    const Positioned(
+                                    Positioned(
                                       right: 4,
                                       top: 2,
                                       child: Icon(
-                                          Icons.circle, size: 6, color: AppColors.accent),
+                                        Icons.circle,
+                                        size: 6,
+                                        color: context.colors.accent,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -306,11 +333,16 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                               bottom: 8,
                               child: _Fab(
                                 isOpen: _fabOpen,
-                                onToggle: () => setState(() => _fabOpen = !_fabOpen),
+                                onToggle: () =>
+                                    setState(() => _fabOpen = !_fabOpen),
                                 onNewTask: () {
                                   setState(() => _fabOpen = false);
-                                  final pid = ref.read(selectedProjectIdProvider);
-                                  final sid = ref.read(selectedSubProjectIdProvider);
+                                  final pid = ref.read(
+                                    selectedProjectIdProvider,
+                                  );
+                                  final sid = ref.read(
+                                    selectedSubProjectIdProvider,
+                                  );
                                   showTaskEditSheet(
                                     context,
                                     ref,
@@ -321,7 +353,11 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                                 },
                                 onNewProject: () {
                                   setState(() => _fabOpen = false);
-                                  showProjectEditSheet(context, ref, onSave: () {});
+                                  showProjectEditSheet(
+                                    context,
+                                    ref,
+                                    onSave: () {},
+                                  );
                                 },
                               ),
                             ),
@@ -350,12 +386,12 @@ class _MobileShellState extends ConsumerState<MobileShell> {
 
 /// Reference `index.html` `.bottom-nav` — no Material 3 `NavigationBar` pill.
 class _RefBottomNav extends StatelessWidget {
-  const _RefBottomNav({required this.current, required this.onChanged});
+  _RefBottomNav({required this.current, required this.onChanged});
 
   final int current;
   final ValueChanged<int> onChanged;
 
-  static const _items = <(String, String)>[
+  static final _items = <(String, String)>[
     ('▦', 'Projects'),
     ('☰', 'Priority'),
     ('◈', 'Sprint'),
@@ -366,11 +402,11 @@ class _RefBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       child: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.colors.border)),
         ),
         padding: EdgeInsets.fromLTRB(0, 4, 0, math.max(4, safeBottom)),
         child: Row(
@@ -392,7 +428,7 @@ class _RefBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({
+  _NavItem({
     required this.icon,
     required this.label,
     required this.active,
@@ -410,7 +446,7 @@ class _NavItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+          padding: EdgeInsets.fromLTRB(4, 8, 4, 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -419,17 +455,17 @@ class _NavItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   height: 1,
-                  color: active ? AppColors.accent : AppColors.dim,
+                  color: active ? context.colors.accent : context.colors.dim,
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.02,
-                  color: active ? AppColors.accent : AppColors.dim,
+                  color: active ? context.colors.accent : context.colors.dim,
                 ),
               ),
             ],
@@ -441,7 +477,7 @@ class _NavItem extends StatelessWidget {
 }
 
 class _FilterButton extends StatelessWidget {
-  const _FilterButton({required this.hasActive, required this.onPressed});
+  _FilterButton({required this.hasActive, required this.onPressed});
 
   final bool hasActive;
   final VoidCallback onPressed;
@@ -449,30 +485,40 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: hasActive ? AppColors.accent : AppColors.border,
+              color: hasActive ? context.colors.accent : context.colors.border,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('⚙', style: TextStyle(fontSize: 14, color: hasActive ? AppColors.accent : AppColors.muted)),
-              const SizedBox(width: 6),
+              Text(
+                '⚙',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: hasActive
+                      ? context.colors.accent
+                      : context.colors.muted,
+                ),
+              ),
+              SizedBox(width: 6),
               Text(
                 'Filters',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: hasActive ? AppColors.accent : AppColors.text,
+                  color: hasActive
+                      ? context.colors.accent
+                      : context.colors.text,
                 ),
               ),
             ],
@@ -484,11 +530,7 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.title,
-    required this.showBack,
-    required this.onBack,
-  });
+  _TopBar({required this.title, required this.showBack, required this.onBack});
 
   final String title;
   final bool showBack;
@@ -497,45 +539,51 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       child: SafeArea(
         bottom: false,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: NxLayout.topBarMinH),
+          constraints: BoxConstraints(minHeight: NxLayout.topBarMinH),
           child: Container(
             width: double.infinity,
             padding: NxLayout.topBarHPadding,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
             child: Row(
               children: [
-                if (showBack) _TopBarBackButton(onBack: onBack) else const _TopBarLogo(),
-                const SizedBox(width: 10),
+                if (showBack)
+                  _TopBarBackButton(onBack: onBack)
+                else
+                  _TopBarLogo(),
+                SizedBox(width: 10),
                 Flexible(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.text,
+                      color: context.colors.text,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                Spacer(),
                 Container(
                   width: 28,
                   height: 28,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.panel2,
+                    color: context.colors.panel2,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: context.colors.border),
                   ),
-                  child: const Text('N', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                  child: Text(
+                    'N',
+                    style: TextStyle(fontSize: 11, color: context.colors.muted),
+                  ),
                 ),
               ],
             ),
@@ -547,24 +595,24 @@ class _TopBar extends StatelessWidget {
 }
 
 class _TopBarLogo extends StatelessWidget {
-  const _TopBarLogo();
+  _TopBarLogo();
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
+    return Text(
       '◆ Nexus',
       style: TextStyle(
         fontWeight: FontWeight.w600,
         fontSize: 15,
         letterSpacing: 0.3,
-        color: AppColors.text,
+        color: context.colors.text,
       ),
     );
   }
 }
 
 class _TopBarBackButton extends StatelessWidget {
-  const _TopBarBackButton({required this.onBack});
+  _TopBarBackButton({required this.onBack});
 
   final VoidCallback onBack;
 
@@ -575,11 +623,18 @@ class _TopBarBackButton extends StatelessWidget {
       child: InkWell(
         onTap: onBack,
         borderRadius: BorderRadius.circular(8),
-        child: const SizedBox(
+        child: SizedBox(
           width: 32,
           height: 32,
           child: Center(
-            child: Text('‹', style: TextStyle(color: AppColors.muted, fontSize: 22, height: 1)),
+            child: Text(
+              '‹',
+              style: TextStyle(
+                color: context.colors.muted,
+                fontSize: 22,
+                height: 1,
+              ),
+            ),
           ),
         ),
       ),
@@ -588,7 +643,7 @@ class _TopBarBackButton extends StatelessWidget {
 }
 
 class _SprintStrip extends StatelessWidget {
-  const _SprintStrip({
+  _SprintStrip({
     required this.sp,
     required this.onPrev,
     required this.onNext,
@@ -603,18 +658,15 @@ class _SprintStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      decoration: const BoxDecoration(
-        color: AppColors.panel,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      padding: EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: context.colors.panel,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
-          _SprintStripChev(
-            label: '‹',
-            onPressed: canPrev ? onPrev : null,
-          ),
-          const SizedBox(width: 10),
+          _SprintStripChev(label: '‹', onPressed: canPrev ? onPrev : null),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
               children: [
@@ -623,29 +675,26 @@ class _SprintStrip extends StatelessWidget {
                   children: [
                     Text(
                       sp.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
-                        color: AppColors.text,
+                        color: context.colors.text,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     _Badge(label: sp.badge),
                   ],
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   sp.dates,
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                  style: TextStyle(fontSize: 11, color: context.colors.muted),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          _SprintStripChev(
-            label: '›',
-            onPressed: canNext ? onNext : null,
-          ),
+          SizedBox(width: 10),
+          _SprintStripChev(label: '›', onPressed: canNext ? onNext : null),
         ],
       ),
     );
@@ -653,7 +702,7 @@ class _SprintStrip extends StatelessWidget {
 }
 
 class _SprintStripChev extends StatelessWidget {
-  const _SprintStripChev({required this.label, required this.onPressed});
+  _SprintStripChev({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback? onPressed;
@@ -675,7 +724,7 @@ class _SprintStripChev extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 height: 1,
-                color: enabled ? AppColors.muted : AppColors.dim,
+                color: enabled ? context.colors.muted : context.colors.dim,
               ),
             ),
           ),
@@ -686,19 +735,19 @@ class _SprintStripChev extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({required this.label});
+  _Badge({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (label) {
-      'active' => (AppColors.accent, AppColors.bg),
-      'planned' => (const Color(0x2EC084FC), AppColors.pMobile),
-      _ => (const Color(0x338A93A6), AppColors.muted),
+      'active' => (context.colors.accent, context.colors.bg),
+      'planned' => (Color(0x2EC084FC), context.colors.pMobile),
+      _ => (Color(0x338A93A6), context.colors.muted),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(4),
@@ -717,7 +766,7 @@ class _Badge extends StatelessWidget {
 }
 
 class _DailyStrip extends StatelessWidget {
-  const _DailyStrip({
+  _DailyStrip({
     required this.dow,
     required this.line,
     required this.isToday,
@@ -732,18 +781,15 @@ class _DailyStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      decoration: const BoxDecoration(
-        color: AppColors.panel,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      padding: EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: context.colors.panel,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
-          _SprintStripChev(
-            label: '‹',
-            onPressed: onPrev,
-          ),
-          const SizedBox(width: 10),
+          _SprintStripChev(label: '‹', onPressed: onPrev),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
               children: [
@@ -752,43 +798,46 @@ class _DailyStrip extends StatelessWidget {
                   children: [
                     Text(
                       dow,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
-                        color: AppColors.text,
+                        color: context.colors.text,
                       ),
                     ),
                     if (isToday) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.accent,
+                          color: context.colors.accent,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
+                        child: Text(
                           'today',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
-                            color: AppColors.bg,
+                            color: context.colors.bg,
                           ),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(line, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                SizedBox(height: 2),
+                Text(
+                  line,
+                  style: TextStyle(fontSize: 11, color: context.colors.muted),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          _SprintStripChev(
-            label: '›',
-            onPressed: onNext,
-          ),
+          SizedBox(width: 10),
+          _SprintStripChev(label: '›', onPressed: onNext),
         ],
       ),
     );
@@ -796,7 +845,7 @@ class _DailyStrip extends StatelessWidget {
 }
 
 class _Fab extends StatelessWidget {
-  const _Fab({
+  _Fab({
     required this.isOpen,
     required this.onToggle,
     required this.onNewTask,
@@ -813,28 +862,19 @@ class _Fab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (isOpen) ...[
-          _FabMenuPill(
-            onPressed: onNewProject,
-            label: 'Project',
-          ),
-          const SizedBox(height: 8),
-          _FabMenuPill(
-            onPressed: onNewTask,
-            label: 'Task',
-          ),
-          const SizedBox(height: 8),
+          _FabMenuPill(onPressed: onNewProject, label: 'Project'),
+          SizedBox(height: 8),
+          _FabMenuPill(onPressed: onNewTask, label: 'Task'),
+          SizedBox(height: 8),
         ],
-        _FabMainButton(
-          isOpen: isOpen,
-          onPressed: onToggle,
-        ),
+        _FabMainButton(isOpen: isOpen, onPressed: onToggle),
       ],
     );
   }
 }
 
 class _FabMenuPill extends StatelessWidget {
-  const _FabMenuPill({required this.onPressed, required this.label});
+  _FabMenuPill({required this.onPressed, required this.label});
 
   final VoidCallback onPressed;
   final String label;
@@ -842,18 +882,18 @@ class _FabMenuPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.panel2,
+      color: context.colors.panel2,
       borderRadius: BorderRadius.circular(999),
       elevation: 0,
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.border2),
-            boxShadow: const [
+            border: Border.all(color: context.colors.border2),
+            boxShadow: [
               BoxShadow(
                 color: Color(0x66000000),
                 offset: Offset(0, 6),
@@ -864,21 +904,21 @@ class _FabMenuPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 '+',
                 style: TextStyle(
-                  color: AppColors.accent,
+                  color: context.colors.accent,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.text,
+                  color: context.colors.text,
                 ),
               ),
             ],
@@ -890,7 +930,7 @@ class _FabMenuPill extends StatelessWidget {
 }
 
 class _FabMainButton extends StatelessWidget {
-  const _FabMainButton({required this.isOpen, required this.onPressed});
+  _FabMainButton({required this.isOpen, required this.onPressed});
 
   final bool isOpen;
   final VoidCallback onPressed;
@@ -898,16 +938,16 @@ class _FabMainButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.accent,
-      shape: const CircleBorder(),
+      color: context.colors.accent,
+      shape: CircleBorder(),
       elevation: 0,
       child: InkWell(
         onTap: onPressed,
-        customBorder: const CircleBorder(),
+        customBorder: CircleBorder(),
         child: Container(
           width: NxLayout.fabSize,
           height: NxLayout.fabSize,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
@@ -920,10 +960,10 @@ class _FabMainButton extends StatelessWidget {
           child: Center(
             child: Transform.rotate(
               angle: isOpen ? 0.78539816339 : 0,
-              child: const Text(
+              child: Text(
                 '+',
                 style: TextStyle(
-                  color: AppColors.bg,
+                  color: context.colors.bg,
                   fontSize: 28,
                   height: 1,
                   fontWeight: FontWeight.w400,

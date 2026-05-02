@@ -10,7 +10,7 @@ import 'package:nx_projects/features/shared/widgets/task_row.dart';
 
 /// Mobile: single-column daily task list.
 class MobileDailyBody extends ConsumerWidget {
-  const MobileDailyBody({super.key, required this.onOpenTaskMenu});
+  MobileDailyBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
@@ -20,10 +20,13 @@ class MobileDailyBody extends ConsumerWidget {
     final stats = ref.watch(dailyHeaderStatsProvider);
 
     if (tasks.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Nothing planned for this day.',
-          style: TextStyle(color: AppColors.dim, fontStyle: FontStyle.italic),
+          style: TextStyle(
+            color: context.colors.dim,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       );
     }
@@ -32,16 +35,16 @@ class MobileDailyBody extends ConsumerWidget {
       padding: NxLayout.contentPadding,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(6, 12, 6, 10),
+          padding: EdgeInsets.fromLTRB(6, 12, 6, 10),
           child: Text(
             '${tasks.length} task${tasks.length == 1 ? '' : 's'} · ${stats.totalEst.toStringAsFixed(0)}h planned',
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(fontSize: 11, color: context.colors.muted),
           ),
         ),
         _DailySummary(stats: stats),
         for (final t in tasks)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8),
             child: TaskRow(
               task: t,
               showStatus: true,
@@ -54,7 +57,7 @@ class MobileDailyBody extends ConsumerWidget {
 }
 
 class _DailySummary extends StatelessWidget {
-  const _DailySummary({required this.stats});
+  _DailySummary({required this.stats});
 
   final DailyHeaderStats stats;
 
@@ -62,7 +65,7 @@ class _DailySummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final left = stats.hTodo + stats.hBlocked + stats.hDoing;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+      padding: EdgeInsets.fromLTRB(4, 4, 4, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -72,43 +75,69 @@ class _DailySummary extends StatelessWidget {
             blockedH: stats.hBlocked,
             doneH: stats.hDone,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 '${stats.hDone.toStringAsFixed(0)}h done',
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
               ),
               Text(
                 '${stats.pct}%',
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
               ),
               Text(
                 '${left.toStringAsFixed(0)}h left',
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              if (stats.nDoing > 0) _Chip(label: '${stats.nDoing} doing', color: AppColors.accent, soft: true),
-              if (stats.nTodo > 0) _Chip(label: '${stats.nTodo} todo', color: AppColors.muted, soft: false),
-              if (stats.nBlocked > 0) _Chip(label: '${stats.nBlocked} blocked', color: AppColors.warn, soft: true),
-              if (stats.nDone > 0) _Chip(label: '${stats.nDone} done', color: AppColors.ok, soft: true),
-              if (stats.nFeat > 0) _Chip(label: '◉ ${stats.nFeat} feat', color: AppColors.feat, soft: true),
+              if (stats.nDoing > 0)
+                _Chip(
+                  label: '${stats.nDoing} doing',
+                  color: context.colors.accent,
+                  soft: true,
+                ),
+              if (stats.nTodo > 0)
+                _Chip(
+                  label: '${stats.nTodo} todo',
+                  color: context.colors.muted,
+                  soft: false,
+                ),
+              if (stats.nBlocked > 0)
+                _Chip(
+                  label: '${stats.nBlocked} blocked',
+                  color: context.colors.warn,
+                  soft: true,
+                ),
+              if (stats.nDone > 0)
+                _Chip(
+                  label: '${stats.nDone} done',
+                  color: context.colors.ok,
+                  soft: true,
+                ),
+              if (stats.nFeat > 0)
+                _Chip(
+                  label: '◉ ${stats.nFeat} feat',
+                  color: context.colors.feat,
+                  soft: true,
+                ),
               if (stats.nBug > 0)
                 _Chip(
-                  label: '● ${stats.nBug} bug${stats.critBugs > 0 ? ' · ${stats.critBugs} crit' : ''}',
-                  color: AppColors.bug,
+                  label:
+                      '● ${stats.nBug} bug${stats.critBugs > 0 ? ' · ${stats.critBugs} crit' : ''}',
+                  color: context.colors.bug,
                   soft: true,
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       ),
     );
@@ -116,7 +145,7 @@ class _DailySummary extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.color, required this.soft});
+  _Chip({required this.label, required this.color, required this.soft});
 
   final String label;
   final Color color;
@@ -125,9 +154,9 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: soft ? color.withValues(alpha: 0.12) : AppColors.panel2,
+        color: soft ? color.withValues(alpha: 0.12) : context.colors.panel2,
         border: Border.all(color: color.withValues(alpha: 0.35)),
         borderRadius: BorderRadius.circular(999),
       ),
@@ -135,7 +164,7 @@ class _Chip extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 11,
-          color: color == AppColors.muted ? AppColors.muted : color,
+          color: color == context.colors.muted ? context.colors.muted : color,
         ),
       ),
     );

@@ -12,7 +12,7 @@ import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 
 class TaskRow extends StatelessWidget {
-  const TaskRow({
+  TaskRow({
     super.key,
     required this.task,
     this.showCrumb = true,
@@ -40,14 +40,14 @@ class TaskRow extends StatelessWidget {
     }
 
     return Material(
-      color: AppColors.panel,
+      color: context.colors.panel,
       child: InkWell(
         onTap: onMenu,
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.colors.border),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,11 +60,13 @@ class TaskRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.2,
-                    color: done ? AppColors.dim : kindColor(task.kind),
+                    color: done
+                        ? context.colors.dim
+                        : kindColor(context, task.kind),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,12 +79,16 @@ class TaskRow extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: done ? AppColors.muted : AppColors.text,
-                              decoration: done ? TextDecoration.lineThrough : null,
+                              color: done
+                                  ? context.colors.muted
+                                  : context.colors.text,
+                              decoration: done
+                                  ? TextDecoration.lineThrough
+                                  : null,
                             ),
                           ),
                           if (task.severity != null) ...[
-                            const TextSpan(text: ' '),
+                            TextSpan(text: ' '),
                             WidgetSpan(
                               alignment: PlaceholderAlignment.middle,
                               child: _SevPill(severity: task.severity!),
@@ -91,7 +97,7 @@ class TaskRow extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
@@ -102,20 +108,23 @@ class TaskRow extends StatelessWidget {
                           _StatusPill(status: task.status),
                         if (showCrumb && task.crumb.isNotEmpty)
                           ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 200),
+                            constraints: BoxConstraints(maxWidth: 200),
                             child: Text(
                               task.crumb,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.colors.muted,
+                              ),
                             ),
                           ),
                         if (showBucket) _BucketPill(task: task),
                         Text(
                           formatHours(task.estimate),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.muted,
+                            color: context.colors.muted,
                             fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -126,9 +135,13 @@ class TaskRow extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onMenu,
-                icon: const Icon(Icons.more_vert, size: 20, color: AppColors.dim),
+                icon: Icon(
+                  Icons.more_vert,
+                  size: 20,
+                  color: context.colors.dim,
+                ),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                constraints: BoxConstraints(minWidth: 32, minHeight: 32),
               ),
             ],
           ),
@@ -139,51 +152,48 @@ class TaskRow extends StatelessWidget {
 }
 
 class _SevPill extends StatelessWidget {
-  const _SevPill({required this.severity});
+  _SevPill({required this.severity});
 
   final TaskSeverity severity;
 
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (severity) {
-      TaskSeverity.crit => (const Color(0x26F87171), AppColors.crit),
-      TaskSeverity.med => (const Color(0x26FBBF24), AppColors.warn),
-      TaskSeverity.low => (AppColors.panel2, AppColors.muted),
+      TaskSeverity.crit => (Color(0x26F87171), context.colors.crit),
+      TaskSeverity.med => (Color(0x26FBBF24), context.colors.warn),
+      TaskSeverity.low => (context.colors.panel2, context.colors.muted),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        switch (severity) {
-          TaskSeverity.crit => 'crit',
-          TaskSeverity.med => 'med',
-          TaskSeverity.low => 'low',
-        },
-        style: TextStyle(fontSize: 10, color: fg),
-      ),
+      child: Text(switch (severity) {
+        TaskSeverity.crit => 'crit',
+        TaskSeverity.med => 'med',
+        TaskSeverity.low => 'low',
+      }, style: TextStyle(fontSize: 10, color: fg)),
     );
   }
 }
 
 class _KindChip extends StatelessWidget {
-  const _KindChip({required this.kind});
+  _KindChip({required this.kind});
 
   final TaskKind kind;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         border: Border.all(
           color: kind == TaskKind.feat
-              ? const Color(0x4D6AA3FF)
+              ? Color(0x4D6AA3FF)
               : kind == TaskKind.bug
-                  ? const Color(0x4DF87171)
-                  : AppColors.border,
+              ? Color(0x4DF87171)
+              : context.colors.border,
         ),
         borderRadius: BorderRadius.circular(4),
       ),
@@ -192,7 +202,7 @@ class _KindChip extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           letterSpacing: 0.4,
-          color: kindColor(kind),
+          color: kindColor(context, kind),
         ),
       ),
     );
@@ -200,18 +210,18 @@ class _KindChip extends StatelessWidget {
 }
 
 class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
+  _StatusPill({required this.status});
 
   final TaskStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final bg = statusBackground(status);
+    final bg = statusBackground(context, status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         color: bg,
-        border: bg == null ? Border.all(color: AppColors.border) : null,
+        border: bg == null ? Border.all(color: context.colors.border) : null,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -220,7 +230,7 @@ class _StatusPill extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.4,
-          color: statusForeground(status),
+          color: statusForeground(context, status),
         ),
       ),
     );
@@ -228,7 +238,7 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _BucketPill extends StatelessWidget {
-  const _BucketPill({required this.task});
+  _BucketPill({required this.task});
 
   final Task task;
 
@@ -236,12 +246,12 @@ class _BucketPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = task.bucket;
     if (b == TaskBucket.unsorted) {
-      return const Text(
+      return Text(
         'unsorted',
         style: TextStyle(
           fontSize: 10,
           fontStyle: FontStyle.italic,
-          color: AppColors.dim,
+          color: context.colors.dim,
         ),
       );
     }
@@ -251,7 +261,7 @@ class _BucketPill extends StatelessWidget {
         fontSize: 10,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.8,
-        color: bucketColor(b),
+        color: bucketColor(context, b),
       ),
     );
   }

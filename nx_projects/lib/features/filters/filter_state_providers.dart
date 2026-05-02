@@ -41,12 +41,7 @@ final filterKindSetProvider = NotifierProvider<FilterKindSet, Set<String>>(
 
 /// User-selected [TaskStatus] **names** (`todo`, `doing`, `done`, `blocked`). Empty = no filter.
 class FilterStatusSet extends Notifier<Set<String>> {
-  static const Set<String> allStatusKeys = {
-    'todo',
-    'doing',
-    'done',
-    'blocked',
-  };
+  static const Set<String> allStatusKeys = {'todo', 'doing', 'done', 'blocked'};
 
   @override
   Set<String> build() => const {};
@@ -71,10 +66,10 @@ class FilterStatusSet extends Notifier<Set<String>> {
     state = switch (v) {
       'all' => const <String>{},
       'open' => {
-          TaskStatus.todo.name,
-          TaskStatus.doing.name,
-          TaskStatus.blocked.name,
-        },
+        TaskStatus.todo.name,
+        TaskStatus.doing.name,
+        TaskStatus.blocked.name,
+      },
       'done' => {TaskStatus.done.name},
       _ => const <String>{},
     };

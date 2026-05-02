@@ -12,14 +12,14 @@ final dailyTasksProvider = Provider<List<Task>>((ref) {
   final ymd = ref.watch(dailyDateProvider);
   final tasks = ref.watch(tasksListProvider);
   return tasks.where((t) => t.plannedFor == ymd).toList()..sort((a, b) {
-        const order = {
-          TaskStatus.doing: 0,
-          TaskStatus.todo: 1,
-          TaskStatus.blocked: 2,
-          TaskStatus.done: 3,
-        };
-        return (order[a.status] ?? 9).compareTo(order[b.status] ?? 9);
-      });
+    const order = {
+      TaskStatus.doing: 0,
+      TaskStatus.todo: 1,
+      TaskStatus.blocked: 2,
+      TaskStatus.done: 3,
+    };
+    return (order[a.status] ?? 9).compareTo(order[b.status] ?? 9);
+  });
 });
 
 class DailyHeaderStats {
@@ -48,7 +48,13 @@ class DailyHeaderStats {
 final dailyHeaderStatsProvider = Provider<DailyHeaderStats>((ref) {
   final todays = ref.watch(dailyTasksProvider);
   var hTodo = 0.0, hDoing = 0.0, hBlocked = 0.0, hDone = 0.0;
-  var nTodo = 0, nDoing = 0, nBlocked = 0, nDone = 0, nFeat = 0, nBug = 0, critBugs = 0;
+  var nTodo = 0,
+      nDoing = 0,
+      nBlocked = 0,
+      nDone = 0,
+      nFeat = 0,
+      nBug = 0,
+      critBugs = 0;
   for (final t in todays) {
     if (t.status == TaskStatus.todo) {
       nTodo++;

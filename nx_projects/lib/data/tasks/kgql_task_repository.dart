@@ -9,46 +9,25 @@ import 'package:nx_projects/domain/task/task_repository.dart';
 int? _inProjectTargetId(Task t) => t.subProjectId ?? t.projectId;
 
 /// Relation writes when [previous] and [next] differ in project or sprint target.
-List<ModelRelation> _relationDeltasForUpdate(
-  Task next,
-  Task previous,
-) {
+List<ModelRelation> _relationDeltasForUpdate(Task next, Task previous) {
   final out = <ModelRelation>[];
   final pOld = _inProjectTargetId(previous);
   final pNew = _inProjectTargetId(next);
   if (pOld != pNew) {
     if (previous.inProjectRelationId != null) {
-      out.add(
-        ModelRelation(
-          id: previous.inProjectRelationId,
-          delete: true,
-        ),
-      );
+      out.add(ModelRelation(id: previous.inProjectRelationId, delete: true));
     }
     if (pNew != null) {
-      out.add(
-        ModelRelation(
-          modelType: kTaskProjectLinkKey,
-          link: [pNew],
-        ),
-      );
+      out.add(ModelRelation(modelType: kTaskProjectLinkKey, link: [pNew]));
     }
   }
   if (previous.sprintId != next.sprintId) {
     if (previous.inSprintRelationId != null) {
-      out.add(
-        ModelRelation(
-          id: previous.inSprintRelationId,
-          delete: true,
-        ),
-      );
+      out.add(ModelRelation(id: previous.inSprintRelationId, delete: true));
     }
     if (next.sprintId != null) {
       out.add(
-        ModelRelation(
-          modelType: kTaskSprintLinkKey,
-          link: [next.sprintId!],
-        ),
+        ModelRelation(modelType: kTaskSprintLinkKey, link: [next.sprintId!]),
       );
     }
   }
@@ -62,11 +41,11 @@ class KgqlTaskRepository implements TaskRepository {
     required Future<ModelType> Function() loadBugSchema,
     required Future<ModelType> Function() loadFeatureSchema,
     required int domainId,
-  })  : _client = client,
-        _loadProjectTaskSchema = loadProjectTaskSchema,
-        _loadBugSchema = loadBugSchema,
-        _loadFeatureSchema = loadFeatureSchema,
-        _domainId = domainId;
+  }) : _client = client,
+       _loadProjectTaskSchema = loadProjectTaskSchema,
+       _loadBugSchema = loadBugSchema,
+       _loadFeatureSchema = loadFeatureSchema,
+       _domainId = domainId;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadProjectTaskSchema;
@@ -98,7 +77,11 @@ class KgqlTaskRepository implements TaskRepository {
       (kTaskBaseModelTypeName, _loadProjectTaskSchema),
     ];
     for (final (name, loader) in tryOrder) {
-      final m = await _fetchModelByType(id, modelTypeName: name, loadSchema: loader);
+      final m = await _fetchModelByType(
+        id,
+        modelTypeName: name,
+        loadSchema: loader,
+      );
       if (m != null) return m;
     }
     return null;

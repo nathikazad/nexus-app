@@ -6,7 +6,11 @@ import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 
 class BucketSummary {
-  const BucketSummary({required this.bucket, required this.count, required this.hours});
+  const BucketSummary({
+    required this.bucket,
+    required this.count,
+    required this.hours,
+  });
 
   final TaskBucket bucket;
   final int count;
@@ -48,7 +52,10 @@ final priorityBucketsProvider = Provider<List<BucketSummary>>((ref) {
   ];
 });
 
-final priorityBucketTasksProvider = Provider.family<List<Task>, TaskBucket>((ref, bucket) {
+final priorityBucketTasksProvider = Provider.family<List<Task>, TaskBucket>((
+  ref,
+  bucket,
+) {
   final tasks = ref.watch(tasksListProvider);
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
   return tasks.where((t) {

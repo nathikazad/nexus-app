@@ -15,28 +15,28 @@ String varianceClass(double actual, double est) {
   return 'way-over';
 }
 
-Color varianceColorForClass(String? cls) {
+Color varianceColorForClass(BuildContext context, String? cls) {
   switch (cls) {
     case 'under':
-      return AppColors.ok;
+      return context.colors.ok;
     case 'near':
-      return AppColors.muted;
+      return context.colors.muted;
     case 'over':
-      return AppColors.warn;
+      return context.colors.warn;
     case 'way-over':
-      return AppColors.crit;
+      return context.colors.crit;
     default:
-      return AppColors.muted;
+      return context.colors.muted;
   }
 }
 
-Color varianceColorForPair(double actual, double est) {
-  return varianceColorForClass(varianceClass(actual, est));
+Color varianceColorForPair(BuildContext context, double actual, double est) {
+  return varianceColorForClass(context, varianceClass(actual, est));
 }
 
 /// 2px high segmented progress matching `reference` `progVarianceSegments`.
 class TaskProgressSegments extends StatelessWidget {
-  const TaskProgressSegments({
+  TaskProgressSegments({
     super.key,
     required this.estimate,
     required this.actual,
@@ -50,42 +50,42 @@ class TaskProgressSegments extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (doneNoActual) {
-      return const _ProgressTrack(
-        children: [Expanded(child: ColoredBox(color: AppColors.accent))],
+      return _ProgressTrack(
+        children: [Expanded(child: ColoredBox(color: context.colors.accent))],
       );
     }
     if (estimate <= 0 || actual <= 0) {
-      return const SizedBox.shrink();
+      return SizedBox.shrink();
     }
     final r = actual / estimate;
-    const eps = 1e-9;
+    final eps = 1e-9;
     if (r < 1 - eps) {
       return _ProgressTrack(
         children: [
           Expanded(
             flex: (r * 1000).round().clamp(1, 1000),
-            child: const ColoredBox(color: Color(0xFF4ADE80)),
+            child: ColoredBox(color: Color(0xFF4ADE80)),
           ),
           Expanded(
             flex: ((1 - r) * 1000).round().clamp(1, 1000),
-            child: const SizedBox.shrink(),
+            child: SizedBox.shrink(),
           ),
         ],
       );
     }
     if (r <= 1 + eps) {
-      return const _ProgressTrack(
-        children: [Expanded(child: ColoredBox(color: AppColors.accent))],
+      return _ProgressTrack(
+        children: [Expanded(child: ColoredBox(color: context.colors.accent))],
       );
     }
 
     final base = (estimate / actual).clamp(0.0, 1.0);
-    final overColor = r <= 1.5 ? AppColors.warn : AppColors.crit;
+    final overColor = r <= 1.5 ? context.colors.warn : context.colors.crit;
     return _ProgressTrack(
       children: [
         Expanded(
           flex: (base * 1000).round().clamp(1, 1000),
-          child: const ColoredBox(color: AppColors.accent),
+          child: ColoredBox(color: context.colors.accent),
         ),
         Expanded(
           flex: ((1 - base) * 1000).round().clamp(1, 1000),
@@ -97,7 +97,7 @@ class TaskProgressSegments extends StatelessWidget {
 }
 
 class _ProgressTrack extends StatelessWidget {
-  const _ProgressTrack({required this.children});
+  _ProgressTrack({required this.children});
 
   final List<Widget> children;
 
@@ -106,7 +106,7 @@ class _ProgressTrack extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(1),
       child: ColoredBox(
-        color: const Color(0xFF202736),
+        color: Color(0xFF202736),
         child: SizedBox(height: 3, child: Row(children: children)),
       ),
     );

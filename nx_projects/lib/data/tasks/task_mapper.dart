@@ -134,10 +134,7 @@ Task taskFromModel(Model m) {
     driftFrom: const [],
     notes: m.description?.trim() ?? '',
     inProjectRelationId: _relationIdForTarget(m, kProjectModelTypeName),
-    inSprintRelationId: _relationIdForTarget(
-      m,
-      kTaskSprintLinkKey,
-    ),
+    inSprintRelationId: _relationIdForTarget(m, kTaskSprintLinkKey),
     ideationStatus: _ideationFromModel(m),
   );
 }
@@ -194,12 +191,17 @@ List<SetModelAttribute> _taskAttributesForSave(Task t) {
   if (plan != null && plan.isNotEmpty) {
     final p = DateTime.tryParse('${plan}T12:00:00');
     if (p != null) {
-      attrs.add(SetModelAttribute(key: kTaskAttrDate, value: p.toIso8601String()));
+      attrs.add(
+        SetModelAttribute(key: kTaskAttrDate, value: p.toIso8601String()),
+      );
     }
   }
   if (t.kind == TaskKind.bug && t.severity != null) {
     attrs.add(
-      SetModelAttribute(key: kTaskAttrSeverity, value: _severityToDb(t.severity!)),
+      SetModelAttribute(
+        key: kTaskAttrSeverity,
+        value: _severityToDb(t.severity!),
+      ),
     );
   }
   if (t.kind == TaskKind.feat && t.ideationStatus != null) {
@@ -217,20 +219,10 @@ SetModelRequest setModelRequestForCreateTask(Task t) {
   final rels = <ModelRelation>[];
   final pid = _targetProjectIdForTask(t);
   if (pid != null) {
-    rels.add(
-      ModelRelation(
-        modelType: kTaskProjectLinkKey,
-        link: [pid],
-      ),
-    );
+    rels.add(ModelRelation(modelType: kTaskProjectLinkKey, link: [pid]));
   }
   if (t.sprintId != null) {
-    rels.add(
-      ModelRelation(
-        modelType: kTaskSprintLinkKey,
-        link: [t.sprintId!],
-      ),
-    );
+    rels.add(ModelRelation(modelType: kTaskSprintLinkKey, link: [t.sprintId!]));
   }
   return SetModelRequest(
     modelType: _modelTypeNameForCreate(t),
@@ -260,23 +252,14 @@ SetModelRequest setModelRequestForUpdateTask(
 ///
 /// Use the **concrete** subtype schema for list queries so attribute keys like
 /// `severity` (Bug-only) are collected correctly by the server.
-Map<String, dynamic> buildTaskFetchStruct(
-  ModelType taskModelSchema,
-) {
+Map<String, dynamic> buildTaskFetchStruct(ModelType taskModelSchema) {
   final struct = buildKgqlStructFromSchema(taskModelSchema);
   struct[kTaskProjectLinkKey] = {
     'id': true,
     'name': true,
     'description': true,
-    kProjectRelationKey: {
-      'id': true,
-      'name': true,
-      'relation': true,
-    },
+    kProjectRelationKey: {'id': true, 'name': true, 'relation': true},
   };
-  struct[kTaskSprintLinkKey] = {
-    'id': true,
-    'name': true,
-  };
+  struct[kTaskSprintLinkKey] = {'id': true, 'name': true};
   return struct;
 }

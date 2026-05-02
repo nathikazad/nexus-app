@@ -14,7 +14,7 @@ import 'package:nx_projects/features/sprint/widgets/sprint_summary_strip.dart';
 
 /// Desktop: sprint summary, plan heading, bordered day cards.
 class DesktopSprintBody extends ConsumerStatefulWidget {
-  const DesktopSprintBody({super.key, required this.onOpenTaskMenu});
+  DesktopSprintBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
@@ -71,7 +71,7 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
     return SafeArea(
       child: SingleChildScrollView(
         controller: _taskScroller.controller,
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        padding: EdgeInsets.fromLTRB(24, 16, 24, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -99,13 +99,13 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
                     ref.read(desktopDrawerControllerProvider).viewTask(t.id),
               ),
             if (allTasks.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(
                   child: Text(
                     'No tasks in this sprint yet.',
                     style: TextStyle(
-                      color: AppColors.dim,
+                      color: context.colors.dim,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -119,7 +119,7 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
 }
 
 class _DaysHead extends StatelessWidget {
-  const _DaysHead({required this.sprint, required this.scheduledH});
+  _DaysHead({required this.sprint, required this.scheduledH});
 
   final Sprint sprint;
   final double scheduledH;
@@ -132,7 +132,7 @@ class _DaysHead extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 0, 2, 12),
+      padding: EdgeInsets.fromLTRB(2, 0, 2, 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -144,20 +144,20 @@ class _DaysHead extends StatelessWidget {
                 Text.rich(
                   TextSpan(
                     children: [
-                      const TextSpan(
+                      TextSpan(
                         text: 'Plan',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.text,
+                          color: context.colors.text,
                         ),
                       ),
                       TextSpan(
                         text: ' · ${sprint.name}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w400,
-                          color: AppColors.muted,
+                          color: context.colors.muted,
                         ),
                       ),
                     ],
@@ -169,18 +169,18 @@ class _DaysHead extends StatelessWidget {
           Text.rich(
             TextSpan(
               children: [
-                const TextSpan(text: 'Total: '),
+                TextSpan(text: 'Total: '),
                 TextSpan(
                   text: '${_fmt(scheduledH)}h',
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: context.colors.text,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const TextSpan(text: ' scheduled'),
+                TextSpan(text: ' scheduled'),
               ],
             ),
-            style: const TextStyle(fontSize: 11, color: AppColors.dim),
+            style: TextStyle(fontSize: 11, color: context.colors.dim),
           ),
         ],
       ),

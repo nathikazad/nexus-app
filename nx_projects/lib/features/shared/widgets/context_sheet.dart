@@ -19,8 +19,8 @@ Future<void> showTaskContextSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: AppColors.panel,
-    shape: const RoundedRectangleBorder(
+    backgroundColor: context.colors.panel,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
@@ -33,13 +33,13 @@ Future<void> showTaskContextSheet(
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
+                margin: EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.border2,
+                  color: context.colors.border2,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              _h('Move to bucket'),
+              _h(ctx, 'Move to bucket'),
               _act(ctx, ref, 'Bucket NOW', () async {
                 await _setBucket(ref, task, TaskBucket.now);
                 onAfterChange();
@@ -56,8 +56,8 @@ Future<void> showTaskContextSheet(
                 await _setBucket(ref, task, TaskBucket.someday);
                 onAfterChange();
               }),
-              const Divider(color: AppColors.border),
-              _h('Status'),
+              Divider(color: context.colors.border),
+              _h(ctx, 'Status'),
               _act(ctx, ref, 'Todo', () async {
                 await _setStatus(ref, task, TaskStatus.todo);
                 onAfterChange();
@@ -71,23 +71,23 @@ Future<void> showTaskContextSheet(
                 onAfterChange();
               }),
               if (isDesktopLayout(context) && task.sprintId != null) ...[
-                const Divider(color: AppColors.border),
-                _h('Sprint plan'),
+                Divider(color: context.colors.border),
+                _h(ctx, 'Sprint plan'),
                 SprintDayPickerButton(
                   task: task,
                   onChanged: () {
                     onAfterChange();
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   },
-                  child: const ListTile(
+                  child: ListTile(
                     title: Text('Plan day…'),
                     subtitle: Text('Assign or clear the sprint day'),
                   ),
                 ),
               ],
-              const Divider(color: AppColors.border),
+              Divider(color: context.colors.border),
               ListTile(
-                title: const Text('Edit…'),
+                title: Text('Edit…'),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   if (isDesktopLayout(context)) {
@@ -103,9 +103,9 @@ Future<void> showTaskContextSheet(
                 },
               ),
               ListTile(
-                title: const Text(
+                title: Text(
                   'Delete',
-                  style: TextStyle(color: AppColors.crit),
+                  style: TextStyle(color: context.colors.crit),
                 ),
                 onTap: () async {
                   await ref.read(taskRepositoryProvider).delete(task.id);
@@ -114,7 +114,7 @@ Future<void> showTaskContextSheet(
                   if (ctx.mounted) Navigator.of(ctx).pop();
                 },
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
             ],
           ),
         ),
@@ -123,17 +123,17 @@ Future<void> showTaskContextSheet(
   );
 }
 
-Widget _h(String t) {
+Widget _h(BuildContext context, String t) {
   return Padding(
-    padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+    padding: EdgeInsets.fromLTRB(14, 10, 14, 4),
     child: Align(
       alignment: Alignment.centerLeft,
       child: Text(
         t,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           letterSpacing: 0.6,
-          color: AppColors.dim,
+          color: context.colors.dim,
         ),
       ),
     ),

@@ -4,7 +4,7 @@ import 'package:nx_projects/core/theme/app_theme.dart';
 
 /// Stacked bar: done / doing / blocked / todo — segment widths = hours in status / [capH].
 class CapacityBar extends StatelessWidget {
-  const CapacityBar({
+  CapacityBar({
     super.key,
     required this.todoH,
     required this.doingH,
@@ -31,13 +31,26 @@ class CapacityBar extends StatelessWidget {
     void add(Widget c, int f) {
       if (f > 0) children.add(Expanded(flex: f, child: c));
     }
-    add(const ColoredBox(color: AppColors.ok, child: SizedBox(height: 6)), flex(doneH));
-    add(const ColoredBox(color: AppColors.accent, child: SizedBox(height: 6)), flex(doingH));
-    add(const ColoredBox(color: AppColors.warn, child: SizedBox(height: 6)), flex(blockedH));
-    add(const ColoredBox(color: AppColors.border2, child: SizedBox(height: 6)), flex(todoH));
+
+    add(
+      ColoredBox(color: context.colors.ok, child: SizedBox(height: 6)),
+      flex(doneH),
+    );
+    add(
+      ColoredBox(color: context.colors.accent, child: SizedBox(height: 6)),
+      flex(doingH),
+    );
+    add(
+      ColoredBox(color: context.colors.warn, child: SizedBox(height: 6)),
+      flex(blockedH),
+    );
+    add(
+      ColoredBox(color: context.colors.border2, child: SizedBox(height: 6)),
+      flex(todoH),
+    );
 
     if (children.isEmpty) {
-      return const SizedBox(height: 6);
+      return SizedBox(height: 6);
     }
 
     return ClipRRect(
@@ -49,7 +62,7 @@ class CapacityBar extends StatelessWidget {
 
 /// For daily view: done / doing / (todo+blocked) as stacked segments of total work.
 class DailyProgressBar extends StatelessWidget {
-  const DailyProgressBar({
+  DailyProgressBar({
     super.key,
     required this.todoH,
     required this.doingH,
@@ -66,7 +79,7 @@ class DailyProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = doneH + doingH + blockedH + todoH;
     if (total <= 0) {
-      return const SizedBox(height: 6);
+      return SizedBox(height: 6);
     }
     int flex(double h) {
       if (h <= 0) return 0;
@@ -77,10 +90,17 @@ class DailyProgressBar extends StatelessWidget {
     void add(Widget c, int f) {
       if (f > 0) children.add(Expanded(flex: f, child: c));
     }
-    add(const ColoredBox(color: AppColors.ok, child: SizedBox(height: 6)), flex(doneH));
-    add(const ColoredBox(color: AppColors.accent, child: SizedBox(height: 6)), flex(doingH));
+
     add(
-      const ColoredBox(color: AppColors.border2, child: SizedBox(height: 6)),
+      ColoredBox(color: context.colors.ok, child: SizedBox(height: 6)),
+      flex(doneH),
+    );
+    add(
+      ColoredBox(color: context.colors.accent, child: SizedBox(height: 6)),
+      flex(doingH),
+    );
+    add(
+      ColoredBox(color: context.colors.border2, child: SizedBox(height: 6)),
       flex(todoH + blockedH),
     );
 
@@ -93,7 +113,7 @@ class DailyProgressBar extends StatelessWidget {
 
 /// Per-day cap fill: [dayH] / [dailyCap].
 class DayCapBar extends StatelessWidget {
-  const DayCapBar({
+  DayCapBar({
     super.key,
     required this.ratio,
     this.isOver = false,
@@ -112,13 +132,13 @@ class DayCapBar extends StatelessWidget {
         height: height,
         child: Stack(
           children: [
-            const ColoredBox(color: AppColors.panel3, child: SizedBox.expand()),
+            ColoredBox(color: context.colors.panel3, child: SizedBox.expand()),
             Align(
               alignment: Alignment.centerLeft,
               child: FractionallySizedBox(
                 widthFactor: ratio.clamp(0, 1),
                 child: ColoredBox(
-                  color: isOver ? AppColors.warn : AppColors.accent,
+                  color: isOver ? context.colors.warn : context.colors.accent,
                 ),
               ),
             ),

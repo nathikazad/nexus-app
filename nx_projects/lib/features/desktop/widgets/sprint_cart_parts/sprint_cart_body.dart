@@ -21,16 +21,16 @@ String _topProjectForBreakdown(Task t) {
   return first.isEmpty ? 'Other' : first;
 }
 
-Color _breakdownBarColor(String topProject) {
+Color _breakdownBarColor(BuildContext context, String topProject) {
   switch (topProject) {
     case 'Nexus':
-      return AppColors.pNexus;
+      return context.colors.pNexus;
     case 'Pipeline':
-      return AppColors.pPipe;
+      return context.colors.pPipe;
     case 'Mobile App':
-      return AppColors.pMobile;
+      return context.colors.pMobile;
     default:
-      return AppColors.accent;
+      return context.colors.accent;
   }
 }
 
@@ -46,7 +46,7 @@ String _cartGlyph(Task t) {
 }
 
 class _CartSectionLabel extends StatelessWidget {
-  const _CartSectionLabel(this.text, {this.topPadding = 14});
+  _CartSectionLabel(this.text, {this.topPadding = 14});
   final String text;
   final double topPadding;
 
@@ -56,10 +56,10 @@ class _CartSectionLabel extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(4, topPadding, 4, 4),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           letterSpacing: 0.8,
-          color: AppColors.dim,
+          color: context.colors.dim,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -68,7 +68,7 @@ class _CartSectionLabel extends StatelessWidget {
 }
 
 class _CartBody extends ConsumerWidget {
-  const _CartBody({
+  _CartBody({
     required this.sprint,
     required this.tasks,
     required this.projects,
@@ -85,12 +85,12 @@ class _CartBody extends ConsumerWidget {
     if (tasks.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Text(
             'No items in ${sprint.name} yet.\nClick ☆ on a backlog row to add.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.dim,
+            style: TextStyle(
+              color: context.colors.dim,
               fontSize: 12,
               fontStyle: FontStyle.italic,
             ),
@@ -112,17 +112,17 @@ class _CartBody extends ConsumerWidget {
     }
     final breakdownKeys = breakdown.keys.toList()..sort();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+      padding: EdgeInsets.fromLTRB(14, 4, 14, 14),
       children: [
         _CartSectionLabel('Items (${tasks.length})', topPadding: 4),
         for (final k in keys) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+            padding: EdgeInsets.fromLTRB(6, 6, 6, 4),
             child: Text(
               k,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: AppColors.muted,
+                color: context.colors.muted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -141,13 +141,13 @@ class _CartBody extends ConsumerWidget {
               },
             ),
         ],
-        const _CartSectionLabel('Breakdown'),
+        _CartSectionLabel('Breakdown'),
         _CartBreakdown(
           totalEst: totalEst,
           byProject: breakdown,
           projectKeys: breakdownKeys,
         ),
-        const _CartSectionLabel('Sprint goal'),
+        _CartSectionLabel('Sprint goal'),
         _SprintGoalField(key: ValueKey(sprint.id), sprint: sprint),
       ],
     );
@@ -155,7 +155,7 @@ class _CartBody extends ConsumerWidget {
 }
 
 class _CartBreakdown extends StatelessWidget {
-  const _CartBreakdown({
+  _CartBreakdown({
     required this.totalEst,
     required this.byProject,
     required this.projectKeys,
@@ -168,7 +168,7 @@ class _CartBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+      padding: EdgeInsets.fromLTRB(6, 4, 6, 8),
       child: Column(
         children: [
           for (var i = 0; i < projectKeys.length; i++) ...[
@@ -176,9 +176,9 @@ class _CartBreakdown extends StatelessWidget {
               name: projectKeys[i],
               hours: byProject[projectKeys[i]]!,
               total: totalEst,
-              barColor: _breakdownBarColor(projectKeys[i]),
+              barColor: _breakdownBarColor(context, projectKeys[i]),
             ),
-            if (i < projectKeys.length - 1) const SizedBox(height: 6),
+            if (i < projectKeys.length - 1) SizedBox(height: 6),
           ],
         ],
       ),
@@ -187,7 +187,7 @@ class _CartBreakdown extends StatelessWidget {
 }
 
 class _BreakdownRow extends StatelessWidget {
-  const _BreakdownRow({
+  _BreakdownRow({
     required this.name,
     required this.hours,
     required this.total,
@@ -213,7 +213,7 @@ class _BreakdownRow extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(fontSize: 11, color: context.colors.muted),
           ),
         ),
         Expanded(
@@ -227,7 +227,7 @@ class _BreakdownRow extends StatelessWidget {
                     height: 5,
                     width: constraints.maxWidth,
                     decoration: BoxDecoration(
-                      color: AppColors.panel3,
+                      color: context.colors.panel3,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -249,7 +249,7 @@ class _BreakdownRow extends StatelessWidget {
           child: Text(
             '${hStr}h · $pct%',
             textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(fontSize: 11, color: context.colors.muted),
           ),
         ),
       ],

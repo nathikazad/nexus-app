@@ -36,11 +36,14 @@ class Task {
   final int? subProjectId;
   final String crumb;
   final double estimate;
+
   /// Logged or recorded actual hours (simulated in fake data).
   final double actualHours;
   final int? sprintId;
+
   /// YYYY-MM-DD
   final String? plannedFor;
+
   /// Past `plannedFor` YMDs when the task was moved to another day.
   final List<String> driftFrom;
   final String notes;

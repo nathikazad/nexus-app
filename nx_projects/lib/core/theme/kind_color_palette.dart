@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 
-Color kindColor(TaskKind k) {
+Color kindColor(BuildContext context, TaskKind k) {
   return switch (k) {
-    TaskKind.task => AppColors.muted,
-    TaskKind.feat => AppColors.feat,
-    TaskKind.bug => AppColors.bug,
+    TaskKind.task => context.colors.muted,
+    TaskKind.feat => context.colors.feat,
+    TaskKind.bug => context.colors.bug,
   };
 }
 

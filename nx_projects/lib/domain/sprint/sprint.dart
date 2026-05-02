@@ -18,10 +18,12 @@ class Sprint {
   final int id;
   final String name;
   final String dates;
+
   /// display label: active, planned, done
   final String badge;
   final SprintState state;
   final String start;
+
   /// YYYY-MM-DD
   final int length;
   final double capH;

@@ -10,6 +10,7 @@ class Project {
 
   final int id;
   final String name;
+
   /// ARGB, e.g. 0xFF6AA3FF
   final int color;
   final int? parentId;

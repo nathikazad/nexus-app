@@ -17,8 +17,8 @@ class NxRootShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, c) {
         return isDesktopLayoutWidth(c.maxWidth)
-            ? const DesktopShell()
-            : const MobileShell();
+            ? DesktopShell()
+            : MobileShell();
       },
     );
   }
@@ -50,12 +50,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const ProjectsLoginScreen(),
+        builder: (context, state) => ProjectsLoginScreen(),
       ),
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const NxRootShell(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const NxRootShell()),
     ],
   );
 });

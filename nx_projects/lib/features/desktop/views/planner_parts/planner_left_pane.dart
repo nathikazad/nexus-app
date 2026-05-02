@@ -1,7 +1,7 @@
 part of '../planner_view.dart';
 
 class _PlannerLeftPane extends ConsumerStatefulWidget {
-  const _PlannerLeftPane({
+  _PlannerLeftPane({
     required this.onOpenTaskMenu,
     required this.onNewProject,
     required this.onNewSprint,
@@ -40,19 +40,19 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+          padding: EdgeInsets.fromLTRB(20, 14, 20, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Planner',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text,
+                  color: context.colors.text,
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -74,9 +74,9 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.border)),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: context.colors.border)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -89,48 +89,48 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const _ProjectFilterChip(),
-                        const SizedBox(width: 10),
-                        const _KindFilterChip(),
-                        const SizedBox(width: 10),
-                        const _StatusFilterChip(),
+                        _ProjectFilterChip(),
+                        SizedBox(width: 10),
+                        _KindFilterChip(),
+                        SizedBox(width: 10),
+                        _StatusFilterChip(),
                       ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               SizedBox(
                 width: 240,
                 child: TextField(
                   controller: _search,
                   onChanged: (s) =>
                       ref.read(searchQueryProvider.notifier).set(s),
-                  style: const TextStyle(color: AppColors.text, fontSize: 12),
+                  style: TextStyle(color: context.colors.text, fontSize: 12),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: AppColors.panel,
+                    fillColor: context.colors.panel,
                     hintText: 'Search ideas…',
-                    hintStyle: const TextStyle(
-                      color: AppColors.dim,
+                    hintStyle: TextStyle(
+                      color: context.colors.dim,
                       fontSize: 12,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
+                    contentPadding: EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 8,
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: context.colors.border),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: context.colors.border),
                     ),
-                    focusedBorder: const OutlineInputBorder(
+                    focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(6)),
-                      borderSide: BorderSide(color: AppColors.accent),
+                      borderSide: BorderSide(color: context.colors.accent),
                     ),
                   ),
                 ),
@@ -138,10 +138,10 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
             ],
           ),
         ),
-        const Divider(height: 1, color: AppColors.border),
+        Divider(height: 1, color: context.colors.border),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: mode == 0
                 ? ProjectsScreen(onOpenTaskMenu: widget.onOpenTaskMenu)
                 : PriorityScreen(onOpenTaskMenu: widget.onOpenTaskMenu),
@@ -153,7 +153,7 @@ class _PlannerLeftPaneState extends ConsumerState<_PlannerLeftPane> {
 }
 
 class _PaneToggle extends StatelessWidget {
-  const _PaneToggle({required this.mode, required this.onChanged});
+  _PaneToggle({required this.mode, required this.onChanged});
 
   final int mode;
   final ValueChanged<int> onChanged;
@@ -161,10 +161,10 @@ class _PaneToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.panel,
-        border: Border.all(color: AppColors.border),
+        color: context.colors.panel,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -187,11 +187,7 @@ class _PaneToggle extends StatelessWidget {
 }
 
 class _SegBtn extends StatelessWidget {
-  const _SegBtn({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  _SegBtn({required this.label, required this.selected, required this.onTap});
 
   final String label;
   final bool selected;
@@ -200,18 +196,18 @@ class _SegBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.panel3 : Colors.transparent,
+      color: selected ? context.colors.panel3 : Colors.transparent,
       borderRadius: BorderRadius.circular(5),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 5),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: selected ? AppColors.text : AppColors.muted,
+              color: selected ? context.colors.text : context.colors.muted,
               fontWeight: FontWeight.w500,
             ),
           ),

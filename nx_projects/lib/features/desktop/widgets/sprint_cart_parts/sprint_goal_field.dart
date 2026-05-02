@@ -1,7 +1,7 @@
 part of '../sprint_cart.dart';
 
 class _SprintGoalField extends ConsumerStatefulWidget {
-  const _SprintGoalField({super.key, required this.sprint});
+  _SprintGoalField({super.key, required this.sprint});
 
   final Sprint sprint;
 
@@ -35,7 +35,7 @@ class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+      padding: EdgeInsets.fromLTRB(6, 4, 6, 8),
       child: TextField(
         controller: _c,
         onChanged: (v) {
@@ -46,25 +46,25 @@ class _SprintGoalFieldState extends ConsumerState<_SprintGoalField> {
         },
         minLines: 2,
         maxLines: 4,
-        style: const TextStyle(fontSize: 13, color: AppColors.text),
-        cursorColor: AppColors.accent,
+        style: TextStyle(fontSize: 13, color: context.colors.text),
+        cursorColor: context.colors.accent,
         decoration: InputDecoration(
           hintText: "What's the goal for ${widget.sprint.name}?",
-          hintStyle: const TextStyle(color: AppColors.dim, fontSize: 12),
+          hintStyle: TextStyle(color: context.colors.dim, fontSize: 12),
           filled: true,
-          fillColor: AppColors.panel2,
-          contentPadding: const EdgeInsets.all(8),
+          fillColor: context.colors.panel2,
+          contentPadding: EdgeInsets.all(8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: BorderSide(color: context.colors.border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: BorderSide(color: context.colors.border),
           ),
-          focusedBorder: const OutlineInputBorder(
+          focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(6)),
-            borderSide: BorderSide(color: AppColors.accent),
+            borderSide: BorderSide(color: context.colors.accent),
           ),
         ),
       ),

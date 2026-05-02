@@ -12,7 +12,7 @@ import 'package:nx_projects/domain/task/task_status.dart';
 
 /// Dense row for a task on a desktop sprint day (draggable to another day when [enableDrag]).
 class DayItemRow extends StatefulWidget {
-  const DayItemRow({
+  DayItemRow({
     super.key,
     required this.task,
     this.onMenu,
@@ -82,13 +82,13 @@ class _DayItemRowState extends State<DayItemRow> {
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: AppColors.border2, width: 1),
+          border: Border.all(color: context.colors.border2, width: 1),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           children: [
-            const SizedBox(width: 7),
-            const SizedBox(width: 7),
+            SizedBox(width: 7),
+            SizedBox(width: 7),
             SizedBox(
               width: 14,
               child: Text(
@@ -96,17 +96,17 @@ class _DayItemRowState extends State<DayItemRow> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
-                  color: done ? AppColors.dim : kindColor(t.kind),
+                  color: done ? context.colors.dim : kindColor(context, t.kind),
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Expanded(
               child: Text(
                 '${t.title}  ${_movedToLabel()}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: context.colors.muted),
               ),
             ),
           ],
@@ -119,7 +119,7 @@ class _DayItemRowState extends State<DayItemRow> {
     return Material(
       color: Colors.transparent,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: BoxConstraints(maxWidth: 400),
         child: _mainRow(
           t: t,
           done: done,
@@ -142,29 +142,29 @@ class _DayItemRowState extends State<DayItemRow> {
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
       child: Material(
-        color: _h ? AppColors.panel3 : AppColors.panel2,
+        color: _h ? context.colors.panel3 : context.colors.panel2,
         borderRadius: BorderRadius.circular(5),
         child: InkWell(
           onTap: widget.onTap ?? widget.onMenu,
           borderRadius: BorderRadius.circular(5),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: widget.isLocated ? const Color(0x10FBBF24) : null,
+              color: widget.isLocated ? Color(0x10FBBF24) : null,
               borderRadius: BorderRadius.circular(5),
               border: widget.isLocated
-                  ? Border.all(color: const Color(0x59FBBF24), width: 1)
+                  ? Border.all(color: Color(0x59FBBF24), width: 1)
                   : blocked
-                  ? Border.all(color: const Color(0x40FF6B6B), width: 1)
+                  ? Border.all(color: Color(0x40FF6B6B), width: 1)
                   : null,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _StatusDot(status: t.status),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: EdgeInsets.only(top: 2),
                   child: SizedBox(
                     width: 14,
                     child: Text(
@@ -172,12 +172,14 @@ class _DayItemRowState extends State<DayItemRow> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11,
-                        color: done ? AppColors.dim : kindColor(t.kind),
+                        color: done
+                            ? context.colors.dim
+                            : kindColor(context, t.kind),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -189,12 +191,14 @@ class _DayItemRowState extends State<DayItemRow> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          color: done ? AppColors.muted : AppColors.text,
+                          color: done
+                              ? context.colors.muted
+                              : context.colors.text,
                           decoration: done ? TextDecoration.lineThrough : null,
                         ),
                       ),
                       if (t.estimate > 0 && actualForProgress > 0) ...[
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         TaskProgressSegments(
                           estimate: t.estimate,
                           actual: actualForProgress,
@@ -204,9 +208,9 @@ class _DayItemRowState extends State<DayItemRow> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 SizedBox(width: 66, child: _HoursCell(task: t)),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 SizedBox(
                   width: 16,
                   child: InkWell(
@@ -215,11 +219,11 @@ class _DayItemRowState extends State<DayItemRow> {
                         : () {
                             widget.onMenu!();
                           },
-                    child: const Text(
+                    child: Text(
                       '⋮',
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.dim,
+                        color: context.colors.dim,
                         height: 1,
                       ),
                     ),
@@ -235,7 +239,7 @@ class _DayItemRowState extends State<DayItemRow> {
 }
 
 class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.status});
+  _StatusDot({required this.status});
 
   final TaskStatus status;
 
@@ -244,29 +248,29 @@ class _StatusDot extends StatelessWidget {
     Color c;
     switch (status) {
       case TaskStatus.todo:
-        c = AppColors.dim;
+        c = context.colors.dim;
         break;
       case TaskStatus.doing:
-        c = AppColors.accent;
+        c = context.colors.accent;
         break;
       case TaskStatus.done:
-        c = AppColors.ok;
+        c = context.colors.ok;
         break;
       case TaskStatus.blocked:
-        c = AppColors.crit;
+        c = context.colors.crit;
         break;
     }
     return Container(
       width: 7,
       height: 7,
-      margin: const EdgeInsets.only(top: 5),
+      margin: EdgeInsets.only(top: 5),
       decoration: BoxDecoration(
         color: c,
         shape: BoxShape.circle,
         boxShadow: status == TaskStatus.doing
             ? [
                 BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.25),
+                  color: context.colors.accent.withValues(alpha: 0.25),
                   blurRadius: 0,
                   spreadRadius: 2,
                 ),
@@ -278,7 +282,7 @@ class _StatusDot extends StatelessWidget {
 }
 
 class _HoursCell extends StatelessWidget {
-  const _HoursCell({required this.task});
+  _HoursCell({required this.task});
 
   final Task task;
 
@@ -288,9 +292,9 @@ class _HoursCell extends StatelessWidget {
       return Text(
         formatHours(task.estimate),
         textAlign: TextAlign.right,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
-          color: AppColors.muted,
+          color: context.colors.muted,
           fontFeatures: [FontFeature.tabularFigures()],
         ),
       );
@@ -302,20 +306,24 @@ class _HoursCell extends StatelessWidget {
           TextSpan(
             text: formatHours(task.actualHours),
             style: TextStyle(
-              color: varianceColorForPair(task.actualHours, task.estimate),
+              color: varianceColorForPair(
+                context,
+                task.actualHours,
+                task.estimate,
+              ),
               fontWeight: FontWeight.w500,
             ),
           ),
           TextSpan(
             text: ' / ${formatHours(task.estimate)}',
-            style: const TextStyle(color: AppColors.dim),
+            style: TextStyle(color: context.colors.dim),
           ),
         ],
       ),
       textAlign: TextAlign.right,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
-        color: AppColors.muted,
+        color: context.colors.muted,
         fontFeatures: [FontFeature.tabularFigures()],
       ),
     );

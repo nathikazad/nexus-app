@@ -16,7 +16,7 @@ import 'package:nx_projects/features/shared/widgets/desktop_task_row.dart';
 
 /// Desktop: full project / subproject tree with dense rows (`reference/desktop` pane-projects).
 class DesktopProjectsBody extends ConsumerStatefulWidget {
-  const DesktopProjectsBody({super.key, required this.onOpenTaskMenu});
+  DesktopProjectsBody({super.key, required this.onOpenTaskMenu});
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
 
@@ -204,12 +204,12 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
         }
         treeChildren.add(
           Padding(
-            padding: const EdgeInsets.only(left: 10, top: 2, bottom: 4),
+            padding: EdgeInsets.only(left: 10, top: 2, bottom: 4),
             child: Container(
-              decoration: const BoxDecoration(
-                border: Border(left: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                border: Border(left: BorderSide(color: context.colors.border)),
               ),
-              padding: const EdgeInsets.only(left: 10),
+              padding: EdgeInsets.only(left: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -264,12 +264,12 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
 
       children.add(
         Padding(
-          padding: const EdgeInsets.only(left: 12),
+          padding: EdgeInsets.only(left: 12),
           child: Container(
-            decoration: const BoxDecoration(
-              border: Border(left: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: context.colors.border)),
             ),
-            padding: const EdgeInsets.only(left: 10),
+            padding: EdgeInsets.only(left: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: treeChildren,
@@ -279,17 +279,21 @@ class _DesktopProjectsBodyState extends ConsumerState<DesktopProjectsBody> {
       );
     }
     children.add(
-      const Padding(
+      Padding(
         padding: EdgeInsets.fromLTRB(4, 16, 4, 0),
         child: Text(
           'Crumb column shows priority bucket. Rows are ordered by bucket within each group.',
-          style: TextStyle(fontSize: 11, color: AppColors.dim, height: 1.6),
+          style: TextStyle(
+            fontSize: 11,
+            color: context.colors.dim,
+            height: 1.6,
+          ),
         ),
       ),
     );
     return SingleChildScrollView(
       controller: _taskScroller.controller,
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
+      padding: EdgeInsets.fromLTRB(0, 0, 0, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,
@@ -325,7 +329,7 @@ List<Task> _sortByBucket(List<Task> tasks) {
 }
 
 class _TreeProjectName extends StatelessWidget {
-  const _TreeProjectName({
+  _TreeProjectName({
     required this.name,
     required this.color,
     required this.meta,
@@ -344,7 +348,7 @@ class _TreeProjectName extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 8, 6, 4),
+      padding: EdgeInsets.fromLTRB(2, 8, 6, 4),
       child: Row(
         children: [
           SizedBox(
@@ -357,30 +361,30 @@ class _TreeProjectName extends StatelessWidget {
               icon: Icon(
                 isExpanded ? Icons.expand_more : Icons.chevron_right,
                 size: 18,
-                color: AppColors.muted,
+                color: context.colors.muted,
               ),
             ),
           ),
-          const SizedBox(width: 2),
+          SizedBox(width: 2),
           Container(
             width: 8,
             height: 8,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.text,
+                color: context.colors.text,
               ),
             ),
           ),
           Text(
             meta,
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(fontSize: 11, color: context.colors.muted),
           ),
           _HoverAdd(onTap: onAdd),
         ],
@@ -390,7 +394,7 @@ class _TreeProjectName extends StatelessWidget {
 }
 
 class _TreeSubName extends StatelessWidget {
-  const _TreeSubName({
+  _TreeSubName({
     required this.name,
     required this.meta,
     required this.isExpanded,
@@ -407,7 +411,7 @@ class _TreeSubName extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 8, 4, 4),
+      padding: EdgeInsets.fromLTRB(2, 8, 4, 4),
       child: Row(
         children: [
           SizedBox(
@@ -420,24 +424,24 @@ class _TreeSubName extends StatelessWidget {
               icon: Icon(
                 isExpanded ? Icons.expand_more : Icons.chevron_right,
                 size: 18,
-                color: AppColors.muted,
+                color: context.colors.muted,
               ),
             ),
           ),
-          const SizedBox(width: 2),
+          SizedBox(width: 2),
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.muted,
+                color: context.colors.muted,
               ),
             ),
           ),
           Text(
             meta,
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(fontSize: 11, color: context.colors.muted),
           ),
           _HoverAdd(onTap: onAdd),
         ],
@@ -447,7 +451,7 @@ class _TreeSubName extends StatelessWidget {
 }
 
 class _HoverAdd extends StatefulWidget {
-  const _HoverAdd({required this.onTap});
+  _HoverAdd({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -467,8 +471,8 @@ class _HoverAddState extends State<_HoverAdd> {
         opacity: _h ? 1 : 0,
         child: IconButton(
           onPressed: widget.onTap,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          icon: const Icon(Icons.add, size: 16, color: AppColors.dim),
+          padding: EdgeInsets.symmetric(horizontal: 6),
+          icon: Icon(Icons.add, size: 16, color: context.colors.dim),
         ),
       ),
     );
