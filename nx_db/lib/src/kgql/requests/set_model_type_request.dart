@@ -45,11 +45,13 @@ class SetModelTypeRequest {
     }
 
     if (attributeDefinitions != null) {
-      json['attribute_definitions'] = attributeDefinitions!.map((ad) => ad.toJson()).toList();
+      json['attribute_definitions'] =
+          attributeDefinitions!.map((ad) => ad.toJson()).toList();
     }
 
     if (relationshipTypes != null) {
-      json['relationship_types'] = relationshipTypes!.map((rt) => rt.toJson()).toList();
+      json['relationship_types'] =
+          relationshipTypes!.map((rt) => rt.toJson()).toList();
     }
 
     if (tagSystems != null) {
@@ -98,13 +100,30 @@ class SetTagSystemRequest {
 }
 
 class SetTagNodeRequest {
-  final String name;
+  final int? id;
+  final String? name;
   final List<SetTagNodeRequest>? children;
+  final bool delete;
 
-  SetTagNodeRequest({required this.name, this.children});
+  SetTagNodeRequest({
+    this.id,
+    this.name,
+    this.children,
+    this.delete = false,
+  });
 
   Map<String, dynamic> toJson() {
+    if (delete) {
+      if (id == null) {
+        throw Exception('id is required when delete is true');
+      }
+      return {'id': id, 'delete': true};
+    }
+    if (name == null || name!.isEmpty) {
+      throw Exception('name is required when delete is false');
+    }
     return {
+      if (id != null) 'id': id,
       'name': name,
       if (children != null && children!.isNotEmpty)
         'children': children!.map((c) => c.toJson()).toList(),

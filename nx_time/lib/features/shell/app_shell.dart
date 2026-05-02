@@ -12,6 +12,7 @@ import 'package:nx_time/features/ai/ai_chat_page.dart';
 import 'package:nx_time/features/ai/voice_listening_overlay.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
 import 'package:nx_time/features/goals/goals_page.dart';
+import 'package:nx_time/features/log_edit/log_edit_page.dart';
 import 'package:nx_time/features/tasks/tasks_page.dart';
 import 'package:nx_time/features/today/today_page.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
@@ -19,7 +20,7 @@ import 'package:nx_time/features/today/today_view_model.dart';
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, this.initialTabIndex = 0});
 
-  /// Initial bottom-nav index (0–3). Used by screenshot integration tests.
+  /// Initial bottom-nav index (0-3). Used by screenshot integration tests.
   final int initialTabIndex;
 
   @override
@@ -77,13 +78,22 @@ class _AppShellState extends ConsumerState<AppShell> {
                 final row = index < snapshot.umbrellaRows.length
                     ? snapshot.umbrellaRows[index]
                     : null;
-                final Action? rowAction =
-                    index < snapshot.sourceActions.length ? snapshot.sourceActions[index] : null;
+                final Action? rowAction = index < snapshot.sourceActions.length
+                    ? snapshot.sourceActions[index]
+                    : null;
                 late final ActivityDetailArgs args;
                 if (row != null && row.children.isNotEmpty) {
-                  args = activityDetailArgsForUmbrella(row, snapshot.dayDateLabel, colors);
+                  args = activityDetailArgsForUmbrella(
+                    row,
+                    snapshot.dayDateLabel,
+                    colors,
+                  );
                 } else if (rowAction != null) {
-                  args = activityDetailArgsForAction(rowAction, snapshot.dayDateLabel, colors);
+                  args = activityDetailArgsForAction(
+                    rowAction,
+                    snapshot.dayDateLabel,
+                    colors,
+                  );
                 } else {
                   args = activityDetailArgsForTodayRow(
                     snapshot.actions[index],
@@ -91,16 +101,24 @@ class _AppShellState extends ConsumerState<AppShell> {
                   );
                 }
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
+                  MaterialPageRoute(
+                    builder: (_) => ActivityDetailPage(args: args),
+                  ),
                 );
               },
               onChildTap: (rowIndex, childIndex) {
                 final row = snapshot.umbrellaRows[rowIndex];
                 if (childIndex < 0 || childIndex >= row.children.length) return;
                 final child = row.children[childIndex];
-                final args = activityDetailArgsForAction(child, snapshot.dayDateLabel, colors);
+                final args = activityDetailArgsForAction(
+                  child,
+                  snapshot.dayDateLabel,
+                  colors,
+                );
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute(builder: (_) => ActivityDetailPage(args: args)),
+                  MaterialPageRoute(
+                    builder: (_) => ActivityDetailPage(args: args),
+                  ),
                 );
               },
               onAddManualTap: () {
@@ -108,6 +126,19 @@ class _AppShellState extends ConsumerState<AppShell> {
                   MaterialPageRoute<void>(
                     builder: (_) => const ActionEditPage(),
                   ),
+                );
+              },
+              onLogTap: (log) {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        LogEditPage(mode: LogEditMode.edit, initial: log),
+                  ),
+                );
+              },
+              onAddLogTap: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(builder: (_) => const LogEditPage()),
                 );
               },
             ),
@@ -119,7 +150,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
           ),
-          TasksPage(),
+          const TasksPage(),
           const GoalsPage(),
           _index == 3 ? const CalendarPage() : const SizedBox.shrink(),
         ],
@@ -179,7 +210,9 @@ class _BottomNav extends StatelessWidget {
                     badge: true,
                   ),
                 ),
-                Expanded(child: _AiSlot(onTap: onAiTap, onLongPress: onAiLongPress)),
+                Expanded(
+                  child: _AiSlot(onTap: onAiTap, onLongPress: onAiLongPress),
+                ),
                 Expanded(
                   child: _NavItem(
                     label: 'Goals',

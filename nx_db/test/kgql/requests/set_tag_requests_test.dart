@@ -3,17 +3,20 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:test/test.dart' show Tags;
 
 void main() {
   group('SetModelTag', () {
     test('R4.1 minimal', () {
       final j = SetModelTag(system: 'Category', nodes: ['Coffee']).toJson();
-      expect(j, {'system': 'Category', 'nodes': ['Coffee']});
+      expect(j, {
+        'system': 'Category',
+        'nodes': ['Coffee']
+      });
     });
 
     test('R4.2 clear', () {
-      final j = SetModelTag(system: 'Category', nodes: [], clear: true).toJson();
+      final j =
+          SetModelTag(system: 'Category', nodes: [], clear: true).toJson();
       expect(j['clear'], true);
     });
   });
@@ -51,6 +54,11 @@ void main() {
       ).toJson();
       expect(j['name'], 'Food');
       expect((j['children'] as List).length, 1);
+    });
+
+    test('R4.6 delete', () {
+      final j = SetTagNodeRequest(id: 7, delete: true).toJson();
+      expect(j, {'id': 7, 'delete': true});
     });
   });
 }

@@ -18,6 +18,8 @@ abstract final class AppColors {
 
   /// Reference link / header actions (Tailwind sky-600).
   static const Color sky600 = Color(0xFF0284C7);
+  static const Color teal100 = Color(0xFFCCFBF1);
+  static const Color teal600 = Color(0xFF0D9488);
 
   static const Color accent = Color(0xFFF97316);
   static const Color accentLight = Color(0xFFFFEDD5);

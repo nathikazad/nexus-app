@@ -1,6 +1,6 @@
 import 'package:nx_db/kgql.dart';
 
-import 'package:nx_expense/domain/schema/model_type_view.dart';
+import 'package:nx_time/domain/schema/model_type_view.dart';
 
 ModelTypeView modelTypeViewFromKgql(ModelType m) {
   return ModelTypeView(

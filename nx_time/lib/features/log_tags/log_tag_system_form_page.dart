@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nx_expense/core/layout/layout.dart';
-import 'package:nx_expense/core/theme/app_theme.dart';
-import 'package:nx_expense/data/providers.dart';
-import 'package:nx_expense/data/schema/model_type_kgql_facade.dart';
-import 'package:nx_expense/data/schema/submit_model_type.dart';
-import 'package:nx_expense/domain/schema/model_type_view.dart';
-import 'package:nx_expense/features/desktop/desktop_nav.dart';
-import 'package:nx_expense/features/expense/expense_list_view_model.dart';
+import 'package:nx_db/kgql.dart';
+import 'package:nx_time/core/layout/layout.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/data/log/log_schema_provider.dart';
+import 'package:nx_time/data/log/log_schema_view_provider.dart';
+import 'package:nx_time/data/schema/submit_model_type.dart';
+import 'package:nx_time/domain/schema/model_type_view.dart';
+import 'package:nx_time/features/log_edit/feeling_provider.dart';
 
-class TagSystemFormScreen extends ConsumerStatefulWidget {
-  const TagSystemFormScreen({
+class LogTagSystemFormPage extends ConsumerStatefulWidget {
+  const LogTagSystemFormPage({
     super.key,
     this.tagSystemId,
     this.embedded = false,
@@ -25,8 +25,8 @@ class TagSystemFormScreen extends ConsumerStatefulWidget {
   final bool embedded;
 
   @override
-  ConsumerState<TagSystemFormScreen> createState() =>
-      _TagSystemFormScreenState();
+  ConsumerState<LogTagSystemFormPage> createState() =>
+      _LogTagSystemFormPageState();
 }
 
 class _NodeForm {
@@ -62,7 +62,7 @@ class _NodeForm {
   }
 }
 
-class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
+class _LogTagSystemFormPageState extends ConsumerState<LogTagSystemFormPage> {
   final _name = TextEditingController();
   bool _exclusive = true;
   bool _hierarchical = false;
@@ -127,7 +127,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final schemaAsync = ref.watch(expenseSchemaViewProvider);
+    final schemaAsync = ref.watch(logSchemaViewProvider);
 
     return schemaAsync.when(
       loading: () =>
@@ -496,7 +496,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.arrow_right, color: AppColors.slate300, size: 20),
+            const Icon(Icons.arrow_right, color: AppColors.slate300, size: 20),
             Expanded(
               child: TextField(
                 controller: node.name,
@@ -525,7 +525,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               ),
             ),
             IconButton(
-              icon: Icon(
+              icon: const Icon(
                 Icons.add_circle_outline,
                 color: AppColors.slate300,
                 size: 22,
@@ -533,7 +533,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               onPressed: () => setState(() => node.children.add(_NodeForm())),
             ),
             IconButton(
-              icon: Icon(
+              icon: const Icon(
                 Icons.cancel_outlined,
                 color: AppColors.slate300,
                 size: 22,
@@ -627,7 +627,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               ),
             ),
             IconButton(
-              icon: Icon(
+              icon: const Icon(
                 Icons.add_circle_outline,
                 color: AppColors.slate300,
                 size: 22,
@@ -635,7 +635,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               onPressed: () => setState(() => child.children.add(_NodeForm())),
             ),
             IconButton(
-              icon: Icon(
+              icon: const Icon(
                 Icons.cancel_outlined,
                 color: AppColors.slate300,
                 size: 22,
@@ -705,7 +705,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                 ),
               ),
               IconButton(
-                icon: Icon(
+                icon: const Icon(
                   Icons.cancel_outlined,
                   color: AppColors.slate300,
                   size: 22,
@@ -772,10 +772,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       );
 
       await submitSetModelTypeRequest(ref.container, req);
-      ref.invalidate(expenseSchemaProvider);
-      ref.invalidate(expenseSchemaViewProvider);
-      ref.invalidate(expenseStructProvider);
-      invalidateExpenseListCache(ref);
+      _invalidateLogTagSchemas();
       if (mounted) _leaveForm(context, ref);
     } catch (e) {
       if (mounted) {
@@ -789,11 +786,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
   }
 
   void _leaveForm(BuildContext context, WidgetRef ref) {
-    if (widget.embedded) {
-      navTagSystemFormBack(context, ref);
-    } else {
-      context.pop();
-    }
+    context.pop();
   }
 
   Future<void> _delete(ModelTypeView schema) async {
@@ -825,10 +818,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
         tagSystems: [SetTagSystemRequest(id: id, delete: true)],
       );
       await submitSetModelTypeRequest(ref.container, req);
-      ref.invalidate(expenseSchemaProvider);
-      ref.invalidate(expenseSchemaViewProvider);
-      ref.invalidate(expenseStructProvider);
-      invalidateExpenseListCache(ref);
+      _invalidateLogTagSchemas();
       if (mounted) _leaveForm(context, ref);
     } catch (e) {
       if (mounted) {
@@ -839,5 +829,11 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _invalidateLogTagSchemas() {
+    ref.invalidate(logSchemaProvider);
+    ref.invalidate(logSchemaViewProvider);
+    ref.invalidate(feelingNamesProvider);
   }
 }

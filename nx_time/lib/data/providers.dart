@@ -5,6 +5,7 @@ import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_time/domain/action/action_repository.dart';
 import 'package:nx_time/domain/goals/goal_repository.dart';
+import 'package:nx_time/domain/log/log_repository.dart';
 import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/data/action/action_schema_provider.dart';
@@ -12,6 +13,8 @@ import 'package:nx_time/data/action/action_subtypes_provider.dart';
 import 'package:nx_time/data/action/kgql_action_repository.dart';
 import 'package:nx_time/data/goals/goal_schema_provider.dart';
 import 'package:nx_time/data/goals/kgql_goal_repository.dart';
+import 'package:nx_time/data/log/kgql_log_repository.dart';
+import 'package:nx_time/data/log/log_schema_provider.dart';
 import 'package:nx_time/data/person/model_type_colors.dart';
 import 'package:nx_time/data/projects/kgql_project_repository.dart';
 import 'package:nx_time/data/projects/project_schema_provider.dart';
@@ -22,6 +25,7 @@ import 'package:nx_time/data/tasks/task_schema_provider.dart';
 export 'package:nx_db/person.dart';
 export 'package:nx_time/data/action/action_schema_provider.dart';
 export 'package:nx_time/data/action/action_subtypes_provider.dart';
+export 'package:nx_time/data/log/log_schema_provider.dart';
 export 'package:nx_time/data/projects/project_schema_provider.dart';
 export 'package:nx_time/data/tasks/task_schema_provider.dart';
 export 'package:nx_time/data/goals/goal_schema_provider.dart';
@@ -92,6 +96,21 @@ final goalRepositoryProvider = Provider<GoalRepository>(
     return KgqlGoalRepository(
       client: ref.watch(graphqlClientProvider),
       loadGoalSchema: () => ref.read(goalSchemaProvider.future),
+      domainId: personal,
+    );
+  },
+);
+
+/// KGQL-backed [LogRepository] for `Daily Log` rows in the personal domain.
+final logRepositoryProvider = Provider<LogRepository>(
+  (ref) {
+    final personal = ref.watch(personalDomainIdProvider);
+    if (personal == null) {
+      throw StateError('personalDomainId required (login)');
+    }
+    return KgqlLogRepository(
+      client: ref.watch(graphqlClientProvider),
+      loadLogSchema: () => ref.read(logSchemaProvider.future),
       domainId: personal,
     );
   },
