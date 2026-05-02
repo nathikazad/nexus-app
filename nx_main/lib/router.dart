@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/features/auth/login_page.dart';
 import 'package:nexus_voice_assistant/features/home/home_page.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/model_detail_page.dart';
@@ -34,13 +33,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => LoginPage(
-          onLoginSuccess: (urls) {
-            final container = ProviderScope.containerOf(context);
-            container.read(bleBackgroundServiceProvider).disconnectSocket();
-            container.read(bleBackgroundServiceProvider).connectSocket(urls.sockWs);
-          },
-        ),
+        builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
         path: '/',
@@ -111,7 +104,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             print('[Router] Unauthenticated on /login → allowing access');
             return null;
           }
-          print('[Router] Unauthenticated on $location → redirecting to /login');
+          print(
+              '[Router] Unauthenticated on $location → redirecting to /login');
           return '/login';
       }
     },

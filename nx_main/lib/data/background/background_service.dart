@@ -5,7 +5,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
@@ -27,16 +26,6 @@ class BleBackgroundService {
 
     final bleClient = BleClient();
     final socketClient = SocketClient();
-    final prefs = await SharedPreferences.getInstance();
-    final sockUrl = prefs.getString(PrefsKeys.sockWsUrl) ??
-        resolve(BackendPreset.defaultPreset).sockWs;
-    final userId = prefs.getString(PrefsKeys.userId) ?? '1';
-    final socketHeaders = <String, String>{
-      'X-User-Id': userId,
-      if (CfAccess.shouldAttachHeaders(sockUrl)) ...CfAccess.headers,
-    };
-
-    await socketClient.connect(sockUrl, headers: socketHeaders);
 
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -243,13 +232,35 @@ class BleBackgroundService {
 
     // Socket control events
     service.on('socket.connect').listen((event) async {
-      final url = event?['url'] as String? ?? sockUrl;
-      final freshPrefs = await SharedPreferences.getInstance();
-      final uid = freshPrefs.getString(PrefsKeys.userId) ?? '1';
+      final url = event?['url'] as String?;
+      final userId = event?['userId'] as String?;
+      final personalDomainId = event?['personalDomainId'] as int?;
+      final sharedDomainId = event?['sharedDomainId'] as int?;
+
+      if (url == null ||
+          url.isEmpty ||
+          userId == null ||
+          userId.isEmpty ||
+          personalDomainId == null ||
+          sharedDomainId == null) {
+        debugPrint(
+          '[Socket] Ignoring connect without complete auth session '
+          '(url=${url != null && url.isNotEmpty}, '
+          'userId=${userId != null && userId.isNotEmpty}, '
+          'personalDomainId=${personalDomainId != null}, '
+          'sharedDomainId=${sharedDomainId != null})',
+        );
+        await socketClient.disconnect();
+        return;
+      }
+
       final headers = <String, String>{
-        'X-User-Id': uid,
+        'X-User-Id': userId,
+        'X-Personal-Domain-Id': personalDomainId.toString(),
+        'X-Shared-Domain-Id': sharedDomainId.toString(),
         if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
+      await socketClient.disconnect();
       await socketClient.connect(url, headers: headers);
     });
 
@@ -464,8 +475,8 @@ class BleBackgroundService {
   /// that attach after `connected` was already emitted would otherwise see [idle] forever.
   BleConnectionState lastKnownBleStatus = BleConnectionState.idle;
 
-  /// For concise File TX logs; refreshed in [start] and [connectSocket].
-  String _fileTxLogUserId = '1';
+  /// For concise File TX logs; refreshed from the active socket session.
+  String _fileTxLogUserId = '';
 
   Stream<BleConnectionState> get statusStream => _statusController.stream;
   Stream<Uint8List> get fileTxStream => _fileTxDataController.stream;
@@ -498,9 +509,6 @@ class BleBackgroundService {
 
   Future<void> start() async {
     await _service.startService();
-
-    final prefs = await SharedPreferences.getInstance();
-    _fileTxLogUserId = prefs.getString(PrefsKeys.userId) ?? '1';
 
     _service.on('ble.status').listen((event) {
       final statusStr = event?['status'] as String? ?? 'scanning';
@@ -596,14 +604,23 @@ class BleBackgroundService {
     _service.invoke('stop');
   }
 
-  void connectSocket(String url) {
-    SharedPreferences.getInstance().then((p) {
-      _fileTxLogUserId = p.getString(PrefsKeys.userId) ?? '1';
+  void connectSocket({
+    required String url,
+    required String userId,
+    required int personalDomainId,
+    required int sharedDomainId,
+  }) {
+    _fileTxLogUserId = userId;
+    _service.invoke('socket.connect', {
+      'url': url,
+      'userId': userId,
+      'personalDomainId': personalDomainId,
+      'sharedDomainId': sharedDomainId,
     });
-    _service.invoke('socket.connect', {'url': url});
   }
 
   void disconnectSocket() {
+    _fileTxLogUserId = '';
     _service.invoke('socket.disconnect');
   }
 

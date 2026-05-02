@@ -26,7 +26,7 @@ class TodayViewToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _ToggleButton(
-            icon: SolarLinearIcons.pieChart2,
+            icon: SolarLinearIcons.running,
             tooltip: 'Actions',
             selected: mode == TodayViewMode.actions,
             onTap: () => onChanged(TodayViewMode.actions),

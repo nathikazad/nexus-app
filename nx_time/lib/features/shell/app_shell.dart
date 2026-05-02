@@ -4,18 +4,22 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/data/subscriptions/kgql_model_subscription.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
 import 'package:nx_time/features/ai/ai_chat_page.dart';
 import 'package:nx_time/features/ai/voice_listening_overlay.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
 import 'package:nx_time/features/goals/goals_page.dart';
 import 'package:nx_time/features/log_edit/log_edit_page.dart';
 import 'package:nx_time/features/tasks/tasks_page.dart';
+import 'package:nx_time/features/today/log_view_model.dart';
 import 'package:nx_time/features/today/today_page.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
+import 'package:nx_time/router.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, this.initialTabIndex = 0});
@@ -27,14 +31,51 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> with RouteAware {
   late int _index;
+  bool _routeVisible = true;
 
   @override
   void initState() {
     super.initState();
     final i = widget.initialTabIndex;
     _index = i < 0 ? 0 : (i > 3 ? 3 : i);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    if (!_routeVisible) {
+      setState(() => _routeVisible = true);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    if (!_routeVisible) {
+      setState(() => _routeVisible = true);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    if (_routeVisible) {
+      setState(() => _routeVisible = false);
+    }
   }
 
   void _onAiTap() {
@@ -59,12 +100,40 @@ class _AppShellState extends ConsumerState<AppShell> {
     final colors = modelTypeColorsOrFallback(
       ref.watch(modelTypeColorsProvider),
     );
+    final todayMode = ref.watch(todayViewModeProvider);
+    final actionsTabVisible = _routeVisible && _index == 0;
 
     ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
       if (next.hasError) {
         debugPrint('[nx_time shell] todaySnapshot: ${next.error}');
       }
     });
+    if (actionsTabVisible && todayMode == TodayViewMode.actions) {
+      ref.listen<AsyncValue<KgqlModelChange>>(
+        kgqlModelChangesProvider('Action'),
+        (prev, next) {
+          final change = next.asData?.value;
+          if (change != null) {
+            invalidateActionsAfterMutation(ref);
+          } else if (next.hasError) {
+            debugPrint('[nx_time shell] action subscription: ${next.error}');
+          }
+        },
+      );
+    }
+    if (actionsTabVisible && todayMode == TodayViewMode.logs) {
+      ref.listen<AsyncValue<KgqlModelChange>>(
+        kgqlModelChangesProvider('Daily Log'),
+        (prev, next) {
+          final change = next.asData?.value;
+          if (change != null) {
+            invalidateLogsAfterMutation(ref);
+          } else if (next.hasError) {
+            debugPrint('[nx_time shell] log subscription: ${next.error}');
+          }
+        },
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -196,7 +265,7 @@ class _BottomNav extends StatelessWidget {
                 Expanded(
                   child: _NavItem(
                     label: 'Actions',
-                    icon: SolarLinearIcons.pieChart2,
+                    icon: SolarLinearIcons.running,
                     selected: currentIndex == 0,
                     onTap: () => onChanged(0),
                   ),

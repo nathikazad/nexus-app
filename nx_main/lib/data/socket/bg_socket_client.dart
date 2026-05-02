@@ -493,9 +493,10 @@ class SocketClient {
     });
   }
 
-  Future<void> disconnect() async {
+  Future<void> disconnect({bool clearQueuedPackets = true}) async {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _isConnected = false;
 
     if (_channel != null) {
       try {
@@ -506,7 +507,9 @@ class SocketClient {
       _channel = null;
     }
 
-    _isConnected = false;
+    if (clearQueuedPackets) {
+      _packetQueue.clear();
+    }
     debugPrint(
         "[Socket] Disconnected (${_packetQueue.length} packets in queue)");
   }

@@ -6,6 +6,8 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_time/features/auth/time_login_screen.dart';
 import 'package:nx_time/features/shell/app_shell.dart';
 
+final routeObserver = RouteObserver<ModalRoute<void>>();
+
 /// Root router: `/login` when unauthenticated, `/today` for [AppShell].
 ///
 /// [initialTabIndex] is only applied on first load (e.g. screenshot tests via `?tab=`).
@@ -18,6 +20,7 @@ final routerProvider = Provider.family<GoRouter, int>((ref, initialTabIndex) {
       : '/today?tab=$initialTabIndex';
 
   return GoRouter(
+    observers: [routeObserver],
     refreshListenable: refresh,
     initialLocation: initial,
     redirect: (context, state) {

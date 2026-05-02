@@ -13,15 +13,44 @@ class NexusVoiceAssistantApp extends ConsumerStatefulWidget {
       _NexusVoiceAssistantAppState();
 }
 
-class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp> {
+class _NexusVoiceAssistantAppState
+    extends ConsumerState<NexusVoiceAssistantApp> {
+  String? _activeSocketSessionKey;
+
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
-      if (next.hasValue && next.value != null) {
-        final user = next.value!;
-        final urls = resolve(user.preset);
-        ref.read(bleBackgroundServiceProvider).connectSocket(urls.sockWs);
+      if (!next.hasValue) return;
+
+      final service = ref.read(bleBackgroundServiceProvider);
+      final user = next.value;
+      if (user == null) {
+        if (_activeSocketSessionKey != null) {
+          _activeSocketSessionKey = null;
+          service.disconnectSocket();
+        }
+        return;
       }
+
+      final urls = resolve(user.preset);
+      final sessionKey = [
+        urls.sockWs,
+        user.userId,
+        user.personalDomainId,
+        user.homeDomainId,
+      ].join('|');
+      if (_activeSocketSessionKey == sessionKey) return;
+
+      if (_activeSocketSessionKey != null) {
+        service.disconnectSocket();
+      }
+      _activeSocketSessionKey = sessionKey;
+      service.connectSocket(
+        url: urls.sockWs,
+        userId: user.userId,
+        personalDomainId: user.personalDomainId,
+        sharedDomainId: user.homeDomainId,
+      );
     });
 
     final router = ref.watch(routerProvider);

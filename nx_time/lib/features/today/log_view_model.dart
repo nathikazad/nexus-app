@@ -29,6 +29,16 @@ final todayLogsProvider = FutureProvider.autoDispose<List<DailyLog>>(
   },
 );
 
+/// Daily Log rows whose `logged_at` falls in [dayLocal]'s local calendar day.
+final dailyLogsForDayProvider =
+    FutureProvider.autoDispose.family<List<DailyLog>, DateTime>(
+  (ref, dayLocal) async {
+    final repo = ref.watch(logRepositoryProvider);
+    return repo.listForCalendarDay(dayLocal);
+  },
+);
+
 void invalidateLogsAfterMutation(WidgetRef ref) {
   ref.invalidate(todayLogsProvider);
+  ref.invalidate(dailyLogsForDayProvider);
 }

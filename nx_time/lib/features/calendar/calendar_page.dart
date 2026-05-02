@@ -15,7 +15,10 @@ import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_view_model.dart';
+import 'package:nx_time/features/log_edit/log_edit_page.dart';
 import 'package:nx_time/features/today/action_fold.dart';
+import 'package:nx_time/features/today/log_view_model.dart';
+import 'package:nx_time/features/today/widgets/log_row.dart';
 
 class CalendarPage extends ConsumerStatefulWidget {
   const CalendarPage({super.key});
@@ -24,7 +27,7 @@ class CalendarPage extends ConsumerStatefulWidget {
   ConsumerState<CalendarPage> createState() => _CalendarPageState();
 }
 
-enum _CalendarView { actions, tasks, stats }
+enum _CalendarView { actions, logs, tasks, stats }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
   /// Index 0 = Monday … 6 = Sunday; `null` until first frame picks default for the week.
@@ -375,10 +378,17 @@ class _CalendarDayPanel extends StatelessWidget {
               Row(
                 children: [
                   _CalViewIcon(
-                    icon: SolarLinearIcons.pieChart2,
+                    icon: SolarLinearIcons.running,
                     tooltip: 'Actions',
                     selected: view == _CalendarView.actions,
                     onTap: () => onSelectView(_CalendarView.actions),
+                  ),
+                  const SizedBox(width: 4),
+                  _CalViewIcon(
+                    icon: SolarLinearIcons.notebook,
+                    tooltip: 'Daily logs',
+                    selected: view == _CalendarView.logs,
+                    onTap: () => onSelectView(_CalendarView.logs),
                   ),
                   const SizedBox(width: 4),
                   _CalViewIcon(
@@ -402,55 +412,124 @@ class _CalendarDayPanel extends StatelessWidget {
         Expanded(
           child: switch (view) {
             _CalendarView.tasks => const Center(
-                child: Text(
-                  'No tasks',
-                  style: TextStyle(fontSize: 14, color: AppColors.slate500),
-                ),
+              child: Text(
+                'No tasks',
+                style: TextStyle(fontSize: 14, color: AppColors.slate500),
               ),
-            _CalendarView.stats => _StatsList(stats: _statsForDay(dayData, colors)),
-            _CalendarView.actions => rows.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No actions',
-                      style: TextStyle(fontSize: 14, color: AppColors.slate500),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 120),
-                    itemCount: rows.length + 1,
-                    itemBuilder: (context, i) {
-                      if (i == rows.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text(
-                            'tap any row to view activity detail',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.slate400,
+            ),
+            _CalendarView.logs => _CalendarLogsList(day: dayData.day),
+            _CalendarView.stats => _StatsList(
+              stats: _statsForDay(dayData, colors),
+            ),
+            _CalendarView.actions =>
+              rows.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No actions',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 120),
+                      itemCount: rows.length + 1,
+                      itemBuilder: (context, i) {
+                        if (i == rows.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              'tap any row to view activity detail',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.slate400,
+                              ),
                             ),
-                          ),
+                          );
+                        }
+                        final row = rows[i];
+                        final u = row.umbrella;
+                        final bar = colors.forId(
+                          u.modelTypeId,
+                          name: u.modelTypeName,
                         );
-                      }
-                      final row = rows[i];
-                      final u = row.umbrella;
-                      final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
-                      final name = u.name.isNotEmpty ? u.name : (u.modelTypeName ?? 'Action');
-                      final start = u.startTime;
-                      final end = u.endTime;
-                      return _CalActRow(
-                        color: bar,
-                        timeRange: _compactTimeRange(start, end),
-                        title: name,
-                        duration: formatDurationHm(start, end),
-                        showBottomBorder: i < rows.length - 1,
-                        onTap: () => onRowTap(row),
-                      );
-                    },
-                  ),
+                        final name = u.name.isNotEmpty
+                            ? u.name
+                            : (u.modelTypeName ?? 'Action');
+                        final start = u.startTime;
+                        final end = u.endTime;
+                        return _CalActRow(
+                          color: bar,
+                          timeRange: _compactTimeRange(start, end),
+                          title: name,
+                          duration: formatDurationHm(start, end),
+                          showBottomBorder: i < rows.length - 1,
+                          onTap: () => onRowTap(row),
+                        );
+                      },
+                    ),
           },
         ),
       ],
+    );
+  }
+}
+
+class _CalendarLogsList extends ConsumerWidget {
+  const _CalendarLogsList({required this.day});
+
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final logsAsync = ref.watch(dailyLogsForDayProvider(day));
+
+    return logsAsync.when(
+      data: (logs) {
+        if (logs.isEmpty) {
+          return const Center(
+            child: Text(
+              'No logs',
+              style: TextStyle(fontSize: 14, color: AppColors.slate500),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          itemCount: logs.length,
+          itemBuilder: (context, i) {
+            final log = logs[i];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: LogRow(
+                log: log,
+                onTap: () {
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          LogEditPage(mode: LogEditMode.edit, initial: log),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Could not load logs: $e',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.slate500),
+          ),
+        ),
+      ),
     );
   }
 }

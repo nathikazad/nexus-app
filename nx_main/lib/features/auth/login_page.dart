@@ -3,14 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 
 /// Login page with userId and backend preset dropdown.
-///
-/// [onLoginSuccess] is called after a successful login with the resolved
-/// [BackendUrls] so the consuming app can perform post-login actions
-/// (e.g. connecting a WebSocket, starting a background service).
 class LoginPage extends ConsumerStatefulWidget {
-  final void Function(BackendUrls urls)? onLoginSuccess;
-
-  const LoginPage({super.key, this.onLoginSuccess});
+  const LoginPage({super.key});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -32,8 +26,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           );
 
       if (errorMessage == null) {
-        final urls = resolve(_selectedPreset);
-        widget.onLoginSuccess?.call(urls);
         return;
       }
 
