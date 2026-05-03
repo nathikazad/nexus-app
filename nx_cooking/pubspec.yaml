@@ -23,6 +23,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # Match nx_time: older Xcode may fail on connectivity_plus; pin until toolchains catch up.
 dependency_overrides:
@@ -30,3 +31,9 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  ios: true
+  android: false
+  image_path: logo.png
+  remove_alpha_ios: true
