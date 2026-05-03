@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nx_notes Mobile Reference</title>
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --panel: #fff;
+      --line: #dedbd2;
+      --line-strong: #c8c3b8;
+      --text: #25231f;
+      --muted: #736f66;
+      --faint: #a39d92;
+      --accent: #276b61;
+      --accent-soft: #e3efec;
+      --blue: #2f5f98;
+      --amber: #8b6518;
+      --red: #a3443f;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: #dedbd2;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .phone {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: min(430px, 100vw);
+      height: min(932px, 100vh);
+      background: var(--bg);
+      overflow: hidden;
+      box-shadow: 0 20px 70px rgba(33, 30, 24, 0.22);
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 54px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(251, 250, 247, 0.96);
+    }
+
+    .top-title {
+      min-width: 0;
+      overflow: hidden;
+      font-size: 17px;
+      font-weight: 760;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      color: var(--muted);
+      flex: none;
+    }
+
+    .icon-button:active {
+      background: #ece8df;
+      color: var(--text);
+    }
+
+    .content {
+      overflow: auto;
+      min-height: 0;
+      padding: 14px;
+    }
+
+    .bottom-nav {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      min-height: 62px;
+      border-top: 1px solid var(--line);
+      background: rgba(251, 250, 247, 0.98);
+    }
+
+    .nav-item {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--muted);
+      box-shadow: 0 1px 2px rgba(33, 30, 24, 0.05);
+    }
+
+    .search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .count {
+      margin-left: auto;
+      color: var(--faint);
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .essay-list,
+    .tag-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .essay-row {
+      display: grid;
+      gap: 5px;
+      width: 100%;
+      min-height: 68px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+      text-align: left;
+      box-shadow: 0 1px 2px rgba(33, 30, 24, 0.04);
+    }
+
+    .essay-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 720;
+      font-size: 14px;
+    }
+
+    .essay-title span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .essay-meta,
+    .essay-excerpt {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--faint);
+      flex: none;
+    }
+
+    .dot.draft {
+      background: var(--amber);
+    }
+
+    .dot.progress {
+      background: var(--blue);
+    }
+
+    .dot.published {
+      background: var(--accent);
+    }
+
+    .dot.discarded {
+      background: var(--red);
+    }
+
+    .tag-system {
+      margin-bottom: 18px;
+    }
+
+    .system-row,
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 40px;
+      width: 100%;
+      padding: 0 9px;
+      border-radius: 8px;
+      text-align: left;
+    }
+
+    .system-row {
+      color: var(--text);
+      font-weight: 760;
+    }
+
+    .tag-row {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tag-row:active {
+      background: var(--accent-soft);
+      color: var(--text);
+    }
+
+    .indent {
+      padding-left: 30px;
+    }
+
+    .tag-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag-count {
+      margin-left: auto;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .context-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      margin: -2px -14px 14px;
+      padding: 0 14px;
+      border-bottom: 1px solid #cbded8;
+      background: var(--accent-soft);
+      color: #1f5a51;
+      font-size: 13px;
+      font-weight: 680;
+    }
+
+    .editor-title {
+      width: 100%;
+      margin: 10px 0 20px;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 32px;
+      font-weight: 780;
+      letter-spacing: 0;
+      line-height: 1.1;
+    }
+
+    .editor-body {
+      color: #3c3933;
+      font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+      font-size: 18px;
+      line-height: 1.72;
+      padding-bottom: 90px;
+    }
+
+    .editor-body p {
+      margin: 0 0 18px;
+    }
+
+    .editor-tools {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 76px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 8px;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 10px 26px rgba(33, 30, 24, 0.12);
+    }
+
+    .tool-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 30px;
+      padding: 0 9px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .tool-pill:active {
+      background: #ece8df;
+      color: var(--text);
+    }
+
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      align-items: end;
+      background: rgba(33, 30, 24, 0.28);
+    }
+
+    .sheet-backdrop.hidden {
+      display: none;
+    }
+
+    .sheet {
+      max-height: 72%;
+      overflow: auto;
+      border-radius: 18px 18px 0 0;
+      background: #fff;
+      box-shadow: 0 -18px 42px rgba(33, 30, 24, 0.22);
+    }
+
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 54px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sheet-title {
+      font-size: 16px;
+      font-weight: 760;
+    }
+
+    .sheet-body {
+      padding: 14px 16px 24px;
+    }
+
+    .field {
+      padding: 13px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .field-label {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 9px;
+      border-radius: 7px;
+      background: #eef0ee;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .chip.blue {
+      background: #e4edf8;
+      color: var(--blue);
+    }
+
+    .chip.green {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .empty {
+      padding: 28px 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (min-width: 520px) {
+      .phone {
+        border-radius: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header id="top" class="top"></header>
+    <main id="content" class="content"></main>
+    <nav id="bottomNav" class="bottom-nav"></nav>
+    <div id="sheetBackdrop" class="sheet-backdrop hidden"></div>
+  </div>
+
+  <script>
+    const essays = [
+      {
+        id: 1,
+        title: "Draft: API design notes",
+        status: "Draft",
+        topics: ["Technical"],
+        area: ["Work", "Infrastructure"],
+        pinned: false,
+        updatedRank: 1,
+        updatedLabel: "12m ago",
+        words: 842,
+        version: 18,
+        excerpt: "Notes on how KGQL should store Super Editor JSON, raw text, tags, and document snapshots.",
+        body: [
+          "The mobile app should have one essay open at a time.",
+          "Navigation is stack based: home, tags, or search leads to a result list, then the editor opens from one selected row.",
+          "When an essay opens from a result set, the editor keeps a small back-to-results bar."
+        ],
+        links: [["KGQL model subscriptions", "Digital Noun · Project"], ["Implement note editor", "Action · Work"]],
+        snapshots: [["Version 18", "Manual checkpoint · 12m ago"], ["Version 17", "Before AI rewrite · 1h ago"]]
+      },
+      {
+        id: 2,
+        title: "Meditation and the Mind",
+        status: "Published",
+        topics: ["Spiritual"],
+        area: ["Personal"],
+        pinned: false,
+        updatedRank: 2,
+        updatedLabel: "2h ago",
+        words: 4500,
+        version: 24,
+        excerpt: "A polished essay about attention, meditation, and returning to the present moment.",
+        body: ["Attention is not a possession. It is an activity that has to be returned to again and again.", "Meditation makes that return visible.", "The essay connects practice with everyday work."],
+        links: [["Morning meditation", "Action · Meditation"]],
+        snapshots: [["Version 24", "Published · 2h ago"]]
+      },
+      {
+        id: 3,
+        title: "The Economics of Meditation",
+        status: "In Progress",
+        topics: ["Spiritual", "Economic"],
+        area: ["Personal"],
+        pinned: false,
+        updatedRank: 3,
+        updatedLabel: "today",
+        words: 3200,
+        version: 13,
+        excerpt: "Explores meditation as an attention budget with costs, returns, and compounding effects.",
+        body: ["A day has a budget of attention.", "The question is whether that budget is spent by intention or auctioned away by default.", "Meditation changes the transaction cost of coming back to the thing that matters."],
+        links: [["Attention budget", "Digital Noun · Concept"]],
+        snapshots: [["Version 13", "Outline pass · today"]]
+      },
+      {
+        id: 4,
+        title: "Internal notes app direction",
+        status: "Draft",
+        topics: ["Product"],
+        area: ["Work", "Product"],
+        pinned: false,
+        updatedRank: 4,
+        updatedLabel: "3d ago",
+        words: 1190,
+        version: 7,
+        excerpt: "Product notes for a Notion-like internal app where documents are KGQL models.",
+        body: ["The app should open directly into work.", "Navigation is secondary to writing and retrieval.", "Every document can link to Actions, Real Nouns, and Digital Nouns."],
+        links: [["Notes product spec", "Essay · Pinned"]],
+        snapshots: [["Version 7", "Product direction · 3d ago"]]
+      },
+      {
+        id: 5,
+        title: "KGQL API shape for notes",
+        status: "In Progress",
+        topics: ["Technical"],
+        area: ["Work", "Infrastructure"],
+        pinned: false,
+        updatedRank: 5,
+        updatedLabel: "yesterday",
+        words: 980,
+        version: 9,
+        excerpt: "A compact outline for set_kgql_models calls, relation links, and query structs.",
+        body: ["The app writes current documents to Essay.", "Meaningful saves create EssaySnap rows.", "Relations are written from the canonical Essay row to the linked model."],
+        links: [["KGQL document model", "Essay · Technical"]],
+        snapshots: [["Version 9", "API examples · yesterday"]]
+      },
+      {
+        id: 6,
+        title: "Notes product spec",
+        status: "In Progress",
+        topics: ["Product"],
+        area: ["Work", "Product"],
+        pinned: true,
+        updatedRank: 6,
+        updatedLabel: "2d ago",
+        words: 2100,
+        version: 11,
+        excerpt: "The working product spec for navigation, editor tabs on desktop, and mobile stack behavior.",
+        body: ["The sidebar is for finding on desktop.", "Mobile uses bottom navigation and one active editor.", "Pinned and recent stay compact."],
+        links: [["Draft: API design notes", "Essay · Technical"]],
+        snapshots: [["Version 11", "Workspace flow · 2d ago"]]
+      },
+      {
+        id: 7,
+        title: "KGQL document model",
+        status: "Draft",
+        topics: ["Technical"],
+        area: ["Work", "Infrastructure"],
+        pinned: true,
+        updatedRank: 7,
+        updatedLabel: "2d ago",
+        words: 1370,
+        version: 6,
+        excerpt: "Abstract Essay, Essay, and EssaySnap model type notes with version_number.",
+        body: ["Abstract Essay owns document, json_document, and word_count.", "Essay is the canonical live document.", "EssaySnap is immutable history."],
+        links: [["Essay snapshot plan", "Digital Noun · Plan"]],
+        snapshots: [["Version 6", "Snapshot flow · 2d ago"]]
+      },
+      {
+        id: 8,
+        title: "Writing system principles",
+        status: "Published",
+        topics: ["Personal"],
+        area: ["Personal"],
+        pinned: true,
+        updatedRank: 8,
+        updatedLabel: "last week",
+        words: 1650,
+        version: 15,
+        excerpt: "A short reference for how internal essays connect back to actions, nouns, and context.",
+        body: ["A good writing system makes capture easy, retrieval precise, and revision low friction.", "Documents should remain readable outside the graph.", "The graph should make them more useful."],
+        links: [["Internal knowledge graph", "Essay · Work"]],
+        snapshots: [["Version 15", "Published · last week"]]
+      }
+    ];
+
+    const tagSystems = [
+      { name: "Status", nodes: ["Draft", "In Progress", "Published", "Discarded"] },
+      { name: "Topic", nodes: ["Technical", "Product", "Spiritual", "Economic", "Personal"] },
+      { name: "Area", nodes: [{ name: "Work", children: ["Product", "Infrastructure"] }, { name: "Personal", children: [] }] }
+    ];
+
+    const state = {
+      route: "home",
+      activeTab: "essays",
+      activeEssayId: null,
+      query: "",
+      resultContext: null,
+      sheet: null
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const escapeHtml = (value) => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+    function statusClass(status) {
+      return { Draft: "draft", "In Progress": "progress", Published: "published", Discarded: "discarded" }[status] || "";
+    }
+
+    function byUpdated(a, b) {
+      return a.updatedRank - b.updatedRank;
+    }
+
+    function essayMatchesTag(essay, systemName, nodeName) {
+      if (systemName === "Status") return essay.status === nodeName;
+      if (systemName === "Topic") return essay.topics.includes(nodeName);
+      if (systemName === "Area") return essay.area.includes(nodeName);
+      return false;
+    }
+
+    function tagCount(systemName, nodeName) {
+      return essays.filter((essay) => essayMatchesTag(essay, systemName, nodeName)).length;
+    }
+
+    function activeEssay() {
+      return essays.find((essay) => essay.id === state.activeEssayId);
+    }
+
+    function essayRow(essay) {
+      return `
+        <button class="essay-row" data-open-essay="${essay.id}">
+          <div class="essay-title">
+            <span class="dot ${statusClass(essay.status)}"></span>
+            <span>${escapeHtml(essay.title)}</span>
+          </div>
+          <div class="essay-meta">${escapeHtml(essay.status)} · ${escapeHtml(essay.topics[0] || "Untagged")} · ${escapeHtml(essay.updatedLabel)}</div>
+          <div class="essay-excerpt">${escapeHtml(essay.excerpt)}</div>
+        </button>
+      `;
+    }
+
+    function renderTop(title, options = {}) {
+      $("#top").innerHTML = `
+        ${options.back ? `
+          <button class="icon-button" data-back aria-label="Back">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
+          </button>
+        ` : ""}
+        <div class="top-title">${escapeHtml(title)}</div>
+        <div style="flex:1"></div>
+        ${options.menu ? `
+          <button class="icon-button" data-open-sheet="menu" aria-label="Essay menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+        ` : ""}
+      `;
+    }
+
+    function renderBottomNav() {
+      const hidden = state.route === "editor";
+      $("#bottomNav").style.display = hidden ? "none" : "grid";
+      if (hidden) return;
+      $("#bottomNav").innerHTML = [
+        ["essays", "Essays"],
+        ["tags", "Tags"],
+        ["search", "Search"]
+      ].map(([key, label]) => `
+        <button class="nav-item ${state.activeTab === key ? "active" : ""}" data-tab="${key}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            ${key === "essays" ? '<path d="M4 19.5V5a2 2 0 0 1 2-2h11l3 3v13.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5Z"></path>' : ""}
+            ${key === "tags" ? '<path d="M20.6 13.2 13.2 20.6a2 2 0 0 1-2.8 0l-7-7V4h9.6l7.6 7.6a2 2 0 0 1 0 1.6Z"></path><circle cx="7.5" cy="7.5" r=".5"></circle>' : ""}
+            ${key === "search" ? '<circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path>' : ""}
+          </svg>
+          <span>${label}</span>
+        </button>
+      `).join("");
+    }
+
+    function renderHome() {
+      renderTop("nx_notes");
+      const pinned = essays.filter((essay) => essay.pinned).slice(0, 5);
+      const recent = [...essays].sort(byUpdated).slice(0, 8);
+      $("#content").innerHTML = `
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input placeholder="Search essays..." data-search-input>
+        </label>
+        <section class="section">
+          <div class="section-head">Pinned <span class="count">${pinned.length}</span></div>
+          <div class="essay-list">${pinned.map(essayRow).join("")}</div>
+        </section>
+        <section class="section">
+          <div class="section-head">Recent <span class="count">${recent.length}</span></div>
+          <div class="essay-list">${recent.map(essayRow).join("")}</div>
+        </section>
+      `;
+    }
+
+    function renderTags() {
+      renderTop("Tags");
+      const tagMarkup = tagSystems.map((system) => {
+        const rows = system.nodes.map((node) => {
+          if (typeof node === "string") {
+            return `
+              <button class="tag-row" data-tag-system="${escapeHtml(system.name)}" data-tag-node="${escapeHtml(node)}">
+                ${system.name === "Status" ? `<span class="dot ${statusClass(node)}"></span>` : ""}
+                <span class="tag-name">${escapeHtml(node)}</span>
+                <span class="tag-count">${tagCount(system.name, node)}</span>
+              </button>
+            `;
+          }
+          return `
+            <button class="tag-row" data-tag-system="${escapeHtml(system.name)}" data-tag-node="${escapeHtml(node.name)}">
+              <span class="tag-name">${escapeHtml(node.name)}</span>
+              <span class="tag-count">${tagCount(system.name, node.name)}</span>
+            </button>
+            ${node.children.map((child) => `
+              <button class="tag-row indent" data-tag-system="${escapeHtml(system.name)}" data-tag-node="${escapeHtml(child)}">
+                <span class="tag-name">${escapeHtml(child)}</span>
+                <span class="tag-count">${tagCount(system.name, child)}</span>
+              </button>
+            `).join("")}
+          `;
+        }).join("");
+        return `
+          <section class="tag-system">
+            <div class="system-row">${escapeHtml(system.name)}</div>
+            ${rows}
+          </section>
+        `;
+      }).join("");
+      $("#content").innerHTML = tagMarkup;
+    }
+
+    function renderSearch() {
+      renderTop("Search");
+      const results = state.query
+        ? essays.filter((essay) => [essay.title, essay.excerpt, essay.status, ...essay.topics, ...essay.area].join(" ").toLowerCase().includes(state.query.toLowerCase())).sort(byUpdated)
+        : [];
+      $("#content").innerHTML = `
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input value="${escapeHtml(state.query)}" placeholder="Search essays..." data-search-input autofocus>
+        </label>
+        <section class="section">
+          <div class="section-head">${state.query ? `Results for "${escapeHtml(state.query)}"` : "Type to search"} <span class="count">${results.length}</span></div>
+          <div class="essay-list">${results.length ? results.map(essayRow).join("") : '<div class="empty">Search by title, tag, status, or excerpt.</div>'}</div>
+        </section>
+      `;
+    }
+
+    function renderResults() {
+      renderTop(state.resultContext.title, { back: true });
+      const results = state.resultContext.resultIds.map((id) => essays.find((essay) => essay.id === id)).filter(Boolean);
+      $("#content").innerHTML = `
+        <section class="section" style="margin-top:0">
+          <div class="section-head">${escapeHtml(state.resultContext.title)} <span class="count">${results.length}</span></div>
+          <div class="essay-list">${results.map(essayRow).join("")}</div>
+        </section>
+      `;
+    }
+
+    function renderEditor() {
+      const essay = activeEssay();
+      renderTop(essay.title, { back: true, menu: true });
+      const contextBar = state.resultContext && state.resultContext.resultIds.includes(essay.id)
+        ? `<button class="context-bar" data-back-results>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
+            <span>Back to ${escapeHtml(state.resultContext.title)}</span>
+            <span class="tag-count">${state.resultContext.resultIds.indexOf(essay.id) + 1} of ${state.resultContext.resultIds.length}</span>
+          </button>`
+        : "";
+      $("#content").innerHTML = `
+        ${contextBar}
+        <input class="editor-title" value="${escapeHtml(essay.title)}" aria-label="Essay title">
+        <div class="editor-body">
+          ${essay.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+        </div>
+        <div class="editor-tools">
+          <button class="tool-pill">+</button>
+          <button class="tool-pill">B</button>
+          <button class="tool-pill">I</button>
+          <button class="tool-pill">#</button>
+          <button class="tool-pill">@</button>
+        </div>
+      `;
+    }
+
+    function renderSheet() {
+      const backdrop = $("#sheetBackdrop");
+      if (!state.sheet) {
+        backdrop.classList.add("hidden");
+        backdrop.innerHTML = "";
+        return;
+      }
+      const essay = activeEssay();
+      let body = "";
+      if (state.sheet === "menu") {
+        body = `
+          <button class="tag-row" data-open-sheet="details">Details</button>
+          <button class="tag-row" data-open-sheet="links">Links</button>
+          <button class="tag-row" data-open-sheet="history">History</button>
+          <button class="tag-row">Pin / Unpin</button>
+          <button class="tag-row">Create checkpoint</button>
+        `;
+      } else if (state.sheet === "details") {
+        body = `
+          <div class="field"><div class="field-label">Status</div><span class="chip">${escapeHtml(essay.status)}</span></div>
+          <div class="field"><div class="field-label">Topics</div><div class="chips">${essay.topics.map((topic) => `<span class="chip blue">${escapeHtml(topic)}</span>`).join("")}</div></div>
+          <div class="field"><div class="field-label">Area</div><div class="chips">${essay.area.map((area) => `<span class="chip green">${escapeHtml(area)}</span>`).join("") || '<span class="chip">None</span>'}</div></div>
+          <div class="field"><div class="field-label">Document</div>${essay.words.toLocaleString()} words · Version ${essay.version} · Updated ${escapeHtml(essay.updatedLabel)}</div>
+        `;
+      } else if (state.sheet === "links") {
+        body = essay.links.map(([title, subtitle]) => `<button class="essay-row"><div class="essay-title"><span>${escapeHtml(title)}</span></div><div class="essay-meta">${escapeHtml(subtitle)}</div></button>`).join("") || '<div class="empty">No links yet.</div>';
+      } else if (state.sheet === "history") {
+        body = essay.snapshots.map(([title, subtitle]) => `<button class="essay-row"><div class="essay-title"><span>${escapeHtml(title)}</span></div><div class="essay-meta">${escapeHtml(subtitle)}</div></button>`).join("");
+      }
+      backdrop.classList.remove("hidden");
+      backdrop.innerHTML = `
+        <section class="sheet">
+          <div class="sheet-head">
+            <div class="sheet-title">${escapeHtml(state.sheet[0].toUpperCase() + state.sheet.slice(1))}</div>
+            <div style="flex:1"></div>
+            <button class="icon-button" data-close-sheet aria-label="Close sheet">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="sheet-body">${body}</div>
+        </section>
+      `;
+    }
+
+    function render() {
+      if (state.route === "home") {
+        if (state.activeTab === "essays") renderHome();
+        if (state.activeTab === "tags") renderTags();
+        if (state.activeTab === "search") renderSearch();
+      }
+      if (state.route === "results") renderResults();
+      if (state.route === "editor") renderEditor();
+      renderBottomNav();
+      renderSheet();
+    }
+
+    function openEssay(id) {
+      state.activeEssayId = id;
+      state.route = "editor";
+      state.sheet = null;
+      render();
+    }
+
+    function openResults(title, results) {
+      state.resultContext = { title, resultIds: results.map((essay) => essay.id) };
+      state.route = "results";
+      render();
+    }
+
+    document.addEventListener("click", (event) => {
+      const tab = event.target.closest("[data-tab]");
+      if (tab) {
+        state.activeTab = tab.dataset.tab;
+        state.route = "home";
+        state.sheet = null;
+        render();
+        return;
+      }
+
+      if (event.target.closest("[data-back]")) {
+        if (state.route === "editor" && state.resultContext) {
+          state.route = "results";
+        } else {
+          state.route = "home";
+        }
+        state.sheet = null;
+        render();
+        return;
+      }
+
+      if (event.target.closest("[data-back-results]")) {
+        state.route = "results";
+        render();
+        return;
+      }
+
+      const essayButton = event.target.closest("[data-open-essay]");
+      if (essayButton) {
+        openEssay(Number(essayButton.dataset.openEssay));
+        return;
+      }
+
+      const tagButton = event.target.closest("[data-tag-system]");
+      if (tagButton) {
+        const system = tagButton.dataset.tagSystem;
+        const node = tagButton.dataset.tagNode;
+        const results = essays.filter((essay) => essayMatchesTag(essay, system, node)).sort(byUpdated);
+        openResults(`${system}: ${node}`, results);
+        return;
+      }
+
+      const sheetButton = event.target.closest("[data-open-sheet]");
+      if (sheetButton) {
+        state.sheet = sheetButton.dataset.openSheet;
+        renderSheet();
+        return;
+      }
+
+      if (event.target.closest("[data-close-sheet]") || event.target.id === "sheetBackdrop") {
+        state.sheet = null;
+        renderSheet();
+      }
+    });
+
+    document.addEventListener("input", (event) => {
+      if (event.target.matches("[data-search-input]")) {
+        state.query = event.target.value;
+        state.activeTab = "search";
+        state.route = "home";
+        render();
+        const input = document.querySelector("[data-search-input]");
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+      if (event.target.matches(".editor-title")) {
+        const essay = activeEssay();
+        essay.title = event.target.value;
+        renderTop(essay.title, { back: true, menu: true });
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
