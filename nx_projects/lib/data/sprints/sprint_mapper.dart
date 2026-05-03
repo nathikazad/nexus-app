@@ -78,6 +78,7 @@ Sprint sprintFromModel(Model m) {
 
 List<SetModelAttribute> setModelAttributesForSprintCreate(Sprint s) {
   return [
+    SetModelAttribute(key: kSprintAttrName, value: s.name),
     SetModelAttribute(key: kSprintAttrStartDate, value: _isoNoon(s.start)),
     SetModelAttribute(
       key: kSprintAttrEndDate,
@@ -99,8 +100,17 @@ SetModelRequest setModelRequestForCreateSprint(Sprint s) {
 
 List<SetModelAttribute> setModelAttributesForSprintUpdate(Sprint s) {
   return [
+    SetModelAttribute(key: kSprintAttrName, value: s.name),
     SetModelAttribute(key: kSprintAttrGoal, value: s.goal),
     SetModelAttribute(key: kSprintAttrStatus, value: _stateToAttr(s.state)),
     SetModelAttribute(key: kSprintAttrAllocatedHours, value: s.capH),
   ];
+}
+
+SetModelRequest setModelRequestForUpdateSprint(Sprint s) {
+  return SetModelRequest(
+    id: s.id,
+    name: s.name,
+    attributes: setModelAttributesForSprintUpdate(s),
+  );
 }

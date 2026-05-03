@@ -71,10 +71,7 @@ class KgqlSprintRepository implements SprintRepository {
   Future<void> update(Sprint sprint) async {
     await setKgqlModel(
       _client,
-      SetModelRequest(
-        id: sprint.id,
-        attributes: setModelAttributesForSprintUpdate(sprint),
-      ),
+      setModelRequestForUpdateSprint(sprint),
       domainId: _domainId,
     );
   }
