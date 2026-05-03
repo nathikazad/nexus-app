@@ -19,5 +19,5 @@ const String kTaskRelationKey = 'Task';
 /// Task belongs to project.
 const String kTaskInProjectRelationName = 'in_project';
 
-/// Task linked to a concrete activity (Action subtype).
-const String kTaskLinkedActivityRelationName = 'linked_to_activity';
+/// Generic Task -> Action relation for linking to concrete Action subtype rows.
+const String kTaskLinkedActivityRelationName = 'link_to_action';

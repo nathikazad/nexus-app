@@ -57,7 +57,7 @@ abstract class TaskRepository {
     required int relationId,
   });
 
-  /// Links an existing activity row (concrete Action subtype) via `linked_to_activity`.
+  /// Links an existing activity row (concrete Action subtype) via `link_to_action`.
   Future<int> linkActivity({
     required int taskId,
     required int activityId,

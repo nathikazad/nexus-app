@@ -6,7 +6,7 @@ class _TaskCopyUnset {
 
 const _taskCopyUnset = _TaskCopyUnset();
 
-/// Link from a [Task] to a concrete activity row (Action subtype) via `linked_to_activity`.
+/// Link from a [Task] to a concrete activity row (Action subtype) via `link_to_action`.
 class TaskActivityLink {
   const TaskActivityLink({
     required this.activityId,

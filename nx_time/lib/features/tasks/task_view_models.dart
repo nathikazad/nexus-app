@@ -150,7 +150,7 @@ Future<void> pinTaskIdsToCalendarDay(
   }
 }
 
-/// Tasks whose `linked_to_activity` relation includes [activityId].
+/// Tasks whose `link_to_action` relation includes [activityId].
 Future<List<Task>> tasksLinkedToActivity(
   TaskRepository repo,
   int activityId,
