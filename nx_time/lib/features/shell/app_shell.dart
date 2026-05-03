@@ -15,6 +15,7 @@ import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
 import 'package:nx_time/features/goals/goals_page.dart';
 import 'package:nx_time/features/log_edit/log_edit_page.dart';
+import 'package:nx_time/features/tasks/task_view_models.dart';
 import 'package:nx_time/features/tasks/tasks_page.dart';
 import 'package:nx_time/features/today/log_view_model.dart';
 import 'package:nx_time/features/today/today_page.dart';
@@ -31,13 +32,16 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> with RouteAware {
+class _AppShellState extends ConsumerState<AppShell>
+    with RouteAware, WidgetsBindingObserver {
   late int _index;
   bool _routeVisible = true;
+  bool _wasBackgrounded = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final i = widget.initialTabIndex;
     _index = i < 0 ? 0 : (i > 3 ? 3 : i);
   }
@@ -53,8 +57,25 @@ class _AppShellState extends ConsumerState<AppShell> with RouteAware {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _wasBackgrounded = true;
+      return;
+    }
+    if (state != AppLifecycleState.resumed || !_wasBackgrounded) return;
+    _wasBackgrounded = false;
+    if (!_routeVisible) return;
+    invalidateActionsAfterMutation(ref);
+    invalidateTasksAfterMutation(ref);
   }
 
   @override

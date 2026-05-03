@@ -58,7 +58,7 @@ List<TaskRowVm> taskRowVmsFromTasks(
           title: t.name.isEmpty ? 'Task' : t.name,
           subtitle: t.projectId != null
               ? (projectBreadcrumbByProjectId[t.projectId] ??
-                  'Project ${t.projectId}')
+                    'Project ${t.projectId}')
               : '',
           durationLabel: formatDurationHm(t.startTime, t.endTime),
           isDone: t.status == TaskStatus.done,
@@ -91,6 +91,7 @@ Map<int, String> projectBreadcrumbLabels(List<Project> all) {
     }
     return parts.reversed.join(' › ');
   }
+
   return {for (final p in all) p.id: labelFor(p.id)};
 }
 
@@ -99,8 +100,9 @@ final allProjectsProvider = FutureProvider<List<Project>>((ref) async {
   return ref.read(projectRepositoryProvider).listAll();
 });
 
-final projectBreadcrumbLabelsProvider =
-    FutureProvider<Map<int, String>>((ref) async {
+final projectBreadcrumbLabelsProvider = FutureProvider<Map<int, String>>((
+  ref,
+) async {
   final projects = await ref.watch(allProjectsProvider.future);
   return projectBreadcrumbLabels(projects);
 });
@@ -121,8 +123,10 @@ final taskDetailProvider = FutureProvider.family<Task?, int>((ref, id) async {
   return ref.read(taskRepositoryProvider).getById(id);
 });
 
-final subtasksOfTaskProvider =
-    FutureProvider.family<List<Task>, int>((ref, parentId) async {
+final subtasksOfTaskProvider = FutureProvider.family<List<Task>, int>((
+  ref,
+  parentId,
+) async {
   await ref.watch(authenticatedUserProvider.future);
   final parent = await ref.watch(taskDetailProvider(parentId).future);
   if (parent == null) return [];
@@ -165,10 +169,22 @@ Future<List<Task>> tasksLinkedToActivity(
 ///
 /// Because it `watch`es [allTasksProvider], any invalidation of that provider
 /// (status change, edit, link, etc.) propagates here automatically.
-final tasksLinkedToActivityProvider =
-    FutureProvider.family<List<Task>, int>((ref, activityId) async {
+final tasksLinkedToActivityProvider = FutureProvider.family<List<Task>, int>((
+  ref,
+  activityId,
+) async {
   final all = await ref.watch(allTasksProvider.future);
   return all
       .where((t) => t.linkedActivities.any((l) => l.activityId == activityId))
       .toList();
 });
+
+/// Refetches task lists and any mounted task detail/link views after external
+/// changes, such as returning to the app after it was backgrounded.
+void invalidateTasksAfterMutation(WidgetRef ref) {
+  ref.invalidate(tasksForTodayProvider);
+  ref.invalidate(allTasksProvider);
+  ref.invalidate(taskDetailProvider);
+  ref.invalidate(subtasksOfTaskProvider);
+  ref.invalidate(tasksLinkedToActivityProvider);
+}
