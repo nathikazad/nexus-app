@@ -1,0 +1,2196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nx_notes Desktop Reference</title>
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --panel: #fbfaf7;
+      --panel-2: #ffffff;
+      --line: #dedbd2;
+      --line-strong: #c9c5ba;
+      --text: #25231f;
+      --muted: #736f66;
+      --faint: #9a958b;
+      --accent: #276b61;
+      --accent-soft: #e3efec;
+      --blue: #2f5f98;
+      --amber: #8b6518;
+      --red: #a3443f;
+      --shadow: 0 1px 2px rgba(33, 30, 24, 0.06);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 304px minmax(520px, 1fr) 320px;
+      height: 100vh;
+      min-width: 1040px;
+      position: relative;
+    }
+
+    .sidebar,
+    .inspector {
+      background: var(--panel);
+      border-color: var(--line);
+      min-height: 0;
+    }
+
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      border-right: 1px solid var(--line);
+      z-index: 3;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 52px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .workspace {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 650;
+      font-size: 14px;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--text);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      color: var(--muted);
+    }
+
+    .icon-button:hover {
+      background: #eeeae2;
+      color: var(--text);
+    }
+
+    .create-menu {
+      position: absolute;
+      top: 42px;
+      right: 12px;
+      z-index: 8;
+      width: 236px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 14px 34px rgba(33, 30, 24, 0.16);
+      overflow: hidden;
+    }
+
+    .create-menu.hidden {
+      display: none;
+    }
+
+    .create-menu-head {
+      padding: 11px 12px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .create-menu-title {
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .create-menu-subtitle {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .create-topic {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      min-height: 34px;
+      padding: 0 12px;
+      color: var(--text);
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .create-topic:hover {
+      background: var(--accent-soft);
+    }
+
+    .grow {
+      flex: 1;
+    }
+
+    .search-wrap {
+      padding: 12px 12px 10px;
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .search svg {
+      color: var(--faint);
+      flex: none;
+    }
+
+    .search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3px;
+      margin: 0 12px 10px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #eeece6;
+    }
+
+    .tab {
+      height: 28px;
+      border-radius: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .tab.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .filter-block {
+      padding: 0 12px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .filter-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      min-height: 24px;
+      padding: 0 7px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chip.active {
+      border-color: #b9d3cc;
+      background: var(--accent-soft);
+      color: #1e574f;
+    }
+
+    .sidebar-scroll {
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .section {
+      padding: 12px;
+    }
+
+    .section + .section {
+      border-top: 1px solid var(--line);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 24px;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .count {
+      margin-left: auto;
+      color: var(--faint);
+      font-weight: 650;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .essay-list {
+      display: grid;
+      gap: 2px;
+    }
+
+    .essay-row {
+      display: grid;
+      gap: 3px;
+      min-height: 54px;
+      padding: 8px;
+      border-radius: 7px;
+    }
+
+    .essay-row.active {
+      background: #e8f0ed;
+      outline: 1px solid #c6ddd7;
+    }
+
+    .essay-row:hover {
+      background: #efede7;
+    }
+
+    .essay-title-line {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .essay-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 620;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex: none;
+      background: var(--faint);
+    }
+
+    .dot.draft {
+      background: var(--amber);
+    }
+
+    .dot.progress {
+      background: var(--blue);
+    }
+
+    .dot.published {
+      background: var(--accent);
+    }
+
+    .dot.discarded {
+      background: var(--red);
+    }
+
+    .essay-meta {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag-system {
+      display: grid;
+      gap: 2px;
+      margin-bottom: 12px;
+    }
+
+    .tag-system:last-child {
+      margin-bottom: 0;
+    }
+
+    .system-row,
+    .tag-row,
+    .saved-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 28px;
+      padding: 0 7px;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .system-row {
+      color: var(--text);
+      font-weight: 680;
+    }
+
+    .tag-row:hover,
+    .saved-row:hover {
+      background: #efede7;
+      color: var(--text);
+    }
+
+    .tag-row.selected {
+      background: var(--accent-soft);
+      color: #1f5a51;
+    }
+
+    .indent {
+      padding-left: 25px;
+    }
+
+    .tag-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag-count {
+      margin-left: auto;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .chev {
+      color: var(--faint);
+      flex: none;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: 38px 52px auto 1fr;
+      min-width: 0;
+      min-height: 0;
+      background: var(--panel-2);
+    }
+
+    .editor-tabs {
+      display: flex;
+      align-items: end;
+      gap: 2px;
+      min-width: 0;
+      padding: 6px 10px 0;
+      border-bottom: 1px solid var(--line);
+      background: #f1efea;
+    }
+
+    .doc-tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 210px;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid transparent;
+      border-bottom: 0;
+      border-radius: 7px 7px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .doc-tab.active {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--text);
+    }
+
+    .doc-tab span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tab-close {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      margin-right: -4px;
+      border-radius: 4px;
+      color: var(--faint);
+      flex: none;
+    }
+
+    .tab-close:hover {
+      background: #e8e5dd;
+      color: var(--text);
+    }
+
+    .dirty-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex: none;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.84);
+    }
+
+    .crumb {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .save-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .context-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 38px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: #f8f6f1;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .context-bar.hidden {
+      display: none;
+    }
+
+    .context-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text);
+      font-weight: 680;
+    }
+
+    .context-meta {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .context-stepper {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: auto;
+    }
+
+    .editor-shell {
+      overflow: auto;
+      min-height: 0;
+      background:
+        linear-gradient(90deg, rgba(222, 219, 210, 0.7) 1px, transparent 1px) left top / 1px 100% no-repeat,
+        linear-gradient(90deg, transparent calc(100% - 1px), rgba(222, 219, 210, 0.7) calc(100% - 1px)) right top / 1px 100% no-repeat,
+        #fff;
+    }
+
+    .editor-page {
+      width: min(820px, calc(100% - 96px));
+      margin: 56px auto 120px;
+    }
+
+    .title-input {
+      margin: 0 0 26px;
+      border: 0;
+      outline: 0;
+      width: 100%;
+      color: var(--text);
+      font-size: 38px;
+      font-weight: 760;
+      letter-spacing: 0;
+      line-height: 1.12;
+    }
+
+    .editor-placeholder {
+      color: #3c3933;
+      font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+      font-size: 19px;
+      line-height: 1.72;
+    }
+
+    .editor-placeholder p {
+      margin: 0 0 18px;
+    }
+
+    .editor-placeholder h2 {
+      margin: 34px 0 10px;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 19px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    .ghost-line {
+      color: #aaa49a;
+    }
+
+    .block-handle {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin-left: -34px;
+      margin-right: 10px;
+      border-radius: 5px;
+      color: #b2aca2;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 16px;
+      vertical-align: middle;
+    }
+
+    .block-handle:hover {
+      background: #f0eee8;
+      color: var(--muted);
+    }
+
+    .inspector {
+      display: grid;
+      grid-template-rows: 52px auto 1fr;
+      border-left: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .inspector-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      margin: 12px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #eeece6;
+    }
+
+    .segmented button {
+      height: 28px;
+      border-radius: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .segmented .active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .inspector-scroll {
+      overflow: auto;
+      min-height: 0;
+      padding: 0 12px 18px;
+    }
+
+    .field-group {
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .field-group:first-child {
+      border-top: 0;
+      padding-top: 2px;
+    }
+
+    .label {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .value-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #efede7;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .pill.green {
+      background: var(--accent-soft);
+      color: #1f5a51;
+    }
+
+    .pill.blue {
+      background: #e4edf8;
+      color: #2f5f98;
+    }
+
+    .link-row,
+    .history-row {
+      display: grid;
+      gap: 3px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .link-row + .link-row,
+    .history-row + .history-row {
+      margin-top: 7px;
+    }
+
+    .item-title {
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-subtitle {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .add-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      height: 32px;
+      padding: 0 8px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .results-overlay {
+      position: fixed;
+      left: 304px;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      display: grid;
+      place-items: stretch;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      background: #fbfaf7;
+      backdrop-filter: none;
+      border-left: 1px solid rgba(222, 219, 210, 0.7);
+    }
+
+    .results-overlay.hidden {
+      display: none;
+    }
+
+    .results-panel {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+      box-shadow: none;
+      overflow: hidden;
+    }
+
+    .results-head {
+      display: grid;
+      gap: 8px;
+      padding: 22px 28px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .results-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .results-title {
+      overflow: hidden;
+      font-size: 18px;
+      font-weight: 760;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .results-count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .results-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .overlay-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .overlay-search strong {
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .results-scroll {
+      overflow: auto;
+      min-height: 0;
+      padding: 12px 20px 28px;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 16px;
+      width: 100%;
+      min-height: 74px;
+      padding: 11px 12px;
+      border-radius: 7px;
+      text-align: left;
+    }
+
+    .result-row:hover,
+    .result-row.active {
+      background: var(--accent-soft);
+    }
+
+    .result-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 680;
+    }
+
+    .result-title span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-meta {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .result-excerpt {
+      grid-column: 1 / -1;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-state {
+      padding: 26px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .mobile-warning {
+      display: none;
+    }
+
+    @media (max-width: 1039px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        display: none;
+      }
+
+      .mobile-warning {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 32px;
+        color: var(--muted);
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Essay navigator">
+      <div class="topbar">
+        <div class="workspace">
+          <div class="mark">N</div>
+          <span>nx_notes</span>
+        </div>
+        <div class="grow"></div>
+        <button id="newEssayButton" class="icon-button" aria-label="New essay">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"></path>
+          </svg>
+        </button>
+        <div id="createMenu" class="create-menu hidden" aria-label="Choose topic for new essay"></div>
+      </div>
+
+      <div class="search-wrap">
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input id="sidebarSearch" placeholder="Search essays..." aria-label="Search essays">
+        </label>
+      </div>
+
+      <nav class="tabs" aria-label="Sidebar sections">
+        <button id="essaysTab" class="tab active" data-sidebar-tab="essays">Essays</button>
+        <button id="tagsTab" class="tab" data-sidebar-tab="tags">Tags</button>
+      </nav>
+
+      <div id="navigator" class="sidebar-scroll">
+        <section class="section">
+          <div class="section-header">
+            <span>Recent</span>
+            <span class="count">5</span>
+          </div>
+          <div class="essay-list">
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot published"></span>
+                <span class="essay-title">Meditation and the Mind</span>
+              </span>
+              <span class="essay-meta">Published · Spiritual · 2h ago</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot progress"></span>
+                <span class="essay-title">The Economics of Meditation</span>
+              </span>
+              <span class="essay-meta">In Progress · Economic · today</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot draft"></span>
+                <span class="essay-title">Internal notes app direction</span>
+              </span>
+              <span class="essay-meta">Draft · Product · 3d ago</span>
+            </button>
+            <button class="essay-row active">
+              <span class="essay-title-line">
+                <span class="dot draft"></span>
+                <span class="essay-title">Draft: API design notes</span>
+              </span>
+              <span class="essay-meta">Draft · Technical · edited 12m ago</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot progress"></span>
+                <span class="essay-title">KGQL API shape for notes</span>
+              </span>
+              <span class="essay-meta">In Progress · Technical · yesterday</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <span>Pinned</span>
+            <span class="count">5</span>
+          </div>
+          <div class="essay-list">
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot progress"></span>
+                <span class="essay-title">Notes product spec</span>
+              </span>
+              <span class="essay-meta">In Progress · Product</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot draft"></span>
+                <span class="essay-title">KGQL document model</span>
+              </span>
+              <span class="essay-meta">Draft · Technical</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot published"></span>
+                <span class="essay-title">Writing system principles</span>
+              </span>
+              <span class="essay-meta">Published · Personal</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot progress"></span>
+                <span class="essay-title">Mobile editor constraints</span>
+              </span>
+              <span class="essay-meta">In Progress · Technical</span>
+            </button>
+            <button class="essay-row">
+              <span class="essay-title-line">
+                <span class="dot draft"></span>
+                <span class="essay-title">Internal knowledge graph</span>
+              </span>
+              <span class="essay-meta">Draft · Work</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <span>Tags</span>
+          </div>
+
+          <div class="tag-system">
+            <div class="system-row">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span>Status</span>
+            </div>
+            <button class="tag-row selected">
+              <span class="dot draft"></span>
+              <span class="tag-name">Draft</span>
+              <span class="tag-count">7</span>
+            </button>
+            <button class="tag-row">
+              <span class="dot progress"></span>
+              <span class="tag-name">In Progress</span>
+              <span class="tag-count">6</span>
+            </button>
+            <button class="tag-row">
+              <span class="dot published"></span>
+              <span class="tag-name">Published</span>
+              <span class="tag-count">4</span>
+            </button>
+            <button class="tag-row">
+              <span class="dot discarded"></span>
+              <span class="tag-name">Discarded</span>
+              <span class="tag-count">1</span>
+            </button>
+          </div>
+
+          <div class="tag-system">
+            <div class="system-row">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span>Topic</span>
+            </div>
+            <button class="tag-row selected">
+              <span class="tag-name">Technical</span>
+              <span class="tag-count">5</span>
+            </button>
+            <button class="tag-row">
+              <span class="tag-name">Spiritual</span>
+              <span class="tag-count">3</span>
+            </button>
+            <button class="tag-row">
+              <span class="tag-name">Economic</span>
+              <span class="tag-count">2</span>
+            </button>
+            <button class="tag-row">
+              <span class="tag-name">Personal</span>
+              <span class="tag-count">8</span>
+            </button>
+          </div>
+
+          <div class="tag-system">
+            <div class="system-row">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span>Area</span>
+            </div>
+            <button class="tag-row">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span class="tag-name">Work</span>
+              <span class="tag-count">9</span>
+            </button>
+            <button class="tag-row indent">
+              <span class="tag-name">Product</span>
+              <span class="tag-count">4</span>
+            </button>
+            <button class="tag-row indent">
+              <span class="tag-name">Infrastructure</span>
+              <span class="tag-count">3</span>
+            </button>
+            <button class="tag-row">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span class="tag-name">Personal</span>
+              <span class="tag-count">6</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <span>Saved Views</span>
+          </div>
+          <button class="saved-row">
+            <span class="tag-name">Draft technical notes</span>
+            <span class="tag-count">2</span>
+          </button>
+          <button class="saved-row">
+            <span class="tag-name">Published essays</span>
+            <span class="tag-count">4</span>
+          </button>
+            <button class="saved-row">
+              <span class="tag-name">Linked to actions</span>
+              <span class="tag-count">11</span>
+            </button>
+        </section>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="editorTabs" class="editor-tabs" aria-label="Open essays">
+        <button class="doc-tab">
+          <span>Meditation and the Mind</span>
+        </button>
+        <button class="doc-tab active">
+          <span class="dirty-dot"></span>
+          <span>Draft: API design notes</span>
+        </button>
+        <button class="doc-tab">
+          <span>KGQL document model</span>
+        </button>
+      </div>
+
+      <div class="editor-toolbar">
+        <button class="icon-button" aria-label="Toggle sidebar">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+            <path d="M9 4v16"></path>
+          </svg>
+        </button>
+        <div class="crumb">All Essays / Technical / Draft: API design notes</div>
+        <div class="grow"></div>
+        <span class="save-state">
+          <span class="dot published"></span>
+          Saved 12m ago
+        </span>
+        <button class="icon-button" aria-label="Create checkpoint">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+            <path d="M17 21v-8H7v8"></path>
+            <path d="M7 3v5h8"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div id="contextBar" class="context-bar hidden"></div>
+
+      <div class="editor-shell">
+        <article class="editor-page">
+          <input id="editorTitle" class="title-input" value="Draft: API design notes" aria-label="Essay title">
+          <div id="editorBody" class="editor-placeholder">
+            <p><span class="block-handle">⋮</span>The editor sits here. This center area should be the quiet writing surface: title, Super Editor document, selection toolbar, and block insertion menu.</p>
+            <p>The live <strong>Essay</strong> row holds the current raw text and serialized editor JSON. Autosave updates this row frequently. Manual checkpoints and meaningful saves create <strong>EssaySnap</strong> rows in the background.</p>
+            <h2>Navigator behavior</h2>
+            <p>The sidebar launches queries. Search, recent, pinned, and tags open a chooser overlay across the editor and inspector. Picking a row opens or activates an essay tab.</p>
+            <p class="ghost-line">Type <strong>/</strong> for blocks, <strong>#</strong> for tags, and <strong>@</strong> for KGQL links.</p>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <aside class="inspector" aria-label="Essay inspector">
+      <div class="inspector-head">
+        <span>Inspector</span>
+        <div class="grow"></div>
+        <button class="icon-button" aria-label="Close inspector">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="segmented">
+        <button class="active">Details</button>
+        <button>Links</button>
+        <button>History</button>
+      </div>
+
+      <div id="inspectorBody" class="inspector-scroll">
+        <section class="field-group">
+          <div class="label">Status</div>
+          <div class="value-row">
+            <span class="dot draft"></span>
+            <span>Draft</span>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <div class="label">Tags</div>
+          <div class="chips">
+            <span class="pill blue">Technical</span>
+            <span class="pill">Product</span>
+            <span class="pill green">Work / Infrastructure</span>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <div class="label">Document</div>
+          <div class="value-row">842 words</div>
+          <div class="value-row">Updated 12 minutes ago</div>
+          <div class="value-row">Version 18</div>
+        </section>
+
+        <section class="field-group">
+          <div class="label">Linked Models</div>
+          <div class="link-row">
+            <div class="item-title">KGQL model subscriptions</div>
+            <div class="item-subtitle">Digital Noun · Project</div>
+          </div>
+          <div class="link-row">
+            <div class="item-title">Implement note editor</div>
+            <div class="item-subtitle">Action · Work</div>
+          </div>
+          <button class="add-link">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            Add KGQL link
+          </button>
+        </section>
+
+        <section class="field-group">
+          <div class="label">Recent Snapshots</div>
+          <div class="history-row">
+            <div class="item-title">Version 18</div>
+            <div class="item-subtitle">Manual checkpoint · 12m ago</div>
+          </div>
+          <div class="history-row">
+            <div class="item-title">Version 17</div>
+            <div class="item-subtitle">Before AI rewrite · 1h ago</div>
+          </div>
+          <div class="history-row">
+            <div class="item-title">Version 16</div>
+            <div class="item-subtitle">Autosave checkpoint · yesterday</div>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <div id="resultsOverlay" class="results-overlay hidden" aria-label="Essay results overlay">
+      <section class="results-panel">
+        <div class="results-head">
+          <div class="results-title-row">
+            <div class="results-title">Topic: Technical</div>
+            <div class="results-count">5 essays</div>
+            <button class="icon-button" aria-label="Close results">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="results-controls">
+            <span class="chip active">Topic: Technical</span>
+            <span class="chip active">Search: api</span>
+            <span class="chip">Sort: recently updated</span>
+          </div>
+        </div>
+        <div class="overlay-search">
+          <span>Results overlay covers the editor and right panel. Press <strong>Esc</strong> to return to the current tab.</span>
+        </div>
+        <div class="results-scroll">
+          <button class="result-row active">
+            <div class="result-title">
+              <span class="dot draft"></span>
+              <span>Draft: API design notes</span>
+            </div>
+            <div class="result-meta">Draft · edited 12m ago</div>
+            <div class="result-excerpt">Notes on how KGQL should store Super Editor JSON, raw text, tags, and document snapshots.</div>
+          </button>
+          <button class="result-row">
+            <div class="result-title">
+              <span class="dot progress"></span>
+              <span>KGQL API shape for notes</span>
+            </div>
+            <div class="result-meta">In Progress · yesterday</div>
+            <div class="result-excerpt">A compact outline for set_kgql_models calls, relation links, and query structs used by the notes app.</div>
+          </button>
+          <button class="result-row">
+            <div class="result-title">
+              <span class="dot draft"></span>
+              <span>KGQL document model</span>
+            </div>
+            <div class="result-meta">Draft · 2d ago</div>
+            <div class="result-excerpt">Abstract Essay, Essay, and EssaySnap model type notes with version_number and restore behavior.</div>
+          </button>
+          <button class="result-row">
+            <div class="result-title">
+              <span class="dot progress"></span>
+              <span>Mobile editor constraints</span>
+            </div>
+            <div class="result-meta">In Progress · 4d ago</div>
+            <div class="result-excerpt">Keyboard, toolbar, viewport, and sync constraints for sharing one document model across mobile and web.</div>
+          </button>
+          <button class="result-row">
+            <div class="result-title">
+              <span class="dot published"></span>
+              <span>Writing system principles</span>
+            </div>
+            <div class="result-meta">Published · last week</div>
+            <div class="result-excerpt">A short reference for how internal essays should connect back to actions, nouns, and project context.</div>
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="mobile-warning">
+    <p>This reference mockup is sized for desktop. Open it in a wider window to see the full navigator, editor, and inspector layout.</p>
+  </div>
+  <script>
+    const essays = [
+      {
+        id: 1,
+        title: "Draft: API design notes",
+        status: "Draft",
+        topics: ["Technical"],
+        area: ["Work", "Infrastructure"],
+        pinned: false,
+        updatedRank: 1,
+        updatedLabel: "edited 12m ago",
+        words: 842,
+        version: 18,
+        dirty: true,
+        excerpt: "Notes on how KGQL should store Super Editor JSON, raw text, tags, and document snapshots.",
+        body: [
+          "The editor sits here. This center area should be the quiet writing surface: title, Super Editor document, selection toolbar, and block insertion menu.",
+          "The live Essay row holds the current raw text and serialized editor JSON. Autosave updates this row frequently. Manual checkpoints and meaningful saves create EssaySnap rows in the background.",
+          "The sidebar launches queries. Search, recent, pinned, and tags open a chooser overlay across the editor and inspector. Picking a row opens or activates an essay tab."
+        ],
+        links: [
+          ["KGQL model subscriptions", "Digital Noun · Project"],
+          ["Implement note editor", "Action · Work"]
+        ],
+        snapshots: [
+          ["Version 18", "Manual checkpoint · 12m ago"],
+          ["Version 17", "Before AI rewrite · 1h ago"],
+          ["Version 16", "Autosave checkpoint · yesterday"]
+        ]
+      },
+      {
+        id: 2,
+        title: "Meditation and the Mind",
+        status: "Published",
+        topics: ["Spiritual"],
+        area: ["Personal"],
+        pinned: false,
+        updatedRank: 2,
+        updatedLabel: "2h ago",
+        words: 4500,
+        version: 24,
+        excerpt: "A polished essay about attention, meditation, and the habit of returning to the present moment.",
+        body: [
+          "Attention is not a possession. It is an activity that has to be returned to again and again.",
+          "Meditation is useful because it turns that return into a visible movement. The mind wanders, notices, and comes back.",
+          "The essay connects spiritual practice with everyday decision making and sustained work."
+        ],
+        links: [["Morning meditation", "Action · Meditation"]],
+        snapshots: [["Version 24", "Published · 2h ago"], ["Version 23", "Copy edit · yesterday"]]
+      },
+      {
+        id: 3,
+        title: "The Economics of Meditation",
+        status: "In Progress",
+        topics: ["Spiritual", "Economic"],
+        area: ["Personal"],
+        pinned: false,
+        updatedRank: 3,
+        updatedLabel: "today",
+        words: 3200,
+        version: 13,
+        excerpt: "Explores meditation as an attention budget, with costs, returns, and hidden compounding effects.",
+        body: [
+          "A day has a budget of attention. The question is whether that budget is spent by intention or auctioned away by default.",
+          "Meditation creates no new hours, but it changes the transaction cost of coming back to the thing that matters.",
+          "This draft needs a stronger middle section and clearer examples from daily work."
+        ],
+        links: [["Attention budget", "Digital Noun · Concept"]],
+        snapshots: [["Version 13", "Outline pass · today"], ["Version 12", "Autosave checkpoint · yesterday"]]
+      },
+      {
+        id: 4,
+        title: "Internal notes app direction",
+        status: "Draft",
+        topics: ["Product"],
+        area: ["Work", "Product"],
+        pinned: false,
+        updatedRank: 4,
+        updatedLabel: "3d ago",
+        words: 1190,
+        version: 7,
+        excerpt: "Product notes for a Notion-like internal app where documents are KGQL models and graph links are first class.",
+        body: [
+          "The app should open directly into work. Navigation is secondary to writing and retrieval.",
+          "The key product decision is that every document can link to Actions, Real Nouns, and Digital Nouns without leaving the editor.",
+          "The desktop UI should feel closer to an editor workspace than a content dashboard."
+        ],
+        links: [["Notes product spec", "Essay · Pinned"]],
+        snapshots: [["Version 7", "Product direction · 3d ago"]]
+      },
+      {
+        id: 5,
+        title: "KGQL API shape for notes",
+        status: "In Progress",
+        topics: ["Technical"],
+        area: ["Work", "Infrastructure"],
+        pinned: false,
+        updatedRank: 5,
+        updatedLabel: "yesterday",
+        words: 980,
+        version: 9,
+        excerpt: "A compact outline for set_kgql_models calls, relation links, and query structs used by the notes app.",
+        body: [
+          "The app writes current documents to Essay and creates EssaySnap rows for meaningful history.",
+          "Search by title can start with a LIKE filter. Later, document text can move to full text search or embeddings.",
+          "Relations are written from the canonical Essay row to the linked model."
+        ],
+        links: [["KGQL document model", "Essay · Technical"]],
+        snapshots: [["Version 9", "API examples · yesterday"]]
+      },
+      {
+        id: 6,
+        title: "Notes product spec",
+        status: "In Progress",
+        topics: ["Product"],
+        area: ["Work", "Product"],
+        pinned: true,
+        updatedRank: 6,
+        updatedLabel: "2d ago",
+        words: 2100,
+        version: 11,
+        excerpt: "The working product spec for the notes app: navigation, editor tabs, overlay results, and KGQL linking.",
+        body: [
+          "The sidebar is for finding. The center is for open essays. The right panel is for context.",
+          "Search and tags should not take over the sidebar with full lists. They launch a chooser overlay over the workspace.",
+          "Pinned and recent are capped in the sidebar so the navigator stays calm."
+        ],
+        links: [["Draft: API design notes", "Essay · Technical"]],
+        snapshots: [["Version 11", "Workspace flow · 2d ago"]]
+      },
+      {
+        id: 7,
+        title: "KGQL document model",
+        status: "Draft",
+        topics: ["Technical"],
+        area: ["Work", "Infrastructure"],
+        pinned: true,
+        updatedRank: 7,
+        updatedLabel: "2d ago",
+        words: 1370,
+        version: 6,
+        excerpt: "Abstract Essay, Essay, and EssaySnap model type notes with version_number and restore behavior.",
+        body: [
+          "Abstract Essay owns document, json_document, and word_count.",
+          "Essay is the canonical live document. EssaySnap is immutable history.",
+          "The canonical Essay id stays stable so links, routes, and references do not drift on save."
+        ],
+        links: [["Essay snapshot plan", "Digital Noun · Plan"]],
+        snapshots: [["Version 6", "Snapshot flow · 2d ago"]]
+      },
+      {
+        id: 8,
+        title: "Writing system principles",
+        status: "Published",
+        topics: ["Personal"],
+        area: ["Personal"],
+        pinned: true,
+        updatedRank: 8,
+        updatedLabel: "last week",
+        words: 1650,
+        version: 15,
+        excerpt: "A short reference for how internal essays should connect back to actions, nouns, and project context.",
+        body: [
+          "A good writing system makes capture easy, retrieval precise, and revision low friction.",
+          "Documents should remain readable outside the graph, but the graph should make them more useful.",
+          "The app should let writing produce structure without demanding structure first."
+        ],
+        links: [["Internal knowledge graph", "Essay · Work"]],
+        snapshots: [["Version 15", "Published · last week"]]
+      },
+      {
+        id: 9,
+        title: "Mobile editor constraints",
+        status: "In Progress",
+        topics: ["Technical"],
+        area: ["Work", "Product"],
+        pinned: true,
+        updatedRank: 9,
+        updatedLabel: "4d ago",
+        words: 760,
+        version: 5,
+        excerpt: "Keyboard, toolbar, viewport, and sync constraints for sharing one document model across mobile and web.",
+        body: [
+          "Mobile editing needs fewer persistent controls and stronger defaults.",
+          "The same KGQL document model can support both mobile and desktop if editor-specific UI state stays out of the document payload.",
+          "The biggest risk is making linking too heavy on small screens."
+        ],
+        links: [["Notes product spec", "Essay · Product"]],
+        snapshots: [["Version 5", "Mobile notes · 4d ago"]]
+      },
+      {
+        id: 10,
+        title: "Internal knowledge graph",
+        status: "Draft",
+        topics: ["Technical", "Product"],
+        area: ["Work"],
+        pinned: true,
+        updatedRank: 10,
+        updatedLabel: "5d ago",
+        words: 1890,
+        version: 8,
+        excerpt: "How essays, actions, real nouns, and digital nouns should link together inside KGQL.",
+        body: [
+          "The graph is valuable when links are cheap enough to make during writing.",
+          "Essays should be able to reference Actions, Real Nouns, and Digital Nouns through KGQL relations.",
+          "Backlinks should feel like context, not administration."
+        ],
+        links: [["KGQL model subscriptions", "Digital Noun · Project"]],
+        snapshots: [["Version 8", "Graph outline · 5d ago"]]
+      }
+    ];
+
+    const tagSystems = [
+      { name: "Status", nodes: ["Draft", "In Progress", "Published", "Discarded"] },
+      { name: "Topic", nodes: ["Technical", "Product", "Spiritual", "Economic", "Personal"] },
+      {
+        name: "Area",
+        nodes: [
+          { name: "Work", children: ["Product", "Infrastructure"] },
+          { name: "Personal", children: [] }
+        ]
+      }
+    ];
+
+    const state = {
+      activeEssayId: 1,
+      openTabs: [
+        { essayId: 2, context: null },
+        { essayId: 1, context: null },
+        { essayId: 7, context: null }
+      ],
+      sidebarTab: "essays",
+      overlay: null
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const escapeHtml = (value) => String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+
+    function statusClass(status) {
+      return {
+        Draft: "draft",
+        "In Progress": "progress",
+        Published: "published",
+        Discarded: "discarded"
+      }[status] || "";
+    }
+
+    function byUpdated(a, b) {
+      return a.updatedRank - b.updatedRank;
+    }
+
+    function tagCount(systemName, nodeName) {
+      return essays.filter((essay) => essayMatchesTag(essay, systemName, nodeName)).length;
+    }
+
+    function essayMatchesTag(essay, systemName, nodeName) {
+      if (systemName === "Status") return essay.status === nodeName;
+      if (systemName === "Topic") return essay.topics.includes(nodeName);
+      if (systemName === "Area") return essay.area.includes(nodeName);
+      return false;
+    }
+
+    function activeTab() {
+      return state.openTabs.find((tab) => tab.essayId === state.activeEssayId) || null;
+    }
+
+    function tabForEssay(id) {
+      return state.openTabs.find((tab) => tab.essayId === id) || null;
+    }
+
+    function contextFromOverlay() {
+      if (!state.overlay) return null;
+      return {
+        title: state.overlay.title,
+        resultIds: [...state.overlay.resultIds],
+        chips: [...state.overlay.chips]
+      };
+    }
+
+    function topicNames() {
+      return tagSystems.find((system) => system.name === "Topic").nodes;
+    }
+
+    function renderCreateMenu() {
+      $("#createMenu").innerHTML = `
+        <div class="create-menu-head">
+          <div class="create-menu-title">New essay</div>
+          <div class="create-menu-subtitle">Choose a topic before creating the essay.</div>
+        </div>
+        ${topicNames().map((topic) => `
+          <button class="create-topic" data-create-topic="${escapeHtml(topic)}">
+            <span>${escapeHtml(topic)}</span>
+            <span class="tag-count">${tagCount("Topic", topic)}</span>
+          </button>
+        `).join("")}
+      `;
+    }
+
+    function essayRow(essay) {
+      return `
+        <button class="essay-row ${essay.id === state.activeEssayId ? "active" : ""}" data-open-essay="${essay.id}">
+          <span class="essay-title-line">
+            <span class="dot ${statusClass(essay.status)}"></span>
+            <span class="essay-title">${escapeHtml(essay.title)}</span>
+          </span>
+          <span class="essay-meta">${escapeHtml(essay.status)} · ${escapeHtml(essay.topics[0] || "Untagged")} · ${escapeHtml(essay.updatedLabel)}</span>
+        </button>
+      `;
+    }
+
+    function renderSidebar() {
+      const recent = [...essays].sort(byUpdated).slice(0, 5);
+      const pinned = essays.filter((essay) => essay.pinned).slice(0, 5);
+      const tagMarkup = tagSystems.map((system) => {
+        const rows = system.nodes.map((node) => {
+          if (typeof node === "string") {
+            return `
+              <button class="tag-row" data-tag-system="${escapeHtml(system.name)}" data-tag-node="${escapeHtml(node)}">
+                ${system.name === "Status" ? `<span class="dot ${statusClass(node)}"></span>` : ""}
+                <span class="tag-name">${escapeHtml(node)}</span>
+                <span class="tag-count">${tagCount(system.name, node)}</span>
+              </button>
+            `;
+          }
+          const children = node.children.map((child) => `
+            <button class="tag-row indent" data-tag-system="${escapeHtml(system.name)}" data-tag-node="${escapeHtml(child)}">
+              <span class="tag-name">${escapeHtml(child)}</span>
+              <span class="tag-count">${tagCount(system.name, child)}</span>
+            </button>
+          `).join("");
+          return `
+            <button class="tag-row" data-tag-system="${escapeHtml(system.name)}" data-tag-node="${escapeHtml(node.name)}">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span class="tag-name">${escapeHtml(node.name)}</span>
+              <span class="tag-count">${tagCount(system.name, node.name)}</span>
+            </button>
+            ${children}
+          `;
+        }).join("");
+        return `
+          <div class="tag-system">
+            <div class="system-row">
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+              <span>${escapeHtml(system.name)}</span>
+            </div>
+            ${rows}
+          </div>
+        `;
+      }).join("");
+
+      $("#essaysTab").classList.toggle("active", state.sidebarTab === "essays");
+      $("#tagsTab").classList.toggle("active", state.sidebarTab === "tags");
+
+      if (state.sidebarTab === "tags") {
+        $("#navigator").innerHTML = `
+          <section class="section">
+            <div class="section-header"><span>Tags</span></div>
+            ${tagMarkup}
+          </section>
+        `;
+      } else {
+        $("#navigator").innerHTML = `
+          <section class="section">
+            <div class="section-header">
+              <button data-overlay-recent>Recent</button>
+              <span class="count">5</span>
+            </div>
+            <div class="essay-list">${recent.map(essayRow).join("")}</div>
+          </section>
+          <section class="section">
+            <div class="section-header">
+              <button data-overlay-pinned>Pinned</button>
+              <span class="count">5</span>
+            </div>
+            <div class="essay-list">${pinned.map(essayRow).join("")}</div>
+          </section>
+          <section class="section">
+            <div class="section-header"><span>Saved Views</span></div>
+            <button class="saved-row" data-saved-view="draft-technical">
+              <span class="tag-name">Draft technical notes</span>
+              <span class="tag-count">2</span>
+            </button>
+            <button class="saved-row" data-saved-view="published">
+              <span class="tag-name">Published essays</span>
+              <span class="tag-count">2</span>
+            </button>
+            <button class="saved-row" data-saved-view="linked">
+              <span class="tag-name">Linked to actions</span>
+              <span class="tag-count">6</span>
+            </button>
+          </section>
+        `;
+      }
+    }
+
+    function renderTabs() {
+      $("#editorTabs").innerHTML = state.openTabs.map((tab) => {
+        const essay = essays.find((item) => item.id === tab.essayId);
+        return `
+          <button class="doc-tab ${essay.id === state.activeEssayId ? "active" : ""}" data-tab-id="${essay.id}">
+            ${essay.dirty ? '<span class="dirty-dot"></span>' : ""}
+            <span>${escapeHtml(essay.title)}</span>
+            <span class="tab-close" data-close-tab="${essay.id}" aria-label="Close tab">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <path d="M18 6 6 18M6 6l12 12"></path>
+              </svg>
+            </span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderEditor() {
+      const essay = essays.find((item) => item.id === state.activeEssayId);
+      $("#editorTitle").value = essay.title;
+      $("#editorBody").innerHTML = essay.body.map((paragraph, index) => {
+        const handle = index === 0 ? '<span class="block-handle">⋮</span>' : "";
+        return `<p>${handle}${escapeHtml(paragraph)}</p>`;
+      }).join("") + '<p class="ghost-line">Type <strong>/</strong> for blocks, <strong>#</strong> for tags, and <strong>@</strong> for KGQL links.</p>';
+      $(".crumb").textContent = `All Essays / ${essay.topics[0] || "Untagged"} / ${essay.title}`;
+      $(".save-state").innerHTML = `<span class="dot published"></span>${essay.dirty ? "Unsaved edits" : `Saved ${escapeHtml(essay.updatedLabel)}`}`;
+    }
+
+    function renderInspector() {
+      const essay = essays.find((item) => item.id === state.activeEssayId);
+      $("#inspectorBody").innerHTML = `
+        <section class="field-group">
+          <div class="label">Status</div>
+          <div class="value-row">
+            <span class="dot ${statusClass(essay.status)}"></span>
+            <span>${escapeHtml(essay.status)}</span>
+          </div>
+        </section>
+        <section class="field-group">
+          <div class="label">Tags</div>
+          <div class="chips">
+            ${essay.topics.map((topic) => `<span class="pill blue">${escapeHtml(topic)}</span>`).join("")}
+            ${essay.area.map((area) => `<span class="pill green">${escapeHtml(area)}</span>`).join("")}
+          </div>
+        </section>
+        <section class="field-group">
+          <div class="label">Document</div>
+          <div class="value-row">${essay.words.toLocaleString()} words</div>
+          <div class="value-row">Updated ${escapeHtml(essay.updatedLabel)}</div>
+          <div class="value-row">Version ${essay.version}</div>
+        </section>
+        <section class="field-group">
+          <div class="label">Linked Models</div>
+          ${essay.links.map(([title, subtitle]) => `
+            <div class="link-row">
+              <div class="item-title">${escapeHtml(title)}</div>
+              <div class="item-subtitle">${escapeHtml(subtitle)}</div>
+            </div>
+          `).join("")}
+          <button class="add-link">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            Add KGQL link
+          </button>
+        </section>
+        <section class="field-group">
+          <div class="label">Recent Snapshots</div>
+          ${essay.snapshots.map(([title, subtitle]) => `
+            <div class="history-row">
+              <div class="item-title">${escapeHtml(title)}</div>
+              <div class="item-subtitle">${escapeHtml(subtitle)}</div>
+            </div>
+          `).join("")}
+        </section>
+      `;
+    }
+
+    function renderContextBar() {
+      const bar = $("#contextBar");
+      const tab = activeTab();
+      const context = tab ? tab.context : null;
+      if (!context || !context.resultIds.includes(state.activeEssayId)) {
+        bar.classList.add("hidden");
+        bar.innerHTML = "";
+        return;
+      }
+
+      const index = context.resultIds.indexOf(state.activeEssayId);
+      const total = context.resultIds.length;
+      bar.classList.remove("hidden");
+      bar.innerHTML = `
+        <button class="context-back" data-reopen-context>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m15 18-6-6 6-6"></path>
+          </svg>
+          Back to ${escapeHtml(context.title)}
+        </button>
+        <span class="context-meta">${index + 1} of ${total}</span>
+        <span class="context-meta">${context.chips.map(escapeHtml).join(" · ")}</span>
+        <span class="context-stepper">
+          <button class="icon-button" data-context-prev aria-label="Previous result">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m18 15-6-6-6 6"></path>
+            </svg>
+          </button>
+          <button class="icon-button" data-context-next aria-label="Next result">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button>
+          <button class="icon-button" data-clear-context aria-label="Clear result context">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"></path>
+            </svg>
+          </button>
+        </span>
+      `;
+    }
+
+    function resultRow(essay, index) {
+      return `
+        <button class="result-row ${index === 0 ? "active" : ""}" data-result-id="${essay.id}">
+          <div class="result-title">
+            <span class="dot ${statusClass(essay.status)}"></span>
+            <span>${escapeHtml(essay.title)}</span>
+          </div>
+          <div class="result-meta">${escapeHtml(essay.status)} · ${escapeHtml(essay.updatedLabel)}</div>
+          <div class="result-excerpt">${escapeHtml(essay.excerpt)}</div>
+        </button>
+      `;
+    }
+
+    function showOverlay(title, results, chips = []) {
+      state.overlay = {
+        title,
+        resultIds: results.map((essay) => essay.id),
+        chips
+      };
+      const overlay = $("#resultsOverlay");
+      overlay.classList.remove("hidden");
+      overlay.innerHTML = `
+        <section class="results-panel">
+          <div class="results-head">
+            <div class="results-title-row">
+              <div class="results-title">${escapeHtml(title)}</div>
+              <div class="results-count">${results.length} ${results.length === 1 ? "essay" : "essays"}</div>
+              <button class="icon-button" aria-label="Close results" data-close-overlay>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6 6 18M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="results-controls">
+              ${chips.map((chip) => `<span class="chip active">${escapeHtml(chip)}</span>`).join("")}
+              <span class="chip">Sort: recently updated</span>
+            </div>
+          </div>
+          <div class="overlay-search">
+            <span>Results overlay covers the editor and right panel. Pick a row to open it in an essay tab. Press <strong>Esc</strong> to close.</span>
+          </div>
+          <div class="results-scroll">
+            ${results.length ? results.map(resultRow).join("") : '<div class="empty-state">No essays match this query.</div>'}
+          </div>
+        </section>
+      `;
+    }
+
+    function hideOverlay() {
+      $("#resultsOverlay").classList.add("hidden");
+    }
+
+    function openEssay(id, options = {}) {
+      let tab = tabForEssay(id);
+      if (!tab) {
+        tab = { essayId: id, context: null };
+        state.openTabs.push(tab);
+      }
+      state.activeEssayId = id;
+      if (options.fromOverlay && state.overlay) {
+        tab.context = contextFromOverlay();
+      } else if (options.context) {
+        tab.context = {
+          title: options.context.title,
+          resultIds: [...options.context.resultIds],
+          chips: [...options.context.chips]
+        };
+      }
+      hideOverlay();
+      render();
+    }
+
+    function closeTab(id) {
+      if (state.openTabs.length === 1) return;
+      const index = state.openTabs.findIndex((tab) => tab.essayId === id);
+      if (index === -1) return;
+
+      state.openTabs = state.openTabs.filter((tab) => tab.essayId !== id);
+      if (state.activeEssayId === id) {
+        const fallbackIndex = Math.min(index, state.openTabs.length - 1);
+        state.activeEssayId = state.openTabs[fallbackIndex].essayId;
+      }
+      render();
+    }
+
+    function createEssay(topic) {
+      const nextId = Math.max(...essays.map((essay) => essay.id)) + 1;
+      const essay = {
+        id: nextId,
+        title: `Untitled ${topic} essay`,
+        status: "Draft",
+        topics: [topic],
+        area: [],
+        pinned: false,
+        updatedRank: 0,
+        updatedLabel: "just now",
+        words: 0,
+        version: 1,
+        dirty: true,
+        excerpt: "New essay draft.",
+        body: [
+          "Start writing here.",
+          "This essay was created after choosing a required topic from the new essay menu."
+        ],
+        links: [],
+        snapshots: [["Version 1", "Created just now"]]
+      };
+      essays.forEach((item) => item.updatedRank += 1);
+      essays.unshift(essay);
+      $("#createMenu").classList.add("hidden");
+      openEssay(nextId);
+      $("#editorTitle").focus();
+      $("#editorTitle").select();
+    }
+
+    function runSearch(query) {
+      const normalized = query.trim().toLowerCase();
+      if (!normalized) {
+        hideOverlay();
+        return;
+      }
+      const results = essays
+        .filter((essay) => [
+          essay.title,
+          essay.excerpt,
+          essay.status,
+          ...essay.topics,
+          ...essay.area
+        ].join(" ").toLowerCase().includes(normalized))
+        .sort(byUpdated);
+      showOverlay(`Search: ${query}`, results, [`Search: ${query}`]);
+    }
+
+    function render() {
+      renderCreateMenu();
+      renderSidebar();
+      renderTabs();
+      renderEditor();
+      renderContextBar();
+      renderInspector();
+    }
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#newEssayButton") && !event.target.closest("#createMenu")) {
+        $("#createMenu").classList.add("hidden");
+      }
+
+      if (event.target.id === "resultsOverlay") {
+        hideOverlay();
+        return;
+      }
+
+      if (event.target.closest("#newEssayButton")) {
+        renderCreateMenu();
+        $("#createMenu").classList.toggle("hidden");
+        return;
+      }
+
+      const createTopic = event.target.closest("[data-create-topic]");
+      if (createTopic) {
+        createEssay(createTopic.dataset.createTopic);
+        return;
+      }
+
+      const openButton = event.target.closest("[data-open-essay]");
+      if (openButton) {
+        openEssay(Number(openButton.dataset.openEssay));
+        return;
+      }
+
+      const closeTabButton = event.target.closest("[data-close-tab]");
+      if (closeTabButton) {
+        event.stopPropagation();
+        closeTab(Number(closeTabButton.dataset.closeTab));
+        return;
+      }
+
+      const tabButton = event.target.closest("[data-tab-id]");
+      if (tabButton) {
+        state.activeEssayId = Number(tabButton.dataset.tabId);
+        render();
+        return;
+      }
+
+      const sidebarTab = event.target.closest("[data-sidebar-tab]");
+      if (sidebarTab) {
+        state.sidebarTab = sidebarTab.dataset.sidebarTab;
+        renderSidebar();
+        return;
+      }
+
+      const resultButton = event.target.closest("[data-result-id]");
+      if (resultButton) {
+        openEssay(Number(resultButton.dataset.resultId), { fromOverlay: true });
+        return;
+      }
+
+      if (event.target.closest("[data-reopen-context]")) {
+        const tab = activeTab();
+        const context = tab ? tab.context : null;
+        if (context) {
+          const results = context.resultIds
+            .map((id) => essays.find((essay) => essay.id === id))
+            .filter(Boolean);
+          showOverlay(context.title, results, context.chips);
+        }
+        return;
+      }
+
+      if (event.target.closest("[data-context-prev]") || event.target.closest("[data-context-next]")) {
+        const tab = activeTab();
+        const context = tab ? tab.context : null;
+        if (!context || !context.resultIds.length) return;
+        const currentIndex = Math.max(0, context.resultIds.indexOf(state.activeEssayId));
+        const direction = event.target.closest("[data-context-prev]") ? -1 : 1;
+        const nextIndex = (currentIndex + direction + context.resultIds.length) % context.resultIds.length;
+        openEssay(context.resultIds[nextIndex], { context });
+        return;
+      }
+
+      if (event.target.closest("[data-clear-context]")) {
+        const tab = activeTab();
+        if (tab) tab.context = null;
+        renderContextBar();
+        return;
+      }
+
+      const tagButton = event.target.closest("[data-tag-system]");
+      if (tagButton) {
+        const system = tagButton.dataset.tagSystem;
+        const node = tagButton.dataset.tagNode;
+        const results = essays.filter((essay) => essayMatchesTag(essay, system, node)).sort(byUpdated);
+        showOverlay(`${system}: ${node}`, results, [`${system}: ${node}`]);
+        return;
+      }
+
+      if (event.target.closest("[data-overlay-recent]")) {
+        showOverlay("Recent essays", [...essays].sort(byUpdated), ["Recent"]);
+        return;
+      }
+
+      if (event.target.closest("[data-overlay-pinned]")) {
+        showOverlay("Pinned essays", essays.filter((essay) => essay.pinned).sort(byUpdated), ["Pinned"]);
+        return;
+      }
+
+      const savedView = event.target.closest("[data-saved-view]");
+      if (savedView) {
+        const key = savedView.dataset.savedView;
+        if (key === "draft-technical") {
+          showOverlay("Draft technical notes", essays.filter((essay) => essay.status === "Draft" && essay.topics.includes("Technical")).sort(byUpdated), ["Status: Draft", "Topic: Technical"]);
+        } else if (key === "published") {
+          showOverlay("Published essays", essays.filter((essay) => essay.status === "Published").sort(byUpdated), ["Status: Published"]);
+        } else {
+          showOverlay("Linked to actions", essays.filter((essay) => essay.links.length > 0).sort(byUpdated), ["Has KGQL links"]);
+        }
+        return;
+      }
+
+      if (event.target.closest("[data-close-overlay]")) {
+        hideOverlay();
+      }
+    });
+
+    $("#sidebarSearch").addEventListener("input", (event) => runSearch(event.target.value));
+
+    $("#editorTitle").addEventListener("input", (event) => {
+      const essay = essays.find((item) => item.id === state.activeEssayId);
+      essay.title = event.target.value;
+      essay.dirty = true;
+      renderTabs();
+      renderSidebar();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") hideOverlay();
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        $("#sidebarSearch").focus();
+        $("#sidebarSearch").select();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
