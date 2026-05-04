@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nx_people Reference</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --sidebar: #fafafa;
+      --panel: #ffffff;
+      --subtle: #f4f4f5;
+      --hover: #e4e4e7;
+      --line: #e4e4e7;
+      --line-strong: #d4d4d8;
+      --text: #18181b;
+      --muted: #71717a;
+      --faint: #a1a1aa;
+      --blue: #3f6ca8;
+      --green: #3d7c72;
+      --amber: #9a6a18;
+      --red: #a6534f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 34px rgba(0, 0, 0, 0.06);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    button, input { font: inherit; }
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 256px minmax(520px, 1fr) 288px;
+      height: 100vh;
+      min-width: 1040px;
+      position: relative;
+      background: var(--bg);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--sidebar);
+      border-right: 1px solid var(--line);
+      z-index: 20;
+    }
+
+    .sidebar-head {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: var(--text);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .app-name {
+      font-weight: 700;
+      font-size: 14px;
+      min-width: 0;
+    }
+
+    .grow { flex: 1; }
+
+    .icon-square {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .icon-square:hover { background: var(--subtle); color: var(--text); }
+
+    .create-menu {
+      position: absolute;
+      top: 40px;
+      right: 12px;
+      width: 198px;
+      padding: 6px 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      z-index: 80;
+    }
+
+    .create-menu.hidden { display: none; }
+
+    .menu-title {
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--faint);
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .menu-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 7px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .menu-row:hover { background: var(--subtle); color: var(--text); }
+
+    .search-box {
+      padding: 14px 12px 10px;
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      color: var(--faint);
+    }
+
+    .search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .side-tabs {
+      display: flex;
+      gap: 1px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .side-tab {
+      padding: 7px 12px;
+      border-radius: 4px 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      position: relative;
+      top: 1px;
+    }
+
+    .side-tab.active {
+      border: 1px solid var(--line);
+      border-bottom-color: #fff;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .side-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 16px 12px 24px;
+    }
+
+    .side-section { margin-bottom: 24px; }
+
+    .side-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2px 8px;
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .side-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 30px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: var(--muted);
+      text-align: left;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .side-link:hover, .side-link.active { background: var(--hover); color: var(--text); }
+    .side-link span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .count { margin-left: auto; color: var(--faint); font-size: 12px; }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--faint);
+      flex: none;
+    }
+
+    .dot.green { background: var(--green); }
+    .dot.blue { background: var(--blue); }
+    .dot.amber { background: var(--amber); }
+    .dot.red { background: var(--red); }
+
+    .workspace {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      position: relative;
+    }
+
+    .mobile-top { display: none; }
+
+    .context-bar {
+      display: none;
+      height: 38px;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--sidebar);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .context-bar.visible { display: flex; }
+    .context-bar .position { margin-left: auto; font-weight: 500; }
+
+    .profile-scroll {
+      flex: 1;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .profile {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 54px 48px 120px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 30px;
+    }
+
+    .avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--subtle);
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-size: 19px;
+      font-weight: 750;
+      flex: none;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 38px;
+      line-height: 1.12;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .link-text {
+      display: inline;
+      padding: 0;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .link-text:hover { color: var(--text); }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .soft-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 30px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .soft-button:hover { background: var(--subtle); color: var(--text); }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--subtle);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pill.clickable { cursor: pointer; }
+    .pill.clickable:hover { border-color: var(--line-strong); color: var(--text); }
+
+    .profile-grid {
+      display: grid;
+      gap: 30px;
+    }
+
+    .section h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .section p {
+      margin: 0;
+      color: #3f3f46;
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    .thread-list, .timeline {
+      display: grid;
+      gap: 8px;
+    }
+
+    .thread {
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .thread-title {
+      font-weight: 650;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .thread-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .time {
+      color: var(--faint);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .event-title {
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 3px;
+    }
+
+    .event-body {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .inspector {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-left: 1px solid var(--line);
+      background: #fff;
+      z-index: 20;
+    }
+
+    .inspector-head {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--sidebar);
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .inspector-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 22px 20px 32px;
+    }
+
+    .inspector-section { margin-bottom: 28px; }
+
+    .inspector-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .pair {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .pair .label { color: var(--muted); }
+    .pair .value {
+      color: var(--text);
+      text-align: right;
+      max-width: 150px;
+      overflow-wrap: anywhere;
+    }
+
+    .link-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+    }
+
+    .link-line:hover { color: var(--text); }
+
+    .overlay {
+      position: absolute;
+      inset: 0 0 0 256px;
+      display: none;
+      z-index: 60;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(3px);
+      overflow: auto;
+    }
+
+    .overlay.visible { display: block; }
+
+    .overlay-inner {
+      padding: 34px 48px 56px;
+      max-width: 1160px;
+    }
+
+    .overlay-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .overlay h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .overlay-count {
+      margin-left: auto;
+      padding-top: 5px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .overlay-help {
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      margin: 16px 0 12px;
+    }
+
+    .result-list { display: grid; gap: 2px; }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 42px minmax(180px, 1fr) 170px 170px;
+      gap: 12px;
+      align-items: center;
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: left;
+    }
+
+    .result-row:hover, .result-row.active {
+      background: #eef5f4;
+    }
+
+    .result-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      background: var(--subtle);
+      font-weight: 750;
+      font-size: 12px;
+    }
+
+    .result-name {
+      color: var(--text);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .result-sub {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .mobile-nav { display: none; }
+
+    @media (max-width: 900px) {
+      body { overflow: hidden; }
+
+      .app {
+        display: block;
+        min-width: 0;
+        height: 100vh;
+      }
+
+      .sidebar, .inspector { display: none; }
+
+      .workspace {
+        height: 100vh;
+        padding-bottom: 56px;
+      }
+
+      .mobile-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255,255,255,.95);
+        z-index: 20;
+      }
+
+      .mobile-title {
+        flex: 1;
+        min-width: 0;
+        padding: 0 12px;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .profile {
+        padding: 28px 22px 130px;
+      }
+
+      .profile-header {
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        font-size: 16px;
+      }
+
+      h1 { font-size: 30px; }
+
+      .subtitle { font-size: 14px; }
+
+      .timeline-item {
+        grid-template-columns: 58px 1fr;
+      }
+
+      .overlay {
+        inset: 56px 0 56px 0;
+        z-index: 70;
+      }
+
+      .overlay-inner {
+        padding: 22px 16px 36px;
+      }
+
+      .overlay h2 { font-size: 21px; }
+
+      .result-row {
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 10px;
+        padding: 12px 8px;
+      }
+
+      .result-row .result-meta { display: none; }
+
+      .mobile-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 56px;
+        display: flex;
+        border-top: 1px solid var(--line);
+        background: rgba(255,255,255,.96);
+        z-index: 90;
+      }
+
+      .mobile-nav button {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 2px;
+        color: var(--faint);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .mobile-nav button.active {
+        color: var(--text);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="mark">P</div>
+        <div class="app-name">nx_people</div>
+        <div class="grow"></div>
+        <button class="icon-square" id="createButton" title="Create">+</button>
+        <div class="create-menu hidden" id="createMenu">
+          <div class="menu-title">Create</div>
+          <button class="menu-row" data-create="Person"><span>Person</span><span>›</span></button>
+          <button class="menu-row" data-create="Company"><span>Company</span><span>›</span></button>
+          <button class="menu-row" data-create="Meeting"><span>Meeting</span><span>›</span></button>
+          <button class="menu-row" data-create="Daily Log"><span>Daily Log</span><span>›</span></button>
+        </div>
+      </div>
+
+      <div class="search-box">
+        <label class="search">
+          <span>⌕</span>
+          <input id="sidebarSearch" placeholder="Search people..." autocomplete="off">
+        </label>
+      </div>
+
+      <div class="side-tabs">
+        <button class="side-tab active" id="peopleTab">People</button>
+        <button class="side-tab" id="tagsTab">Tags</button>
+      </div>
+
+      <div class="side-scroll" id="peoplePane"></div>
+      <div class="side-scroll" id="tagsPane" hidden></div>
+    </aside>
+
+    <main class="workspace">
+      <div class="mobile-top">
+        <button class="icon-square" id="mobileBack">‹</button>
+        <div class="mobile-title" id="mobileTitle">Sarah Chen</div>
+        <button class="icon-square" id="mobileMenu">⋯</button>
+      </div>
+
+      <div class="context-bar" id="contextBar">
+        <button id="contextBack">← <span id="contextTitle">Back to Results</span></button>
+        <span class="position" id="contextPosition"></span>
+        <button id="contextClear">×</button>
+      </div>
+
+      <div class="profile-scroll">
+        <section class="profile" id="profile"></section>
+      </div>
+    </main>
+
+    <aside class="inspector">
+      <div class="inspector-head">Inspector</div>
+      <div class="inspector-scroll" id="inspector"></div>
+    </aside>
+
+    <section class="overlay" id="overlay">
+      <div class="overlay-inner">
+        <div class="overlay-head">
+          <h2 id="overlayTitle">Results</h2>
+          <div class="overlay-count" id="overlayCount"></div>
+          <button class="icon-square" id="overlayClose">×</button>
+        </div>
+        <div class="pill-row" id="overlayPills"></div>
+        <div class="overlay-help">Pick a person to open their profile. The profile keeps this list as a back context.</div>
+        <div class="result-list" id="results"></div>
+      </div>
+    </section>
+
+    <nav class="mobile-nav">
+      <button class="active" data-mobile="people"><span>☷</span><span>People</span></button>
+      <button data-mobile="tags"><span>⌑</span><span>Tags</span></button>
+      <button data-mobile="search"><span>⌕</span><span>Search</span></button>
+    </nav>
+  </div>
+
+  <script>
+    const people = [
+      {
+        id: 1,
+        name: 'Sarah Chen',
+        initials: 'SC',
+        company: 'Northstar Labs',
+        role: 'Product Lead',
+        location: 'San Francisco',
+        status: 'Follow up',
+        statusColor: 'amber',
+        lastContact: '3d ago',
+        nextFollowUp: 'Tomorrow',
+        pinned: true,
+        email: 'sarah@northstar.example',
+        phone: '+1 415 555 0182',
+        tags: ['Product', 'Investor', 'SF', 'Warm'],
+        meetings: ['Design Sync', 'Investor Intro'],
+        planned: ['Roadmap Review'],
+        summary: 'Sarah is a product operator with strong taste around internal tools. She is useful for pressure-testing whether a workflow is actually clear or just visually polished.',
+        current: [
+          ['Send notes prototype', 'Promised to share the notes UI once the back-navigation flow is tightened.'],
+          ['Ask about hiring graph', 'She mentioned a hiring CRM problem that maps closely to KGQL people relations.']
+        ],
+        logs: [
+          ['Today', 'Added her to the Product relationship group and marked follow-up for tomorrow.'],
+          ['3d ago', 'Met during Design Sync. She liked the recoverable result-list navigation.'],
+          ['Oct 22', 'Intro from Maya. Strong interest in tools for personal operating systems.']
+        ],
+        related: [2, 4]
+      },
+      {
+        id: 2,
+        name: 'Marcus Rivera',
+        initials: 'MR',
+        company: 'Atlas Capital',
+        role: 'Partner',
+        location: 'New York',
+        status: 'Active',
+        statusColor: 'green',
+        lastContact: 'Yesterday',
+        nextFollowUp: 'Friday',
+        pinned: true,
+        email: 'marcus@atlas.example',
+        phone: '+1 212 555 0134',
+        tags: ['Investor', 'Finance', 'Warm'],
+        meetings: ['Investor Intro'],
+        planned: ['Q2 Check-in'],
+        summary: 'Marcus is focused on founder systems, metrics, and capital allocation. Good person for finance-oriented product framing.',
+        current: [['Deck follow-up', 'Send short write-up on KGQL as a personal graph database.']],
+        logs: [['Yesterday', 'Quick call. He asked for a tighter example around people, companies, and meetings.'], ['Apr 29', 'Introduced by Sarah Chen.']],
+        related: [1, 5]
+      },
+      {
+        id: 3,
+        name: 'Anika Patel',
+        initials: 'AP',
+        company: 'Quiet Systems',
+        role: 'Founder',
+        location: 'London',
+        status: 'Active',
+        statusColor: 'green',
+        lastContact: '1w ago',
+        nextFollowUp: 'None',
+        pinned: false,
+        email: 'anika@quiet.example',
+        phone: '+44 20 5555 0191',
+        tags: ['Founder', 'Product', 'Remote'],
+        meetings: ['Design Sync'],
+        planned: [],
+        summary: 'Anika builds calm operational software. She tends to care about density, keyboard flow, and avoiding dashboard theater.',
+        current: [['Ask about mobile CRM', 'She has opinions about single-profile mobile navigation.']],
+        logs: [['1w ago', 'Discussed whether People should be a profile/timeline instead of an address book.']],
+        related: [1]
+      },
+      {
+        id: 4,
+        name: 'Maya Ioseliani',
+        initials: 'MI',
+        company: 'Nexus',
+        role: 'Advisor',
+        location: 'Tbilisi',
+        status: 'Active',
+        statusColor: 'green',
+        lastContact: 'Today',
+        nextFollowUp: 'Today',
+        pinned: true,
+        email: 'maya@nexus.example',
+        phone: '+995 555 012 345',
+        tags: ['Advisor', 'Tbilisi', 'Warm', 'Personal'],
+        meetings: ['Weekly Planning', 'Investor Intro'],
+        planned: ['Roadmap Review'],
+        summary: 'Maya connects product strategy with day-to-day execution. Usually the best person to ask whether a workflow will survive real use.',
+        current: [['Review people mockup', 'Ask if the company and meeting navigation feels natural.']],
+        logs: [['Today', 'Asked for a People app mockup based on the notes navigation pattern.'], ['2d ago', 'Talked through tags and recoverable result contexts.']],
+        related: [1, 2]
+      },
+      {
+        id: 5,
+        name: 'Daniel Brooks',
+        initials: 'DB',
+        company: 'Atlas Capital',
+        role: 'Analyst',
+        location: 'New York',
+        status: 'Dormant',
+        statusColor: 'blue',
+        lastContact: '2mo ago',
+        nextFollowUp: 'None',
+        pinned: false,
+        email: 'daniel@atlas.example',
+        phone: '+1 646 555 0147',
+        tags: ['Finance', 'Dormant'],
+        meetings: ['Q1 Portfolio Review'],
+        planned: [],
+        summary: 'Daniel tracks portfolio tooling and research workflows. Not urgent, but useful for later finance product interviews.',
+        current: [['No current thread', 'Keep dormant until there is a finance-specific prototype.']],
+        logs: [['2mo ago', 'Brief intro during portfolio review.']],
+        related: [2]
+      },
+      {
+        id: 6,
+        name: 'Elena Torres',
+        initials: 'ET',
+        company: 'Northstar Labs',
+        role: 'Design Engineer',
+        location: 'Austin',
+        status: 'Follow up',
+        statusColor: 'amber',
+        lastContact: '5d ago',
+        nextFollowUp: 'Monday',
+        pinned: false,
+        email: 'elena@northstar.example',
+        phone: '+1 512 555 0156',
+        tags: ['Design', 'Product', 'Remote'],
+        meetings: ['Design Sync'],
+        planned: ['Roadmap Review'],
+        summary: 'Elena is detail-oriented about interaction states, overlays, and mobile adaptation.',
+        current: [['Overlay question', 'Ask whether people result rows need richer relationship metadata.']],
+        logs: [['5d ago', 'She pushed for a full-width overlay rather than a centered modal.']],
+        related: [1, 3]
+      }
+    ];
+
+    const companies = ['Northstar Labs', 'Atlas Capital', 'Quiet Systems', 'Nexus'];
+    const meetings = ['Design Sync', 'Investor Intro', 'Weekly Planning', 'Q1 Portfolio Review'];
+    const planned = ['Roadmap Review', 'Q2 Check-in'];
+    const tagSystems = [
+      ['Status', ['Active', 'Follow up', 'Dormant']],
+      ['Relationship', ['Investor', 'Advisor', 'Founder', 'Warm', 'Personal']],
+      ['Context', ['Product', 'Finance', 'Design', 'Remote']],
+      ['Location', ['SF', 'Tbilisi', 'New York']]
+    ];
+
+    let activePersonId = 1;
+    let activeSideTab = 'people';
+    let activeContext = null;
+    let overlayContext = null;
+
+    const byId = id => people.find(person => person.id === id);
+    const matches = (person, query) => [person.name, person.company, person.role, person.location, person.status, ...person.tags].join(' ').toLowerCase().includes(query.toLowerCase());
+    const contextLabel = ctx => ctx ? `${ctx.type}: ${ctx.label}` : '';
+
+    function showOverlay(ctx) {
+      overlayContext = ctx;
+      const rows = people.filter(ctx.filter);
+      const overlay = document.getElementById('overlay');
+      document.getElementById('overlayTitle').textContent = contextLabel(ctx);
+      document.getElementById('overlayCount').textContent = `${rows.length} people`;
+      document.getElementById('overlayPills').innerHTML = `
+        <span class="pill">${ctx.type}</span>
+        <span class="pill">Sort: recently contacted</span>
+      `;
+      document.getElementById('results').innerHTML = rows.map((person, index) => resultRow(person, index)).join('');
+      overlay.classList.add('visible');
+    }
+
+    function hideOverlay() {
+      document.getElementById('overlay').classList.remove('visible');
+    }
+
+    function openPerson(id, ctx = null) {
+      activePersonId = id;
+      if (ctx) activeContext = { ...ctx, ids: people.filter(ctx.filter).map(person => person.id) };
+      hideOverlay();
+      render();
+    }
+
+    function resultRow(person, index) {
+      return `
+        <button class="result-row ${person.id === activePersonId ? 'active' : ''}" onclick="openPerson(${person.id}, overlayContext)">
+          <span class="result-avatar">${person.initials}</span>
+          <span>
+            <div class="result-name">${person.name}</div>
+            <div class="result-sub">${person.role} · ${person.company} · ${person.location}</div>
+          </span>
+          <span class="result-meta">Last contacted<br><strong>${person.lastContact}</strong></span>
+          <span class="result-meta">Next follow-up<br><strong>${person.nextFollowUp}</strong></span>
+        </button>
+      `;
+    }
+
+    function renderSidebar() {
+      document.getElementById('peopleTab').classList.toggle('active', activeSideTab === 'people');
+      document.getElementById('tagsTab').classList.toggle('active', activeSideTab === 'tags');
+      document.getElementById('peoplePane').hidden = activeSideTab !== 'people';
+      document.getElementById('tagsPane').hidden = activeSideTab !== 'tags';
+
+      const pinned = people.filter(person => person.pinned).slice(0, 5);
+      const recent = [people[3], people[0], people[1], people[5], people[2]];
+      const followUp = people.filter(person => person.status === 'Follow up');
+
+      document.getElementById('peoplePane').innerHTML = `
+        ${section('Pinned', pinned.map(personLink).join(''))}
+        ${section('Recent', recent.map(personLink).join(''))}
+        ${section('Follow up', followUp.map(personLink).join(''))}
+        ${section('Companies', companies.map(company => sideQuery(company, people.filter(p => p.company === company).length, 'Company', company)).join(''))}
+        ${section('Meetings', meetings.slice(0, 4).map(meeting => sideQuery(meeting, people.filter(p => p.meetings.includes(meeting)).length, 'Meeting', meeting)).join(''))}
+        ${section('Planned', planned.map(item => sideQuery(item, people.filter(p => p.planned.includes(item)).length, 'Planned', item)).join(''))}
+      `;
+
+      document.getElementById('tagsPane').innerHTML = tagSystems.map(([system, tags]) => {
+        return section(system, tags.map(tag => sideQuery(tag, people.filter(p => p.status === tag || p.tags.includes(tag)).length, system, tag)).join(''));
+      }).join('');
+    }
+
+    function section(title, body) {
+      return `<div class="side-section"><div class="side-title">${title}</div>${body}</div>`;
+    }
+
+    function personLink(person) {
+      return `
+        <button class="side-link ${person.id === activePersonId ? 'active' : ''}" onclick="openPerson(${person.id})">
+          <span class="dot ${person.statusColor}"></span>
+          <span>${person.name}</span>
+        </button>
+      `;
+    }
+
+    function sideQuery(label, count, type, value) {
+      return `
+        <button class="side-link" onclick="openContext('${type}', '${value}')">
+          <span>${label}</span>
+          <span class="count">${count}</span>
+        </button>
+      `;
+    }
+
+    function openContext(type, label) {
+      let filter;
+      if (type === 'Company') filter = person => person.company === label;
+      else if (type === 'Meeting') filter = person => person.meetings.includes(label);
+      else if (type === 'Planned') filter = person => person.planned.includes(label);
+      else if (type === 'Status') filter = person => person.status === label;
+      else filter = person => person.tags.includes(label);
+      showOverlay({ type, label, filter });
+    }
+
+    function renderContext() {
+      const bar = document.getElementById('contextBar');
+      if (!activeContext) {
+        bar.classList.remove('visible');
+        return;
+      }
+      const index = activeContext.ids.indexOf(activePersonId);
+      document.getElementById('contextTitle').textContent = `Back to ${contextLabel(activeContext)}`;
+      document.getElementById('contextPosition').textContent = `${index + 1} of ${activeContext.ids.length}`;
+      bar.classList.add('visible');
+    }
+
+    function renderProfile() {
+      const person = byId(activePersonId);
+      document.getElementById('mobileTitle').textContent = person.name;
+      document.getElementById('profile').innerHTML = `
+        <div class="profile-header">
+          <div class="avatar">${person.initials}</div>
+          <div>
+            <h1>${person.name}</h1>
+            <div class="subtitle">${person.role} · <button class="link-text" onclick="openContext('Company', '${person.company}')">${person.company}</button> · ${person.location}</div>
+            <div class="pill-row">
+              <span class="pill"><span class="dot ${person.statusColor}"></span>${person.status}</span>
+              ${person.tags.map(tag => `<button class="pill clickable" onclick="openContext('Tag', '${tag}')">${tag}</button>`).join('')}
+            </div>
+            <div class="quick-actions">
+              <button class="soft-button">＋ Add log</button>
+              <button class="soft-button">✉ Contact</button>
+              <button class="soft-button">◎ Create meeting</button>
+              <button class="soft-button">✓ Follow-up action</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-grid">
+          <section class="section">
+            <h2>Summary</h2>
+            <p>${person.summary}</p>
+          </section>
+          <section class="section">
+            <h2>Current Threads</h2>
+            <div class="thread-list">
+              ${person.current.map(([title, body]) => `<div class="thread"><div class="thread-title">${title}</div><div class="thread-meta">${body}</div></div>`).join('')}
+            </div>
+          </section>
+          <section class="section">
+            <h2>Recent Activity</h2>
+            <div class="timeline">
+              ${person.logs.map(([time, body]) => `<div class="timeline-item"><div class="time">${time}</div><div><div class="event-title">Daily log</div><div class="event-body">${body}</div></div></div>`).join('')}
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function renderInspector() {
+      const person = byId(activePersonId);
+      document.getElementById('inspector').innerHTML = `
+        ${inspectorSection('Details', `
+          ${pair('Status', person.status)}
+          ${pair('Company', `<button class="link-line" onclick="openContext('Company', '${person.company}')">${person.company}</button>`)}
+          ${pair('Role', person.role)}
+          ${pair('Location', person.location)}
+          ${pair('Last contacted', person.lastContact)}
+          ${pair('Next follow-up', person.nextFollowUp)}
+        `)}
+        ${inspectorSection('Contacts', `
+          ${pair('Email', person.email)}
+          ${pair('Phone', person.phone)}
+        `)}
+        ${inspectorSection('Relations', `
+          ${person.meetings.map(meeting => `<button class="link-line" onclick="openContext('Meeting', '${meeting}')">◷ ${meeting}</button>`).join('')}
+          ${person.planned.map(item => `<button class="link-line" onclick="openContext('Planned', '${item}')">◌ ${item}</button>`).join('')}
+          ${person.related.map(id => `<button class="link-line" onclick="openPerson(${id})">☷ ${byId(id).name}</button>`).join('')}
+        `)}
+        ${inspectorSection('Tags', `<div class="pill-row">${person.tags.map(tag => `<button class="pill clickable" onclick="openContext('Tag', '${tag}')">${tag}</button>`).join('')}</div>`)}
+      `;
+    }
+
+    function inspectorSection(title, body) {
+      return `<section class="inspector-section"><div class="inspector-title">${title}</div>${body}</section>`;
+    }
+
+    function pair(label, value) {
+      return `<div class="pair"><span class="label">${label}</span><span class="value">${value}</span></div>`;
+    }
+
+    function render() {
+      renderSidebar();
+      renderContext();
+      renderProfile();
+      renderInspector();
+    }
+
+    document.getElementById('createButton').addEventListener('click', () => {
+      document.getElementById('createMenu').classList.toggle('hidden');
+    });
+
+    document.getElementById('peopleTab').addEventListener('click', () => {
+      activeSideTab = 'people';
+      renderSidebar();
+    });
+
+    document.getElementById('tagsTab').addEventListener('click', () => {
+      activeSideTab = 'tags';
+      renderSidebar();
+    });
+
+    document.getElementById('sidebarSearch').addEventListener('input', event => {
+      const query = event.target.value.trim();
+      if (query.length > 1) showOverlay({ type: 'Search', label: query, filter: person => matches(person, query) });
+    });
+
+    document.getElementById('overlayClose').addEventListener('click', hideOverlay);
+    document.getElementById('contextBack').addEventListener('click', () => activeContext && showOverlay(activeContext));
+    document.getElementById('contextClear').addEventListener('click', () => {
+      activeContext = null;
+      renderContext();
+    });
+
+    document.querySelectorAll('[data-mobile]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-mobile]').forEach(item => item.classList.remove('active'));
+        button.classList.add('active');
+        const section = button.dataset.mobile;
+        if (section === 'people') showOverlay({ type: 'Recent', label: 'People', filter: () => true });
+        if (section === 'tags') {
+          activeSideTab = 'tags';
+          showOverlay({ type: 'Tag', label: 'Follow up', filter: person => person.status === 'Follow up' });
+        }
+        if (section === 'search') document.getElementById('overlay').classList.add('visible');
+      });
+    });
+
+    window.addEventListener('keydown', event => {
+      if (event.key === 'Escape') hideOverlay();
+    });
+
+    render();
+  </script>
+</body>
+</html>
