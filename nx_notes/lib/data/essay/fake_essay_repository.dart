@@ -6,9 +6,7 @@ import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 
 class FakeEssayRepository implements EssayRepository {
-  FakeEssayRepository()
-      : _essays = _seedEssays(),
-        _snaps = _seedSnaps();
+  FakeEssayRepository() : _essays = _seedEssays(), _snaps = _seedSnaps();
 
   final List<Essay> _essays;
   final Map<int, List<EssaySnap>> _snaps;
@@ -24,8 +22,20 @@ class FakeEssayRepository implements EssayRepository {
       title: 'Untitled $topic essay',
       document: 'Start writing here.',
       jsonDocument: const <String, dynamic>{
-        'type': 'super_editor_document',
-        'nodes': <dynamic>[],
+        'format': 'appflowy_document',
+        'document': <String, dynamic>{
+          'type': 'page',
+          'children': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'type': 'paragraph',
+              'data': <String, dynamic>{
+                'delta': <Map<String, dynamic>>[
+                  <String, dynamic>{'insert': 'Start writing here.'},
+                ],
+              },
+            },
+          ],
+        },
       },
       wordCount: 3,
       status: 'Draft',
@@ -56,7 +66,10 @@ class FakeEssayRepository implements EssayRepository {
     final existing = _snaps[essayId] ?? <EssaySnap>[];
     final nextVersion = existing.isEmpty
         ? 1
-        : existing.map((snap) => snap.versionNumber).reduce((a, b) => a > b ? a : b) + 1;
+        : existing
+                  .map((snap) => snap.versionNumber)
+                  .reduce((a, b) => a > b ? a : b) +
+              1;
     final snap = EssaySnap(
       id: _nextSnapId++,
       essayId: essayId,
@@ -124,15 +137,34 @@ class FakeEssayRepository implements EssayRepository {
       TagSystem(
         name: 'Status',
         nodes: <TagNode>[
-          for (final name in const ['Draft', 'In Progress', 'Published', 'Discarded'])
-            TagNode(name: name, count: _essays.where((essay) => essay.status == name).length),
+          for (final name in const [
+            'Draft',
+            'In Progress',
+            'Published',
+            'Discarded',
+          ])
+            TagNode(
+              name: name,
+              count: _essays.where((essay) => essay.status == name).length,
+            ),
         ],
       ),
       TagSystem(
         name: 'Topic',
         nodes: <TagNode>[
-          for (final name in const ['Technical', 'Product', 'Spiritual', 'Economic', 'Personal'])
-            TagNode(name: name, count: _essays.where((essay) => essay.topics.contains(name)).length),
+          for (final name in const [
+            'Technical',
+            'Product',
+            'Spiritual',
+            'Economic',
+            'Personal',
+          ])
+            TagNode(
+              name: name,
+              count: _essays
+                  .where((essay) => essay.topics.contains(name))
+                  .length,
+            ),
         ],
       ),
       TagSystem(
@@ -141,16 +173,30 @@ class FakeEssayRepository implements EssayRepository {
         nodes: <TagNode>[
           TagNode(
             name: 'Work',
-            count: _essays.where((essay) => essay.areaTags.contains('Work')).length,
+            count: _essays
+                .where((essay) => essay.areaTags.contains('Work'))
+                .length,
             children: <TagNode>[
-              TagNode(name: 'Product', count: _essays.where((essay) => essay.areaTags.contains('Product')).length),
+              TagNode(
+                name: 'Product',
+                count: _essays
+                    .where((essay) => essay.areaTags.contains('Product'))
+                    .length,
+              ),
               TagNode(
                 name: 'Infrastructure',
-                count: _essays.where((essay) => essay.areaTags.contains('Infrastructure')).length,
+                count: _essays
+                    .where((essay) => essay.areaTags.contains('Infrastructure'))
+                    .length,
               ),
             ],
           ),
-          TagNode(name: 'Personal', count: _essays.where((essay) => essay.areaTags.contains('Personal')).length),
+          TagNode(
+            name: 'Personal',
+            count: _essays
+                .where((essay) => essay.areaTags.contains('Personal'))
+                .length,
+          ),
         ],
       ),
     ];
@@ -182,12 +228,16 @@ class FakeEssayRepository implements EssayRepository {
     if (index == -1) {
       throw StateError('Essay ${essay.id} not found');
     }
-    final updated = essay.copyWith(updatedAt: DateTime.now(), updatedLabel: 'just now');
+    final updated = essay.copyWith(
+      updatedAt: DateTime.now(),
+      updatedLabel: 'just now',
+    );
     _essays[index] = updated;
     return updated;
   }
 
-  static int _recentSort(Essay a, Essay b) => b.updatedAt.compareTo(a.updatedAt);
+  static int _recentSort(Essay a, Essay b) =>
+      b.updatedAt.compareTo(a.updatedAt);
 }
 
 List<Essay> _seedEssays() {
@@ -216,7 +266,9 @@ List<Essay> _seedEssays() {
       areaTags: areas,
       pinned: pinned,
       updatedAt: now.subtract(Duration(minutes: minutesAgo)),
-      updatedLabel: minutesAgo < 60 ? '${minutesAgo}m ago' : '${(minutesAgo / 60).round()}h ago',
+      updatedLabel: minutesAgo < 60
+          ? '${minutesAgo}m ago'
+          : '${(minutesAgo / 60).round()}h ago',
       versionNumber: version,
       excerpt: excerpt,
       links: const <LinkedModel>[
@@ -236,7 +288,8 @@ List<Essay> _seedEssays() {
       minutesAgo: 12,
       words: 842,
       version: 18,
-      excerpt: 'Notes on KGQL, Super Editor JSON, raw text, tags, and snapshots.',
+      excerpt:
+          'Notes on KGQL, Super Editor JSON, raw text, tags, and snapshots.',
       document:
           'The mobile app should have one essay open at a time.\n\nNavigation is stack based: home, tags, or search leads to a result list, then the editor opens from one selected row.',
     ),
