@@ -20,6 +20,15 @@ abstract class EssayRepository {
   Future<List<EssaySnap>> listSnapshots(int essayId);
   Future<List<TagSystem>> listTagSystems();
   Future<List<LinkedModel>> listProjects();
+  Future<List<LinkedModel>> searchLinkableModels({
+    required LinkableModelType modelType,
+    required String query,
+  });
+  Future<Essay> attachLinkedModel({
+    required int essayId,
+    required LinkableModelType modelType,
+    required int modelId,
+  });
   Future<Essay> attachProject(int essayId, int projectId);
   Future<Essay> detachProject(int essayId, int relationId);
 }

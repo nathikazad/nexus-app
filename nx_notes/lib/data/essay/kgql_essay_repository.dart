@@ -158,25 +158,48 @@ class KgqlEssayRepository implements EssayRepository {
 
   @override
   Future<List<LinkedModel>> listProjects() async {
+    return searchLinkableModels(
+      modelType: LinkableModelType.project,
+      query: '',
+    );
+  }
+
+  @override
+  Future<List<LinkedModel>> searchLinkableModels({
+    required LinkableModelType modelType,
+    required String query,
+  }) async {
     final models = await fetchKgqlModelsForRelationPicker(
       _client,
-      'Project',
+      modelType.kgqlName,
       domainId: _domainId,
     );
+    final normalized = query.trim().toLowerCase();
     return [
       for (final model in models)
-        LinkedModel(id: model.id, name: model.name, modelType: 'Project'),
+        if (normalized.isEmpty ||
+            model.name.toLowerCase().contains(normalized) ||
+            (model.description ?? '').toLowerCase().contains(normalized))
+          LinkedModel(
+            id: model.id,
+            name: model.name,
+            modelType: modelType.kgqlName,
+          ),
     ]..sort((a, b) => a.name.compareTo(b.name));
   }
 
   @override
-  Future<Essay> attachProject(int essayId, int projectId) async {
+  Future<Essay> attachLinkedModel({
+    required int essayId,
+    required LinkableModelType modelType,
+    required int modelId,
+  }) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
         id: essayId,
         relations: [
-          ModelRelation(modelType: 'Project', link: [projectId]),
+          ModelRelation(modelType: modelType.kgqlName, link: [modelId]),
         ],
       ),
       domainId: _domainId,
@@ -186,6 +209,15 @@ class KgqlEssayRepository implements EssayRepository {
       throw StateError('Updated essay $essayId could not be loaded');
     }
     return updated;
+  }
+
+  @override
+  Future<Essay> attachProject(int essayId, int projectId) async {
+    return attachLinkedModel(
+      essayId: essayId,
+      modelType: LinkableModelType.project,
+      modelId: projectId,
+    );
   }
 
   @override

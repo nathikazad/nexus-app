@@ -7,6 +7,7 @@ import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/essay/essay.dart';
 import 'package:nx_notes/domain/essay/essay_result_context.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 
 class EssayEditorView extends ConsumerWidget {
@@ -129,6 +130,26 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                     Expanded(
                       child: NxAppFlowyEditor(
                         essay: widget.essay,
+                        searchLinkableModels:
+                            ({required modelType, required query}) {
+                              return ref
+                                  .read(essayRepositoryProvider)
+                                  .searchLinkableModels(
+                                    modelType: modelType,
+                                    query: query,
+                                  );
+                            },
+                        onLinkableModelSelected: (modelType, model) async {
+                          await ref
+                              .read(essayRepositoryProvider)
+                              .attachLinkedModel(
+                                essayId: widget.essay.id,
+                                modelType: modelType,
+                                modelId: model.id,
+                              );
+                          ref.invalidate(essayByIdProvider(widget.essay.id));
+                          ref.invalidate(recentEssaysProvider);
+                        },
                         onChanged: (updated) async {
                           await ref
                               .read(essayRepositoryProvider)
@@ -155,11 +176,20 @@ class NxAppFlowyEditor extends StatefulWidget {
   const NxAppFlowyEditor({
     required this.essay,
     required this.onChanged,
+    required this.searchLinkableModels,
+    required this.onLinkableModelSelected,
     super.key,
   });
 
   final Essay essay;
   final Future<void> Function(Essay essay) onChanged;
+  final Future<List<LinkedModel>> Function({
+    required LinkableModelType modelType,
+    required String query,
+  })
+  searchLinkableModels;
+  final Future<void> Function(LinkableModelType modelType, LinkedModel model)
+  onLinkableModelSelected;
 
   @override
   State<NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
@@ -320,7 +350,10 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
           ...standardCharacterShortcutEvents.where(
             (event) => event.key != 'show the slash menu',
           ),
-          nxSlashCommand(),
+          nxSlashCommand(
+            searchLinkableModels: widget.searchLinkableModels,
+            onLinkableModelSelected: widget.onLinkableModelSelected,
+          ),
         ],
         commandShortcutEvents: standardCommandShortcutEvents,
         footer: const SizedBox(height: 120),

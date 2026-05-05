@@ -122,32 +122,50 @@ class FakeEssayRepository implements EssayRepository {
 
   @override
   Future<List<LinkedModel>> listProjects() async {
-    return const <LinkedModel>[
-      LinkedModel(id: 54, name: 'Notes App', modelType: 'Project'),
-      LinkedModel(id: 55, name: 'KGQL Platform', modelType: 'Project'),
-      LinkedModel(id: 56, name: 'Internal Tools', modelType: 'Project'),
-      LinkedModel(id: 57, name: 'Writing System', modelType: 'Project'),
-    ];
+    return searchLinkableModels(
+      modelType: LinkableModelType.project,
+      query: '',
+    );
   }
 
   @override
-  Future<Essay> attachProject(int essayId, int projectId) async {
+  Future<List<LinkedModel>> searchLinkableModels({
+    required LinkableModelType modelType,
+    required String query,
+  }) async {
+    final normalized = query.trim().toLowerCase();
+    return _fakeLinkableModels
+        .where((model) => model.modelType == modelType.kgqlName)
+        .where(
+          (model) =>
+              normalized.isEmpty ||
+              model.name.toLowerCase().contains(normalized),
+        )
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  @override
+  Future<Essay> attachLinkedModel({
+    required int essayId,
+    required LinkableModelType modelType,
+    required int modelId,
+  }) async {
     final essay = await getById(essayId);
     if (essay == null) {
       throw StateError('Essay $essayId not found');
     }
     if (essay.links.any(
-      (link) => link.modelType == 'Project' && link.id == projectId,
+      (link) => link.modelType == modelType.kgqlName && link.id == modelId,
     )) {
       return essay;
     }
-    final projects = await listProjects();
-    final project = projects.firstWhere(
-      (item) => item.id == projectId,
+    final model = _fakeLinkableModels.firstWhere(
+      (item) => item.modelType == modelType.kgqlName && item.id == modelId,
       orElse: () => LinkedModel(
-        id: projectId,
-        name: 'Project $projectId',
-        modelType: 'Project',
+        id: modelId,
+        name: '${modelType.kgqlName} $modelId',
+        modelType: modelType.kgqlName,
       ),
     );
     return updateDraft(
@@ -155,13 +173,22 @@ class FakeEssayRepository implements EssayRepository {
         links: <LinkedModel>[
           ...essay.links,
           LinkedModel(
-            id: project.id,
-            name: project.name,
-            modelType: project.modelType,
+            id: model.id,
+            name: model.name,
+            modelType: model.modelType,
             relationId: _nextRelationId++,
           ),
         ],
       ),
+    );
+  }
+
+  @override
+  Future<Essay> attachProject(int essayId, int projectId) async {
+    return attachLinkedModel(
+      essayId: essayId,
+      modelType: LinkableModelType.project,
+      modelId: projectId,
     );
   }
 
@@ -477,3 +504,19 @@ Map<int, List<EssaySnap>> _seedSnaps() {
       ],
   };
 }
+
+const List<LinkedModel> _fakeLinkableModels = <LinkedModel>[
+  LinkedModel(id: 54, name: 'Notes App', modelType: 'Project'),
+  LinkedModel(id: 55, name: 'KGQL Platform', modelType: 'Project'),
+  LinkedModel(id: 56, name: 'Internal Tools', modelType: 'Project'),
+  LinkedModel(id: 57, name: 'Writing System', modelType: 'Project'),
+  LinkedModel(id: 201, name: 'Nathik Azad', modelType: 'Person'),
+  LinkedModel(id: 202, name: 'Sarah Chen', modelType: 'Person'),
+  LinkedModel(id: 203, name: 'Alex Morgan', modelType: 'Person'),
+  LinkedModel(id: 301, name: 'Nexus Labs', modelType: 'Company'),
+  LinkedModel(id: 302, name: 'OpenAI', modelType: 'Company'),
+  LinkedModel(id: 303, name: 'Apple', modelType: 'Company'),
+  LinkedModel(id: 1, name: 'Draft: API design notes', modelType: 'Essay'),
+  LinkedModel(id: 4, name: 'Internal notes app direction', modelType: 'Essay'),
+  LinkedModel(id: 7, name: 'KGQL document model', modelType: 'Essay'),
+];

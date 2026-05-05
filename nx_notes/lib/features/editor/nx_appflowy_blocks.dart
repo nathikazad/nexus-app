@@ -2,6 +2,7 @@ import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:provider/provider.dart';
 
 const String nxToggleBlockType = 'nx_toggle';
@@ -29,7 +30,15 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders() {
   return builders;
 }
 
-CharacterShortcutEvent nxSlashCommand() {
+CharacterShortcutEvent nxSlashCommand({
+  required Future<List<LinkedModel>> Function({
+    required LinkableModelType modelType,
+    required String query,
+  })
+  searchLinkableModels,
+  required Future<void> Function(LinkableModelType modelType, LinkedModel model)
+  onLinkableModelSelected,
+}) {
   return CharacterShortcutEvent(
     key: 'show nx slash menu',
     character: '/',
@@ -47,7 +56,12 @@ CharacterShortcutEvent nxSlashCommand() {
       if (context == null || !context.mounted) {
         return true;
       }
-      _showNxSlashOverlay(context, editorState);
+      _showNxSlashOverlay(
+        context,
+        editorState,
+        searchLinkableModels: searchLinkableModels,
+        onLinkableModelSelected: onLinkableModelSelected,
+      );
       return true;
     },
   );
@@ -66,7 +80,17 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems() {
   ];
 }
 
-void _showNxSlashOverlay(BuildContext anchorContext, EditorState editorState) {
+void _showNxSlashOverlay(
+  BuildContext anchorContext,
+  EditorState editorState, {
+  required Future<List<LinkedModel>> Function({
+    required LinkableModelType modelType,
+    required String query,
+  })
+  searchLinkableModels,
+  required Future<void> Function(LinkableModelType modelType, LinkedModel model)
+  onLinkableModelSelected,
+}) {
   final overlay = Overlay.of(anchorContext);
   final renderBox = anchorContext.findRenderObject() as RenderBox?;
   final anchor = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
@@ -84,6 +108,8 @@ void _showNxSlashOverlay(BuildContext anchorContext, EditorState editorState) {
         child: NxSlashMenuOverlay(
           editorState: editorState,
           menuService: menuService,
+          searchLinkableModels: searchLinkableModels,
+          onLinkableModelSelected: onLinkableModelSelected,
           onDismiss: () {
             if (entry.mounted) {
               entry.remove();
@@ -100,12 +126,21 @@ class NxSlashMenuOverlay extends StatefulWidget {
   const NxSlashMenuOverlay({
     required this.editorState,
     required this.menuService,
+    required this.searchLinkableModels,
+    required this.onLinkableModelSelected,
     required this.onDismiss,
     super.key,
   });
 
   final EditorState editorState;
   final SelectionMenuService menuService;
+  final Future<List<LinkedModel>> Function({
+    required LinkableModelType modelType,
+    required String query,
+  })
+  searchLinkableModels;
+  final Future<void> Function(LinkableModelType modelType, LinkedModel model)
+  onLinkableModelSelected;
   final VoidCallback onDismiss;
 
   @override
@@ -117,9 +152,9 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   final _staticItems = _nxStaticSelectionMenuItems();
   var _keyword = '';
   var _selectedIndex = 0;
-  var _loadingBlogs = false;
-  var _blogRequestId = 0;
-  List<_FakeBlogDocument> _blogResults = const <_FakeBlogDocument>[];
+  var _loadingLinkableModels = false;
+  var _linkableRequestId = 0;
+  List<LinkedModel> _linkableResults = const <LinkedModel>[];
 
   @override
   void initState() {
@@ -167,8 +202,8 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
               maxWidth: 340,
               maxHeight: 320,
             ),
-            child: _loadingBlogs
-                ? const _NxSlashMessage(text: 'Loading blogs...')
+            child: _loadingLinkableModels
+                ? const _NxSlashMessage(text: 'Loading models...')
                 : rows.isEmpty
                 ? const _NxSlashMessage(text: 'No results')
                 : ListView.builder(
@@ -191,17 +226,27 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   }
 
   List<_NxSlashRow> get _rows {
-    if (_keyword.startsWith('blog/')) {
+    final selectedType = _selectedLinkableType;
+    if (selectedType != null) {
       return <_NxSlashRow>[
-        for (final blog in _blogResults)
-          _NxBlogResultRow(blog: blog, onSelected: () => _selectBlog(blog)),
+        for (final model in _linkableResults)
+          _NxLinkableModelResultRow(
+            model: model,
+            onSelected: () => _selectLinkableModel(selectedType, model),
+          ),
       ];
     }
 
     final lowerKeyword = _keyword.toLowerCase();
     final rows = <_NxSlashRow>[
-      if ('blog'.contains(lowerKeyword))
-        _NxBlogCommandRow(onSelected: _enterBlogSearch),
+      for (final type in LinkableModelType.values)
+        if (lowerKeyword.isEmpty ||
+            type.command.contains(lowerKeyword) ||
+            type.kgqlName.toLowerCase().contains(lowerKeyword))
+          _NxLinkableModelCommandRow(
+            modelType: type,
+            onSelected: () => _enterLinkableModelSearch(type),
+          ),
       for (final item in _staticItems)
         if (lowerKeyword.isEmpty ||
             item.allKeywords.any((keyword) => keyword.contains(lowerKeyword)))
@@ -211,6 +256,14 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
           ),
     ];
     return rows;
+  }
+
+  LinkableModelType? get _selectedLinkableType {
+    final slashIndex = _keyword.indexOf('/');
+    if (slashIndex <= 0) {
+      return null;
+    }
+    return LinkableModelType.fromCommand(_keyword.substring(0, slashIndex));
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -249,7 +302,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
           _keyword = _keyword.substring(0, _keyword.length - 1);
           _selectedIndex = 0;
         });
-        _maybeFetchBlogs();
+        _maybeFetchLinkableModels();
       }
       return KeyEventResult.handled;
     }
@@ -263,7 +316,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
         _keyword += character;
         _selectedIndex = 0;
       });
-      _maybeFetchBlogs();
+      _maybeFetchLinkableModels();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -282,51 +335,67 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     });
   }
 
-  void _enterBlogSearch() {
-    final start = _keyword.length > 5 ? 5 : _keyword.length;
-    final missing = 'blog/'.substring(start);
+  void _enterLinkableModelSearch(LinkableModelType modelType) {
+    final command = '${modelType.command}/';
+    final start = _keyword.length > command.length
+        ? command.length
+        : _keyword.length;
+    final missing = command.substring(start);
     if (missing.isNotEmpty) {
       _insertText(missing);
     }
     setState(() {
-      _keyword = 'blog/';
+      _keyword = command;
       _selectedIndex = 0;
     });
-    _maybeFetchBlogs();
+    _maybeFetchLinkableModels();
   }
 
-  void _maybeFetchBlogs() {
-    if (!_keyword.startsWith('blog/')) {
+  void _maybeFetchLinkableModels() {
+    final modelType = _selectedLinkableType;
+    if (modelType == null) {
       setState(() {
-        _loadingBlogs = false;
-        _blogResults = const <_FakeBlogDocument>[];
+        _loadingLinkableModels = false;
+        _linkableResults = const <LinkedModel>[];
       });
       return;
     }
-    final requestId = ++_blogRequestId;
-    final query = _keyword.substring('blog/'.length);
+    final requestId = ++_linkableRequestId;
+    final query = _keyword.substring(modelType.command.length + 1);
     setState(() {
-      _loadingBlogs = true;
-      _blogResults = const <_FakeBlogDocument>[];
+      _loadingLinkableModels = true;
+      _linkableResults = const <LinkedModel>[];
     });
-    _fetchBlogDocuments(query).then((blogs) {
-      if (!mounted || requestId != _blogRequestId) {
-        return;
-      }
-      setState(() {
-        _loadingBlogs = false;
-        _blogResults = blogs;
-        _selectedIndex = 0;
-      });
-    });
+    widget
+        .searchLinkableModels(modelType: modelType, query: query)
+        .then((models) {
+          if (!mounted || requestId != _linkableRequestId) {
+            return;
+          }
+          setState(() {
+            _loadingLinkableModels = false;
+            _linkableResults = models;
+            _selectedIndex = 0;
+          });
+        })
+        .catchError((Object _) {
+          if (!mounted || requestId != _linkableRequestId) {
+            return;
+          }
+          setState(() {
+            _loadingLinkableModels = false;
+            _linkableResults = const <LinkedModel>[];
+          });
+        });
   }
 
   void _selectStaticItem(SelectionMenuItem item) {
     item.handler(widget.editorState, widget.menuService, context);
   }
 
-  void _selectBlog(_FakeBlogDocument blog) {
-    _deleteSlashKeywordAndInsertBlogLink(blog);
+  void _selectLinkableModel(LinkableModelType modelType, LinkedModel model) {
+    _deleteSlashKeywordAndInsertLinkableModel(modelType, model);
+    widget.onLinkableModelSelected(modelType, model);
     widget.onDismiss();
   }
 
@@ -358,7 +427,10 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     widget.editorState.apply(transaction);
   }
 
-  void _deleteSlashKeywordAndInsertBlogLink(_FakeBlogDocument blog) {
+  void _deleteSlashKeywordAndInsertLinkableModel(
+    LinkableModelType modelType,
+    LinkedModel model,
+  ) {
     final selection = widget.editorState.selection;
     if (selection == null || !selection.isCollapsed) {
       return;
@@ -369,19 +441,21 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
       return;
     }
     final end = selection.start.offset;
-    final slashIndex = plainText.substring(0, end).lastIndexOf('/');
-    if (slashIndex == -1) {
+    final commandStart = end - _keyword.length - 1;
+    if (commandStart < 0 ||
+        commandStart >= plainText.length ||
+        plainText[commandStart] != '/') {
       return;
     }
-    final href = '/blog/${blog.id}';
+    final href = 'kgql://${modelType.kgqlName}/${model.id}';
     final needsLeadingSpace =
-        slashIndex > 0 &&
-        plainText.substring(0, slashIndex).trimRight().length == slashIndex;
+        commandStart > 0 &&
+        plainText.substring(0, commandStart).trimRight().length == commandStart;
     final needsTrailingSpace =
         end == plainText.length || plainText.substring(end).startsWith(' ');
     final transaction = widget.editorState.transaction;
-    transaction.deleteText(node, slashIndex, end - slashIndex);
-    var insertIndex = slashIndex;
+    transaction.deleteText(node, commandStart, end - commandStart);
+    var insertIndex = commandStart;
     if (needsLeadingSpace) {
       transaction.insertText(node, insertIndex, ' ', sliceAttributes: false);
       insertIndex += 1;
@@ -389,11 +463,11 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     transaction.insertText(
       node,
       insertIndex,
-      blog.title,
+      model.name,
       attributes: <String, dynamic>{BuiltInAttributeKey.href: href},
       sliceAttributes: false,
     );
-    insertIndex += blog.title.length;
+    insertIndex += model.name.length;
     if (needsTrailingSpace) {
       transaction.insertText(node, insertIndex, ' ', sliceAttributes: false);
     }
@@ -412,9 +486,13 @@ abstract class _NxSlashRow {
   void select();
 }
 
-class _NxBlogCommandRow implements _NxSlashRow {
-  const _NxBlogCommandRow({required this.onSelected});
+class _NxLinkableModelCommandRow implements _NxSlashRow {
+  const _NxLinkableModelCommandRow({
+    required this.modelType,
+    required this.onSelected,
+  });
 
+  final LinkableModelType modelType;
   final VoidCallback onSelected;
 
   @override
@@ -426,9 +504,9 @@ class _NxBlogCommandRow implements _NxSlashRow {
   }) {
     return _NxSlashTile(
       selected: selected,
-      icon: Icons.article_outlined,
-      title: 'Blog',
-      subtitle: 'Search blog documents',
+      icon: _iconForLinkableModelType(modelType),
+      title: modelType.kgqlName,
+      subtitle: 'Search ${modelType.kgqlName} models',
       onTap: onSelected,
     );
   }
@@ -437,10 +515,13 @@ class _NxBlogCommandRow implements _NxSlashRow {
   void select() => onSelected();
 }
 
-class _NxBlogResultRow implements _NxSlashRow {
-  const _NxBlogResultRow({required this.blog, required this.onSelected});
+class _NxLinkableModelResultRow implements _NxSlashRow {
+  const _NxLinkableModelResultRow({
+    required this.model,
+    required this.onSelected,
+  });
 
-  final _FakeBlogDocument blog;
+  final LinkedModel model;
   final VoidCallback onSelected;
 
   @override
@@ -452,10 +533,9 @@ class _NxBlogResultRow implements _NxSlashRow {
   }) {
     return _NxSlashTile(
       selected: selected,
-      icon: Icons.article_outlined,
-      title: blog.title,
-      subtitle: blog.excerpt,
-      trailing: blog.status,
+      icon: _iconForModelTypeName(model.modelType),
+      title: model.name,
+      subtitle: model.modelType,
       onTap: onSelected,
     );
   }
@@ -497,7 +577,6 @@ class _NxSlashTile extends StatelessWidget {
     this.icon,
     this.leading,
     this.subtitle,
-    this.trailing,
   });
 
   final bool selected;
@@ -505,7 +584,6 @@ class _NxSlashTile extends StatelessWidget {
   final Widget? leading;
   final String title;
   final String? subtitle;
-  final String? trailing;
   final VoidCallback onTap;
 
   @override
@@ -557,17 +635,6 @@ class _NxSlashTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...<Widget>[
-                const SizedBox(width: 8),
-                Text(
-                  trailing!,
-                  style: const TextStyle(
-                    color: AppColors.faint,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -591,6 +658,20 @@ class _NxSlashMessage extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _iconForLinkableModelType(LinkableModelType modelType) {
+  return _iconForModelTypeName(modelType.kgqlName);
+}
+
+IconData _iconForModelTypeName(String modelType) {
+  return switch (modelType) {
+    'Project' => Icons.folder_open_outlined,
+    'Person' => Icons.person_outline,
+    'Company' => Icons.business_outlined,
+    'Essay' => Icons.article_outlined,
+    _ => Icons.link,
+  };
 }
 
 class _NxSelectionMenuService implements SelectionMenuService {
@@ -1162,71 +1243,6 @@ Widget _wrapBlockSelection({
     supportTypes: const <BlockSelectionType>[BlockSelectionType.block],
     child: child,
   );
-}
-
-class _FakeBlogDocument {
-  const _FakeBlogDocument({
-    required this.id,
-    required this.title,
-    required this.excerpt,
-    required this.status,
-    required this.keywords,
-  });
-
-  final String id;
-  final String title;
-  final String excerpt;
-  final String status;
-  final List<String> keywords;
-}
-
-const List<_FakeBlogDocument> _fakeBlogDocuments = <_FakeBlogDocument>[
-  _FakeBlogDocument(
-    id: 'blog_001',
-    title: 'Designing Quiet Internal Tools',
-    excerpt: 'A short essay on density, restraint, and fast scanning.',
-    status: 'Draft',
-    keywords: <String>['design', 'internal', 'tools', 'ui'],
-  ),
-  _FakeBlogDocument(
-    id: 'blog_002',
-    title: 'KGQL Notes Architecture',
-    excerpt: 'How essays, tags, snapshots, and links fit together.',
-    status: 'Published',
-    keywords: <String>['kgql', 'notes', 'architecture'],
-  ),
-  _FakeBlogDocument(
-    id: 'blog_003',
-    title: 'Mobile Editor Constraints',
-    excerpt: 'Keyboard, toolbar, viewport, and one-document navigation rules.',
-    status: 'Review',
-    keywords: <String>['mobile', 'editor', 'keyboard'],
-  ),
-  _FakeBlogDocument(
-    id: 'blog_004',
-    title: 'Version History for Essays',
-    excerpt: 'Whole-document snapshots, latest state, and restore behavior.',
-    status: 'Draft',
-    keywords: <String>['version', 'history', 'snapshot'],
-  ),
-];
-
-Future<List<_FakeBlogDocument>> _fetchBlogDocuments(String query) async {
-  await Future<void>.delayed(const Duration(milliseconds: 280));
-  final normalized = query.trim().toLowerCase();
-  if (normalized.isEmpty) {
-    return _fakeBlogDocuments;
-  }
-  return _fakeBlogDocuments
-      .where((blog) {
-        return <String>[
-          blog.title,
-          blog.excerpt,
-          blog.status,
-          ...blog.keywords,
-        ].join(' ').toLowerCase().contains(normalized);
-      })
-      .toList(growable: false);
 }
 
 enum _DropVerticalPosition { top, bottom }

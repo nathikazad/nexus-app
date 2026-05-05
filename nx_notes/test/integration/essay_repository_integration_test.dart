@@ -7,6 +7,7 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_notes/data/essay/essay_attr_keys.dart';
 import 'package:nx_notes/data/essay/kgql_essay_repository.dart';
 import 'package:nx_notes/domain/essay/essay_query.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 
 void main() {
   test(
@@ -101,9 +102,16 @@ void main() {
       final projects = await harness.repo.listProjects();
       expect(projects, isNotEmpty);
       final project = projects.first;
-      final withProject = await harness.repo.attachProject(
-        updated.id,
-        project.id,
+      final projectSearch = await harness.repo.searchLinkableModels(
+        modelType: LinkableModelType.project,
+        query: project.name,
+      );
+      expect(projectSearch.map((model) => model.id), contains(project.id));
+
+      final withProject = await harness.repo.attachLinkedModel(
+        essayId: updated.id,
+        modelType: LinkableModelType.project,
+        modelId: project.id,
       );
       final projectLink = withProject.links.firstWhere(
         (link) => link.modelType == 'Project' && link.id == project.id,
