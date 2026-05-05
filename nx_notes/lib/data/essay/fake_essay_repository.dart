@@ -41,6 +41,11 @@ class FakeEssayRepository implements EssayRepository {
       status: 'Draft',
       topics: const <String>[],
       areaTags: const <String>[],
+      tagsBySystem: const <String, List<String>>{
+        'Status': <String>['Draft'],
+        'Topic': <String>[],
+        'Area': <String>[],
+      },
       pinned: false,
       updatedAt: now,
       updatedLabel: 'just now',
@@ -100,13 +105,7 @@ class FakeEssayRepository implements EssayRepository {
       if (filter.system == 'Status') {
         return essay.status == filter.node;
       }
-      if (filter.system == 'Topic') {
-        return essay.topics.contains(filter.node);
-      }
-      if (filter.system == 'Area') {
-        return essay.areaTags.contains(filter.node);
-      }
-      return false;
+      return essay.tagsBySystem[filter.system]?.contains(filter.node) ?? false;
     }).toList();
     rows.sort(_recentSort);
     return rows;
@@ -136,6 +135,7 @@ class FakeEssayRepository implements EssayRepository {
     return <TagSystem>[
       TagSystem(
         name: 'Status',
+        exclusive: true,
         nodes: <TagNode>[
           for (final name in const [
             'Draft',
@@ -214,8 +214,7 @@ class FakeEssayRepository implements EssayRepository {
         essay.document,
         essay.excerpt,
         essay.status,
-        ...essay.topics,
-        ...essay.areaTags,
+        ...essay.tagsBySystem.values.expand((tags) => tags),
       ].join(' ').toLowerCase().contains(q);
     }).toList();
     rows.sort(_recentSort);
@@ -264,6 +263,11 @@ List<Essay> _seedEssays() {
       status: status,
       topics: topics,
       areaTags: areas,
+      tagsBySystem: <String, List<String>>{
+        'Status': <String>[status],
+        'Topic': topics,
+        'Area': areas,
+      },
       pinned: pinned,
       updatedAt: now.subtract(Duration(minutes: minutesAgo)),
       updatedLabel: minutesAgo < 60

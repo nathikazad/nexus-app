@@ -15,9 +15,11 @@ class TagSystem {
     required this.name,
     required this.nodes,
     this.hierarchical = false,
+    this.exclusive = false,
   });
 
   final String name;
   final List<TagNode> nodes;
   final bool hierarchical;
+  final bool exclusive;
 }

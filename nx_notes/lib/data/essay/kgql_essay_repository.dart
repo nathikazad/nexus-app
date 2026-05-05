@@ -183,6 +183,7 @@ class KgqlEssayRepository implements EssayRepository {
         domain_tags.TagSystem(
           name: system.name,
           hierarchical: system.isHierarchical,
+          exclusive: system.selectionMode == 'exclusive',
           nodes: [
             for (final node in system.nodes)
               _mapTagNode(node, system.name, essays),
@@ -202,8 +203,7 @@ class KgqlEssayRepository implements EssayRepository {
         essay.document,
         essay.excerpt,
         essay.status,
-        ...essay.topics,
-        ...essay.areaTags,
+        ...essay.tagsBySystem.values.expand((tags) => tags),
       ].join(' ').toLowerCase().contains(q);
     }).toList();
   }
@@ -283,9 +283,7 @@ class KgqlEssayRepository implements EssayRepository {
   bool _essayHasTag(Essay essay, String system, String node) {
     return switch (system) {
       kEssayStatusTagSystem => essay.status == node,
-      kEssayTopicTagSystem => essay.topics.contains(node),
-      kEssayAreaTagSystem => essay.areaTags.contains(node),
-      _ => false,
+      _ => essay.tagsBySystem[system]?.contains(node) ?? false,
     };
   }
 }

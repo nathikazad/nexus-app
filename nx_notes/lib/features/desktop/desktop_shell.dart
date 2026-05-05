@@ -659,6 +659,11 @@ class _DesktopInspector extends ConsumerWidget {
     final snaps = id == null
         ? const []
         : ref.watch(essaySnapshotsProvider(id)).value ?? const [];
+    final tagSystems = ref.watch(tagSystemsProvider).value ?? const [];
+    final statusSystem = tagSystems.where((system) => system.name == 'Status');
+    final editableTagSystems = tagSystems
+        .where((system) => system.name != 'Status')
+        .toList();
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.panel,
@@ -695,10 +700,18 @@ class _DesktopInspector extends ConsumerWidget {
                         title: 'Details',
                         child: Column(
                           children: <Widget>[
-                            _InspectorPair(
-                              label: 'Status',
-                              value: essay.status,
-                              pill: true,
+                            _InspectorStatusPair(
+                              essay: essay,
+                              statuses: statusSystem.isEmpty
+                                  ? const <String>[
+                                      'Draft',
+                                      'In Progress',
+                                      'Published',
+                                      'Discarded',
+                                    ]
+                                  : statusSystem.first.nodes
+                                        .map((node) => node.name)
+                                        .toList(),
                             ),
                             const _InspectorPair(
                               label: 'Created',
@@ -718,17 +731,9 @@ class _DesktopInspector extends ConsumerWidget {
                       _InspectorSection(
                         icon: Icons.sell_outlined,
                         title: 'Tags',
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: <Widget>[
-                            for (final tag in [
-                              ...essay.topics,
-                              ...essay.areaTags,
-                            ])
-                              _TagPill(label: tag),
-                            const _DashedPill(label: 'Add tag'),
-                          ],
+                        child: _InspectorTagsEditor(
+                          essay: essay,
+                          systems: editableTagSystems,
                         ),
                       ),
                       _InspectorSection(
@@ -842,41 +847,13 @@ class _InspectorSection extends StatelessWidget {
 }
 
 class _InspectorPair extends StatelessWidget {
-  const _InspectorPair({
-    required this.label,
-    required this.value,
-    this.pill = false,
-  });
+  const _InspectorPair({required this.label, required this.value});
 
   final String label;
   final String value;
-  final bool pill;
 
   @override
   Widget build(BuildContext context) {
-    final valueWidget = pill
-        ? DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.subtle,
-              border: Border.all(color: AppColors.line),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.muted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          )
-        : Text(
-            value,
-            style: const TextStyle(fontSize: 12, color: AppColors.text),
-          );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -886,17 +863,166 @@ class _InspectorPair extends StatelessWidget {
             style: const TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const Spacer(),
-          valueWidget,
+          Text(
+            value,
+            style: const TextStyle(fontSize: 12, color: AppColors.text),
+          ),
         ],
       ),
     );
   }
 }
 
+class _InspectorStatusPair extends ConsumerWidget {
+  const _InspectorStatusPair({required this.essay, required this.statuses});
+
+  final Essay essay;
+  final List<String> statuses;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final values = statuses.contains(essay.status)
+        ? statuses
+        : <String>[essay.status, ...statuses];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: <Widget>[
+          const Text(
+            'Status',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const Spacer(),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.subtle,
+              border: Border.all(color: AppColors.line),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8, right: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: essay.status,
+                  isDense: true,
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 15,
+                    color: AppColors.muted,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  dropdownColor: AppColors.panel,
+                  borderRadius: BorderRadius.circular(6),
+                  items: [
+                    for (final status in values)
+                      DropdownMenuItem<String>(
+                        value: status,
+                        child: Text(status),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null || value == essay.status) return;
+                    _saveEssayMetadata(
+                      ref,
+                      essay.copyWith(
+                        status: value,
+                        tagsBySystem: <String, List<String>>{
+                          ...essay.tagsBySystem,
+                          'Status': <String>[value],
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InspectorTagsEditor extends ConsumerWidget {
+  const _InspectorTagsEditor({required this.essay, required this.systems});
+
+  final Essay essay;
+  final List<TagSystem> systems;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (systems.isEmpty) {
+      return const Text(
+        'No editable tag systems',
+        style: TextStyle(fontSize: 12, color: AppColors.faint),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (final system in systems) ...<Widget>[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: Text(
+              system.name,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.faint,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: <Widget>[
+              for (final tag in _tagsForSystem(essay, system.name))
+                _TagPill(
+                  label: tag,
+                  onRemove: () => _saveEssayMetadata(
+                    ref,
+                    _essayWithTagSystem(
+                      essay,
+                      system.name,
+                      _tagsForSystem(
+                        essay,
+                        system.name,
+                      ).where((item) => item != tag).toList(),
+                    ),
+                  ),
+                ),
+              _AddTagMenu(
+                system: system,
+                selected: _tagsForSystem(essay, system.name),
+                onSelected: (tag) {
+                  final current = _tagsForSystem(essay, system.name);
+                  final next = system.exclusive
+                      ? <String>[tag]
+                      : <String>{...current, tag}.toList();
+                  _saveEssayMetadata(
+                    ref,
+                    _essayWithTagSystem(essay, system.name, next),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+}
+
 class _TagPill extends StatelessWidget {
-  const _TagPill({required this.label});
+  const _TagPill({required this.label, this.onRemove});
 
   final String label;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -907,40 +1033,10 @@ class _TagPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.muted,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashedPill extends StatelessWidget {
-  const _DashedPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.panel,
-        border: Border.all(color: const Color(0xffd4d4d8)),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.add, size: 13, color: AppColors.muted),
-            const SizedBox(width: 4),
             Text(
               label,
               style: const TextStyle(
@@ -949,11 +1045,111 @@ class _DashedPill extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            if (onRemove != null) ...<Widget>[
+              const SizedBox(width: 3),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onRemove,
+                child: const SizedBox(
+                  width: 17,
+                  height: 17,
+                  child: Icon(Icons.close, size: 13, color: AppColors.faint),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+class _AddTagMenu extends StatelessWidget {
+  const _AddTagMenu({
+    required this.system,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final TagSystem system;
+  final List<String> selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final nodes = _flattenTagNodes(system.nodes);
+    final available = system.exclusive
+        ? nodes
+        : nodes.where((tag) => !selected.contains(tag)).toList();
+    return PopupMenuButton<String>(
+      tooltip: 'Add ${system.name} tag',
+      enabled: available.isNotEmpty,
+      color: AppColors.panel,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        for (final tag in available)
+          PopupMenuItem<String>(
+            value: tag,
+            height: 34,
+            child: Text(tag, style: const TextStyle(fontSize: 13)),
+          ),
+      ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.panel,
+          border: Border.all(color: const Color(0xffd4d4d8)),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: Icon(Icons.add, size: 14, color: AppColors.muted),
+        ),
+      ),
+    );
+  }
+}
+
+List<String> _tagsForSystem(Essay essay, String system) {
+  return switch (system) {
+    'Status' => <String>[essay.status],
+    'Topic' => essay.topics,
+    'Area' => essay.areaTags,
+    _ => essay.tagsBySystem[system] ?? const <String>[],
+  };
+}
+
+Essay _essayWithTagSystem(Essay essay, String system, List<String> tags) {
+  final nextTags = <String, List<String>>{...essay.tagsBySystem, system: tags};
+  return essay.copyWith(
+    topics: system == 'Topic' ? tags : null,
+    areaTags: system == 'Area' ? tags : null,
+    tagsBySystem: nextTags,
+  );
+}
+
+List<String> _flattenTagNodes(List<TagNode> nodes) {
+  final tags = <String>[];
+  void visit(TagNode node) {
+    tags.add(node.name);
+    for (final child in node.children) {
+      visit(child);
+    }
+  }
+
+  for (final node in nodes) {
+    visit(node);
+  }
+  return tags;
+}
+
+Future<void> _saveEssayMetadata(WidgetRef ref, Essay essay) async {
+  await ref.read(essayRepositoryProvider).updateDraft(essay);
+  ref.invalidate(essayByIdProvider(essay.id));
+  ref.invalidate(recentEssaysProvider);
+  ref.invalidate(pinnedEssaysProvider);
+  ref.invalidate(tagSystemsProvider);
 }
 
 class _TimelineItem extends StatelessWidget {

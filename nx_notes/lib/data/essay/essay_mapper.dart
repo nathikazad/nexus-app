@@ -15,6 +15,7 @@ Essay essayFromModel(Model model, {int versionNumber = 0}) {
       DateTime.now();
   final tags = model.tags ?? const <String, List<String>>{};
   final topics = List<String>.from(tags[kEssayTopicTagSystem] ?? const []);
+  final areaTags = List<String>.from(tags[kEssayAreaTagSystem] ?? const []);
   final statusTags = tags[kEssayStatusTagSystem] ?? const [];
   return Essay(
     id: model.id,
@@ -24,7 +25,11 @@ Essay essayFromModel(Model model, {int versionNumber = 0}) {
     wordCount: _countWords(document),
     status: statusTags.isEmpty ? 'Draft' : statusTags.first,
     topics: topics,
-    areaTags: List<String>.from(tags[kEssayAreaTagSystem] ?? const []),
+    areaTags: areaTags,
+    tagsBySystem: {
+      for (final entry in tags.entries)
+        entry.key: List<String>.from(entry.value),
+    },
     pinned: model.attrBool(kEssayAttrPinned) ?? false,
     updatedAt: updatedAt,
     updatedLabel: _relativeLabel(updatedAt),
@@ -98,12 +103,23 @@ List<SetModelTag>? _setModelTagsForEssay(
   final tags = <SetModelTag>[
     if (canWrite(kEssayStatusTagSystem))
       SetModelTag(system: kEssayStatusTagSystem, nodes: [essay.status]),
-    if (canWrite(kEssayTopicTagSystem))
-      SetModelTag(system: kEssayTopicTagSystem, nodes: essay.topics),
-    if (canWrite(kEssayAreaTagSystem) && essay.areaTags.isNotEmpty)
-      SetModelTag(system: kEssayAreaTagSystem, nodes: essay.areaTags),
+    for (final entry in _editableTagSystemsForEssay(essay).entries)
+      if (canWrite(entry.key))
+        SetModelTag(system: entry.key, nodes: entry.value, clear: true),
   ];
   return tags.isEmpty ? null : tags;
+}
+
+Map<String, List<String>> _editableTagSystemsForEssay(Essay essay) {
+  final tags = <String, List<String>>{
+    for (final entry in essay.tagsBySystem.entries)
+      if (entry.key != kEssayStatusTagSystem) entry.key: entry.value,
+  };
+  tags[kEssayTopicTagSystem] = essay.topics;
+  if (essay.areaTags.isNotEmpty || tags.containsKey(kEssayAreaTagSystem)) {
+    tags[kEssayAreaTagSystem] = essay.areaTags;
+  }
+  return tags;
 }
 
 SetModelRequest setModelRequestForCreateSnapshot({

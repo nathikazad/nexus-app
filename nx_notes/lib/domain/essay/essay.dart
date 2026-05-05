@@ -10,6 +10,7 @@ class Essay {
     required this.status,
     required this.topics,
     required this.areaTags,
+    required this.tagsBySystem,
     required this.pinned,
     required this.updatedAt,
     required this.updatedLabel,
@@ -26,6 +27,7 @@ class Essay {
   final String status;
   final List<String> topics;
   final List<String> areaTags;
+  final Map<String, List<String>> tagsBySystem;
   final bool pinned;
   final DateTime updatedAt;
   final String updatedLabel;
@@ -41,6 +43,7 @@ class Essay {
     String? status,
     List<String>? topics,
     List<String>? areaTags,
+    Map<String, List<String>>? tagsBySystem,
     bool? pinned,
     DateTime? updatedAt,
     String? updatedLabel,
@@ -57,6 +60,7 @@ class Essay {
       status: status ?? this.status,
       topics: topics ?? this.topics,
       areaTags: areaTags ?? this.areaTags,
+      tagsBySystem: tagsBySystem ?? this.tagsBySystem,
       pinned: pinned ?? this.pinned,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedLabel: updatedLabel ?? this.updatedLabel,
