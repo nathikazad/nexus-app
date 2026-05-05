@@ -7,6 +7,7 @@ import 'package:nx_notes/domain/essay/essay_query.dart';
 import 'package:nx_notes/domain/essay/essay_result_context.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/features/editor/essay_editor_view.dart';
+import 'package:nx_notes/features/essay/essay_actions.dart';
 import 'package:nx_notes/features/navigator/essay_row.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
 
@@ -275,23 +276,14 @@ class _MobileTags extends ConsumerWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
           onTap: () async {
-            final filter = EssayTagFilter(
-              system: system,
-              node: node.name,
-              includeDescendants: depth == 0,
-            );
-            final rows = await ref
-                .read(essayRepositoryProvider)
-                .listByTag(filter);
-            ref
-                .read(mobileNotesProvider.notifier)
-                .showResults(
-                  EssayResultContext(
-                    title: '$system: ${node.name}',
-                    query: EssayQuery(tagFilters: <EssayTagFilter>[filter]),
-                    resultIds: rows.map((essay) => essay.id).toList(),
-                  ),
+            final result = await ref
+                .read(essayResultControllerProvider)
+                .tag(
+                  system: system,
+                  node: node.name,
+                  includeDescendants: depth == 0,
                 );
+            ref.read(mobileNotesProvider.notifier).showResults(result);
           },
           child: Padding(
             padding: EdgeInsets.fromLTRB(8 + depth * 16.0, 9, 8, 9),

@@ -8,6 +8,7 @@ import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/essay/essay.dart';
 import 'package:nx_notes/domain/essay/essay_result_context.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
+import 'package:nx_notes/features/essay/essay_actions.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 
 class EssayEditorView extends ConsumerWidget {
@@ -81,13 +82,8 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
     _titleSaveDebounce = Timer(const Duration(milliseconds: 450), () async {
       if (!mounted) return;
       await ref
-          .read(essayRepositoryProvider)
-          .updateDraft(widget.essay.copyWith(title: title));
-      if (!mounted) return;
-      ref.invalidate(essayByIdProvider(widget.essay.id));
-      ref.invalidate(recentEssaysProvider);
-      ref.invalidate(pinnedEssaysProvider);
-      ref.invalidate(tagSystemsProvider);
+          .read(essayMutationControllerProvider)
+          .saveDraft(widget.essay.copyWith(title: title));
     });
   }
 
@@ -141,23 +137,17 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                             },
                         onLinkableModelSelected: (modelType, model) async {
                           await ref
-                              .read(essayRepositoryProvider)
+                              .read(essayMutationControllerProvider)
                               .attachLinkedModel(
                                 essayId: widget.essay.id,
                                 modelType: modelType,
                                 modelId: model.id,
                               );
-                          ref.invalidate(essayByIdProvider(widget.essay.id));
-                          ref.invalidate(recentEssaysProvider);
                         },
                         onChanged: (updated) async {
                           await ref
-                              .read(essayRepositoryProvider)
-                              .updateDraft(updated);
-                          ref.invalidate(essayByIdProvider(widget.essay.id));
-                          ref.invalidate(recentEssaysProvider);
-                          ref.invalidate(pinnedEssaysProvider);
-                          ref.invalidate(tagSystemsProvider);
+                              .read(essayMutationControllerProvider)
+                              .saveDraft(updated);
                         },
                       ),
                     ),
