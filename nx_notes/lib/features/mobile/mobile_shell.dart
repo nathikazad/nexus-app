@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/essay/essay.dart';
@@ -25,9 +27,23 @@ class MobileShell extends ConsumerWidget {
     }
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: const PreferredSize(
-        preferredSize: Size.fromHeight(56),
-        child: _MobileTopChrome(title: 'nx_notes'),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: _MobileTopChrome(
+          title: 'nx_notes',
+          trailing: IconButton(
+            tooltip: 'Log out',
+            onPressed: () async {
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) context.go('/login');
+            },
+            icon: const Icon(
+              Icons.logout,
+              size: 20,
+              color: AppColors.muted,
+            ),
+          ),
+        ),
       ),
       body: switch (state.section) {
         MobileSection.essays => const _MobileHome(),

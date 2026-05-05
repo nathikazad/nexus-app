@@ -17,3 +17,4 @@ samples, guidance on mobile development, and a full API reference.
 
 flutter build web --release --base-href /projects/
 rsync -az --delete build/web/ \  nathik@100.108.43.37:~/Nexus/nexus-server/mcp/new_server/static/nx_projects/
+http://100.108.43.37:8001/projects/

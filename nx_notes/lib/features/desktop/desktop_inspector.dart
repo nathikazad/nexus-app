@@ -27,19 +27,41 @@ class _DesktopInspector extends ConsumerWidget {
         children: <Widget>[
           Container(
             height: 40,
-            alignment: Alignment.centerLeft,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: const BoxDecoration(
               color: AppColors.sidebar,
               border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
-            child: const Text(
-              'INSPECTOR',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.faint,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              children: <Widget>[
+                const Text(
+                  'INSPECTOR',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.faint,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Log out',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                  onPressed: () async {
+                    await ref.read(authProvider.notifier).logout();
+                    if (context.mounted) context.go('/login');
+                  },
+                  icon: const Icon(
+                    Icons.logout,
+                    size: 17,
+                    color: AppColors.faint,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
