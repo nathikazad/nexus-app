@@ -7,6 +7,7 @@ import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/essay/essay.dart';
 import 'package:nx_notes/domain/essay/essay_result_context.dart';
+import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 
 class EssayEditorView extends ConsumerWidget {
   const EssayEditorView({
@@ -216,7 +217,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   String _documentPlainText(Document document) {
     final buffer = StringBuffer();
     void visit(Node node) {
-      final text = node.delta?.toPlainText();
+      final text = node.delta?.toPlainText().isNotEmpty == true
+          ? node.delta?.toPlainText()
+          : nxPlainTextForCustomNode(node);
       if (text != null && text.isNotEmpty) {
         if (buffer.isNotEmpty) {
           buffer.writeln();
@@ -252,14 +255,248 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return AppFlowyEditor(
+    return FloatingToolbar(
       editorState: _editorState,
       editorScrollController: _scrollController,
-      editorStyle: _editorStyle,
-      characterShortcutEvents: standardCharacterShortcutEvents,
-      commandShortcutEvents: standardCommandShortcutEvents,
-      footer: const SizedBox(height: 120),
+      textDirection: Directionality.of(context),
+      items: [
+        paragraphItem,
+        ...headingItems,
+        ...markdownFormatItems,
+        quoteItem,
+        bulletedListItem,
+        numberedListItem,
+        linkItem,
+        buildTextColorItem(),
+        buildHighlightColorItem(),
+        ...alignmentItems,
+      ],
+      tooltipBuilder: (context, _, message, child) {
+        return Tooltip(message: message, preferBelow: false, child: child);
+      },
+      child: AppFlowyEditor(
+        editorState: _editorState,
+        editorScrollController: _scrollController,
+        editorStyle: _editorStyle,
+        blockComponentBuilders: nxBlockComponentBuilders(),
+        characterShortcutEvents: <CharacterShortcutEvent>[
+          ...standardCharacterShortcutEvents.where(
+            (event) => event.key != 'show the slash menu',
+          ),
+          nxSlashCommand(),
+        ],
+        commandShortcutEvents: standardCommandShortcutEvents,
+        footer: const SizedBox(height: 120),
+      ),
     );
+  }
+}
+
+class NxSelectionFormattingToolbar extends StatefulWidget {
+  const NxSelectionFormattingToolbar({
+    required this.editorState,
+    required this.editorScrollController,
+    required this.child,
+    super.key,
+  });
+
+  final EditorState editorState;
+  final EditorScrollController editorScrollController;
+  final Widget child;
+
+  @override
+  State<NxSelectionFormattingToolbar> createState() =>
+      _NxSelectionFormattingToolbarState();
+}
+
+class _NxSelectionFormattingToolbarState
+    extends State<NxSelectionFormattingToolbar> {
+  static const _toolbarHeight = 34.0;
+  OverlayEntry? _overlayEntry;
+  Selection? _toolbarSelection;
+  Timer? _showTimer;
+
+  EditorState get _editorState => widget.editorState;
+
+  @override
+  void initState() {
+    super.initState();
+    _editorState.selectionNotifier.addListener(_onSelectionChanged);
+    widget.editorScrollController.offsetNotifier.addListener(_hideToolbar);
+  }
+
+  @override
+  void didUpdateWidget(covariant NxSelectionFormattingToolbar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.editorState != widget.editorState) {
+      oldWidget.editorState.selectionNotifier.removeListener(
+        _onSelectionChanged,
+      );
+      widget.editorState.selectionNotifier.addListener(_onSelectionChanged);
+    }
+    if (oldWidget.editorScrollController != widget.editorScrollController) {
+      oldWidget.editorScrollController.offsetNotifier.removeListener(
+        _hideToolbar,
+      );
+      widget.editorScrollController.offsetNotifier.addListener(_hideToolbar);
+    }
+  }
+
+  @override
+  void dispose() {
+    _showTimer?.cancel();
+    _hideToolbar();
+    _editorState.selectionNotifier.removeListener(_onSelectionChanged);
+    widget.editorScrollController.offsetNotifier.removeListener(_hideToolbar);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+
+  void _onSelectionChanged() {
+    final selection = _editorState.selection;
+    if (selection == null ||
+        selection.isCollapsed ||
+        _editorState.selectionType == SelectionType.block ||
+        !_selectionContainsText(selection)) {
+      _hideToolbar();
+      return;
+    }
+
+    _toolbarSelection = selection.normalized;
+    _showTimer?.cancel();
+    _showTimer = Timer(const Duration(milliseconds: 80), _showToolbar);
+  }
+
+  bool _selectionContainsText(Selection selection) {
+    final nodes = _editorState.getNodesInSelection(selection);
+    return nodes.any((node) {
+      final delta = node.delta;
+      return delta != null && delta.isNotEmpty;
+    });
+  }
+
+  void _showToolbar() {
+    final selection = _toolbarSelection;
+    if (selection == null || !mounted) {
+      return;
+    }
+    final rects = _editorState.selectionRects();
+    if (rects.isEmpty) {
+      return;
+    }
+
+    final rect = rects.reduce((a, b) => a.top <= b.top ? a : b);
+    final overlay = Overlay.of(context, rootOverlay: true);
+    final left = rect.center.dx - 95;
+    final top = rect.top - _toolbarHeight - 8;
+
+    _overlayEntry?.remove();
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: left < 8 ? 8 : left,
+        top: top < 8 ? rect.bottom + 8 : top,
+        child: _NxFormattingToolbarSurface(
+          selection: selection,
+          editorState: _editorState,
+          onClose: _hideToolbar,
+        ),
+      ),
+    );
+    overlay.insert(_overlayEntry!);
+  }
+
+  void _hideToolbar() {
+    _showTimer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+}
+
+class _NxFormattingToolbarSurface extends StatelessWidget {
+  const _NxFormattingToolbarSurface({
+    required this.selection,
+    required this.editorState,
+    required this.onClose,
+  });
+
+  final Selection selection;
+  final EditorState editorState;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.text,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _formatButton('B', 'bold', FontWeight.w700),
+              _formatButton('I', 'italic', FontWeight.w500),
+              _formatButton('U', 'underline', FontWeight.w500),
+              _formatButton('S', 'strikethrough', FontWeight.w500),
+              _formatButton('</>', 'code', FontWeight.w600, wide: true),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _formatButton(
+    String label,
+    String attribute,
+    FontWeight fontWeight, {
+    bool wide = false,
+  }) {
+    return Tooltip(
+      message: attribute,
+      preferBelow: false,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => _toggle(attribute),
+        child: SizedBox(
+          width: wide ? 38 : 28,
+          height: 28,
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: wide ? 11 : 13,
+                fontWeight: fontWeight,
+                fontStyle: attribute == 'italic' ? FontStyle.italic : null,
+                decoration: attribute == 'underline'
+                    ? TextDecoration.underline
+                    : attribute == 'strikethrough'
+                    ? TextDecoration.lineThrough
+                    : null,
+                decorationColor: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggle(String attribute) {
+    editorState.toggleAttribute(attribute, selection: selection);
   }
 }
 

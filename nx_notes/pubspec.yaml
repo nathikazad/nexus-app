@@ -19,6 +19,7 @@ dependencies:
   intl: ^0.20.2
   nx_db:
     path: ../nx_db
+  provider: ^6.1.5+1
 
 dev_dependencies:
   flutter_test:
