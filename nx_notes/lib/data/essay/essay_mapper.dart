@@ -45,6 +45,7 @@ EssaySnap essaySnapFromModel(Model model, {required int essayId}) {
   return EssaySnap(
     id: model.id,
     essayId: essayId,
+    name: model.name,
     versionNumber: model.attrInt(kEssaySnapAttrVersionNumber) ?? 0,
     document: document,
     jsonDocument: _jsonMap(model.attributes?[kEssayAttrJsonDocument]),
@@ -126,11 +127,12 @@ SetModelRequest setModelRequestForCreateSnapshot({
   required Essay essay,
   required int versionNumber,
   required String source,
+  required String name,
   required Object? changeSummary,
 }) {
   return SetModelRequest(
     modelType: kEssaySnapModelTypeName,
-    name: source,
+    name: name,
     attributes: [
       SetModelAttribute(key: kEssayAttrDocument, value: essay.document),
       SetModelAttribute(key: kEssayAttrJsonDocument, value: essay.jsonDocument),
@@ -162,6 +164,13 @@ Map<String, dynamic> essayFetchStruct(ModelType schema) {
     kEssayAttrJsonDocument: true,
     kEssayAttrPinned: true,
     'tags': true,
+    'relations': {
+      'relation_id': true,
+      'model_id': true,
+      'model_type': true,
+      'name': true,
+      'description': true,
+    },
     'EssaySnap': {
       'id': true,
       'name': true,
@@ -198,9 +207,16 @@ Map<String, dynamic> essaySnapFetchStruct(ModelType schema) {
 
 List<EssaySnap> essaySnapsFromEssayModel(Model model) {
   final nested = model.relations?[kEssaySnapModelTypeName] ?? const <Model>[];
-  final snaps = [
-    for (final snap in nested) essaySnapFromModel(snap, essayId: model.id),
-  ]..sort((a, b) => b.versionNumber.compareTo(a.versionNumber));
+  final byId = <int, EssaySnap>{};
+  for (final snap in nested) {
+    byId[snap.id] = essaySnapFromModel(snap, essayId: model.id);
+  }
+  final snaps = byId.values.toList()
+    ..sort((a, b) {
+      final version = b.versionNumber.compareTo(a.versionNumber);
+      if (version != 0) return version;
+      return b.createdAt.compareTo(a.createdAt);
+    });
   return snaps;
 }
 
@@ -273,6 +289,7 @@ List<LinkedModel> _linksFromModel(Model model) {
           id: rel.modelId,
           name: rel.name ?? '${rel.modelType} ${rel.modelId}',
           modelType: rel.modelType,
+          relationId: rel.relationId,
         ),
   ];
 }

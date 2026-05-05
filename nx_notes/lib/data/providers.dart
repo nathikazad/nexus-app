@@ -7,6 +7,7 @@ import 'package:nx_notes/domain/essay/essay.dart';
 import 'package:nx_notes/domain/essay/essay_query.dart';
 import 'package:nx_notes/domain/essay/essay_repository.dart';
 import 'package:nx_notes/domain/essay/essay_snap.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 
 final essayRepositoryProvider = Provider<EssayRepository>((ref) {
@@ -44,6 +45,10 @@ final essaySnapshotsProvider = FutureProvider.family<List<EssaySnap>, int>(
 
 final essaySearchProvider = FutureProvider.family<List<Essay>, String>(
   (ref, query) => ref.watch(essayRepositoryProvider).search(query),
+);
+
+final projectsProvider = FutureProvider<List<LinkedModel>>(
+  (ref) => ref.watch(essayRepositoryProvider).listProjects(),
 );
 
 final essaysByTagProvider = FutureProvider.family<List<Essay>, EssayTagFilter>(

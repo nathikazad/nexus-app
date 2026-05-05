@@ -12,6 +12,7 @@ class FakeEssayRepository implements EssayRepository {
   final Map<int, List<EssaySnap>> _snaps;
   int _nextEssayId = 100;
   int _nextSnapId = 1000;
+  int _nextRelationId = 5000;
 
   @override
   Future<Essay> create() async {
@@ -78,6 +79,7 @@ class FakeEssayRepository implements EssayRepository {
     final snap = EssaySnap(
       id: _nextSnapId++,
       essayId: essayId,
+      name: changeSummary.trim().isEmpty ? source : changeSummary.trim(),
       versionNumber: nextVersion,
       document: essay.document,
       jsonDocument: essay.jsonDocument,
@@ -116,6 +118,66 @@ class FakeEssayRepository implements EssayRepository {
     final rows = _essays.where((essay) => essay.pinned).toList()
       ..sort(_recentSort);
     return rows.take(limit).toList();
+  }
+
+  @override
+  Future<List<LinkedModel>> listProjects() async {
+    return const <LinkedModel>[
+      LinkedModel(id: 54, name: 'Notes App', modelType: 'Project'),
+      LinkedModel(id: 55, name: 'KGQL Platform', modelType: 'Project'),
+      LinkedModel(id: 56, name: 'Internal Tools', modelType: 'Project'),
+      LinkedModel(id: 57, name: 'Writing System', modelType: 'Project'),
+    ];
+  }
+
+  @override
+  Future<Essay> attachProject(int essayId, int projectId) async {
+    final essay = await getById(essayId);
+    if (essay == null) {
+      throw StateError('Essay $essayId not found');
+    }
+    if (essay.links.any(
+      (link) => link.modelType == 'Project' && link.id == projectId,
+    )) {
+      return essay;
+    }
+    final projects = await listProjects();
+    final project = projects.firstWhere(
+      (item) => item.id == projectId,
+      orElse: () => LinkedModel(
+        id: projectId,
+        name: 'Project $projectId',
+        modelType: 'Project',
+      ),
+    );
+    return updateDraft(
+      essay.copyWith(
+        links: <LinkedModel>[
+          ...essay.links,
+          LinkedModel(
+            id: project.id,
+            name: project.name,
+            modelType: project.modelType,
+            relationId: _nextRelationId++,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<Essay> detachProject(int essayId, int relationId) async {
+    final essay = await getById(essayId);
+    if (essay == null) {
+      throw StateError('Essay $essayId not found');
+    }
+    return updateDraft(
+      essay.copyWith(
+        links: essay.links
+            .where((link) => link.relationId != relationId)
+            .toList(),
+      ),
+    );
   }
 
   @override
@@ -404,6 +466,7 @@ Map<int, List<EssaySnap>> _seedSnaps() {
         EssaySnap(
           id: essay.id * 10,
           essayId: essay.id,
+          name: 'Latest checkpoint',
           versionNumber: essay.versionNumber,
           document: essay.document,
           jsonDocument: essay.jsonDocument,

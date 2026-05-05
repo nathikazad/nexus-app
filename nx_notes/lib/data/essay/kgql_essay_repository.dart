@@ -6,6 +6,7 @@ import 'package:nx_notes/domain/essay/essay.dart';
 import 'package:nx_notes/domain/essay/essay_query.dart';
 import 'package:nx_notes/domain/essay/essay_repository.dart';
 import 'package:nx_notes/domain/essay/essay_snap.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart' as domain_tags;
 
 class KgqlEssayRepository implements EssayRepository {
@@ -64,6 +65,7 @@ class KgqlEssayRepository implements EssayRepository {
         essay: essay,
         versionNumber: nextVersion,
         source: source,
+        name: changeSummary.trim().isEmpty ? source : changeSummary.trim(),
         changeSummary: changeSummary.trim().isEmpty
             ? null
             : <String, dynamic>{'message': changeSummary},
@@ -152,6 +154,55 @@ class KgqlEssayRepository implements EssayRepository {
       domainId: _domainId,
     );
     return _sortedEssays(models).take(limit).toList();
+  }
+
+  @override
+  Future<List<LinkedModel>> listProjects() async {
+    final models = await fetchKgqlModelsForRelationPicker(
+      _client,
+      'Project',
+      domainId: _domainId,
+    );
+    return [
+      for (final model in models)
+        LinkedModel(id: model.id, name: model.name, modelType: 'Project'),
+    ]..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  @override
+  Future<Essay> attachProject(int essayId, int projectId) async {
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: essayId,
+        relations: [
+          ModelRelation(modelType: 'Project', link: [projectId]),
+        ],
+      ),
+      domainId: _domainId,
+    );
+    final updated = await getById(essayId);
+    if (updated == null) {
+      throw StateError('Updated essay $essayId could not be loaded');
+    }
+    return updated;
+  }
+
+  @override
+  Future<Essay> detachProject(int essayId, int relationId) async {
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: essayId,
+        relations: [ModelRelation(id: relationId, delete: true)],
+      ),
+      domainId: _domainId,
+    );
+    final updated = await getById(essayId);
+    if (updated == null) {
+      throw StateError('Updated essay $essayId could not be loaded');
+    }
+    return updated;
   }
 
   @override

@@ -2,6 +2,7 @@ class EssaySnap {
   const EssaySnap({
     required this.id,
     required this.essayId,
+    required this.name,
     required this.versionNumber,
     required this.document,
     required this.jsonDocument,
@@ -12,6 +13,7 @@ class EssaySnap {
 
   final int id;
   final int essayId;
+  final String name;
   final int versionNumber;
   final String document;
   final Map<String, dynamic> jsonDocument;

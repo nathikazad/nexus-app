@@ -98,6 +98,30 @@ void main() {
       );
       expect(topicTagged.map((essay) => essay.id), contains(updated.id));
 
+      final projects = await harness.repo.listProjects();
+      expect(projects, isNotEmpty);
+      final project = projects.first;
+      final withProject = await harness.repo.attachProject(
+        updated.id,
+        project.id,
+      );
+      final projectLink = withProject.links.firstWhere(
+        (link) => link.modelType == 'Project' && link.id == project.id,
+      );
+      expect(projectLink.name, project.name);
+      expect(projectLink.relationId, isNotNull);
+
+      final withoutProject = await harness.repo.detachProject(
+        updated.id,
+        projectLink.relationId!,
+      );
+      expect(
+        withoutProject.links.where(
+          (link) => link.modelType == 'Project' && link.id == project.id,
+        ),
+        isEmpty,
+      );
+
       final snapshot = await harness.repo.createSnapshot(
         updated.id,
         source: 'integration_test',
