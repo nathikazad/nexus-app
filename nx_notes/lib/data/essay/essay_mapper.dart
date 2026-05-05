@@ -51,11 +51,11 @@ EssaySnap essaySnapFromModel(Model model, {required int essayId}) {
   );
 }
 
-SetModelRequest setModelRequestForCreateEssay({required String topic}) {
+SetModelRequest setModelRequestForCreateEssay() {
   const document = 'Start writing here.';
   return SetModelRequest(
     modelType: kEssayModelTypeName,
-    name: 'Untitled $topic essay',
+    name: 'Untitled essay',
     attributes: [
       SetModelAttribute(key: kEssayAttrDocument, value: document),
       SetModelAttribute(
@@ -67,7 +67,6 @@ SetModelRequest setModelRequestForCreateEssay({required String topic}) {
     ],
     tags: [
       SetModelTag(system: kEssayStatusTagSystem, nodes: const ['Draft']),
-      SetModelTag(system: kEssayTopicTagSystem, nodes: [topic]),
     ],
   );
 }

@@ -47,8 +47,6 @@ class _DesktopSidebar extends ConsumerStatefulWidget {
 }
 
 class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
-  bool _createOpen = false;
-
   @override
   Widget build(BuildContext context) {
     final workspace = ref.watch(desktopWorkspaceProvider);
@@ -64,70 +62,57 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
         children: <Widget>[
           SizedBox(
             height: 48,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppColors.line)),
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      Container(
-                        width: 26,
-                        height: 26,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.text,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'N',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.line)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.text,
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'nx_notes',
+                      child: const Text(
+                        'N',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const Spacer(),
-                      _IconSquareButton(
-                        icon: Icons.add,
-                        onPressed: () =>
-                            setState(() => _createOpen = !_createOpen),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'nx_notes',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
-                  ),
-                ),
-                if (_createOpen)
-                  Positioned(
-                    top: 40,
-                    right: 12,
-                    child: _CreateEssayMenu(
-                      onCreate: (topic) async {
+                    ),
+                    const Spacer(),
+                    _IconSquareButton(
+                      icon: Icons.add,
+                      onPressed: () async {
                         final essay = await ref
                             .read(essayRepositoryProvider)
-                            .create(topic: topic);
+                            .create();
                         ref.invalidate(recentEssaysProvider);
                         ref.invalidate(pinnedEssaysProvider);
                         ref.invalidate(tagSystemsProvider);
                         ref
                             .read(desktopWorkspaceProvider.notifier)
                             .openEssay(essay.id);
-                        setState(() => _createOpen = false);
                       },
                     ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
           Padding(
@@ -202,82 +187,6 @@ class _IconSquareButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Icon(icon, size: 16, color: AppColors.muted),
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateEssayMenu extends ConsumerWidget {
-  const _CreateEssayMenu({required this.onCreate});
-
-  final ValueChanged<String> onCreate;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tagSystems =
-        ref.watch(tagSystemsProvider).value ?? const <TagSystem>[];
-    final topics = tagSystems
-        .where((system) => system.name == 'Topic')
-        .expand((system) => system.nodes)
-        .map((node) => node.name)
-        .toList();
-    return Material(
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      color: AppColors.panel,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        width: 192,
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.line),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 6, 12, 6),
-              child: Text(
-                'SELECT TOPIC',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.faint,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            for (final topic in topics)
-              InkWell(
-                onTap: () => onCreate(topic),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          topic,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right,
-                        size: 16,
-                        color: AppColors.faint,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
         ),
       ),
     );

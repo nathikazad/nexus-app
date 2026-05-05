@@ -14,12 +14,12 @@ class FakeEssayRepository implements EssayRepository {
   int _nextSnapId = 1000;
 
   @override
-  Future<Essay> create({required String topic}) async {
+  Future<Essay> create() async {
     final id = _nextEssayId++;
     final now = DateTime.now();
     final essay = Essay(
       id: id,
-      title: 'Untitled $topic essay',
+      title: 'Untitled essay',
       document: 'Start writing here.',
       jsonDocument: const <String, dynamic>{
         'format': 'appflowy_document',
@@ -39,7 +39,7 @@ class FakeEssayRepository implements EssayRepository {
       },
       wordCount: 3,
       status: 'Draft',
-      topics: <String>[topic],
+      topics: const <String>[],
       areaTags: const <String>[],
       pinned: false,
       updatedAt: now,
@@ -288,8 +288,7 @@ List<Essay> _seedEssays() {
       minutesAgo: 12,
       words: 842,
       version: 18,
-      excerpt:
-          'Notes on KGQL, AppFlowy JSON, raw text, tags, and snapshots.',
+      excerpt: 'Notes on KGQL, AppFlowy JSON, raw text, tags, and snapshots.',
       document:
           'The mobile app should have one essay open at a time.\n\nNavigation is stack based: home, tags, or search leads to a result list, then the editor opens from one selected row.',
     ),

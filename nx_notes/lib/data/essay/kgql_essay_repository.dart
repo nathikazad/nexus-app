@@ -25,10 +25,10 @@ class KgqlEssayRepository implements EssayRepository {
   final int _domainId;
 
   @override
-  Future<Essay> create({required String topic}) async {
+  Future<Essay> create() async {
     final id = await setKgqlModel(
       _client,
-      setModelRequestForCreateEssay(topic: topic),
+      setModelRequestForCreateEssay(),
       domainId: _domainId,
     );
     final essay = await getById(id);

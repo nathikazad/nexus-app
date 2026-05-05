@@ -9,7 +9,7 @@ abstract class EssayRepository {
   Future<List<Essay>> search(String query);
   Future<List<Essay>> listByTag(EssayTagFilter filter);
   Future<Essay?> getById(int id);
-  Future<Essay> create({required String topic});
+  Future<Essay> create();
   Future<Essay> updateDraft(Essay essay);
   Future<EssaySnap> createSnapshot(
     int essayId, {
