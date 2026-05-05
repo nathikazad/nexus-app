@@ -596,6 +596,7 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeEssayId = workspace.activeEssayId;
     return Column(
       children: <Widget>[
         Container(
@@ -616,10 +617,10 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
             ],
           ),
         ),
-        if (workspace.activeContext != null)
+        if (workspace.activeContext != null && activeEssayId != null)
           EditorContextBar(
             resultContext: workspace.activeContext!,
-            activeEssayId: workspace.activeEssayId,
+            activeEssayId: activeEssayId,
             onBack: () => ref
                 .read(desktopWorkspaceProvider.notifier)
                 .showOverlay(
@@ -631,8 +632,41 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
                 .read(desktopWorkspaceProvider.notifier)
                 .clearActiveContext(),
           ),
-        Expanded(child: EssayEditorView(essayId: workspace.activeEssayId)),
+        Expanded(
+          child: activeEssayId == null
+              ? const _NoEssaySelected()
+              : EssayEditorView(essayId: activeEssayId),
+        ),
       ],
+    );
+  }
+}
+
+class _NoEssaySelected extends ConsumerWidget {
+  const _NoEssaySelected();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recent = ref.watch(recentEssaysProvider);
+    return recent.when(
+      data: (rows) {
+        if (rows.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(desktopWorkspaceProvider.notifier)
+                .openEssay(rows.first.id);
+          });
+          return const Center(child: CircularProgressIndicator());
+        }
+        return const Center(
+          child: Text(
+            'Create an essay from the sidebar.',
+            style: TextStyle(color: AppColors.muted),
+          ),
+        );
+      },
+      error: (error, stackTrace) => Center(child: Text('$error')),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -707,12 +741,15 @@ class _EditorTab extends ConsumerWidget {
 class _DesktopInspector extends ConsumerWidget {
   const _DesktopInspector({required this.essayId});
 
-  final int essayId;
+  final int? essayId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final essay = ref.watch(essayByIdProvider(essayId)).value;
-    final snaps = ref.watch(essaySnapshotsProvider(essayId)).value ?? const [];
+    final id = essayId;
+    final essay = id == null ? null : ref.watch(essayByIdProvider(id)).value;
+    final snaps = id == null
+        ? const []
+        : ref.watch(essaySnapshotsProvider(id)).value ?? const [];
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.panel,

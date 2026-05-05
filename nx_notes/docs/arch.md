@@ -17,7 +17,7 @@ reference/reference-mobile.html  # mobile stack
 It stores live essays, immutable snapshots, tags, and graph links to
 Actions, Digital Nouns, and Real Nouns.
 
-The editor is built with Super Editor. KGQL stores:
+The editor is built with AppFlowy Editor. KGQL stores:
 
 - `document`: raw text, used for search, snippets, embeddings, and
   summaries.
@@ -55,7 +55,6 @@ The backend model shape is:
 Abstract Essay
   document         string
   json_document    json
-  word_count       number
 
 Essay
   canonical/live document
@@ -71,9 +70,11 @@ Relations:
 
 ```text
 Essay -> EssaySnap      has_snapshot
+Essay -> Essay          references_essay
 Essay -> Action         references_action
 Essay -> Digital Nouns  references_digital_noun
 Essay -> Real Nouns     references_real_noun
+EssaySnap -> EssaySnap  parent_snapshot
 ```
 
 The canonical `Essay` id must remain stable. Saves update the live
@@ -96,7 +97,6 @@ nx_notes/
         is_desktop_layout.dart
       formatting/
         date_label.dart
-        word_count_format.dart
       widgets/
         empty_state.dart
         section_header.dart
@@ -236,7 +236,7 @@ EssayRepository
   updateLinks(...)
 ```
 
-Domain types stay pure Dart. They do not know about KGQL, Super Editor,
+Domain types stay pure Dart. They do not know about KGQL, AppFlowy Editor,
 Riverpod, or Flutter widgets.
 
 ## Data layer
@@ -264,7 +264,7 @@ EssayDocumentCodec
   jsonFromEditorDocument(document)
 ```
 
-Super Editor and any JSON helper package should only be referenced
+AppFlowy Editor and any JSON helper package should only be referenced
 behind this codec and the editor feature. This keeps the persistence
 shape stable if the editor serialization library changes.
 

@@ -289,7 +289,7 @@ List<Essay> _seedEssays() {
       words: 842,
       version: 18,
       excerpt:
-          'Notes on KGQL, Super Editor JSON, raw text, tags, and snapshots.',
+          'Notes on KGQL, AppFlowy JSON, raw text, tags, and snapshots.',
       document:
           'The mobile app should have one essay open at a time.\n\nNavigation is stack based: home, tags, or search leads to a result list, then the editor opens from one selected row.',
     ),
@@ -375,7 +375,7 @@ List<Essay> _seedEssays() {
       version: 6,
       excerpt: 'Abstract Essay, Essay, and EssaySnap model type notes.',
       document:
-          'Abstract Essay owns document, json_document, and word_count. Essay is the canonical live document.',
+          'Abstract Essay owns document and json_document. Essay is the canonical live document.',
     ),
     essay(
       id: 8,

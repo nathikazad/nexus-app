@@ -37,19 +37,20 @@ Attributes:
 ```text
 document        string
 json_document   json
-word_count      number
 version_number  number   # EssaySnap
 source          string   # EssaySnap
-change_summary  string   # EssaySnap
+change_summary  json     # EssaySnap
 ```
 
 Relations:
 
 ```text
 Essay -> EssaySnap      has_snapshot
+Essay -> Essay          references_essay
 Essay -> Action         references_action
 Essay -> Digital Nouns  references_digital_noun
 Essay -> Real Nouns     references_real_noun
+EssaySnap -> EssaySnap  parent_snapshot
 ```
 
 Acceptance checks:
@@ -89,10 +90,10 @@ go_router
 intl
 google_fonts
 nx_db
-super_editor
+appflowy_editor
 ```
 
-Add Super Editor JSON/serialization dependency only behind the editor
+Add AppFlowy Editor JSON/serialization dependency only behind the editor
 codec. Do not spread editor serialization code through repositories or
 widgets.
 
@@ -172,7 +173,8 @@ Repository operations:
 - create snapshot
 - list snapshots
 
-Use fake repositories for UI work until KGQL model setup is complete.
+Keep fake repositories available for widget tests, but the default provider
+uses the KGQL repository after login.
 
 Acceptance checks:
 
@@ -181,13 +183,13 @@ Acceptance checks:
 - Provider test confirms `essayRepositoryProvider` returns KGQL repo
   with `personalDomainId`.
 
-## Phase 6: Editor codec and Super Editor wrapper
+## Phase 6: Editor codec and AppFlowy Editor wrapper
 
 Implement:
 
 ```text
 data/editor/essay_document_codec.dart
-data/editor/super_editor_document_codec.dart
+data/editor/appflowy_document_codec.dart
 features/editor/essay_editor_controller.dart
 features/editor/essay_editor_view_model.dart
 features/editor/widgets/editor_toolbar.dart
@@ -196,7 +198,7 @@ features/editor/widgets/editor_title_field.dart
 
 Rules:
 
-- `json_document` is the Super Editor source of truth.
+- `json_document` is the AppFlowy Editor source of truth.
 - `document` is derived raw text.
 - Autosave updates live Essay with debounce.
 - Manual checkpoint creates EssaySnap.

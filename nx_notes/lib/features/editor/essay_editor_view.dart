@@ -41,7 +41,7 @@ class EssayEditorView extends ConsumerWidget {
   }
 }
 
-class EssayEditorBody extends ConsumerWidget {
+class EssayEditorBody extends ConsumerStatefulWidget {
   const EssayEditorBody({
     required this.essay,
     this.contextBar,
@@ -54,12 +54,49 @@ class EssayEditorBody extends ConsumerWidget {
   final ValueChanged<String>? onTitleChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EssayEditorBody> createState() => _EssayEditorBodyState();
+}
+
+class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
+  Timer? _titleSaveDebounce;
+
+  @override
+  void didUpdateWidget(covariant EssayEditorBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.essay.id != widget.essay.id) {
+      _titleSaveDebounce?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleSaveDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleTitleSave(String title) {
+    widget.onTitleChanged?.call(title);
+    _titleSaveDebounce?.cancel();
+    _titleSaveDebounce = Timer(const Duration(milliseconds: 450), () async {
+      if (!mounted) return;
+      await ref
+          .read(essayRepositoryProvider)
+          .updateDraft(widget.essay.copyWith(title: title));
+      if (!mounted) return;
+      ref.invalidate(essayByIdProvider(widget.essay.id));
+      ref.invalidate(recentEssaysProvider);
+      ref.invalidate(pinnedEssaysProvider);
+      ref.invalidate(tagSystemsProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final titleSize = width < 700 ? 30.0 : 38.0;
     return Column(
       children: <Widget>[
-        if (contextBar != null) contextBar!,
+        if (widget.contextBar != null) widget.contextBar!,
         Expanded(
           child: Center(
             child: ConstrainedBox(
@@ -70,9 +107,9 @@ class EssayEditorBody extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     TextFormField(
-                      key: ValueKey<int>(essay.id),
-                      initialValue: essay.title,
-                      onChanged: onTitleChanged,
+                      key: ValueKey<int>(widget.essay.id),
+                      initialValue: widget.essay.title,
+                      onChanged: _scheduleTitleSave,
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -91,12 +128,12 @@ class EssayEditorBody extends ConsumerWidget {
                     const SizedBox(height: 28),
                     Expanded(
                       child: NxAppFlowyEditor(
-                        essay: essay,
+                        essay: widget.essay,
                         onChanged: (updated) async {
                           await ref
                               .read(essayRepositoryProvider)
                               .updateDraft(updated);
-                          ref.invalidate(essayByIdProvider(essay.id));
+                          ref.invalidate(essayByIdProvider(widget.essay.id));
                           ref.invalidate(recentEssaysProvider);
                           ref.invalidate(pinnedEssaysProvider);
                           ref.invalidate(tagSystemsProvider);

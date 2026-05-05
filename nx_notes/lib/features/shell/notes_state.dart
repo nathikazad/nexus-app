@@ -29,7 +29,7 @@ class EssayTabState {
 class DesktopWorkspaceState {
   const DesktopWorkspaceState({
     required this.openTabs,
-    required this.activeEssayId,
+    this.activeEssayId,
     this.overlayTitle,
     this.overlayQuery,
     this.overlayResultIds = const <int>[],
@@ -37,7 +37,7 @@ class DesktopWorkspaceState {
   });
 
   final List<EssayTabState> openTabs;
-  final int activeEssayId;
+  final int? activeEssayId;
   final String? overlayTitle;
   final EssayQuery? overlayQuery;
   final List<int> overlayResultIds;
@@ -68,7 +68,9 @@ class DesktopWorkspaceState {
       activeEssayId: activeEssayId ?? this.activeEssayId,
       overlayTitle: clearOverlay ? null : overlayTitle ?? this.overlayTitle,
       overlayQuery: clearOverlay ? null : overlayQuery ?? this.overlayQuery,
-      overlayResultIds: clearOverlay ? const <int>[] : overlayResultIds ?? this.overlayResultIds,
+      overlayResultIds: clearOverlay
+          ? const <int>[]
+          : overlayResultIds ?? this.overlayResultIds,
       sidebarTab: sidebarTab ?? this.sidebarTab,
     );
   }
@@ -79,14 +81,7 @@ enum SidebarTab { essays, tags }
 class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
   @override
   DesktopWorkspaceState build() {
-    return const DesktopWorkspaceState(
-      openTabs: <EssayTabState>[
-        EssayTabState(essayId: 2),
-        EssayTabState(essayId: 1),
-        EssayTabState(essayId: 7),
-      ],
-      activeEssayId: 1,
-    );
+    return const DesktopWorkspaceState(openTabs: <EssayTabState>[]);
   }
 
   void setSidebarTab(SidebarTab tab) {
@@ -109,11 +104,17 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
     state = state.copyWith(clearOverlay: true);
   }
 
-  void openEssay(int essayId, {bool fromOverlay = false, EssayResultContext? context}) {
+  void openEssay(
+    int essayId, {
+    bool fromOverlay = false,
+    EssayResultContext? context,
+  }) {
     var tabs = [...state.openTabs];
     final index = tabs.indexWhere((tab) => tab.essayId == essayId);
     EssayResultContext? nextContext = context;
-    if (fromOverlay && state.overlayTitle != null && state.overlayQuery != null) {
+    if (fromOverlay &&
+        state.overlayTitle != null &&
+        state.overlayQuery != null) {
       nextContext = EssayResultContext(
         title: state.overlayTitle!,
         query: state.overlayQuery!,
@@ -134,6 +135,7 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
 
   void closeTab(int essayId) {
     if (state.openTabs.length == 1) {
+      state = const DesktopWorkspaceState(openTabs: <EssayTabState>[]);
       return;
     }
     final index = state.openTabs.indexWhere((tab) => tab.essayId == essayId);
@@ -150,7 +152,10 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
   void clearActiveContext() {
     final tabs = [
       for (final tab in state.openTabs)
-        if (tab.essayId == state.activeEssayId) tab.copyWith(clearContext: true) else tab,
+        if (tab.essayId == state.activeEssayId)
+          tab.copyWith(clearContext: true)
+        else
+          tab,
     ];
     state = state.copyWith(openTabs: tabs);
   }
@@ -158,8 +163,8 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
 
 final desktopWorkspaceProvider =
     NotifierProvider<DesktopWorkspaceNotifier, DesktopWorkspaceState>(
-  DesktopWorkspaceNotifier.new,
-);
+      DesktopWorkspaceNotifier.new,
+    );
 
 enum MobileSection { essays, tags, search }
 
@@ -202,32 +207,53 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
   MobileNotesState build() => const MobileNotesState();
 
   void setSection(MobileSection section) {
-    state = state.copyWith(section: section, clearEssay: true, showResults: false);
+    state = state.copyWith(
+      section: section,
+      clearEssay: true,
+      showResults: false,
+    );
   }
 
   void setSearchText(String value) {
-    state = state.copyWith(section: MobileSection.search, searchText: value, showResults: false);
+    state = state.copyWith(
+      section: MobileSection.search,
+      searchText: value,
+      showResults: false,
+    );
   }
 
   void showResults(EssayResultContext context) {
-    state = state.copyWith(resultContext: context, showResults: true, clearEssay: true);
+    state = state.copyWith(
+      resultContext: context,
+      showResults: true,
+      clearEssay: true,
+    );
   }
 
   void openEssay(int id, {EssayResultContext? context}) {
-    state = state.copyWith(activeEssayId: id, resultContext: context ?? state.resultContext, showResults: false);
+    state = state.copyWith(
+      activeEssayId: id,
+      resultContext: context ?? state.resultContext,
+      showResults: false,
+    );
   }
 
   void back() {
     if (state.activeEssayId != null && state.resultContext != null) {
       state = state.copyWith(clearEssay: true, showResults: true);
     } else if (state.activeEssayId != null) {
-      state = state.copyWith(clearEssay: true, clearContext: true, showResults: false);
+      state = state.copyWith(
+        clearEssay: true,
+        clearContext: true,
+        showResults: false,
+      );
     } else if (state.showResults) {
       state = state.copyWith(showResults: false, clearContext: true);
     }
   }
 }
 
-final mobileNotesProvider = NotifierProvider<MobileNotesNotifier, MobileNotesState>(
-  MobileNotesNotifier.new,
-);
+final mobileNotesProvider =
+    NotifierProvider<MobileNotesNotifier, MobileNotesState>(
+      MobileNotesNotifier.new,
+    );
