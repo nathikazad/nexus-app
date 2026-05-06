@@ -12,7 +12,19 @@ import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
     show BleClient;
 import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
+import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.dart';
 import 'package:nexus_voice_assistant/domain/ble/ble_connection_state.dart';
+
+String _httpBaseFromSocketUrl(String socketUrl) {
+  final uri = Uri.parse(socketUrl);
+  final scheme = uri.scheme == 'wss' ? 'https' : 'http';
+  final port = uri.hasPort && uri.port == 8002 ? 8001 : uri.port;
+  return Uri(
+    scheme: scheme,
+    host: uri.host,
+    port: port,
+  ).toString().replaceAll(RegExp(r'/+$'), '');
+}
 
 class BleBackgroundService {
   /// Start the background service (called from onStart entry point)
@@ -26,6 +38,7 @@ class BleBackgroundService {
 
     final bleClient = BleClient();
     final socketClient = SocketClient();
+    TelemetryUploadManager? telemetryUploadManager;
 
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -236,6 +249,7 @@ class BleBackgroundService {
       final userId = event?['userId'] as String?;
       final personalDomainId = event?['personalDomainId'] as int?;
       final sharedDomainId = event?['sharedDomainId'] as int?;
+      final telemetryHttpBaseUrl = event?['telemetryHttpBaseUrl'] as String?;
 
       if (url == null ||
           url.isEmpty ||
@@ -260,6 +274,22 @@ class BleBackgroundService {
         'X-Shared-Domain-Id': sharedDomainId.toString(),
         if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
+      final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
+          ? telemetryHttpBaseUrl!
+          : _httpBaseFromSocketUrl(url);
+      telemetryUploadManager = TelemetryUploadManager(
+        httpBaseUrl: uploadBase,
+        headers: {
+          'X-User-Id': userId,
+          if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
+        },
+        onCommitted: (transferId) async {
+          await bleClient.writeFileRx(telemetryCommittedAck(transferId));
+          service.invoke('ble.debugLog', {
+            'message': 'Telemetry upload committed transfer=$transferId',
+          });
+        },
+      );
       await socketClient.disconnect();
       await socketClient.connect(url, headers: headers);
     });
@@ -438,6 +468,8 @@ class BleBackgroundService {
       if (data.length >= 5 && data[0] == 0x00 && data[1] == 0x01) {
         imagePacketCount++;
         socketClient.sendImagePacket(data, imagePacketCount);
+      } else if (data.length >= 19 && data[0] == 0x00 && data[1] == 0x02) {
+        telemetryUploadManager?.handlePacket(data);
       }
       service.invoke('ble.fileTx.data', {'data': data.toList()});
     };
@@ -606,6 +638,7 @@ class BleBackgroundService {
 
   void connectSocket({
     required String url,
+    required String telemetryHttpBaseUrl,
     required String userId,
     required int personalDomainId,
     required int sharedDomainId,
@@ -613,6 +646,7 @@ class BleBackgroundService {
     _fileTxLogUserId = userId;
     _service.invoke('socket.connect', {
       'url': url,
+      'telemetryHttpBaseUrl': telemetryHttpBaseUrl,
       'userId': userId,
       'personalDomainId': personalDomainId,
       'sharedDomainId': sharedDomainId,

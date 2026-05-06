@@ -47,6 +47,7 @@ class _NexusVoiceAssistantAppState
       _activeSocketSessionKey = sessionKey;
       service.connectSocket(
         url: urls.sockWs,
+        telemetryHttpBaseUrl: urls.imageHttp,
         userId: user.userId,
         personalDomainId: user.personalDomainId,
         sharedDomainId: user.homeDomainId,
