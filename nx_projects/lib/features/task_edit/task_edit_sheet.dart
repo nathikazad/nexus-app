@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
-import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/project/project.dart';
@@ -108,7 +106,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
   late TaskBucket _bucket;
   TaskSeverity _sev = TaskSeverity.med;
   int? _sprintId;
-  String? _plannedFor;
   IdeationStatus _ideation = IdeationStatus.idea;
 
   @override
@@ -124,7 +121,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       _subProjectId = widget.defaultSub;
       _bucket = widget.defaultBucket ?? TaskBucket.unsorted;
       _sprintId = null;
-      _plannedFor = null;
       _ideation = IdeationStatus.idea;
     } else {
       _type = t.kind == TaskKind.feat
@@ -141,7 +137,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       _subProjectId = t.subProjectId;
       _bucket = t.bucket;
       _sprintId = t.sprintId;
-      _plannedFor = t.plannedFor;
       if (t.severity != null) _sev = t.severity!;
       if (t.kind == TaskKind.feat) {
         _ideation = t.ideationStatus ?? IdeationStatus.idea;
@@ -181,7 +176,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
     final est = double.tryParse(_est.text.trim()) ?? 0;
     final projectId = _projectId;
     var subId = _subProjectId;
-    final plannedFor = _sprintId == null ? null : _plannedFor;
     final projects = ref.read(projectsListProvider);
     if (subId != null &&
         !projects.any((p) => p.id == subId && p.parentId == projectId)) {
@@ -204,14 +198,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       crumb = sub != null ? '${proj.name} / ${sub.name}' : proj.name;
     }
     final driftFrom = [...?widget.task?.driftFrom];
-    final oldPlannedFor = widget.task?.plannedFor;
-    if (oldPlannedFor != null &&
-        oldPlannedFor.isNotEmpty &&
-        plannedFor != null &&
-        oldPlannedFor != plannedFor &&
-        !driftFrom.contains(oldPlannedFor)) {
-      driftFrom.add(oldPlannedFor);
-    }
 
     final kind = _mapKind();
     var task = Task(
@@ -226,7 +212,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
       bucket: _bucket,
       status: widget.task?.status ?? TaskStatus.todo,
       sprintId: _sprintId,
-      plannedFor: plannedFor,
+      plannedFor: null,
       driftFrom: driftFrom,
       notes: _notes.text,
     );
@@ -306,7 +292,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
         .where((p) => p.parentId == null)
         .toList();
     final sprints = ref.watch(sprintsListProvider);
-    final selectedSprint = _sprintById(sprints, _sprintId);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -363,10 +348,6 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
             Expanded(child: _refSprintField(sprints)),
           ],
         ),
-        if (selectedSprint != null) ...[
-          SizedBox(height: 14),
-          _refSprintDayField(selectedSprint),
-        ],
         if (_type == 'bug') ...[
           SizedBox(height: 14),
           RefFieldLabel('Severity'),
@@ -687,74 +668,7 @@ class _TaskEditFormState extends ConsumerState<TaskEditForm> {
                 ),
               ),
           ],
-          onChanged: (v) => setState(() {
-            _sprintId = v;
-            final sp = _sprintById(sprints, v);
-            if (sp == null || !_sprintContainsDay(sp, _plannedFor)) {
-              _plannedFor = null;
-            }
-          }),
-        ),
-      ],
-    );
-  }
-
-  Sprint? _sprintById(List<Sprint> sprints, int? id) {
-    if (id == null) return null;
-    for (final sp in sprints) {
-      if (sp.id == id) return sp;
-    }
-    return null;
-  }
-
-  bool _sprintContainsDay(Sprint sprint, String? ymd) {
-    if (ymd == null || ymd.isEmpty) return true;
-    final start = parseLocalDate(sprint.start);
-    for (var i = 0; i < sprint.length; i++) {
-      if (formatYmd(start.add(Duration(days: i))) == ymd) return true;
-    }
-    return false;
-  }
-
-  Widget _refSprintDayField(Sprint sprint) {
-    final start = parseLocalDate(sprint.start);
-    final validValue = _sprintContainsDay(sprint, _plannedFor)
-        ? _plannedFor
-        : null;
-    if (validValue == null && _plannedFor != null) {
-      _plannedFor = null;
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RefFieldLabel('Sprint day'),
-        SizedBox(height: 6),
-        DropdownButtonFormField<String?>(
-          key: ValueKey('sprint-day-${sprint.id}-$validValue'),
-          initialValue: validValue,
-          isExpanded: true,
-          isDense: true,
-          decoration: refFieldDecoration(context, null),
-          dropdownColor: context.colors.panel2,
-          style: TextStyle(color: context.colors.text, fontSize: 13),
-          items: [
-            DropdownMenuItem<String?>(
-              value: null,
-              child: Text(
-                '— Unscheduled in sprint —',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            for (var i = 0; i < sprint.length; i++)
-              DropdownMenuItem<String?>(
-                value: formatYmd(start.add(Duration(days: i))),
-                child: Text(
-                  '${DateFormat('EEE, MMM d').format(start.add(Duration(days: i)))} · ${formatYmd(start.add(Duration(days: i)))}',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
-          onChanged: (v) => setState(() => _plannedFor = v),
+          onChanged: (v) => setState(() => _sprintId = v),
         ),
       ],
     );

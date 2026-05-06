@@ -117,11 +117,13 @@ class DayCapBar extends StatelessWidget {
     super.key,
     required this.ratio,
     this.isOver = false,
+    this.fillColor,
     this.height = 4,
   });
 
   final double ratio;
   final bool isOver;
+  final Color? fillColor;
   final double height;
 
   @override
@@ -138,7 +140,10 @@ class DayCapBar extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: ratio.clamp(0, 1),
                 child: ColoredBox(
-                  color: isOver ? context.colors.warn : context.colors.accent,
+                  color:
+                      fillColor ??
+                      (isOver ? context.colors.warn : context.colors.accent),
+                  child: SizedBox.expand(),
                 ),
               ),
             ),

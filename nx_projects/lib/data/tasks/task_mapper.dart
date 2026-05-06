@@ -112,6 +112,55 @@ int? _relationIdForTarget(Model m, String targetType) {
   return null;
 }
 
+double? _doubleFromValue(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+List<TaskWorkLink> _workLinksFromModel(Model m) {
+  final list = m.relationsList;
+  if (list == null || list.isEmpty) return const [];
+
+  final nestedById = <int, Model>{};
+  final nested = m.relations?[kTaskWorkLinkKey];
+  if (nested != null) {
+    for (final work in nested) {
+      nestedById[work.id] = work;
+    }
+  }
+
+  final out = <TaskWorkLink>[];
+  for (final r in list) {
+    if (r.modelType != kTaskWorkLinkKey) continue;
+    final attrs = r.relationAttributes ?? const <String, dynamic>{};
+    final work = nestedById[r.modelId];
+    out.add(
+      TaskWorkLink(
+        relationId: r.relationId,
+        workActionId: r.modelId,
+        workActionName: work?.name ?? r.name ?? 'Work #${r.modelId}',
+        startTime: work?.attrDateTime(kTaskWorkStartTimeAttr),
+        endTime: work?.attrDateTime(kTaskWorkEndTimeAttr),
+        workDescription: attrs[kTaskWorkDescriptionAttr]?.toString() ?? '',
+        timeSpentHours: _doubleFromValue(attrs[kTaskWorkHoursAttr]),
+      ),
+    );
+  }
+  out.sort((a, b) {
+    final ad = a.startTime;
+    final bd = b.startTime;
+    if (ad == null && bd == null) {
+      return a.workActionName.compareTo(b.workActionName);
+    }
+    if (ad == null) return 1;
+    if (bd == null) return -1;
+    return bd.compareTo(ad);
+  });
+  return out;
+}
+
 Task taskFromModel(Model m) {
   final kind = _kindFromModel(m);
   final (projectId, subProjectId) = _projectIdsFromModel(m);
@@ -136,6 +185,7 @@ Task taskFromModel(Model m) {
     inProjectRelationId: _relationIdForTarget(m, kProjectModelTypeName),
     inSprintRelationId: _relationIdForTarget(m, kTaskSprintLinkKey),
     ideationStatus: _ideationFromModel(m),
+    workLinks: _workLinksFromModel(m),
   );
 }
 
@@ -195,6 +245,8 @@ List<SetModelAttribute> _taskAttributesForSave(Task t) {
         SetModelAttribute(key: kTaskAttrDate, value: p.toIso8601String()),
       );
     }
+  } else {
+    attrs.add(SetModelAttribute(key: kTaskAttrDate, delete: true));
   }
   if (t.kind == TaskKind.bug && t.severity != null) {
     attrs.add(
@@ -261,5 +313,18 @@ Map<String, dynamic> buildTaskFetchStruct(ModelType taskModelSchema) {
     kProjectRelationKey: {'id': true, 'name': true, 'relation': true},
   };
   struct[kTaskSprintLinkKey] = {'id': true, 'name': true};
+  struct[kTaskWorkLinkKey] = {
+    'id': true,
+    'name': true,
+    kTaskWorkStartTimeAttr: true,
+    kTaskWorkEndTimeAttr: true,
+  };
+  struct['relations'] = {
+    'relation_id': true,
+    'model_id': true,
+    'model_type': true,
+    'name': true,
+    'relation_attributes': {'key': true, 'value': true},
+  };
   return struct;
 }

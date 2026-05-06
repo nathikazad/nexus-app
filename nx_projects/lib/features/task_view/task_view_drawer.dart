@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/status_color_palette.dart'
@@ -216,6 +217,8 @@ class _TaskViewBody extends ConsumerWidget {
                   ),
                 ],
                 SizedBox(height: 16),
+                _WorkActionsSection(task: task),
+                SizedBox(height: 16),
                 _sectionTitle(context, 'Notes'),
                 SizedBox(height: 6),
                 if (task.notes.isEmpty)
@@ -344,6 +347,410 @@ class _StatusChanger extends ConsumerWidget {
   }
 }
 
+class _WorkActionsSection extends ConsumerWidget {
+  _WorkActionsSection({required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _TaskViewBody._sectionTitle(context, 'Work actions'),
+            ),
+            TextButton.icon(
+              onPressed: () => _openWorkLinkDialog(context, task: task),
+              icon: Icon(Icons.add, size: 16),
+              label: Text('Link Work'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.colors.accent,
+                textStyle: TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        if (task.workLinks.isEmpty)
+          Text(
+            'No Work actions linked.',
+            style: TextStyle(
+              color: context.colors.dim,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          )
+        else
+          for (final link in task.workLinks)
+            Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: _WorkActionLinkCard(task: task, link: link),
+            ),
+      ],
+    );
+  }
+}
+
+class _WorkActionLinkCard extends ConsumerWidget {
+  _WorkActionLinkCard({required this.task, required this.link});
+
+  final Task task;
+  final TaskWorkLink link;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hours = link.timeSpentHours;
+    return Container(
+      padding: EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: context.colors.panel2,
+        border: Border.all(color: context.colors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      link.workActionName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: context.colors.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      _workTimeLabel(link.startTime, link.endTime),
+                      style: TextStyle(
+                        color: context.colors.muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: SizedBox(
+                  height: 28,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hours != null)
+                        Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Text(
+                            '${_fmtHours(hours)}h',
+                            style: TextStyle(
+                              color: context.colors.accent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      IconButton(
+                        tooltip: 'Edit link',
+                        onPressed: () => _openWorkLinkDialog(
+                          context,
+                          task: task,
+                          link: link,
+                        ),
+                        icon: Icon(Icons.edit_outlined, size: 16),
+                        style: IconButton.styleFrom(
+                          foregroundColor: context.colors.muted,
+                          minimumSize: Size(28, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete link',
+                        onPressed: () async {
+                          await ref
+                              .read(taskRepositoryProvider)
+                              .deleteWorkLink(
+                                taskId: task.id,
+                                relationId: link.relationId,
+                              );
+                          ref.invalidate(tasksListAsyncProvider);
+                        },
+                        icon: Icon(Icons.delete_outline, size: 16),
+                        style: IconButton.styleFrom(
+                          foregroundColor: context.colors.crit,
+                          minimumSize: Size(28, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (link.workDescription.trim().isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text(
+              link.workDescription,
+              style: TextStyle(
+                color: context.colors.text,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _openWorkLinkDialog(
+  BuildContext context, {
+  required Task task,
+  TaskWorkLink? link,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _WorkLinkDialog(task: task, link: link),
+  );
+}
+
+class _WorkLinkDialog extends ConsumerStatefulWidget {
+  _WorkLinkDialog({required this.task, this.link});
+
+  final Task task;
+  final TaskWorkLink? link;
+
+  @override
+  ConsumerState<_WorkLinkDialog> createState() => _WorkLinkDialogState();
+}
+
+class _WorkLinkDialogState extends ConsumerState<_WorkLinkDialog> {
+  late final TextEditingController _description;
+  late final TextEditingController _hours;
+  late final TextEditingController _startTime;
+  late final TextEditingController _endTime;
+  int? _workActionId;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final link = widget.link;
+    _workActionId = link?.workActionId;
+    _description = TextEditingController(text: link?.workDescription ?? '');
+    _hours = TextEditingController(
+      text: link?.timeSpentHours == null
+          ? ''
+          : _fmtHours(link!.timeSpentHours!),
+    );
+    _startTime = TextEditingController(
+      text: _dateTimeInputLabel(link?.startTime),
+    );
+    _endTime = TextEditingController(text: _dateTimeInputLabel(link?.endTime));
+  }
+
+  @override
+  void dispose() {
+    _description.dispose();
+    _hours.dispose();
+    _startTime.dispose();
+    _endTime.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final hoursText = _hours.text.trim();
+    final hours = hoursText.isEmpty ? null : double.tryParse(hoursText);
+    if (hoursText.isNotEmpty && hours == null) return;
+    final start = _parseDateTimeInput(_startTime.text);
+    final end = _parseDateTimeInput(_endTime.text);
+    if (_startTime.text.trim().isNotEmpty && start == null) return;
+    if (_endTime.text.trim().isNotEmpty && end == null) return;
+    final selected = _workActionId;
+    if (widget.link == null && selected == null) return;
+
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(taskRepositoryProvider);
+      final link = widget.link;
+      if (link == null) {
+        await repo.linkWorkAction(
+          taskId: widget.task.id,
+          workActionId: selected!,
+          workDescription: _description.text,
+          timeSpentHours: hours,
+          startTime: start,
+          endTime: end,
+        );
+      } else {
+        await repo.updateWorkLink(
+          taskId: widget.task.id,
+          relationId: link.relationId,
+          workActionId: link.workActionId,
+          workDescription: _description.text,
+          timeSpentHours: hours,
+          startTime: start,
+          endTime: end,
+        );
+      }
+      ref.invalidate(tasksListAsyncProvider);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final editing = widget.link != null;
+    return AlertDialog(
+      backgroundColor: context.colors.panel,
+      title: Text(
+        editing ? 'Edit Work link' : 'Link Work action',
+        style: TextStyle(color: context.colors.text),
+      ),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (editing)
+              _readonlyWorkField(context, widget.link!)
+            else
+              FutureBuilder<List<WorkActionOption>>(
+                future: ref.read(taskRepositoryProvider).listWorkActions(),
+                builder: (context, snap) {
+                  final options = snap.data ?? const <WorkActionOption>[];
+                  return DropdownButtonFormField<int>(
+                    initialValue: _workActionId,
+                    isExpanded: true,
+                    dropdownColor: context.colors.panel2,
+                    decoration: InputDecoration(labelText: 'Work action'),
+                    selectedItemBuilder: (context) => [
+                      for (final option in options)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _workOptionLabel(option),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    items: [
+                      for (final option in options)
+                        DropdownMenuItem<int>(
+                          value: option.id,
+                          child: Text(
+                            _workOptionLabel(option),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (value) {
+                            WorkActionOption? selected;
+                            for (final option in options) {
+                              if (option.id == value) {
+                                selected = option;
+                                break;
+                              }
+                            }
+                            setState(() {
+                              _workActionId = value;
+                              _startTime.text = _dateTimeInputLabel(
+                                selected?.startTime,
+                              );
+                              _endTime.text = _dateTimeInputLabel(
+                                selected?.endTime,
+                              );
+                            });
+                          },
+                  );
+                },
+              ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _startTime,
+                    decoration: InputDecoration(
+                      labelText: 'Start time',
+                      hintText: 'YYYY-MM-DD HH:MM',
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _endTime,
+                    decoration: InputDecoration(
+                      labelText: 'End time',
+                      hintText: 'YYYY-MM-DD HH:MM',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: _hours,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: 'Time spent hours'),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: _description,
+              minLines: 3,
+              maxLines: 5,
+              decoration: InputDecoration(labelText: 'Work description'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: Text(_saving ? 'Saving…' : 'Save'),
+        ),
+      ],
+    );
+  }
+
+  Widget _readonlyWorkField(BuildContext context, TaskWorkLink link) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        '${link.workActionName} · ${_workTimeLabel(link.startTime, link.endTime)}',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: context.colors.muted, fontSize: 12),
+      ),
+    );
+  }
+}
+
 class _StatusButton extends StatelessWidget {
   _StatusButton({
     required this.status,
@@ -392,6 +799,42 @@ Future<void> _setTaskStatus(WidgetRef ref, Task task, TaskStatus status) async {
   if (task.status == status) return;
   await ref.read(taskRepositoryProvider).upsert(task.copyWith(status: status));
   ref.invalidate(tasksListAsyncProvider);
+}
+
+String _fmtHours(double h) {
+  if (h == h.roundToDouble()) return h.toInt().toString();
+  return h
+      .toStringAsFixed(2)
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
+}
+
+String _workTimeLabel(DateTime? start, DateTime? end) {
+  if (start == null && end == null) return 'No time';
+  final base = start ?? end!;
+  final date = DateFormat('MMM d').format(base);
+  final startText = start == null ? null : DateFormat('h:mm a').format(start);
+  final endText = end == null ? null : DateFormat('h:mm a').format(end);
+  if (startText != null && endText != null) {
+    return '$date · $startText–$endText';
+  }
+  return '$date · ${startText ?? endText}';
+}
+
+String _workOptionLabel(WorkActionOption option) {
+  return '${option.name} · ${_workTimeLabel(option.startTime, option.endTime)}';
+}
+
+String _dateTimeInputLabel(DateTime? value) {
+  if (value == null) return '';
+  return DateFormat('yyyy-MM-dd HH:mm').format(value);
+}
+
+DateTime? _parseDateTimeInput(String raw) {
+  final text = raw.trim();
+  if (text.isEmpty) return null;
+  return DateTime.tryParse(text) ??
+      DateTime.tryParse(text.replaceFirst(' ', 'T'));
 }
 
 String _statusLabel(TaskStatus s) {

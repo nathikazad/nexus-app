@@ -23,10 +23,13 @@ class MobileSprintBody extends ConsumerWidget {
     final stats = ref.watch(sprintHeaderStatsProvider);
     final days = ref.watch(sprintDaySlicesProvider);
     final allTasks = ref.watch(sprintTasksProvider);
-    final unscheduled = allTasks
-        .where((t) => t.plannedFor == null || t.plannedFor!.isEmpty)
+    final activeTaskIds = {
+      for (final day in days)
+        for (final group in day.taskGroups) group.task.id,
+    };
+    final noWorkLogged = allTasks
+        .where((t) => !activeTaskIds.contains(t.id))
         .toList();
-    final dailyCap = sp.length > 0 ? sp.capH / sp.length : 0.0;
 
     return ListView(
       padding: EdgeInsets.only(bottom: 24),
@@ -35,18 +38,17 @@ class MobileSprintBody extends ConsumerWidget {
         for (final day in days) ...[
           _DayHead(
             ymd: day.ymd,
-            tasks: day.tasks,
-            dailyCap: dailyCap,
+            taskGroups: day.taskGroups,
             isToday: day.isToday,
           ),
-          if (day.tasks.isNotEmpty)
-            ...day.tasks.map(
-              (t) => Padding(
+          if (day.taskGroups.isNotEmpty)
+            ...day.taskGroups.map(
+              (group) => Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 child: TaskRow(
-                  task: t,
+                  task: group.task,
                   showStatus: true,
-                  onMenu: () => onOpenTaskMenu(context, ref, t),
+                  onMenu: () => onOpenTaskMenu(context, ref, group.task),
                 ),
               ),
             )
@@ -63,9 +65,9 @@ class MobileSprintBody extends ConsumerWidget {
               ),
             ),
         ],
-        if (unscheduled.isNotEmpty) ...[
-          _SectionHeader(title: 'UNSCHEDULED', count: unscheduled.length),
-          ...unscheduled.map(
+        if (noWorkLogged.isNotEmpty) ...[
+          _SectionHeader(title: 'NO WORK LOGGED', count: noWorkLogged.length),
+          ...noWorkLogged.map(
             (t) => Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: TaskRow(
@@ -236,27 +238,30 @@ class _Chip extends StatelessWidget {
 class _DayHead extends StatelessWidget {
   _DayHead({
     required this.ymd,
-    required this.tasks,
-    required this.dailyCap,
+    required this.taskGroups,
     required this.isToday,
   });
 
   final String ymd;
-  final List<Task> tasks;
-  final double dailyCap;
+  final List<SprintDayTask> taskGroups;
   final bool isToday;
 
   @override
   Widget build(BuildContext context) {
     final d = parseLocalDate(ymd);
-    final nDone = tasks.where((t) => t.status == TaskStatus.done).length;
-    final dayH = tasks.fold<double>(0, (a, t) => a + t.estimate);
-    final meta = tasks.isEmpty
+    final nDone = taskGroups
+        .where((group) => group.task.status == TaskStatus.done)
+        .length;
+    final workedH = taskGroups.fold<double>(
+      0,
+      (total, group) => total + group.actualHours,
+    );
+    final gaugeMaxH = 12.0;
+    final actualGaugeColor = _gaugeColor(context, workedH);
+    final meta = taskGroups.isEmpty
         ? '0'
-        : '${tasks.length} · $nDone/${tasks.length} done';
-    final capLine = dailyCap > 0
-        ? '$meta · ${dayH.toStringAsFixed(0)}/${dailyCap.toStringAsFixed(0)}h'
-        : meta;
+        : '${taskGroups.length} · $nDone/${taskGroups.length} done';
+    final capLine = '$meta · ${workedH.toStringAsFixed(0)}h';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -319,12 +324,18 @@ class _DayHead extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(6, 0, 6, 8),
           child: DayCapBar(
-            ratio: dailyCap > 0 ? (dayH / dailyCap) : 0,
-            isOver: dailyCap > 0 && dayH > dailyCap,
+            ratio: workedH / gaugeMaxH,
+            fillColor: actualGaugeColor,
           ),
         ),
       ],
     );
+  }
+
+  Color _gaugeColor(BuildContext context, double hours) {
+    if (hours < 4) return context.colors.crit;
+    if (hours < 8) return context.colors.warn;
+    return context.colors.ok;
   }
 }
 

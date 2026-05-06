@@ -41,11 +41,13 @@ class TaskProgressSegments extends StatelessWidget {
     required this.estimate,
     required this.actual,
     this.doneNoActual = false,
+    this.actualColor,
   });
 
   final double estimate;
   final double actual;
   final bool doneNoActual;
+  final Color? actualColor;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +59,7 @@ class TaskProgressSegments extends StatelessWidget {
     if (estimate <= 0 || actual <= 0) {
       return SizedBox.shrink();
     }
+    final fillColor = actualColor ?? Color(0xFF4ADE80);
     final r = actual / estimate;
     final eps = 1e-9;
     if (r < 1 - eps) {
@@ -64,7 +67,7 @@ class TaskProgressSegments extends StatelessWidget {
         children: [
           Expanded(
             flex: (r * 1000).round().clamp(1, 1000),
-            child: ColoredBox(color: Color(0xFF4ADE80)),
+            child: ColoredBox(color: fillColor),
           ),
           Expanded(
             flex: ((1 - r) * 1000).round().clamp(1, 1000),
@@ -75,7 +78,7 @@ class TaskProgressSegments extends StatelessWidget {
     }
     if (r <= 1 + eps) {
       return _ProgressTrack(
-        children: [Expanded(child: ColoredBox(color: context.colors.accent))],
+        children: [Expanded(child: ColoredBox(color: fillColor))],
       );
     }
 
@@ -85,7 +88,7 @@ class TaskProgressSegments extends StatelessWidget {
       children: [
         Expanded(
           flex: (base * 1000).round().clamp(1, 1000),
-          child: ColoredBox(color: context.colors.accent),
+          child: ColoredBox(color: fillColor),
         ),
         Expanded(
           flex: ((1 - base) * 1000).round().clamp(1, 1000),

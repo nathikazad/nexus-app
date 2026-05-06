@@ -4,6 +4,40 @@ import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/domain/task/task_severity.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 
+class TaskWorkLink {
+  const TaskWorkLink({
+    required this.relationId,
+    required this.workActionId,
+    required this.workActionName,
+    this.startTime,
+    this.endTime,
+    this.workDescription = '',
+    this.timeSpentHours,
+  });
+
+  final int relationId;
+  final int workActionId;
+  final String workActionName;
+  final DateTime? startTime;
+  final DateTime? endTime;
+  final String workDescription;
+  final double? timeSpentHours;
+}
+
+class WorkActionOption {
+  const WorkActionOption({
+    required this.id,
+    required this.name,
+    this.startTime,
+    this.endTime,
+  });
+
+  final int id;
+  final String name;
+  final DateTime? startTime;
+  final DateTime? endTime;
+}
+
 class Task {
   const Task({
     required this.id,
@@ -24,6 +58,7 @@ class Task {
     this.inProjectRelationId,
     this.inSprintRelationId,
     this.ideationStatus,
+    this.workLinks = const [],
   });
 
   final int id;
@@ -57,6 +92,9 @@ class Task {
   /// [Feature] only: `ideation_status` in the database.
   final IdeationStatus? ideationStatus;
 
+  /// ProjectTask -> Work links with relation attributes.
+  final List<TaskWorkLink> workLinks;
+
   Task copyWith({
     int? id,
     String? title,
@@ -84,6 +122,7 @@ class Task {
     bool clearInSprintRelationId = false,
     IdeationStatus? ideationStatus,
     bool clearIdeationStatus = false,
+    List<TaskWorkLink>? workLinks,
   }) {
     return Task(
       id: id ?? this.id,
@@ -116,6 +155,7 @@ class Task {
       ideationStatus: clearIdeationStatus
           ? null
           : (ideationStatus ?? this.ideationStatus),
+      workLinks: workLinks ?? this.workLinks,
     );
   }
 }

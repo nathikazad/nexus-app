@@ -44,7 +44,6 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
     final hStr = t.estimate % 1 == 0
         ? '${t.estimate.toInt()}h'
         : '${t.estimate}h';
-    final scheduled = t.plannedFor != null;
     Widget buildRow() {
       return MouseRegion(
         onEnter: (_) {
@@ -135,29 +134,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
                         ),
                       )
                     else
-                      SizedBox(
-                        width: 40,
-                        child: !scheduled
-                            ? Center(
-                                child: Tooltip(
-                                  message: 'No day assigned',
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: context.colors.warn,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : Align(
-                                alignment: Alignment.centerRight,
-                                child: _TinyDateChip(
-                                  date: parseLocalDate(t.plannedFor!),
-                                ),
-                              ),
-                      ),
+                      SizedBox(width: 16),
                   ],
                 ),
               ),
@@ -167,36 +144,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
       );
     }
 
-    if (scheduled) {
-      return buildRow();
-    }
-    return Draggable<Task>(
-      data: t,
-      maxSimultaneousDrags: 1,
-      feedback: Material(
-        color: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 360),
-          child: Card(
-            color: context.colors.panel2,
-            child: ListTile(
-              dense: true,
-              title: Text(
-                t.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: Text(
-                hStr,
-                style: TextStyle(fontSize: 11, color: context.colors.muted),
-              ),
-            ),
-          ),
-        ),
-      ),
-      childWhenDragging: Opacity(opacity: 0.4, child: buildRow()),
-      child: buildRow(),
-    );
+    return buildRow();
   }
 }
 

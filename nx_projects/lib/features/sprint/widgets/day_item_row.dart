@@ -6,6 +6,7 @@ import 'package:nx_projects/core/formatting/hours_format.dart';
 import 'package:nx_projects/core/formatting/sprint_variance.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/kind_color_palette.dart';
+import 'package:nx_projects/core/widgets/capacity_bar.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
@@ -19,6 +20,8 @@ class DayItemRow extends StatefulWidget {
     this.onTap,
     this.isGhost = false,
     this.movedToYmd,
+    this.actualHours,
+    this.actionCount,
     this.enableDrag = true,
     this.isLocated = false,
   });
@@ -28,6 +31,8 @@ class DayItemRow extends StatefulWidget {
   final VoidCallback? onTap;
   final bool isGhost;
   final String? movedToYmd;
+  final double? actualHours;
+  final int? actionCount;
   final bool enableDrag;
   final bool isLocated;
 
@@ -136,8 +141,9 @@ class _DayItemRowState extends State<DayItemRow> {
     required bool blocked,
     required String glyph,
   }) {
-    final doneNoActual = done && t.actualHours <= 0;
-    final actualForProgress = doneNoActual ? t.estimate : t.actualHours;
+    final actualHours = widget.actualHours ?? t.actualHours;
+    final doneNoActual = widget.actualHours == null && done && actualHours <= 0;
+    final actualForProgress = doneNoActual ? t.estimate : actualHours;
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
@@ -199,17 +205,31 @@ class _DayItemRowState extends State<DayItemRow> {
                       ),
                       if (t.estimate > 0 && actualForProgress > 0) ...[
                         SizedBox(height: 4),
-                        TaskProgressSegments(
-                          estimate: t.estimate,
-                          actual: actualForProgress,
-                          doneNoActual: doneNoActual,
+                        DayCapBar(
+                          ratio: actualForProgress / t.estimate,
+                          fillColor: _actualGaugeColor(actualForProgress),
+                          height: 3,
+                        ),
+                      ],
+                      if (widget.actionCount != null &&
+                          widget.actionCount! > 1) ...[
+                        SizedBox(height: 3),
+                        Text(
+                          '${widget.actionCount} Work actions',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: context.colors.dim,
+                          ),
                         ),
                       ],
                     ],
                   ),
                 ),
                 SizedBox(width: 6),
-                SizedBox(width: 66, child: _HoursCell(task: t)),
+                SizedBox(
+                  width: 66,
+                  child: _HoursCell(task: t, actualHours: actualHours),
+                ),
                 SizedBox(width: 4),
                 SizedBox(
                   width: 16,
@@ -235,6 +255,12 @@ class _DayItemRowState extends State<DayItemRow> {
         ),
       ),
     );
+  }
+
+  Color _actualGaugeColor(double hours) {
+    if (hours < 4) return context.colors.crit;
+    if (hours < 8) return context.colors.warn;
+    return context.colors.ok;
   }
 }
 
@@ -282,13 +308,14 @@ class _StatusDot extends StatelessWidget {
 }
 
 class _HoursCell extends StatelessWidget {
-  _HoursCell({required this.task});
+  _HoursCell({required this.task, required this.actualHours});
 
   final Task task;
+  final double actualHours;
 
   @override
   Widget build(BuildContext context) {
-    if (task.actualHours <= 0) {
+    if (actualHours <= 0) {
       return Text(
         formatHours(task.estimate),
         textAlign: TextAlign.right,
@@ -304,13 +331,9 @@ class _HoursCell extends StatelessWidget {
       TextSpan(
         children: [
           TextSpan(
-            text: formatHours(task.actualHours),
+            text: formatHours(actualHours),
             style: TextStyle(
-              color: varianceColorForPair(
-                context,
-                task.actualHours,
-                task.estimate,
-              ),
+              color: varianceColorForPair(context, actualHours, task.estimate),
               fontWeight: FontWeight.w500,
             ),
           ),

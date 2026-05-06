@@ -19,3 +19,11 @@ const String kTaskProjectLinkKey = 'Project';
 
 /// Nested [Sprint] from `in_sprint` uses this struct key; matches [ModelType] name.
 const String kTaskSprintLinkKey = 'Sprint';
+
+/// Nested [Work] action relation from ProjectTask -> Work.
+const String kTaskWorkLinkKey = 'Work';
+
+const String kTaskWorkDescriptionAttr = 'work_description';
+const String kTaskWorkHoursAttr = 'time_spent_hours';
+const String kTaskWorkStartTimeAttr = 'start_time';
+const String kTaskWorkEndTimeAttr = 'end_time';

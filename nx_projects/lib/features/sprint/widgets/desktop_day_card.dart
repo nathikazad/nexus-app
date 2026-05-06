@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:nx_projects/core/formatting/date_label.dart';
-import 'package:nx_projects/core/formatting/sprint_variance.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/widgets/capacity_bar.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/sprint/sprint_state.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
-import 'package:nx_projects/features/sprint/assign_task_to_sprint_day.dart';
 import 'package:nx_projects/features/sprint/sprint_view_model.dart';
 import 'package:nx_projects/features/sprint/widgets/day_item_row.dart';
 
@@ -20,8 +18,6 @@ class DesktopDayCard extends ConsumerWidget {
     super.key,
     required this.slice,
     required this.sprint,
-    required this.allTasks,
-    required this.dailyCap,
     required this.taskRowKeyFor,
     required this.onOpenTaskMenu,
     required this.onOpenTask,
@@ -29,8 +25,6 @@ class DesktopDayCard extends ConsumerWidget {
 
   final SprintDaySlice slice;
   final Sprint sprint;
-  final List<Task> allTasks;
-  final double dailyCap;
   final GlobalKey Function(int taskId) taskRowKeyFor;
   final void Function(Task t) onOpenTaskMenu;
   final void Function(Task t) onOpenTask;
@@ -39,239 +33,171 @@ class DesktopDayCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = parseLocalDate(slice.ymd);
     final locator = ref.watch(desktopTaskLocatorProvider);
-    final dayH = slice.dayHours;
     final dayActual = slice.dayActual;
-    final isOver = dailyCap > 0 && dayH > dailyCap;
+    final gaugeMaxH = 12.0;
+    final actualGaugeColor = _gaugeColor(context, dayActual);
     final isToday = slice.isToday;
-    final ghosts = allTasks
-        .where(
-          (t) =>
-              t.driftFrom.contains(slice.ymd) &&
-              t.plannedFor != null &&
-              t.plannedFor != slice.ymd,
-        )
-        .toList();
-    final showStats =
-        slice.isPast &&
-        (slice.tasks.isNotEmpty ||
-            slice.pushedCount > 0 ||
-            slice.rolledCount > 0);
+    final showStats = slice.isPast && slice.taskGroups.isNotEmpty;
     final showDayNote = slice.isPast || sprint.state == SprintState.done;
-    final actualLineCls = dayH > 0
-        ? varianceClass(dayActual, dayH)
-        : (dayActual > 0 ? 'over' : '');
-
     return Padding(
       padding: EdgeInsets.only(bottom: 10),
-      child: DragTarget<Task>(
-        onWillAcceptWithDetails: (details) {
-          final d = details.data;
-          if (d.plannedFor == slice.ymd) return false;
-          return d.sprintId == sprint.id;
-        },
-        onAcceptWithDetails: (details) async {
-          await assignTaskToSprintDay(
-            ref: ref,
-            task: details.data,
-            sprint: sprint,
-            ymd: slice.ymd,
-          );
-        },
-        builder: (context, candidate, rejected) {
-          final drop = candidate.isNotEmpty;
-          final borderColor = drop
-              ? context.colors.accent
-              : (isToday ? context.colors.border2 : context.colors.border);
-          return Opacity(
-            opacity: slice.isPast ? 0.65 : 1.0,
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 120),
-              decoration: BoxDecoration(
-                color: drop ? context.colors.accentSoft : context.colors.panel,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 30,
-                          child: Text(
-                            DateFormat('EEE').format(d).toUpperCase(),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.visible,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: context.colors.dim,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
+      child: Opacity(
+        opacity: slice.isPast ? 0.65 : 1.0,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            color: context.colors.panel,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isToday ? context.colors.border2 : context.colors.border,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 30,
+                      child: Text(
+                        DateFormat('EEE').format(d).toUpperCase(),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: context.colors.dim,
+                          letterSpacing: 0.2,
                         ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: DateFormat('MMM').format(d),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: isToday
-                                        ? context.colors.accent
-                                        : context.colors.text,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' ${DateFormat('d').format(d)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: context.colors.muted,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                if (isToday)
-                                  TextSpan(
-                                    text: '  · today',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: context.colors.accent,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
                           children: [
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: _fmtH(dayH),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isOver
-                                          ? context.colors.warn
-                                          : context.colors.text,
-                                      fontWeight: FontWeight.w600,
-                                      fontFeatures: [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: ' / ${dailyCap.toStringAsFixed(0)}h',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: context.colors.muted,
-                                      fontFeatures: [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                            TextSpan(
+                              text: DateFormat('MMM').format(d),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isToday
+                                    ? context.colors.accent
+                                    : context.colors.text,
                               ),
                             ),
-                            if (dayH > 0 &&
-                                (slice.isPast || dayActual > 0)) ...[
-                              SizedBox(height: 2),
-                              Text(
-                                '${_fmtH(dayActual)}h actual',
+                            TextSpan(
+                              text: ' ${DateFormat('d').format(d)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.muted,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            if (isToday)
+                              TextSpan(
+                                text: '  · today',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  color: varianceColorForClass(
-                                    context,
-                                    actualLineCls,
-                                  ),
-                                  fontFeatures: [FontFeature.tabularFigures()],
+                                  fontSize: 12,
+                                  color: context.colors.accent,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${_fmtH(dayActual)}h',
+                                style: TextStyle(
+                                  color: actualGaugeColor,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
-                          ],
+                          ),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  Transform.translate(
-                    offset: Offset(2, 0),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(10, 0, 10, 8),
-                      child: DayCapBar(
-                        ratio: dailyCap > 0 ? (dayH / dailyCap) : 0,
-                        isOver: isOver,
-                        height: 3,
-                      ),
-                    ),
-                  ),
-                  if (showStats)
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
-                      child: _DayStatsLine(slice: slice, dayActual: dayActual),
-                    ),
-                  if (slice.tasks.isNotEmpty || ghosts.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(6, 0, 6, 8),
-                      child: Column(
-                        children: [
-                          for (final t in slice.tasks)
-                            Padding(
-                              padding: EdgeInsets.only(bottom: 4),
-                              child: SizedBox(
-                                key: taskRowKeyFor(t.id),
-                                child: DayItemRow(
-                                  task: t,
-                                  isLocated: locator.isHighlighted(t.id),
-                                  onTap: () => onOpenTask(t),
-                                  onMenu: () => onOpenTaskMenu(t),
-                                ),
-                              ),
-                            ),
-                          for (final t in ghosts)
-                            Padding(
-                              padding: EdgeInsets.only(bottom: 4),
-                              child: DayItemRow(
-                                task: t,
-                                isGhost: true,
-                                movedToYmd: t.plannedFor!,
-                              ),
-                            ),
-                        ],
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
-                      child: Text(
-                        drop ? 'Drop here' : 'Nothing scheduled.',
-                        style: TextStyle(
-                          color: context.colors.dim,
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
-                  if (showDayNote)
-                    _SprintDayNoteField(
-                      key: ValueKey('${sprint.id}_${slice.ymd}'),
-                      sprint: sprint,
-                      ymd: slice.ymd,
-                    ),
-                  SizedBox(height: 2),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+              Transform.translate(
+                offset: Offset(2, 0),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(10, 0, 10, 8),
+                  child: DayCapBar(
+                    ratio: dayActual / gaugeMaxH,
+                    fillColor: actualGaugeColor,
+                    height: 3,
+                  ),
+                ),
+              ),
+              if (showStats)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
+                  child: _DayStatsLine(slice: slice, dayActual: dayActual),
+                ),
+              if (slice.taskGroups.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(6, 0, 6, 8),
+                  child: Column(
+                    children: [
+                      for (final group in slice.taskGroups)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: SizedBox(
+                            key: taskRowKeyFor(group.task.id),
+                            child: DayItemRow(
+                              task: group.task,
+                              actualHours: group.actualHours,
+                              actionCount: group.actionCount,
+                              isLocated: locator.isHighlighted(group.task.id),
+                              onTap: () => onOpenTask(group.task),
+                              onMenu: () => onOpenTaskMenu(group.task),
+                              enableDrag: false,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: Text(
+                    'No work logged.',
+                    style: TextStyle(
+                      color: context.colors.dim,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              if (showDayNote)
+                _SprintDayNoteField(
+                  key: ValueKey('${sprint.id}_${slice.ymd}'),
+                  sprint: sprint,
+                  ymd: slice.ymd,
+                ),
+              SizedBox(height: 2),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -279,6 +205,12 @@ class DesktopDayCard extends ConsumerWidget {
   String _fmtH(double h) {
     if (h == h.roundToDouble()) return h.toInt().toString();
     return h.toStringAsFixed(1);
+  }
+
+  Color _gaugeColor(BuildContext context, double hours) {
+    if (hours < 4) return context.colors.crit;
+    if (hours < 8) return context.colors.warn;
+    return context.colors.ok;
   }
 }
 
@@ -291,31 +223,18 @@ class _DayStatsLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final allDone =
-        slice.tasks.isNotEmpty && slice.doneCount == slice.tasks.length;
+        slice.taskGroups.isNotEmpty &&
+        slice.doneCount == slice.taskGroups.length;
     return Wrap(
       spacing: 14,
       runSpacing: 4,
       children: [
         _DayStatText(
           icon: '✓',
-          value: '${slice.doneCount}/${slice.tasks.length}',
+          value: '${slice.doneCount}/${slice.taskGroups.length}',
           label: 'done',
           color: allDone ? context.colors.ok : context.colors.warn,
         ),
-        if (slice.pushedCount > 0)
-          _DayStatText(
-            icon: '↗',
-            value: '${slice.pushedCount}',
-            label: 'pushed out',
-            color: context.colors.warn,
-          ),
-        if (slice.rolledCount > 0)
-          _DayStatText(
-            icon: '↙',
-            value: '${slice.rolledCount}',
-            label: 'rolled in',
-            color: context.colors.accent,
-          ),
         if (slice.isPast && dayActual == 0)
           Text(
             '· no logged work',

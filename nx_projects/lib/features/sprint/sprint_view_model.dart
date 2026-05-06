@@ -9,6 +9,7 @@ import 'package:nx_projects/domain/task/task_severity.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
+import 'package:nx_projects/features/sprint/sprint_actual_hours.dart';
 
 final currentSprintProvider = Provider<Sprint>((ref) {
   final sprints = ref.watch(sprintsListProvider);
@@ -36,28 +37,40 @@ final sprintTasksProvider = Provider<List<Task>>((ref) {
   return tasks.where((t) => t.sprintId == sp.id).toList();
 });
 
+class SprintDayTask {
+  const SprintDayTask({
+    required this.task,
+    required this.ymd,
+    required this.workLinks,
+    required this.actualHours,
+  });
+
+  final Task task;
+  final String ymd;
+  final List<TaskWorkLink> workLinks;
+  final double actualHours;
+
+  int get actionCount => workLinks.length;
+}
+
 class SprintDaySlice {
   const SprintDaySlice({
     required this.ymd,
-    required this.tasks,
-    required this.dayHours,
+    required this.taskGroups,
     required this.isToday,
     required this.isPast,
     required this.dayActual,
     required this.doneCount,
-    required this.pushedCount,
-    required this.rolledCount,
   });
 
   final String ymd;
-  final List<Task> tasks;
-  final double dayHours;
+  final List<SprintDayTask> taskGroups;
   final bool isToday;
   final bool isPast;
   final double dayActual;
   final int doneCount;
-  final int pushedCount;
-  final int rolledCount;
+
+  List<Task> get tasks => [for (final group in taskGroups) group.task];
 }
 
 int sprintDayIndexOneBased(Sprint sp) {
@@ -70,10 +83,7 @@ int sprintDayIndexOneBased(Sprint sp) {
 }
 
 final sprintDriftCountProvider = Provider<int>((ref) {
-  return ref
-      .watch(sprintTasksProvider)
-      .where((t) => t.driftFrom.isNotEmpty)
-      .length;
+  return 0;
 });
 
 final sprintBlockedCountProvider = Provider<int>((ref) {
@@ -96,31 +106,43 @@ final sprintDaySlicesProvider = Provider<List<SprintDaySlice>>((ref) {
       start.day,
     ).add(Duration(days: i));
     final ymd = formatYmd(d);
-    final dayTasks = tasks.where((t) => t.plannedFor == ymd).toList();
-    final h = dayTasks.fold<double>(0, (a, t) => a + t.estimate);
-    final actual = dayTasks.fold<double>(0, (a, t) => a + t.actualHours);
-    var done = 0, pushed = 0, rolled = 0;
-    for (final t in dayTasks) {
-      if (t.status == TaskStatus.done) done++;
-      if (t.driftFrom.isNotEmpty) rolled++;
-    }
+    final dayTaskGroups = <SprintDayTask>[];
     for (final t in tasks) {
-      if (t.driftFrom.contains(ymd) && t.plannedFor != ymd) {
-        pushed++;
-      }
+      final links = taskWorkLinksForDay(t, ymd);
+      if (links.isEmpty) continue;
+      dayTaskGroups.add(
+        SprintDayTask(
+          task: t,
+          ymd: ymd,
+          workLinks: links,
+          actualHours: taskActualHoursForDay(t, ymd),
+        ),
+      );
     }
+    dayTaskGroups.sort((a, b) {
+      final at = a.workLinks.first.startTime;
+      final bt = b.workLinks.first.startTime;
+      if (at == null && bt == null) return a.task.title.compareTo(b.task.title);
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return at.compareTo(bt);
+    });
+    final actual = dayTaskGroups.fold<double>(
+      0,
+      (total, group) => total + group.actualHours,
+    );
+    final done = dayTaskGroups
+        .where((group) => group.task.status == TaskStatus.done)
+        .length;
     final isPast = ymd.compareTo(todayYmd) < 0;
     out.add(
       SprintDaySlice(
         ymd: ymd,
-        tasks: dayTasks,
-        dayHours: h,
+        taskGroups: dayTaskGroups,
         isToday: ymd == todayYmd,
         isPast: isPast,
         dayActual: actual,
         doneCount: done,
-        pushedCount: pushed,
-        rolledCount: rolled,
       ),
     );
   }

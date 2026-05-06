@@ -188,6 +188,21 @@ class FakeTaskRepository implements TaskRepository {
   FakeTaskRepository(this._planner);
   final Planner _planner;
 
+  static const _workActions = <WorkActionOption>[
+    WorkActionOption(
+      id: 9001,
+      name: 'Morning work block',
+      startTime: null,
+      endTime: null,
+    ),
+    WorkActionOption(
+      id: 9002,
+      name: 'Afternoon work block',
+      startTime: null,
+      endTime: null,
+    ),
+  ];
+
   @override
   Future<List<Task>> listAll() async => _planner.readTasks();
 
@@ -203,6 +218,89 @@ class FakeTaskRepository implements TaskRepository {
   @override
   Future<void> delete(int id) async {
     _planner.deleteTask(id);
+  }
+
+  @override
+  Future<List<WorkActionOption>> listWorkActions() async => _workActions;
+
+  @override
+  Future<void> linkWorkAction({
+    required int taskId,
+    required int workActionId,
+    String workDescription = '',
+    double? timeSpentHours,
+    DateTime? startTime,
+    DateTime? endTime,
+  }) async {
+    final task = _planner.readTask(taskId);
+    if (task == null) return;
+    final action = _workActions.firstWhere(
+      (a) => a.id == workActionId,
+      orElse: () =>
+          WorkActionOption(id: workActionId, name: 'Work #$workActionId'),
+    );
+    final nextRelationId =
+        [
+          for (final t in _planner.readTasks())
+            for (final w in t.workLinks) w.relationId,
+        ].fold<int>(8000, (maxId, id) => id > maxId ? id : maxId) +
+        1;
+    final link = TaskWorkLink(
+      relationId: nextRelationId,
+      workActionId: action.id,
+      workActionName: action.name,
+      startTime: startTime ?? action.startTime,
+      endTime: endTime ?? action.endTime,
+      workDescription: workDescription,
+      timeSpentHours: timeSpentHours,
+    );
+    _planner.upsertTask(task.copyWith(workLinks: [...task.workLinks, link]));
+  }
+
+  @override
+  Future<void> updateWorkLink({
+    required int taskId,
+    required int relationId,
+    required int workActionId,
+    String workDescription = '',
+    double? timeSpentHours,
+    DateTime? startTime,
+    DateTime? endTime,
+  }) async {
+    final task = _planner.readTask(taskId);
+    if (task == null) return;
+    final links = [
+      for (final link in task.workLinks)
+        if (link.relationId == relationId)
+          TaskWorkLink(
+            relationId: link.relationId,
+            workActionId: link.workActionId,
+            workActionName: link.workActionName,
+            startTime: startTime,
+            endTime: endTime,
+            workDescription: workDescription,
+            timeSpentHours: timeSpentHours,
+          )
+        else
+          link,
+    ];
+    _planner.upsertTask(task.copyWith(workLinks: links));
+  }
+
+  @override
+  Future<void> deleteWorkLink({
+    required int taskId,
+    required int relationId,
+  }) async {
+    final task = _planner.readTask(taskId);
+    if (task == null) return;
+    _planner.upsertTask(
+      task.copyWith(
+        workLinks: task.workLinks
+            .where((link) => link.relationId != relationId)
+            .toList(),
+      ),
+    );
   }
 }
 

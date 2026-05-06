@@ -8,7 +8,6 @@ import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
-import 'package:nx_projects/features/sprint/widgets/sprint_day_picker_menu.dart';
 import 'package:nx_projects/features/task_edit/task_edit_sheet.dart';
 
 Future<void> showTaskContextSheet(
@@ -70,21 +69,6 @@ Future<void> showTaskContextSheet(
                 await _setStatus(ref, task, TaskStatus.done);
                 onAfterChange();
               }),
-              if (isDesktopLayout(context) && task.sprintId != null) ...[
-                Divider(color: context.colors.border),
-                _h(ctx, 'Sprint plan'),
-                SprintDayPickerButton(
-                  task: task,
-                  onChanged: () {
-                    onAfterChange();
-                    if (ctx.mounted) Navigator.of(ctx).pop();
-                  },
-                  child: ListTile(
-                    title: Text('Plan day…'),
-                    subtitle: Text('Assign or clear the sprint day'),
-                  ),
-                ),
-              ],
               Divider(color: context.colors.border),
               ListTile(
                 title: Text('Edit…'),
