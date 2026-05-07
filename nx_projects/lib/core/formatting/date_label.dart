@@ -37,3 +37,7 @@ DateTime parseLocalDate(String ymd) {
 String formatYmd(DateTime d) {
   return DateFormat('yyyy-MM-dd').format(d);
 }
+
+String todayYmd() {
+  return formatYmd(DateTime.now());
+}

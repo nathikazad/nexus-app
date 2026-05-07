@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/features/desktop/desktop_navigation_controller.dart';
-import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
-import 'package:nx_projects/features/desktop/widgets/desktop_drawer_layer.dart';
 import 'package:nx_projects/features/desktop/widgets/sprint_cart.dart';
 import 'package:nx_projects/features/shared/widgets/context_sheet.dart';
 import 'package:nx_projects/features/sprint/sprint_screen.dart';
@@ -19,25 +17,17 @@ class DesktopSprintView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final drawerOpen =
-        ref.watch(desktopTaskDrawerProvider) is! DesktopTaskDrawerClosed;
-
-    return Stack(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SprintCart(
-              border: SprintCartBorder.right,
-              surface: SprintCartSurface.sprint,
-              onFooter: () {
-                ref.read(desktopNavigationControllerProvider).showPlanner();
-              },
-            ),
-            Expanded(child: SprintScreen(onOpenTaskMenu: _openTaskMenu)),
-          ],
+        SprintCart(
+          border: SprintCartBorder.right,
+          surface: SprintCartSurface.sprint,
+          onFooter: () {
+            ref.read(desktopNavigationControllerProvider).showPlanner();
+          },
         ),
-        if (drawerOpen) const Positioned.fill(child: DesktopDrawerLayer()),
+        Expanded(child: SprintScreen(onOpenTaskMenu: _openTaskMenu)),
       ],
     );
   }

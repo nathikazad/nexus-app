@@ -66,7 +66,7 @@ class _DesktopSprintBodyState extends ConsumerState<DesktopSprintBody> {
               DesktopDayCard(
                 slice: day,
                 sprint: sp,
-                taskRowKeyFor: _taskScroller.rowKeyFor,
+                taskRowKeyFor: _taskScroller.rowKeyForOccurrence,
                 onOpenTaskMenu: (t) => widget.onOpenTaskMenu(context, ref, t),
                 onOpenTask: (t) =>
                     ref.read(desktopDrawerControllerProvider).viewTask(t.id),

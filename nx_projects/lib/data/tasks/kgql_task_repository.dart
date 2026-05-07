@@ -182,9 +182,19 @@ class KgqlTaskRepository implements TaskRepository {
 
   @override
   Future<List<WorkActionOption>> listWorkActions() async {
+    final since = DateTime.now().subtract(const Duration(days: 7));
     final models = await fetchKgqlModels(
       _client,
-      filter: {'model_type': kTaskWorkLinkKey},
+      filter: {
+        'model_type': kTaskWorkLinkKey,
+        'filters': [
+          {
+            'key': kTaskWorkStartTimeAttr,
+            'op': '>=',
+            'value': since.toIso8601String(),
+          },
+        ],
+      },
       struct: {
         'id': true,
         'name': true,
@@ -217,9 +227,64 @@ class KgqlTaskRepository implements TaskRepository {
     return out;
   }
 
+  @override
+  Future<List<WorkActionOption>> listWorkActionsForDay(DateTime day) async {
+    final dayStart = DateTime(day.year, day.month, day.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    final models = await fetchKgqlModels(
+      _client,
+      filter: {
+        'model_type': kTaskWorkLinkKey,
+        'filters': [
+          {
+            'key': kTaskWorkStartTimeAttr,
+            'op': '>=',
+            'value': dayStart.toIso8601String(),
+          },
+          {
+            'key': kTaskWorkStartTimeAttr,
+            'op': '<',
+            'value': dayEnd.toIso8601String(),
+          },
+        ],
+      },
+      struct: {
+        'id': true,
+        'name': true,
+        'model_type': {'id': true, 'name': true, 'type_kind': true},
+        kTaskWorkStartTimeAttr: true,
+        kTaskWorkEndTimeAttr: true,
+      },
+      domainId: _domainId,
+    );
+    final out = <WorkActionOption>[];
+    for (final m in models) {
+      if (m.modelType?.name != kTaskWorkLinkKey) continue;
+      out.add(
+        WorkActionOption(
+          id: m.id,
+          name: m.name,
+          startTime: m.attrDateTime(kTaskWorkStartTimeAttr),
+          endTime: m.attrDateTime(kTaskWorkEndTimeAttr),
+        ),
+      );
+    }
+    out.sort((a, b) {
+      final ad = a.startTime;
+      final bd = b.startTime;
+      if (ad == null && bd == null) return a.name.compareTo(b.name);
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
+    return out;
+  }
+
   List<RelationAttribute> _workRelationAttributes({
     required String workDescription,
     required double? timeSpentHours,
+    required DateTime? startTime,
+    required DateTime? endTime,
   }) {
     return [
       RelationAttribute(
@@ -231,33 +296,17 @@ class KgqlTaskRepository implements TaskRepository {
         value: timeSpentHours,
         delete: timeSpentHours == null,
       ),
-    ];
-  }
-
-  Future<void> _updateWorkActionTimes({
-    required int workActionId,
-    required DateTime? startTime,
-    required DateTime? endTime,
-  }) async {
-    await setKgqlModel(
-      _client,
-      SetModelRequest(
-        id: workActionId,
-        attributes: [
-          SetModelAttribute(
-            key: kTaskWorkStartTimeAttr,
-            value: startTime?.toIso8601String(),
-            delete: startTime == null,
-          ),
-          SetModelAttribute(
-            key: kTaskWorkEndTimeAttr,
-            value: endTime?.toIso8601String(),
-            delete: endTime == null,
-          ),
-        ],
+      RelationAttribute(
+        key: kTaskWorkStartTimeAttr,
+        value: startTime?.toIso8601String(),
+        delete: startTime == null,
       ),
-      domainId: _domainId,
-    );
+      RelationAttribute(
+        key: kTaskWorkEndTimeAttr,
+        value: endTime?.toIso8601String(),
+        delete: endTime == null,
+      ),
+    ];
   }
 
   @override
@@ -269,11 +318,6 @@ class KgqlTaskRepository implements TaskRepository {
     DateTime? startTime,
     DateTime? endTime,
   }) async {
-    await _updateWorkActionTimes(
-      workActionId: workActionId,
-      startTime: startTime,
-      endTime: endTime,
-    );
     await setKgqlModel(
       _client,
       SetModelRequest(
@@ -285,6 +329,8 @@ class KgqlTaskRepository implements TaskRepository {
             attributes: _workRelationAttributes(
               workDescription: workDescription,
               timeSpentHours: timeSpentHours,
+              startTime: startTime,
+              endTime: endTime,
             ),
           ),
         ],
@@ -303,11 +349,6 @@ class KgqlTaskRepository implements TaskRepository {
     DateTime? startTime,
     DateTime? endTime,
   }) async {
-    await _updateWorkActionTimes(
-      workActionId: workActionId,
-      startTime: startTime,
-      endTime: endTime,
-    );
     await setKgqlModel(
       _client,
       SetModelRequest(
@@ -318,6 +359,8 @@ class KgqlTaskRepository implements TaskRepository {
             attributes: _workRelationAttributes(
               workDescription: workDescription,
               timeSpentHours: timeSpentHours,
+              startTime: startTime,
+              endTime: endTime,
             ),
           ),
         ],

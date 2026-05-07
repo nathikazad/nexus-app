@@ -29,6 +29,8 @@ void main() {
             'relation_attributes': [
               {'key': 'work_description', 'value': 'Mapped relation attrs'},
               {'key': 'time_spent_hours', 'value': '1.5'},
+              {'key': 'start_time', 'value': '2026-04-22T10:00:00'},
+              {'key': 'end_time', 'value': '2026-04-22T11:30:00'},
             ],
           },
         ],
@@ -41,8 +43,49 @@ void main() {
     expect(task.workLinks.single.workActionName, 'Morning work block');
     expect(task.workLinks.single.startTime, DateTime(2026, 4, 22, 10));
     expect(task.workLinks.single.endTime, DateTime(2026, 4, 22, 11, 30));
+    expect(task.workLinks.single.relationStartTime, DateTime(2026, 4, 22, 10));
+    expect(
+      task.workLinks.single.relationEndTime,
+      DateTime(2026, 4, 22, 11, 30),
+    );
     expect(task.workLinks.single.workDescription, 'Mapped relation attrs');
     expect(task.workLinks.single.timeSpentHours, 1.5);
+  });
+
+  test('taskFromModel falls back to action times without relation attrs', () {
+    final task = taskFromModel(
+      Model.fromJson({
+        'id': 12,
+        'name': 'Fix sprint work links',
+        'model_type_id': 9,
+        'model_type': {'id': 9, 'name': 'Feature', 'type_kind': 'base'},
+        'Work': [
+          {
+            'id': 900,
+            'name': 'Morning work block',
+            'start_time': '2026-04-22T10:00:00',
+            'end_time': '2026-04-22T11:30:00',
+          },
+        ],
+        'relations': [
+          {
+            'relation_id': 77,
+            'model_id': 900,
+            'model_type': 'Work',
+            'name': 'Morning work block',
+            'relation_attributes': [
+              {'key': 'work_description', 'value': 'Mapped relation attrs'},
+              {'key': 'time_spent_hours', 'value': '1.5'},
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(task.workLinks.single.startTime, DateTime(2026, 4, 22, 10));
+    expect(task.workLinks.single.endTime, DateTime(2026, 4, 22, 11, 30));
+    expect(task.workLinks.single.relationStartTime, isNull);
+    expect(task.workLinks.single.relationEndTime, isNull);
   });
 
   test('task fetch struct requests relation attributes', () {

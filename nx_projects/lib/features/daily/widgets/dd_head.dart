@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
-import 'package:nx_projects/data/fake/seed_data.dart';
 
 /// Sticky day header (`reference/desktop` `.dd-head`).
 class DdHead extends StatelessWidget {
@@ -22,7 +21,7 @@ class DdHead extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ymd = formatYmd(dailyDate);
-    final cmp = ymd.compareTo(kReferenceTodayYmd);
+    final cmp = ymd.compareTo(todayYmd());
     final pill = cmp == 0
         ? _PillKind.today
         : cmp < 0

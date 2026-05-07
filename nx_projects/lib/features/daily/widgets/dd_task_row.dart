@@ -9,9 +9,10 @@ import 'package:nx_projects/domain/task/task_status.dart';
 
 /// One task card in desktop daily left column (`reference/desktop` `.dd-task` simplified).
 class DdTaskRow extends StatelessWidget {
-  DdTaskRow({super.key, required this.task, this.onMenu});
+  DdTaskRow({super.key, required this.task, this.onTap, this.onMenu});
 
   final Task task;
+  final VoidCallback? onTap;
   final VoidCallback? onMenu;
 
   @override
@@ -30,7 +31,9 @@ class DdTaskRow extends StatelessWidget {
       color: context.colors.panel,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        onTap: onMenu,
+        onTap: onTap,
+        onSecondaryTap: onMenu,
+        onLongPress: onMenu,
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),

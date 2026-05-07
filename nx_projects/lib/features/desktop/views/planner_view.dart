@@ -11,8 +11,6 @@ import 'package:nx_projects/features/desktop/widgets/sprint_cart.dart';
 import 'package:nx_projects/features/filters/filter_state_providers.dart';
 import 'package:nx_projects/features/priority/priority_screen.dart';
 import 'package:nx_projects/features/projects/projects_screen.dart';
-import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
-import 'package:nx_projects/features/desktop/widgets/desktop_drawer_layer.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';
 import 'package:nx_projects/features/shared/widgets/context_sheet.dart';
 
@@ -34,41 +32,33 @@ class PlannerView extends ConsumerWidget {
       ref.read(desktopNavigationControllerProvider).showSprint();
     }
 
-    final drawerOpen =
-        ref.watch(desktopTaskDrawerProvider) is! DesktopTaskDrawerClosed;
-
-    return Stack(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _PlannerLeftPane(
-                onOpenTaskMenu: _openTaskMenu,
-                onNewProject: () {
-                  ref.read(desktopDrawerControllerProvider).newProject();
-                },
-                onNewSprint: () {
-                  ref.read(desktopDrawerControllerProvider).newSprint();
-                },
-                onNewTask: () {
-                  ref
-                      .read(desktopDrawerControllerProvider)
-                      .newTask(
-                        defaultProject: ref.read(selectedProjectIdProvider),
-                        defaultSub: ref.read(selectedSubProjectIdProvider),
-                      );
-                },
-              ),
-            ),
-            SprintCart(
-              border: SprintCartBorder.left,
-              surface: SprintCartSurface.planner,
-              onFooter: goSprint,
-            ),
-          ],
+        Expanded(
+          child: _PlannerLeftPane(
+            onOpenTaskMenu: _openTaskMenu,
+            onNewProject: () {
+              ref.read(desktopDrawerControllerProvider).newProject();
+            },
+            onNewSprint: () {
+              ref.read(desktopDrawerControllerProvider).newSprint();
+            },
+            onNewTask: () {
+              ref
+                  .read(desktopDrawerControllerProvider)
+                  .newTask(
+                    defaultProject: ref.read(selectedProjectIdProvider),
+                    defaultSub: ref.read(selectedSubProjectIdProvider),
+                  );
+            },
+          ),
         ),
-        if (drawerOpen) const Positioned.fill(child: DesktopDrawerLayer()),
+        SprintCart(
+          border: SprintCartBorder.left,
+          surface: SprintCartSurface.planner,
+          onFooter: goSprint,
+        ),
       ],
     );
   }

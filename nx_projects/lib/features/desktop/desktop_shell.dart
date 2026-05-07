@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/features/desktop/desktop_navigation_controller.dart';
+import 'package:nx_projects/features/desktop/desktop_task_drawer_state.dart';
+import 'package:nx_projects/features/desktop/widgets/desktop_drawer_layer.dart';
 import 'package:nx_projects/features/desktop/widgets/desktop_topbar.dart';
 import 'package:nx_projects/features/desktop/views/planner_view.dart';
 import 'package:nx_projects/features/desktop/views/sprint_view.dart';
@@ -17,6 +19,8 @@ class DesktopShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final view = ref.watch(desktopViewIndexProvider);
+    final drawerOpen =
+        ref.watch(desktopTaskDrawerProvider) is! DesktopTaskDrawerClosed;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -37,10 +41,16 @@ class DesktopShell extends ConsumerWidget {
                   .showView(DesktopView.values[i]),
             ),
             Expanded(
-              child: IndexedStack(
-                index: view,
-                sizing: StackFit.expand,
-                children: [PlannerView(), DesktopSprintView(), TodayView()],
+              child: Stack(
+                children: [
+                  IndexedStack(
+                    index: view,
+                    sizing: StackFit.expand,
+                    children: [PlannerView(), DesktopSprintView(), TodayView()],
+                  ),
+                  if (drawerOpen)
+                    const Positioned.fill(child: DesktopDrawerLayer()),
+                ],
               ),
             ),
           ],

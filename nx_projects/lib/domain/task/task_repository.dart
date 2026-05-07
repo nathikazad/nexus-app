@@ -6,6 +6,7 @@ abstract class TaskRepository {
   Future<Task> upsert(Task task);
   Future<void> delete(int id);
   Future<List<WorkActionOption>> listWorkActions();
+  Future<List<WorkActionOption>> listWorkActionsForDay(DateTime day);
   Future<void> linkWorkAction({
     required int taskId,
     required int workActionId,

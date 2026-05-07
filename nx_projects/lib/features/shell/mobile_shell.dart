@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/layout/layout.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
-import 'package:nx_projects/data/fake/seed_data.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
@@ -217,7 +216,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                       _DailyStrip(
                         dow: longDowLabel(dailyDate),
                         line: fullDateLine(dailyDate),
-                        isToday: dailyYmd == kReferenceTodayYmd,
+                        isToday: dailyYmd == todayYmd(),
                         onPrev: () {
                           final d = dailyDate.subtract(Duration(days: 1));
                           ref
@@ -323,7 +322,10 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                                 ProjectsScreen(onOpenTaskMenu: _openTaskMenu),
                                 PriorityScreen(onOpenTaskMenu: _openTaskMenu),
                                 SprintScreen(onOpenTaskMenu: _openTaskMenu),
-                                DailyScreen(onOpenTaskMenu: _openTaskMenu),
+                                DailyScreen(
+                                  onOpenTaskMenu: _openTaskMenu,
+                                  onOpenTask: _openTaskMenu,
+                                ),
                               ],
                             ),
                           ),

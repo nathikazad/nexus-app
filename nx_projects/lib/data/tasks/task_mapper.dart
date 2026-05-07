@@ -119,6 +119,12 @@ double? _doubleFromValue(dynamic value) {
   return double.tryParse(value.toString());
 }
 
+DateTime? _dateTimeFromValue(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  return DateTime.tryParse(value.toString());
+}
+
 List<TaskWorkLink> _workLinksFromModel(Model m) {
   final list = m.relationsList;
   if (list == null || list.isEmpty) return const [];
@@ -136,13 +142,22 @@ List<TaskWorkLink> _workLinksFromModel(Model m) {
     if (r.modelType != kTaskWorkLinkKey) continue;
     final attrs = r.relationAttributes ?? const <String, dynamic>{};
     final work = nestedById[r.modelId];
+    final relationStart = _dateTimeFromValue(attrs[kTaskWorkStartTimeAttr]);
+    final relationEnd = _dateTimeFromValue(attrs[kTaskWorkEndTimeAttr]);
+    final hasRelationTime = relationStart != null || relationEnd != null;
     out.add(
       TaskWorkLink(
         relationId: r.relationId,
         workActionId: r.modelId,
         workActionName: work?.name ?? r.name ?? 'Work #${r.modelId}',
-        startTime: work?.attrDateTime(kTaskWorkStartTimeAttr),
-        endTime: work?.attrDateTime(kTaskWorkEndTimeAttr),
+        startTime: hasRelationTime
+            ? relationStart
+            : work?.attrDateTime(kTaskWorkStartTimeAttr),
+        endTime: hasRelationTime
+            ? relationEnd
+            : work?.attrDateTime(kTaskWorkEndTimeAttr),
+        relationStartTime: relationStart,
+        relationEndTime: relationEnd,
         workDescription: attrs[kTaskWorkDescriptionAttr]?.toString() ?? '',
         timeSpentHours: _doubleFromValue(attrs[kTaskWorkHoursAttr]),
       ),

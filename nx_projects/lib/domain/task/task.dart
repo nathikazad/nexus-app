@@ -11,6 +11,8 @@ class TaskWorkLink {
     required this.workActionName,
     this.startTime,
     this.endTime,
+    this.relationStartTime,
+    this.relationEndTime,
     this.workDescription = '',
     this.timeSpentHours,
   });
@@ -18,8 +20,14 @@ class TaskWorkLink {
   final int relationId;
   final int workActionId;
   final String workActionName;
+
+  /// Display time: relation override when present, otherwise the linked Work action time.
   final DateTime? startTime;
   final DateTime? endTime;
+
+  /// Editable Task -> Work relation attributes. Null means the relation has no override.
+  final DateTime? relationStartTime;
+  final DateTime? relationEndTime;
   final String workDescription;
   final double? timeSpentHours;
 }

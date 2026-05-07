@@ -557,9 +557,11 @@ class _WorkLinkDialogState extends ConsumerState<_WorkLinkDialog> {
           : _fmtHours(link!.timeSpentHours!),
     );
     _startTime = TextEditingController(
-      text: _dateTimeInputLabel(link?.startTime),
+      text: _dateTimeInputLabel(link?.relationStartTime),
     );
-    _endTime = TextEditingController(text: _dateTimeInputLabel(link?.endTime));
+    _endTime = TextEditingController(
+      text: _dateTimeInputLabel(link?.relationEndTime),
+    );
   }
 
   @override
@@ -665,21 +667,8 @@ class _WorkLinkDialogState extends ConsumerState<_WorkLinkDialog> {
                     onChanged: _saving
                         ? null
                         : (value) {
-                            WorkActionOption? selected;
-                            for (final option in options) {
-                              if (option.id == value) {
-                                selected = option;
-                                break;
-                              }
-                            }
                             setState(() {
                               _workActionId = value;
-                              _startTime.text = _dateTimeInputLabel(
-                                selected?.startTime,
-                              );
-                              _endTime.text = _dateTimeInputLabel(
-                                selected?.endTime,
-                              );
                             });
                           },
                   );

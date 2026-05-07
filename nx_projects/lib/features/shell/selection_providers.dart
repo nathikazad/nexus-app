@@ -1,5 +1,5 @@
+import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/domain/task/task_bucket.dart';
-import 'package:nx_projects/data/fake/seed_data.dart';
 import 'package:riverpod/riverpod.dart';
 
 /// Bottom tab index: 0 Projects, 1 Priority, 2 Sprint, 3 Daily
@@ -58,7 +58,7 @@ final sprintIndexProvider = NotifierProvider<SprintIndex, int>(SprintIndex.new);
 
 class DailyDate extends Notifier<String> {
   @override
-  String build() => kReferenceTodayYmd;
+  String build() => todayYmd();
 
   void set(String v) => state = v;
 }

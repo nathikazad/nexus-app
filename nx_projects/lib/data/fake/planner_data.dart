@@ -221,7 +221,25 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<List<WorkActionOption>> listWorkActions() async => _workActions;
+  Future<List<WorkActionOption>> listWorkActions() async {
+    final since = DateTime.now().subtract(const Duration(days: 7));
+    return _workActions.where((action) {
+      final start = action.startTime;
+      return start != null && !start.isBefore(since);
+    }).toList();
+  }
+
+  @override
+  Future<List<WorkActionOption>> listWorkActionsForDay(DateTime day) async {
+    final dayStart = DateTime(day.year, day.month, day.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    return _workActions.where((action) {
+      final start = action.startTime;
+      return start != null &&
+          !start.isBefore(dayStart) &&
+          start.isBefore(dayEnd);
+    }).toList();
+  }
 
   @override
   Future<void> linkWorkAction({
@@ -251,6 +269,8 @@ class FakeTaskRepository implements TaskRepository {
       workActionName: action.name,
       startTime: startTime ?? action.startTime,
       endTime: endTime ?? action.endTime,
+      relationStartTime: startTime,
+      relationEndTime: endTime,
       workDescription: workDescription,
       timeSpentHours: timeSpentHours,
     );
@@ -272,19 +292,45 @@ class FakeTaskRepository implements TaskRepository {
     final links = [
       for (final link in task.workLinks)
         if (link.relationId == relationId)
-          TaskWorkLink(
-            relationId: link.relationId,
-            workActionId: link.workActionId,
-            workActionName: link.workActionName,
-            startTime: startTime,
-            endTime: endTime,
+          _updatedFakeWorkLink(
+            link: link,
             workDescription: workDescription,
             timeSpentHours: timeSpentHours,
+            startTime: startTime,
+            endTime: endTime,
           )
         else
           link,
     ];
     _planner.upsertTask(task.copyWith(workLinks: links));
+  }
+
+  TaskWorkLink _updatedFakeWorkLink({
+    required TaskWorkLink link,
+    required String workDescription,
+    required double? timeSpentHours,
+    required DateTime? startTime,
+    required DateTime? endTime,
+  }) {
+    WorkActionOption? action;
+    for (final candidate in _workActions) {
+      if (candidate.id == link.workActionId) {
+        action = candidate;
+        break;
+      }
+    }
+    final hasRelationTime = startTime != null || endTime != null;
+    return TaskWorkLink(
+      relationId: link.relationId,
+      workActionId: link.workActionId,
+      workActionName: link.workActionName,
+      startTime: hasRelationTime ? startTime : action?.startTime,
+      endTime: hasRelationTime ? endTime : action?.endTime,
+      relationStartTime: startTime,
+      relationEndTime: endTime,
+      workDescription: workDescription,
+      timeSpentHours: timeSpentHours,
+    );
   }
 
   @override

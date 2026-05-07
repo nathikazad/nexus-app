@@ -25,7 +25,7 @@ class DesktopDayCard extends ConsumerWidget {
 
   final SprintDaySlice slice;
   final Sprint sprint;
-  final GlobalKey Function(int taskId) taskRowKeyFor;
+  final GlobalKey Function(int taskId, String occurrenceId) taskRowKeyFor;
   final void Function(Task t) onOpenTaskMenu;
   final void Function(Task t) onOpenTask;
 
@@ -161,7 +161,7 @@ class DesktopDayCard extends ConsumerWidget {
                         Padding(
                           padding: EdgeInsets.only(bottom: 4),
                           child: SizedBox(
-                            key: taskRowKeyFor(group.task.id),
+                            key: taskRowKeyFor(group.task.id, slice.ymd),
                             child: DayItemRow(
                               task: group.task,
                               actualHours: group.actualHours,

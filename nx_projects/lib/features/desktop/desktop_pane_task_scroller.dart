@@ -4,9 +4,19 @@ import 'package:flutter/rendering.dart';
 class DesktopPaneTaskScroller {
   final ScrollController controller = ScrollController();
   final Map<int, GlobalKey> _rowKeys = <int, GlobalKey>{};
+  final Map<String, GlobalKey> _occurrenceRowKeys = <String, GlobalKey>{};
 
   GlobalKey rowKeyFor(int taskId) {
     return _rowKeys.putIfAbsent(taskId, () => GlobalKey());
+  }
+
+  GlobalKey rowKeyForOccurrence(int taskId, String occurrenceId) {
+    final key = _occurrenceRowKeys.putIfAbsent(
+      '$taskId:$occurrenceId',
+      () => GlobalKey(),
+    );
+    _rowKeys.putIfAbsent(taskId, () => key);
+    return key;
   }
 
   void scrollToTask(int taskId, {required bool Function() isMounted}) {

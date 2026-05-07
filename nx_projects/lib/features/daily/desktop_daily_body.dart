@@ -15,9 +15,14 @@ import 'package:nx_projects/features/shell/selection_providers.dart';
 
 /// Desktop two-column day page + journal (`reference/desktop` `view-today` layout, simplified).
 class DesktopDailyBody extends ConsumerWidget {
-  DesktopDailyBody({super.key, required this.onOpenTaskMenu});
+  DesktopDailyBody({
+    super.key,
+    required this.onOpenTaskMenu,
+    required this.onOpenTask,
+  });
 
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
+  final void Function(BuildContext, WidgetRef, Task) onOpenTask;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,6 +30,7 @@ class DesktopDailyBody extends ConsumerWidget {
     final dailyDate = parseLocalDate(ymd);
     final tasks = ref.watch(dailyTasksProvider);
     final stats = ref.watch(dailyHeaderStatsProvider);
+    final actions = ref.watch(dailyWorkActionsAsyncProvider);
 
     return CustomScrollView(
       slivers: [
@@ -62,10 +68,20 @@ class DesktopDailyBody extends ConsumerWidget {
                       child: _TasksColumn(
                         tasks: tasks,
                         onOpenTaskMenu: onOpenTaskMenu,
+                        onOpenTask: onOpenTask,
                       ),
                     ),
                     SizedBox(width: 24),
-                    Expanded(flex: 40, child: ActionsZonePlaceholder()),
+                    Expanded(
+                      flex: 40,
+                      child: actions.maybeWhen(
+                        data: (items) => ActionsZone(
+                          actions: items,
+                          onOpenTask: (t) => onOpenTask(context, ref, t),
+                        ),
+                        orElse: () => ActionsZone(actions: const []),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -80,10 +96,15 @@ class DesktopDailyBody extends ConsumerWidget {
 }
 
 class _TasksColumn extends ConsumerWidget {
-  _TasksColumn({required this.tasks, required this.onOpenTaskMenu});
+  _TasksColumn({
+    required this.tasks,
+    required this.onOpenTaskMenu,
+    required this.onOpenTask,
+  });
 
   final List<Task> tasks;
   final void Function(BuildContext, WidgetRef, Task) onOpenTaskMenu;
+  final void Function(BuildContext, WidgetRef, Task) onOpenTask;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -128,6 +149,7 @@ class _TasksColumn extends ConsumerWidget {
               padding: EdgeInsets.only(bottom: 10),
               child: DdTaskRow(
                 task: t,
+                onTap: () => onOpenTask(context, ref, t),
                 onMenu: () => onOpenTaskMenu(context, ref, t),
               ),
             ),
