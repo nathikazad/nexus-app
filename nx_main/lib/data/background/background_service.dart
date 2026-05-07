@@ -28,13 +28,13 @@ String _httpBaseFromSocketUrl(String socketUrl) {
 }
 
 int _opusBytesFromNrfAudioPayload(Uint8List data) {
-  if (data.length >= 5 && data[0] == 0x01 && data[1] == 0x00) {
-    final declared = data[3] | (data[4] << 8);
-    final available = data.length - 5;
+  if (data.length >= 6 && data[0] == 0x01 && data[1] == 0x00) {
+    final declared = data[4] | (data[5] << 8);
+    final available = data.length - 6;
     if (declared >= 0 && declared <= available) return declared;
   }
   if (data.length >= 4) {
-    final declared = data[0] | (data[1] << 8);
+    final declared = data[2] | (data[3] << 8);
     final available = data.length - 4;
     if (declared >= 0 && declared <= available) return declared;
   }
@@ -42,11 +42,40 @@ int _opusBytesFromNrfAudioPayload(Uint8List data) {
 }
 
 int? _turnIdFromNrfAudioPayload(Uint8List data) {
-  if (data.length < 4) return null;
-  final declared = data[0] | (data[1] << 8);
-  if (declared + 4 != data.length) return null;
-  final meta = data[2] | (data[3] << 8);
-  return meta & 0x07;
+  if (data.length >= 6 && data[0] == 0x01 && data[1] == 0x00) {
+    final declared = data[4] | (data[5] << 8);
+    if (declared + 6 != data.length) return null;
+    final meta = data[2] | (data[3] << 8);
+    return (meta >> 8) & 0x0F;
+  }
+  if (data.length >= 4) {
+    final declared = data[2] | (data[3] << 8);
+    if (declared + 4 != data.length) return null;
+    final meta = data[0] | (data[1] << 8);
+    return (meta >> 8) & 0x0F;
+  }
+  return null;
+}
+
+int? _nonceFromNrfAudioPayload(Uint8List data) {
+  if (data.length >= 6 && data[0] == 0x01 && data[1] == 0x00) {
+    final declared = data[4] | (data[5] << 8);
+    if (declared + 6 != data.length) return null;
+    final meta = data[2] | (data[3] << 8);
+    return (meta >> 12) & 0x0F;
+  }
+  if (data.length >= 4) {
+    final declared = data[2] | (data[3] << 8);
+    if (declared + 4 != data.length) return null;
+    final meta = data[0] | (data[1] << 8);
+    return (meta >> 12) & 0x0F;
+  }
+  return null;
+}
+
+String? _turnkey(int? nonce, int? turnId) {
+  if (nonce == null || turnId == null) return null;
+  return '$nonce:$turnId';
 }
 
 class BleBackgroundService {
@@ -77,6 +106,7 @@ class BleBackgroundService {
     int audioSendPacketCount = 0;
     int audioSendOpusByteCount = 0;
     int? audioSendTurnId;
+    int? audioSendNonce;
 
     String utcNow() => DateTime.now().toUtc().toIso8601String();
 
@@ -185,26 +215,28 @@ class BleBackgroundService {
 
     bleClient.onAudioPacketReceived = (data) {
       packetCount++;
-      // Byte 2 is 1-byte packet_index from ESP32 (format: [0x01][0x00][packet_index][size:2][opus])
-      final packetIndex = data.length >= 3 ? data[2] : 0;
+      // ESP32 payload format: [0x01][0x00][meta:2][size:2][opus].
+      final packetIndex = data.length >= 4 ? data[2] : 0;
       service.invoke('ble.packet', {
         'count': packetCount,
         'packet_index': packetIndex,
         'size': data.length,
       });
 
-      final isAudioEof = data.length == 2 && data[0] == 0xFC && data[1] == 0xFF;
+      final isAudioEof = data.length >= 2 && data[0] == 0xFC && data[1] == 0xFF;
       if (!audioSendActive) {
         audioSendActive = true;
         audioSendPacketCount = 0;
         audioSendOpusByteCount = 0;
         audioSendTurnId = null;
+        audioSendNonce = null;
         debugPrint("[BLE BG] ${utcNow()} UTC nrf opus reception started");
       }
       if (!isAudioEof) {
         audioSendPacketCount++;
         audioSendOpusByteCount += _opusBytesFromNrfAudioPayload(data);
         audioSendTurnId ??= _turnIdFromNrfAudioPayload(data);
+        audioSendNonce ??= _nonceFromNrfAudioPayload(data);
       }
 
       // Forward BLE payload with 4B index (consistent with text/image/EOF)
@@ -213,8 +245,11 @@ class BleBackgroundService {
       if (isAudioEof) {
         final turnText =
             audioSendTurnId == null ? "" : ", turn_id=$audioSendTurnId";
+        final nonceText = audioSendNonce == null ? "" : ", nonce=$audioSendNonce";
+        final turnkey = _turnkey(audioSendNonce, audioSendTurnId);
+        final turnkeyText = turnkey == null ? "" : ", turnkey=$turnkey";
         final message =
-            'nrf opus reception finished $audioSendPacketCount packets, $audioSendOpusByteCount bytes$turnText';
+            'nrf opus reception finished $audioSendPacketCount packets, $audioSendOpusByteCount bytes$turnText$nonceText$turnkeyText';
         debugPrint(
           "[BLE BG] ${utcNow()} UTC $message",
         );
@@ -226,6 +261,8 @@ class BleBackgroundService {
             'opus_packets': audioSendPacketCount,
             'opus_bytes': audioSendOpusByteCount,
             if (audioSendTurnId != null) 'turn_id': audioSendTurnId,
+            if (audioSendNonce != null) 'nonce': audioSendNonce,
+            if (turnkey != null) 'turnkey': turnkey,
           },
         ));
         audioSendActive = false;
@@ -279,12 +316,16 @@ class BleBackgroundService {
       final packets = summary['opus_packets'];
       final bytes = summary['opus_bytes'];
       final turnId = summary['turn_id'];
+      final nonce = summary['nonce'];
+      final turnkey = summary['turnkey'];
       final turnText = turnId == null ? '' : ', turn_id=$turnId';
+      final nonceText = nonce == null ? '' : ', nonce=$nonce';
+      final turnkeyText = turnkey == null ? '' : ', turnkey=$turnkey';
       unawaited(uploadAppLog(
         eventName: 'websocket_opus_reception_summary',
         category: 'audio',
         message:
-            'websocket opus reception finished $packets packets, $bytes bytes$turnText',
+            'websocket opus reception finished $packets packets, $bytes bytes$turnText$nonceText$turnkeyText',
         payload: summary,
       ));
     };
