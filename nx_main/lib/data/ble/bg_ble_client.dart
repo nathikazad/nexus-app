@@ -385,7 +385,13 @@ class BleClient {
 
       if (_rtcCharacteristic != null) {
         try {
-          final rtcTime = RTCTime.fromDateTime(DateTime.now());
+          final now = DateTime.now();
+          final offset = now.timeZoneOffset;
+          final rtcTime = RTCTime.fromDateTime(
+            now.toUtc(),
+            timezoneHours: offset.inHours,
+            timezoneMinutes: offset.inMinutes.remainder(60).abs(),
+          );
           await _rtcCharacteristic!
               .write(rtcTime.toBytes(), withoutResponse: false);
         } catch (e) {

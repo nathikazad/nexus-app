@@ -14,6 +14,7 @@ import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.dart';
 import 'package:nexus_voice_assistant/domain/ble/ble_connection_state.dart';
+import 'package:http/http.dart' as http;
 
 String _httpBaseFromSocketUrl(String socketUrl) {
   final uri = Uri.parse(socketUrl);
@@ -24,6 +25,28 @@ String _httpBaseFromSocketUrl(String socketUrl) {
     host: uri.host,
     port: port,
   ).toString().replaceAll(RegExp(r'/+$'), '');
+}
+
+int _opusBytesFromNrfAudioPayload(Uint8List data) {
+  if (data.length >= 5 && data[0] == 0x01 && data[1] == 0x00) {
+    final declared = data[3] | (data[4] << 8);
+    final available = data.length - 5;
+    if (declared >= 0 && declared <= available) return declared;
+  }
+  if (data.length >= 4) {
+    final declared = data[0] | (data[1] << 8);
+    final available = data.length - 4;
+    if (declared >= 0 && declared <= available) return declared;
+  }
+  return data.length;
+}
+
+int? _turnIdFromNrfAudioPayload(Uint8List data) {
+  if (data.length < 4) return null;
+  final declared = data[0] | (data[1] << 8);
+  if (declared + 4 != data.length) return null;
+  final meta = data[2] | (data[3] << 8);
+  return meta & 0x07;
 }
 
 class BleBackgroundService {
@@ -39,6 +62,8 @@ class BleBackgroundService {
     final bleClient = BleClient();
     final socketClient = SocketClient();
     TelemetryUploadManager? telemetryUploadManager;
+    String? appLogHttpBaseUrl;
+    Map<String, String> appLogHeaders = {};
 
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -50,9 +75,108 @@ class BleBackgroundService {
     int audioPacketCount = 0;
     bool audioSendActive = false;
     int audioSendPacketCount = 0;
-    int audioSendByteCount = 0;
+    int audioSendOpusByteCount = 0;
+    int? audioSendTurnId;
 
     String utcNow() => DateTime.now().toUtc().toIso8601String();
+
+    Future<void> uploadAppLog({
+      required String eventName,
+      required String category,
+      required String message,
+      required Map<String, dynamic> payload,
+    }) async {
+      final base = appLogHttpBaseUrl;
+      if (base == null || base.isEmpty) return;
+      final uri = Uri.parse(
+        '${base.replaceAll(RegExp(r'/+$'), '')}/telemetry/firmware/upload',
+      );
+      final now = DateTime.now().toUtc();
+      final row = {
+        'time': now.toIso8601String(),
+        'origin_kind': 'app',
+        'origin': 'nx_main',
+        'severity': 'info',
+        'event_name': eventName,
+        'category': category,
+        'message': message,
+        'payload': payload,
+      };
+      try {
+        final response = await http
+            .post(
+              uri,
+              headers: {
+                ...appLogHeaders,
+                'content-type': 'application/json',
+              },
+              body: jsonEncode({
+                'transfer_id': now.microsecondsSinceEpoch & 0x7fffffff,
+                'filename':
+                    'nx_main_${now.millisecondsSinceEpoch.toString()}.jsonl',
+                'origin': 'app',
+                'format': 'jsonl',
+                'content': jsonEncode(row),
+              }),
+            )
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          debugPrint(
+            '[BLE BG] app log upload failed: ${response.statusCode} ${response.body}',
+          );
+        }
+      } catch (e) {
+        debugPrint('[BLE BG] app log upload error: $e');
+      }
+    }
+
+    Future<void> printServerClockDrift(String httpBaseUrl) async {
+      final base = httpBaseUrl.replaceAll(RegExp(r'/+$'), '');
+      final uri = Uri.parse('$base/time');
+      final localSend = DateTime.now().toUtc();
+      final sw = Stopwatch()..start();
+      try {
+        final response = await http
+            .get(uri, headers: appLogHeaders)
+            .timeout(const Duration(seconds: 5));
+        final localReceive = DateTime.now().toUtc();
+        sw.stop();
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          debugPrint(
+            '[Clock Sync] GET /time failed: ${response.statusCode} ${response.body}',
+          );
+          return;
+        }
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map<String, dynamic>) {
+          debugPrint('[Clock Sync] GET /time returned invalid JSON');
+          return;
+        }
+        final serverUnixUs = decoded['unix_us'];
+        if (serverUnixUs is! int) {
+          debugPrint('[Clock Sync] GET /time missing unix_us: $decoded');
+          return;
+        }
+        final rttUs = localReceive.difference(localSend).inMicroseconds;
+        final estimatedServerAtReceive = DateTime.fromMicrosecondsSinceEpoch(
+          serverUnixUs + (rttUs ~/ 2),
+          isUtc: true,
+        );
+        final offsetMs =
+            estimatedServerAtReceive.difference(localReceive).inMicroseconds /
+                1000.0;
+        debugPrint(
+          '[Clock Sync] local_send=${localSend.toIso8601String()} '
+          'server=${decoded['time']} '
+          'local_receive=${localReceive.toIso8601String()} '
+          'rtt_ms=${(sw.elapsedMicroseconds / 1000.0).toStringAsFixed(3)} '
+          'estimated_offset_ms=${offsetMs.toStringAsFixed(3)}',
+        );
+      } catch (e) {
+        sw.stop();
+        debugPrint('[Clock Sync] GET /time error: $e');
+      }
+    }
 
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
@@ -73,21 +197,37 @@ class BleBackgroundService {
       if (!audioSendActive) {
         audioSendActive = true;
         audioSendPacketCount = 0;
-        audioSendByteCount = 0;
-        debugPrint("[BLE BG] ${utcNow()} UTC audio packets sending started");
+        audioSendOpusByteCount = 0;
+        audioSendTurnId = null;
+        debugPrint("[BLE BG] ${utcNow()} UTC nrf opus reception started");
       }
-      audioSendPacketCount++;
-      // Count WebSocket wire bytes: 6-byte OPUS_AUDIO_PACKET wrapper + BLE payload.
-      audioSendByteCount += 6 + data.length;
+      if (!isAudioEof) {
+        audioSendPacketCount++;
+        audioSendOpusByteCount += _opusBytesFromNrfAudioPayload(data);
+        audioSendTurnId ??= _turnIdFromNrfAudioPayload(data);
+      }
 
       // Forward BLE payload with 4B index (consistent with text/image/EOF)
       audioPacketCount++;
       socketClient.sendPacket(data, index: audioPacketCount);
       if (isAudioEof) {
+        final turnText =
+            audioSendTurnId == null ? "" : ", turn_id=$audioSendTurnId";
+        final message =
+            'nrf opus reception finished $audioSendPacketCount packets, $audioSendOpusByteCount bytes$turnText';
         debugPrint(
-          "[BLE BG] ${utcNow()} UTC audio packets sending finished "
-          "$audioSendPacketCount packets, $audioSendByteCount bytes",
+          "[BLE BG] ${utcNow()} UTC $message",
         );
+        unawaited(uploadAppLog(
+          eventName: 'nrf_opus_reception_summary',
+          category: 'audio',
+          message: message,
+          payload: {
+            'opus_packets': audioSendPacketCount,
+            'opus_bytes': audioSendOpusByteCount,
+            if (audioSendTurnId != null) 'turn_id': audioSendTurnId,
+          },
+        ));
         audioSendActive = false;
       }
       // Send ACK back to the device
@@ -135,6 +275,19 @@ class BleBackgroundService {
 
     // Forward packets from server to BLE
     socketClient.onPacketFromServer = (packet) => bleClient.sendAudio(packet);
+    socketClient.onAudioReceptionSummary = (summary) {
+      final packets = summary['opus_packets'];
+      final bytes = summary['opus_bytes'];
+      final turnId = summary['turn_id'];
+      final turnText = turnId == null ? '' : ', turn_id=$turnId';
+      unawaited(uploadAppLog(
+        eventName: 'websocket_opus_reception_summary',
+        category: 'audio',
+        message:
+            'websocket opus reception finished $packets packets, $bytes bytes$turnText',
+        payload: summary,
+      ));
+    };
 
     // Handle device requests (e.g. take_photo, camera record)
     socketClient.onDeviceRequest = (requestId, action, params) async {
@@ -277,6 +430,12 @@ class BleBackgroundService {
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
           ? telemetryHttpBaseUrl!
           : _httpBaseFromSocketUrl(url);
+      appLogHttpBaseUrl = uploadBase;
+      appLogHeaders = {
+        'X-User-Id': userId,
+        if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
+      };
+      unawaited(printServerClockDrift(uploadBase));
       telemetryUploadManager = TelemetryUploadManager(
         httpBaseUrl: uploadBase,
         headers: {

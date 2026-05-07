@@ -24,7 +24,8 @@ class SocketClient {
   int _reconnectAttempts = 0;
   bool _audioReceiveActive = false;
   int _audioReceivePacketCount = 0;
-  int _audioReceiveByteCount = 0;
+  int _audioReceiveOpusByteCount = 0;
+  int? _audioReceiveTurnId;
   static const int maxReconnectAttempts = 5;
   static const Duration reconnectDelay = Duration(seconds: 3);
 
@@ -35,6 +36,7 @@ class SocketClient {
 
   // Callback to forward packets from server to BLE
   Future<void> Function(Uint8List)? onPacketFromServer;
+  void Function(Map<String, dynamic> summary)? onAudioReceptionSummary;
 
   /// Callback to handle device requests (e.g. take_photo). Returns response payload or null.
   Future<String?> Function(
@@ -214,8 +216,6 @@ class SocketClient {
       return packet;
     }
 
-    _recordAudioReception(packet.length);
-
     final streamIndex = byteData.getUint32(2, Endian.little);
     final packetIndex = packet[8];
     final opusSize = byteData.getUint16(9, Endian.little);
@@ -227,6 +227,7 @@ class SocketClient {
       );
       return packet;
     }
+    _recordAudioReception(opusBytes: opusSize, turnId: streamIndex & 0x07);
 
     final meta = (streamIndex & 0x07) | ((packetIndex & 0x1FFF) << 3);
     final blePayload = Uint8List(4 + opusSize);
@@ -239,29 +240,36 @@ class SocketClient {
 
   String _utcNow() => DateTime.now().toUtc().toIso8601String();
 
-  void _recordAudioReception(int packetBytes) {
+  void _recordAudioReception({required int opusBytes, int? turnId}) {
     if (!_audioReceiveActive) {
       _audioReceiveActive = true;
       _audioReceivePacketCount = 0;
-      _audioReceiveByteCount = 0;
-      debugPrint("[BLE BG] ${_utcNow()} UTC audio packets reception started");
+      _audioReceiveOpusByteCount = 0;
+      _audioReceiveTurnId = null;
+      debugPrint("[BLE BG] ${_utcNow()} UTC websocket opus reception started");
     }
     _audioReceivePacketCount++;
-    _audioReceiveByteCount += packetBytes;
+    _audioReceiveOpusByteCount += opusBytes;
+    _audioReceiveTurnId ??= turnId;
   }
 
   void _finishAudioReception() {
     if (!_audioReceiveActive) return;
-    // Count WebSocket wire EOF packet: [header_type 2B][stream_index 4B].
-    _audioReceivePacketCount++;
-    _audioReceiveByteCount += 6;
+    final turnText =
+        _audioReceiveTurnId == null ? "" : ", turn_id=$_audioReceiveTurnId";
     debugPrint(
-      "[BLE BG] ${_utcNow()} UTC audio packets reception finished "
-      "$_audioReceivePacketCount packets, $_audioReceiveByteCount bytes",
+      "[BLE BG] ${_utcNow()} UTC websocket opus reception finished "
+      "$_audioReceivePacketCount packets, $_audioReceiveOpusByteCount bytes$turnText",
     );
+    onAudioReceptionSummary?.call({
+      'opus_packets': _audioReceivePacketCount,
+      'opus_bytes': _audioReceiveOpusByteCount,
+      if (_audioReceiveTurnId != null) 'turn_id': _audioReceiveTurnId,
+    });
     _audioReceiveActive = false;
     _audioReceivePacketCount = 0;
-    _audioReceiveByteCount = 0;
+    _audioReceiveOpusByteCount = 0;
+    _audioReceiveTurnId = null;
   }
 
   void sendText(String message) {

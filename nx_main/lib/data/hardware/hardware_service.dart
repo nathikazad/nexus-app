@@ -13,7 +13,8 @@ import 'package:nexus_voice_assistant/domain/ble/camera_record_status.dart';
 class HardwareService {
   final BleBackgroundService _bgService;
   String? _deviceName;
-  final StreamController<CameraRecordStatus> _cameraStatusController = StreamController<CameraRecordStatus>.broadcast();
+  final StreamController<CameraRecordStatus> _cameraStatusController =
+      StreamController<CameraRecordStatus>.broadcast();
 
   HardwareService(this._bgService) {
     // Listen to device.push for camera status updates
@@ -30,18 +31,21 @@ class HardwareService {
         }
       }
     });
-    
+
     // Read device name once during initialization
     _readDeviceName();
   }
 
   Stream<BleConnectionState> get statusStream => _bgService.statusStream;
-  Stream<CameraRecordStatus> get cameraStatusStream => _cameraStatusController.stream;
-  bool get isConnected => _bgService.lastKnownBleStatus == BleConnectionState.connected;
+  Stream<CameraRecordStatus> get cameraStatusStream =>
+      _cameraStatusController.stream;
+  bool get isConnected =>
+      _bgService.lastKnownBleStatus == BleConnectionState.connected;
   String? get deviceName => _deviceName;
 
   /// Saved BLE peripheral id ([BluetoothDevice.remoteId]), or null until the user picks a device.
-  Future<String?> getPairedRemoteId() => PairedDeviceStorage.getPairedRemoteId();
+  Future<String?> getPairedRemoteId() =>
+      PairedDeviceStorage.getPairedRemoteId();
 
   /// Persists the chosen device and starts background connect (call after UI selection).
   Future<void> savePairedRemoteIdAndConnect(String remoteId) async {
@@ -67,7 +71,7 @@ class HardwareService {
   Future<RTCTime?> readRTC() async {
     final rtcData = await _bgService.readRTC();
     if (rtcData == null) return null;
-    
+
     try {
       return RTCTime.fromBytes(rtcData);
     } catch (e) {
@@ -85,15 +89,14 @@ class HardwareService {
 
   /// Set RTC time from current system time (preserves existing timezone)
   Future<bool> setRTCTimeNow() async {
-    // Read current RTC to get timezone
-    final currentRTC = await readRTC();
     final now = DateTime.now();
-    
-    // Preserve timezone from current RTC, or use default PST
+    final offset = now.timeZoneOffset;
+
+    // RTC registers store UTC; timezone is stored separately for local display/capture names.
     final rtcTime = RTCTime.fromDateTime(
-      now,
-      timezoneHours: currentRTC?.timezoneHours ?? -8,
-      timezoneMinutes: currentRTC?.timezoneMinutes ?? 0,
+      now.toUtc(),
+      timezoneHours: offset.inHours,
+      timezoneMinutes: offset.inMinutes.remainder(60).abs(),
     );
     debugPrint('RTC time to write: ${rtcTime.toString()}');
     return await writeRTC(rtcTime);
@@ -146,14 +149,14 @@ class HardwareService {
         final voltageLsb = batteryData[1];
         final socPercent = batteryData[2];
         final chargingStatus = batteryData[3];
-        
+
         // Calculate voltage: (msb << 8) | lsb, then divide by 1000 to get volts (raw is in mV)
         final voltageRaw = (voltageMsb << 8) | voltageLsb;
         final voltage = voltageRaw / 1000.0;
-        
+
         // Charging status: 1 = charging, 0 = not charging
         final isCharging = chargingStatus != 0;
-        
+
         return BatteryData(
           percentage: socPercent,
           voltage: voltage,
@@ -164,14 +167,14 @@ class HardwareService {
         final voltageMsb = batteryData[0];
         final voltageLsb = batteryData[1];
         final socPercent = batteryData[2];
-        
+
         final voltageRaw = (voltageMsb << 8) | voltageLsb;
         final voltage = voltageRaw / 1000.0;
-        
+
         return BatteryData(
           percentage: socPercent,
           voltage: voltage,
-          isCharging: false,  // Default to not charging for old format
+          isCharging: false, // Default to not charging for old format
         );
       }
     } catch (e) {
@@ -179,5 +182,4 @@ class HardwareService {
     }
     return null;
   }
-
 }
