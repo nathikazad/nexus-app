@@ -78,6 +78,11 @@ String? _turnkey(int? nonce, int? turnId) {
   return '$nonce:$turnId';
 }
 
+String _requestIdFromImageFilename(String filename) {
+  final dot = filename.lastIndexOf('.');
+  return dot > 0 ? filename.substring(0, dot) : filename;
+}
+
 class BleBackgroundService {
   /// Start the background service (called from onStart entry point)
   static Future<void> startBackgroundService(ServiceInstance service) async {
@@ -119,7 +124,7 @@ class BleBackgroundService {
       final base = appLogHttpBaseUrl;
       if (base == null || base.isEmpty) return;
       final uri = Uri.parse(
-        '${base.replaceAll(RegExp(r'/+$'), '')}/telemetry/firmware/upload',
+        '${base.replaceAll(RegExp(r'/+$'), '')}/logs/app/upload',
       );
       final now = DateTime.now().toUtc();
       final row = {
@@ -140,14 +145,7 @@ class BleBackgroundService {
                 ...appLogHeaders,
                 'content-type': 'application/json',
               },
-              body: jsonEncode({
-                'transfer_id': now.microsecondsSinceEpoch & 0x7fffffff,
-                'filename':
-                    'nx_main_${now.millisecondsSinceEpoch.toString()}.jsonl',
-                'origin': 'app',
-                'format': 'jsonl',
-                'content': jsonEncode(row),
-              }),
+              body: jsonEncode({'row': row}),
             )
             .timeout(const Duration(seconds: 5));
         if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -245,7 +243,8 @@ class BleBackgroundService {
       if (isAudioEof) {
         final turnText =
             audioSendTurnId == null ? "" : ", turn_id=$audioSendTurnId";
-        final nonceText = audioSendNonce == null ? "" : ", nonce=$audioSendNonce";
+        final nonceText =
+            audioSendNonce == null ? "" : ", nonce=$audioSendNonce";
         final turnkey = _turnkey(audioSendNonce, audioSendTurnId);
         final turnkeyText = turnkey == null ? "" : ", turnkey=$turnkey";
         final message =
@@ -335,6 +334,16 @@ class BleBackgroundService {
       try {
         switch (action) {
           case 'take_photo':
+            unawaited(uploadAppLog(
+              eventName: 'nx_camera_capture_requested',
+              category: 'camera',
+              message: 'nx_main requested camera capture',
+              payload: {
+                'device_request_id': requestId,
+                'trigger': 'server_tool',
+                'action': action,
+              },
+            ));
             final success =
                 await bleClient.writeCamera(CameraCommand.capture.toBytes());
             return jsonEncode({'success': success});
@@ -667,7 +676,42 @@ class BleBackgroundService {
     bleClient.onFileTxDataReceived = (data) {
       if (data.length >= 5 && data[0] == 0x00 && data[1] == 0x01) {
         imagePacketCount++;
+        final pktNum = data[2];
+        final totalPkts = data[3];
+        int end = 4;
+        while (end < data.length && data[end] != 0) end++;
+        final filename = end < data.length
+            ? String.fromCharCodes(data.sublist(4, end))
+            : 'unknown.jpg';
+        final requestId = _requestIdFromImageFilename(filename);
+        if (pktNum == 0) {
+          unawaited(uploadAppLog(
+            eventName: 'nx_image_reception_started',
+            category: 'camera',
+            message: 'nx_main image reception started',
+            payload: {
+              'request_id': requestId,
+              'filename': filename,
+              'packet_id': pktNum,
+              'total_packets': totalPkts,
+            },
+          ));
+        }
         socketClient.sendImagePacket(data, imagePacketCount);
+        if (pktNum + 1 == totalPkts) {
+          unawaited(uploadAppLog(
+            eventName: 'nx_image_received',
+            category: 'camera',
+            message: 'nx_main image received',
+            payload: {
+              'request_id': requestId,
+              'filename': filename,
+              'packet_id': pktNum,
+              'total_packets': totalPkts,
+              'size': data.length,
+            },
+          ));
+        }
       } else if (data.length >= 19 && data[0] == 0x00 && data[1] == 0x02) {
         telemetryUploadManager?.handlePacket(data);
       }
