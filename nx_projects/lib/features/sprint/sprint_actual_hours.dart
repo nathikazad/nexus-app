@@ -18,6 +18,16 @@ double taskActualHoursForDay(Task task, String ymd) {
   ).fold<double>(0, (total, link) => total + workLinkActualHours(link));
 }
 
+double taskActualHoursBeforeDay(Task task, String ymd) {
+  var total = 0.0;
+  for (final link in task.workLinks) {
+    final start = link.startTime;
+    if (start == null || formatYmd(start).compareTo(ymd) >= 0) continue;
+    total += workLinkActualHours(link);
+  }
+  return total;
+}
+
 List<TaskWorkLink> taskWorkLinksForDay(Task task, String ymd) {
   final out = <TaskWorkLink>[];
   for (final link in task.workLinks) {

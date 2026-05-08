@@ -43,14 +43,17 @@ class SprintDayTask {
     required this.ymd,
     required this.workLinks,
     required this.actualHours,
+    required this.priorActualHours,
   });
 
   final Task task;
   final String ymd;
   final List<TaskWorkLink> workLinks;
   final double actualHours;
+  final double priorActualHours;
 
   int get actionCount => workLinks.length;
+  double get cumulativeActualHours => priorActualHours + actualHours;
 }
 
 class SprintDaySlice {
@@ -116,6 +119,7 @@ final sprintDaySlicesProvider = Provider<List<SprintDaySlice>>((ref) {
           ymd: ymd,
           workLinks: links,
           actualHours: taskActualHoursForDay(t, ymd),
+          priorActualHours: taskActualHoursBeforeDay(t, ymd),
         ),
       );
     }

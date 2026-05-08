@@ -188,7 +188,7 @@ class FakeTaskRepository implements TaskRepository {
   FakeTaskRepository(this._planner);
   final Planner _planner;
 
-  static const _workActions = <WorkActionOption>[
+  final List<WorkActionOption> _workActions = <WorkActionOption>[
     WorkActionOption(
       id: 9001,
       name: 'Morning work block',
@@ -239,6 +239,45 @@ class FakeTaskRepository implements TaskRepository {
           !start.isBefore(dayStart) &&
           start.isBefore(dayEnd);
     }).toList();
+  }
+
+  @override
+  Future<WorkActionOption> createWorkAction({
+    required String name,
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    final nextId =
+        _workActions.fold<int>(
+          9000,
+          (maxId, a) => a.id > maxId ? a.id : maxId,
+        ) +
+        1;
+    final action = WorkActionOption(
+      id: nextId,
+      name: name,
+      startTime: startTime,
+      endTime: endTime,
+    );
+    _workActions.add(action);
+    return action;
+  }
+
+  @override
+  Future<void> updateWorkActionTimes({
+    required int workActionId,
+    required DateTime? startTime,
+    required DateTime? endTime,
+  }) async {
+    final index = _workActions.indexWhere((a) => a.id == workActionId);
+    if (index < 0) return;
+    final current = _workActions[index];
+    _workActions[index] = WorkActionOption(
+      id: current.id,
+      name: current.name,
+      startTime: startTime,
+      endTime: endTime,
+    );
   }
 
   @override

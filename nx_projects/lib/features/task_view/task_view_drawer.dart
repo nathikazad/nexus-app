@@ -678,22 +678,16 @@ class _WorkLinkDialogState extends ConsumerState<_WorkLinkDialog> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: _DateTimeInputField(
                     controller: _startTime,
-                    decoration: InputDecoration(
-                      labelText: 'Start time',
-                      hintText: 'YYYY-MM-DD HH:MM',
-                    ),
+                    labelText: 'Start time',
                   ),
                 ),
                 SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
+                  child: _DateTimeInputField(
                     controller: _endTime,
-                    decoration: InputDecoration(
-                      labelText: 'End time',
-                      hintText: 'YYYY-MM-DD HH:MM',
-                    ),
+                    labelText: 'End time',
                   ),
                 ),
               ],
@@ -784,6 +778,31 @@ class _StatusButton extends StatelessWidget {
   }
 }
 
+class _DateTimeInputField extends StatelessWidget {
+  _DateTimeInputField({required this.controller, required this.labelText});
+
+  final TextEditingController controller;
+  final String labelText;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      readOnly: true,
+      onTap: () => _pickDateTimeInput(context, controller),
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: 'Choose date and time',
+        suffixIcon: IconButton(
+          tooltip: 'Clear',
+          icon: Icon(Icons.close, size: 16),
+          onPressed: controller.clear,
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> _setTaskStatus(WidgetRef ref, Task task, TaskStatus status) async {
   if (task.status == status) return;
   await ref.read(taskRepositoryProvider).upsert(task.copyWith(status: status));
@@ -824,6 +843,28 @@ DateTime? _parseDateTimeInput(String raw) {
   if (text.isEmpty) return null;
   return DateTime.tryParse(text) ??
       DateTime.tryParse(text.replaceFirst(' ', 'T'));
+}
+
+Future<void> _pickDateTimeInput(
+  BuildContext context,
+  TextEditingController controller,
+) async {
+  final initial = _parseDateTimeInput(controller.text) ?? DateTime.now();
+  final date = await showDatePicker(
+    context: context,
+    initialDate: initial,
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2100),
+  );
+  if (!context.mounted || date == null) return;
+  final time = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay.fromDateTime(initial),
+  );
+  if (time == null) return;
+  controller.text = _dateTimeInputLabel(
+    DateTime(date.year, date.month, date.day, time.hour, time.minute),
+  );
 }
 
 String _statusLabel(TaskStatus s) {

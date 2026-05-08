@@ -7,6 +7,16 @@ abstract class TaskRepository {
   Future<void> delete(int id);
   Future<List<WorkActionOption>> listWorkActions();
   Future<List<WorkActionOption>> listWorkActionsForDay(DateTime day);
+  Future<WorkActionOption> createWorkAction({
+    required String name,
+    required DateTime startTime,
+    required DateTime endTime,
+  });
+  Future<void> updateWorkActionTimes({
+    required int workActionId,
+    required DateTime? startTime,
+    required DateTime? endTime,
+  });
   Future<void> linkWorkAction({
     required int taskId,
     required int workActionId,

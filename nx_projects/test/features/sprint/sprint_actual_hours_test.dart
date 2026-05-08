@@ -28,11 +28,14 @@ void main() {
           workActionId: 102,
           workActionName: 'Work',
           startTime: DateTime(2026, 5, 6, 9),
-          endTime: DateTime(2026, 5, 6, 11),
+          endTime: DateTime(2026, 5, 6, 12),
         ),
       ],
     );
 
     expect(taskActualHoursForDay(task, '2026-05-05'), 3.5);
+    expect(taskActualHoursBeforeDay(task, '2026-05-05'), 0);
+    expect(taskActualHoursBeforeDay(task, '2026-05-06'), 3.5);
+    expect(taskActualHoursForDay(task, '2026-05-06'), 3);
   });
 }

@@ -194,7 +194,7 @@ class _SprintNavStripState extends ConsumerState<_SprintNavStrip> {
                             ),
                     ),
                     SizedBox(width: 8),
-                    _Badge(label: widget.sp.badge),
+                    _SprintStatusPicker(sp: widget.sp, saving: _saving),
                   ],
                 ),
                 SizedBox(height: 2),
@@ -242,6 +242,76 @@ class _Chev extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SprintStatusPicker extends ConsumerStatefulWidget {
+  _SprintStatusPicker({required this.sp, required this.saving});
+
+  final Sprint sp;
+  final bool saving;
+
+  @override
+  ConsumerState<_SprintStatusPicker> createState() =>
+      _SprintStatusPickerState();
+}
+
+class _SprintStatusPickerState extends ConsumerState<_SprintStatusPicker> {
+  bool _saving = false;
+
+  Future<void> _setStatus(SprintState state) async {
+    if (_saving || widget.saving || state == widget.sp.state) return;
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(sprintRepositoryProvider)
+          .update(
+            widget.sp.copyWith(state: state, badge: _statusBadgeLabel(state)),
+          );
+      ref.invalidate(sprintsListAsyncProvider);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<SprintState>(
+      enabled: !_saving && !widget.saving,
+      tooltip: 'Edit sprint status',
+      color: context.colors.panel2,
+      onSelected: _setStatus,
+      itemBuilder: (context) => [
+        for (final state in SprintState.values)
+          PopupMenuItem<SprintState>(
+            value: state,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  child: state == widget.sp.state
+                      ? Icon(
+                          Icons.check,
+                          size: 14,
+                          color: context.colors.accent,
+                        )
+                      : null,
+                ),
+                Text(_statusBadgeLabel(state)),
+              ],
+            ),
+          ),
+      ],
+      child: _Badge(label: _statusBadgeLabel(widget.sp.state)),
+    );
+  }
+}
+
+String _statusBadgeLabel(SprintState state) {
+  return switch (state) {
+    SprintState.planned => 'planned',
+    SprintState.active => 'active',
+    SprintState.done => 'done',
+  };
 }
 
 class _SprintDots extends StatelessWidget {

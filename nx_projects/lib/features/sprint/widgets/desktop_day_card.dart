@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/widgets/capacity_bar.dart';
+import 'package:nx_projects/data/providers.dart';
+import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
 import 'package:nx_projects/domain/sprint/sprint_state.dart';
 import 'package:nx_projects/domain/task/task.dart';
@@ -33,6 +35,7 @@ class DesktopDayCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = parseLocalDate(slice.ymd);
     final locator = ref.watch(desktopTaskLocatorProvider);
+    final projects = ref.watch(projectsListProvider);
     final dayActual = slice.dayActual;
     final gaugeMaxH = 12.0;
     final actualGaugeColor = _gaugeColor(context, dayActual);
@@ -165,7 +168,13 @@ class DesktopDayCard extends ConsumerWidget {
                             child: DayItemRow(
                               task: group.task,
                               actualHours: group.actualHours,
+                              priorActualHours: group.priorActualHours,
                               actionCount: group.actionCount,
+                              workLinks: group.workLinks,
+                              barColor: _projectColorForTask(
+                                group.task,
+                                projects,
+                              ),
                               isLocated: locator.isHighlighted(group.task.id),
                               onTap: () => onOpenTask(group.task),
                               onMenu: () => onOpenTaskMenu(group.task),
@@ -211,6 +220,32 @@ class DesktopDayCard extends ConsumerWidget {
     if (hours < 4) return context.colors.crit;
     if (hours < 8) return context.colors.warn;
     return context.colors.ok;
+  }
+
+  Color? _projectColorForTask(Task task, List<Project> projects) {
+    final projectId = task.projectId;
+    if (projectId != null) {
+      for (final project in projects) {
+        if (project.id == projectId) return Color(project.color);
+      }
+    }
+
+    final subProjectId = task.subProjectId;
+    if (subProjectId == null) return null;
+    Project? subProject;
+    for (final project in projects) {
+      if (project.id == subProjectId) {
+        subProject = project;
+        break;
+      }
+    }
+    final parentId = subProject?.parentId;
+    if (parentId != null) {
+      for (final project in projects) {
+        if (project.id == parentId) return Color(project.color);
+      }
+    }
+    return subProject == null ? null : Color(subProject.color);
   }
 }
 

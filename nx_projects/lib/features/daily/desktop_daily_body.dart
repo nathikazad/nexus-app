@@ -77,9 +77,11 @@ class DesktopDailyBody extends ConsumerWidget {
                       child: actions.maybeWhen(
                         data: (items) => ActionsZone(
                           actions: items,
+                          day: dailyDate,
                           onOpenTask: (t) => onOpenTask(context, ref, t),
                         ),
-                        orElse: () => ActionsZone(actions: const []),
+                        orElse: () =>
+                            ActionsZone(actions: const [], day: dailyDate),
                       ),
                     ),
                   ],

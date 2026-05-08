@@ -3,14 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:intl/intl.dart';
 
-import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
 import 'package:nx_projects/core/theme/kind_color_palette.dart';
 import 'package:nx_projects/data/providers.dart';
 import 'package:nx_projects/domain/project/project.dart';
 import 'package:nx_projects/domain/sprint/sprint.dart';
+import 'package:nx_projects/domain/sprint/sprint_state.dart';
 import 'package:nx_projects/domain/task/task.dart';
 import 'package:nx_projects/domain/task/task_kind.dart';
+import 'package:nx_projects/domain/task/task_status.dart';
 import 'package:nx_projects/features/desktop/desktop_drawer_controller.dart';
 import 'package:nx_projects/features/desktop/desktop_task_locator.dart';
 import 'package:nx_projects/features/shell/selection_providers.dart';

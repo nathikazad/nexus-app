@@ -5,10 +5,7 @@ import 'package:nx_projects/core/formatting/date_label.dart';
 import 'package:nx_projects/core/formatting/hours_format.dart';
 import 'package:nx_projects/core/formatting/sprint_variance.dart';
 import 'package:nx_projects/core/theme/app_theme.dart';
-import 'package:nx_projects/core/theme/kind_color_palette.dart';
-import 'package:nx_projects/core/widgets/capacity_bar.dart';
 import 'package:nx_projects/domain/task/task.dart';
-import 'package:nx_projects/domain/task/task_kind.dart';
 import 'package:nx_projects/domain/task/task_status.dart';
 
 /// Dense row for a task on a desktop sprint day (draggable to another day when [enableDrag]).
@@ -21,7 +18,10 @@ class DayItemRow extends StatefulWidget {
     this.isGhost = false,
     this.movedToYmd,
     this.actualHours,
+    this.priorActualHours = 0,
     this.actionCount,
+    this.workLinks = const <TaskWorkLink>[],
+    this.barColor,
     this.enableDrag = true,
     this.isLocated = false,
   });
@@ -32,7 +32,10 @@ class DayItemRow extends StatefulWidget {
   final bool isGhost;
   final String? movedToYmd;
   final double? actualHours;
+  final double priorActualHours;
   final int? actionCount;
+  final List<TaskWorkLink> workLinks;
+  final Color? barColor;
   final bool enableDrag;
   final bool isLocated;
 
@@ -48,24 +51,18 @@ class _DayItemRowState extends State<DayItemRow> {
     final t = widget.task;
     final done = t.status == TaskStatus.done;
     final blocked = t.status == TaskStatus.blocked;
-    var glyph = '▢';
-    if (t.kind == TaskKind.bug) {
-      glyph = '●';
-    } else if (t.kind == TaskKind.feat) {
-      glyph = '◉';
-    }
     if (widget.isGhost) {
-      return _ghostRow(t, glyph, done);
+      return _ghostRow(t, done);
     }
     Widget buildMain() {
-      return _mainRow(t: t, done: done, blocked: blocked, glyph: glyph);
+      return _mainRow(t: t, done: done, blocked: blocked);
     }
 
     if (widget.enableDrag) {
       return Draggable<Task>(
         data: t,
         maxSimultaneousDrags: 1,
-        feedback: _dragFeedback(t, done, glyph),
+        feedback: _dragFeedback(t, done),
         childWhenDragging: Opacity(opacity: 0.4, child: buildMain()),
         child: buildMain(),
       );
@@ -80,7 +77,7 @@ class _DayItemRowState extends State<DayItemRow> {
     return '→ moved to ${DateFormat('EEE MMM d').format(d)}';
   }
 
-  Widget _ghostRow(Task t, String glyph, bool done) {
+  Widget _ghostRow(Task t, bool done) {
     return Opacity(
       opacity: 0.55,
       child: Container(
@@ -92,19 +89,7 @@ class _DayItemRowState extends State<DayItemRow> {
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           children: [
-            SizedBox(width: 7),
-            SizedBox(width: 7),
-            SizedBox(
-              width: 14,
-              child: Text(
-                glyph,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: done ? context.colors.dim : kindColor(context, t.kind),
-                ),
-              ),
-            ),
+            _ProjectDot(color: widget.barColor ?? context.colors.dim),
             SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -120,7 +105,7 @@ class _DayItemRowState extends State<DayItemRow> {
     );
   }
 
-  Material _dragFeedback(Task t, bool done, String glyph) {
+  Material _dragFeedback(Task t, bool done) {
     return Material(
       color: Colors.transparent,
       child: ConstrainedBox(
@@ -129,7 +114,6 @@ class _DayItemRowState extends State<DayItemRow> {
           t: t,
           done: done,
           blocked: t.status == TaskStatus.blocked,
-          glyph: glyph,
         ),
       ),
     );
@@ -139,11 +123,14 @@ class _DayItemRowState extends State<DayItemRow> {
     required Task t,
     required bool done,
     required bool blocked,
-    required String glyph,
   }) {
     final actualHours = widget.actualHours ?? t.actualHours;
+    final priorActualHours = widget.priorActualHours;
+    final cumulativeActualHours = priorActualHours + actualHours;
     final doneNoActual = widget.actualHours == null && done && actualHours <= 0;
-    final actualForProgress = doneNoActual ? t.estimate : actualHours;
+    final actualForProgress = doneNoActual ? t.estimate : cumulativeActualHours;
+    final projectColor = widget.barColor ?? context.colors.dim;
+    final workMessages = _workDescriptions();
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
@@ -167,24 +154,7 @@ class _DayItemRowState extends State<DayItemRow> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _StatusDot(status: t.status),
-                SizedBox(width: 8),
-                Padding(
-                  padding: EdgeInsets.only(top: 2),
-                  child: SizedBox(
-                    width: 14,
-                    child: Text(
-                      glyph,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: done
-                            ? context.colors.dim
-                            : kindColor(context, t.kind),
-                      ),
-                    ),
-                  ),
-                ),
+                _ProjectDot(color: projectColor),
                 SizedBox(width: 6),
                 Expanded(
                   child: Column(
@@ -205,9 +175,11 @@ class _DayItemRowState extends State<DayItemRow> {
                       ),
                       if (t.estimate > 0 && actualForProgress > 0) ...[
                         SizedBox(height: 4),
-                        DayCapBar(
-                          ratio: actualForProgress / t.estimate,
-                          fillColor: _actualGaugeColor(actualForProgress),
+                        _CumulativeTaskBar(
+                          priorHours: priorActualHours,
+                          dayHours: actualHours,
+                          estimateHours: t.estimate,
+                          dayColor: projectColor,
                           height: 3,
                         ),
                       ],
@@ -222,13 +194,33 @@ class _DayItemRowState extends State<DayItemRow> {
                           ),
                         ),
                       ],
+                      if (workMessages.isNotEmpty) ...[
+                        SizedBox(height: 4),
+                        for (final message in workMessages)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              message,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: context.colors.muted,
+                                height: 1.25,
+                              ),
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
                 SizedBox(width: 6),
                 SizedBox(
                   width: 66,
-                  child: _HoursCell(task: t, actualHours: actualHours),
+                  child: _HoursCell(
+                    task: t,
+                    actualHours: cumulativeActualHours,
+                  ),
                 ),
                 SizedBox(width: 4),
                 SizedBox(
@@ -257,52 +249,84 @@ class _DayItemRowState extends State<DayItemRow> {
     );
   }
 
-  Color _actualGaugeColor(double hours) {
-    if (hours < 4) return context.colors.crit;
-    if (hours < 8) return context.colors.warn;
-    return context.colors.ok;
+  List<String> _workDescriptions() {
+    return [
+      for (final link in widget.workLinks)
+        if (link.workDescription.trim().isNotEmpty) link.workDescription.trim(),
+    ];
   }
 }
 
-class _StatusDot extends StatelessWidget {
-  _StatusDot({required this.status});
+class _CumulativeTaskBar extends StatelessWidget {
+  _CumulativeTaskBar({
+    required this.priorHours,
+    required this.dayHours,
+    required this.estimateHours,
+    required this.dayColor,
+    required this.height,
+  });
 
-  final TaskStatus status;
+  final double priorHours;
+  final double dayHours;
+  final double estimateHours;
+  final Color dayColor;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    Color c;
-    switch (status) {
-      case TaskStatus.todo:
-        c = context.colors.dim;
-        break;
-      case TaskStatus.doing:
-        c = context.colors.accent;
-        break;
-      case TaskStatus.done:
-        c = context.colors.ok;
-        break;
-      case TaskStatus.blocked:
-        c = context.colors.crit;
-        break;
-    }
-    return Container(
-      width: 7,
-      height: 7,
-      margin: EdgeInsets.only(top: 5),
-      decoration: BoxDecoration(
-        color: c,
-        shape: BoxShape.circle,
-        boxShadow: status == TaskStatus.doing
-            ? [
-                BoxShadow(
-                  color: context.colors.accent.withValues(alpha: 0.25),
-                  blurRadius: 0,
-                  spreadRadius: 2,
+    if (estimateHours <= 0) return SizedBox(height: height);
+    final priorRatio = (priorHours / estimateHours).clamp(0.0, 1.0);
+    final dayRatio = (dayHours / estimateHours).clamp(0.0, 1.0 - priorRatio);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: SizedBox(
+        height: height,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            return Stack(
+              children: [
+                ColoredBox(
+                  color: context.colors.panel3,
+                  child: SizedBox.expand(),
                 ),
-              ]
-            : null,
+                if (priorRatio > 0)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: width * priorRatio,
+                    child: ColoredBox(color: context.colors.border2),
+                  ),
+                if (dayRatio > 0)
+                  Positioned(
+                    left: width * priorRatio,
+                    top: 0,
+                    bottom: 0,
+                    width: width * dayRatio,
+                    child: ColoredBox(color: dayColor),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
+    );
+  }
+}
+
+class _ProjectDot extends StatelessWidget {
+  _ProjectDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 9,
+      height: 9,
+      margin: EdgeInsets.only(top: 4),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

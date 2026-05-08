@@ -39,6 +39,7 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
   @override
   Widget build(BuildContext context) {
     final t = widget.task;
+    final done = t.status == TaskStatus.done;
     final g = _cartGlyph(t);
     final gColor = kindColor(context, t.kind);
     final hStr = t.estimate % 1 == 0
@@ -83,7 +84,10 @@ class _CartTaskRowState extends ConsumerState<_CartTaskRow> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          color: context.colors.text,
+                          color: done
+                              ? context.colors.muted
+                              : context.colors.text,
+                          decoration: done ? TextDecoration.lineThrough : null,
                         ),
                       ),
                     ),
