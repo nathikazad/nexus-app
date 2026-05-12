@@ -1,10 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/domain/person/person_query.dart';
-
-final peopleRepositoryProvider = Provider<PersonRepository>((ref) {
-  return const PersonRepository(_people);
-});
 
 const companies = <String>[
   'Northstar Labs',
@@ -22,24 +17,127 @@ const meetings = <String>[
 
 const planned = <String>['Roadmap Review', 'Q2 Check-in'];
 
-const tagSystems = <PeopleTagSystem>[
-  PeopleTagSystem('Status', <String>['Active', 'Follow up', 'Dormant']),
-  PeopleTagSystem('Relationship', <String>[
-    'Investor',
-    'Advisor',
-    'Founder',
-    'Warm',
-    'Personal',
-  ]),
-  PeopleTagSystem('Context', <String>['Product', 'Finance', 'Design', 'Remote']),
-  PeopleTagSystem('Location', <String>['SF', 'Tbilisi', 'New York']),
+const fakeTagSystems = <PeopleTagSystem>[
+  PeopleTagSystem(
+    name: 'Status',
+    tags: <String>['Active', 'Follow up', 'Dormant'],
+  ),
+  PeopleTagSystem(
+    name: 'Relationship',
+    tags: <String>['Investor', 'Advisor', 'Founder', 'Warm', 'Personal'],
+  ),
+  PeopleTagSystem(
+    name: 'Context',
+    tags: <String>['Product', 'Finance', 'Design', 'Remote'],
+  ),
+  PeopleTagSystem(
+    name: 'Location',
+    tags: <String>['SF', 'Tbilisi', 'New York'],
+  ),
 ];
 
-class PeopleTagSystem {
-  const PeopleTagSystem(this.name, this.tags);
+class FakePeopleRepository implements PersonRepository {
+  const FakePeopleRepository([this.people = _people]);
 
-  final String name;
-  final List<String> tags;
+  final List<Person> people;
+
+  Person _byId(int id) => people.firstWhere((person) => person.id == id);
+
+  @override
+  Future<Person?> getById(int id) async {
+    for (final person in people) {
+      if (person.id == id) return person;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<Person>> listPinned({int limit = 20}) async {
+    return people.where((person) => person.pinned).take(limit).toList();
+  }
+
+  @override
+  Future<List<Person>> listRecent({int limit = 20}) async {
+    return <Person>[
+      _byId(4),
+      _byId(1),
+      _byId(2),
+      _byId(6),
+      _byId(3),
+    ].take(limit).toList();
+  }
+
+  @override
+  Future<List<Person>> listFollowUp({int limit = 20}) async {
+    return people
+        .where((person) => person.status == 'Follow up')
+        .take(limit)
+        .toList();
+  }
+
+  @override
+  Future<List<Person>> search(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return const <Person>[];
+    return people.where((person) => person.matches(trimmed)).toList();
+  }
+
+  @override
+  Future<PeopleResultContext> context(String type, String label) async {
+    final rows = await _filter(type, label);
+    return PeopleResultContext(
+      type: type,
+      label: label,
+      personIds: rows.map((person) => person.id).toList(),
+    );
+  }
+
+  @override
+  Future<List<Person>> peopleFor(PeopleResultContext context) async {
+    return [
+      for (final id in context.personIds)
+        if (await getById(id) case final person?) person,
+    ];
+  }
+
+  @override
+  Future<int> count(String type, String label) async {
+    return (await _filter(type, label)).length;
+  }
+
+  @override
+  Future<List<String>> listCompanies() async => companies;
+
+  @override
+  Future<List<String>> listMeetings() async => meetings;
+
+  @override
+  Future<List<String>> listPlanned() async => planned;
+
+  @override
+  Future<List<PeopleTagSystem>> listTagSystems() async => fakeTagSystems;
+
+  Future<List<Person>> _filter(String type, String label) async {
+    return switch (type) {
+      'Search' => search(label),
+      'Recent' => Future<List<Person>>.value(people),
+      'Company' => Future<List<Person>>.value(
+        people.where((person) => person.company == label).toList(),
+      ),
+      'Meeting' => Future<List<Person>>.value(
+        people.where((person) => person.meetings.contains(label)).toList(),
+      ),
+      'Planned' => Future<List<Person>>.value(
+        people.where((person) => person.planned.contains(label)).toList(),
+      ),
+      'Status' => Future<List<Person>>.value(
+        people.where((person) => person.status == label).toList(),
+      ),
+      _ => Future<List<Person>>.value(
+        people.where((person) => person.tags.contains(label)).toList(),
+      ),
+    };
+  }
 }
 
 const _people = <Person>[
@@ -82,7 +180,8 @@ const _people = <Person>[
       ),
       PersonLog(
         time: '3d ago',
-        body: 'Met during Design Sync. She liked recoverable result navigation.',
+        body:
+            'Met during Design Sync. She liked recoverable result navigation.',
       ),
       PersonLog(
         time: 'Oct 22',
@@ -189,7 +288,8 @@ const _people = <Person>[
     logs: <PersonLog>[
       PersonLog(
         time: 'Today',
-        body: 'Asked for a People app mockup based on the notes navigation pattern.',
+        body:
+            'Asked for a People app mockup based on the notes navigation pattern.',
       ),
       PersonLog(
         time: '2d ago',
@@ -250,13 +350,15 @@ const _people = <Person>[
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'Overlay question',
-        body: 'Ask whether people result rows need richer relationship metadata.',
+        body:
+            'Ask whether people result rows need richer relationship metadata.',
       ),
     ],
     logs: <PersonLog>[
       PersonLog(
         time: '5d ago',
-        body: 'She pushed for a full-width overlay rather than a centered modal.',
+        body:
+            'She pushed for a full-width overlay rather than a centered modal.',
       ),
     ],
     relatedIds: <int>[1, 3],

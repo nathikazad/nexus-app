@@ -1,0 +1,161 @@
+import 'package:nx_db/kgql.dart';
+import 'package:nx_people/data/person/person_attr_keys.dart';
+import 'package:nx_people/domain/person/person.dart';
+
+Person personFromModel(Model model) {
+  final tags = model.tags ?? const <String, List<String>>{};
+  final tagValues = [
+    for (final entry in tags.entries)
+      if (entry.key != kPeopleStatusTagSystem) ...entry.value,
+  ];
+  final status =
+      model.attrString(kPersonAttrStatus) ??
+      tags[kPeopleStatusTagSystem]?.firstOrNull ??
+      'Active';
+  final company =
+      model.attrString(kPersonAttrCompany) ??
+      _firstRelatedName(model, 'Company') ??
+      _firstRelatedName(model, 'Place') ??
+      '';
+  final location =
+      model.attrString(kPersonAttrLocation) ??
+      tags[kPeopleLocationTagSystem]?.firstOrNull ??
+      '';
+  final summary =
+      model.attrString(kPersonAttrSummary) ??
+      model.description ??
+      'No summary yet.';
+
+  return Person(
+    id: model.id,
+    name: model.name,
+    initials: _initials(model.name),
+    company: company,
+    role: model.attrString(kPersonAttrRole) ?? '',
+    location: location,
+    status: status,
+    statusColor: _statusColor(status),
+    lastContact: model.attrString(kPersonAttrLastContact) ?? 'Unknown',
+    nextFollowUp: model.attrString(kPersonAttrNextFollowUp) ?? 'None',
+    pinned: model.attrBool(kPersonAttrPinned) ?? false,
+    email: model.attrString(kPersonAttrEmail) ?? '',
+    phone: model.attrString(kPersonAttrPhone) ?? '',
+    tags: tagValues.toSet().toList()..sort(),
+    meetings: _uniqueRelatedNames(model, const ['Meeting', 'Meet']),
+    planned: _uniqueRelatedNames(model, const ['Planned', 'PlannedMeeting']),
+    summary: summary,
+    currentThreads: _threadsFromRaw(
+      model.attributes?[kPersonAttrCurrentThreads],
+    ),
+    logs: _logsFromRaw(model.attributes?[kPersonAttrLogs]),
+    relatedIds: _relatedPeople(model),
+  );
+}
+
+Map<String, dynamic> personFetchStruct(ModelType schema) {
+  return {
+    ...buildKgqlStructFromSchema(
+      schema,
+      extraTopLevel: const [
+        'id',
+        'name',
+        'description',
+        'created_at',
+        'updated_at',
+        'model_type_id',
+      ],
+    ),
+    'tags': true,
+    'relations': {
+      'relation_id': true,
+      'model_id': true,
+      'model_type': true,
+      'name': true,
+      'description': true,
+    },
+    'Company': {'id': true, 'name': true, 'description': true},
+    'Meeting': {'id': true, 'name': true, 'description': true},
+    'Meet': {'id': true, 'name': true, 'description': true},
+    'Planned': {'id': true, 'name': true, 'description': true},
+    'PlannedMeeting': {'id': true, 'name': true, 'description': true},
+    'Place': {'id': true, 'name': true, 'description': true},
+    'Person': {'id': true, 'name': true, 'description': true},
+  };
+}
+
+String _initials(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  return parts.take(2).map((part) => part[0].toUpperCase()).join();
+}
+
+PersonStatusColor _statusColor(String status) {
+  final normalized = status.toLowerCase();
+  if (normalized.contains('follow')) return PersonStatusColor.amber;
+  if (normalized.contains('dormant')) return PersonStatusColor.blue;
+  if (normalized.contains('blocked') || normalized.contains('cold')) {
+    return PersonStatusColor.red;
+  }
+  return PersonStatusColor.green;
+}
+
+String? _firstRelatedName(Model model, String type) {
+  final names = _relatedNames(model, type);
+  return names.isEmpty ? null : names.first;
+}
+
+List<String> _relatedNames(Model model, String type) {
+  final rows = model.relations?[type] ?? const <Model>[];
+  return rows.map((row) => row.name).where((name) => name.isNotEmpty).toList()
+    ..sort();
+}
+
+List<String> _uniqueRelatedNames(Model model, List<String> types) {
+  return {for (final type in types) ..._relatedNames(model, type)}.toList()
+    ..sort();
+}
+
+List<int> _relatedPeople(Model model) {
+  final rows = model.relations?[kPersonModelTypeName] ?? const <Model>[];
+  return rows
+      .map((row) => row.id)
+      .where((id) => id != model.id)
+      .toSet()
+      .toList();
+}
+
+List<PersonThread> _threadsFromRaw(Object? raw) {
+  final rows = _listOfMaps(raw);
+  return [
+    for (final row in rows)
+      PersonThread(
+        title: row['title']?.toString() ?? 'Thread',
+        body: row['body']?.toString() ?? row['description']?.toString() ?? '',
+      ),
+  ];
+}
+
+List<PersonLog> _logsFromRaw(Object? raw) {
+  final rows = _listOfMaps(raw);
+  return [
+    for (final row in rows)
+      PersonLog(
+        time: row['time']?.toString() ?? row['date']?.toString() ?? '',
+        body: row['body']?.toString() ?? row['description']?.toString() ?? '',
+      ),
+  ];
+}
+
+List<Map<String, dynamic>> _listOfMaps(Object? raw) {
+  if (raw is List) {
+    return [
+      for (final item in raw)
+        if (item is Map) Map<String, dynamic>.from(item),
+    ];
+  }
+  return const <Map<String, dynamic>>[];
+}

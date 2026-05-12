@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_people/core/theme/app_theme.dart';
-import 'package:nx_people/data/fake_people_repository.dart';
+import 'package:nx_people/data/providers.dart';
 import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/domain/person/person_query.dart';
 import 'package:nx_people/features/shell/people_state.dart';
@@ -12,8 +12,10 @@ class MobileShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workspace = ref.watch(peopleWorkspaceProvider);
-    final repository = ref.watch(peopleRepositoryProvider);
-    final person = repository.byId(workspace.activePersonId);
+    final activeId = workspace.activePersonId;
+    final person = activeId == null
+        ? null
+        : ref.watch(personByIdProvider(activeId)).value;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -24,14 +26,20 @@ class MobileShell extends ConsumerWidget {
                     .returnToActiveContext(),
           icon: const Icon(Icons.chevron_left),
         ),
-        title: Text(person.name, style: const TextStyle(fontSize: 14)),
+        title: Text(
+          person?.name ?? 'nx_people',
+          style: const TextStyle(fontSize: 14),
+        ),
         actions: <Widget>[
           IconButton(onPressed: () {}, icon: const Icon(Icons.more_horiz)),
         ],
       ),
       body: Stack(
         children: <Widget>[
-          _MobileProfile(person: person),
+          if (person == null)
+            const _MobileNoPersonSelected()
+          else
+            _MobileProfile(person: person),
           if (workspace.hasOverlay)
             _MobileResultOverlay(contextModel: workspace.overlayContext!),
         ],
@@ -62,11 +70,17 @@ class _MobileProfile extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     person.name,
-                    style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     '${person.role} · ${person.company} · ${person.location}',
-                    style: const TextStyle(color: AppColors.muted, fontSize: 14),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -123,50 +137,76 @@ class _MobileResultOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(peopleRepositoryProvider);
-    final rows = repository.peopleFor(contextModel);
+    final rowsValue = ref.watch(_mobileContextPeopleProvider(contextModel));
     return Material(
       color: Colors.white.withValues(alpha: 0.97),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 22, 16, 36),
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  contextModel.title,
-                  style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+      child: rowsValue.when(
+        data: (rows) =>
+            _MobileResultRows(contextModel: contextModel, rows: rows),
+        error: (error, stackTrace) => Center(child: Text('$error')),
+        loading: () => const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+}
+
+final _mobileContextPeopleProvider =
+    FutureProvider.family<List<Person>, PeopleResultContext>(
+      (ref, context) => ref.watch(peopleRepositoryProvider).peopleFor(context),
+    );
+
+class _MobileResultRows extends ConsumerWidget {
+  const _MobileResultRows({required this.contextModel, required this.rows});
+
+  final PeopleResultContext contextModel;
+  final List<Person> rows;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 36),
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                contextModel.title,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              IconButton(
-                onPressed: () =>
-                    ref.read(peopleWorkspaceProvider.notifier).hideOverlay(),
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          ),
-          Text(
-            '${rows.length} people',
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Pick a person to open their profile. The profile keeps this list as a back context.',
-            style: TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 10),
-          for (final person in rows)
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: _Avatar(initials: person.initials, small: true),
-              title: Text(person.name),
-              subtitle: Text('${person.role} · ${person.company} · ${person.location}'),
-              onTap: () => ref
-                  .read(peopleWorkspaceProvider.notifier)
-                  .openPerson(person.id, context: contextModel),
             ),
-        ],
-      ),
+            IconButton(
+              onPressed: () =>
+                  ref.read(peopleWorkspaceProvider.notifier).hideOverlay(),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
+        Text(
+          '${rows.length} people',
+          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Pick a person to open their profile. The profile keeps this list as a back context.',
+          style: TextStyle(color: AppColors.muted, fontSize: 13),
+        ),
+        const SizedBox(height: 10),
+        for (final person in rows)
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            leading: _Avatar(initials: person.initials, small: true),
+            title: Text(person.name),
+            subtitle: Text(
+              '${person.role} · ${person.company} · ${person.location}',
+            ),
+            onTap: () => ref
+                .read(peopleWorkspaceProvider.notifier)
+                .openPerson(person.id, context: contextModel),
+          ),
+      ],
     );
   }
 }
@@ -177,7 +217,6 @@ class _MobileTabs extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mobile = ref.watch(mobilePeopleProvider);
-    final repository = ref.read(peopleRepositoryProvider);
     return NavigationBar(
       selectedIndex: mobile.section.index,
       onDestinationSelected: (index) {
@@ -185,21 +224,11 @@ class _MobileTabs extends ConsumerWidget {
         ref.read(mobilePeopleProvider.notifier).setSection(section);
         switch (section) {
           case MobilePeopleSection.people:
-            ref
-                .read(peopleWorkspaceProvider.notifier)
-                .showOverlay(PeopleResultContext(
-                  type: 'Recent',
-                  label: 'People',
-                  personIds: repository.people.map((person) => person.id).toList(),
-                ));
+            _showContext(ref, 'Recent', 'People');
           case MobilePeopleSection.tags:
-            ref
-                .read(peopleWorkspaceProvider.notifier)
-                .showOverlay(repository.context('Status', 'Follow up'));
+            _showContext(ref, 'Status', 'Follow up');
           case MobilePeopleSection.search:
-            ref
-                .read(peopleWorkspaceProvider.notifier)
-                .showOverlay(repository.context('Search', mobile.searchText));
+            _showContext(ref, 'Search', mobile.searchText);
         }
       },
       destinations: const <NavigationDestination>[
@@ -207,6 +236,37 @@ class _MobileTabs extends ConsumerWidget {
         NavigationDestination(icon: Icon(Icons.sell_outlined), label: 'Tags'),
         NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
       ],
+    );
+  }
+
+  Future<void> _showContext(WidgetRef ref, String type, String label) async {
+    final context = await ref
+        .read(peopleRepositoryProvider)
+        .context(type, label);
+    ref.read(peopleWorkspaceProvider.notifier).showOverlay(context);
+  }
+}
+
+class _MobileNoPersonSelected extends ConsumerWidget {
+  const _MobileNoPersonSelected();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recent = ref.watch(recentPeopleProvider);
+    return recent.when(
+      data: (rows) {
+        if (rows.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(peopleWorkspaceProvider.notifier)
+                .openPerson(rows.first.id);
+          });
+          return const Center(child: CircularProgressIndicator());
+        }
+        return const Center(child: Text('No people found.'));
+      },
+      error: (error, stackTrace) => Center(child: Text('$error')),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -289,7 +349,10 @@ class _Avatar extends StatelessWidget {
       ),
       child: Text(
         initials,
-        style: TextStyle(fontSize: small ? 12 : 16, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          fontSize: small ? 12 : 16,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

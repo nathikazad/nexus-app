@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('features layer does not import nx_db directly', () {
+  test('features do not import KGQL, GraphQL, or nx_db internals', () {
     final featuresDir = Directory('lib/features');
     final dartFiles = featuresDir
         .listSync(recursive: true)
@@ -13,7 +13,11 @@ void main() {
     final offenders = <String>[];
     for (final file in dartFiles) {
       final contents = file.readAsStringSync();
-      if (contents.contains("package:nx_db/")) {
+      if (contents.contains('package:nx_db/kgql.dart') ||
+          contents.contains('package:nx_db/riverpod.dart') ||
+          contents.contains('package:nx_db/nx_db.dart') ||
+          contents.contains('package:nx_db/src/') ||
+          contents.contains('package:graphql_flutter/')) {
         offenders.add(file.path);
       }
     }

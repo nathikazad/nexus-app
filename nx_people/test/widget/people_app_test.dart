@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_people/app.dart';
+import 'package:nx_people/data/auth/people_auth_controller.dart';
+import 'package:nx_people/data/fake_people_repository.dart';
+import 'package:nx_people/data/providers.dart';
 
 void main() {
   Future<void> pumpDesktop(WidgetTester tester) async {
@@ -11,12 +15,32 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const ProviderScope(child: NexusPeopleApp()),
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(
+            () => PeopleAuthController(
+              initialUser: User(
+                userId: '1',
+                personalDomainId: 1,
+                homeDomainId: 1,
+                preset: BackendPreset.defaultPreset,
+              ),
+              skipBackendPing: true,
+            ),
+          ),
+          peopleRepositoryProvider.overrideWithValue(
+            const FakePeopleRepository(),
+          ),
+        ],
+        child: const NexusPeopleApp(),
+      ),
     );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('people app renders the desktop navigator and profile', (tester) async {
+  testWidgets('people app renders the desktop navigator and profile', (
+    tester,
+  ) async {
     await pumpDesktop(tester);
 
     expect(find.text('nx_people'), findsOneWidget);
@@ -26,10 +50,15 @@ void main() {
     expect(find.text('INSPECTOR'), findsOneWidget);
   });
 
-  testWidgets('sidebar search opens results and preserves context after open', (tester) async {
+  testWidgets('sidebar search opens results and preserves context after open', (
+    tester,
+  ) async {
     await pumpDesktop(tester);
 
-    await tester.enterText(find.byKey(const ValueKey('people-search-field')), 'atlas');
+    await tester.enterText(
+      find.byKey(const ValueKey('people-search-field')),
+      'atlas',
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Search: atlas'), findsOneWidget);
@@ -44,7 +73,9 @@ void main() {
     expect(find.text('2 of 2'), findsOneWidget);
   });
 
-  testWidgets('tags tab shows tag groups and opens matching result overlay', (tester) async {
+  testWidgets('tags tab shows tag groups and opens matching result overlay', (
+    tester,
+  ) async {
     await pumpDesktop(tester);
 
     await tester.tap(find.text('Tags'));

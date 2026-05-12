@@ -3,14 +3,14 @@ import 'package:nx_people/domain/person/person_query.dart';
 
 class PeopleWorkspaceState {
   const PeopleWorkspaceState({
-    this.activePersonId = 1,
+    this.activePersonId,
     this.sidebarTab = PeopleSidebarTab.people,
     this.activeContext,
     this.overlayContext,
     this.createMenuOpen = false,
   });
 
-  final int activePersonId;
+  final int? activePersonId;
   final PeopleSidebarTab sidebarTab;
   final PeopleResultContext? activeContext;
   final PeopleResultContext? overlayContext;
@@ -26,14 +26,19 @@ class PeopleWorkspaceState {
     bool? createMenuOpen,
     bool clearActiveContext = false,
     bool clearOverlay = false,
+    bool clearActivePerson = false,
   }) {
     return PeopleWorkspaceState(
-      activePersonId: activePersonId ?? this.activePersonId,
+      activePersonId: clearActivePerson
+          ? null
+          : activePersonId ?? this.activePersonId,
       sidebarTab: sidebarTab ?? this.sidebarTab,
       activeContext: clearActiveContext
           ? null
           : activeContext ?? this.activeContext,
-      overlayContext: clearOverlay ? null : overlayContext ?? this.overlayContext,
+      overlayContext: clearOverlay
+          ? null
+          : overlayContext ?? this.overlayContext,
       createMenuOpen: createMenuOpen ?? this.createMenuOpen,
     );
   }

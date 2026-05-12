@@ -51,6 +51,9 @@ class Person {
       role,
       location,
       status,
+      summary,
+      email,
+      phone,
       ...tags,
     ].join(' ').toLowerCase().contains(normalized);
   }
@@ -70,9 +73,4 @@ class PersonLog {
   final String body;
 }
 
-enum PersonStatusColor {
-  green,
-  blue,
-  amber,
-  red;
-}
+enum PersonStatusColor { green, blue, amber, red }
