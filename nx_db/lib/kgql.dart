@@ -15,4 +15,5 @@ export 'src/kgql/repositories/aggregate_repository.dart';
 export 'src/kgql/helpers/struct_builder.dart';
 export 'src/kgql/helpers/set_request_helpers.dart';
 export 'src/kgql/helpers/attr_accessors.dart';
+export 'src/core/client/db_audit_context.dart';
 export 'src/core/client/graphql_client.dart';

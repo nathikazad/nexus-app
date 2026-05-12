@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../../core/json/payload_unwrap.dart';
+import '../../core/client/db_audit_context.dart';
 import '../documents/get_kgql_models.graphql.dart';
 import '../documents/set_kgql_models.graphql.dart';
 import '../models/model.dart';
@@ -98,54 +99,84 @@ Future<int> setKgqlModel(
   GraphQLClient client,
   SetModelRequest request, {
   required int domainId,
+  DbAuditContext? auditContext,
+  String auditSourceKind = '',
 }) async {
   final requestJson = request.toJson();
+  final context = auditContext ??
+      currentDbAuditContext() ??
+      DbAuditContext.create(
+        sourceKind: auditSourceKind,
+        sourceId: _setModelSourceId(request),
+        sourceLabel: _setModelSourceLabel(request),
+      );
 
-  final result = await client.mutate(
-    MutationOptions(
-      document: gql(setKgqlModelsMutation),
-      variables: {
-        'input': {
-          'data': requestJson,
-          'domainId': domainId,
+  return runWithDbAuditContext(context, () async {
+    final result = await client.mutate(
+      MutationOptions(
+        document: gql(setKgqlModelsMutation),
+        variables: {
+          'input': {
+            'data': requestJson,
+            'domainId': domainId,
+          },
         },
-      },
-    ),
-  );
+      ),
+    );
 
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  final responseData = result.data?['setKgqlModels'] as Map<String, dynamic>?;
-  if (responseData == null) {
-    throw Exception('No data returned from setKgqlModels mutation');
-  }
-
-  final jsonResult = responseData['json'];
-  Map<String, dynamic>? jsonData;
-  if (jsonResult != null) {
-    jsonData = jsonResult is String
-        ? json.decode(jsonResult) as Map<String, dynamic>
-        : jsonResult as Map<String, dynamic>;
-  }
-
-  if (request.delete) {
-    final modelId = jsonData?['id'] as int? ?? request.id;
-    if (modelId == null) {
-      throw Exception('Delete: no id in response or request');
+    if (result.hasException) {
+      throw result.exception!;
     }
+
+    final responseData = result.data?['setKgqlModels'] as Map<String, dynamic>?;
+    if (responseData == null) {
+      throw Exception('No data returned from setKgqlModels mutation');
+    }
+
+    final jsonResult = responseData['json'];
+    Map<String, dynamic>? jsonData;
+    if (jsonResult != null) {
+      jsonData = jsonResult is String
+          ? json.decode(jsonResult) as Map<String, dynamic>
+          : jsonResult as Map<String, dynamic>;
+    }
+
+    if (request.delete) {
+      final modelId = jsonData?['id'] as int? ?? request.id;
+      if (modelId == null) {
+        throw Exception('Delete: no id in response or request');
+      }
+      return modelId;
+    }
+
+    if (jsonData == null) {
+      throw Exception('No JSON in setKgqlModels response');
+    }
+
+    final modelId = jsonData['id'] as int?;
+    if (modelId == null) {
+      throw Exception('No ID returned from setKgqlModels mutation');
+    }
+
     return modelId;
-  }
+  });
+}
 
-  if (jsonData == null) {
-    throw Exception('No JSON in setKgqlModels response');
-  }
+String _setModelSourceId(SetModelRequest request) {
+  final id = request.id;
+  final modelType = request.modelType;
+  if (id != null) return 'set_kgql_models:${modelType ?? 'model'}:$id';
+  return 'set_kgql_models:${modelType ?? 'model'}';
+}
 
-  final modelId = jsonData['id'] as int?;
-  if (modelId == null) {
-    throw Exception('No ID returned from setKgqlModels mutation');
-  }
-
-  return modelId;
+String _setModelSourceLabel(SetModelRequest request) {
+  final action = request.delete
+      ? 'delete'
+      : request.id == null
+          ? 'create'
+          : 'update';
+  final modelType = request.modelType ?? 'model';
+  final name = request.name == null || request.name!.trim().isEmpty ? '' : ' "${request.name}"';
+  final id = request.id == null ? '' : ' #${request.id}';
+  return '$action $modelType$name$id';
 }

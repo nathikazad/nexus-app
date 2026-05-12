@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:gql/language.dart' show printNode;
+import 'package:gql/ast.dart' show OperationType;
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../config/backend_presets.dart';
 import '../config/graphql_http_config.dart';
+import 'db_audit_context.dart';
 
 export '../config/graphql_http_config.dart';
 
@@ -43,13 +45,46 @@ Link _kgqlRequestLogLink() {
   });
 }
 
+Link dbAuditContextLink(String sourceKind) {
+  return Link.function((Request request, [NextLink? forward]) {
+    if (forward == null) {
+      return Stream<Response>.error(
+        StateError('DbAuditContextLink: forward is null'),
+      );
+    }
+    if (request.operation.getOperationType() != OperationType.mutation) {
+      return forward(request);
+    }
+
+    final context = currentDbAuditContext() ??
+        DbAuditContext.create(
+          sourceKind: sourceKind,
+          sourceId: request.operation.operationName,
+          sourceLabel: request.operation.operationName,
+        );
+    final auditedRequest = request.updateContextEntry<HttpLinkHeaders>(
+      (headers) => HttpLinkHeaders(
+        headers: <String, String>{
+          ...headers?.headers ?? <String, String>{},
+          ...context.toHeaders(fallbackSourceKind: sourceKind),
+        },
+      ),
+    );
+    return forward(auditedRequest);
+  });
+}
+
 class GraphQLConfig {
   static String get defaultEndpoint =>
       resolve(BackendPreset.defaultPreset).graphqlHttp;
   static const String defaultUserId = '1';
 }
 
-GraphQLClient createClient(String endpoint, String userId) {
+GraphQLClient createClient(
+  String endpoint,
+  String userId, {
+  String auditSourceKind = 'nx_mobile',
+}) {
   final ep = normalizeHttpEndpointForCf(endpoint);
   final defaultHeaders = buildHttpLinkDefaultHeaders(ep, userId);
 
@@ -79,6 +114,7 @@ GraphQLClient createClient(String endpoint, String userId) {
 
   final link = Link.from([
     _kgqlRequestLogLink(),
+    dbAuditContextLink(auditSourceKind),
     transport,
   ]);
 

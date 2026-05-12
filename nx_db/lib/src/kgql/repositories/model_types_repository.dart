@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:graphql_flutter/graphql_flutter.dart';
 
+import '../../core/client/db_audit_context.dart';
 import '../documents/get_kgql_model_type.graphql.dart';
 import '../documents/get_kgql_model_type_all.graphql.dart';
 import '../documents/set_kgql_model_type.graphql.dart';
@@ -180,19 +181,31 @@ Future<int> setKgqlModelType(
   GraphQLClient client,
   SetModelTypeRequest request, {
   required int domainId,
+  DbAuditContext? auditContext,
+  String auditSourceKind = '',
 }) async {
   final requestJson = request.toJson();
+  final context = auditContext ??
+      currentDbAuditContext() ??
+      DbAuditContext.create(
+        sourceKind: auditSourceKind,
+        sourceId: _setModelTypeSourceId(request),
+        sourceLabel: _setModelTypeSourceLabel(request),
+      );
 
   try {
-    final result = await client.mutate(
-      MutationOptions(
-        document: gql(setKgqlModelTypesMutation),
-        variables: {
-          'input': {
-            'data': requestJson,
-            'domainId': domainId,
+    final result = await runWithDbAuditContext(
+      context,
+      () => client.mutate(
+        MutationOptions(
+          document: gql(setKgqlModelTypesMutation),
+          variables: {
+            'input': {
+              'data': requestJson,
+              'domainId': domainId,
+            },
           },
-        },
+        ),
       ),
     );
 
@@ -232,4 +245,18 @@ Future<int> setKgqlModelType(
     print('Stack trace: $stackTrace');
     rethrow;
   }
+}
+
+String _setModelTypeSourceId(SetModelTypeRequest request) {
+  if (request.id != null) {
+    return 'set_kgql_model_types:${request.name}:${request.id}';
+  }
+  return 'set_kgql_model_types:${request.name}';
+}
+
+String _setModelTypeSourceLabel(SetModelTypeRequest request) {
+  final action = request.id == null ? 'create' : 'update';
+  final name = request.name.trim().isEmpty ? 'model type' : request.name;
+  final id = request.id == null ? '' : ' #${request.id}';
+  return '$action model type $name$id';
 }

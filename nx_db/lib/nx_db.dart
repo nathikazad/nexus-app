@@ -1,6 +1,7 @@
 library nx_db;
 
 // Core — config, GraphQL client
+export 'src/core/client/db_audit_context.dart';
 export 'src/core/client/graphql_client.dart';
 export 'src/core/client/graphql_client_provider.dart';
 export 'src/core/config/backend_presets.dart';
