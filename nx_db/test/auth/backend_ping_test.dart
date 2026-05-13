@@ -8,7 +8,8 @@ import 'package:nx_db/auth.dart';
 import 'package:test/test.dart' show Tags;
 
 void main() {
-  test('pingGraphqlBackend succeeds on 200 JSON without GraphQL errors', () async {
+  test('pingGraphqlBackend succeeds on 200 JSON without GraphQL errors',
+      () async {
     final mock = MockClient((request) async {
       expect(request.method, 'POST');
       expect(request.headers['Content-Type'], 'application/json');

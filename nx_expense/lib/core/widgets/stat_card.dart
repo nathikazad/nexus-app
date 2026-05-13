@@ -15,6 +15,7 @@ class StatCard extends StatelessWidget {
   final String title;
   final String value;
   final String? subtitle;
+
   /// Teal card for primary total (see reference dashboard).
   final bool highlight;
 
@@ -32,22 +33,20 @@ class StatCard extends StatelessWidget {
       letterSpacing: -0.5,
       color: highlight ? Colors.white : AppColors.slate900,
     );
-    final useMoneySplit = highlight &&
+    final useMoneySplit =
+        highlight &&
         value.contains('.') &&
         (value.startsWith(r'$') || value.startsWith('-'));
     final valueWidget = useMoneySplit
         ? _splitMoneyHighlight(value)
-        : Text(
-            value,
-            style: valueStyle,
-            maxLines: 1,
-            softWrap: false,
-          );
+        : Text(value, style: valueStyle, maxLines: 1, softWrap: false);
     return Card(
       color: highlight ? AppColors.teal600 : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: highlight ? AppColors.teal700 : AppColors.slate100),
+        side: BorderSide(
+          color: highlight ? AppColors.teal700 : AppColors.slate100,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),

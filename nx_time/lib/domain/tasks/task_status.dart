@@ -1,10 +1,5 @@
 /// Stored in KGQL attribute `status` (lowercase string).
-enum TaskStatus {
-  todo,
-  progress,
-  done,
-  skip,
-}
+enum TaskStatus { todo, progress, done, skip }
 
 extension TaskStatusKgql on TaskStatus {
   /// Value persisted in `attribute_definitions.key == status`.

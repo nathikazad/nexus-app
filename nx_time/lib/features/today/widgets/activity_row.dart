@@ -26,7 +26,9 @@ class _ActivityRowState extends State<ActivityRow> {
   bool _expanded = false;
 
   TodayUmbrellaActivity? get _umbrella =>
-      widget.activity is TodayUmbrellaActivity ? widget.activity as TodayUmbrellaActivity : null;
+      widget.activity is TodayUmbrellaActivity
+      ? widget.activity as TodayUmbrellaActivity
+      : null;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +61,10 @@ class _ActivityRowState extends State<ActivityRow> {
                   onTap: widget.onTap,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: BorderRadius.circular(16),
@@ -98,7 +103,12 @@ class _ActivityRowState extends State<ActivityRow> {
         ),
         if (umbrella != null && _expanded && umbrella.children.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 28, right: 12, top: 4, bottom: 4),
+            padding: const EdgeInsets.only(
+              left: 28,
+              right: 12,
+              top: 4,
+              bottom: 4,
+            ),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: Border(
@@ -130,10 +140,7 @@ class _ActivityRowState extends State<ActivityRow> {
 }
 
 class _UmbrellaChildTile extends StatelessWidget {
-  const _UmbrellaChildTile({
-    required this.activity,
-    this.onTap,
-  });
+  const _UmbrellaChildTile({required this.activity, this.onTap});
 
   final TodayActivity activity;
   final VoidCallback? onTap;
@@ -262,10 +269,7 @@ class _Titles extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             activity.timeRangeLabel,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.slate500,
-            ),
+            style: const TextStyle(fontSize: 12, color: AppColors.slate500),
           ),
         ],
       );
@@ -319,10 +323,7 @@ class _Titles extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           activity.timeRangeLabel,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.slate500,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.slate500),
         ),
       ],
     );
@@ -336,7 +337,8 @@ class _Duration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (activity.kind == TodayActivityKind.current && activity.liveElapsedLabel != null) {
+    if (activity.kind == TodayActivityKind.current &&
+        activity.liveElapsedLabel != null) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(

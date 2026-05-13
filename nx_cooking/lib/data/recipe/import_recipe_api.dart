@@ -89,7 +89,6 @@ Never _throwFromResponse(http.Response resp) {
 Future<ImportRecipeHttpResult> importRecipeFromUrl({
   required String imageBaseUrl,
   required String userId,
-  required int domainId,
   required String recipeUrl,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
@@ -97,7 +96,7 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
   final resp = await http.post(
     uri,
     headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{'url': recipeUrl, 'domainId': domainId}),
+    body: jsonEncode(<String, dynamic>{'url': recipeUrl}),
   );
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     _throwFromResponse(resp);
@@ -116,7 +115,6 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
 Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   required String imageBaseUrl,
   required String userId,
-  required int domainId,
   required String recipeText,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
@@ -124,10 +122,7 @@ Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   final resp = await http.post(
     uri,
     headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{
-      'text': recipeText,
-      'domainId': domainId,
-    }),
+    body: jsonEncode(<String, dynamic>{'text': recipeText}),
   );
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     _throwFromResponse(resp);

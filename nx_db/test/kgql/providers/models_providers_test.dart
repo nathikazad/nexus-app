@@ -17,8 +17,6 @@ class _AuthLoggedIn extends AuthController {
   @override
   Future<User?> build() async => User(
         userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
         preset: BackendPreset.localhost,
       );
 }
@@ -53,7 +51,7 @@ void main() {
       expect(captured, isNotNull);
       expect(captured!.variables['filter'], containsPair('model_type', 9));
       expect(captured!.variables['struct'], isNotNull);
-      expect(captured!.variables['domainId'], 1);
+      expect(captured!.variables.containsKey('domainId'), isFalse);
     });
 
     test('modelsProvider filters list to matching modelTypeId', () async {

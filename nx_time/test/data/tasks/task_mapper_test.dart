@@ -66,11 +66,7 @@ void main() {
         'status': 'todo',
         'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
         'relations': [
-          {
-            'relation_id': 500,
-            'model_id': 100,
-            'model_type': 'Meet',
-          },
+          {'relation_id': 500, 'model_id': 100, 'model_type': 'Meet'},
         ],
       });
       final t = taskFromModel(m);
@@ -88,11 +84,7 @@ void main() {
         'status': 'todo',
         'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
         'relations': [
-          {
-            'relation_id': 9001,
-            'model_id': 7,
-            'model_type': 'Task',
-          },
+          {'relation_id': 9001, 'model_id': 7, 'model_type': 'Task'},
         ],
       });
       final t = taskFromModel(m);
@@ -119,20 +111,17 @@ void main() {
       expect(keys, containsAll([kTaskAttrStatus, kTaskAttrTags]));
       expect(req.relations, isNotNull);
       expect(req.relations!.length, 2);
-      expect(req.relations!.map((r) => r.modelType).toSet(),
-          containsAll([kTaskRelationKey, kProjectRelationKey]));
+      expect(
+        req.relations!.map((r) => r.modelType).toSet(),
+        containsAll([kTaskRelationKey, kProjectRelationKey]),
+      );
     });
   });
 
   group('setModelRequestForUpdateTask', () {
     test('passes id and omits attributes by default', () {
       final req = setModelRequestForUpdateTask(
-        Task(
-          id: 55,
-          name: 'X',
-          modelTypeId: 9,
-          status: TaskStatus.done,
-        ),
+        Task(id: 55, name: 'X', modelTypeId: 9, status: TaskStatus.done),
       );
       expect(req.id, 55);
       expect(req.attributes, isNull);

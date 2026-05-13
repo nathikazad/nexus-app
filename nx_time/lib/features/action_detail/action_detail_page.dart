@@ -115,7 +115,10 @@ class _ActivityDetailScaffold extends StatelessWidget {
                   TextButton(
                     onPressed: onEdit,
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -219,7 +222,8 @@ class _ActivityDetailScaffold extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         c.title,
@@ -281,7 +285,11 @@ class _ActivityDetailScaffold extends StatelessWidget {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: const [
-                                  Icon(Icons.add_circle_outline, size: 18, color: AppColors.slate500),
+                                  Icon(
+                                    Icons.add_circle_outline,
+                                    size: 18,
+                                    color: AppColors.slate500,
+                                  ),
                                   SizedBox(width: 6),
                                   Text(
                                     'Add another action',
@@ -299,12 +307,16 @@ class _ActivityDetailScaffold extends StatelessWidget {
                       ),
                     ],
                   ],
-                  if (args.description != null && args.description!.trim().isNotEmpty) ...[
+                  if (args.description != null &&
+                      args.description!.trim().isNotEmpty) ...[
                     const SizedBox(height: 14),
                     ActionDetailNotesBlock(text: args.description!.trim()),
                   ],
                   const SizedBox(height: 12),
-                  Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
+                  Divider(
+                    height: 1,
+                    color: AppColors.slate100.withValues(alpha: 0.9),
+                  ),
                   const SizedBox(height: 12),
                   if (args.tasks.isNotEmpty) ...[
                     Row(
@@ -334,10 +346,7 @@ class _ActivityDetailScaffold extends StatelessWidget {
                     ],
                     const Text(
                       'Tap to view task detail',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.slate400,
-                      ),
+                      style: TextStyle(fontSize: 11, color: AppColors.slate400),
                     ),
                   ] else ...[
                     const Align(
@@ -366,7 +375,10 @@ class _ActivityDetailScaffold extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 4),
-                  Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
+                  Divider(
+                    height: 1,
+                    color: AppColors.slate100.withValues(alpha: 0.9),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

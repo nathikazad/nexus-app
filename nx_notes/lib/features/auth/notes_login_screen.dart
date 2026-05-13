@@ -19,12 +19,7 @@ class _NotesLoginScreenState extends ConsumerState<NotesLoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final error = await ref
         .read(authProvider.notifier)
-        .login(
-          _selectedProfile.userId,
-          _selectedPreset,
-          _selectedProfile.personalDomainId,
-          _selectedProfile.homeDomainId,
-        );
+        .login(_selectedProfile.userId, _selectedPreset);
     if (error == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error), backgroundColor: AppColors.red),

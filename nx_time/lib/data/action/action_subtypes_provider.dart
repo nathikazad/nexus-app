@@ -23,15 +23,17 @@ List<ModelType> collectActionSubtypeModelTypes(ModelType actionRoot) {
 }
 
 /// Action subtypes from the DB (same tree as [actionSchemaProvider]).
-final actionSubtypeModelTypesProvider =
-    FutureProvider<List<ModelType>>((ref) async {
+final actionSubtypeModelTypesProvider = FutureProvider<List<ModelType>>((
+  ref,
+) async {
   final action = await ref.watch(actionSchemaProvider.future);
   return collectActionSubtypeModelTypes(action);
 });
 
 /// Same as [actionSubtypeModelTypesProvider] in domain-shaped form (no [ModelType] in features).
-final actionSubtypeOptionsProvider =
-    FutureProvider<List<ActionSubtypeOption>>((ref) async {
+final actionSubtypeOptionsProvider = FutureProvider<List<ActionSubtypeOption>>((
+  ref,
+) async {
   final raw = await ref.watch(actionSubtypeModelTypesProvider.future);
   return [for (final t in raw) ActionSubtypeOption(id: t.id, name: t.name)];
 });

@@ -12,11 +12,7 @@ import 'package:nx_time/features/today/widgets/time_map_segment.dart';
 
 /// View-model types for the Today tab (presentation only).
 
-enum TodayActivityKind {
-  standard,
-  flagged,
-  current,
-}
+enum TodayActivityKind { standard, flagged, current }
 
 class TodayActivity {
   const TodayActivity({
@@ -60,10 +56,7 @@ class TodayUmbrellaActivity extends TodayActivity {
 }
 
 class ActivityCategory {
-  const ActivityCategory({
-    required this.label,
-    required this.swatch,
-  });
+  const ActivityCategory({required this.label, required this.swatch});
 
   final String label;
   final Color swatch;
@@ -86,6 +79,7 @@ class TodaySnapshot {
 
   final String clockLabel;
   final String titleLine;
+
   /// Calendar line for the focused day, e.g. "Sat, Apr 18" (for activity detail, not the header title).
   final String dayDateLabel;
   final List<TimeMapSegment> timeMapSegments;
@@ -116,9 +110,7 @@ final todaySnapshotProvider = Provider<AsyncValue<TodaySnapshot>>((ref) {
   const tag = '[nx_time Today]';
   final monday = ref.watch(todayMondayProvider);
   final weekAsync = ref.watch(weekActionsProvider(monday));
-  final colors = modelTypeColorsOrFallback(
-    ref.watch(modelTypeColorsProvider),
-  );
+  final colors = modelTypeColorsOrFallback(ref.watch(modelTypeColorsProvider));
 
   return weekAsync.when(
     data: (week) {
@@ -180,8 +172,9 @@ TodaySnapshot buildTodaySnapshot(
   final dayEnd = dayStart.add(const Duration(days: 1));
   final totalMs = dayEnd.difference(dayStart).inMilliseconds;
 
-  final inDay =
-      domainActions.where((m) => actionOverlapsHalfOpen(m, dayStart, dayEnd)).toList();
+  final inDay = domainActions
+      .where((m) => actionOverlapsHalfOpen(m, dayStart, dayEnd))
+      .toList();
 
   final sorted = List<Action>.from(inDay)
     ..sort((a, b) {

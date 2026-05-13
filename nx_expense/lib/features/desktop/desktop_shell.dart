@@ -46,7 +46,8 @@ class DesktopShell extends ConsumerWidget {
             onDestinationSelected: (i) {
               ref.read(desktopShellTabIndexProvider.notifier).state = i;
               if (i != 4) {
-                ref.read(tagSystemsPanelSelectionProvider.notifier).state = null;
+                ref.read(tagSystemsPanelSelectionProvider.notifier).state =
+                    null;
               }
               if (i != 3) {
                 ref.read(tellerPanel3Provider.notifier).state = null;
@@ -69,10 +70,7 @@ class DesktopShell extends ConsumerWidget {
             ),
             leading: Padding(
               padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-              child: Text(
-                'EXPNS.',
-                style: refAppBarTitleLarge(),
-              ),
+              child: Text('EXPNS.', style: refAppBarTitleLarge()),
             ),
             trailing: Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -113,7 +111,11 @@ class DesktopShell extends ConsumerWidget {
               ),
             ],
           ),
-          const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
+          const VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: AppColors.slate100,
+          ),
           Expanded(child: _DesktopContent(index: index)),
         ],
       ),
@@ -178,11 +180,12 @@ class _ExpensesPanels extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: 360,
-          child: const ExpenseListScreen(),
+        SizedBox(width: 360, child: const ExpenseListScreen()),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: AppColors.slate100,
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
         Expanded(
           child: selectedId != null
               ? ExpenseDetailScreen(
@@ -191,11 +194,12 @@ class _ExpensesPanels extends ConsumerWidget {
                 )
               : _emptyPanel('Select an expense'),
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
-        SizedBox(
-          width: 380,
-          child: _ExpensePanel3(),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: AppColors.slate100,
         ),
+        SizedBox(width: 380, child: _ExpensePanel3()),
       ],
     );
   }
@@ -208,16 +212,11 @@ class _ExpensePanel3 extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stack = ref.watch(panel3StackProvider);
     if (stack.isEmpty) {
-      return const ColoredBox(
-        color: Colors.white,
-        child: SizedBox.expand(),
-      );
+      return const ColoredBox(color: Colors.white, child: SizedBox.expand());
     }
 
     final top = stack.last;
-    return SizedBox.expand(
-      child: _buildPanel3Content(context, ref, top),
-    );
+    return SizedBox.expand(child: _buildPanel3Content(context, ref, top));
   }
 
   Widget _buildPanel3Content(
@@ -227,10 +226,7 @@ class _ExpensePanel3 extends ConsumerWidget {
   ) {
     switch (state.type) {
       case Panel3Type.none:
-        return const ColoredBox(
-          color: Colors.white,
-          child: SizedBox.expand(),
-        );
+        return const ColoredBox(color: Colors.white, child: SizedBox.expand());
       case Panel3Type.expenseDetail:
         return ExpenseDetailScreen(
           key: ValueKey('p3-expense-${state.id}'),
@@ -253,7 +249,9 @@ class _ExpensePanel3 extends ConsumerWidget {
         return scopedExpenseListScreen(
           title: relDisplayName,
           initialFilter: ExpenseFilter(
-            relationFilters: {relName: {relId}},
+            relationFilters: {
+              relName: {relId},
+            },
             relationFilterLabels: {
               relName: {relId: relDisplayName},
             },
@@ -290,11 +288,12 @@ class _TagSystemsPanels extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: 360,
-          child: const TagSystemsScreen(embedded: true),
+        SizedBox(width: 360, child: const TagSystemsScreen(embedded: true)),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: AppColors.slate100,
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
         Expanded(
           child: sel == null
               ? _emptyPanel('Select a tag system or add one')
@@ -321,11 +320,12 @@ class _TransfersPanels extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: 360,
-          child: const TransfersListScreen(),
+        SizedBox(width: 360, child: const TransfersListScreen()),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: AppColors.slate100,
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
         Expanded(
           child: selectedId != null
               ? TransferDetailScreen(
@@ -349,11 +349,12 @@ class _TellerPanels extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: 360,
-          child: const TellerListScreen(),
+        SizedBox(width: 360, child: const TellerListScreen()),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: AppColors.slate100,
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
         Expanded(
           child: row != null
               ? TellerTransactionDetailScreen(
@@ -362,11 +363,12 @@ class _TellerPanels extends ConsumerWidget {
                 )
               : _emptyPanel('Select a transaction'),
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
-        SizedBox(
-          width: 380,
-          child: _TellerPanel3(),
+        const VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: AppColors.slate100,
         ),
+        SizedBox(width: 380, child: _TellerPanel3()),
       ],
     );
   }
@@ -379,10 +381,7 @@ class _TellerPanel3 extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(tellerPanel3Provider);
     if (state == null) {
-      return const ColoredBox(
-        color: Colors.white,
-        child: SizedBox.expand(),
-      );
+      return const ColoredBox(color: Colors.white, child: SizedBox.expand());
     }
     switch (state.kind) {
       case TellerPanel3Kind.expense:
@@ -400,7 +399,11 @@ class _TellerPanel3 extends ConsumerWidget {
         return PanelChrome(
           title: 'Link expense',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => closeTellerPanel3(ref),
           ),
           actions: [
@@ -416,7 +419,11 @@ class _TellerPanel3 extends ConsumerWidget {
         return PanelChrome(
           title: 'Link transfer',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => closeTellerPanel3(ref),
           ),
           actions: [
@@ -434,7 +441,11 @@ class _TellerPanel3 extends ConsumerWidget {
         return PanelChrome(
           title: 'New expense',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => closeTellerPanel3(ref),
           ),
           body: ExpenseFormScreen(
@@ -450,7 +461,11 @@ class _TellerPanel3 extends ConsumerWidget {
         return PanelChrome(
           title: 'New transfer',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => closeTellerPanel3(ref),
           ),
           body: TellerTransferQuickCreateScreen(row: row, embedded: true),

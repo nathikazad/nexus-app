@@ -25,12 +25,7 @@ class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(
-          _selectedProfile.userId,
-          _selectedPreset,
-          _selectedProfile.personalDomainId,
-          _selectedProfile.homeDomainId,
-        );
+        .login(_selectedProfile.userId, _selectedPreset);
 
     if (errorMessage == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

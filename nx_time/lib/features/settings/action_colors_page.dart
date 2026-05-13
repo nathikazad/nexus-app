@@ -122,12 +122,18 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
                           shape: BoxShape.circle,
                           color: c,
                           border: Border.all(
-                            color: selectedSwatch ? AppColors.slate900 : AppColors.slate200,
+                            color: selectedSwatch
+                                ? AppColors.slate900
+                                : AppColors.slate200,
                             width: selectedSwatch ? 2.2 : 1.2,
                           ),
                         ),
                         child: selectedSwatch
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            ? const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.white,
+                              )
                             : null,
                       ),
                     );
@@ -155,9 +161,9 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
       }
     }
   }
@@ -208,10 +214,7 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
               padding: EdgeInsets.fromLTRB(20, 14, 20, 8),
               child: Text(
                 'Tap a color to choose a new swatch',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.slate500,
-                ),
+                style: TextStyle(fontSize: 13, color: AppColors.slate500),
               ),
             ),
             Expanded(
@@ -255,11 +258,7 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
         ),
       );
     }
-    return _buildList(
-      types,
-      colorsLast,
-      person: personLast,
-    );
+    return _buildList(types, colorsLast, person: personLast);
   }
 
   Widget _error(Object e) {
@@ -279,7 +278,8 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       itemCount: types.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.slate100),
+      separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: AppColors.slate100),
       itemBuilder: (context, index) {
         final mt = types[index];
         final name = mt.name;
@@ -307,7 +307,10 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
                 ),
                 borderRadius: BorderRadius.circular(999),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: AppColors.slate200),
                     borderRadius: BorderRadius.circular(999),

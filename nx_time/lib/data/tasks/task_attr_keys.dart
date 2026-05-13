@@ -4,6 +4,7 @@ library;
 const String kTaskModelTypeName = 'Task';
 
 const String kTaskAttrStatus = 'status';
+
 /// JSON array of strings; not named `tags` (reserved for KGQL tag assignments on [Model]).
 const String kTaskAttrTags = 'task_tags';
 const String kTaskAttrDate = 'date';

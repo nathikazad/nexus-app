@@ -15,18 +15,13 @@ Future<ActionCategoryOption?> showActionCategoryPicker(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _CategoryPickerBody(
-      categories: categories,
-      selected: selected,
-    ),
+    builder: (ctx) =>
+        _CategoryPickerBody(categories: categories, selected: selected),
   );
 }
 
 class _CategoryPickerBody extends StatefulWidget {
-  const _CategoryPickerBody({
-    required this.categories,
-    this.selected,
-  });
+  const _CategoryPickerBody({required this.categories, this.selected});
 
   final List<ActionCategoryOption> categories;
   final ActionCategoryOption? selected;
@@ -56,6 +51,7 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final screenH = MediaQuery.sizeOf(context).height;
+
     /// Fixed allocation for rows so the sheet height does not change when the
     /// filtered list shrinks or is empty (content scrolls inside).
     final listAreaHeight = screenH * 0.42;
@@ -142,26 +138,27 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                           ),
                         )
                       : _filtered.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No types match your search.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.slate500,
-                                ),
-                              ),
-                            )
-                          : ListView(
-                              children: [
-                                for (final c in _filtered)
-                                  _CategoryRow(
-                                    option: c,
-                                    isSelected: widget.selected?.modelTypeId ==
-                                        c.modelTypeId,
-                                  ),
-                              ],
+                      ? const Center(
+                          child: Text(
+                            'No types match your search.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.slate500,
                             ),
+                          ),
+                        )
+                      : ListView(
+                          children: [
+                            for (final c in _filtered)
+                              _CategoryRow(
+                                option: c,
+                                isSelected:
+                                    widget.selected?.modelTypeId ==
+                                    c.modelTypeId,
+                              ),
+                          ],
+                        ),
                 ),
               ],
             ),
@@ -173,10 +170,7 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
 }
 
 class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({
-    required this.option,
-    required this.isSelected,
-  });
+  const _CategoryRow({required this.option, required this.isSelected});
 
   final ActionCategoryOption option;
   final bool isSelected;
@@ -193,10 +187,7 @@ class _CategoryRow extends StatelessWidget {
           onTap: () => Navigator.of(context).pop(option),
           borderRadius: BorderRadius.circular(10),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Row(
               children: [
                 Container(
@@ -213,17 +204,15 @@ class _CategoryRow extends StatelessWidget {
                     option.name,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                      fontWeight: isSelected
+                          ? FontWeight.w500
+                          : FontWeight.w400,
                       color: isSelected ? style.foreground : AppColors.slate900,
                     ),
                   ),
                 ),
                 if (isSelected)
-                  Icon(
-                    Icons.check,
-                    size: 16,
-                    color: style.foreground,
-                  ),
+                  Icon(Icons.check, size: 16, color: style.foreground),
               ],
             ),
           ),

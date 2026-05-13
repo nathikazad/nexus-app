@@ -4,11 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 
 class ExpenseTagChip extends StatelessWidget {
-  const ExpenseTagChip({
-    super.key,
-    required this.label,
-    this.color,
-  });
+  const ExpenseTagChip({super.key, required this.label, this.color});
 
   final String label;
   final Color? color;

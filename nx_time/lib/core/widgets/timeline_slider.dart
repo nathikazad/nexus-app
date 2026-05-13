@@ -124,11 +124,7 @@ class _TimelinePainter extends CustomPainter {
     for (final m in marks) {
       if (m < minTime - 1e-6 || m > maxTime + 1e-6) continue;
       final x = valueToX(m).clamp(0.0, w);
-      canvas.drawLine(
-        Offset(x, 4),
-        Offset(x, 14),
-        markPaint,
-      );
+      canvas.drawLine(Offset(x, 4), Offset(x, 14), markPaint);
     }
 
     final cx = valueToX(value).clamp(10.0, w - 10.0);

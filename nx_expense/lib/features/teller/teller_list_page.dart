@@ -32,16 +32,18 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     if (base == null || base.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image / MCP HTTP URL is not configured.')),
+          const SnackBar(
+            content: Text('Image / MCP HTTP URL is not configured.'),
+          ),
         );
       }
       return;
     }
     if (uid == null || uid.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Not signed in.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Not signed in.')));
       }
       return;
     }
@@ -52,9 +54,9 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
       await ref.read(tellerTransactionsProvider.future);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Teller sync failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Teller sync failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _syncBusy = false);
@@ -86,8 +88,15 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                   if (Navigator.of(context).canPop())
                     IconButton(
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: AppColors.slate400,
+                        size: 22,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   Expanded(child: Text('Teller', style: refAppBarTitleLarge())),
@@ -96,7 +105,10 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                       message: 'Fetch from Teller (server sync)',
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
                         onPressed: _syncBusy ? null : _onSyncFromServer,
                         icon: _syncBusy
                             ? SizedBox(
@@ -107,7 +119,11 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                                   color: AppColors.teal600,
                                 ),
                               )
-                            : const Icon(Icons.refresh, color: AppColors.slate400, size: 22),
+                            : const Icon(
+                                Icons.refresh,
+                                color: AppColors.slate400,
+                                size: 22,
+                              ),
                       ),
                     ),
                   const ExpenseDateRangeCalendarButton(),
@@ -119,10 +135,17 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
           ),
           const ExpenseDateRangeBar(bottomPadding: 12),
           Padding(
-            padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 4),
+            padding: const EdgeInsets.fromLTRB(
+              RefLayout.px5,
+              0,
+              RefLayout.px5,
+              4,
+            ),
             child: summaryAsync.when(
               data: (s) => Text(
-                s.sumTotal != null ? '${s.count} · ${formatMoney(s.sumTotal)}' : '${s.count}',
+                s.sumTotal != null
+                    ? '${s.count} · ${formatMoney(s.sumTotal)}'
+                    : '${s.count}',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -131,7 +154,10 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
               ),
               loading: () => Text(
                 '...',
-                style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate500),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.slate500,
+                ),
               ),
               error: (_, __) => const SizedBox.shrink(),
             ),
@@ -159,7 +185,10 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                         padding: const EdgeInsets.all(24),
                         child: Text(
                           'Error: $e',
-                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.slate500,
+                          ),
                         ),
                       ),
                     ],
@@ -168,7 +197,9 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                     if (rows.isEmpty) {
                       return ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: RefLayout.px5,
+                        ),
                         children: [
                           SizedBox(
                             height: 280,
@@ -176,7 +207,11 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.account_balance_outlined, size: 48, color: AppColors.slate300),
+                                  Icon(
+                                    Icons.account_balance_outlined,
+                                    size: 48,
+                                    color: AppColors.slate300,
+                                  ),
                                   const SizedBox(height: 12),
                                   Text(
                                     'No Teller transactions in this range',

@@ -11,30 +11,23 @@ import 'screenshot_today_snapshot.dart';
 /// Logged-in user without hitting the network; fixed [TodaySnapshot] for stable screenshots.
 class ScreenshotAuthController extends AuthController {
   ScreenshotAuthController()
-      : super(initialDelay: Duration.zero, skipBackendPing: true);
+    : super(initialDelay: Duration.zero, skipBackendPing: true);
 
   @override
   Future<User?> build() async {
-    return User(
-      userId: '1',
-      personalDomainId: 1,
-      homeDomainId: 1,
-      preset: BackendPreset.laptop,
-    );
+    return User(userId: '1', preset: BackendPreset.laptop);
   }
 }
 
 List<Override> get screenshotAuthOverrides => [
-      authProvider.overrideWith(() => ScreenshotAuthController()),
-      actionRepositoryProvider.overrideWith(
-        (ref) => FakeActionRepository(
-          initial: buildScreenshotTodaySnapshot().sourceActions,
-        ),
-      ),
-      modelTypeColorsProvider.overrideWith(
-        (ref) async => ModelTypeColors.fallback,
-      ),
-      todaySnapshotProvider.overrideWithValue(
-        AsyncData(buildScreenshotTodaySnapshot()),
-      ),
-    ];
+  authProvider.overrideWith(() => ScreenshotAuthController()),
+  actionRepositoryProvider.overrideWith(
+    (ref) => FakeActionRepository(
+      initial: buildScreenshotTodaySnapshot().sourceActions,
+    ),
+  ),
+  modelTypeColorsProvider.overrideWith((ref) async => ModelTypeColors.fallback),
+  todaySnapshotProvider.overrideWithValue(
+    AsyncData(buildScreenshotTodaySnapshot()),
+  ),
+];

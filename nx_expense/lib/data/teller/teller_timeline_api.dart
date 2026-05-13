@@ -94,7 +94,9 @@ List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
     final idRaw = raw['id'];
     final eventId = idRaw == null ? '' : idRaw.toString();
     final payload = _asMap(raw['payload']) ?? {};
-    final linkConn = raw['modelTimelineEventLinksByEventTimeAndEventId'] as Map<String, dynamic>?;
+    final linkConn =
+        raw['modelTimelineEventLinksByEventTimeAndEventId']
+            as Map<String, dynamic>?;
     final linkNodes = linkConn?['nodes'] as List<dynamic>? ?? const [];
     final linked = <LinkedTellerModel>[];
     for (final ln in linkNodes) {
@@ -130,7 +132,9 @@ List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
 }
 
 /// Loads all Teller timeline rows for the current user (RLS via [GraphQLClient] headers).
-Future<List<TellerTransaction>> fetchTellerTimelineEvents(GraphQLClient client) async {
+Future<List<TellerTransaction>> fetchTellerTimelineEvents(
+  GraphQLClient client,
+) async {
   final result = await client.query(
     QueryOptions(
       document: gql(tellerTimelineEventsQuery),

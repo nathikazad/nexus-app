@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_projects/data/projects/kgql_project_repository.dart';
@@ -23,42 +22,27 @@ export 'package:nx_db/riverpod.dart';
 
 /// KGQL-backed [ProjectRepository].
 final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
-  final personal = ref.watch(personalDomainIdProvider);
-  if (personal == null) {
-    throw StateError('personalDomainId required (login)');
-  }
   return KgqlProjectRepository(
     client: ref.watch(graphqlClientProvider),
     loadProjectSchema: () => ref.read(projectSchemaProvider.future),
-    domainId: personal,
   );
 });
 
 /// KGQL-backed [TaskRepository] (`ProjectTask` descendants).
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  final personal = ref.watch(personalDomainIdProvider);
-  if (personal == null) {
-    throw StateError('personalDomainId required (login)');
-  }
   return KgqlTaskRepository(
     client: ref.watch(graphqlClientProvider),
     loadProjectTaskSchema: () => ref.read(projectTaskSchemaProvider.future),
     loadBugSchema: () => ref.read(bugTaskSchemaProvider.future),
     loadFeatureSchema: () => ref.read(featureTaskSchemaProvider.future),
-    domainId: personal,
   );
 });
 
 /// KGQL-backed [SprintRepository].
 final sprintRepositoryProvider = Provider<SprintRepository>((ref) {
-  final personal = ref.watch(personalDomainIdProvider);
-  if (personal == null) {
-    throw StateError('personalDomainId required (login)');
-  }
   return KgqlSprintRepository(
     client: ref.watch(graphqlClientProvider),
     loadSprintSchema: () => ref.read(sprintSchemaProvider.future),
-    domainId: personal,
   );
 });
 

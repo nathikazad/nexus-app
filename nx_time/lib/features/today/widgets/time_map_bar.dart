@@ -61,7 +61,8 @@ class TimeMapBar extends StatelessWidget {
                         for (final seg in segments)
                           if (seg.isPositioned)
                             Positioned(
-                              left: barWidth * seg.startFraction!.clamp(0.0, 1.0),
+                              left:
+                                  barWidth * seg.startFraction!.clamp(0.0, 1.0),
                               width: math.max(
                                 1,
                                 barWidth * seg.widthFraction!.clamp(0.0, 1.0),
@@ -69,8 +70,9 @@ class TimeMapBar extends StatelessWidget {
                               top: 0,
                               bottom: 0,
                               child: ColoredBox(
-                                color: _segmentPaintColor(seg.color)
-                                    .withValues(alpha: 0.82),
+                                color: _segmentPaintColor(
+                                  seg.color,
+                                ).withValues(alpha: 0.82),
                               ),
                             ),
                       ],

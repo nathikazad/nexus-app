@@ -25,12 +25,7 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
 
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(
-          _selectedProfile.userId,
-          _selectedPreset,
-          _selectedProfile.personalDomainId,
-          _selectedProfile.homeDomainId,
-        );
+        .login(_selectedProfile.userId, _selectedPreset);
 
     if (errorMessage == null) {
       return;

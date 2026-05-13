@@ -10,12 +10,8 @@ import '../../_support/mock_graphql_client.dart';
 class _AuthLoggedIn extends AuthController {
   _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
   @override
-  Future<User?> build() async => User(
-        userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
-        preset: BackendPreset.localhost,
-      );
+  Future<User?> build() async =>
+      User(userId: '1', preset: BackendPreset.localhost);
 }
 
 void main() {
@@ -23,17 +19,19 @@ void main() {
 
   test('getActionRoot returns Action model type', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
-          'getKgqlModelType': [
-            {
-              'id': 1,
-              'name': 'Action',
-              'attributes': [
-                {'key': 'start_time', 'value_type': 'datetime'},
-              ],
-            },
-          ],
-        }));
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getKgqlModelType': [
+          {
+            'id': 1,
+            'name': 'Action',
+            'attributes': [
+              {'key': 'start_time', 'value_type': 'datetime'},
+            ],
+          },
+        ],
+      }),
+    );
 
     final container = ProviderContainer(
       overrides: [

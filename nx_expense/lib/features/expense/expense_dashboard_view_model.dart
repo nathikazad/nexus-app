@@ -8,19 +8,13 @@ final dashboardExpenseSummaryProvider = FutureProvider<ExpenseSummary>((
 ) async {
   final repo = ref.watch(expenseRepositoryProvider);
   final range = ref.watch(expenseDateRangeProvider);
-  return repo.dashboardSummary(
-    rangeStart: range.start,
-    rangeEnd: range.end,
-  );
+  return repo.dashboardSummary(rangeStart: range.start, rangeEnd: range.end);
 });
 
 final spendByDayProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.watch(expenseRepositoryProvider);
   final range = ref.watch(expenseDateRangeProvider);
-  return repo.spendByDay(
-    rangeStart: range.start,
-    rangeEnd: range.end,
-  );
+  return repo.spendByDay(rangeStart: range.start, rangeEnd: range.end);
 });
 
 final spendByTagSystemProvider =

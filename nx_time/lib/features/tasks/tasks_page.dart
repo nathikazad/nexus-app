@@ -43,7 +43,9 @@ class TasksPage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
                     decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: AppColors.slate100)),
+                      border: Border(
+                        bottom: BorderSide(color: AppColors.slate100),
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -81,10 +83,10 @@ class TasksPage extends ConsumerWidget {
                           onPressed: () async {
                             final picked = await Navigator.of(context)
                                 .push<Set<int>?>(
-                              MaterialPageRoute(
-                                builder: (_) => const TaskPickerPage(),
-                              ),
-                            );
+                                  MaterialPageRoute(
+                                    builder: (_) => const TaskPickerPage(),
+                                  ),
+                                );
                             if (picked == null || picked.isEmpty) return;
                             final repo = ref.read(taskRepositoryProvider);
                             await pinTaskIdsToCalendarDay(
@@ -100,7 +102,10 @@ class TasksPage extends ConsumerWidget {
                             foregroundColor: AppColors.accent,
                             hoverColor: AppColors.accentLight,
                           ),
-                          icon: const Icon(SolarLinearIcons.addCircle, size: 26),
+                          icon: const Icon(
+                            SolarLinearIcons.addCircle,
+                            size: 26,
+                          ),
                         ),
                       ],
                     ),
@@ -133,7 +138,9 @@ class TasksPage extends ConsumerWidget {
                                 );
                               }
                               final row = rows[i - 1];
-                              final task = tasks.firstWhere((t) => t.id == row.taskId);
+                              final task = tasks.firstWhere(
+                                (t) => t.id == row.taskId,
+                              );
                               return Dismissible(
                                 key: ValueKey('task_row_${row.taskId}'),
                                 direction: DismissDirection.endToStart,
@@ -180,9 +187,8 @@ class TasksPage extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Expanded(
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () =>
+              const Expanded(child: Center(child: CircularProgressIndicator())),
           error: (e, _) => Expanded(
             child: Center(
               child: Padding(
@@ -221,11 +227,7 @@ class _Chip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: fg),
       ),
     );
   }

@@ -32,7 +32,8 @@ enum CameraCommand {
         return Uint8List.fromList([value]);
       case CameraCommand.setRecordPeriod:
         if (period == null || period < 1 || period > 1000) {
-          throw ArgumentError('SetRecordPeriod requires period in range 1-1000, got: $period');
+          throw ArgumentError(
+              'SetRecordPeriod requires period in range 1-1000, got: $period');
         }
         return Uint8List.fromList([
           value,

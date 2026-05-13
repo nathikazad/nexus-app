@@ -43,9 +43,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   void _prevWeek() {
     final m = ref.read(currentWeekProvider);
     final m0 = DateTime(m.year, m.month, m.day);
-    ref.read(currentWeekProvider.notifier).setLocalWeekMonday(
-          m0.subtract(const Duration(days: 7)),
-        );
+    ref
+        .read(currentWeekProvider.notifier)
+        .setLocalWeekMonday(m0.subtract(const Duration(days: 7)));
     setState(() {
       _selectedDayIndex = null;
       _view = _CalendarView.actions;
@@ -56,9 +56,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   void _nextWeek() {
     final m = ref.read(currentWeekProvider);
     final m0 = DateTime(m.year, m.month, m.day);
-    ref.read(currentWeekProvider.notifier).setLocalWeekMonday(
-          m0.add(const Duration(days: 7)),
-        );
+    ref
+        .read(currentWeekProvider.notifier)
+        .setLocalWeekMonday(m0.add(const Duration(days: 7)));
     setState(() {
       _selectedDayIndex = null;
       _view = _CalendarView.actions;
@@ -78,7 +78,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final today = DateTime(n.year, n.month, n.day);
     for (var i = 0; i < 7; i++) {
       final d = monday.add(Duration(days: i));
-      if (d.year == today.year && d.month == today.month && d.day == today.day) {
+      if (d.year == today.year &&
+          d.month == today.month &&
+          d.day == today.day) {
         return i;
       }
     }
@@ -93,20 +95,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   ) {
     final dayLabel = DateFormat.MMMd().format(dayData.day);
     final args = row.children.isNotEmpty
-        ? activityDetailArgsForUmbrella(
-            row,
-            dayLabel,
-            colors,
-          )
-        : activityDetailArgsForAction(
-            row.umbrella,
-            dayLabel,
-            colors,
-          );
+        ? activityDetailArgsForUmbrella(row, dayLabel, colors)
+        : activityDetailArgsForAction(row.umbrella, dayLabel, colors);
     Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => ActivityDetailPage(args: args),
-      ),
+      MaterialPageRoute<void>(builder: (_) => ActivityDetailPage(args: args)),
     );
   }
 
@@ -150,7 +142,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 onPressed: _prevWeek,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                icon: const Icon(SolarLinearIcons.altArrowLeft, size: 18, color: _sky600),
+                icon: const Icon(
+                  SolarLinearIcons.altArrowLeft,
+                  size: 18,
+                  color: _sky600,
+                ),
               ),
               Expanded(
                 child: Text(
@@ -167,7 +163,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 onPressed: _nextWeek,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                icon: const Icon(SolarLinearIcons.altArrowRight, size: 18, color: _sky600),
+                icon: const Icon(
+                  SolarLinearIcons.altArrowRight,
+                  size: 18,
+                  color: _sky600,
+                ),
               ),
             ],
           ),
@@ -180,9 +180,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: _WeekOverviewBody(weekStats: weekStats),
-                    ),
+                    Expanded(child: _WeekOverviewBody(weekStats: weekStats)),
                   ],
                 );
               }
@@ -219,7 +217,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   const SizedBox(height: 8),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Divider(height: 1, thickness: 1, color: AppColors.slate200),
+                    child: Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppColors.slate200,
+                    ),
                   ),
                   Expanded(
                     child: _CalendarDayPanel(
@@ -227,7 +229,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       view: _view,
                       colors: colors,
                       onSelectView: (v) => setState(() => _view = v),
-                      onRowTap: (row) => _openActivityDetail(context, selected, row, colors),
+                      onRowTap: (row) =>
+                          _openActivityDetail(context, selected, row, colors),
                     ),
                   ),
                 ],
@@ -588,7 +591,11 @@ void _accumulateDayRowsInto(
   ModelTypeColors colors,
   Map<int, _TypeStat> byType,
 ) {
-  final dayStart = DateTime(dayData.day.year, dayData.day.month, dayData.day.day);
+  final dayStart = DateTime(
+    dayData.day.year,
+    dayData.day.month,
+    dayData.day.day,
+  );
   final dayEnd = dayStart.add(const Duration(days: 1));
   for (final r in dayData.rows) {
     final u = r.umbrella;
@@ -623,7 +630,10 @@ List<_TypeStat> _statsForDay(CalendarDayData dayData, ModelTypeColors colors) {
   return list;
 }
 
-List<_TypeStat> _statsForWeek(List<CalendarDayData> days, ModelTypeColors colors) {
+List<_TypeStat> _statsForWeek(
+  List<CalendarDayData> days,
+  ModelTypeColors colors,
+) {
   final byType = <int, _TypeStat>{};
   for (final d in days) {
     _accumulateDayRowsInto(d, colors, byType);
@@ -714,16 +724,10 @@ class _StatsList extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: Stack(
                   children: [
-                    Container(
-                      height: 6,
-                      color: AppColors.slate100,
-                    ),
+                    Container(height: 6, color: AppColors.slate100),
                     FractionallySizedBox(
                       widthFactor: fraction.clamp(0.0, 1.0),
-                      child: Container(
-                        height: 6,
-                        color: s.color,
-                      ),
+                      child: Container(height: 6, color: s.color),
                     ),
                   ],
                 ),
@@ -887,7 +891,11 @@ class _DayBarSeg {
 
 /// Stacked segments from local midnight → next midnight (1440 min). Gaps use [AppColors.calMuted].
 List<_DayBarSeg> _segments24h(CalendarDayData dayData, ModelTypeColors colors) {
-  final dayStart = DateTime(dayData.day.year, dayData.day.month, dayData.day.day);
+  final dayStart = DateTime(
+    dayData.day.year,
+    dayData.day.month,
+    dayData.day.day,
+  );
   final dayEnd = dayStart.add(const Duration(days: 1));
   const total = 24 * 60;
   final intervals = <({int startMin, int endMin, Color color})>[];
@@ -948,7 +956,8 @@ class _DayColumn extends StatelessWidget {
     final letter = _letters[dayData.day.weekday - 1];
     final rows = dayData.rows;
     final isWeekend =
-        dayData.day.weekday == DateTime.saturday || dayData.day.weekday == DateTime.sunday;
+        dayData.day.weekday == DateTime.saturday ||
+        dayData.day.weekday == DateTime.sunday;
 
     final Widget bar;
     if (rows.isEmpty) {

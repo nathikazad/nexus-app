@@ -69,11 +69,15 @@ TaskDetailVm taskDetailVmFromTask({
   for (var i = 0; i < task.linkedActivities.length; i++) {
     final link = task.linkedActivities[i];
     final act = i < linkedActions.length ? linkedActions[i] : null;
-    final title = act?.name.isNotEmpty == true ? act!.name : 'Activity ${link.activityId}';
+    final title = act?.name.isNotEmpty == true
+        ? act!.name
+        : 'Activity ${link.activityId}';
     final range = act != null
         ? formatTimeRange(timeFmt, act.startTime, act.endTime)
         : '—';
-    final dur = act != null ? formatDurationHm(act.startTime, act.endTime) : '—';
+    final dur = act != null
+        ? formatDurationHm(act.startTime, act.endTime)
+        : '—';
     summaries.add(
       LinkedActivityLineVm(
         title: title,
@@ -100,8 +104,10 @@ TaskDetailVm taskDetailVmFromTask({
   );
 }
 
-final linkedActionsForTaskProvider =
-    FutureProvider.family<List<Action?>, int>((ref, taskId) async {
+final linkedActionsForTaskProvider = FutureProvider.family<List<Action?>, int>((
+  ref,
+  taskId,
+) async {
   await ref.watch(authenticatedUserProvider.future);
   final task = await ref.watch(taskDetailProvider(taskId).future);
   if (task == null) return [];
@@ -118,8 +124,10 @@ final linkedActionsForTaskProvider =
   return out;
 });
 
-final taskDetailScreenVmProvider =
-    FutureProvider.family<TaskDetailVm?, int>((ref, taskId) async {
+final taskDetailScreenVmProvider = FutureProvider.family<TaskDetailVm?, int>((
+  ref,
+  taskId,
+) async {
   final task = await ref.watch(taskDetailProvider(taskId).future);
   if (task == null) return null;
   final crumbs = await ref.watch(projectBreadcrumbLabelsProvider.future);

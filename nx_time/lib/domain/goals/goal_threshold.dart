@@ -1,11 +1,5 @@
 /// `threshold_op` / `target.op` as supported by [`_check_threshold`].
-enum GoalThresholdOp {
-  gte,
-  gt,
-  eq,
-  lte,
-  lt,
-}
+enum GoalThresholdOp { gte, gt, eq, lte, lt }
 
 GoalThresholdOp goalThresholdOpFromKgql(String raw) {
   switch (raw) {
@@ -41,10 +35,7 @@ String goalThresholdOpToKgql(GoalThresholdOp op) {
 
 /// Policy target in goal JSON responses ([`target`] block).
 class GoalTarget {
-  const GoalTarget({
-    required this.op,
-    required this.value,
-  });
+  const GoalTarget({required this.op, required this.value});
 
   final GoalThresholdOp op;
   final num value;

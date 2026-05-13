@@ -312,8 +312,7 @@ class HardwareViewNotifier extends Notifier<HardwareViewState> {
     if (!state.isConnected || state.isPowerCycling) return;
     state = state.copyWith(isPowerCycling: true);
     try {
-      final success =
-          await _hw.sendCameraCommand(CameraCommand.powerCycle);
+      final success = await _hw.sendCameraCommand(CameraCommand.powerCycle);
       if (success) {
         state = state.copyWith(
           snackbarMessage: 'Power cycle sent — device will restart',
@@ -332,8 +331,7 @@ class HardwareViewNotifier extends Notifier<HardwareViewState> {
     if (!state.isConnected || state.isTriggeringCamera) return;
     state = state.copyWith(isTriggeringCamera: true);
     try {
-      final success =
-          await _hw.sendCameraCommand(CameraCommand.capture);
+      final success = await _hw.sendCameraCommand(CameraCommand.capture);
       if (!success) {
         state = state.copyWith(snackbarMessage: 'Failed to trigger camera');
       }

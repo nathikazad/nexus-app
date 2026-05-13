@@ -45,22 +45,24 @@ class InputArea extends StatelessWidget {
               foregroundColor: isRecording ? Colors.white : Colors.black,
             ),
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Speaker toggle button
           IconButton(
             onPressed: isConnected ? onToggleSpeaker : null,
             icon: Icon(speakerEnabled ? Icons.volume_up : Icons.volume_off),
             style: IconButton.styleFrom(
-              backgroundColor: speakerEnabled ? Theme.of(context).primaryColor : Colors.grey[300],
+              backgroundColor: speakerEnabled
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey[300],
               foregroundColor: speakerEnabled ? Colors.white : Colors.black,
             ),
             tooltip: speakerEnabled ? 'Disable speaker' : 'Enable speaker',
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Text input field
           Expanded(
             child: TextField(
@@ -89,15 +91,17 @@ class InputArea extends StatelessWidget {
               textInputAction: TextInputAction.send,
             ),
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Send button
           IconButton(
             onPressed: isConnected ? onSendTextMessage : null,
             icon: const Icon(Icons.send),
             style: IconButton.styleFrom(
-              backgroundColor: isConnected ? Theme.of(context).primaryColor : Colors.grey[300],
+              backgroundColor: isConnected
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey[300],
               foregroundColor: isConnected ? Colors.white : Colors.grey[600],
             ),
           ),

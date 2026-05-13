@@ -3,10 +3,7 @@
 /// Pure Dart — no Flutter / KGQL. UI maps [modelTypeId] to color via
 /// [barColorForModelTypeId] in the presentation layer.
 class ActionCategory {
-  const ActionCategory({
-    required this.modelTypeId,
-    required this.name,
-  });
+  const ActionCategory({required this.modelTypeId, required this.name});
 
   final int modelTypeId;
   final String name;

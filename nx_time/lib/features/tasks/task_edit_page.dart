@@ -59,9 +59,8 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   Future<void> _pickProject() async {
     final id = await Navigator.of(context).push<int?>(
       MaterialPageRoute(
-        builder: (_) => const ProjectsBrowsePage(
-          mode: ProjectsBrowseMode.pickProject,
-        ),
+        builder: (_) =>
+            const ProjectsBrowsePage(mode: ProjectsBrowseMode.pickProject),
       ),
     );
     if (id != null && mounted) {
@@ -262,9 +261,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                       _fieldLabel('TAGS'),
                       const SizedBox(height: 8),
                       Text(
-                        draft.tags.isEmpty
-                            ? 'No tags'
-                            : draft.tags.join(', '),
+                        draft.tags.isEmpty ? 'No tags' : draft.tags.join(', '),
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.slate600,
@@ -299,7 +296,10 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(SolarLinearIcons.trashBinMinimalistic, size: 18),
+                            Icon(
+                              SolarLinearIcons.trashBinMinimalistic,
+                              size: 18,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Delete task',

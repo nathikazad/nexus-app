@@ -151,14 +151,12 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
     try {
       final imageBaseUrl = ref.read(imageBaseUrlProvider);
       final userId = ref.read(userIdProvider);
-      final domainId = ref.read(homeDomainIdProvider);
-      if (imageBaseUrl == null || userId == null || domainId == null) {
+      if (imageBaseUrl == null || userId == null) {
         throw StateError('Not logged in');
       }
       final result = await importRecipeFromUrl(
         imageBaseUrl: imageBaseUrl,
         userId: userId,
-        domainId: domainId,
         recipeUrl: url,
       );
       scaffold.hideCurrentSnackBar();
@@ -183,14 +181,12 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
     try {
       final imageBaseUrl = ref.read(imageBaseUrlProvider);
       final userId = ref.read(userIdProvider);
-      final domainId = ref.read(homeDomainIdProvider);
-      if (imageBaseUrl == null || userId == null || domainId == null) {
+      if (imageBaseUrl == null || userId == null) {
         throw StateError('Not logged in');
       }
       final result = await importRecipeFromPastedText(
         imageBaseUrl: imageBaseUrl,
         userId: userId,
-        domainId: domainId,
         recipeText: text,
       );
       scaffold.hideCurrentSnackBar();

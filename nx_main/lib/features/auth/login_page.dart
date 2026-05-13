@@ -18,12 +18,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final errorMessage = await ref.read(authProvider.notifier).login(
-            _selectedProfile.userId,
-            _selectedPreset,
-            _selectedProfile.personalDomainId,
-            _selectedProfile.homeDomainId,
-          );
+      final errorMessage = await ref
+          .read(authProvider.notifier)
+          .login(_selectedProfile.userId, _selectedPreset);
 
       if (errorMessage == null) {
         return;

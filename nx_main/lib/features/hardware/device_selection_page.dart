@@ -98,7 +98,8 @@ class _DeviceSelectionPageState extends ConsumerState<DeviceSelectionPage> {
     }
 
     final macStr = result.device.remoteId.toString();
-    final macParts = macStr.replaceAll(':', '').replaceAll('-', '').toUpperCase();
+    final macParts =
+        macStr.replaceAll(':', '').replaceAll('-', '').toUpperCase();
     if (macParts.length >= 5) {
       final last5 = macParts.substring(macParts.length - 5);
       return 'Nexus-$last5';
@@ -219,7 +220,8 @@ class _DeviceSelectionPageState extends ConsumerState<DeviceSelectionPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.bluetooth_disabled, size: 64, color: Colors.grey),
+                    const Icon(Icons.bluetooth_disabled,
+                        size: 64, color: Colors.grey),
                     const SizedBox(height: 16),
                     const Text(
                       'No Nexus devices found',
@@ -253,7 +255,8 @@ class _DeviceSelectionPageState extends ConsumerState<DeviceSelectionPage> {
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: isConnecting ? null : () => _connectToDevice(result),
+                      onTap:
+                          isConnecting ? null : () => _connectToDevice(result),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -264,9 +267,8 @@ class _DeviceSelectionPageState extends ConsumerState<DeviceSelectionPage> {
                                 : AppColors.gray200,
                             width: isConnecting ? 2 : 1,
                           ),
-                          color: isConnecting
-                              ? AppColors.orange50
-                              : Colors.white,
+                          color:
+                              isConnecting ? AppColors.orange50 : Colors.white,
                         ),
                         child: Row(
                           children: [

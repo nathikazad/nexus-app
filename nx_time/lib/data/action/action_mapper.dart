@@ -26,7 +26,8 @@ bool _nestedActionNeighborIsChild(Model c) {
 }
 
 bool _isActionNeighborChild(Relation r) {
-  if (r.modelType != kActionRelationKey && r.modelType != kActionModelTypeName) {
+  if (r.modelType != kActionRelationKey &&
+      r.modelType != kActionModelTypeName) {
     return false;
   }
   if (r.relation == 'parent') return false;
@@ -37,7 +38,10 @@ bool _isActionNeighborChild(Relation r) {
 List<int> _childIdsFromModel(Model m) {
   final nested = m.relations?[kActionRelationKey];
   if (nested != null && nested.isNotEmpty) {
-    final ids = nested.where(_nestedActionNeighborIsChild).map((c) => c.id).toList();
+    final ids = nested
+        .where(_nestedActionNeighborIsChild)
+        .map((c) => c.id)
+        .toList();
     if (kNxTimeTraceActionSemantics) {
       developer.log(
         '[nx_time action_map] id=${m.id} type=${m.modelType?.name} nested_Action_len=${nested.length} '
@@ -106,7 +110,9 @@ SetModelRequest setModelRequestForCreate(Action action, String modelTypeName) {
   final start = action.startTime;
   final end = action.endTime;
   if (start == null || end == null) {
-    throw ArgumentError('Action requires startTime and endTime for set_kgql_models');
+    throw ArgumentError(
+      'Action requires startTime and endTime for set_kgql_models',
+    );
   }
 
   return setKgqlCreate(
@@ -118,10 +124,7 @@ SetModelRequest setModelRequestForCreate(Action action, String modelTypeName) {
         key: kActionAttrStartTime,
         value: start.toIso8601String(),
       ),
-      SetModelAttribute(
-        key: kActionAttrEndTime,
-        value: end.toIso8601String(),
-      ),
+      SetModelAttribute(key: kActionAttrEndTime, value: end.toIso8601String()),
     ],
   );
 }
@@ -139,10 +142,7 @@ SetModelRequest setModelRequestForCreateWithParent(
     description: base.description,
     attributes: base.attributes,
     relations: [
-      ModelRelation(
-        modelType: kActionRelationKey,
-        link: [parentActionId],
-      ),
+      ModelRelation(modelType: kActionRelationKey, link: [parentActionId]),
     ],
   );
 }
@@ -154,7 +154,9 @@ SetModelRequest setModelRequestForUpdate(
   final start = action.startTime;
   final end = action.endTime;
   if (start == null || end == null) {
-    throw ArgumentError('Action requires startTime and endTime for set_kgql_models');
+    throw ArgumentError(
+      'Action requires startTime and endTime for set_kgql_models',
+    );
   }
 
   return setKgqlUpdate(
@@ -167,10 +169,7 @@ SetModelRequest setModelRequestForUpdate(
         key: kActionAttrStartTime,
         value: start.toIso8601String(),
       ),
-      SetModelAttribute(
-        key: kActionAttrEndTime,
-        value: end.toIso8601String(),
-      ),
+      SetModelAttribute(key: kActionAttrEndTime, value: end.toIso8601String()),
     ],
   );
 }

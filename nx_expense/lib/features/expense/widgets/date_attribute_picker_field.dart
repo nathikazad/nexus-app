@@ -67,11 +67,15 @@ class DateAttributePickerField extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            empty ? 'Select date' : formatModelDate(controller.text.trim()),
+                            empty
+                                ? 'Select date'
+                                : formatModelDate(controller.text.trim()),
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: empty ? AppColors.slate400 : AppColors.slate900,
+                              color: empty
+                                  ? AppColors.slate400
+                                  : AppColors.slate900,
                             ),
                           ),
                         ),

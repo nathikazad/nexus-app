@@ -51,7 +51,10 @@ class _TagTreeTileState extends State<TagTreeTile> {
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
                       icon: Icon(
                         _expanded ? Icons.expand_more : Icons.chevron_right,
                         color: AppColors.zinc400,

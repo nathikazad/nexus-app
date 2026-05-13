@@ -49,9 +49,7 @@ Expense expenseFromModel(Model m) {
   }
   Map<String, List<String>>? tags;
   if (m.tags != null) {
-    tags = {
-      for (final e in m.tags!.entries) e.key: List<String>.from(e.value),
-    };
+    tags = {for (final e in m.tags!.entries) e.key: List<String>.from(e.value)};
   }
   Map<String, dynamic>? attrs;
   if (m.attributes != null) {

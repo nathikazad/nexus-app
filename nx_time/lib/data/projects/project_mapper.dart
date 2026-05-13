@@ -22,7 +22,8 @@ bool _nestedProjectNeighborIsChild(Model c) {
 }
 
 bool _isProjectNeighborChild(Relation r) {
-  if (r.modelType != kProjectRelationKey && r.modelType != kProjectModelTypeName) {
+  if (r.modelType != kProjectRelationKey &&
+      r.modelType != kProjectModelTypeName) {
     return false;
   }
   if (r.relation == 'parent') return false;
@@ -69,7 +70,8 @@ int? _parentProjectIdFromModel(Model m) {
   final list = m.relationsList;
   if (list == null || list.isEmpty) return null;
   for (final r in list) {
-    if ((r.modelType == kProjectRelationKey || r.modelType == kProjectModelTypeName) &&
+    if ((r.modelType == kProjectRelationKey ||
+            r.modelType == kProjectModelTypeName) &&
         r.relation == 'parent') {
       return r.modelId;
     }
@@ -96,10 +98,7 @@ SetModelRequest setModelRequestForCreateProject(
 }) {
   final rels = <ModelRelation>[
     if (parentProjectId != null)
-      ModelRelation(
-        modelType: kProjectRelationKey,
-        link: [parentProjectId],
-      ),
+      ModelRelation(modelType: kProjectRelationKey, link: [parentProjectId]),
   ];
 
   return SetModelRequest(
@@ -113,8 +112,9 @@ SetModelRequest setModelRequestForCreateProject(
 SetModelRequest setModelRequestForUpdateProject(Project project) {
   return SetModelRequest(
     id: project.id,
-    modelType:
-        project.modelTypeName != kProjectModelTypeName ? project.modelTypeName : null,
+    modelType: project.modelTypeName != kProjectModelTypeName
+        ? project.modelTypeName
+        : null,
     name: project.name,
     description: project.description,
   );

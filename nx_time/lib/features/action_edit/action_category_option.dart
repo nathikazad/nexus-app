@@ -22,8 +22,10 @@ class ActionCategoryOption {
     return ActionCategoryOption(
       modelTypeId: a.modelTypeId,
       name: a.modelTypeName ?? 'Action',
-      dotColor: ModelTypeColors.fallback
-          .forId(a.modelTypeId, name: a.modelTypeName),
+      dotColor: ModelTypeColors.fallback.forId(
+        a.modelTypeId,
+        name: a.modelTypeName,
+      ),
     );
   }
 }

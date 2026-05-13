@@ -164,7 +164,8 @@ void main() {
           },
         ],
       });
-      expect(m.relations!['Company']!.first.relations?['Person']?.first.name, 'L2');
+      expect(m.relations!['Company']!.first.relations?['Person']?.first.name,
+          'L2');
     });
 
     test('MD1.12 description as list (root model)', () {

@@ -5,10 +5,7 @@ import 'package:nx_time/domain/action/action.dart';
 
 /// One top-level row: the umbrella [Action] plus its displayed children for the day.
 class UmbrellaRow {
-  const UmbrellaRow({
-    required this.umbrella,
-    required this.children,
-  });
+  const UmbrellaRow({required this.umbrella, required this.children});
 
   final Action umbrella;
 

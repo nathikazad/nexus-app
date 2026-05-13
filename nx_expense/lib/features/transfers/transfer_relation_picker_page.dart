@@ -86,7 +86,11 @@ class _TransferRelationPickerScreenState
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.slate400,
+            size: 22,
+          ),
           onPressed: () => context.pop(),
         ),
         centerTitle: true,
@@ -136,17 +140,26 @@ class _TransferRelationPickerScreenState
                 ),
                 child: Row(
                   children: [
-                    Expanded(child: Text('Transfers', style: refAppBarTitleLarge())),
+                    Expanded(
+                      child: Text('Transfers', style: refAppBarTitleLarge()),
+                    ),
                     const ExpenseDateRangeCalendarButton(),
                   ],
                 ),
               ),
               const ExpenseDateRangeBar(bottomPadding: 12),
               Padding(
-                padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  RefLayout.px5,
+                  0,
+                  RefLayout.px5,
+                  4,
+                ),
                 child: summaryAsync.when(
                   data: (s) => Text(
-                    s.sumTotal != null ? '${s.count} · ${formatMoney(s.sumTotal)}' : '${s.count}',
+                    s.sumTotal != null
+                        ? '${s.count} · ${formatMoney(s.sumTotal)}'
+                        : '${s.count}',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -155,7 +168,10 @@ class _TransferRelationPickerScreenState
                   ),
                   loading: () => Text(
                     '...',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate500),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppColors.slate500,
+                    ),
                   ),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
@@ -172,13 +188,17 @@ class _TransferRelationPickerScreenState
                     },
                     color: AppColors.teal600,
                     child: listAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
                             'Error: $e',
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppColors.slate500,
+                            ),
                           ),
                         ),
                       ),
@@ -188,7 +208,11 @@ class _TransferRelationPickerScreenState
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
                               const SizedBox(height: 48),
-                              Icon(Icons.swap_horiz_rounded, size: 48, color: AppColors.slate300),
+                              Icon(
+                                Icons.swap_horiz_rounded,
+                                size: 48,
+                                color: AppColors.slate300,
+                              ),
                               const SizedBox(height: 12),
                               Center(
                                 child: Text(
@@ -221,7 +245,12 @@ class _TransferRelationPickerScreenState
               ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 28),
+                padding: const EdgeInsets.fromLTRB(
+                  RefLayout.px5,
+                  8,
+                  RefLayout.px5,
+                  28,
+                ),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(top: BorderSide(color: AppColors.slate100)),
@@ -231,12 +260,18 @@ class _TransferRelationPickerScreenState
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: const BorderSide(color: AppColors.slate200, width: 2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.add_circle_outline, color: AppColors.slate500, size: 20),
+                      const Icon(
+                        Icons.add_circle_outline,
+                        color: AppColors.slate500,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Create new Transfer',
@@ -257,7 +292,10 @@ class _TransferRelationPickerScreenState
     );
   }
 
-  List<Widget> _buildDateGroupedItems(List<Transfer> models, ModelTypeView schema) {
+  List<Widget> _buildDateGroupedItems(
+    List<Transfer> models,
+    ModelTypeView schema,
+  ) {
     final items = <Widget>[];
     String? lastDate;
     final amountKey = primaryNumberAttributeKey(schema);

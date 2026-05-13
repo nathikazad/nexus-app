@@ -22,9 +22,7 @@ class GoalsPage extends ConsumerWidget {
 
   static void openDetail(BuildContext context, int goalId) {
     Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => GoalDetailPage(goalId: goalId),
-      ),
+      MaterialPageRoute<void>(builder: (_) => GoalDetailPage(goalId: goalId)),
     );
   }
 
@@ -51,8 +49,12 @@ class GoalsPage extends ConsumerWidget {
           child: weekAsync.when(
             data: (week) {
               final ws = asStoredLocalWallClock(week.weekStart);
-              final daily = week.items.where((e) => e.cadence == GoalCadence.daily).toList();
-              final weekly = week.items.where((e) => e.cadence == GoalCadence.weekly).toList();
+              final daily = week.items
+                  .where((e) => e.cadence == GoalCadence.daily)
+                  .toList();
+              final weekly = week.items
+                  .where((e) => e.cadence == GoalCadence.weekly)
+                  .toList();
               final wa = weekActions.maybeWhen(
                 data: (d) => d,
                 orElse: () => null,
@@ -62,9 +64,7 @@ class GoalsPage extends ConsumerWidget {
                 children: [
                   const SizedBox(height: 10),
                   const _SectionLabel(text: 'Daily goals'),
-                  ...daily.map(
-                    (item) => _buildDailyRow(context, item, ws, wa),
-                  ),
+                  ...daily.map((item) => _buildDailyRow(context, item, ws, wa)),
                   const SizedBox(height: 14),
                   const _SectionLabel(text: 'Weekly goals'),
                   ...weekly.map(
@@ -86,7 +86,10 @@ class GoalsPage extends ConsumerWidget {
                 child: Text(
                   'Could not load goals: $e',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.slate500, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.slate500,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -137,7 +140,9 @@ String _rightStatusText(
         return '${formatDurationShort(d, useDashForZero: false)} today';
       }
     }
-    if (item.cadence == GoalCadence.daily && item.aggregation == 'count' && item.modelType == 'Sleep') {
+    if (item.cadence == GoalCadence.daily &&
+        item.aggregation == 'count' &&
+        item.modelType == 'Sleep') {
       var t = todayAttributedTime(wa, item);
       var fromYesterday = false;
       if (t == null) {
@@ -207,7 +212,9 @@ Color _rightStatusColor(
         return _colorForDayState(_todayInWeek(item, weekStart));
       }
     }
-    if (item.cadence == GoalCadence.daily && item.aggregation == 'count' && item.modelType == 'Sleep') {
+    if (item.cadence == GoalCadence.daily &&
+        item.aggregation == 'count' &&
+        item.modelType == 'Sleep') {
       var t = todayAttributedTime(wa, item);
       if (t == null) {
         final idx = todayDowIndex0Mon();
@@ -216,7 +223,9 @@ Color _rightStatusColor(
         }
       }
       if (t != null) {
-        return wakeIsOnTrack(item, t) ? AppColors.goalOnTrack : AppColors.goalMissed;
+        return wakeIsOnTrack(item, t)
+            ? AppColors.goalOnTrack
+            : AppColors.goalMissed;
       }
     }
     if (item.cadence == GoalCadence.daily &&
@@ -288,7 +297,9 @@ _LabelExtras2? _goalRowExtrasFor(
     }
     final tv = formatTargetValue(item);
     final targetSec = item.target.value;
-    final prog = targetSec > 0 ? (t.inSeconds / targetSec).clamp(0, 1).toDouble() : 0.0;
+    final prog = targetSec > 0
+        ? (t.inSeconds / targetSec).clamp(0, 1).toDouble()
+        : 0.0;
     final isReading = item.modelType == 'Reading';
     return _LabelExtras2(
       subline: 'Today: ${formatDurationShort(t, useDashForZero: false)} of $tv',
@@ -300,15 +311,23 @@ _LabelExtras2? _goalRowExtrasFor(
       item.aggregation == 'sum' &&
       item.metric == 'duration') {
     final list = actionsForGoal(weekActions, item);
-    final wk = weekTotalDuration(list, capAtNow: isWeekCurrent(weekActions.weekStart));
+    final wk = weekTotalDuration(
+      list,
+      capAtNow: isWeekCurrent(weekActions.weekStart),
+    );
     final targetSec = item.target.value.toInt();
     final remSec = (targetSec - wk.inSeconds);
     final rem = remSec > 0 ? remSec : 0;
     final tv = formatTargetValue(item);
     final wkStr = formatDurationShort(wk, useDashForZero: false);
-    final remStr = formatDurationShort(Duration(seconds: rem), useDashForZero: false);
+    final remStr = formatDurationShort(
+      Duration(seconds: rem),
+      useDashForZero: false,
+    );
     final dl = daysLeftInSelectedWeek(weekActions);
-    final prog = targetSec > 0 ? (wk.inSeconds / targetSec).clamp(0, 1).toDouble() : 0.0;
+    final prog = targetSec > 0
+        ? (wk.inSeconds / targetSec).clamp(0, 1).toDouble()
+        : 0.0;
     final isDance = item.modelType == 'Dance';
     return _LabelExtras2(
       subline: '$wkStr of $tv — $remStr remaining, $dl days left',
@@ -468,7 +487,9 @@ class _GoalRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         border: lastBorder
-            ? const Border(bottom: BorderSide(color: AppColors.slate200, width: 0.5))
+            ? const Border(
+                bottom: BorderSide(color: AppColors.slate200, width: 0.5),
+              )
             : null,
       ),
       child: Column(
@@ -529,7 +550,9 @@ class _GoalRow extends StatelessWidget {
               }),
             ),
           ],
-          if (progress != null && progressColor != null && progressBeforeSubline) ...[
+          if (progress != null &&
+              progressColor != null &&
+              progressBeforeSubline) ...[
             const SizedBox(height: 4),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
@@ -545,13 +568,12 @@ class _GoalRow extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               subline!,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.slate500,
-              ),
+              style: const TextStyle(fontSize: 11, color: AppColors.slate500),
             ),
           ],
-          if (progress != null && progressColor != null && !progressBeforeSubline) ...[
+          if (progress != null &&
+              progressColor != null &&
+              !progressBeforeSubline) ...[
             const SizedBox(height: 4),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
@@ -571,10 +593,7 @@ class _GoalRow extends StatelessWidget {
     }
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: child,
-      ),
+      child: InkWell(onTap: onTap, child: child),
     );
   }
 }
@@ -673,7 +692,9 @@ class _GymWeekRow extends StatelessWidget {
     final child = Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.slate200, width: 0.5)),
+        border: Border(
+          bottom: BorderSide(color: AppColors.slate200, width: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -710,23 +731,28 @@ class _GymWeekRow extends StatelessWidget {
                 children: [
                   for (var i = 0; i < target; i++) ...[
                     if (i > 0) const SizedBox(width: 4),
-                    if (i < hits.clamp(0, target)) _GymCheck() else Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.slate200, width: 1.5),
+                    if (i < hits.clamp(0, target))
+                      _GymCheck()
+                    else
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.slate200,
+                            width: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ],
               ),
               Text(
-                daysLeft == 0 ? 'last day of week' : '$daysLeft days left in week',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.slate500,
-                ),
+                daysLeft == 0
+                    ? 'last day of week'
+                    : '$daysLeft days left in week',
+                style: const TextStyle(fontSize: 11, color: AppColors.slate500),
               ),
             ],
           ),
@@ -738,10 +764,7 @@ class _GymWeekRow extends StatelessWidget {
     }
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: child,
-      ),
+      child: InkWell(onTap: onTap, child: child),
     );
   }
 }

@@ -5,12 +5,16 @@ import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/features/expense/widgets/expense_teller_links_section.dart';
 
 void main() {
-  testWidgets('ExpenseTellerLinksFormSection shows title, add, empty state', (tester) async {
+  testWidgets('ExpenseTellerLinksFormSection shows title, add, empty state', (
+    tester,
+  ) async {
     const expenseId = 42;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          expenseTimelineLinksProvider(expenseId).overrideWith((ref) async => []),
+          expenseTimelineLinksProvider(
+            expenseId,
+          ).overrideWith((ref) async => []),
         ],
         child: const MaterialApp(
           home: Scaffold(

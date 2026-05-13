@@ -55,11 +55,14 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   final Map<String, TextEditingController> _attr = {};
   final Map<String, List<String>> _tags = {};
   final Map<String, List<int>> _relations = {};
+
   /// Pending `ModelRelation.create` payload per relation target type key (`link` string).
   final Map<String, Map<String, dynamic>?> _relationCreates = {};
+
   /// Maps relation type → (model ID → relation edge ID) from the generic `relations` node.
   /// Used to issue `ModelRelation(id: edgeId, delete: true)` for removed links.
   final Map<String, Map<int, int>> _relationEdgeIds = {};
+
   /// Snapshot of linked model IDs per type at load time — used to compute add/remove deltas.
   Map<String, Set<int>> _relationSnapshotIds = {};
   Map<String, Map<String, dynamic>?> _relationSnapshotCreates = {};
@@ -129,9 +132,8 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     // Build modelId → relationEdgeId mapping from the generic `relations` node.
     if (m.relationsList != null) {
       for (final rel in m.relationsList!) {
-        _relationEdgeIds
-            .putIfAbsent(rel.modelType, () => {})
-            [rel.modelId] = rel.relationId;
+        _relationEdgeIds.putIfAbsent(rel.modelType, () => {})[rel.modelId] =
+            rel.relationId;
       }
     }
     _captureRelationSnapshot();
@@ -189,12 +191,14 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         : const AsyncValue<Expense?>.data(null);
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         _ensureControllers(schema);
         return existingAsync.when(
-          loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
           data: (existing) {
             if (widget.expenseId != null && existing == null) {
@@ -222,322 +226,453 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
               });
             }
 
-            final title = widget.expenseId == null ? 'New Expense' : 'Edit Expense';
+            final title = widget.expenseId == null
+                ? 'New Expense'
+                : 'Edit Expense';
 
-            final saveLabel = widget.expenseId == null ? 'Save Expense' : 'Save Changes';
+            final saveLabel = widget.expenseId == null
+                ? 'Save Expense'
+                : 'Save Changes';
 
             return Theme(
               data: Theme.of(context).copyWith(
                 switchTheme: SwitchThemeData(
                   thumbColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) return Colors.white;
+                    if (states.contains(WidgetState.selected))
+                      return Colors.white;
                     return AppColors.slate400;
                   }),
                   trackColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) return AppColors.teal600;
+                    if (states.contains(WidgetState.selected))
+                      return AppColors.teal600;
                     return AppColors.slate200;
                   }),
-                  trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                  trackOutlineColor: WidgetStateProperty.all(
+                    Colors.transparent,
+                  ),
                 ),
               ),
               child: Scaffold(
-              backgroundColor: Colors.white,
-              appBar: widget.embedded
-                  ? null
-                  : AppBar(
-                      leading: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-                        onPressed: () => context.pop(),
+                backgroundColor: Colors.white,
+                appBar: widget.embedded
+                    ? null
+                    : AppBar(
+                        leading: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: AppColors.slate400,
+                            size: 22,
+                          ),
+                          onPressed: () => context.pop(),
+                        ),
+                        centerTitle: true,
+                        title: Text(title, style: refAppBarTitleBase()),
+                        bottom: const PreferredSize(
+                          preferredSize: Size.fromHeight(1),
+                          child: Divider(height: 1, color: AppColors.slate100),
+                        ),
                       ),
-                      centerTitle: true,
-                      title: Text(title, style: refAppBarTitleBase()),
-                      bottom: const PreferredSize(
-                        preferredSize: Size.fromHeight(1),
-                        child: Divider(height: 1, color: AppColors.slate100),
-                      ),
-                    ),
-              body: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: ColoredBox(
-                            color: const Color(0x4DF8FAFC),
-                            child: ListView(
-                              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 20, RefLayout.px5, 120),
-                              children: [
-                                _refLabel('Name *'),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: _name,
-                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
-                                  decoration: _refInputDeco(hint: 'E.g., Groceries'),
+                body: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
+                        children: [
+                          Expanded(
+                            child: ColoredBox(
+                              color: const Color(0x4DF8FAFC),
+                              child: ListView(
+                                padding: const EdgeInsets.fromLTRB(
+                                  RefLayout.px5,
+                                  20,
+                                  RefLayout.px5,
+                                  120,
                                 ),
-                                const SizedBox(height: 16),
-                                _refLabel('Description'),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: _desc,
-                                  maxLines: 3,
-                                  style: GoogleFonts.inter(fontSize: 14),
-                                  decoration: _refInputDeco(hint: 'Add details...'),
-                                ),
-                                const SizedBox(height: 24),
-                                Text('Attributes', style: refSectionTitle(context)),
-                                const SizedBox(height: 12),
-                                Builder(
-                                  builder: (context) {
-                                    final ads = schema.attributes
-                                        .where((ad) => ad.key != null && _attr.containsKey(ad.key))
-                                        .toList();
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                                        border: Border.all(color: AppColors.slate100),
-                                        boxShadow: refCardShadow,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          for (var i = 0; i < ads.length; i++) ...[
-                                            ModelAttributeFormField(
-                                              attribute: ads[i],
-                                              controller: _attr[ads[i].key]!,
-                                              onChanged: () => setState(() {}),
-                                              inputDecoration: _refInputDeco(hint: ''),
-                                            ),
-                                            if (i < ads.length - 1)
-                                              const Divider(height: 1, color: AppColors.slate50),
-                                          ],
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 24),
-                                Text('Tags', style: refSectionTitle(context)),
-                                const SizedBox(height: 12),
-                                Builder(
-                                  builder: (context) {
-                                    final systems = schema.tagSystems;
-                                    if (systems.isEmpty) {
-                                      return Text(
-                                        'No tag systems',
-                                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
-                                      );
-                                    }
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                                        border: Border.all(color: AppColors.slate100),
-                                        boxShadow: refCardShadow,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          for (var i = 0; i < systems.length; i++) ...[
-                                            TagPickerRow(
-                                              system: systems[i],
-                                              value: _tags[systems[i].name] ?? [],
-                                              onChanged: (v) =>
-                                                  setState(() => _tags[systems[i].name] = v),
-                                            ),
-                                            if (i < systems.length - 1)
-                                              const Divider(height: 1, color: AppColors.slate50),
-                                          ],
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 24),
-                                Text('Relations', style: refSectionTitle(context)),
-                                const SizedBox(height: 12),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                                    border: Border.all(color: AppColors.slate100),
-                                    boxShadow: refCardShadow,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: Builder(
-                                    builder: (context) {
-                                      final relsAll = schema.relations;
-                                      final rels = relsAll.where((rt) {
-                                        final link = rt.link;
-                                        return link.isNotEmpty &&
-                                            link != kTransferModelTypeName;
-                                      }).toList();
-                                      final rows = <Widget>[];
-                                      for (var i = 0; i < rels.length; i++) {
-                                        final rt = rels[i];
-                                        final link = rt.link;
-                                        rows.add(
-                                          RelationPickerRow(
-                                            targetModelTypeName: link,
-                                            valueIds: _relations[link] ?? [],
-                                            pendingCreate: _relationCreates[link],
-                                            allowMultiple: (rt.multiplicity ?? 'many') != 'one',
-                                            onPicked: (r) => _onRelationPicked(link, r),
-                                          ),
-                                        );
-                                        if (i < rels.length - 1) {
-                                          rows.add(
-                                            const Divider(height: 1, color: AppColors.slate50),
-                                          );
-                                        }
-                                      }
-                                      return Column(children: rows);
-                                    },
-                                  ),
-                                ),
-                                Builder(
-                                  builder: (context) {
-                                    RelationTypeView? transferRt;
-                                    for (final rt in schema.relations) {
-                                      final link = rt.link;
-                                      if (link == kTransferModelTypeName) {
-                                        transferRt = rt;
-                                        break;
-                                      }
-                                    }
-                                    if (transferRt == null) return const SizedBox.shrink();
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        const SizedBox(height: 24),
-                                        Text('Transfer', style: refSectionTitle(context)),
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                                            border: Border.all(color: AppColors.slate100),
-                                            boxShadow: refCardShadow,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(vertical: 4),
-                                          child: RelationPickerRow(
-                                            targetModelTypeName: kTransferModelTypeName,
-                                            valueIds: _relations[kTransferModelTypeName] ?? [],
-                                            pendingCreate: _relationCreates[kTransferModelTypeName],
-                                            allowMultiple:
-                                                (transferRt.multiplicity ?? 'many') != 'one',
-                                            onPicked: (r) =>
-                                                _onRelationPicked(kTransferModelTypeName, r),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                if (widget.expenseId != null) ...[
-                                  const SizedBox(height: 24),
-                                  ExpenseTellerLinksFormSection(expenseId: widget.expenseId!),
-                                  const SizedBox(height: 24),
-                                  ExpenseBillsSection(expenseId: widget.expenseId!),
-                                  const SizedBox(height: 24),
-                                  OutlinedButton.icon(
-                                    icon: const Icon(Icons.swap_horiz_outlined, size: 20),
-                                    label: Text(
-                                      'Transform to transfer',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
+                                children: [
+                                  _refLabel('Name *'),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: _name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    onPressed: () {
-                                      context.push(
-                                        '/transfer/form?fromExpenseId=${widget.expenseId}',
-                                      );
-                                    },
+                                    decoration: _refInputDeco(
+                                      hint: 'E.g., Groceries',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _refLabel('Description'),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: _desc,
+                                    maxLines: 3,
+                                    style: GoogleFonts.inter(fontSize: 14),
+                                    decoration: _refInputDeco(
+                                      hint: 'Add details...',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'Attributes',
+                                    style: refSectionTitle(context),
                                   ),
                                   const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    icon: const Icon(Icons.delete_outline, size: 20),
-                                    label: Text(
-                                      'Delete Expense',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    onPressed: () async {
-                                      debugPrint(
-                                        '[ExpenseForm] Delete expense tapped id=${widget.expenseId}',
-                                      );
-                                      final ok = await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Delete expense?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(ctx, false),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            FilledButton(
-                                              onPressed: () => Navigator.pop(ctx, true),
-                                              child: const Text('Delete'),
-                                            ),
+                                  Builder(
+                                    builder: (context) {
+                                      final ads = schema.attributes
+                                          .where(
+                                            (ad) =>
+                                                ad.key != null &&
+                                                _attr.containsKey(ad.key),
+                                          )
+                                          .toList();
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            RefLayout.rounded2xl,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.slate100,
+                                          ),
+                                          boxShadow: refCardShadow,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            for (
+                                              var i = 0;
+                                              i < ads.length;
+                                              i++
+                                            ) ...[
+                                              ModelAttributeFormField(
+                                                attribute: ads[i],
+                                                controller: _attr[ads[i].key]!,
+                                                onChanged: () =>
+                                                    setState(() {}),
+                                                inputDecoration: _refInputDeco(
+                                                  hint: '',
+                                                ),
+                                              ),
+                                              if (i < ads.length - 1)
+                                                const Divider(
+                                                  height: 1,
+                                                  color: AppColors.slate50,
+                                                ),
+                                            ],
                                           ],
                                         ),
                                       );
-                                      if (ok != true || !context.mounted) {
-                                        debugPrint(
-                                          '[ExpenseForm] Delete cancelled or unmounted',
-                                        );
-                                        return;
-                                      }
-                                      try {
-                                        debugPrint(
-                                          '[ExpenseForm] calling deleteById id=${widget.expenseId}',
-                                        );
-                                        await ref
-                                            .read(expenseRepositoryProvider)
-                                            .deleteById(widget.expenseId!);
-                                        debugPrint(
-                                          '[ExpenseForm] delete succeeded, invalidating + go /expenses',
-                                        );
-                                        invalidateExpenseListCache(ref);
-                                        if (context.mounted) context.go('/expenses');
-                                      } catch (e, st) {
-                                        debugPrint('[ExpenseForm] delete FAILED: $e');
-                                        debugPrint('[ExpenseForm] stack: $st');
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('$e')),
-                                          );
-                                        }
-                                      }
                                     },
                                   ),
+                                  const SizedBox(height: 24),
+                                  Text('Tags', style: refSectionTitle(context)),
+                                  const SizedBox(height: 12),
+                                  Builder(
+                                    builder: (context) {
+                                      final systems = schema.tagSystems;
+                                      if (systems.isEmpty) {
+                                        return Text(
+                                          'No tag systems',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColors.slate400,
+                                          ),
+                                        );
+                                      }
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            RefLayout.rounded2xl,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.slate100,
+                                          ),
+                                          boxShadow: refCardShadow,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            for (
+                                              var i = 0;
+                                              i < systems.length;
+                                              i++
+                                            ) ...[
+                                              TagPickerRow(
+                                                system: systems[i],
+                                                value:
+                                                    _tags[systems[i].name] ??
+                                                    [],
+                                                onChanged: (v) => setState(
+                                                  () => _tags[systems[i].name] =
+                                                      v,
+                                                ),
+                                              ),
+                                              if (i < systems.length - 1)
+                                                const Divider(
+                                                  height: 1,
+                                                  color: AppColors.slate50,
+                                                ),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'Relations',
+                                    style: refSectionTitle(context),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(
+                                        RefLayout.rounded2xl,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.slate100,
+                                      ),
+                                      boxShadow: refCardShadow,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                    ),
+                                    child: Builder(
+                                      builder: (context) {
+                                        final relsAll = schema.relations;
+                                        final rels = relsAll.where((rt) {
+                                          final link = rt.link;
+                                          return link.isNotEmpty &&
+                                              link != kTransferModelTypeName;
+                                        }).toList();
+                                        final rows = <Widget>[];
+                                        for (var i = 0; i < rels.length; i++) {
+                                          final rt = rels[i];
+                                          final link = rt.link;
+                                          rows.add(
+                                            RelationPickerRow(
+                                              targetModelTypeName: link,
+                                              valueIds: _relations[link] ?? [],
+                                              pendingCreate:
+                                                  _relationCreates[link],
+                                              allowMultiple:
+                                                  (rt.multiplicity ?? 'many') !=
+                                                  'one',
+                                              onPicked: (r) =>
+                                                  _onRelationPicked(link, r),
+                                            ),
+                                          );
+                                          if (i < rels.length - 1) {
+                                            rows.add(
+                                              const Divider(
+                                                height: 1,
+                                                color: AppColors.slate50,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                        return Column(children: rows);
+                                      },
+                                    ),
+                                  ),
+                                  Builder(
+                                    builder: (context) {
+                                      RelationTypeView? transferRt;
+                                      for (final rt in schema.relations) {
+                                        final link = rt.link;
+                                        if (link == kTransferModelTypeName) {
+                                          transferRt = rt;
+                                          break;
+                                        }
+                                      }
+                                      if (transferRt == null)
+                                        return const SizedBox.shrink();
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          const SizedBox(height: 24),
+                                          Text(
+                                            'Transfer',
+                                            style: refSectionTitle(context),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    RefLayout.rounded2xl,
+                                                  ),
+                                              border: Border.all(
+                                                color: AppColors.slate100,
+                                              ),
+                                              boxShadow: refCardShadow,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 4,
+                                            ),
+                                            child: RelationPickerRow(
+                                              targetModelTypeName:
+                                                  kTransferModelTypeName,
+                                              valueIds:
+                                                  _relations[kTransferModelTypeName] ??
+                                                  [],
+                                              pendingCreate:
+                                                  _relationCreates[kTransferModelTypeName],
+                                              allowMultiple:
+                                                  (transferRt.multiplicity ??
+                                                      'many') !=
+                                                  'one',
+                                              onPicked: (r) =>
+                                                  _onRelationPicked(
+                                                    kTransferModelTypeName,
+                                                    r,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  if (widget.expenseId != null) ...[
+                                    const SizedBox(height: 24),
+                                    ExpenseTellerLinksFormSection(
+                                      expenseId: widget.expenseId!,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ExpenseBillsSection(
+                                      expenseId: widget.expenseId!,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    OutlinedButton.icon(
+                                      icon: const Icon(
+                                        Icons.swap_horiz_outlined,
+                                        size: 20,
+                                      ),
+                                      label: Text(
+                                        'Transform to transfer',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        context.push(
+                                          '/transfer/form?fromExpenseId=${widget.expenseId}',
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton.icon(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 20,
+                                      ),
+                                      label: Text(
+                                        'Delete Expense',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        debugPrint(
+                                          '[ExpenseForm] Delete expense tapped id=${widget.expenseId}',
+                                        );
+                                        final ok = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: const Text(
+                                              'Delete expense?',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx, true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (ok != true || !context.mounted) {
+                                          debugPrint(
+                                            '[ExpenseForm] Delete cancelled or unmounted',
+                                          );
+                                          return;
+                                        }
+                                        try {
+                                          debugPrint(
+                                            '[ExpenseForm] calling deleteById id=${widget.expenseId}',
+                                          );
+                                          await ref
+                                              .read(expenseRepositoryProvider)
+                                              .deleteById(widget.expenseId!);
+                                          debugPrint(
+                                            '[ExpenseForm] delete succeeded, invalidating + go /expenses',
+                                          );
+                                          invalidateExpenseListCache(ref);
+                                          if (context.mounted)
+                                            context.go('/expenses');
+                                        } catch (e, st) {
+                                          debugPrint(
+                                            '[ExpenseForm] delete FAILED: $e',
+                                          );
+                                          debugPrint(
+                                            '[ExpenseForm] stack: $st',
+                                          );
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(content: Text('$e')),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ],
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(
+                              RefLayout.px5,
+                              12,
+                              RefLayout.px5,
+                              28,
+                            ),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              border: Border(
+                                top: BorderSide(color: AppColors.slate100),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                FilledButton(
+                                  onPressed: () => _submit(schema),
+                                  child: Text(
+                                    saveLabel,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 28),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            border: Border(top: BorderSide(color: AppColors.slate100)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              FilledButton(
-                                onPressed: () => _submit(schema),
-                                child: Text(
-                                  saveLabel,
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
               ),
             );
           },
@@ -574,9 +709,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
   Future<void> _submit(ModelTypeView schema) async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
     setState(() => _loading = true);
@@ -606,8 +741,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         relationsByType: {
           for (final e in _relations.entries) e.key: List<int>.from(e.value),
         },
-        relationCreatesByType:
-            Map<String, Map<String, dynamic>?>.from(_relationCreates),
+        relationCreatesByType: Map<String, Map<String, dynamic>?>.from(
+          _relationCreates,
+        ),
         relationEdgeIdsByType: {
           for (final e in _relationEdgeIds.entries)
             e.key: Map<int, int>.from(e.value),
@@ -616,8 +752,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
           for (final e in _relationSnapshotIds.entries)
             e.key: Set<int>.from(e.value),
         },
-        snapshotCreatesByType:
-            Map<String, Map<String, dynamic>?>.from(_relationSnapshotCreates),
+        snapshotCreatesByType: Map<String, Map<String, dynamic>?>.from(
+          _relationSnapshotCreates,
+        ),
       );
 
       final savedId = await repo.upsert(upsert);
@@ -659,7 +796,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -700,7 +839,9 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
   Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RefLayout.rounded2xl)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 400),
         child: Padding(
@@ -719,8 +860,14 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.slate400, size: 22),
-                    onPressed: _loading ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.close,
+                      color: AppColors.slate400,
+                      size: 22,
+                    ),
+                    onPressed: _loading
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -735,7 +882,10 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: _name,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                   decoration: _refInputDeco(hint: 'E.g., Groceries'),
                   textCapitalization: TextCapitalization.sentences,
                   autofocus: true,
@@ -745,8 +895,13 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: _cost,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: _refInputDeco(hint: '0.00'),
                 ),
                 const SizedBox(height: 20),
@@ -754,7 +909,10 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
                   onPressed: _submit,
                   child: Text(
                     'Create',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],
@@ -793,23 +951,23 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
 
   Future<void> _submit() async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
     final costRaw = _cost.text.trim().replaceFirst(RegExp(r'^\$\s*'), '');
     if (costRaw.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cost is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cost is required')));
       return;
     }
     final costNum = num.tryParse(costRaw);
     if (costNum == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid cost')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid cost')));
       return;
     }
     setState(() => _loading = true);
@@ -827,7 +985,9 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
       router.push('/expense/form/$id');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

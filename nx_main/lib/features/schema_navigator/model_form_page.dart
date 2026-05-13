@@ -70,7 +70,7 @@
 //           if (data != null && mounted) {
 //             _nameController.text = data['name']?.toString() ?? '';
 //             _descriptionController.text = data['description']?.toString() ?? '';
-            
+
 //             // Load attribute values
 //             final attributes = data['attributesByModelId']?['nodes'] as List<dynamic>?;
 //             if (attributes != null) {
@@ -79,9 +79,9 @@
 //                 final def = a['attributeDefinitionByAttributeDefinitionId'] as Map<String, dynamic>?;
 //                 final key = def?['key']?.toString();
 //                 if (key != null) {
-//                   _attributeValues[key] = a['valueText'] ?? 
-//                                           a['valueNumber'] ?? 
-//                                           a['valueBool'] ?? 
+//                   _attributeValues[key] = a['valueText'] ??
+//                                           a['valueNumber'] ??
+//                                           a['valueBool'] ??
 //                                           a['valueTime'];
 //                 }
 //               }
@@ -108,7 +108,7 @@
 //     final client = ref.read(graphqlClientProvider);
 //     final isEditing = widget.modelId != null;
 //     int? modelTypeId = widget.modelTypeId;
-    
+
 //     if (modelTypeId == null && widget.modelId != null) {
 //       final modelAsync = ref.read(modelProvider(widget.modelId!));
 //       await modelAsync.whenData((model) {
@@ -224,13 +224,13 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     final modelTypeId = widget.modelTypeId;
-    
+
 //     if (modelTypeId == null && widget.modelId == null) {
 //       return const Scaffold(
 //         body: Center(child: Text('Model type ID is required')),
 //       );
 //     }
-    
+
 //     // If editing and modelTypeId not provided, we'll need to load it
 //     int? effectiveModelTypeId = modelTypeId;
 //     if (effectiveModelTypeId == null && widget.modelId != null) {
@@ -257,16 +257,16 @@
 //         },
 //       );
 //     }
-    
+
 //     if (effectiveModelTypeId == null) {
 //       return const Scaffold(
 //         body: Center(child: Text('Model type ID is required')),
 //       );
 //     }
-    
+
 //     return _buildForm(context, ref, effectiveModelTypeId);
 //   }
-  
+
 //   Widget _buildForm(BuildContext context, WidgetRef ref, int modelTypeId) {
 
 //     final attributeDefinitionsAsync = ref.watch(attributeDefinitionsProvider(modelTypeId));
@@ -356,4 +356,3 @@
 //     );
 //   }
 // }
-

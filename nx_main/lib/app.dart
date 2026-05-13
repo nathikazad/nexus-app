@@ -36,8 +36,6 @@ class _NexusVoiceAssistantAppState
       final sessionKey = [
         urls.sockWs,
         user.userId,
-        user.personalDomainId,
-        user.homeDomainId,
       ].join('|');
       if (_activeSocketSessionKey == sessionKey) return;
 
@@ -49,8 +47,6 @@ class _NexusVoiceAssistantAppState
         url: urls.sockWs,
         telemetryHttpBaseUrl: urls.imageHttp,
         userId: user.userId,
-        personalDomainId: user.personalDomainId,
-        sharedDomainId: user.homeDomainId,
       );
     });
 

@@ -12,13 +12,8 @@ class GoalActionTypeOption {
 /// Same list as the action create screen — from KGQL `Action` descendants.
 final goalActionTypeOptionsProvider =
     FutureProvider<List<GoalActionTypeOption>>((ref) async {
-  final subtypes = await ref.watch(actionSubtypeModelTypesProvider.future);
-  return subtypes
-      .map(
-        (e) => GoalActionTypeOption(
-          id: e.id,
-          name: e.name,
-        ),
-      )
-      .toList();
-});
+      final subtypes = await ref.watch(actionSubtypeModelTypesProvider.future);
+      return subtypes
+          .map((e) => GoalActionTypeOption(id: e.id, name: e.name))
+          .toList();
+    });

@@ -28,7 +28,8 @@ class TaskActivityLink {
           relationId == other.relationId;
 
   @override
-  int get hashCode => Object.hash(activityId, activityModelTypeName, relationId);
+  int get hashCode =>
+      Object.hash(activityId, activityModelTypeName, relationId);
 }
 
 /// Domain entity for a Task row in KGQL.
@@ -116,8 +117,9 @@ class Task {
       startTime: identical(startTime, _taskCopyUnset)
           ? this.startTime
           : startTime as DateTime?,
-      endTime:
-          identical(endTime, _taskCopyUnset) ? this.endTime : endTime as DateTime?,
+      endTime: identical(endTime, _taskCopyUnset)
+          ? this.endTime
+          : endTime as DateTime?,
       parentTaskId: identical(parentTaskId, _taskCopyUnset)
           ? this.parentTaskId
           : parentTaskId as int?,
@@ -158,23 +160,23 @@ class Task {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        description,
-        modelTypeId,
-        modelTypeName,
-        status,
-        Object.hashAll(tags),
-        date,
-        startTime,
-        endTime,
-        parentTaskId,
-        Object.hashAll(childTaskIds),
-        Object.hashAllUnordered(relationIdByChildTaskId.entries),
-        projectId,
-        projectRelationId,
-        Object.hashAll(linkedActivities),
-      );
+    id,
+    name,
+    description,
+    modelTypeId,
+    modelTypeName,
+    status,
+    Object.hashAll(tags),
+    date,
+    startTime,
+    endTime,
+    parentTaskId,
+    Object.hashAll(childTaskIds),
+    Object.hashAllUnordered(relationIdByChildTaskId.entries),
+    projectId,
+    projectRelationId,
+    Object.hashAll(linkedActivities),
+  );
 }
 
 bool _listEq(List<int> a, List<int> b) {

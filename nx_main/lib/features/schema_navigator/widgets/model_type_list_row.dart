@@ -41,13 +41,13 @@ class ModelTypeListRow extends StatelessWidget {
             : null,
         trailing: showSettingsButton
             ? Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: onSettingsTap,
-            ),
-          ],
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: onSettingsTap,
+                  ),
+                ],
               )
             : null,
         onTap: onTap,
@@ -55,4 +55,3 @@ class ModelTypeListRow extends StatelessWidget {
     );
   }
 }
-

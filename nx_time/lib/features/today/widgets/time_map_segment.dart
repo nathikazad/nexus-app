@@ -6,11 +6,9 @@ import 'package:flutter/material.dart';
 /// **Positioned layout** (real data): [startFraction] and [widthFraction] are
 /// fractions of the local calendar day `[0, 1)`; overlapping blocks stack in order.
 class TimeMapSegment {
-  const TimeMapSegment({
-    required this.color,
-    required this.flex,
-  })  : startFraction = null,
-        widthFraction = null;
+  const TimeMapSegment({required this.color, required this.flex})
+    : startFraction = null,
+      widthFraction = null;
 
   const TimeMapSegment.positioned({
     required this.color,

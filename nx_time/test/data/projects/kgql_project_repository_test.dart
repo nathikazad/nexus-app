@@ -12,23 +12,25 @@ void main() {
 
   test('linkChildProject sends set_kgql_models with Project link', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 99},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 99},
+        },
+      }),
+    );
 
     final repo = KgqlProjectRepository(
       client: mock,
       loadProjectSchema: () async => throw UnsupportedError('not used'),
-      domainId: 1,
     );
 
     final id = await repo.linkChildProject(parentId: 10, childId: 20);
     expect(id, 99);
 
     final captured =
-        verify(() => mock.mutate(captureAny())).captured.single as MutationOptions;
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 10);
@@ -45,11 +47,7 @@ void main() {
       if (queryCount == 1) {
         return okQueryResult({
           'getKgqlModelType': [
-            {
-              'id': 1,
-              'name': 'Project',
-              'attributes': [],
-            },
+            {'id': 1, 'name': 'Project', 'attributes': []},
           ],
         });
       }
@@ -72,11 +70,8 @@ void main() {
           QueryOptions(document: gql('query { __typename }')),
         );
         final rows = r.data!['getKgqlModelType'] as List<dynamic>;
-        return ModelType.fromJson(
-          Map<String, dynamic>.from(rows.first as Map),
-        );
+        return ModelType.fromJson(Map<String, dynamic>.from(rows.first as Map));
       },
-      domainId: 1,
     );
 
     final list = await repo.listAll();

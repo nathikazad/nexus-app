@@ -124,7 +124,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     final items = <Widget>[];
     for (var i = 0; i < types.length; i++) {
       final modelType = types[i];
-      final hasChildren = modelType.children != null && modelType.children!.isNotEmpty;
+      final hasChildren =
+          modelType.children != null && modelType.children!.isNotEmpty;
       final isExpanded = _expandedIds.contains(modelType.id);
       final showTopDivider = indentLevel == 0 && i > 0;
 
@@ -189,7 +190,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       child: const SizedBox(
                         width: 40,
                         height: 40,
-                        child: Icon(Icons.menu, color: AppColors.gray600, size: 24),
+                        child: Icon(Icons.menu,
+                            color: AppColors.gray600, size: 24),
                       ),
                     ),
                   ),
@@ -206,7 +208,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       );
                     }
 
-                    final filtered = _filterModelTypeTree(modelTypes, searchQuery);
+                    final filtered =
+                        _filterModelTypeTree(modelTypes, searchQuery);
                     if (searchQuery.trim().isNotEmpty) {
                       final need = <int>{};
                       _collectExpandableIds(filtered, need);

@@ -245,7 +245,7 @@ KGQL knowledge lives in `data/`.
 
 `KgqlEssayRepository` should:
 
-- use `personalDomainIdProvider` through `data/providers.dart`;
+- rely on backend domain resolution from the authenticated user;
 - request `Essay` with `document`, `json_document`, tags, links, and
   snapshot summary fields;
 - create/update live `Essay` rows through `set_kgql_models`;

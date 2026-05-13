@@ -90,8 +90,7 @@ class ModelDetailPage extends ConsumerWidget {
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 16),
-                if (model.description != null &&
-                    model.description!.isNotEmpty)
+                if (model.description != null && model.description!.isNotEmpty)
                   Text(
                     model.description!,
                     style: Theme.of(context).textTheme.bodyLarge,
@@ -120,8 +119,7 @@ class ModelDetailPage extends ConsumerWidget {
                       model.relationsByModelType,
                     ),
                   )
-                else if (model.relations != null &&
-                    model.relations!.isNotEmpty)
+                else if (model.relations != null && model.relations!.isNotEmpty)
                   _buildSection(
                     context,
                     'Relations',

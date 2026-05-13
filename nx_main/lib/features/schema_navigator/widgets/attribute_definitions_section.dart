@@ -55,7 +55,8 @@ class AttributeDefinitionsSection extends StatelessWidget {
                     DropdownMenuItem(value: 'string', child: Text('String')),
                     DropdownMenuItem(value: 'number', child: Text('Number')),
                     DropdownMenuItem(value: 'boolean', child: Text('Boolean')),
-                    DropdownMenuItem(value: 'datetime', child: Text('DateTime')),
+                    DropdownMenuItem(
+                        value: 'datetime', child: Text('DateTime')),
                     DropdownMenuItem(value: 'vector', child: Text('Vector')),
                   ],
                   onChanged: (value) {

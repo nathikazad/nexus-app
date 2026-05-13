@@ -27,7 +27,8 @@ List<GoalDailyState> normalizeDailyStates(
   }
   return List.generate(7, (i) {
     final day = start.add(Duration(days: i));
-    return byKey[dayKey(day)] ?? GoalDailyState(date: day, state: GoalDayState.pending);
+    return byKey[dayKey(day)] ??
+        GoalDailyState(date: day, state: GoalDayState.pending);
   });
 }
 

@@ -28,7 +28,8 @@ class ModelTypeTreeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final leftInset = indentLevel * 32.0;
-    final badgeLabel = modelType.typeKind ?? (isGroupHeader ? 'abstract' : 'base');
+    final badgeLabel =
+        modelType.typeKind ?? (isGroupHeader ? 'abstract' : 'base');
     final folderColor =
         modelType.typeKind == 'abstract' ? _orange500 : AppColors.gray400;
 
@@ -45,7 +46,8 @@ class ModelTypeTreeRow extends StatelessWidget {
             child: InkWell(
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     if (isGroupHeader) ...[
@@ -78,7 +80,8 @@ class ModelTypeTreeRow extends StatelessWidget {
                           color: AppColors.gray200,
                         ),
                       ],
-                      Icon(Icons.crop_square_rounded, size: 18, color: _orange400),
+                      Icon(Icons.crop_square_rounded,
+                          size: 18, color: _orange400),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(

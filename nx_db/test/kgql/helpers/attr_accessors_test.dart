@@ -14,7 +14,8 @@ Model _m(Map<String, dynamic>? attrs) => Model(
 
 void main() {
   group('ModelAttrReads', () {
-    test('attrString: string, trim empty to null, preserves non-empty spacing', () {
+    test('attrString: string, trim empty to null, preserves non-empty spacing',
+        () {
       expect(_m({'a': 'x'}).attrString('a'), 'x');
       expect(_m({'a': '  '}).attrString('a'), isNull);
       expect(_m({'a': '  hi  '}).attrString('a'), '  hi  ');
@@ -49,7 +50,8 @@ void main() {
     test('attrDateTime: DateTime passthrough, ISO string, invalid null', () {
       final dt = DateTime.utc(2024, 1, 2);
       expect(_m({'t': dt}).attrDateTime('t'), dt);
-      expect(_m({'t': '2024-01-02T00:00:00.000Z'}).attrDateTime('t'), isNotNull);
+      expect(
+          _m({'t': '2024-01-02T00:00:00.000Z'}).attrDateTime('t'), isNotNull);
       expect(_m({'t': 'not-a-date'}).attrDateTime('t'), isNull);
     });
   });

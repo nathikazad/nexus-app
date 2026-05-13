@@ -13,10 +13,7 @@ import 'package:nx_time/domain/goals/goal_streak.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
 GoalTarget _targetFromWire(nx.GoalTarget t) {
-  return GoalTarget(
-    op: goalThresholdOpFromKgql(t.op),
-    value: t.value,
-  );
+  return GoalTarget(op: goalThresholdOpFromKgql(t.op), value: t.value);
 }
 
 GoalStreakWindow _streakWindowFromWire(nx.GoalStreakWindow w) {
@@ -153,7 +150,15 @@ ExpenseGoalsMonth expenseGoalsMonthFromWire(nx.ExpenseGoalMonthResponse w) {
 // -----------------------------------------------------------------------------
 // Editable [Goal] ⇄ `Model` / `set_kgql_models` (see demo seed goals).
 
-const List<String> _kDowNames = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const List<String> _kDowNames = <String>[
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
+];
 
 int? _dowIndexFromName(String? s) {
   if (s == null) return null;
@@ -240,17 +245,13 @@ Map<String, dynamic> _timeFilter(
         'key': col,
         'op': _filterOpForTime(op),
         'value': _hhmmssFromMinutes(minutes),
-      }
+      },
     ],
   };
 }
 
 class _KBundle {
-  const _KBundle({
-    required this.selectedK,
-    this.aggregation,
-    this.metric,
-  });
+  const _KBundle({required this.selectedK, this.aggregation, this.metric});
 
   final String selectedK;
   final String? aggregation;
@@ -288,7 +289,8 @@ _KBundle _encodeBundle(Goal g) {
 }
 
 Map<String, dynamic>? _buildMeta(Goal g) {
-  if (g.cadence != GoalCadence.weekly || g.selectedAttribute != GoalSelectedAttribute.count) {
+  if (g.cadence != GoalCadence.weekly ||
+      g.selectedAttribute != GoalSelectedAttribute.count) {
     return null;
   }
   final slots = <Map<String, dynamic>>[];
@@ -299,21 +301,16 @@ Map<String, dynamic>? _buildMeta(Goal g) {
       'duration_min': 0,
     });
   }
-  return {
-    'preferred_slots': slots,
-    'auto_generate_tasks': g.autoGenerateTasks,
-  };
+  return {'preferred_slots': slots, 'auto_generate_tasks': g.autoGenerateTasks};
 }
 
 List<SetModelAttribute> _goalToAttributes(Goal g) {
   final b = _encodeBundle(g);
-  final nFilter = g.filter ??
-      (g.selectedAttribute == GoalSelectedAttribute.startTime || g.selectedAttribute == GoalSelectedAttribute.endTime
-          ? _timeFilter(
-              g.selectedAttribute,
-              g.op,
-              g.thresholdValue.round(),
-            )
+  final nFilter =
+      g.filter ??
+      (g.selectedAttribute == GoalSelectedAttribute.startTime ||
+              g.selectedAttribute == GoalSelectedAttribute.endTime
+          ? _timeFilter(g.selectedAttribute, g.op, g.thresholdValue.round())
           : null);
   var thresholdNum = g.thresholdValue;
   if (g.selectedAttribute == GoalSelectedAttribute.duration) {
@@ -328,16 +325,23 @@ List<SetModelAttribute> _goalToAttributes(Goal g) {
   return [
     SetModelAttribute(key: kGoalAttrLabel, value: g.label),
     SetModelAttribute(key: kGoalAttrActive, value: g.active),
-    SetModelAttribute(key: kGoalAttrCadence, value: goalCadenceToKgql(g.cadence)),
+    SetModelAttribute(
+      key: kGoalAttrCadence,
+      value: goalCadenceToKgql(g.cadence),
+    ),
     SetModelAttribute(key: kGoalAttrModelType, value: g.actionModelTypeName),
     SetModelAttribute(key: kGoalAttrFilter, value: nFilter),
     SetModelAttribute(key: kGoalAttrSelectedAttribute, value: b.selectedK),
-    SetModelAttribute(key: kGoalAttrAggregation, value: b.aggregation ?? 'count'),
+    SetModelAttribute(
+      key: kGoalAttrAggregation,
+      value: b.aggregation ?? 'count',
+    ),
     SetModelAttribute(key: kGoalAttrMetric, value: b.metric),
     SetModelAttribute(
       key: kGoalAttrThresholdOp,
       value: goalThresholdOpToKgql(
-        g.selectedAttribute == GoalSelectedAttribute.startTime || g.selectedAttribute == GoalSelectedAttribute.endTime
+        g.selectedAttribute == GoalSelectedAttribute.startTime ||
+                g.selectedAttribute == GoalSelectedAttribute.endTime
             ? GoalThresholdOp.gte
             : g.op,
       ),
@@ -365,7 +369,9 @@ Goal goalFromModel(Model m) {
     label = '';
   }
   final activeRaw = _attr(m, kGoalAttrActive);
-  final active = activeRaw is bool ? activeRaw : (activeRaw ?? true) as bool? ?? true;
+  final active = activeRaw is bool
+      ? activeRaw
+      : (activeRaw ?? true) as bool? ?? true;
   final cadenceRaw = _attr(m, kGoalAttrCadence) as String? ?? 'daily';
   final cadence = goalCadenceFromKgql(cadenceRaw);
   final modelType = _attr(m, kGoalAttrModelType) as String? ?? 'Sleep';
@@ -376,7 +382,9 @@ Goal goalFromModel(Model m) {
   }
   final ag = _attr(m, kGoalAttrAggregation) as String? ?? 'count';
   final metric = _attr(m, kGoalAttrMetric) as String?;
-  final tOp = goalThresholdOpFromKgql(_attr(m, kGoalAttrThresholdOp) as String? ?? '>=');
+  final tOp = goalThresholdOpFromKgql(
+    _attr(m, kGoalAttrThresholdOp) as String? ?? '>=',
+  );
   final tVal = _readNum(_attr(m, kGoalAttrThresholdValue)) ?? 0;
   final rawMeta = _attr(m, kGoalAttrMeta);
   Map<String, dynamic>? meta;
@@ -387,8 +395,10 @@ Goal goalFromModel(Model m) {
   }
 
   final firstF = _firstTimeFilterMap(filter);
-  final hasTimeFilter = firstF != null &&
-      ((firstF['key'] as String?) == 'start_time' || (firstF['key'] as String?) == 'end_time');
+  final hasTimeFilter =
+      firstF != null &&
+      ((firstF['key'] as String?) == 'start_time' ||
+          (firstF['key'] as String?) == 'end_time');
 
   GoalSelectedAttribute sel;
   num threshold;
@@ -399,7 +409,9 @@ Goal goalFromModel(Model m) {
     threshold = tVal / 3600.0;
   } else if (ag == 'count' && hasTimeFilter) {
     final k = firstF['key'] as String? ?? 'end_time';
-    sel = k == 'start_time' ? GoalSelectedAttribute.startTime : GoalSelectedAttribute.endTime;
+    sel = k == 'start_time'
+        ? GoalSelectedAttribute.startTime
+        : GoalSelectedAttribute.endTime;
     final val = firstF['value'] as String? ?? '00:00:00';
     threshold = _minutesFromHhmmss(val);
     domainOp = _opFromFilter(firstF['op'] as String?);
@@ -447,9 +459,17 @@ Goal goalFromModel(Model m) {
     cadence: cadence,
     actionModelTypeName: modelType,
     selectedAttribute: sel,
-    op: (sel == GoalSelectedAttribute.startTime || sel == GoalSelectedAttribute.endTime) ? domainOp : tOp,
+    op:
+        (sel == GoalSelectedAttribute.startTime ||
+            sel == GoalSelectedAttribute.endTime)
+        ? domainOp
+        : tOp,
     thresholdValue: threshold,
-    filter: (sel == GoalSelectedAttribute.startTime || sel == GoalSelectedAttribute.endTime) ? null : filter,
+    filter:
+        (sel == GoalSelectedAttribute.startTime ||
+            sel == GoalSelectedAttribute.endTime)
+        ? null
+        : filter,
     preferredDays: preferredDays,
     preferredTime: preferredTime,
     autoGenerateTasks: auto,

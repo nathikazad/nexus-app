@@ -17,7 +17,8 @@ class LoggingService {
   static const String _logFileName = 'logs.json';
 
   final List<LogEntry> _logs = [];
-  final StreamController<LogEntry> _logStreamController = StreamController<LogEntry>.broadcast();
+  final StreamController<LogEntry> _logStreamController =
+      StreamController<LogEntry>.broadcast();
   File? _logFile;
   bool _isInitialized = false;
   final Queue<LogEntry> _writeQueue = Queue<LogEntry>();
@@ -25,7 +26,7 @@ class LoggingService {
 
   Stream<LogEntry> get logStream => _logStreamController.stream;
   List<LogEntry> get recentLogs => List.unmodifiable(_logs);
-  
+
   /// Get the log file path (returns null if not initialized)
   Future<String?> getLogFilePath() async {
     if (!_isInitialized) {
@@ -85,7 +86,8 @@ class LoggingService {
       if (content.isEmpty) return;
 
       final List<dynamic> jsonList = jsonDecode(content);
-      final loadedLogs = jsonList.map((json) => LogEntry.fromJson(json)).toList();
+      final loadedLogs =
+          jsonList.map((json) => LogEntry.fromJson(json)).toList();
 
       // Keep only the last _maxInMemoryLogs in memory
       _logs.clear();
@@ -100,7 +102,8 @@ class LoggingService {
 
   void log(String message) {
     if (!_isInitialized) {
-      debugPrint('LoggingService not initialized, falling back to debugPrint: $message');
+      debugPrint(
+          'LoggingService not initialized, falling back to debugPrint: $message');
       return;
     }
 
@@ -138,7 +141,8 @@ class LoggingService {
           final content = await _logFile!.readAsString();
           if (content.isNotEmpty) {
             final List<dynamic> jsonList = jsonDecode(content);
-            existingLogs = jsonList.map((json) => LogEntry.fromJson(json)).toList();
+            existingLogs =
+                jsonList.map((json) => LogEntry.fromJson(json)).toList();
           }
         } catch (e) {
           debugPrint('Error reading existing logs: $e');
@@ -181,4 +185,3 @@ class LoggingService {
     await _logStreamController.close();
   }
 }
-

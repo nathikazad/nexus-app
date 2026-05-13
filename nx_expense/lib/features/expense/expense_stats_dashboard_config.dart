@@ -5,11 +5,7 @@
 // the full schema elsewhere.
 
 /// Tag system names (`TagSystem.name`) that get a distribution pie on Stats.
-const Set<String> statsDashboardTagSystemNames = {
-  'Spending Category',
-};
+const Set<String> statsDashboardTagSystemNames = {'Spending Category'};
 
 /// Relation target type names (e.g. `Company.name` group key) for Stats pies.
-const Set<String> statsDashboardRelationTypeNames = {
-  'Company',
-};
+const Set<String> statsDashboardRelationTypeNames = {'Company'};

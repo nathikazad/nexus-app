@@ -21,8 +21,6 @@ void main() {
             () => PeopleAuthController(
               initialUser: User(
                 userId: '1',
-                personalDomainId: 1,
-                homeDomainId: 1,
                 preset: BackendPreset.defaultPreset,
               ),
               skipBackendPing: true,

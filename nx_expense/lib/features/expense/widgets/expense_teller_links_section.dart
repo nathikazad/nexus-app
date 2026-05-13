@@ -28,7 +28,8 @@ class ModelTellerLinksFormSection extends ConsumerStatefulWidget {
       _ModelTellerLinksFormSectionState();
 }
 
-class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFormSection> {
+class _ModelTellerLinksFormSectionState
+    extends ConsumerState<ModelTellerLinksFormSection> {
   bool _busy = false;
 
   Future<void> _run(Future<void> Function() fn) async {
@@ -40,7 +41,9 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
       ref.invalidate(tellerTransactionsProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -67,13 +70,18 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
               const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal600),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.teal600,
+                ),
               )
             else
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: _busy ? null : () => context.push(widget.linkPickerRoute),
+                  onTap: _busy
+                      ? null
+                      : () => context.push(widget.linkPickerRoute),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -98,13 +106,18 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
           ),
           data: (links) {
-            final tellerLinks = links.where((l) => l.isTellerTimelineEvent).toList();
+            final tellerLinks = links
+                .where((l) => l.isTellerTimelineEvent)
+                .toList();
             if (tellerLinks.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   'No linked Teller transactions.',
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate400,
+                  ),
                 ),
               );
             }
@@ -117,7 +130,9 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                        borderRadius: BorderRadius.circular(
+                          RefLayout.rounded2xl,
+                        ),
                         border: Border.all(color: AppColors.slate100),
                         boxShadow: refCardShadow,
                       ),
@@ -129,7 +144,8 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
                             child: Builder(
                               builder: (context) {
                                 final amt = num.tryParse(
-                                  link.payload['amount']?.toString().trim() ?? '',
+                                  link.payload['amount']?.toString().trim() ??
+                                      '',
                                 );
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +160,10 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      tellerDetailDateLabel(link.payload, link.eventTime),
+                                      tellerDetailDateLabel(
+                                        link.payload,
+                                        link.eventTime,
+                                      ),
                                       style: GoogleFonts.inter(
                                         fontSize: 12,
                                         color: AppColors.slate400,
@@ -166,7 +185,10 @@ class _ModelTellerLinksFormSectionState extends ConsumerState<ModelTellerLinksFo
                           ),
                           IconButton(
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
                             icon: Icon(
                               Icons.close_rounded,
                               size: 20,

@@ -1,24 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
-import '../../auth/auth_providers.dart';
 import '../../core/client/graphql_client_provider.dart';
 import '../documents/get_kgql_models.graphql.dart';
 import '../models/model.dart';
 import '../repositories/models_repository.dart';
 import '../requests/set_model_request.dart';
 
-int _requirePersonalDomain(Ref ref) {
-  final id = ref.watch(personalDomainIdProvider);
-  if (id == null) {
-    throw StateError('personalDomainId required (login)');
-  }
-  return id;
-}
-
-final modelsProvider = FutureProvider.family<List<Model>, int>((ref, modelTypeId) async {
+final modelsProvider =
+    FutureProvider.family<List<Model>, int>((ref, modelTypeId) async {
   final client = ref.watch(graphqlClientProvider);
-  final domainId = _requirePersonalDomain(ref);
 
   final queryOptions = QueryOptions(
     document: gql(kgqlGetKgqlModelsQuery),
@@ -34,7 +25,6 @@ final modelsProvider = FutureProvider.family<List<Model>, int>((ref, modelTypeId
         'created_at': true,
         'updated_at': true,
       },
-      'domainId': domainId,
     },
     fetchPolicy: FetchPolicy.networkOnly,
   );
@@ -52,7 +42,6 @@ final modelsProvider = FutureProvider.family<List<Model>, int>((ref, modelTypeId
 
 final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
   final client = ref.watch(graphqlClientProvider);
-  final domainId = _requirePersonalDomain(ref);
 
   final queryOptions = QueryOptions(
     document: gql(kgqlGetKgqlModelsQuery),
@@ -83,7 +72,6 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
           'description': true,
         },
       },
-      'domainId': domainId,
     },
     fetchPolicy: FetchPolicy.networkOnly,
   );
@@ -103,29 +91,22 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
 });
 
 /// Creates or updates a model using [setKgqlModel].
-/// When [domainId] is null, uses the logged-in user's [personalDomainIdProvider].
 Future<int> createModel(
   ProviderContainer container,
-  SetModelRequest request, {
-  int? domainId,
-}) async {
+  SetModelRequest request,
+) async {
   final client = container.read(graphqlClientProvider);
-  final resolved = domainId ?? container.read(personalDomainIdProvider);
-  if (resolved == null) {
-    throw StateError('domainId or logged-in personalDomainId required');
-  }
-  return setKgqlModel(client, request, domainId: resolved);
+  return setKgqlModel(client, request);
 }
 
 /// Updates an existing model using [setKgqlModel].
 Future<int> updateModel(
   ProviderContainer container,
-  SetModelRequest request, {
-  int? domainId,
-}) async {
+  SetModelRequest request,
+) async {
   if (request.id == null) {
     throw Exception('updateModel requires an id field in the request');
   }
 
-  return createModel(container, request, domainId: domainId);
+  return createModel(container, request);
 }

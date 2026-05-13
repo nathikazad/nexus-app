@@ -39,10 +39,7 @@ class TaskDraft {
   bool get canSave => name.trim().isNotEmpty;
 
   /// New row payload (id must be filled by repo).
-  Task toTaskForCreate({
-    required int modelTypeId,
-    String? modelTypeName,
-  }) {
+  Task toTaskForCreate({required int modelTypeId, String? modelTypeName}) {
     final n = name.trim();
     final note = notes?.trim();
     return Task(

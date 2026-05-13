@@ -8,10 +8,7 @@ import 'package:nx_time/features/tasks/projects_browse_view_model.dart';
 
 /// Reference: `reference/partials/page-projects-browse.html`
 class ProjectsBrowsePage extends ConsumerStatefulWidget {
-  const ProjectsBrowsePage({
-    super.key,
-    this.mode = ProjectsBrowseMode.browse,
-  });
+  const ProjectsBrowsePage({super.key, this.mode = ProjectsBrowseMode.browse});
 
   final ProjectsBrowseMode mode;
 
@@ -47,8 +44,8 @@ class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
                       widget.mode == ProjectsBrowseMode.pickProject
                           ? 'Pick project'
                           : widget.mode == ProjectsBrowseMode.pickTask
-                              ? 'Pick tasks (projects)'
-                              : 'Projects',
+                          ? 'Pick tasks (projects)'
+                          : 'Projects',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -59,8 +56,9 @@ class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
                   ),
                   if (widget.mode == ProjectsBrowseMode.pickTask)
                     TextButton(
-                      onPressed: () => Navigator.of(context)
-                          .pop<Set<int>>(Set<int>.from(_accumulatedTaskIds)),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pop<Set<int>>(Set<int>.from(_accumulatedTaskIds)),
                       child: const Text('Done'),
                     ),
                 ],
@@ -69,14 +67,21 @@ class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: AppColors.slate200),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    Icon(SolarLinearIcons.magnifer, size: 18, color: AppColors.slate400),
+                    Icon(
+                      SolarLinearIcons.magnifer,
+                      size: 18,
+                      color: AppColors.slate400,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Search projects…',
@@ -103,13 +108,13 @@ class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
                               if (r.subProjectCount > 0) {
                                 final picked = await Navigator.of(context)
                                     .push<int?>(
-                                  MaterialPageRoute(
-                                    builder: (_) => ProjectDrillPage(
-                                      projectId: r.project.id,
-                                      mode: ProjectsBrowseMode.pickProject,
-                                    ),
-                                  ),
-                                );
+                                      MaterialPageRoute(
+                                        builder: (_) => ProjectDrillPage(
+                                          projectId: r.project.id,
+                                          mode: ProjectsBrowseMode.pickProject,
+                                        ),
+                                      ),
+                                    );
                                 if (!context.mounted) return;
                                 if (picked != null) {
                                   Navigator.of(context).pop<int>(picked);
@@ -121,17 +126,19 @@ class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
                             }
                             final result = await Navigator.of(context)
                                 .push<Set<int>?>(
-                              MaterialPageRoute(
-                                builder: (_) => ProjectDrillPage(
-                                  projectId: r.project.id,
-                                  mode: widget.mode,
-                                ),
-                              ),
-                            );
+                                  MaterialPageRoute(
+                                    builder: (_) => ProjectDrillPage(
+                                      projectId: r.project.id,
+                                      mode: widget.mode,
+                                    ),
+                                  ),
+                                );
                             if (!mounted) return;
                             if (widget.mode == ProjectsBrowseMode.pickTask &&
                                 result != null) {
-                              setState(() => _accumulatedTaskIds.addAll(result));
+                              setState(
+                                () => _accumulatedTaskIds.addAll(result),
+                              );
                             }
                           },
                           child: Padding(
@@ -143,7 +150,8 @@ class _ProjectsBrowsePageState extends ConsumerState<ProjectsBrowsePage> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         r.project.name,

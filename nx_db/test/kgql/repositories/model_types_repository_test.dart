@@ -24,7 +24,7 @@ void main() {
         }),
       );
 
-      final roots = await fetchAllModelTypes(mock, domainId: 1);
+      final roots = await fetchAllModelTypes(mock);
       expect(roots.length, 2);
       expect(roots.map((e) => e.name).toList(), ['A', 'B']);
     });
@@ -46,7 +46,7 @@ void main() {
         }),
       );
 
-      final roots = await fetchAllModelTypes(mock, domainId: 1);
+      final roots = await fetchAllModelTypes(mock);
       expect(roots.first.children?.length, 1);
       expect(roots.first.children!.first.parentId, 1);
     });
@@ -59,7 +59,7 @@ void main() {
         }),
       );
 
-      final roots = await fetchAllModelTypes(mock, domainId: 1);
+      final roots = await fetchAllModelTypes(mock);
       expect(roots.length, 1);
       expect(roots.first.name, 'S');
     });
@@ -88,7 +88,7 @@ void main() {
         }),
       );
 
-      final mt = await fetchKgqlModelTypeById(mock, 9, domainId: 1);
+      final mt = await fetchKgqlModelTypeById(mock, 9);
       expect(mt, isNotNull);
       expect(mt!.tagSystems?.length, 1);
       expect(mt.tagSystems!.first.name, 'Cat');
@@ -111,7 +111,6 @@ void main() {
       final id = await setKgqlModelType(
         mock,
         SetModelTypeRequest(name: 'NewType', typeKind: 'base'),
-        domainId: 1,
       );
       expect(id, 42);
     });

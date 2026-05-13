@@ -1,9 +1,5 @@
 /// Stored / API cadence for a [Goal] row.
-enum GoalCadence {
-  daily,
-  weekly,
-  monthly,
-}
+enum GoalCadence { daily, weekly, monthly }
 
 /// Parses API string values (`daily` \| `weekly` \| `monthly`).
 GoalCadence goalCadenceFromKgql(String? raw) {

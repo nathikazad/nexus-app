@@ -50,7 +50,10 @@ class TaskStatusSegmented extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: selected ? Colors.white : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
@@ -64,7 +67,9 @@ class TaskStatusSegmented extends StatelessWidget {
                             ]
                           : null,
                       border: selected
-                          ? Border.all(color: Colors.black.withValues(alpha: 0.04))
+                          ? Border.all(
+                              color: Colors.black.withValues(alpha: 0.04),
+                            )
                           : null,
                     ),
                     child: Text(

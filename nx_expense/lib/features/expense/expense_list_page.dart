@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +31,7 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
     this.showSelect = true,
     this.showDrawer = true,
     this.showActiveFilterChips = true,
+
     /// When set (e.g. desktop panel 3 scoped list), taps open without changing column 2.
     this.onExpenseTap,
   });
@@ -43,6 +43,7 @@ class ExpenseListScreen extends ConsumerStatefulWidget {
   final bool showSearch;
   final bool showSelect;
   final bool showDrawer;
+
   /// When false, the horizontal filter chip row (and "Clear all") is hidden.
   final bool showActiveFilterChips;
   final void Function(int expenseId)? onExpenseTap;

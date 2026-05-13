@@ -9,16 +9,14 @@ import '../documents/get_kgql_aggregate.graphql.dart';
 Future<Map<String, dynamic>> getKgqlAggregate(
   GraphQLClient client,
   Map<String, dynamic> filterKgql,
-  Map<String, dynamic> aggregate, {
-  required int domainId,
-}) async {
+  Map<String, dynamic> aggregate,
+) async {
   final result = await client.query(
     QueryOptions(
       document: gql(getKgqlAggregateQuery),
       variables: {
         'filterkgql': filterKgql,
         'aggregate': aggregate,
-        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -49,7 +47,8 @@ Map<String, dynamic> parseKgqlAggregateResult(dynamic raw) {
     if (decoded is List) {
       return {'grouped': decoded};
     }
-    throw FormatException('getKgqlAggregate: expected JSON object or array, got $decoded');
+    throw FormatException(
+        'getKgqlAggregate: expected JSON object or array, got $decoded');
   }
   if (raw is Map) {
     return Map<String, dynamic>.from(raw);

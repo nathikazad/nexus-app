@@ -67,9 +67,11 @@ void main() {
     });
 
     test('TR4.5 copyWithMessage', () {
-      final m1 = TranscriptMessage(timestamp: 't1', sender: 'Human', message: 'a');
+      final m1 =
+          TranscriptMessage(timestamp: 't1', sender: 'Human', message: 'a');
       var t = Transcript(id: 1, messages: {m1.timestamp: m1});
-      final m2 = TranscriptMessage(timestamp: 't2', sender: 'Agent', message: 'b');
+      final m2 =
+          TranscriptMessage(timestamp: 't2', sender: 'Agent', message: 'b');
       t = t.copyWithMessage(m2);
       expect(t.messages.length, 2);
       expect(t.messages.containsKey('t2'), true);

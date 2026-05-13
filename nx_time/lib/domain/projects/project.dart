@@ -78,15 +78,15 @@ class Project {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        description,
-        modelTypeId,
-        modelTypeName,
-        parentProjectId,
-        Object.hashAll(childProjectIds),
-        Object.hashAllUnordered(relationIdByChildId.entries),
-      );
+    id,
+    name,
+    description,
+    modelTypeId,
+    modelTypeName,
+    parentProjectId,
+    Object.hashAll(childProjectIds),
+    Object.hashAllUnordered(relationIdByChildId.entries),
+  );
 }
 
 bool _listEq(List<int> a, List<int> b) {

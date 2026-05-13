@@ -31,6 +31,7 @@ Set<int> descendantProjectIds(int rootId, List<Project> all) {
       if (out.add(c)) walk(c);
     }
   }
+
   walk(rootId);
   return out;
 }
@@ -73,8 +74,9 @@ List<ProjectBrowseRowVm> projectBrowseRows(
   }).toList();
 }
 
-final projectBrowseRowsProvider =
-    FutureProvider<List<ProjectBrowseRowVm>>((ref) async {
+final projectBrowseRowsProvider = FutureProvider<List<ProjectBrowseRowVm>>((
+  ref,
+) async {
   await ref.watch(authenticatedUserProvider.future);
   final projects = await ref.watch(allProjectsProvider.future);
   final tasks = await ref.watch(allTasksProvider.future);

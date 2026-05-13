@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
 
@@ -40,84 +39,46 @@ final modelTypeColorsProvider = FutureProvider<ModelTypeColors>((ref) async {
 });
 
 /// Default KGQL-backed [ActionRepository].
-final actionRepositoryProvider = Provider<ActionRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlActionRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadActionSchema: () => ref.read(actionSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final actionRepositoryProvider = Provider<ActionRepository>((ref) {
+  return KgqlActionRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadActionSchema: () => ref.read(actionSchemaProvider.future),
+  );
+});
 
 /// KGQL-backed [TaskRepository].
-final taskRepositoryProvider = Provider<TaskRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    final home = ref.watch(homeDomainIdProvider);
-    if (personal == null || home == null) {
-      throw StateError('personalDomainId and homeDomainId required (login)');
-    }
-    return KgqlTaskRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadTaskSchema: () => ref.read(taskSchemaProvider.future),
-      personalDomainId: personal,
-      homeDomainId: home,
-    );
-  },
-);
+final taskRepositoryProvider = Provider<TaskRepository>((ref) {
+  return KgqlTaskRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadTaskSchema: () => ref.read(taskSchemaProvider.future),
+  );
+});
 
 /// KGQL-backed [ProjectRepository].
-final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlProjectRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadProjectSchema: () => ref.read(projectSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
+  return KgqlProjectRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadProjectSchema: () => ref.read(projectSchemaProvider.future),
+  );
+});
 
 /// KGQL-backed [GoalRepository] (`app.get_action_goals_*` / `app.get_expense_goals_month`).
-final goalRepositoryProvider = Provider<GoalRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlGoalRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadGoalSchema: () => ref.read(goalSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final goalRepositoryProvider = Provider<GoalRepository>((ref) {
+  return KgqlGoalRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadGoalSchema: () => ref.read(goalSchemaProvider.future),
+  );
+});
 
 /// KGQL-backed [LogRepository] for `Daily Log` rows in the personal domain.
-final logRepositoryProvider = Provider<LogRepository>(
-  (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return KgqlLogRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadLogSchema: () => ref.read(logSchemaProvider.future),
-      domainId: personal,
-    );
-  },
-);
+final logRepositoryProvider = Provider<LogRepository>((ref) {
+  return KgqlLogRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadLogSchema: () => ref.read(logSchemaProvider.future),
+  );
+});
 
 /// Cached Action root schema for callers that prefer a class over [actionSchemaProvider].
-final kgqlActionSchemaRepositoryProvider =
-    Provider<KgqlActionSchemaRepository>(
+final kgqlActionSchemaRepositoryProvider = Provider<KgqlActionSchemaRepository>(
   (ref) => KgqlActionSchemaRepository(ref),
 );

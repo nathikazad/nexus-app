@@ -74,7 +74,9 @@ class _VoiceMessagePair extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: Container(
-            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.85),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.85,
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
               color: AppColors.accent,
@@ -96,7 +98,9 @@ class _VoiceMessagePair extends StatelessWidget {
         Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.85),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.85,
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -107,7 +111,10 @@ class _VoiceMessagePair extends StatelessWidget {
                 bottomLeft: Radius.circular(4),
               ),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                ),
               ],
             ),
             child: Column(
@@ -115,7 +122,11 @@ class _VoiceMessagePair extends StatelessWidget {
               children: [
                 const Text(
                   "Done — moved 'Draft blog post outline' from today to Monday, Apr 20.",
-                  style: TextStyle(fontSize: 14, height: 1.45, color: AppColors.slate900),
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.45,
+                    color: AppColors.slate900,
+                  ),
                 ),
                 TextButton(
                   onPressed: () {},
@@ -125,7 +136,10 @@ class _VoiceMessagePair extends StatelessWidget {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     foregroundColor: AppColors.accent,
                   ),
-                  child: const Text('Undo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  child: const Text(
+                    'Undo',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ],
             ),
@@ -141,13 +155,17 @@ class _ListeningPill extends StatefulWidget {
   State<_ListeningPill> createState() => _ListeningPillState();
 }
 
-class _ListeningPillState extends State<_ListeningPill> with SingleTickerProviderStateMixin {
+class _ListeningPillState extends State<_ListeningPill>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat();
   }
 
   @override
@@ -171,12 +189,19 @@ class _ListeningPillState extends State<_ListeningPill> with SingleTickerProvide
             Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEF4444),
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 10),
             const Text(
               'Listening...',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate600),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.slate600,
+              ),
             ),
             const SizedBox(width: 10),
             AnimatedBuilder(
@@ -187,7 +212,8 @@ class _ListeningPillState extends State<_ListeningPill> with SingleTickerProvide
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: List.generate(4, (i) {
                     final t = (_controller.value + i * 0.15) % 1.0;
-                    final h = 6.0 + 8 * (0.5 + 0.5 * (t < 0.5 ? t * 2 : 2 - t * 2));
+                    final h =
+                        6.0 + 8 * (0.5 + 0.5 * (t < 0.5 ? t * 2 : 2 - t * 2));
                     return Padding(
                       padding: const EdgeInsets.only(left: 3),
                       child: Container(

@@ -2,8 +2,7 @@
 class CfAccess {
   CfAccess._();
 
-  static const String clientId =
-      '6496f268604fc87ea7bcc9bd1b4b4a78.access';
+  static const String clientId = '6496f268604fc87ea7bcc9bd1b4b4a78.access';
   static const String clientSecret =
       '4bcdc67981628ed79f0295c7213d8cf47043ed1ef295086e5e452cb294aa4d04';
 

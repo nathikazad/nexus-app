@@ -32,67 +32,63 @@ void main() {
     );
   });
 
-  test('weekActionsProvider refetches on invalidateActionsAfterMutation', () async {
-    final counter = _ListForWeekCounter();
-    final c = makeContainer(
-      overrides: [
-        authenticatedUserProvider.overrideWith(
-          (ref) async => User(
-            userId: '1',
-            personalDomainId: 1,
-            homeDomainId: 1,
-            preset: BackendPreset.localhost,
+  test(
+    'weekActionsProvider refetches on invalidateActionsAfterMutation',
+    () async {
+      final counter = _ListForWeekCounter();
+      final c = makeContainer(
+        overrides: [
+          authenticatedUserProvider.overrideWith(
+            (ref) async => User(userId: '1', preset: BackendPreset.localhost),
           ),
-        ),
-        modelTypeColorsProvider.overrideWith(
-          (ref) async => ModelTypeColors.fallback,
-        ),
-        actionRepositoryProvider.overrideWith((ref) => counter),
-      ],
-    );
-    addTearDown(c.dispose);
-    expect(counter.listForWeekCount, 0);
-    final mon = c.read(currentWeekProvider);
-    final m0 = DateTime(mon.year, mon.month, mon.day);
-    await c.read(weekActionsProvider(m0).future);
-    expect(counter.listForWeekCount, 1);
-    c.invalidate(weekActionsProvider);
-    c.invalidate(actionGoalsWeekProvider);
-    await c.read(weekActionsProvider(m0).future);
-    expect(counter.listForWeekCount, 2);
-  });
+          modelTypeColorsProvider.overrideWith(
+            (ref) async => ModelTypeColors.fallback,
+          ),
+          actionRepositoryProvider.overrideWith((ref) => counter),
+        ],
+      );
+      addTearDown(c.dispose);
+      expect(counter.listForWeekCount, 0);
+      final mon = c.read(currentWeekProvider);
+      final m0 = DateTime(mon.year, mon.month, mon.day);
+      await c.read(weekActionsProvider(m0).future);
+      expect(counter.listForWeekCount, 1);
+      c.invalidate(weekActionsProvider);
+      c.invalidate(actionGoalsWeekProvider);
+      await c.read(weekActionsProvider(m0).future);
+      expect(counter.listForWeekCount, 2);
+    },
+  );
 
-  test('weekActionsProvider refetches when currentWeekProvider changes', () async {
-    final counter = _ListForWeekCounter();
-    final c = makeContainer(
-      overrides: [
-        authenticatedUserProvider.overrideWith(
-          (ref) async => User(
-            userId: '1',
-            personalDomainId: 1,
-            homeDomainId: 1,
-            preset: BackendPreset.localhost,
+  test(
+    'weekActionsProvider refetches when currentWeekProvider changes',
+    () async {
+      final counter = _ListForWeekCounter();
+      final c = makeContainer(
+        overrides: [
+          authenticatedUserProvider.overrideWith(
+            (ref) async => User(userId: '1', preset: BackendPreset.localhost),
           ),
-        ),
-        modelTypeColorsProvider.overrideWith(
-          (ref) async => ModelTypeColors.fallback,
-        ),
-        actionRepositoryProvider.overrideWith((ref) => counter),
-      ],
-    );
-    addTearDown(c.dispose);
-    var mon = c.read(currentWeekProvider);
-    var m0 = DateTime(mon.year, mon.month, mon.day);
-    await c.read(weekActionsProvider(m0).future);
-    expect(counter.listForWeekCount, 1);
-    mon = c.read(currentWeekProvider);
-    m0 = DateTime(mon.year, mon.month, mon.day);
-    c.read(currentWeekProvider.notifier).setLocalWeekMonday(
-          m0.subtract(const Duration(days: 7)),
-        );
-    mon = c.read(currentWeekProvider);
-    m0 = DateTime(mon.year, mon.month, mon.day);
-    await c.read(weekActionsProvider(m0).future);
-    expect(counter.listForWeekCount, 2);
-  });
+          modelTypeColorsProvider.overrideWith(
+            (ref) async => ModelTypeColors.fallback,
+          ),
+          actionRepositoryProvider.overrideWith((ref) => counter),
+        ],
+      );
+      addTearDown(c.dispose);
+      var mon = c.read(currentWeekProvider);
+      var m0 = DateTime(mon.year, mon.month, mon.day);
+      await c.read(weekActionsProvider(m0).future);
+      expect(counter.listForWeekCount, 1);
+      mon = c.read(currentWeekProvider);
+      m0 = DateTime(mon.year, mon.month, mon.day);
+      c
+          .read(currentWeekProvider.notifier)
+          .setLocalWeekMonday(m0.subtract(const Duration(days: 7)));
+      mon = c.read(currentWeekProvider);
+      m0 = DateTime(mon.year, mon.month, mon.day);
+      await c.read(weekActionsProvider(m0).future);
+      expect(counter.listForWeekCount, 2);
+    },
+  );
 }

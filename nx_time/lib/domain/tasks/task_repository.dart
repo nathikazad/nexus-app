@@ -7,19 +7,12 @@ abstract class TaskRepository {
   Future<List<Task>> listForPicker();
 
   /// Tasks with optional filters on status and calendar [onDate] (matches `date` attribute day).
-  Future<List<Task>> listAll({
-    TaskStatus? status,
-    DateTime? onDate,
-  });
+  Future<List<Task>> listAll({TaskStatus? status, DateTime? onDate});
 
   Future<Task?> getById(int id);
 
   /// Creates a task; optional [parentTaskId] links via `has_subtask`; [projectId] via `in_project`.
-  Future<int> create(
-    Task task, {
-    int? parentTaskId,
-    int? projectId,
-  });
+  Future<int> create(Task task, {int? parentTaskId, int? projectId});
 
   /// Persists name and description. Set [includeAttributes] when saving a full [Task]
   /// from [getById] (status, tags, date, times).
@@ -30,32 +23,20 @@ abstract class TaskRepository {
 
   /// Replaces the task's project link: unlinks current `in_project` when present, then
   /// links [projectId] if non-null.
-  Future<void> moveTaskToProject({
-    required int taskId,
-    int? projectId,
-  });
+  Future<void> moveTaskToProject({required int taskId, int? projectId});
 
   Future<void> delete(int id);
 
-  Future<int> linkChildTask({
-    required int parentId,
-    required int childId,
-  });
+  Future<int> linkChildTask({required int parentId, required int childId});
 
   Future<void> unlinkChildTask({
     required int parentId,
     required int relationId,
   });
 
-  Future<int> linkProject({
-    required int taskId,
-    required int projectId,
-  });
+  Future<int> linkProject({required int taskId, required int projectId});
 
-  Future<void> unlinkProject({
-    required int taskId,
-    required int relationId,
-  });
+  Future<void> unlinkProject({required int taskId, required int relationId});
 
   /// Links an existing activity row (concrete Action subtype) via `link_to_action`.
   Future<int> linkActivity({
@@ -64,8 +45,5 @@ abstract class TaskRepository {
     required String activityModelTypeName,
   });
 
-  Future<void> unlinkActivity({
-    required int taskId,
-    required int relationId,
-  });
+  Future<void> unlinkActivity({required int taskId, required int relationId});
 }

@@ -100,9 +100,13 @@ Future<List<Expense>> buildExpenseListForUi(Ref ref) async {
   final sorted = [...filtered];
   switch (sortMode) {
     case ExpenseSortMode.dateDesc:
-      sorted.sort((a, b) => expenseDateSortKey(b).compareTo(expenseDateSortKey(a)));
+      sorted.sort(
+        (a, b) => expenseDateSortKey(b).compareTo(expenseDateSortKey(a)),
+      );
     case ExpenseSortMode.dateAsc:
-      sorted.sort((a, b) => expenseDateSortKey(a).compareTo(expenseDateSortKey(b)));
+      sorted.sort(
+        (a, b) => expenseDateSortKey(a).compareTo(expenseDateSortKey(b)),
+      );
     case ExpenseSortMode.amountDesc:
     case ExpenseSortMode.amountAsc:
       if (amountKey != null) {
@@ -278,9 +282,7 @@ final expenseListSelectionSummaryProvider = Provider<ExpenseSummary?>(
 void invalidateExpenseListCache(WidgetRef ref) {
   final filter = ref.read(expenseListFilterProvider);
   final dateRange = ref.read(expenseDateRangeProvider);
-  ref.invalidate(
-    expenseListProvider((filter: filter, dateRange: dateRange)),
-  );
+  ref.invalidate(expenseListProvider((filter: filter, dateRange: dateRange)));
   ref.invalidate(expenseListSummaryProvider);
   ref.invalidate(expenseSummaryProvider);
   ref.invalidate(dashboardExpenseSummaryProvider);

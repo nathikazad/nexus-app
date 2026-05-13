@@ -12,6 +12,7 @@ import 'package:nx_expense/domain/expense/expense_repository.dart';
 import 'package:nx_expense/domain/expense/expense_summary.dart';
 import 'package:nx_expense/domain/expense/expense_upsert.dart';
 import 'package:nx_expense/domain/expense/model_names.dart';
+
 String _dateOnlyYmd(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -19,14 +20,11 @@ class KgqlExpenseRepository implements ExpenseRepository {
   KgqlExpenseRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadExpenseSchema,
-    required int domainId,
-  })  : _client = client,
-        _loadExpenseSchema = loadExpenseSchema,
-        _domainId = domainId;
+  }) : _client = client,
+       _loadExpenseSchema = loadExpenseSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadExpenseSchema;
-  final int _domainId;
 
   @override
   Future<List<Expense>> list({
@@ -41,19 +39,15 @@ class KgqlExpenseRepository implements ExpenseRepository {
       if (filter?.tagFilters != null && filter!.tagFilters!.isNotEmpty)
         'tag_filters': filter.tagFilters,
       'filters': [
-        {
-          'key': 'date',
-          'op': '>=',
-          'value': _dateOnlyYmd(rangeStart),
-        },
-        {
-          'key': 'date',
-          'op': '<=',
-          'value': _dateOnlyYmd(rangeEnd),
-        },
+        {'key': 'date', 'op': '>=', 'value': _dateOnlyYmd(rangeStart)},
+        {'key': 'date', 'op': '<=', 'value': _dateOnlyYmd(rangeEnd)},
       ],
     };
-    final rows = await fetchKgqlModels(_client, filter: filterMap, struct: struct, domainId: _domainId);
+    final rows = await fetchKgqlModels(
+      _client,
+      filter: filterMap,
+      struct: struct,
+    );
     return rows.map(expenseFromModel).toList();
   }
 
@@ -66,7 +60,6 @@ class KgqlExpenseRepository implements ExpenseRepository {
       modelTypeName: kExpenseModelTypeName,
       id: id,
       struct: struct,
-      domainId: _domainId,
     );
     return m == null ? null : expenseFromModel(m);
   }
@@ -74,12 +67,12 @@ class KgqlExpenseRepository implements ExpenseRepository {
   @override
   Future<int> upsert(ExpenseUpsert payload) async {
     final req = buildExpenseSetModelRequest(payload);
-    return setKgqlModel(_client, req, domainId: _domainId);
+    return setKgqlModel(_client, req);
   }
 
   @override
   Future<void> deleteById(int id) async {
-    await setKgqlModel(_client, SetModelRequest(id: id, delete: true), domainId: _domainId);
+    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
   }
 
   @override
@@ -151,15 +144,14 @@ class KgqlExpenseRepository implements ExpenseRepository {
   Future<ExpenseSummary> globalSummary() async {
     final schema = await _loadExpenseSchema();
     final key = schema.attributes
-            ?.where((a) => a.valueType == 'number' && (a.key ?? '').isNotEmpty)
-            .map((a) => a.key!)
-            .firstOrNull;
+        ?.where((a) => a.valueType == 'number' && (a.key ?? '').isNotEmpty)
+        .map((a) => a.key!)
+        .firstOrNull;
 
     final countMap = await getKgqlAggregate(
       _client,
       {'model_type': kExpenseModelTypeName},
       {'metric': 'count', 'key': null, 'group': null},
-      domainId: _domainId,
     );
     final count = (countMap['aggregated_value'] as num?)?.toInt() ?? 0;
 
@@ -169,7 +161,6 @@ class KgqlExpenseRepository implements ExpenseRepository {
         _client,
         {'model_type': kExpenseModelTypeName},
         {'metric': 'sum', 'key': key, 'group': null},
-        domainId: _domainId,
       );
       sum = sumMap['aggregated_value'] as num?;
     }
@@ -196,7 +187,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       'metric': 'count',
       'key': null,
       'group': null,
-    }, domainId: _domainId);
+    });
     final count = (countMap['aggregated_value'] as num?)?.toInt() ?? 0;
 
     num? sum;
@@ -205,7 +196,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'metric': 'sum',
         'key': key,
         'group': null,
-      }, domainId: _domainId);
+      });
       sum = sumMap['aggregated_value'] as num?;
     }
 
@@ -231,7 +222,6 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'key': key,
         'group': {'key': 'date'},
       },
-      domainId: _domainId,
     );
   }
 
@@ -257,11 +247,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       final existing = filter['tag_filters'] as List? ?? [];
       filter['tag_filters'] = [
         ...existing,
-        {
-          'system': systemName,
-          'node': parentNode,
-          'include_descendants': true,
-        },
+        {'system': systemName, 'node': parentNode, 'include_descendants': true},
       ];
     }
 
@@ -272,7 +258,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       'metric': 'sum',
       'key': key,
       'group': group,
-    }, domainId: _domainId);
+    });
   }
 
   @override
@@ -296,7 +282,6 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'key': key,
         'group': {'key': '$targetTypeName.name'},
       },
-      domainId: _domainId,
     );
   }
 }

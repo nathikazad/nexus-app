@@ -38,9 +38,20 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
         24 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [
-        _DetailRow(label: 'Date', value: _payloadDate(p) ?? row.time.toLocal().toIso8601String().split('T').first),
-        _DetailRow(label: 'deleted', value: tellerPayloadIsDeleted(p) ? 'true' : 'false'),
-        _DetailRow(label: 'Description', value: (p['description'] as String?)?.trim() ?? '—'),
+        _DetailRow(
+          label: 'Date',
+          value:
+              _payloadDate(p) ??
+              row.time.toLocal().toIso8601String().split('T').first,
+        ),
+        _DetailRow(
+          label: 'deleted',
+          value: tellerPayloadIsDeleted(p) ? 'true' : 'false',
+        ),
+        _DetailRow(
+          label: 'Description',
+          value: (p['description'] as String?)?.trim() ?? '—',
+        ),
         _DetailRow(label: 'Type', value: p['type']?.toString() ?? '—'),
         _DetailRow(label: 'Status', value: p['status']?.toString() ?? '—'),
         _DetailRow(label: 'Id', value: p['id']?.toString() ?? '—'),
@@ -50,9 +61,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           Text('Linked', style: refSectionTitle(context)),
           const SizedBox(height: 12),
-          ...row.linkedModels.map(
-            (m) => _LinkedModelTile(row: row, model: m),
-          ),
+          ...row.linkedModels.map((m) => _LinkedModelTile(row: row, model: m)),
         ],
         const SizedBox(height: 20),
         _TellerLinkActions(row: row),
@@ -63,7 +72,11 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
       return PanelChrome(
         title: 'Teller transaction',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.slate400,
+            size: 22,
+          ),
           onPressed: () => navTellerTxDetailBack(context, ref, row),
         ),
         body: listBody,
@@ -76,14 +89,15 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.slate400,
+            size: 22,
+          ),
           onPressed: () => navTellerTxDetailBack(context, ref, row),
         ),
         centerTitle: true,
-        title: Text(
-          'Teller transaction',
-          style: refAppBarTitleBase(),
-        ),
+        title: Text('Teller transaction', style: refAppBarTitleBase()),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: AppColors.slate100),
@@ -212,14 +226,19 @@ class _TellerLinkActions extends ConsumerWidget {
                           TellerPanel3State.newExpenseForm(row);
                     } else {
                       final p = row.payload;
-                      final amt = num.tryParse(p['amount']?.toString().trim() ?? '');
+                      final amt = num.tryParse(
+                        p['amount']?.toString().trim() ?? '',
+                      );
                       final q = <String, String>{
                         'tellerEventId': row.eventId,
                         'tellerEventTime': row.time.toUtc().toIso8601String(),
                         'prefillName': tellerTransactionTitleLine(p),
                       };
                       if (amt != null) q['prefillAmount'] = amt.toString();
-                      final uri = Uri(path: '/expense/form', queryParameters: q);
+                      final uri = Uri(
+                        path: '/expense/form',
+                        queryParameters: q,
+                      );
                       context.push(uri.toString());
                     }
                   },
@@ -304,7 +323,11 @@ class _LinkActionTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded, color: AppColors.slate400, size: 22),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.slate400,
+                    size: 22,
+                  ),
                 ],
               ),
             ),
@@ -335,12 +358,14 @@ class _LinkedModelTile extends ConsumerWidget {
         await refreshTellerSelectionAfterLinkChange(ref, row.eventId);
       }
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unlinked')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Unlinked')));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     }
   }
@@ -366,7 +391,9 @@ class _LinkedModelTile extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              isExpense ? Icons.receipt_long_outlined : Icons.swap_horiz_rounded,
+              isExpense
+                  ? Icons.receipt_long_outlined
+                  : Icons.swap_horiz_rounded,
               color: AppColors.slate500,
               size: 22,
             ),
@@ -383,7 +410,9 @@ class _LinkedModelTile extends ConsumerWidget {
                             navToTransferFromTellerLink(context, ref, model.id);
                           }
                         },
-                        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                        borderRadius: BorderRadius.circular(
+                          RefLayout.rounded2xl,
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Column(
@@ -433,7 +462,11 @@ class _LinkedModelTile extends ConsumerWidget {
                     ),
             ),
             if (tappable)
-              Icon(Icons.chevron_right_rounded, color: AppColors.slate400, size: 22),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.slate400,
+                size: 22,
+              ),
             if (model.linkId != null)
               IconButton(
                 tooltip: 'Unlink',

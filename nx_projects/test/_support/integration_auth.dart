@@ -7,21 +7,20 @@ import 'package:nx_db/auth.dart';
 class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {
-    return User(
-      userId: '1',
-      personalDomainId: 1,
-      homeDomainId: 1,
-      preset: BackendPreset.laptop,
-    );
+    return User(userId: '1', preset: BackendPreset.laptop);
   }
 }
 
 List<Override> get projectsIntegrationOverrides => [
-      authProvider.overrideWith(TestAuthController.new),
-      endpointProvider.overrideWith((ref) => kIntegrationTestBackendUrls.graphqlHttp),
-      sockWsUrlProvider.overrideWith((ref) => kIntegrationTestBackendUrls.sockWs),
-      imageBaseUrlProvider.overrideWith((ref) => kIntegrationTestBackendUrls.imageHttp),
-    ];
+  authProvider.overrideWith(TestAuthController.new),
+  endpointProvider.overrideWith(
+    (ref) => kIntegrationTestBackendUrls.graphqlHttp,
+  ),
+  sockWsUrlProvider.overrideWith((ref) => kIntegrationTestBackendUrls.sockWs),
+  imageBaseUrlProvider.overrideWith(
+    (ref) => kIntegrationTestBackendUrls.imageHttp,
+  ),
+];
 
 bool get runProjectsIntegration =>
     Platform.environment['RUN_NX_PROJECTS_INTEGRATION'] == 'true';

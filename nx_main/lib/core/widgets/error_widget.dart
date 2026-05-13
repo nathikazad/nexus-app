@@ -15,7 +15,7 @@ class ErrorDisplay extends StatelessWidget {
     // Print error to console for debugging
     print('❌ UI Error Display:');
     print('Message: $message');
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -51,4 +51,3 @@ class ErrorDisplay extends StatelessWidget {
     );
   }
 }
-

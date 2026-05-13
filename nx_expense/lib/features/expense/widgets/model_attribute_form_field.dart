@@ -72,14 +72,28 @@ class ModelAttributeFormField extends StatelessWidget {
               child: TextField(
                 controller: c,
                 textAlign: TextAlign.right,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.slate900),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate900,
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
                 decoration: InputDecoration(
                   prefixText: r'$ ',
-                  prefixStyle: GoogleFonts.inter(color: AppColors.slate400, fontWeight: FontWeight.w500),
+                  prefixStyle: GoogleFonts.inter(
+                    color: AppColors.slate400,
+                    fontWeight: FontWeight.w500,
+                  ),
                   isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                 ),
               ),
             ),
@@ -109,10 +123,7 @@ class ModelAttributeFormField extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: c,
-            decoration: inputDecoration,
-          ),
+          TextField(controller: c, decoration: inputDecoration),
         ],
       ),
     );

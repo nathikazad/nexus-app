@@ -75,7 +75,8 @@ void main() {
           ),
         ],
       );
-      final rel = (r.toJson()['relations'] as List).first as Map<String, dynamic>;
+      final rel =
+          (r.toJson()['relations'] as List).first as Map<String, dynamic>;
       expect(rel['attributes'], [
         {'key': 'role', 'value': 'primary'},
       ]);

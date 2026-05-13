@@ -68,7 +68,9 @@ void main() {
     test(
       'getActionGoalsWeek: week envelope, 8 active action goals, cadences, 7 days',
       () async {
-        final container = ProviderContainer(overrides: timeIntegrationOverrides);
+        final container = ProviderContainer(
+          overrides: timeIntegrationOverrides,
+        );
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
@@ -108,7 +110,9 @@ void main() {
     test(
       'getActionGoalsWeek(goalId: gym): meta preferred_slots + auto_generate_tasks',
       () async {
-        final container = ProviderContainer(overrides: timeIntegrationOverrides);
+        final container = ProviderContainer(
+          overrides: timeIntegrationOverrides,
+        );
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
@@ -145,7 +149,9 @@ void main() {
     test(
       'getActionGoalsTrend: Yoga every day, 12 weekly buckets with values',
       () async {
-        final container = ProviderContainer(overrides: timeIntegrationOverrides);
+        final container = ProviderContainer(
+          overrides: timeIntegrationOverrides,
+        );
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
@@ -161,7 +167,9 @@ void main() {
         expect(t.buckets.length, 12);
         for (final b in t.buckets) {
           expect(
-            b.periodStart.year * 10000 + b.periodStart.month * 100 + b.periodStart.day,
+            b.periodStart.year * 10000 +
+                b.periodStart.month * 100 +
+                b.periodStart.day,
             greaterThan(0),
           );
         }
@@ -177,7 +185,9 @@ void main() {
     test(
       'getExpenseGoalsMonth: 2 active caps, sums Restaurants 207 / Amazon 318',
       () async {
-        final container = ProviderContainer(overrides: timeIntegrationOverrides);
+        final container = ProviderContainer(
+          overrides: timeIntegrationOverrides,
+        );
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);
@@ -213,7 +223,9 @@ void main() {
     test(
       'getExpenseGoalsMonth(goalId:): single Restaurants cap passthrough',
       () async {
-        final container = ProviderContainer(overrides: timeIntegrationOverrides);
+        final container = ProviderContainer(
+          overrides: timeIntegrationOverrides,
+        );
         addTearDown(container.dispose);
 
         await container.read(authProvider.future);

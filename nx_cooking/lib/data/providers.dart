@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
@@ -33,13 +32,11 @@ final recipeSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
 });
 
 /// All [Item] models with the CookingItem trait (ingredient catalog).
-final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((ref) async {
+final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((
+  ref,
+) async {
   await ref.watch(authenticatedUserProvider.future);
   final client = ref.watch(graphqlClientProvider);
-  final home = ref.watch(homeDomainIdProvider);
-  if (home == null) {
-    throw StateError('homeDomainId required (login)');
-  }
   final models = await fetchKgqlModels(
     client,
     filter: <String, dynamic>{
@@ -49,14 +46,10 @@ final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((ref) async 
       ],
     },
     struct: <String, dynamic>{'id': true, 'name': true},
-    domainId: home,
   );
-  final list = models
-      .map(
-        (m) => CookingItemEntry(id: m.id, name: m.name),
-      )
-      .toList()
-    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  final list =
+      models.map((m) => CookingItemEntry(id: m.id, name: m.name)).toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   return list;
 });
 
@@ -92,19 +85,19 @@ final recipeSearchQueryProvider =
 /// is empty (hide overlay). Otherwise a (possibly empty) list from the server.
 final recipeSearchResultsProvider =
     FutureProvider.autoDispose<List<RecipeSearchResult>?>((ref) async {
-  var q = ref.watch(recipeSearchQueryProvider);
-  for (;;) {
-    final t = q.trim();
-    if (t.isEmpty) return null;
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (ref.read(recipeSearchQueryProvider).trim() != t) {
-      q = ref.read(recipeSearchQueryProvider);
-      continue;
-    }
-    await ref.watch(authenticatedUserProvider.future);
-    return ref.read(recipeRepositoryProvider).searchRecipes(t);
-  }
-});
+      var q = ref.watch(recipeSearchQueryProvider);
+      for (;;) {
+        final t = q.trim();
+        if (t.isEmpty) return null;
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        if (ref.read(recipeSearchQueryProvider).trim() != t) {
+          q = ref.read(recipeSearchQueryProvider);
+          continue;
+        }
+        await ref.watch(authenticatedUserProvider.future);
+        return ref.read(recipeRepositoryProvider).searchRecipes(t);
+      }
+    });
 
 /// Stats tab only (in-memory).
 final cookingRepositoryProvider = Provider<CookingRepository>(
@@ -131,33 +124,19 @@ class SelectedWeekStartNotifier extends Notifier<DateTime> {
 }
 
 /// Recipe CRUD via PGDB KGQL.
-final recipeRepositoryProvider = Provider<RecipeRepository>(
-  (ref) {
-    final home = ref.watch(homeDomainIdProvider);
-    if (home == null) {
-      throw StateError('homeDomainId required (login)');
-    }
-    return KgqlRecipeRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadRecipeSchema: () => ref.read(recipeSchemaProvider.future),
-      domainId: home,
-    );
-  },
-);
+final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {
+  return KgqlRecipeRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadRecipeSchema: () => ref.read(recipeSchemaProvider.future),
+  );
+});
 
-final cookingPlanRepositoryProvider = Provider<CookingPlanRepository>(
-  (ref) {
-    final home = ref.watch(homeDomainIdProvider);
-    if (home == null) {
-      throw StateError('homeDomainId required (login)');
-    }
-    return KgqlCookingPlanRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadCookingTaskSchema: () => ref.read(cookingTaskSchemaProvider.future),
-      domainId: home,
-    );
-  },
-);
+final cookingPlanRepositoryProvider = Provider<CookingPlanRepository>((ref) {
+  return KgqlCookingPlanRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadCookingTaskSchema: () => ref.read(cookingTaskSchemaProvider.future),
+  );
+});
 
 /// Cached list for recipe tab + sub-bar count.
 ///
@@ -174,9 +153,9 @@ final recipeListProvider = FutureProvider<List<RecipeSummary>>((ref) async {
       'preset=${user.preset.key}',
     );
     final filter = ref.watch(recipeListFilterProvider);
-    final list = await ref.watch(recipeRepositoryProvider).fetchRecipes(
-          filter: filter,
-        );
+    final list = await ref
+        .watch(recipeRepositoryProvider)
+        .fetchRecipes(filter: filter);
     debugPrint('[nx_cooking:recipeListProvider] success count=${list.length}');
     return list;
   } catch (e, st) {
@@ -199,13 +178,11 @@ final recipeDetailProvider = FutureProvider.family<RecipeDetail?, int>((
 });
 
 /// One planned [CookingTask] for [CookingTaskViewPage] (by task id).
-final cookingTaskDetailProvider = FutureProvider.family<CookingTaskDetail?, int>((
-  ref,
-  taskId,
-) async {
-  await ref.watch(authenticatedUserProvider.future);
-  return ref.watch(cookingPlanRepositoryProvider).fetchTaskDetail(taskId);
-});
+final cookingTaskDetailProvider =
+    FutureProvider.family<CookingTaskDetail?, int>((ref, taskId) async {
+      await ref.watch(authenticatedUserProvider.future);
+      return ref.watch(cookingPlanRepositoryProvider).fetchTaskDetail(taskId);
+    });
 
 /// Week tab: seven day rows from `CookingTask` in PGDB.
 final weekSectionsProvider = FutureProvider<List<WeekDaySection>>((ref) async {

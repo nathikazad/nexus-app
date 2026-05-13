@@ -49,7 +49,10 @@ bool _isTaskNeighborChild(Relation r) {
 List<int> _childTaskIdsFromModel(Model m) {
   final nested = m.relations?[kTaskRelationKey];
   if (nested != null && nested.isNotEmpty) {
-    return [for (final c in nested) if (_nestedTaskNeighborIsChild(c)) c.id];
+    return [
+      for (final c in nested)
+        if (_nestedTaskNeighborIsChild(c)) c.id,
+    ];
   }
   final list = m.relationsList;
   if (list == null || list.isEmpty) return [];
@@ -81,7 +84,8 @@ int? _parentTaskIdFromModel(Model m) {
   final list = m.relationsList;
   if (list == null || list.isEmpty) return null;
   for (final r in list) {
-    if ((r.modelType == kTaskRelationKey || r.modelType == kTaskModelTypeName) &&
+    if ((r.modelType == kTaskRelationKey ||
+            r.modelType == kTaskModelTypeName) &&
         r.relation == 'parent') {
       return r.modelId;
     }
@@ -137,7 +141,9 @@ List<SetModelAttribute> _taskAttributes(Task task) {
   ];
   final d = task.date;
   if (d != null) {
-    attrs.add(SetModelAttribute(key: kTaskAttrDate, value: d.toIso8601String()));
+    attrs.add(
+      SetModelAttribute(key: kTaskAttrDate, value: d.toIso8601String()),
+    );
   }
   final st = task.startTime;
   final en = task.endTime;
@@ -189,15 +195,9 @@ SetModelRequest setModelRequestForCreateTask(
 }) {
   final rels = <ModelRelation>[
     if (parentTaskId != null)
-      ModelRelation(
-        modelType: kTaskRelationKey,
-        link: [parentTaskId],
-      ),
+      ModelRelation(modelType: kTaskRelationKey, link: [parentTaskId]),
     if (projectId != null)
-      ModelRelation(
-        modelType: kProjectRelationKey,
-        link: [projectId],
-      ),
+      ModelRelation(modelType: kProjectRelationKey, link: [projectId]),
   ];
 
   return SetModelRequest(
@@ -217,7 +217,9 @@ SetModelRequest setModelRequestForUpdateTask(
 }) {
   return SetModelRequest(
     id: task.id,
-    modelType: task.modelTypeName != kTaskModelTypeName ? task.modelTypeName : null,
+    modelType: task.modelTypeName != kTaskModelTypeName
+        ? task.modelTypeName
+        : null,
     name: task.name,
     description: task.description,
     attributes: includeAttributes ? _taskAttributes(task) : null,

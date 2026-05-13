@@ -99,10 +99,7 @@ class TodayPage extends ConsumerWidget {
                 const Center(
                   child: Text(
                     'No logs yet today',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.slate400,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.slate400),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -115,10 +112,7 @@ class TodayPage extends ConsumerWidget {
                   const SizedBox(height: 8),
                 ],
               const SizedBox(height: 12),
-              _DashedAddButton(
-                label: 'Add log',
-                onTap: onAddLogTap,
-              ),
+              _DashedAddButton(label: 'Add log', onTap: onAddLogTap),
             ]),
           );
         },
@@ -183,7 +177,9 @@ class _DashedAddButton extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
                     color: AppColors.slate500,
-                    fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                    fontFamily: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.fontFamily,
                   ),
                 ),
               ],
@@ -269,10 +265,7 @@ class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TodayViewToggle(
-                    mode: mode,
-                    onChanged: onModeChanged,
-                  ),
+                  TodayViewToggle(mode: mode, onChanged: onModeChanged),
                 ],
               ),
             ),

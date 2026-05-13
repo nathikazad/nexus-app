@@ -203,8 +203,8 @@ class _BatteryPageState extends ConsumerState<BatteryPage> {
                     showTitles: true,
                     reservedSize: 36,
                     interval: 25,
-                    getTitlesWidget: (v, m) =>
-                        Text('${v.toInt()}%', style: const TextStyle(fontSize: 10)),
+                    getTitlesWidget: (v, m) => Text('${v.toInt()}%',
+                        style: const TextStyle(fontSize: 10)),
                   ),
                 ),
                 rightTitles: AxisTitles(
@@ -213,8 +213,7 @@ class _BatteryPageState extends ConsumerState<BatteryPage> {
                     reservedSize: 40,
                     interval: 25,
                     getTitlesWidget: (v, m) {
-                      final mv =
-                          vMin + (v / 100) * vSpan;
+                      final mv = vMin + (v / 100) * vSpan;
                       return Text(
                         '${(mv / 1000).toStringAsFixed(1)}V',
                         style: const TextStyle(fontSize: 10),

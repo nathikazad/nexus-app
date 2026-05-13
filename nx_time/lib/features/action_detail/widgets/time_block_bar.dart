@@ -32,7 +32,9 @@ class TimeBlockBar extends StatelessWidget {
               padding: const EdgeInsets.only(top: 10),
               child: Row(
                 children: [
-                  Expanded(child: Divider(height: 1, color: AppColors.slate200)),
+                  Expanded(
+                    child: Divider(height: 1, color: AppColors.slate200),
+                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
@@ -43,7 +45,9 @@ class TimeBlockBar extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(height: 1, color: AppColors.slate200)),
+                  Expanded(
+                    child: Divider(height: 1, color: AppColors.slate200),
+                  ),
                 ],
               ),
             ),
@@ -78,10 +82,7 @@ class _TimeColumn extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.slate400,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppColors.slate400),
         ),
         const SizedBox(height: 2),
         Text.rich(

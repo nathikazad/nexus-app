@@ -14,24 +14,16 @@ class KgqlEssayRepository implements EssayRepository {
     required GraphQLClient client,
     required Future<ModelType> Function() loadEssaySchema,
     required Future<ModelType> Function() loadEssaySnapSchema,
-    required int domainId,
   }) : _client = client,
        _loadEssaySchema = loadEssaySchema,
-       _loadEssaySnapSchema = loadEssaySnapSchema,
-       _domainId = domainId;
+       _loadEssaySnapSchema = loadEssaySnapSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadEssaySchema;
   final Future<ModelType> Function() _loadEssaySnapSchema;
-  final int _domainId;
-
   @override
   Future<Essay> create() async {
-    final id = await setKgqlModel(
-      _client,
-      setModelRequestForCreateEssay(),
-      domainId: _domainId,
-    );
+    final id = await setKgqlModel(_client, setModelRequestForCreateEssay());
     final essay = await getById(id);
     if (essay == null) {
       throw StateError('Created essay $id could not be loaded');
@@ -70,7 +62,6 @@ class KgqlEssayRepository implements EssayRepository {
             ? null
             : <String, dynamic>{'message': changeSummary},
       ),
-      domainId: _domainId,
     );
 
     if (existing.isNotEmpty) {
@@ -82,7 +73,6 @@ class KgqlEssayRepository implements EssayRepository {
             ModelRelation(modelType: kEssaySnapModelTypeName, link: [snapId]),
           ],
         ),
-        domainId: _domainId,
       );
     }
 
@@ -94,7 +84,6 @@ class KgqlEssayRepository implements EssayRepository {
           ModelRelation(modelType: kEssaySnapModelTypeName, link: [snapId]),
         ],
       ),
-      domainId: _domainId,
     );
 
     final snaps = await listSnapshots(essayId);
@@ -109,7 +98,6 @@ class KgqlEssayRepository implements EssayRepository {
       modelTypeName: kEssayModelTypeName,
       id: id,
       struct: essayFetchStruct(schema),
-      domainId: _domainId,
     );
     if (model == null) return null;
     return essayFromModel(
@@ -134,7 +122,6 @@ class KgqlEssayRepository implements EssayRepository {
         ],
       },
       struct: essayFetchStruct(schema),
-      domainId: _domainId,
     );
     return _sortedEssays(models);
   }
@@ -151,7 +138,6 @@ class KgqlEssayRepository implements EssayRepository {
         ],
       },
       struct: essayFetchStruct(schema),
-      domainId: _domainId,
     );
     return _sortedEssays(models).take(limit).toList();
   }
@@ -172,7 +158,6 @@ class KgqlEssayRepository implements EssayRepository {
     final models = await fetchKgqlModelsForRelationPicker(
       _client,
       modelType.kgqlName,
-      domainId: _domainId,
     );
     final normalized = query.trim().toLowerCase();
     return [
@@ -202,7 +187,6 @@ class KgqlEssayRepository implements EssayRepository {
           ModelRelation(modelType: modelType.kgqlName, link: [modelId]),
         ],
       ),
-      domainId: _domainId,
     );
     final updated = await getById(essayId);
     if (updated == null) {
@@ -228,7 +212,6 @@ class KgqlEssayRepository implements EssayRepository {
         id: essayId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
-      domainId: _domainId,
     );
     final updated = await getById(essayId);
     if (updated == null) {
@@ -251,7 +234,6 @@ class KgqlEssayRepository implements EssayRepository {
       modelTypeName: kEssayModelTypeName,
       id: essayId,
       struct: essayFetchStruct(schema),
-      domainId: _domainId,
     );
     if (model == null) return const <EssaySnap>[];
     return essaySnapsFromEssayModel(model);
@@ -300,7 +282,6 @@ class KgqlEssayRepository implements EssayRepository {
         essay,
         availableTagSystems: _availableTagSystems(schema),
       ),
-      domainId: _domainId,
     );
     final updated = await getById(essay.id);
     if (updated == null) {
@@ -322,7 +303,6 @@ class KgqlEssayRepository implements EssayRepository {
       _client,
       filter: {'model_type': kEssayModelTypeName},
       struct: essayFetchStruct(schema),
-      domainId: _domainId,
     );
     return _sortedEssays(models);
   }

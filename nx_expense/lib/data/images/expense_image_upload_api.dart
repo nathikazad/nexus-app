@@ -80,7 +80,9 @@ Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   }
   final te = decoded['timelineEvent'];
   if (te is! Map<String, dynamic>) {
-    throw StateError('Missing timelineEvent after upload (KGQL insert may have failed)');
+    throw StateError(
+      'Missing timelineEvent after upload (KGQL insert may have failed)',
+    );
   }
   final id = te['id']?.toString();
   final timeStr = te['time']?.toString();

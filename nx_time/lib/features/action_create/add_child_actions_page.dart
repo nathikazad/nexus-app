@@ -13,26 +13,27 @@ import 'package:nx_time/features/today/today_view_model.dart';
 
 /// Post-save screen: add optional child actions under a parent, or tap Done.
 class AddChildActionsPage extends ConsumerStatefulWidget {
-  const AddChildActionsPage({
-    super.key,
-    required this.parent,
-  });
+  const AddChildActionsPage({super.key, required this.parent});
 
   final Action parent;
 
   @override
-  ConsumerState<AddChildActionsPage> createState() => _AddChildActionsPageState();
+  ConsumerState<AddChildActionsPage> createState() =>
+      _AddChildActionsPageState();
 }
 
 class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
   ParentActionKey get _key => (
-        id: widget.parent.id,
-        modelTypeName: widget.parent.modelTypeName ?? 'Action',
-      );
+    id: widget.parent.id,
+    modelTypeName: widget.parent.modelTypeName ?? 'Action',
+  );
 
   Future<void> _unlink(int childId) async {
     final repo = ref.read(actionRepositoryProvider);
-    final fresh = await repo.getById(id: widget.parent.id, modelTypeName: _key.modelTypeName);
+    final fresh = await repo.getById(
+      id: widget.parent.id,
+      modelTypeName: _key.modelTypeName,
+    );
     if (fresh == null || !mounted) return;
     final rid = fresh.relationIdByChildId[childId];
     if (rid == null) {
@@ -46,15 +47,15 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
       invalidateActionsAfterMutation(ref);
       ref.invalidate(parentActionForChildrenProvider(_key));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unlinked')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Unlinked')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not unlink: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not unlink: $e')));
       }
     }
   }
@@ -111,7 +112,9 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
                   Text(
-                    widget.parent.name.isNotEmpty ? widget.parent.name : 'Action',
+                    widget.parent.name.isNotEmpty
+                        ? widget.parent.name
+                        : 'Action',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -131,7 +134,10 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
                         Container(
                           width: 10,
                           height: 10,
-                          decoration: BoxDecoration(color: bar, shape: BoxShape.circle),
+                          decoration: BoxDecoration(
+                            color: bar,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -191,7 +197,10 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
                         ),
                         error: (e, _) => Text(
                           'Could not load types: $e',
-                          style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.slate500,
+                          ),
                         ),
                       );
                     },
@@ -215,7 +224,10 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
                           final n = p?.childActionIds.length ?? 0;
                           return Text(
                             '$n',
-                            style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.slate500,
+                            ),
                           );
                         },
                         loading: () => const SizedBox.shrink(),
@@ -232,14 +244,21 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
                           child: Center(
                             child: Text(
                               'No child actions yet',
-                              style: TextStyle(fontSize: 13, color: AppColors.slate400),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.slate400,
+                              ),
                             ),
                           ),
                         );
                       }
-                      final snap = ref.watch(todaySnapshotProvider).asData?.value;
+                      final snap = ref
+                          .watch(todaySnapshotProvider)
+                          .asData
+                          ?.value;
                       final byId = {
-                        if (snap != null) for (final a in snap.dayActions) a.id: a,
+                        if (snap != null)
+                          for (final a in snap.dayActions) a.id: a,
                       };
                       return Column(
                         children: [
@@ -248,17 +267,21 @@ class _AddChildActionsPageState extends ConsumerState<AddChildActionsPage> {
                               childId: cid,
                               label: byId[cid]?.name.isNotEmpty == true
                                   ? byId[cid]!.name
-                                  : (byId[cid]?.modelTypeName ?? 'Action #$cid'),
+                                  : (byId[cid]?.modelTypeName ??
+                                        'Action #$cid'),
                               onUnlink: () => _unlink(cid),
                             ),
                         ],
                       );
                     },
-                    loading: () => const Center(child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )),
-                    error: (e, _) => Text('$e', style: const TextStyle(fontSize: 12)),
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (e, _) =>
+                        Text('$e', style: const TextStyle(fontSize: 12)),
                   ),
                 ],
               ),

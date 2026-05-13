@@ -31,7 +31,8 @@ void main() {
         name: 'X',
         typeKind: 'base',
         attributeDefinitions: [
-          AttributeDefinition(key: 'title', valueType: 'string', required: true),
+          AttributeDefinition(
+              key: 'title', valueType: 'string', required: true),
         ],
       );
       expect(r.toJson()['attribute_definitions'], isA<List>());
@@ -53,7 +54,8 @@ void main() {
         name: 'X',
         typeKind: 'base',
         attributeDefinitions: [
-          AttributeDefinition(id: 3, key: 'k', valueType: 'string', delete: true),
+          AttributeDefinition(
+              id: 3, key: 'k', valueType: 'string', delete: true),
         ],
       );
       expect((r.toJson()['attribute_definitions'] as List).first, {

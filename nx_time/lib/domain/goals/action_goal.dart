@@ -5,10 +5,7 @@ import 'package:nx_time/domain/goals/goal_streak.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
 class ActionGoalMeta {
-  const ActionGoalMeta({
-    this.preferredSlots,
-    this.autoGenerateTasks,
-  });
+  const ActionGoalMeta({this.preferredSlots, this.autoGenerateTasks});
 
   final List<GoalPreferredSlot>? preferredSlots;
   final bool? autoGenerateTasks;
@@ -45,10 +42,7 @@ class ActionGoalWeekItem {
 }
 
 class ActionGoalsWeek {
-  const ActionGoalsWeek({
-    required this.weekStart,
-    required this.items,
-  });
+  const ActionGoalsWeek({required this.weekStart, required this.items});
 
   final DateTime weekStart;
   final List<ActionGoalWeekItem> items;

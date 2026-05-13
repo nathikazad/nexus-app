@@ -58,20 +58,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           final selecting = ref.watch(expenseListSelectionModeProvider);
-          final showFab =
-              navigationShell.currentIndex == 0 && !selecting;
+          final showFab = navigationShell.currentIndex == 0 && !selecting;
 
           if (isDesktopLayout(context)) {
             return Stack(
               fit: StackFit.expand,
               children: [
-                Offstage(
-                  offstage: true,
-                  child: navigationShell,
-                ),
-                const Positioned.fill(
-                  child: DesktopShell(),
-                ),
+                Offstage(offstage: true, child: navigationShell),
+                const Positioned.fill(child: DesktopShell()),
               ],
             );
           }

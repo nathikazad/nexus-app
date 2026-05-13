@@ -15,11 +15,13 @@ class TagSystemFormScreen extends ConsumerStatefulWidget {
   final int? tagSystemId;
 
   @override
-  ConsumerState<TagSystemFormScreen> createState() => _TagSystemFormScreenState();
+  ConsumerState<TagSystemFormScreen> createState() =>
+      _TagSystemFormScreenState();
 }
 
 class _NodeForm {
-  _NodeForm([String initial = '']) : name = TextEditingController(text: initial);
+  _NodeForm([String initial = ''])
+    : name = TextEditingController(text: initial);
   final TextEditingController name;
   final List<_NodeForm> children = [];
 
@@ -33,7 +35,9 @@ class _NodeForm {
   SetTagNodeRequest toReq() {
     return SetTagNodeRequest(
       name: name.text.trim().isEmpty ? 'Node' : name.text.trim(),
-      children: children.isEmpty ? null : children.map((c) => c.toReq()).toList(),
+      children: children.isEmpty
+          ? null
+          : children.map((c) => c.toReq()).toList(),
     );
   }
 
@@ -113,7 +117,8 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
     final schemaAsync = ref.watch(recipeSchemaViewProvider);
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         _ensureFromSchema(schema);
@@ -121,7 +126,11 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
           backgroundColor: Colors.white,
           appBar: AppBar(
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.zinc500, size: 22),
+              icon: const Icon(
+                Icons.arrow_back,
+                color: AppColors.zinc500,
+                size: 22,
+              ),
               onPressed: () => _leaveForm(context, ref),
             ),
             centerTitle: true,
@@ -136,7 +145,11 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
             actions: [
               if (widget.tagSystemId != null)
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Color(0xFFF87171), size: 22),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFF87171),
+                    size: 22,
+                  ),
                   onPressed: _loading ? null : () => _delete(schema),
                 ),
             ],
@@ -157,18 +170,28 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                           const SizedBox(height: 6),
                           TextField(
                             controller: _name,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.zinc200),
+                                borderSide: const BorderSide(
+                                  color: AppColors.zinc200,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.zinc200),
+                                borderSide: const BorderSide(
+                                  color: AppColors.zinc200,
+                                ),
                               ),
                             ),
                           ),
@@ -178,7 +201,10 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                           _selectionModePill(),
                           const SizedBox(height: 16),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               border: Border.all(color: AppColors.zinc200),
                               borderRadius: BorderRadius.circular(12),
@@ -199,7 +225,8 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                                   value: _hierarchical,
                                   activeTrackColor: AppColors.orange500,
                                   inactiveTrackColor: AppColors.zinc200,
-                                  onChanged: (v) => setState(() => _hierarchical = v),
+                                  onChanged: (v) =>
+                                      setState(() => _hierarchical = v),
                                 ),
                               ],
                             ),
@@ -222,7 +249,9 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
                       decoration: const BoxDecoration(
                         color: Colors.white,
-                        border: Border(top: BorderSide(color: AppColors.zinc100)),
+                        border: Border(
+                          top: BorderSide(color: AppColors.zinc100),
+                        ),
                       ),
                       child: FilledButton(
                         onPressed: _loading ? null : () => _save(schema),
@@ -299,7 +328,9 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: _exclusive ? AppColors.zinc900 : AppColors.zinc500,
+                        color: _exclusive
+                            ? AppColors.zinc900
+                            : AppColors.zinc500,
                       ),
                     ),
                   ),
@@ -336,7 +367,9 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: !_exclusive ? AppColors.zinc900 : AppColors.zinc500,
+                        color: !_exclusive
+                            ? AppColors.zinc900
+                            : AppColors.zinc500,
                       ),
                     ),
                   ),
@@ -374,7 +407,11 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.orange500),
+            icon: const Icon(
+              Icons.add_circle_outline,
+              size: 16,
+              color: AppColors.orange500,
+            ),
             label: Text(
               'Add Root',
               style: GoogleFonts.inter(
@@ -386,14 +423,19 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
           )
         else
           TextButton.icon(
-            onPressed: () => setState(() => _flatCtrls.add(TextEditingController())),
+            onPressed: () =>
+                setState(() => _flatCtrls.add(TextEditingController())),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.orange500,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.orange500),
+            icon: const Icon(
+              Icons.add_circle_outline,
+              size: 16,
+              color: AppColors.orange500,
+            ),
             label: Text(
               'Add node',
               style: GoogleFonts.inter(
@@ -420,12 +462,10 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
         children: [
           for (var i = 0; i < _hierRoots.length; i++)
             Padding(
-              padding: EdgeInsets.only(bottom: i < _hierRoots.length - 1 ? 8 : 0),
-              child: _buildTreeNode(
-                _hierRoots[i],
-                isRoot: true,
-                rootIndex: i,
+              padding: EdgeInsets.only(
+                bottom: i < _hierRoots.length - 1 ? 8 : 0,
               ),
+              child: _buildTreeNode(_hierRoots[i], isRoot: true, rootIndex: i),
             ),
         ],
       ),
@@ -454,7 +494,10 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                 ),
                 decoration: InputDecoration(
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -469,11 +512,19 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.add_circle_outline, color: AppColors.zinc300, size: 22),
+              icon: Icon(
+                Icons.add_circle_outline,
+                color: AppColors.zinc300,
+                size: 22,
+              ),
               onPressed: () => setState(() => node.children.add(_NodeForm())),
             ),
             IconButton(
-              icon: Icon(Icons.cancel_outlined, color: AppColors.zinc300, size: 22),
+              icon: Icon(
+                Icons.cancel_outlined,
+                color: AppColors.zinc300,
+                size: 22,
+              ),
               onPressed: () {
                 if (!isRoot || rootIndex == null) return;
                 if (_hierRoots.length <= 1) return;
@@ -491,14 +542,18 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
             child: Container(
               padding: const EdgeInsets.only(left: 8),
               decoration: const BoxDecoration(
-                border: Border(left: BorderSide(color: AppColors.zinc100, width: 2)),
+                border: Border(
+                  left: BorderSide(color: AppColors.zinc100, width: 2),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var j = 0; j < node.children.length; j++)
                     Padding(
-                      padding: EdgeInsets.only(bottom: j < node.children.length - 1 ? 8 : 0),
+                      padding: EdgeInsets.only(
+                        bottom: j < node.children.length - 1 ? 8 : 0,
+                      ),
                       child: _buildChildNode(node, node.children[j], j),
                     ),
                 ],
@@ -540,7 +595,10 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                 ),
                 decoration: InputDecoration(
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -555,11 +613,19 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.add_circle_outline, color: AppColors.zinc300, size: 22),
+              icon: Icon(
+                Icons.add_circle_outline,
+                color: AppColors.zinc300,
+                size: 22,
+              ),
               onPressed: () => setState(() => child.children.add(_NodeForm())),
             ),
             IconButton(
-              icon: Icon(Icons.cancel_outlined, color: AppColors.zinc300, size: 22),
+              icon: Icon(
+                Icons.cancel_outlined,
+                color: AppColors.zinc300,
+                size: 22,
+              ),
               onPressed: () => setState(() {
                 child.dispose();
                 parent.children.removeAt(childIndex);
@@ -573,14 +639,18 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
             child: Container(
               padding: const EdgeInsets.only(left: 8),
               decoration: const BoxDecoration(
-                border: Border(left: BorderSide(color: AppColors.zinc100, width: 2)),
+                border: Border(
+                  left: BorderSide(color: AppColors.zinc100, width: 2),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var k = 0; k < child.children.length; k++)
                     Padding(
-                      padding: EdgeInsets.only(bottom: k < child.children.length - 1 ? 8 : 0),
+                      padding: EdgeInsets.only(
+                        bottom: k < child.children.length - 1 ? 8 : 0,
+                      ),
                       child: _buildChildNode(child, child.children[k], k),
                     ),
                 ],
@@ -601,11 +671,17 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
               Expanded(
                 child: TextField(
                   controller: _flatCtrls[i],
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: AppColors.zinc200),
@@ -614,7 +690,11 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.cancel_outlined, color: AppColors.zinc300, size: 22),
+                icon: Icon(
+                  Icons.cancel_outlined,
+                  color: AppColors.zinc300,
+                  size: 22,
+                ),
                 onPressed: () {
                   if (_flatCtrls.length <= 1) return;
                   setState(() {
@@ -631,9 +711,9 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
 
   Future<void> _save(ModelTypeView schema) async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
     setState(() => _loading = true);
@@ -643,7 +723,11 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
         nodes = _hierRoots.map((n) => n.toReq()).toList();
       } else {
         nodes = _flatCtrls
-            .map((c) => SetTagNodeRequest(name: c.text.trim().isEmpty ? 'Node' : c.text.trim()))
+            .map(
+              (c) => SetTagNodeRequest(
+                name: c.text.trim().isEmpty ? 'Node' : c.text.trim(),
+              ),
+            )
             .toList();
       }
 
@@ -669,7 +753,9 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       if (mounted) _leaveForm(context, ref);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -688,8 +774,14 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete tag system?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -709,7 +801,9 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
       if (mounted) _leaveForm(context, ref);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

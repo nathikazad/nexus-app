@@ -64,7 +64,8 @@ class _RelationPickerBody extends ConsumerStatefulWidget {
   final bool allowMultiple;
 
   @override
-  ConsumerState<_RelationPickerBody> createState() => _RelationPickerBodyState();
+  ConsumerState<_RelationPickerBody> createState() =>
+      _RelationPickerBodyState();
 }
 
 class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
@@ -89,9 +90,8 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Colors.white,
-      builder: (ctx) => CreateRelationSheet(
-        targetModelTypeName: widget.targetModelTypeName,
-      ),
+      builder: (ctx) =>
+          CreateRelationSheet(targetModelTypeName: widget.targetModelTypeName),
     );
     if (!mounted || map == null) return;
     Navigator.pop(context, RelationPickCreate(map));
@@ -104,7 +104,11 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
         children: [
           IconButton(
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
@@ -120,7 +124,8 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, RelationPickLink(_sel.toList())),
+            onPressed: () =>
+                Navigator.pop(context, RelationPickLink(_sel.toList())),
             child: Text(
               'Done',
               style: GoogleFonts.inter(
@@ -145,14 +150,21 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
         decoration: InputDecoration(
           hintText: 'Search ${widget.targetModelTypeName.toLowerCase()}...',
           hintStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
-          prefixIcon: const Icon(Icons.search, color: AppColors.slate400, size: 20),
+          prefixIcon: const Icon(
+            Icons.search,
+            color: AppColors.slate400,
+            size: 20,
+          ),
           filled: true,
           fillColor: AppColors.slate100,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
         ),
       ),
     );
@@ -189,7 +201,10 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
           child: InkWell(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: RefLayout.px5,
+                vertical: 14,
+              ),
               child: Row(
                 children: [
                   Expanded(child: Text(label, style: labelStyle)),
@@ -225,7 +240,9 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
                 data: (models) {
                   final filtered = q.isEmpty
                       ? models
-                      : models.where((m) => m.name.toLowerCase().contains(q)).toList();
+                      : models
+                            .where((m) => m.name.toLowerCase().contains(q))
+                            .toList();
                   return ListView.builder(
                     itemCount: filtered.length + (widget.allowMultiple ? 0 : 1),
                     itemBuilder: (context, i) {
@@ -252,7 +269,9 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: RefLayout.px5, vertical: 14),
+                                    horizontal: RefLayout.px5,
+                                    vertical: 14,
+                                  ),
                                   child: Row(
                                     children: [
                                       Expanded(
@@ -306,7 +325,12 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 24),
+              padding: const EdgeInsets.fromLTRB(
+                RefLayout.px5,
+                12,
+                RefLayout.px5,
+                24,
+              ),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: AppColors.slate100)),
@@ -316,12 +340,18 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   side: const BorderSide(color: AppColors.slate200, width: 2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_circle_outline, color: AppColors.slate500, size: 20),
+                    const Icon(
+                      Icons.add_circle_outline,
+                      color: AppColors.slate500,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Create New ${widget.targetModelTypeName}',
@@ -392,7 +422,12 @@ class _CreateRelationSheetState extends State<CreateRelationSheet> {
       padding: EdgeInsets.only(bottom: bottom),
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 24),
+          padding: const EdgeInsets.fromLTRB(
+            RefLayout.px5,
+            8,
+            RefLayout.px5,
+            24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -407,7 +442,11 @@ class _CreateRelationSheetState extends State<CreateRelationSheet> {
               const SizedBox(height: 8),
               Text(
                 'Add a new record and link it to this expense.',
-                style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500, height: 1.4),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppColors.slate500,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 20),
               TextField(
@@ -417,7 +456,9 @@ class _CreateRelationSheetState extends State<CreateRelationSheet> {
                   labelText: 'Name *',
                   filled: true,
                   fillColor: AppColors.slate50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -429,7 +470,9 @@ class _CreateRelationSheetState extends State<CreateRelationSheet> {
                   labelText: 'Description (optional)',
                   filled: true,
                   fillColor: AppColors.slate50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -438,17 +481,27 @@ class _CreateRelationSheetState extends State<CreateRelationSheet> {
                 decoration: BoxDecoration(
                   color: AppColors.teal100.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.teal600.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: AppColors.teal600.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: AppColors.teal600),
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: AppColors.teal600,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'This ${widget.targetModelTypeName} will be saved to your workspace and linked to this expense.',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.teal700, height: 1.4),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.teal700,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],
@@ -466,7 +519,10 @@ class _CreateRelationSheetState extends State<CreateRelationSheet> {
                 },
                 child: Text(
                   'Create & Select',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -487,7 +543,8 @@ Future<Map<String, dynamic>?> showCreateRelationSheetForType(
     isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: Colors.white,
-    builder: (ctx) => CreateRelationSheet(targetModelTypeName: targetModelTypeName),
+    builder: (ctx) =>
+        CreateRelationSheet(targetModelTypeName: targetModelTypeName),
   );
 }
 
@@ -592,7 +649,11 @@ class RelationPickerRow extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.slate300,
+                size: 22,
+              ),
             ],
           ),
         ),

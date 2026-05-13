@@ -59,7 +59,10 @@ class _TagTreeTileState extends State<TagTreeTile> {
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
                       icon: Icon(
                         _expanded ? Icons.expand_more : Icons.chevron_right,
                         color: AppColors.slate400,
@@ -75,7 +78,9 @@ class _TagTreeTileState extends State<TagTreeTile> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: hasKids ? FontWeight.w600 : FontWeight.w500,
-                        color: hasKids ? AppColors.slate900 : AppColors.slate700,
+                        color: hasKids
+                            ? AppColors.slate900
+                            : AppColors.slate700,
                       ),
                     ),
                   ),

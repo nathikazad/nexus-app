@@ -47,10 +47,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final task = await ref.read(taskDetailProvider(widget.taskId).future);
     if (task == null || !mounted) return;
     final repo = ref.read(taskRepositoryProvider);
-    await repo.update(
-      task.copyWith(date: null),
-      includeAttributes: true,
-    );
+    await repo.update(task.copyWith(date: null), includeAttributes: true);
     _invalidateAll();
     if (mounted) Navigator.of(context).maybePop();
   }
@@ -108,7 +105,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         children: [
                           IconButton(
                             onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(SolarLinearIcons.arrowLeft, size: 22),
+                            icon: const Icon(
+                              SolarLinearIcons.arrowLeft,
+                              size: 22,
+                            ),
                             color: AppColors.slate600,
                           ),
                           const Expanded(
@@ -293,10 +293,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                             ),
                             const SizedBox(height: 12),
                             ...vm.linkedActivitySummaries.map((line) {
-                              return _linkedActivityTile(
-                                context,
-                                line,
-                              );
+                              return _linkedActivityTile(context, line);
                             }),
                           ],
                           const SizedBox(height: 24),
@@ -388,10 +385,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     );
   }
 
-  Widget _linkedActivityTile(
-    BuildContext context,
-    LinkedActivityLineVm line,
-  ) {
+  Widget _linkedActivityTile(BuildContext context, LinkedActivityLineVm line) {
     final act = line.action;
     final colors = modelTypeColorsOrFallback(
       ref.watch(modelTypeColorsProvider),
@@ -402,11 +396,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         onTap: act == null
             ? null
             : () {
-                final args = activityDetailArgsForAction(
-                  act,
-                  '',
-                  colors,
-                );
+                final args = activityDetailArgsForAction(act, '', colors);
                 Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(
                     builder: (_) => ActivityDetailPage(args: args),
@@ -450,10 +440,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               ),
               Text(
                 line.durationLabel,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.slate500,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.slate500),
               ),
             ],
           ),

@@ -112,7 +112,8 @@ class CameraSectionState extends ConsumerState<CameraSection>
 
   void _onBecameConnected() {
     _cameraStatusSubscription?.cancel();
-    _cameraStatusSubscription = _hardware.cameraStatusStream.listen(_onCameraStatus);
+    _cameraStatusSubscription =
+        _hardware.cameraStatusStream.listen(_onCameraStatus);
     unawaited(_readInitialStatus());
   }
 
@@ -158,12 +159,14 @@ class CameraSectionState extends ConsumerState<CameraSection>
       if (!periodOk) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to set photo record interval')),
+            const SnackBar(
+                content: Text('Failed to set photo record interval')),
           );
         }
         return;
       }
-      final startOk = await _hardware.sendCameraCommand(CameraCommand.startRecord);
+      final startOk =
+          await _hardware.sendCameraCommand(CameraCommand.startRecord);
       if (mounted && !startOk) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to start photo record')),
@@ -254,7 +257,8 @@ class CameraSectionState extends ConsumerState<CameraSection>
               Expanded(
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () => setState(() => _advancedExpanded = !_advancedExpanded),
+                  onTap: () =>
+                      setState(() => _advancedExpanded = !_advancedExpanded),
                   child: Padding(
                     padding: const EdgeInsets.only(right: 8, bottom: 4),
                     child: Column(
@@ -288,7 +292,9 @@ class CameraSectionState extends ConsumerState<CameraSection>
                 shape: const CircleBorder(),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: canInteract && !widget.captureInProgress ? widget.onCapture : null,
+                  onTap: canInteract && !widget.captureInProgress
+                      ? widget.onCapture
+                      : null,
                   child: SizedBox(
                     width: 48,
                     height: 48,
@@ -300,113 +306,117 @@ class CameraSectionState extends ConsumerState<CameraSection>
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.camera_alt, color: Colors.white, size: 22),
+                        : const Icon(Icons.camera_alt,
+                            color: Colors.white, size: 22),
                   ),
                 ),
               ),
             ],
           ),
-              AnimatedCrossFade(
-                firstChild: const SizedBox(width: double.infinity),
-                secondChild: Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Divider(height: 1, color: AppColors.gray100),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Divider(height: 1, color: AppColors.gray100),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Auto Recording',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: AppColors.gray600,
-                            ),
-                          ),
-                          Switch.adaptive(
-                            value: isRecording,
-                            onChanged: canInteract
-                                ? (v) {
-                                    if (v) {
-                                      unawaited(_start());
-                                    } else {
-                                      unawaited(_stop());
-                                    }
-                                  }
-                                : null,
-                            activeTrackColor: AppColors.orange600,
-                            thumbColor: WidgetStateProperty.resolveWith((states) {
-                              if (states.contains(WidgetState.selected)) {
-                                return Colors.white;
-                              }
-                              return null;
-                            }),
-                          ),
-                        ],
+                      Text(
+                        'Auto Recording',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          color: AppColors.gray600,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Interval',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: AppColors.gray600,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.gray50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.gray200),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                isDense: true,
-                                value: kPhotoRecordPeriodOptions.contains(_selectedPeriodSec)
-                                    ? _selectedPeriodSec
-                                    : _nearestPhotoRecordPeriodOption(_selectedPeriodSec),
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.gray900,
-                                ),
-                                iconEnabledColor: AppColors.gray500,
-                                iconSize: 18,
-                                dropdownColor: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                items: kPhotoRecordPeriodOptions
-                                    .map(
-                                      (s) => DropdownMenuItem<int>(
-                                        value: s,
-                                        child: Text(
-                                          _formatPeriodLabel(s),
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            color: AppColors.gray900,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: canInteract ? _onPeriodChanged : null,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Switch.adaptive(
+                        value: isRecording,
+                        onChanged: canInteract
+                            ? (v) {
+                                if (v) {
+                                  unawaited(_start());
+                                } else {
+                                  unawaited(_stop());
+                                }
+                              }
+                            : null,
+                        activeTrackColor: AppColors.orange600,
+                        thumbColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Colors.white;
+                          }
+                          return null;
+                        }),
                       ),
                     ],
                   ),
-                ),
-                crossFadeState: _advancedExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Interval',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          color: AppColors.gray600,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.gray50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.gray200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            isDense: true,
+                            value: kPhotoRecordPeriodOptions
+                                    .contains(_selectedPeriodSec)
+                                ? _selectedPeriodSec
+                                : _nearestPhotoRecordPeriodOption(
+                                    _selectedPeriodSec),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray900,
+                            ),
+                            iconEnabledColor: AppColors.gray500,
+                            iconSize: 18,
+                            dropdownColor: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            items: kPhotoRecordPeriodOptions
+                                .map(
+                                  (s) => DropdownMenuItem<int>(
+                                    value: s,
+                                    child: Text(
+                                      _formatPeriodLabel(s),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: AppColors.gray900,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: canInteract ? _onPeriodChanged : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
+            crossFadeState: _advancedExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
         ],
       ),
     );

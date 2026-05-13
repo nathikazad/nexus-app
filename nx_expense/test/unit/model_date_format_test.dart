@@ -6,13 +6,17 @@ import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 
 void main() {
   group('formatModelDate', () {
-    test('UTC Z midnight formats same calendar day as plain YMD (no local shift)', () {
-      expect(
-        formatModelDate('2026-04-01T00:00:00.000Z'),
-        formatModelDate('2026-04-01'),
-        reason: 'regression: April 1 UTC must not display as March 31 in western zones',
-      );
-    });
+    test(
+      'UTC Z midnight formats same calendar day as plain YMD (no local shift)',
+      () {
+        expect(
+          formatModelDate('2026-04-01T00:00:00.000Z'),
+          formatModelDate('2026-04-01'),
+          reason:
+              'regression: April 1 UTC must not display as March 31 in western zones',
+        );
+      },
+    );
 
     test('plain YYYY-MM-DD is stable', () {
       expect(formatModelDate('2026-03-31'), isNot('—'));
@@ -26,7 +30,10 @@ void main() {
     });
 
     test('Z ISO maps to UTC calendar YMD', () {
-      expect(normalizeDateAttributeSortKey('2026-04-01T00:00:00.000Z'), '2026-04-01');
+      expect(
+        normalizeDateAttributeSortKey('2026-04-01T00:00:00.000Z'),
+        '2026-04-01',
+      );
     });
   });
 

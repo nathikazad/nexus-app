@@ -30,12 +30,14 @@ List<TellerExpenseLink> parseExpenseTimelineLinks(dynamic data) {
   final root = data as Map<String, dynamic>?;
   final model = root?['modelById'] as Map<String, dynamic>?;
   if (model == null) return [];
-  final conn = model['modelTimelineEventLinksByModelId'] as Map<String, dynamic>?;
+  final conn =
+      model['modelTimelineEventLinksByModelId'] as Map<String, dynamic>?;
   final nodes = conn?['nodes'] as List<dynamic>? ?? const [];
   final out = <TellerExpenseLink>[];
   for (final raw in nodes) {
     if (raw is! Map<String, dynamic>) continue;
-    final te = raw['timelineEventByEventTimeAndEventId'] as Map<String, dynamic>?;
+    final te =
+        raw['timelineEventByEventTimeAndEventId'] as Map<String, dynamic>?;
     if (te == null) continue;
     final timeStr = te['time'] as String?;
     if (timeStr == null) continue;
@@ -47,8 +49,8 @@ List<TellerExpenseLink> parseExpenseTimelineLinks(dynamic data) {
     final pmap = payload is Map<String, dynamic>
         ? payload
         : payload is Map
-            ? Map<String, dynamic>.from(payload)
-            : <String, dynamic>{};
+        ? Map<String, dynamic>.from(payload)
+        : <String, dynamic>{};
     final lid = raw['id'];
     if (lid == null) continue;
     final etRaw = te['eventType'];
@@ -91,7 +93,10 @@ mutation DeleteModelTimelineEventLinkById(\$input: DeleteModelTimelineEventLinkB
 }
 ''';
 
-Future<void> deleteExpenseTimelineLink(GraphQLClient client, String linkId) async {
+Future<void> deleteExpenseTimelineLink(
+  GraphQLClient client,
+  String linkId,
+) async {
   final result = await client.mutate(
     MutationOptions(
       document: gql(deleteModelTimelineEventLinkByIdMutation),
@@ -146,13 +151,12 @@ Future<void> linkModelToTimelineEvent(
   required int modelId,
   required DateTime eventTime,
   required String eventId,
-}) =>
-    linkExpenseToTimelineEvent(
-      client,
-      modelId: modelId,
-      eventTime: eventTime,
-      eventId: eventId,
-    );
+}) => linkExpenseToTimelineEvent(
+  client,
+  modelId: modelId,
+  eventTime: eventTime,
+  eventId: eventId,
+);
 
 const String createTimelineEventMutation = '''
 mutation CreateTimelineEvent(\$input: CreateTimelineEventInput!) {
@@ -176,7 +180,9 @@ Future<({DateTime time, String eventId})> createTellerTimelineEvent(
 }) async {
   final dateStr = payload['date']?.toString();
   if (dateStr == null || dateStr.isEmpty) {
-    throw ArgumentError('Teller payload must include a "date" field (YYYY-MM-DD).');
+    throw ArgumentError(
+      'Teller payload must include a "date" field (YYYY-MM-DD).',
+    );
   }
   final d = DateTime.tryParse(dateStr);
   if (d == null) {
@@ -202,8 +208,10 @@ Future<({DateTime time, String eventId})> createTellerTimelineEvent(
   if (result.hasException) {
     throw result.exception!;
   }
-  final te = (result.data?['createTimelineEvent'] as Map<String, dynamic>?)?['timelineEvent']
-      as Map<String, dynamic>?;
+  final te =
+      (result.data?['createTimelineEvent']
+              as Map<String, dynamic>?)?['timelineEvent']
+          as Map<String, dynamic>?;
   if (te == null) {
     throw StateError('createTimelineEvent returned no timelineEvent');
   }
@@ -244,9 +252,7 @@ Future<void> updateTellerTimelinePayload(
         'input': {
           'time': eventTime.toUtc().toIso8601String(),
           'id': eventId,
-          'timelineEventPatch': {
-            'payload': payload,
-          },
+          'timelineEventPatch': {'payload': payload},
         },
       },
     ),

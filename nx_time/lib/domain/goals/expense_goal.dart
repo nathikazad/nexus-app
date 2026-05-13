@@ -28,10 +28,7 @@ class ExpenseGoalMonthItem {
 }
 
 class ExpenseGoalsMonth {
-  const ExpenseGoalsMonth({
-    required this.monthStart,
-    required this.items,
-  });
+  const ExpenseGoalsMonth({required this.monthStart, required this.items});
 
   final DateTime monthStart;
   final List<ExpenseGoalMonthItem> items;

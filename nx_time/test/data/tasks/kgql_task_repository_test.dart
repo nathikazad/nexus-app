@@ -16,12 +16,8 @@ import '../../_support/mock_graphql_client.dart';
 class _AuthLoggedIn extends AuthController {
   _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
   @override
-  Future<User?> build() async => User(
-        userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 2,
-        preset: BackendPreset.localhost,
-      );
+  Future<User?> build() async =>
+      User(userId: '1', preset: BackendPreset.localhost);
 }
 
 ModelType _minimalTaskSchema() => ModelType(id: 1, name: 'Task');
@@ -31,11 +27,13 @@ void main() {
 
   test('listForPicker loads Task rows', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
-          'getKgqlModels': [
-            {'id': 1, 'name': 'Refactor token validation', 'model_type_id': 9},
-          ],
-        }));
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getKgqlModels': [
+          {'id': 1, 'name': 'Refactor token validation', 'model_type_id': 9},
+        ],
+      }),
+    );
 
     final container = ProviderContainer(
       overrides: [
@@ -56,24 +54,25 @@ void main() {
 
   test('linkChildTask sends set_kgql_models with Task link', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 99},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 99},
+        },
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     final id = await repo.linkChildTask(parentId: 10, childId: 20);
     expect(id, 99);
 
     final captured =
-        verify(() => mock.mutate(captureAny())).captured.single as MutationOptions;
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 10);
@@ -84,23 +83,24 @@ void main() {
 
   test('unlinkChildTask sends relation delete by id', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 10},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 10},
+        },
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     await repo.unlinkChildTask(parentId: 10, relationId: 777);
 
-    final captured = verify(() => mock.mutate(captureAny())).captured.single
-        as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 10);
@@ -111,23 +111,24 @@ void main() {
 
   test('linkProject sends Project relation', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 1},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 1},
+        },
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     await repo.linkProject(taskId: 5, projectId: 8);
 
-    final captured = verify(() => mock.mutate(captureAny())).captured.single
-        as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     final rels = data['relations'] as List<dynamic>;
@@ -137,17 +138,17 @@ void main() {
 
   test('linkActivity sends concrete activity model_type', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 1},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 1},
+        },
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => throw UnsupportedError('not used'),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     await repo.linkActivity(
@@ -156,8 +157,9 @@ void main() {
       activityModelTypeName: 'Meet',
     );
 
-    final captured = verify(() => mock.mutate(captureAny())).captured.single
-        as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     final rels = data['relations'] as List<dynamic>;
@@ -203,12 +205,8 @@ void main() {
           QueryOptions(document: gql('query { __typename }')),
         );
         final rows = r.data!['getKgqlModelType'] as List<dynamic>;
-        return ModelType.fromJson(
-          Map<String, dynamic>.from(rows.first as Map),
-        );
+        return ModelType.fromJson(Map<String, dynamic>.from(rows.first as Map));
       },
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     final list = await repo.listAll(status: TaskStatus.todo);
@@ -219,24 +217,25 @@ void main() {
 
   test('updateStatus sends only status attribute', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 7},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 7},
+        },
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     final id = await repo.updateStatus(id: 7, status: TaskStatus.done);
     expect(id, 7);
 
     final captured =
-        verify(() => mock.mutate(captureAny())).captured.single as MutationOptions;
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     final attrs = data['attributes'] as List<dynamic>;
@@ -247,26 +246,26 @@ void main() {
 
   test('moveTaskToProject no-op when project unchanged', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
-          'getKgqlModels': [
-            {
-              'id': 5,
-              'name': 'T',
-              'model_type_id': 9,
-              'status': 'todo',
-              'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
-              'relations': [
-                {'relation_id': 200, 'model_id': 10, 'model_type': 'Project'},
-              ],
-            },
-          ],
-        }));
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getKgqlModels': [
+          {
+            'id': 5,
+            'name': 'T',
+            'model_type_id': 9,
+            'status': 'todo',
+            'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
+            'relations': [
+              {'relation_id': 200, 'model_id': 10, 'model_type': 'Project'},
+            ],
+          },
+        ],
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     await repo.moveTaskToProject(taskId: 5, projectId: 10);
@@ -276,32 +275,34 @@ void main() {
 
   test('moveTaskToProject unlinks then links when project changes', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 5},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 5},
+        },
+      }),
+    );
 
-    when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
-          'getKgqlModels': [
-            {
-              'id': 5,
-              'name': 'T',
-              'model_type_id': 9,
-              'status': 'todo',
-              'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
-              'relations': [
-                {'relation_id': 200, 'model_id': 10, 'model_type': 'Project'},
-              ],
-            },
-          ],
-        }));
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getKgqlModels': [
+          {
+            'id': 5,
+            'name': 'T',
+            'model_type_id': 9,
+            'status': 'todo',
+            'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
+            'relations': [
+              {'relation_id': 200, 'model_id': 10, 'model_type': 'Project'},
+            ],
+          },
+        ],
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     await repo.moveTaskToProject(taskId: 5, projectId: 99);
@@ -327,32 +328,34 @@ void main() {
 
   test('moveTaskToProject only unlinks when projectId is null', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 5},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 5},
+        },
+      }),
+    );
 
-    when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
-          'getKgqlModels': [
-            {
-              'id': 5,
-              'name': 'T',
-              'model_type_id': 9,
-              'status': 'todo',
-              'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
-              'relations': [
-                {'relation_id': 200, 'model_id': 10, 'model_type': 'Project'},
-              ],
-            },
-          ],
-        }));
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getKgqlModels': [
+          {
+            'id': 5,
+            'name': 'T',
+            'model_type_id': 9,
+            'status': 'todo',
+            'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
+            'relations': [
+              {'relation_id': 200, 'model_id': 10, 'model_type': 'Project'},
+            ],
+          },
+        ],
+      }),
+    );
 
     final repo = KgqlTaskRepository(
       client: mock,
       loadTaskSchema: () async => _minimalTaskSchema(),
-      personalDomainId: 1,
-      homeDomainId: 2,
     );
 
     await repo.moveTaskToProject(taskId: 5, projectId: null);

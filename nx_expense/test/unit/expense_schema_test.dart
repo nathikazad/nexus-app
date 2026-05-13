@@ -145,7 +145,10 @@ void main() {
           {'target_model_type': 'Place'},
         ],
       });
-      expect(allRelationTargetTypeNames(modelTypeViewFromKgql(mt)), {'Company', 'Place'});
+      expect(allRelationTargetTypeNames(modelTypeViewFromKgql(mt)), {
+        'Company',
+        'Place',
+      });
     });
 
     test('H6.7 filterChipDescriptors', () {
@@ -220,7 +223,9 @@ void main() {
     test('R7 matches when link sets equal (different Set instances)', () {
       expect(
         relationStateMatchesSnapshotForUpdate(
-          linkIdsByType: {'Company': [10, 20]},
+          linkIdsByType: {
+            'Company': [10, 20],
+          },
           createsByType: {'Company': null},
           snapshotLinkIdsByType: {
             'Company': {20, 10},
@@ -234,9 +239,13 @@ void main() {
     test('R8 fails when link id differs', () {
       expect(
         relationStateMatchesSnapshotForUpdate(
-          linkIdsByType: {'Company': [10]},
+          linkIdsByType: {
+            'Company': [10],
+          },
           createsByType: {'Company': null},
-          snapshotLinkIdsByType: {'Company': {99}},
+          snapshotLinkIdsByType: {
+            'Company': {99},
+          },
           snapshotCreatesByType: {'Company': null},
         ),
         false,
@@ -246,9 +255,13 @@ void main() {
     test('R9 duplicate ids in current list still matches snapshot set', () {
       expect(
         relationStateMatchesSnapshotForUpdate(
-          linkIdsByType: {'Company': [10, 10, 20]},
+          linkIdsByType: {
+            'Company': [10, 10, 20],
+          },
           createsByType: {'Company': null},
-          snapshotLinkIdsByType: {'Company': {10, 20}},
+          snapshotLinkIdsByType: {
+            'Company': {10, 20},
+          },
           snapshotCreatesByType: {'Company': null},
         ),
         true,
@@ -275,9 +288,13 @@ void main() {
       expect(
         shouldOmitRelationsOnExpenseUpdate(
           expenseId: null,
-          linkIdsByType: {'Company': [1]},
+          linkIdsByType: {
+            'Company': [1],
+          },
           createsByType: {'Company': null},
-          snapshotLinkIdsByType: {'Company': {1}},
+          snapshotLinkIdsByType: {
+            'Company': {1},
+          },
           snapshotCreatesByType: {'Company': null},
         ),
         false,
@@ -288,9 +305,13 @@ void main() {
       expect(
         shouldOmitRelationsOnExpenseUpdate(
           expenseId: 42,
-          linkIdsByType: {'Company': [1]},
+          linkIdsByType: {
+            'Company': [1],
+          },
           createsByType: {'Company': null},
-          snapshotLinkIdsByType: {'Company': {1}},
+          snapshotLinkIdsByType: {
+            'Company': {1},
+          },
           snapshotCreatesByType: {'Company': null},
         ),
         true,

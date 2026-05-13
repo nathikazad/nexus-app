@@ -51,7 +51,8 @@ void main() {
     expect(headers['X-Nexus-Source-Label'], 'create Work');
   });
 
-  test('dbAuditContextLink uses app source kind when helper context omits it', () async {
+  test('dbAuditContextLink uses app source kind when helper context omits it',
+      () async {
     Request? captured;
     final captureLink = Link.function((request, [forward]) {
       captured = request;

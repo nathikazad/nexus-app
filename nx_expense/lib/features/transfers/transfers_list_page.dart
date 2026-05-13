@@ -43,7 +43,9 @@ class TransfersListScreen extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: Text('Transfers', style: refAppBarTitleLarge())),
+                      Expanded(
+                        child: Text('Transfers', style: refAppBarTitleLarge()),
+                      ),
                       const ExpenseDateRangeCalendarButton(),
                       const SizedBox(width: 4),
                       const ExpenseAppMenuButton(),
@@ -53,10 +55,17 @@ class TransfersListScreen extends ConsumerWidget {
               ),
               const ExpenseDateRangeBar(bottomPadding: 12),
               Padding(
-                padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  RefLayout.px5,
+                  0,
+                  RefLayout.px5,
+                  4,
+                ),
                 child: summaryAsync.when(
                   data: (s) => Text(
-                    s.sumTotal != null ? '${s.count} · ${formatMoney(s.sumTotal)}' : '${s.count}',
+                    s.sumTotal != null
+                        ? '${s.count} · ${formatMoney(s.sumTotal)}'
+                        : '${s.count}',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -65,7 +74,10 @@ class TransfersListScreen extends ConsumerWidget {
                   ),
                   loading: () => Text(
                     '...',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate500),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppColors.slate500,
+                    ),
                   ),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
@@ -82,13 +94,17 @@ class TransfersListScreen extends ConsumerWidget {
                     },
                     color: AppColors.teal600,
                     child: listAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
                             'Error: $e',
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppColors.slate500,
+                            ),
                           ),
                         ),
                       ),
@@ -98,7 +114,11 @@ class TransfersListScreen extends ConsumerWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.swap_horiz_rounded, size: 48, color: AppColors.slate300),
+                                Icon(
+                                  Icons.swap_horiz_rounded,
+                                  size: 48,
+                                  color: AppColors.slate300,
+                                ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'No transfers in this range',
@@ -112,7 +132,12 @@ class TransfersListScreen extends ConsumerWidget {
                             ),
                           );
                         }
-                        final items = _buildDateGroupedItems(context, ref, models, schema);
+                        final items = _buildDateGroupedItems(
+                          context,
+                          ref,
+                          models,
+                          schema,
+                        );
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(
                             RefLayout.px5,

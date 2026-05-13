@@ -8,7 +8,9 @@ import 'package:nx_time/features/today/today_view_model.dart';
 import 'package:nx_time/features/today/widgets/activity_row.dart';
 
 void main() {
-  testWidgets('chevron toggles child list; body onTap is separate', (tester) async {
+  testWidgets('chevron toggles child list; body onTap is separate', (
+    tester,
+  ) async {
     final day = DateTime(2026, 4, 18);
     final umbrellaAction = Action(
       id: 1,

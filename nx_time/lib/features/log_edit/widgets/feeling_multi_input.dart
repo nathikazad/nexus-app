@@ -68,16 +68,14 @@ class _FeelingMultiInputState extends ConsumerState<FeelingMultiInput> {
     final available = namesAsync.value ?? const <String>[];
     final query = _controller.text.trim().toLowerCase();
 
-    final unselected =
-        available.where((a) => !widget.selected.contains(a)).toList();
+    final unselected = available
+        .where((a) => !widget.selected.contains(a))
+        .toList();
     final filtered = query.isEmpty
         ? unselected
-        : unselected
-            .where((a) => a.toLowerCase().contains(query))
-            .toList();
+        : unselected.where((a) => a.toLowerCase().contains(query)).toList();
 
-    final showDropdown =
-        widget.enabled && _hasFocus && filtered.isNotEmpty;
+    final showDropdown = widget.enabled && _hasFocus && filtered.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,11 +105,7 @@ class _FeelingMultiInputState extends ConsumerState<FeelingMultiInput> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
             children: [
-              const Icon(
-                Icons.search,
-                size: 18,
-                color: AppColors.slate400,
-              ),
+              const Icon(Icons.search, size: 18, color: AppColors.slate400),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
@@ -149,11 +143,7 @@ class _FeelingMultiInputState extends ConsumerState<FeelingMultiInput> {
         ),
         if (showDropdown) ...[
           const SizedBox(height: 4),
-          _Dropdown(
-            options: filtered,
-            query: query,
-            onTap: _add,
-          ),
+          _Dropdown(options: filtered, query: query, onTap: _add),
         ] else if (widget.enabled &&
             _hasFocus &&
             available.isEmpty &&
@@ -222,11 +212,7 @@ class _ClearButton extends StatelessWidget {
       onTap: onTap,
       child: const Padding(
         padding: EdgeInsets.all(4),
-        child: Icon(
-          Icons.close,
-          size: 16,
-          color: AppColors.slate400,
-        ),
+        child: Icon(Icons.close, size: 16, color: AppColors.slate400),
       ),
     );
   }
@@ -275,7 +261,9 @@ class _Dropdown extends StatelessWidget {
                 onTap: () => onTap(name),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 11),
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
                   child: _HighlightedText(text: name, query: query),
                 ),
               );
@@ -298,10 +286,7 @@ class _HighlightedText extends StatelessWidget {
     if (query.isEmpty) {
       return Text(
         text,
-        style: const TextStyle(
-          fontSize: 14,
-          color: AppColors.slate900,
-        ),
+        style: const TextStyle(fontSize: 14, color: AppColors.slate900),
       );
     }
     final lower = text.toLowerCase();

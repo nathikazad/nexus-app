@@ -9,15 +9,11 @@ class KgqlPeopleRepository implements PersonRepository {
   KgqlPeopleRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadPersonSchema,
-    required int domainId,
   }) : _client = client,
-       _loadPersonSchema = loadPersonSchema,
-       _domainId = domainId;
+       _loadPersonSchema = loadPersonSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadPersonSchema;
-  final int _domainId;
-
   @override
   Future<Person?> getById(int id) async {
     final schema = await _loadPersonSchema();
@@ -26,7 +22,6 @@ class KgqlPeopleRepository implements PersonRepository {
       modelTypeName: kPersonModelTypeName,
       id: id,
       struct: personFetchStruct(schema),
-      domainId: _domainId,
     );
     return model == null ? null : personFromModel(model);
   }
@@ -145,7 +140,6 @@ class KgqlPeopleRepository implements PersonRepository {
       _client,
       filter: const {'model_type': kPersonModelTypeName},
       struct: personFetchStruct(schema),
-      domainId: _domainId,
     );
     final rows = [for (final model in models) personFromModel(model)];
     rows.sort((a, b) => a.name.compareTo(b.name));

@@ -16,10 +16,7 @@ import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 import 'package:nx_time/features/action_edit/widgets/action_category_picker.dart';
 import 'package:nx_time/features/action_edit/widgets/action_datetime_picker.dart';
 
-enum ActionEditMode {
-  create,
-  edit,
-}
+enum ActionEditMode { create, edit }
 
 /// Create or edit a logged Action via [ActionRepository] (KGQL by default).
 class ActionEditPage extends ConsumerStatefulWidget {
@@ -92,7 +89,9 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       _end = a.endTime ?? _start.add(const Duration(hours: 1));
     }
     if (!_isCreate) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLinkedTaskIds());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _refreshLinkedTaskIds(),
+      );
     }
   }
 
@@ -293,8 +292,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
         );
         await repo.update(
           action,
-          modelTypeNameIfChanged:
-              ActionEditViewModel.modelTypeNameIfChanged(a, cat),
+          modelTypeNameIfChanged: ActionEditViewModel.modelTypeNameIfChanged(
+            a,
+            cat,
+          ),
         );
       }
 
@@ -307,9 +308,9 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
     } catch (e, st) {
       debugPrint('ActionEditPage._save: $e\n$st');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -346,9 +347,9 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
     } catch (e, st) {
       debugPrint('ActionEditPage._confirmDelete: $e\n$st');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -369,7 +370,9 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
               child: Row(
                 children: [
                   TextButton(
-                    onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.of(context).maybePop(),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
@@ -436,7 +439,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                             : 'Action name',
                         hintStyle: const TextStyle(color: AppColors.slate400),
                       ),
-                      style: const TextStyle(fontSize: 14, color: AppColors.slate900),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.slate900,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -457,55 +463,55 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                       child: _OutlineField(
                         child: _isCreate
                             ? (_categoryCreate == null
-                                ? Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          'Select type',
+                                  ? Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Select type',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: AppColors.slate400,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '▶',
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 12,
                                             color: AppColors.slate400,
                                           ),
                                         ),
-                                      ),
-                                      Text(
-                                        '▶',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.slate400,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: _categoryCreate!.dotColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _categoryCreate!.label,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.slate900,
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: _categoryCreate!.dotColor,
+                                            shape: BoxShape.circle,
                                           ),
                                         ),
-                                      ),
-                                      Text(
-                                        '▶',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.slate400,
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _categoryCreate!.label,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: AppColors.slate900,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ))
+                                        Text(
+                                          '▶',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.slate400,
+                                          ),
+                                        ),
+                                      ],
+                                    ))
                             : Row(
                                 children: [
                                   Container(
@@ -614,7 +620,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
+                  Divider(
+                    height: 1,
+                    color: AppColors.slate100.withValues(alpha: 0.9),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -633,10 +642,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                             : () async {
                                 final picked = await Navigator.of(context)
                                     .push<Set<int>?>(
-                                  MaterialPageRoute(
-                                    builder: (_) => const TaskPickerPage(),
-                                  ),
-                                );
+                                      MaterialPageRoute(
+                                        builder: (_) => const TaskPickerPage(),
+                                      ),
+                                    );
                                 if (!mounted) return;
                                 if (picked != null && picked.isNotEmpty) {
                                   await _applyPickedTasks(picked);
@@ -663,14 +672,15 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                     child: Text(
                       _isCreate
                           ? (_pendingTaskIdsToLink.isEmpty
-                              ? 'No tasks linked yet'
-                              : '${_pendingTaskIdsToLink.length} task(s) will link when you save')
+                                ? 'No tasks linked yet'
+                                : '${_pendingTaskIdsToLink.length} task(s) will link when you save')
                           : (_linkedTaskIdsForEdit.isEmpty
-                              ? 'No tasks linked yet'
-                              : '${_linkedTaskIdsForEdit.length} task(s) linked'),
+                                ? 'No tasks linked yet'
+                                : '${_linkedTaskIdsForEdit.length} task(s) linked'),
                       style: TextStyle(
                         fontSize: 13,
-                        color: _isCreate && _pendingTaskIdsToLink.isNotEmpty ||
+                        color:
+                            _isCreate && _pendingTaskIdsToLink.isNotEmpty ||
                                 !_isCreate && _linkedTaskIdsForEdit.isNotEmpty
                             ? AppColors.slate500
                             : AppColors.slate400,
@@ -678,7 +688,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
+                  Divider(
+                    height: 1,
+                    color: AppColors.slate100.withValues(alpha: 0.9),
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'Notes',
@@ -712,7 +725,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
                   ),
                   if (!_isCreate) ...[
                     const SizedBox(height: 12),
-                    Divider(height: 1, color: AppColors.slate100.withValues(alpha: 0.9)),
+                    Divider(
+                      height: 1,
+                      color: AppColors.slate100.withValues(alpha: 0.9),
+                    ),
                     const SizedBox(height: 16),
                     Material(
                       color: Colors.transparent,

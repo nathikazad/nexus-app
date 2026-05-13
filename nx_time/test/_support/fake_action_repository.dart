@@ -15,12 +15,10 @@ class _Edge {
 
 /// In-memory [ActionRepository] for widget / view-model tests.
 class FakeActionRepository implements ActionRepository {
-  FakeActionRepository({
-    List<Action>? initial,
-    this.delay = Duration.zero,
-  }) : _byId = {
-          for (final a in initial ?? const <Action>[]) a.id: _stripGraph(a),
-        };
+  FakeActionRepository({List<Action>? initial, this.delay = Duration.zero})
+    : _byId = {
+        for (final a in initial ?? const <Action>[]) a.id: _stripGraph(a),
+      };
 
   final Map<int, Action> _byId;
   final List<_Edge> _edges = [];
@@ -83,7 +81,11 @@ class FakeActionRepository implements ActionRepository {
   @override
   Future<List<Action>> listForWeek(DateTime mondayLocal) async {
     await Future<void>.delayed(delay);
-    final weekStart = DateTime(mondayLocal.year, mondayLocal.month, mondayLocal.day);
+    final weekStart = DateTime(
+      mondayLocal.year,
+      mondayLocal.month,
+      mondayLocal.day,
+    );
     final fetchStart = weekStart.subtract(const Duration(days: 1));
     final fetchEnd = weekStart.add(const Duration(days: 8));
     return _all.where((a) {
@@ -136,10 +138,7 @@ class FakeActionRepository implements ActionRepository {
   }
 
   @override
-  Future<int> update(
-    Action action, {
-    String? modelTypeNameIfChanged,
-  }) async {
+  Future<int> update(Action action, {String? modelTypeNameIfChanged}) async {
     await Future<void>.delayed(delay);
     _byId[action.id] = Action(
       id: action.id,
@@ -181,6 +180,8 @@ class FakeActionRepository implements ActionRepository {
     required int relationId,
   }) async {
     await Future<void>.delayed(delay);
-    _edges.removeWhere((e) => e.parentId == parentId && e.relationId == relationId);
+    _edges.removeWhere(
+      (e) => e.parentId == parentId && e.relationId == relationId,
+    );
   }
 }

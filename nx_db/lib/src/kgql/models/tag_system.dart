@@ -5,6 +5,7 @@ class TagSystem {
   final int id;
   final String name;
   final bool isHierarchical;
+
   /// Backend: `exclusive` | `multiple`
   final String selectionMode;
   final int? modelTypeId;

@@ -17,11 +17,7 @@ class FakeEmptyTaskRepository implements TaskRepository {
   Future<Task?> getById(int id) async => null;
 
   @override
-  Future<int> create(
-    Task task, {
-    int? parentTaskId,
-    int? projectId,
-  }) async =>
+  Future<int> create(Task task, {int? parentTaskId, int? projectId}) async =>
       throw UnimplementedError();
 
   @override
@@ -29,14 +25,13 @@ class FakeEmptyTaskRepository implements TaskRepository {
       throw UnimplementedError();
 
   @override
-  Future<int> updateStatus({required int id, required TaskStatus status}) async =>
-      throw UnimplementedError();
+  Future<int> updateStatus({
+    required int id,
+    required TaskStatus status,
+  }) async => throw UnimplementedError();
 
   @override
-  Future<void> moveTaskToProject({
-    required int taskId,
-    int? projectId,
-  }) async =>
+  Future<void> moveTaskToProject({required int taskId, int? projectId}) async =>
       throw UnimplementedError();
 
   @override
@@ -46,42 +41,36 @@ class FakeEmptyTaskRepository implements TaskRepository {
   Future<int> linkChildTask({
     required int parentId,
     required int childId,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> unlinkChildTask({
     required int parentId,
     required int relationId,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<int> linkProject({
     required int taskId,
     required int projectId,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> unlinkProject({
     required int taskId,
     required int relationId,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<int> linkActivity({
     required int taskId,
     required int activityId,
     required String activityModelTypeName,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> unlinkActivity({
     required int taskId,
     required int relationId,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 }

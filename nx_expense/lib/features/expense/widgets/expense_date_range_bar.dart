@@ -11,8 +11,14 @@ bool isFullCalendarMonthRange(DateTimeRange r) {
   final s = DateTime(r.start.year, r.start.month, r.start.day);
   final e = DateTime(r.end.year, r.end.month, r.end.day);
   final monthStart = DateTime(s.year, s.month);
-  final monthEnd = DateTime(s.year, s.month + 1).subtract(const Duration(days: 1));
-  return s == monthStart && e == monthEnd && s.month == e.month && s.year == e.year;
+  final monthEnd = DateTime(
+    s.year,
+    s.month + 1,
+  ).subtract(const Duration(days: 1));
+  return s == monthStart &&
+      e == monthEnd &&
+      s.month == e.month &&
+      s.year == e.year;
 }
 
 /// Shared year + month pills + custom calendar for Dashboard and Expense list.
@@ -22,8 +28,18 @@ class ExpenseDateRangeBar extends ConsumerWidget {
   final double bottomPadding;
 
   static const _monthLabels = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -35,17 +51,26 @@ class ExpenseDateRangeBar extends ConsumerWidget {
     void applyMonth(int month, int year) {
       final start = DateTime(year, month);
       final end = DateTime(year, month + 1).subtract(const Duration(days: 1));
-      ref.read(expenseDateRangeProvider.notifier).setRange(DateTimeRange(start: start, end: end));
+      ref
+          .read(expenseDateRangeProvider.notifier)
+          .setRange(DateTimeRange(start: start, end: end));
     }
 
     void applyYear(int year) {
       final start = DateTime(year, 1, 1);
       final end = DateTime(year, 12, 31, 23, 59, 59, 999);
-      ref.read(expenseDateRangeProvider.notifier).setRange(DateTimeRange(start: start, end: end));
+      ref
+          .read(expenseDateRangeProvider.notifier)
+          .setRange(DateTimeRange(start: start, end: end));
     }
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, bottomPadding),
+      padding: EdgeInsets.fromLTRB(
+        RefLayout.px5,
+        0,
+        RefLayout.px5,
+        bottomPadding,
+      ),
       child: Row(
         children: [
           GestureDetector(
@@ -60,7 +85,12 @@ class ExpenseDateRangeBar extends ConsumerWidget {
                     children: [
                       for (final y in years)
                         ListTile(
-                          title: Text('$y', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                          title: Text(
+                            '$y',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           selected: y == displayYear,
                           selectedColor: AppColors.teal600,
                           onTap: () => Navigator.pop(context, y),
@@ -93,7 +123,11 @@ class ExpenseDateRangeBar extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 2),
-                  Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.slate500),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: AppColors.slate500,
+                  ),
                 ],
               ),
             ),
@@ -120,12 +154,16 @@ class ExpenseDateRangeBar extends ConsumerWidget {
                         color: isSelected ? AppColors.teal600 : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? AppColors.teal600 : AppColors.slate200,
+                          color: isSelected
+                              ? AppColors.teal600
+                              : AppColors.slate200,
                         ),
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: AppColors.teal600.withValues(alpha: 0.3),
+                                  color: AppColors.teal600.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   blurRadius: 4,
                                   offset: const Offset(0, 1),
                                 ),

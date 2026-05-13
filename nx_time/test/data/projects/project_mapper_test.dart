@@ -86,18 +86,8 @@ void main() {
         'model_type_id': 3,
         'model_type': {'id': 3, 'name': 'Project', 'type_kind': 'base'},
         'Project': [
-          {
-            'id': 5,
-            'name': 'Root',
-            'model_type_id': 3,
-            'relation': 'parent',
-          },
-          {
-            'id': 20,
-            'name': 'Leaf',
-            'model_type_id': 3,
-            'relation': 'child',
-          },
+          {'id': 5, 'name': 'Root', 'model_type_id': 3, 'relation': 'parent'},
+          {'id': 20, 'name': 'Leaf', 'model_type_id': 3, 'relation': 'child'},
         ],
       });
       final p = projectFromModel(m);

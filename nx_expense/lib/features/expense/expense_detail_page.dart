@@ -16,6 +16,7 @@ import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/desktop/panel_chrome.dart';
 import 'package:nx_expense/features/expense/widgets/expense_bills_section.dart';
 import 'package:nx_expense/features/teller/widgets/teller_detail_readonly_section.dart';
+
 class ExpenseDetailScreen extends ConsumerWidget {
   const ExpenseDetailScreen({super.key, required this.expenseId});
 
@@ -85,79 +86,98 @@ class _DetailBody extends ConsumerWidget {
     final tagSystems = schema.tagSystems;
 
     final detailBody = Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: AppColors.slate100),
-                    ),
-                    color: Color(0x4DF8FAFC),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        headerAmount != null ? formatMoney(headerAmount) : '—',
-                        style: GoogleFonts.inter(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -1,
-                          height: 1,
-                          color: AppColors.teal600,
-                        ),
+      children: [
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.slate100)),
+                  color: Color(0x4DF8FAFC),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      headerAmount != null ? formatMoney(headerAmount) : '—',
+                      style: GoogleFonts.inter(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1,
+                        height: 1,
+                        color: AppColors.teal600,
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            size: 14,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 14,
+                          color: AppColors.slate400,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          modelDateCellLabel(expense),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             color: AppColors.slate400,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            modelDateCellLabel(expense),
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.slate400,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.all(RefLayout.px5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (expense.description != null &&
-                          expense.description!.isNotEmpty) ...[
-                        Text('Description', style: refSectionTitle(context)),
-                        const SizedBox(height: 12),
-                        Text(
-                          expense.description!,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: AppColors.slate700,
-                          ),
                         ),
-                        const SizedBox(height: 32),
                       ],
+                    ),
+                  ],
+                ),
+              ),
 
-                      if (expense.description == null || expense.description!.isEmpty)
-                        const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.all(RefLayout.px5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (expense.description != null &&
+                        expense.description!.isNotEmpty) ...[
+                      Text('Description', style: refSectionTitle(context)),
+                      const SizedBox(height: 12),
+                      Text(
+                        expense.description!,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: AppColors.slate700,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
 
+                    if (expense.description == null ||
+                        expense.description!.isEmpty)
+                      const SizedBox(height: 24),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(
+                          RefLayout.rounded2xl,
+                        ),
+                        border: Border.all(color: AppColors.slate100),
+                        boxShadow: refCardShadow,
+                      ),
+                      child: _AttrRow(
+                        label: 'Id',
+                        value: '${expense.id}',
+                        showDivider: false,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    if (attrDefs.isNotEmpty) ...[
+                      Text('Attributes', style: refSectionTitle(context)),
+                      const SizedBox(height: 12),
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -167,125 +187,114 @@ class _DetailBody extends ConsumerWidget {
                           border: Border.all(color: AppColors.slate100),
                           boxShadow: refCardShadow,
                         ),
-                        child: _AttrRow(
-                          label: 'Id',
-                          value: '${expense.id}',
-                          showDivider: false,
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < attrDefs.length; i++)
+                              _AttrRow(
+                                label: formatAttributeLabel(attrDefs[i].key!),
+                                value: _formatAttr(
+                                  expense,
+                                  attrDefs[i].key!,
+                                  attrDefs[i].valueType,
+                                ),
+                                showDivider: i < attrDefs.length - 1,
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 32),
+                    ],
 
-                      if (attrDefs.isNotEmpty) ...[
-                        Text('Attributes', style: refSectionTitle(context)),
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(
-                              RefLayout.rounded2xl,
-                            ),
-                            border: Border.all(color: AppColors.slate100),
-                            boxShadow: refCardShadow,
-                          ),
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < attrDefs.length; i++)
-                                _AttrRow(
-                                  label: formatAttributeLabel(attrDefs[i].key!),
-                                  value: _formatAttr(
-                                    expense,
-                                    attrDefs[i].key!,
-                                    attrDefs[i].valueType,
+                    if (_hasAnyTags(tagSystems)) ...[
+                      Text('Tags', style: refSectionTitle(context)),
+                      const SizedBox(height: 12),
+                      for (final sys in tagSystems)
+                        if ((expense.tags?[sys.name] ?? []).isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sys.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppColors.slate400,
                                   ),
-                                  showDivider: i < attrDefs.length - 1,
                                 ),
-                            ],
+                                const SizedBox(height: 6),
+                                _buildTagValues(context, ref, sys),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+                      const SizedBox(height: 20),
+                    ],
 
-                      if (_hasAnyTags(tagSystems)) ...[
-                        Text('Tags', style: refSectionTitle(context)),
-                        const SizedBox(height: 12),
-                        for (final sys in tagSystems)
-                          if ((expense.tags?[sys.name] ?? []).isNotEmpty)
+                    if (expense.relations != null &&
+                        expense.relations!.isNotEmpty)
+                      for (final e in expense.relations!.entries)
+                        if (e.key != kTransferModelTypeName)
+                          if (dedupeModelsById(e.value).isNotEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.only(bottom: 24),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
-                                    sys.name,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: AppColors.slate400,
-                                    ),
+                                    formatAttributeLabel(e.key),
+                                    style: refSectionTitle(context),
                                   ),
-                                  const SizedBox(height: 6),
-                                  _buildTagValues(context, ref, sys),
+                                  const SizedBox(height: 12),
+                                  for (final relM in dedupeModelsById(e.value))
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
+                                      child: _relationRow(
+                                        context,
+                                        ref,
+                                        e.key,
+                                        relM,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
-                        const SizedBox(height: 20),
-                      ],
 
-                      if (expense.relations != null && expense.relations!.isNotEmpty)
-                        for (final e in expense.relations!.entries)
-                          if (e.key != kTransferModelTypeName)
-                            if (dedupeModelsById(e.value).isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(
-                                      formatAttributeLabel(e.key),
-                                      style: refSectionTitle(context),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    for (final relM in dedupeModelsById(e.value))
-                                      Padding(
-                                        padding: const EdgeInsets.only(bottom: 10),
-                                        child: _relationRow(context, ref, e.key, relM),
-                                      ),
-                                  ],
-                                ),
-                              ),
-
-                      if (expense.relations?[kTransferModelTypeName] != null &&
-                          dedupeModelsById(expense.relations![kTransferModelTypeName]!)
-                              .isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text('Transfer', style: refSectionTitle(context)),
-                              const SizedBox(height: 12),
-                              for (final relM in dedupeModelsById(
-                                expense.relations![kTransferModelTypeName]!,
-                              ))
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: _transferCell(context, ref, relM),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                      TellerDetailReadonlySection(modelId: expenseId),
+                    if (expense.relations?[kTransferModelTypeName] != null &&
+                        dedupeModelsById(
+                          expense.relations![kTransferModelTypeName]!,
+                        ).isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 32),
-                        child: ExpenseBillsSection(expenseId: expenseId),
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text('Transfer', style: refSectionTitle(context)),
+                            const SizedBox(height: 12),
+                            for (final relM in dedupeModelsById(
+                              expense.relations![kTransferModelTypeName]!,
+                            ))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _transferCell(context, ref, relM),
+                              ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+
+                    TellerDetailReadonlySection(modelId: expenseId),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 32),
+                      child: ExpenseBillsSection(expenseId: expenseId),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
     );
 
     if (isDesktopLayout(context)) {
@@ -364,7 +373,11 @@ class _DetailBody extends ConsumerWidget {
     return false;
   }
 
-  Widget _buildTagValues(BuildContext context, WidgetRef ref, TagSystemView sys) {
+  Widget _buildTagValues(
+    BuildContext context,
+    WidgetRef ref,
+    TagSystemView sys,
+  ) {
     final nodes = expense.tags?[sys.name] ?? [];
     return Wrap(
       spacing: 8,
@@ -392,9 +405,7 @@ class _DetailBody extends ConsumerWidget {
     final decoration = BoxDecoration(
       color: AppColors.slate100,
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: AppColors.slate200.withValues(alpha: 0.6),
-      ),
+      border: Border.all(color: AppColors.slate200.withValues(alpha: 0.6)),
     );
 
     if (path != null && path.length > 1) {
@@ -417,7 +428,10 @@ class _DetailBody extends ConsumerWidget {
                   ),
                   borderRadius: BorderRadius.circular(6),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 0,
+                    ),
                     child: Text(path[i], style: chipTextStyle),
                   ),
                 ),
@@ -428,17 +442,14 @@ class _DetailBody extends ConsumerWidget {
       );
     }
 
-    final label =
-        path != null && path.isNotEmpty ? path.join(' \u203A ') : node;
+    final label = path != null && path.isNotEmpty
+        ? path.join(' \u203A ')
+        : node;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => navToTagExpenses(
-          context,
-          ref,
-          systemName: sys.name,
-          tagNode: node,
-        ),
+        onTap: () =>
+            navToTagExpenses(context, ref, systemName: sys.name, tagNode: node),
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -503,7 +514,11 @@ class _DetailBody extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.slate300,
+                  size: 22,
+                ),
               ],
             ),
           ),
@@ -550,7 +565,11 @@ class _DetailBody extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.slate300,
+                  size: 22,
+                ),
               ],
             ),
           ),

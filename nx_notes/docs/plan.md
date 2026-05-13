@@ -180,8 +180,8 @@ Acceptance checks:
 
 - Mapper tests convert KGQL `Model` to `Essay`.
 - Mapper tests convert `Essay` updates to set_kgql payloads.
-- Provider test confirms `essayRepositoryProvider` returns KGQL repo
-  with `personalDomainId`.
+- Provider test confirms `essayRepositoryProvider` returns the KGQL repo after
+  login.
 
 ## Phase 6: Editor codec and AppFlowy Editor wrapper
 

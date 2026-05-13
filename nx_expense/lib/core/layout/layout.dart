@@ -22,41 +22,41 @@ abstract final class RefLayout {
 
 /// Card shadow: shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]
 List<BoxShadow> get refCardShadow => [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.05),
-        blurRadius: 10,
-        offset: const Offset(0, 2),
-        spreadRadius: -4,
-      ),
-    ];
+  BoxShadow(
+    color: Colors.black.withValues(alpha: 0.05),
+    blurRadius: 10,
+    offset: const Offset(0, 2),
+    spreadRadius: -4,
+  ),
+];
 
 /// FAB shadow: shadow-[0_8px_20px_-6px_rgba(13,148,136,0.6)]
 List<BoxShadow> get refFabShadow => [
-      BoxShadow(
-        color: const Color(0x990D9488),
-        blurRadius: 20,
-        offset: const Offset(0, 8),
-        spreadRadius: -6,
-      ),
-    ];
+  BoxShadow(
+    color: const Color(0x990D9488),
+    blurRadius: 20,
+    offset: const Offset(0, 8),
+    spreadRadius: -6,
+  ),
+];
 
 TextStyle refSectionTitle(BuildContext context) => GoogleFonts.inter(
-      fontSize: 11,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 1.2,
-      color: AppColors.slate400,
-    );
+  fontSize: 11,
+  fontWeight: FontWeight.w600,
+  letterSpacing: 1.2,
+  color: AppColors.slate400,
+);
 
 TextStyle refAppBarTitleLarge() => GoogleFonts.inter(
-      fontSize: 20,
-      fontWeight: FontWeight.w600,
-      letterSpacing: -0.3,
-      color: AppColors.slate900,
-    );
+  fontSize: 20,
+  fontWeight: FontWeight.w600,
+  letterSpacing: -0.3,
+  color: AppColors.slate900,
+);
 
 TextStyle refAppBarTitleBase() => GoogleFonts.inter(
-      fontSize: 16,
-      fontWeight: FontWeight.w600,
-      letterSpacing: -0.3,
-      color: AppColors.slate900,
-    );
+  fontSize: 16,
+  fontWeight: FontWeight.w600,
+  letterSpacing: -0.3,
+  color: AppColors.slate900,
+);

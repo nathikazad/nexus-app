@@ -10,14 +10,6 @@ class KgqlModelRepository {
 
   GraphQLClient get _client => _ref.read(nx.graphqlClientProvider);
 
-  int get _domainId {
-    final id = _ref.read(nx.personalDomainIdProvider);
-    if (id == null) {
-      throw StateError('personalDomainId required (login)');
-    }
-    return id;
-  }
-
   Future<List<nx.Model>> fetchModels({
     required Map<String, dynamic> filter,
     required Map<String, dynamic> struct,
@@ -26,7 +18,6 @@ class KgqlModelRepository {
       _client,
       filter: filter,
       struct: struct,
-      domainId: _domainId,
     );
   }
 
@@ -40,7 +31,6 @@ class KgqlModelRepository {
       modelTypeName: modelTypeName,
       id: id,
       struct: struct,
-      domainId: _domainId,
     );
   }
 
@@ -48,12 +38,11 @@ class KgqlModelRepository {
     return nx.fetchKgqlModelsForRelationPicker(
       _client,
       modelTypeName,
-      domainId: _domainId,
     );
   }
 
   Future<int> setModel(nx.SetModelRequest request) {
-    return nx.setKgqlModel(_client, request, domainId: _domainId);
+    return nx.setKgqlModel(_client, request);
   }
 }
 

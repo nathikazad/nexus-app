@@ -14,14 +14,11 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
   KgqlCookingPlanRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadCookingTaskSchema,
-    required int domainId,
   }) : _client = client,
-       _loadCookingTaskSchema = loadCookingTaskSchema,
-       _domainId = domainId;
+       _loadCookingTaskSchema = loadCookingTaskSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadCookingTaskSchema;
-  final int _domainId;
 
   Map<String, dynamic> _cookingTaskStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -32,11 +29,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       'model_type': true,
       'name': true,
       'description': true,
-      'relation_attributes': {
-        'key': true,
-        'value': true,
-        'value_type': true,
-      },
+      'relation_attributes': {'key': true, 'value': true, 'value_type': true},
     };
     merged[kRecipeModelTypeName] = {
       'id': true,
@@ -51,11 +44,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
         'relation_id': true,
         'model_id': true,
         'model_type': true,
-        'relation_attributes': {
-          'key': true,
-          'value': true,
-          'value_type': true,
-        },
+        'relation_attributes': {'key': true, 'value': true, 'value_type': true},
       },
     };
     return merged;
@@ -83,7 +72,6 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
         ],
       },
       struct: struct,
-      domainId: _domainId,
     );
   }
 
@@ -114,7 +102,6 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       modelTypeName: kCookingTaskModelTypeName,
       id: taskId,
       struct: struct,
-      domainId: _domainId,
     );
     if (task == null) {
       return null;
@@ -133,7 +120,6 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       modelTypeName: kRecipeModelTypeName,
       id: recipeId,
       struct: const {'id': true, 'name': true},
-      domainId: _domainId,
     );
     final recipeName = recipe?.name ?? 'Recipe';
     final label = DateFormat('MMM d').format(day);
@@ -160,7 +146,7 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
         ),
       ],
     );
-    return setKgqlModel(_client, req, domainId: _domainId);
+    return setKgqlModel(_client, req);
   }
 
   @override
@@ -191,17 +177,12 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
           ),
         ],
       ),
-      domainId: _domainId,
     );
   }
 
   @override
   Future<void> deleteTask(int taskId) async {
-    await setKgqlModel(
-      _client,
-      SetModelRequest(id: taskId, delete: true),
-      domainId: _domainId,
-    );
+    await setKgqlModel(_client, SetModelRequest(id: taskId, delete: true));
   }
 
   @override
@@ -218,7 +199,6 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
           ),
         ],
       ),
-      domainId: _domainId,
     );
   }
 
@@ -231,13 +211,9 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
         SetModelRequest(
           id: taskId,
           attributes: [
-            SetModelAttribute(
-              key: kCookingTaskAttrNotes,
-              delete: true,
-            ),
+            SetModelAttribute(key: kCookingTaskAttrNotes, delete: true),
           ],
         ),
-        domainId: _domainId,
       );
       return;
     }
@@ -245,11 +221,8 @@ class KgqlCookingPlanRepository implements CookingPlanRepository {
       _client,
       SetModelRequest(
         id: taskId,
-        attributes: [
-          SetModelAttribute(key: kCookingTaskAttrNotes, value: t),
-        ],
+        attributes: [SetModelAttribute(key: kCookingTaskAttrNotes, value: t)],
       ),
-      domainId: _domainId,
     );
   }
 }

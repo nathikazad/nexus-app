@@ -88,7 +88,16 @@ void main() {
         ],
       );
       final s = buildKgqlStructFromSchema(schema);
-      expect(s.keys.where((k) => k != 'relations' && k != 'model_type' && k != 'id' && k != 'name' && k != 'description' && k != 'created_at' && k != 'model_type_id'), isEmpty);
+      expect(
+          s.keys.where((k) =>
+              k != 'relations' &&
+              k != 'model_type' &&
+              k != 'id' &&
+              k != 'name' &&
+              k != 'description' &&
+              k != 'created_at' &&
+              k != 'model_type_id'),
+          isEmpty);
     });
 
     test('non-String link uses toString as key', () {

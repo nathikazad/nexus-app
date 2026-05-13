@@ -10,15 +10,11 @@ class KgqlLogRepository implements LogRepository {
   KgqlLogRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadLogSchema,
-    required int domainId,
   }) : _client = client,
-       _loadLogSchema = loadLogSchema,
-       _domainId = domainId;
+       _loadLogSchema = loadLogSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadLogSchema;
-  final int _domainId;
-
   Map<String, dynamic> _logFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
@@ -52,7 +48,6 @@ class KgqlLogRepository implements LogRepository {
         ],
       },
       struct: struct,
-      domainId: _domainId,
     );
 
     final logs = models.map(dailyLogFromModel).toList()
@@ -76,7 +71,6 @@ class KgqlLogRepository implements LogRepository {
       modelTypeName: kDailyLogModelTypeName,
       id: id,
       struct: struct,
-      domainId: _domainId,
     );
     return m == null ? null : dailyLogFromModel(m);
   }
@@ -94,7 +88,6 @@ class KgqlLogRepository implements LogRepository {
         entry: entry,
         tags: tags,
       ),
-      domainId: _domainId,
     );
   }
 
@@ -113,16 +106,11 @@ class KgqlLogRepository implements LogRepository {
         entry: entry,
         tags: tags,
       ),
-      domainId: _domainId,
     );
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(
-      _client,
-      setModelRequestForDeleteDailyLog(id),
-      domainId: _domainId,
-    );
+    await setKgqlModel(_client, setModelRequestForDeleteDailyLog(id));
   }
 }

@@ -13,8 +13,6 @@ class _AuthLoggedIn extends AuthController {
   @override
   Future<User?> build() async => User(
         userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
         preset: BackendPreset.localhost,
       );
 }

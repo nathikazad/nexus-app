@@ -16,8 +16,7 @@ class ModelTypeFormPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ModelTypeFormPage> createState() =>
-      _ModelTypeFormPageState();
+  ConsumerState<ModelTypeFormPage> createState() => _ModelTypeFormPageState();
 }
 
 class _ModelTypeFormPageState extends ConsumerState<ModelTypeFormPage> {
@@ -35,7 +34,8 @@ class _ModelTypeFormPageState extends ConsumerState<ModelTypeFormPage> {
     });
 
     if (widget.modelTypeId != null) {
-      final modelTypeAsync = ref.watch(schemaModelTypeProvider(widget.modelTypeId!));
+      final modelTypeAsync =
+          ref.watch(schemaModelTypeProvider(widget.modelTypeId!));
 
       modelTypeAsync.when(
         data: (data) {

@@ -19,7 +19,8 @@ void main() {
     });
 
     test('parses map result', () {
-      final out = parseKgqlAggregateResult(<String, dynamic>{'aggregated_value': 3});
+      final out =
+          parseKgqlAggregateResult(<String, dynamic>{'aggregated_value': 3});
       expect(out['aggregated_value'], 3);
     });
 
@@ -60,15 +61,15 @@ void main() {
         client,
         {'model_type': 'Expense'},
         {'metric': 'sum', 'key': 'cost', 'group': null},
-        domainId: 1,
       );
       expect(out['aggregated_value'], 1457);
-      final captured =
-          verify(() => client.query(captureAny())).captured.single as QueryOptions;
+      final captured = verify(() => client.query(captureAny())).captured.single
+          as QueryOptions;
       expect(
         captured.variables.keys,
-        containsAll(['filterkgql', 'aggregate', 'domainId']),
+        containsAll(['filterkgql', 'aggregate']),
       );
+      expect(captured.variables.containsKey('domainId'), isFalse);
       expect(captured.variables['filterkgql'], {'model_type': 'Expense'});
       expect(
         captured.variables['aggregate'],
@@ -92,7 +93,6 @@ void main() {
           client,
           {'model_type': 'Expense'},
           {'metric': 'count', 'key': null, 'group': null},
-          domainId: 1,
         ),
         throwsA(isA<OperationException>()),
       );

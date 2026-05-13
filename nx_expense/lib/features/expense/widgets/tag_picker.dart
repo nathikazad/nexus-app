@@ -112,12 +112,21 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 12),
+              padding: const EdgeInsets.fromLTRB(
+                RefLayout.px5,
+                8,
+                RefLayout.px5,
+                12,
+              ),
               child: Row(
                 children: [
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.slate400,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   Expanded(
@@ -148,22 +157,40 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
             ),
             const Divider(height: 1, color: AppColors.slate100),
             Padding(
-              padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 12),
+              padding: const EdgeInsets.fromLTRB(
+                RefLayout.px5,
+                12,
+                RefLayout.px5,
+                12,
+              ),
               child: TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
-                style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.slate900,
+                ),
                 decoration: InputDecoration(
                   hintText: _searchPlaceholder(),
-                  hintStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.slate400, size: 20),
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate400,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.slate400,
+                    size: 20,
+                  ),
                   filled: true,
                   fillColor: AppColors.slate100,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -172,8 +199,8 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
               child: widget.exclusive && !widget.hierarchical
                   ? _buildFlatExclusive(q)
                   : widget.exclusive && widget.hierarchical
-                      ? _buildHierarchicalExclusive(q)
-                      : _buildMultiple(q),
+                  ? _buildHierarchicalExclusive(q)
+                  : _buildMultiple(q),
             ),
           ],
         ),
@@ -209,7 +236,9 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
   Widget _buildHierarchicalExclusive(String q) {
     if (q.isNotEmpty) {
       final flat = _flattenNodes(widget.system.nodes);
-      final filtered = flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+      final filtered = flat
+          .where((n) => n.name.toLowerCase().contains(q))
+          .toList();
       return ListView(
         children: [
           _noneRowExclusive(),
@@ -272,7 +301,10 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
           child: InkWell(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: RefLayout.px5,
+                vertical: 14,
+              ),
               child: Row(
                 children: [
                   Expanded(child: Text(label, style: labelStyle)),
@@ -291,7 +323,9 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
     if (widget.hierarchical) {
       final flat = _flattenNodes(widget.system.nodes);
       if (q.isNotEmpty) {
-        final filtered = flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+        final filtered = flat
+            .where((n) => n.name.toLowerCase().contains(q))
+            .toList();
         return ListView(
           children: [
             for (var i = 0; i < filtered.length; i++)
@@ -356,7 +390,10 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
           child: InkWell(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: RefLayout.px5,
+                vertical: 14,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -422,10 +459,14 @@ class TagPickerRow extends StatelessWidget {
 
   String _valueLabel() {
     if (value.isEmpty) return 'Select ${system.name}';
-    return value.map((node) {
-      final path = tagBreadcrumbPath(system, node);
-      return (path != null && path.length > 1) ? path.join(' \u203A ') : node;
-    }).join(', ');
+    return value
+        .map((node) {
+          final path = tagBreadcrumbPath(system, node);
+          return (path != null && path.length > 1)
+              ? path.join(' \u203A ')
+              : node;
+        })
+        .join(', ');
   }
 
   @override
@@ -466,12 +507,18 @@ class TagPickerRow extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: value.isEmpty ? AppColors.slate400 : AppColors.slate900,
+                    color: value.isEmpty
+                        ? AppColors.slate400
+                        : AppColors.slate900,
                   ),
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.slate300,
+                size: 22,
+              ),
             ],
           ),
         ),

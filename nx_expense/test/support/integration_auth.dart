@@ -8,22 +8,21 @@ import 'package:nx_db/nx_db.dart';
 class TestAuthController extends AuthController {
   @override
   Future<User?> build() async {
-    return User(
-      userId: '1',
-      personalDomainId: 1,
-      homeDomainId: 1,
-      preset: BackendPreset.laptop,
-    );
+    return User(userId: '1', preset: BackendPreset.laptop);
   }
 }
 
 /// Overrides so integration tests hit localhost while [User.preset] stays [laptop].
 List<Override> get expenseIntegrationOverrides => [
-      authProvider.overrideWith(() => TestAuthController()),
-      endpointProvider.overrideWith((ref) => kIntegrationTestBackendUrls.graphqlHttp),
-      sockWsUrlProvider.overrideWith((ref) => kIntegrationTestBackendUrls.sockWs),
-      imageBaseUrlProvider.overrideWith((ref) => kIntegrationTestBackendUrls.imageHttp),
-    ];
+  authProvider.overrideWith(() => TestAuthController()),
+  endpointProvider.overrideWith(
+    (ref) => kIntegrationTestBackendUrls.graphqlHttp,
+  ),
+  sockWsUrlProvider.overrideWith((ref) => kIntegrationTestBackendUrls.sockWs),
+  imageBaseUrlProvider.overrideWith(
+    (ref) => kIntegrationTestBackendUrls.imageHttp,
+  ),
+];
 
 bool get runExpenseIntegration =>
     Platform.environment['RUN_EXPENSE_INTEGRATION'] == 'true';

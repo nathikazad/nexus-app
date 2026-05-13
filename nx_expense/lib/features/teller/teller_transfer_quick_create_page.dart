@@ -68,9 +68,9 @@ class _TellerTransferQuickCreateScreenState
 
   Future<void> _submit(ModelTypeView schema) async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
     final amountKey = primaryNumberAttributeKey(schema);
@@ -82,9 +82,9 @@ class _TellerTransferQuickCreateScreenState
     }
     final amt = num.tryParse(_amount.text.trim());
     if (amt == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid amount')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
       return;
     }
     final dateStr = _date.text.trim();
@@ -156,7 +156,9 @@ class _TellerTransferQuickCreateScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -168,7 +170,8 @@ class _TellerTransferQuickCreateScreenState
     final schemaAsync = ref.watch(transferSchemaViewProvider);
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         return Scaffold(
@@ -180,14 +183,17 @@ class _TellerTransferQuickCreateScreenState
                   backgroundColor: Colors.white,
                   elevation: 0,
                   leading: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-                    onPressed: _loading ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.slate400,
+                      size: 22,
+                    ),
+                    onPressed: _loading
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                   centerTitle: true,
-                  title: Text(
-                    'New transfer',
-                    style: refAppBarTitleBase(),
-                  ),
+                  title: Text('New transfer', style: refAppBarTitleBase()),
                   bottom: const PreferredSize(
                     preferredSize: Size.fromHeight(1),
                     child: Divider(height: 1, color: AppColors.slate100),
@@ -202,7 +208,12 @@ class _TellerTransferQuickCreateScreenState
                       child: ColoredBox(
                         color: const Color(0x4DF8FAFC),
                         child: ListView(
-                          padding: const EdgeInsets.fromLTRB(RefLayout.px5, 20, RefLayout.px5, 120),
+                          padding: const EdgeInsets.fromLTRB(
+                            RefLayout.px5,
+                            20,
+                            RefLayout.px5,
+                            120,
+                          ),
                           children: [
                             Text(
                               'Creates a transfer and links it to this Teller transaction.',
@@ -229,7 +240,10 @@ class _TellerTransferQuickCreateScreenState
                             const SizedBox(height: 6),
                             TextField(
                               controller: _amount,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -256,10 +270,17 @@ class _TellerTransferQuickCreateScreenState
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 28),
+                      padding: const EdgeInsets.fromLTRB(
+                        RefLayout.px5,
+                        12,
+                        RefLayout.px5,
+                        28,
+                      ),
                       decoration: const BoxDecoration(
                         color: Colors.white,
-                        border: Border(top: BorderSide(color: AppColors.slate100)),
+                        border: Border(
+                          top: BorderSide(color: AppColors.slate100),
+                        ),
                       ),
                       child: FilledButton(
                         onPressed: () => _submit(schema),
@@ -274,7 +295,10 @@ class _TellerTransferQuickCreateScreenState
                         ),
                         child: Text(
                           'Create & link',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),

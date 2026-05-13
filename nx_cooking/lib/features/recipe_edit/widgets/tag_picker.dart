@@ -115,7 +115,11 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
                 children: [
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.arrow_back, color: AppColors.zinc400, size: 22),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.zinc400,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   Expanded(
@@ -150,18 +154,31 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
               child: TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
-                style: GoogleFonts.inter(fontSize: 14, color: AppColors.zinc900),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.zinc900,
+                ),
                 decoration: InputDecoration(
                   hintText: _searchPlaceholder(),
-                  hintStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.zinc400),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.zinc400, size: 20),
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.zinc400,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.zinc400,
+                    size: 20,
+                  ),
                   filled: true,
                   fillColor: AppColors.zinc100,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -170,8 +187,8 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
               child: widget.exclusive && !widget.hierarchical
                   ? _buildFlatExclusive(q)
                   : widget.exclusive && widget.hierarchical
-                      ? _buildHierarchicalExclusive(q)
-                      : _buildMultiple(q),
+                  ? _buildHierarchicalExclusive(q)
+                  : _buildMultiple(q),
             ),
           ],
         ),
@@ -207,7 +224,9 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
   Widget _buildHierarchicalExclusive(String q) {
     if (q.isNotEmpty) {
       final flat = _flattenNodes(widget.system.nodes);
-      final filtered = flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+      final filtered = flat
+          .where((n) => n.name.toLowerCase().contains(q))
+          .toList();
       return ListView(
         children: [
           _noneRowExclusive(),
@@ -289,7 +308,9 @@ class _TagPickerBodyState extends State<_TagPickerBody> {
     if (widget.hierarchical) {
       final flat = _flattenNodes(widget.system.nodes);
       if (q.isNotEmpty) {
-        final filtered = flat.where((n) => n.name.toLowerCase().contains(q)).toList();
+        final filtered = flat
+            .where((n) => n.name.toLowerCase().contains(q))
+            .toList();
         return ListView(
           children: [
             for (var i = 0; i < filtered.length; i++)
@@ -425,10 +446,14 @@ class TagPickerRow extends StatelessWidget {
 
   String _valueLabel() {
     if (value.isEmpty) return 'Select ${system.name}';
-    return value.map((node) {
-      final path = tagBreadcrumbPath(system, node);
-      return (path != null && path.length > 1) ? path.join(' \u203A ') : node;
-    }).join(', ');
+    return value
+        .map((node) {
+          final path = tagBreadcrumbPath(system, node);
+          return (path != null && path.length > 1)
+              ? path.join(' \u203A ')
+              : node;
+        })
+        .join(', ');
   }
 
   @override
@@ -469,12 +494,18 @@ class TagPickerRow extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: value.isEmpty ? AppColors.zinc400 : AppColors.zinc900,
+                    color: value.isEmpty
+                        ? AppColors.zinc400
+                        : AppColors.zinc900,
                   ),
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: AppColors.zinc300, size: 22),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.zinc300,
+                size: 22,
+              ),
             ],
           ),
         ),

@@ -40,15 +40,14 @@ class _CookingTaskBody extends ConsumerWidget {
     }
     final m = <String, bool>{};
     for (var j = 0; j < d.ingredients.length; j++) {
-      m['${d.ingredients[j].itemId}'] =
-          j == index ? value : d.ingredients[j].checked;
+      m['${d.ingredients[j].itemId}'] = j == index
+          ? value
+          : d.ingredients[j].checked;
     }
     try {
-      await ref.read(cookingPlanRepositoryProvider).updateIngredientChecks(
-        d.taskId,
-        d.taskRelationId,
-        m,
-      );
+      await ref
+          .read(cookingPlanRepositoryProvider)
+          .updateIngredientChecks(d.taskId, d.taskRelationId, m);
       ref.invalidate(cookingTaskDetailProvider(taskId));
       ref.invalidate(weekSectionsProvider);
       ref.invalidate(shoppingSnapshotProvider);
@@ -62,7 +61,11 @@ class _CookingTaskBody extends ConsumerWidget {
     }
   }
 
-  Future<void> _pickDate(BuildContext context, WidgetRef ref, CookingTaskDetail d) async {
+  Future<void> _pickDate(
+    BuildContext context,
+    WidgetRef ref,
+    CookingTaskDetail d,
+  ) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: dateOnly(d.plannedDate),
@@ -130,9 +133,7 @@ class _CookingTaskBody extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.orange500,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.orange500),
             child: const Text('Remove'),
           ),
         ],
@@ -471,10 +472,7 @@ class _MetaItem extends StatelessWidget {
 }
 
 class _IngredientsChecklist extends StatelessWidget {
-  const _IngredientsChecklist({
-    required this.detail,
-    required this.onToggle,
-  });
+  const _IngredientsChecklist({required this.detail, required this.onToggle});
 
   final CookingTaskDetail detail;
   final void Function(int index, bool value) onToggle;
@@ -600,8 +598,7 @@ class _IngredientCheckRow extends StatelessWidget {
                         decoration: checked ? TextDecoration.lineThrough : null,
                       ),
                     ),
-                    if (preparation != null &&
-                        preparation!.trim().isNotEmpty)
+                    if (preparation != null && preparation!.trim().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
@@ -689,10 +686,7 @@ class _InstructionsBlock extends StatelessWidget {
 }
 
 class _TaskNotesSection extends ConsumerStatefulWidget {
-  const _TaskNotesSection({
-    required this.taskId,
-    required this.initialNotes,
-  });
+  const _TaskNotesSection({required this.taskId, required this.initialNotes});
 
   final int taskId;
   final String? initialNotes;
@@ -728,10 +722,9 @@ class _TaskNotesSectionState extends ConsumerState<_TaskNotesSection> {
   Future<void> _save() async {
     final trimmed = _controller.text.trim();
     try {
-      await ref.read(cookingPlanRepositoryProvider).updateTaskNotes(
-        widget.taskId,
-        trimmed.isEmpty ? null : trimmed,
-      );
+      await ref
+          .read(cookingPlanRepositoryProvider)
+          .updateTaskNotes(widget.taskId, trimmed.isEmpty ? null : trimmed);
       if (!mounted) {
         return;
       }
@@ -820,10 +813,7 @@ class _TaskNotesSectionState extends ConsumerState<_TaskNotesSection> {
 }
 
 class _Footer extends StatelessWidget {
-  const _Footer({
-    required this.onChangeDate,
-    required this.onDelete,
-  });
+  const _Footer({required this.onChangeDate, required this.onDelete});
 
   final VoidCallback onChangeDate;
   final VoidCallback onDelete;

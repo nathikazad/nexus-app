@@ -58,12 +58,14 @@ class _ModelTypeSelectorPageState extends ConsumerState<ModelTypeSelectorPage> {
               }
 
               // Helper function to build list items recursively
-              List<Widget> buildModelTypeItems(List<SchemaModelType> types, {int indentLevel = 0}) {
+              List<Widget> buildModelTypeItems(List<SchemaModelType> types,
+                  {int indentLevel = 0}) {
                 final items = <Widget>[];
                 for (var modelType in types) {
-                  final hasChildren = modelType.children != null && modelType.children!.isNotEmpty;
+                  final hasChildren = modelType.children != null &&
+                      modelType.children!.isNotEmpty;
                   final isExpanded = _expandedIds.contains(modelType.id);
-                  
+
                   // Add the model type itself
                   items.add(
                     Padding(
@@ -72,7 +74,9 @@ class _ModelTypeSelectorPageState extends ConsumerState<ModelTypeSelectorPage> {
                         modelType: modelType,
                         showExpandButton: hasChildren,
                         isExpanded: isExpanded,
-                        onExpandTap: hasChildren ? () => _toggleExpand(modelType.id) : null,
+                        onExpandTap: hasChildren
+                            ? () => _toggleExpand(modelType.id)
+                            : null,
                         onTap: () => _selectModelType(modelType),
                         onSettingsTap: () {
                           // No settings in selector screen - not used
@@ -81,10 +85,11 @@ class _ModelTypeSelectorPageState extends ConsumerState<ModelTypeSelectorPage> {
                       ),
                     ),
                   );
-                  
+
                   // Add children recursively with increased indent (only if expanded)
                   if (hasChildren && isExpanded) {
-                    items.addAll(buildModelTypeItems(modelType.children!, indentLevel: indentLevel + 1));
+                    items.addAll(buildModelTypeItems(modelType.children!,
+                        indentLevel: indentLevel + 1));
                   }
                 }
                 return items;
@@ -117,4 +122,3 @@ class _ModelTypeSelectorPageState extends ConsumerState<ModelTypeSelectorPage> {
     );
   }
 }
-

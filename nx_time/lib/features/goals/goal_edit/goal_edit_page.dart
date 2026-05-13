@@ -15,10 +15,10 @@ import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
 
 class GoalEditPage extends ConsumerStatefulWidget {
   const GoalEditPage({super.key, this.mode = GoalEditMode.create, this.initial})
-      : assert(
-          mode == GoalEditMode.create || initial != null,
-          'edit requires initial goal',
-        );
+    : assert(
+        mode == GoalEditMode.create || initial != null,
+        'edit requires initial goal',
+      );
 
   final GoalEditMode mode;
   final Goal? initial;
@@ -247,13 +247,17 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       case GoalSelectedAttribute.duration:
         final hrs = double.tryParse(_durationCtl.text) ?? 0;
         final at = _op == GoalThresholdOp.lt ? 'less than' : 'at least';
-        final period = _cadence == GoalCadence.weekly ? 'This week' : 'Each day';
+        final period = _cadence == GoalCadence.weekly
+            ? 'This week'
+            : 'Each day';
         return '$period, hits when total ${_actionName.toLowerCase()} '
             'duration is $at ${_trim(hrs)} hours.';
       case GoalSelectedAttribute.count:
         final n = int.tryParse(_countCtl.text) ?? 0;
         final at = _op == GoalThresholdOp.lt ? 'less than' : 'at least';
-        final period = _cadence == GoalCadence.weekly ? 'This week' : 'Each day';
+        final period = _cadence == GoalCadence.weekly
+            ? 'This week'
+            : 'Each day';
         return '$period, hits when count of '
             '${_actionName.toLowerCase()}s is $at $n.';
       case GoalSelectedAttribute.startTime:
@@ -334,15 +338,11 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
   }
 
   Widget _buildHeader() {
-    final saveLabel =
-        widget.mode == GoalEditMode.create ? 'Create' : 'Save';
-    final title =
-        widget.mode == GoalEditMode.create ? 'New goal' : 'Edit goal';
+    final saveLabel = widget.mode == GoalEditMode.create ? 'Create' : 'Save';
+    final title = widget.mode == GoalEditMode.create ? 'New goal' : 'Edit goal';
     return Container(
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.slate100, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.slate100, width: 1)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Row(
@@ -385,9 +385,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: _saving
-                      ? AppColors.slate300
-                      : AppColors.accent,
+                  color: _saving ? AppColors.slate300 : AppColors.accent,
                 ),
               ),
             ),
@@ -428,10 +426,10 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
   }
 
   BoxDecoration get _fieldDecoration => BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.slate200),
-        borderRadius: BorderRadius.circular(12),
-      );
+    color: Colors.white,
+    border: Border.all(color: AppColors.slate200),
+    borderRadius: BorderRadius.circular(12),
+  );
 
   Widget _nameField() {
     return Container(
@@ -565,8 +563,8 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
               onTap: _saving
                   ? null
                   : () => setState(() {
-                        _cadence = GoalCadence.daily;
-                      }),
+                      _cadence = GoalCadence.daily;
+                    }),
             ),
             _pillButton(
               label: 'Weekly',
@@ -574,12 +572,12 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
               onTap: _saving
                   ? null
                   : () => setState(() {
-                        _cadence = GoalCadence.weekly;
-                        _attr = GoalEditViewModel.clampAttributeForCadence(
-                          _cadence,
-                          _attr,
-                        );
-                      }),
+                      _cadence = GoalCadence.weekly;
+                      _attr = GoalEditViewModel.clampAttributeForCadence(
+                        _cadence,
+                        _attr,
+                      );
+                    }),
             ),
           ],
         ),
@@ -691,9 +689,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
           ? null
           : () {
               setState(() {
-                _op = key == 'lt'
-                    ? GoalThresholdOp.lt
-                    : GoalThresholdOp.gte;
+                _op = key == 'lt' ? GoalThresholdOp.lt : GoalThresholdOp.gte;
               });
             },
       behavior: HitTestBehavior.opaque,
@@ -900,8 +896,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
           : () async {
               final t = await showTimePicker(
                 context: context,
-                initialTime:
-                    _slotTime ?? const TimeOfDay(hour: 12, minute: 30),
+                initialTime: _slotTime ?? const TimeOfDay(hour: 12, minute: 30),
               );
               if (t != null) setState(() => _slotTime = t);
             },
@@ -942,9 +937,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
             ),
             if (_slotTime != null)
               GestureDetector(
-                onTap: _saving
-                    ? null
-                    : () => setState(() => _slotTime = null),
+                onTap: _saving ? null : () => setState(() => _slotTime = null),
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   width: 28,
@@ -1003,8 +996,9 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
                 children: [
                   AnimatedAlign(
                     duration: const Duration(milliseconds: 150),
-                    alignment:
-                        _auto ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: _auto
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
                     child: Padding(
                       padding: const EdgeInsets.all(2),
                       child: Container(
@@ -1068,9 +1062,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     bool danger = false,
   }) {
     final color = danger ? AppColors.dotMiss : AppColors.slate700;
-    final border = danger
-        ? const Color(0xFFFECDD3)
-        : AppColors.slate200;
+    final border = danger ? const Color(0xFFFECDD3) : AppColors.slate200;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,

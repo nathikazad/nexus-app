@@ -18,11 +18,7 @@ void main() {
       expect(s['start_time'], true);
       expect(s['end_time'], true);
       expect(s['relations'], isA<Map<String, dynamic>>());
-      expect(s['model_type'], {
-        'id': true,
-        'name': true,
-        'type_kind': true,
-      });
+      expect(s['model_type'], {'id': true, 'name': true, 'type_kind': true});
     });
 
     test('nested relation keys', () {

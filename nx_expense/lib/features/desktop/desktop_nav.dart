@@ -41,22 +41,22 @@ class TellerPanel3State {
   });
 
   const TellerPanel3State.expense(int id)
-      : this._(kind: TellerPanel3Kind.expense, detailId: id);
+    : this._(kind: TellerPanel3Kind.expense, detailId: id);
 
   const TellerPanel3State.transfer(int id)
-      : this._(kind: TellerPanel3Kind.transfer, detailId: id);
+    : this._(kind: TellerPanel3Kind.transfer, detailId: id);
 
   const TellerPanel3State.linkExpensePicker(TellerTransactionRow row)
-      : this._(kind: TellerPanel3Kind.linkExpensePicker, tellerRow: row);
+    : this._(kind: TellerPanel3Kind.linkExpensePicker, tellerRow: row);
 
   const TellerPanel3State.linkTransferPicker(TellerTransactionRow row)
-      : this._(kind: TellerPanel3Kind.linkTransferPicker, tellerRow: row);
+    : this._(kind: TellerPanel3Kind.linkTransferPicker, tellerRow: row);
 
   const TellerPanel3State.newExpenseForm(TellerTransactionRow row)
-      : this._(kind: TellerPanel3Kind.newExpenseForm, tellerRow: row);
+    : this._(kind: TellerPanel3Kind.newExpenseForm, tellerRow: row);
 
   const TellerPanel3State.newTransferCreate(TellerTransactionRow row)
-      : this._(kind: TellerPanel3Kind.newTransferCreate, tellerRow: row);
+    : this._(kind: TellerPanel3Kind.newTransferCreate, tellerRow: row);
 
   final TellerPanel3Kind kind;
 
@@ -156,8 +156,10 @@ void popPanel3(WidgetRef ref) {
   if (stack.length == 1) {
     ref.read(panel3StackProvider.notifier).state = const [];
   } else {
-    ref.read(panel3StackProvider.notifier).state =
-        stack.sublist(0, stack.length - 1);
+    ref.read(panel3StackProvider.notifier).state = stack.sublist(
+      0,
+      stack.length - 1,
+    );
   }
 }
 
@@ -172,10 +174,7 @@ void navToExpenseDetail(BuildContext context, WidgetRef ref, int id) {
 
 void navToTransferDetail(BuildContext context, WidgetRef ref, int transferId) {
   if (isDesktopLayout(context)) {
-    pushPanel3(
-      ref,
-      Panel3State(type: Panel3Type.transfer, id: transferId),
-    );
+    pushPanel3(ref, Panel3State(type: Panel3Type.transfer, id: transferId));
   } else {
     context.push('/transfer/$transferId');
   }
@@ -234,10 +233,7 @@ void navToExpenseDetailFromPanel3(
   int expenseId,
 ) {
   if (isDesktopLayout(context)) {
-    pushPanel3(
-      ref,
-      Panel3State(type: Panel3Type.expenseDetail, id: expenseId),
-    );
+    pushPanel3(ref, Panel3State(type: Panel3Type.expenseDetail, id: expenseId));
   } else {
     context.push('/expense/$expenseId');
   }
@@ -294,7 +290,11 @@ void navExpenseDetailBack(
 }
 
 /// Back from transfer detail (embedded or full-screen).
-void navTransferDetailBack(BuildContext context, WidgetRef ref, int transferId) {
+void navTransferDetailBack(
+  BuildContext context,
+  WidgetRef ref,
+  int transferId,
+) {
   if (!isDesktopLayout(context)) {
     context.pop();
     return;
@@ -380,8 +380,9 @@ void navToExpenseFromTellerLink(
   int expenseId,
 ) {
   if (isDesktopLayout(context)) {
-    ref.read(tellerPanel3Provider.notifier).state =
-        TellerPanel3State.expense(expenseId);
+    ref.read(tellerPanel3Provider.notifier).state = TellerPanel3State.expense(
+      expenseId,
+    );
   } else {
     final router = GoRouter.of(context);
     router.pop();
@@ -397,8 +398,9 @@ void navToTransferFromTellerLink(
   int transferId,
 ) {
   if (isDesktopLayout(context)) {
-    ref.read(tellerPanel3Provider.notifier).state =
-        TellerPanel3State.transfer(transferId);
+    ref.read(tellerPanel3Provider.notifier).state = TellerPanel3State.transfer(
+      transferId,
+    );
   } else {
     final router = GoRouter.of(context);
     router.pop();

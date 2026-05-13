@@ -19,17 +19,12 @@ void main() {
       overrides: [
         goalRepositoryProvider.overrideWithValue(fake),
         goalActionTypeOptionsProvider.overrideWith(
-          (ref) async => const [
-            GoalActionTypeOption(id: 1, name: 'Sleep'),
-          ],
+          (ref) async => const [GoalActionTypeOption(id: 1, name: 'Sleep')],
         ),
       ],
     );
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byType(TextField).first,
-      'My sleep goal',
-    );
+    await tester.enterText(find.byType(TextField).first, 'My sleep goal');
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
     expect(fake.lastCreated, isNotNull);

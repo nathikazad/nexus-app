@@ -7,7 +7,9 @@ import 'package:test/test.dart' show Tags;
 
 void main() {
   group('E10 tags / TagNode edge cases', () {
-    test('E10.1 malformed tags value — non-list coerces to empty list for that key', () {
+    test(
+        'E10.1 malformed tags value — non-list coerces to empty list for that key',
+        () {
       final m = Model.fromJson({
         'id': 1,
         'name': 'X',

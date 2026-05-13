@@ -17,8 +17,9 @@ class CurrentWeek extends Notifier<DateTime> {
 }
 
 /// Notifier: `ref.read(currentWeekProvider.notifier).state = monday` to change week.
-final currentWeekProvider =
-    NotifierProvider<CurrentWeek, DateTime>(CurrentWeek.new);
+final currentWeekProvider = NotifierProvider<CurrentWeek, DateTime>(
+  CurrentWeek.new,
+);
 
 /// Monday 00:00 of the current calendar week (local) — the week the **Today** tab
 /// shows. Evaluated on first read of this provider, not on every build; the week
@@ -34,31 +35,29 @@ final todayMondayProvider = Provider<DateTime>(
 /// Colors are read at render time via [modelTypeColorsProvider], so this
 /// provider intentionally does not await it (changing a color must not
 /// trigger a re-fetch of the entire week's actions).
-final weekActionsProvider =
-    FutureProvider.autoDispose.family<WeekActions, DateTime>(
-  (ref, monday) async {
-    await ref.watch(authenticatedUserProvider.future);
-    final m0 = DateTime(monday.year, monday.month, monday.day);
-    final repo = ref.watch(actionRepositoryProvider);
-    final all = await repo.listForWeek(m0);
-    final byDay = List.generate(7, (i) {
-      final day = m0.add(Duration(days: i));
-      return all.where((a) => actionOverlapsLocalCalendarDay(a, day)).toList();
+final weekActionsProvider = FutureProvider.autoDispose
+    .family<WeekActions, DateTime>((ref, monday) async {
+      await ref.watch(authenticatedUserProvider.future);
+      final m0 = DateTime(monday.year, monday.month, monday.day);
+      final repo = ref.watch(actionRepositoryProvider);
+      final all = await repo.listForWeek(m0);
+      final byDay = List.generate(7, (i) {
+        final day = m0.add(Duration(days: i));
+        return all
+            .where((a) => actionOverlapsLocalCalendarDay(a, day))
+            .toList();
+      });
+      return WeekActions(weekStart: m0, byDay: byDay, all: all);
     });
-    return WeekActions(weekStart: m0, byDay: byDay, all: all);
-  },
-);
 
 /// Action goals for the week starting on [monday] (`getActionGoalsWeek` — no expense
 /// goals; action-only).
-final actionGoalsWeekProvider =
-    FutureProvider.autoDispose.family<ActionGoalsWeek, DateTime>(
-  (ref, monday) async {
-    final m0 = DateTime(monday.year, monday.month, monday.day);
-    final repo = ref.watch(goalRepositoryProvider);
-    return repo.getActionGoalsWeek(weekStart: m0);
-  },
-);
+final actionGoalsWeekProvider = FutureProvider.autoDispose
+    .family<ActionGoalsWeek, DateTime>((ref, monday) async {
+      final m0 = DateTime(monday.year, monday.month, monday.day);
+      final repo = ref.watch(goalRepositoryProvider);
+      return repo.getActionGoalsWeek(weekStart: m0);
+    });
 
 /// After any local action create/update/delete, invalidates the week-action and
 /// week-goal [FutureProvider] families. Refetches any **mounted** family instances

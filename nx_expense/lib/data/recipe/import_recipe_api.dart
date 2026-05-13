@@ -18,10 +18,12 @@ String _trimBase(String imageBaseUrl) {
       : imageBaseUrl;
 }
 
-Map<String, String> _mcpHeaders(String base, String userId, {bool jsonBody = false}) {
-  final headers = <String, String>{
-    'x-user-id': userId,
-  };
+Map<String, String> _mcpHeaders(
+  String base,
+  String userId, {
+  bool jsonBody = false,
+}) {
+  final headers = <String, String>{'x-user-id': userId};
   if (jsonBody) {
     headers['Content-Type'] = 'application/json';
   }
@@ -85,7 +87,8 @@ Never _throwFromResponse(http.Response resp) {
   } catch (_) {
     // ignore
   }
-  final msg = decoded?['error']?.toString() ??
+  final msg =
+      decoded?['error']?.toString() ??
       (resp.body.isNotEmpty ? resp.body : 'HTTP ${resp.statusCode}');
   throw StateError('import-recipe failed (${resp.statusCode}): $msg');
 }
@@ -93,11 +96,10 @@ Never _throwFromResponse(http.Response resp) {
 /// `POST {imageBaseUrl}/import-recipe` with body `{"url":"..."}` — fetch page and import (crawler + KGQL).
 ///
 /// Equivalent to:
-/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"url":"…","domainId":…}' …/import-recipe`
+/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"url":"…"}' …/import-recipe`
 Future<ImportRecipeHttpResult> importRecipeFromUrl({
   required String imageBaseUrl,
   required String userId,
-  required int domainId,
   required String recipeUrl,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
@@ -105,10 +107,7 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
   final resp = await http.post(
     uri,
     headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{
-      'url': recipeUrl,
-      'domainId': domainId,
-    }),
+    body: jsonEncode(<String, dynamic>{'url': recipeUrl}),
   );
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     _throwFromResponse(resp);
@@ -126,11 +125,10 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
 /// `POST {imageBaseUrl}/import-recipe` with body `{"text":"..."}` — paste recipe text (skips fetch).
 ///
 /// Equivalent to:
-/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"text":"…","domainId":…}' …/import-recipe`
+/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"text":"…"}' …/import-recipe`
 Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   required String imageBaseUrl,
   required String userId,
-  required int domainId,
   required String recipeText,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
@@ -138,10 +136,7 @@ Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   final resp = await http.post(
     uri,
     headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{
-      'text': recipeText,
-      'domainId': domainId,
-    }),
+    body: jsonEncode(<String, dynamic>{'text': recipeText}),
   );
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     _throwFromResponse(resp);

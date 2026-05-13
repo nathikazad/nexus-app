@@ -63,9 +63,7 @@ class ImagesViewState {
   }) {
     return ImagesViewState(
       loading: loading ?? this.loading,
-      error: identical(error, _imagesCopyUnset)
-          ? this.error
-          : error as String?,
+      error: identical(error, _imagesCopyUnset) ? this.error : error as String?,
       available: available ?? this.available,
       selected: selected ?? this.selected,
       loadingDay: loadingDay ?? this.loadingDay,
@@ -117,9 +115,7 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
 
   bool _isToday(DateTime day) {
     final now = DateTime.now();
-    return day.year == now.year &&
-        day.month == now.month &&
-        day.day == now.day;
+    return day.year == now.year && day.month == now.month && day.day == now.day;
   }
 
   @override
@@ -301,4 +297,5 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
 }
 
 final imagesViewModelProvider = NotifierProvider.autoDispose
-    .family<ImagesViewNotifier, ImagesViewState, String>(ImagesViewNotifier.new);
+    .family<ImagesViewNotifier, ImagesViewState, String>(
+        ImagesViewNotifier.new);

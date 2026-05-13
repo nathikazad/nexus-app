@@ -52,8 +52,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
 
   String _formatTimeLabel(DateTime selected, ImageEntry? e) {
     if (e == null) return '—';
-    final secs =
-        (e.minutesSinceMidnight * 60).round().clamp(0, 24 * 3600 - 1);
+    final secs = (e.minutesSinceMidnight * 60).round().clamp(0, 24 * 3600 - 1);
     final h = secs ~/ 3600;
     final m = (secs % 3600) ~/ 60;
     final s = secs % 60;
@@ -113,8 +112,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(imagesViewModelProvider(_source));
-    final notifier =
-        ref.read(imagesViewModelProvider(_source).notifier);
+    final notifier = ref.read(imagesViewModelProvider(_source).notifier);
 
     ref.listen(imagesViewModelProvider(_source), (prev, next) {
       final msg = next.transientNotice;
@@ -210,8 +208,8 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
                               Builder(
                                 builder: (context) {
                                   final canPrev = idx > 0;
-                                  final canNext =
-                                      idx >= 0 && idx < vm.dayEntries.length - 1;
+                                  final canNext = idx >= 0 &&
+                                      idx < vm.dayEntries.length - 1;
                                   final timeText =
                                       _formatTimeLabel(vm.selected, entry);
 
@@ -289,8 +287,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
                                 padding: EdgeInsets.only(
                                   top: 4,
                                   bottom:
-                                      MediaQuery.paddingOf(context).bottom +
-                                          28,
+                                      MediaQuery.paddingOf(context).bottom + 28,
                                 ),
                                 child: Align(
                                   alignment: Alignment.center,
@@ -323,10 +320,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
     String? userId,
     ImageEntry? entry,
   ) {
-    if (baseUrl == null ||
-        userId == null ||
-        userId.isEmpty ||
-        entry == null) {
+    if (baseUrl == null || userId == null || userId.isEmpty || entry == null) {
       return ColoredBox(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Center(

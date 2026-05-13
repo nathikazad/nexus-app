@@ -9,16 +9,6 @@ final userIdProvider = Provider<String?>((ref) {
   return authState.value?.userId;
 }, name: 'userIdProvider');
 
-/// Domain id for personal-scoped data (projects, time goals/actions, main schema tools).
-final personalDomainIdProvider = Provider<int?>((ref) {
-  return ref.watch(authProvider).value?.personalDomainId;
-}, name: 'personalDomainIdProvider');
-
-/// Domain id for home / shared household data (cooking, expenses, home tasks).
-final homeDomainIdProvider = Provider<int?>((ref) {
-  return ref.watch(authProvider).value?.homeDomainId;
-}, name: 'homeDomainIdProvider');
-
 /// Resolved GraphQL HTTP endpoint from the current preset, or null.
 final endpointProvider = Provider<String?>((ref) {
   final user = ref.watch(authProvider).value;
@@ -52,7 +42,8 @@ final appStatusProvider = Provider<AppStatus>((ref) {
   final authState = ref.watch(authProvider);
 
   return authState.when(
-    data: (user) => user == null ? AppStatus.unauthenticated : AppStatus.authenticated,
+    data: (user) =>
+        user == null ? AppStatus.unauthenticated : AppStatus.authenticated,
     loading: () => AppStatus.initializing,
     error: (_, __) => AppStatus.unauthenticated,
   );

@@ -77,14 +77,17 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
     );
   }
 
-  void updateAttributeDefinition(int index, AttributeDefinitionDraft attribute) {
-    final updated = List<AttributeDefinitionDraft>.from(state.attributeDefinitions);
+  void updateAttributeDefinition(
+      int index, AttributeDefinitionDraft attribute) {
+    final updated =
+        List<AttributeDefinitionDraft>.from(state.attributeDefinitions);
     updated[index] = attribute;
     state = state.copyWith(attributeDefinitions: updated);
   }
 
   void removeAttributeDefinition(int index) {
-    final updated = List<AttributeDefinitionDraft>.from(state.attributeDefinitions);
+    final updated =
+        List<AttributeDefinitionDraft>.from(state.attributeDefinitions);
     final attrToRemove = updated[index];
 
     if (attrToRemove.id != null) {
@@ -202,7 +205,8 @@ class ModelTypeFormState {
     bool isLoading = false,
   })  : formKey = formKey ?? GlobalKey<FormState>(),
         nameController = nameController ?? TextEditingController(),
-        descriptionController = descriptionController ?? TextEditingController(),
+        descriptionController =
+            descriptionController ?? TextEditingController(),
         typeKind = typeKind ?? 'base',
         parentId = parentId,
         parentName = parentName,
@@ -248,10 +252,9 @@ class ModelTypeFormState {
   }
 }
 
-final modelTypeFormControllerProvider = NotifierProvider.family<
-    ModelTypeFormController,
-    ModelTypeFormState,
-    int?>((int? modelTypeId) {
+final modelTypeFormControllerProvider =
+    NotifierProvider.family<ModelTypeFormController, ModelTypeFormState, int?>(
+        (int? modelTypeId) {
   final controller = ModelTypeFormController();
   controller.modelTypeId = modelTypeId;
   return controller;

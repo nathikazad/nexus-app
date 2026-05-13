@@ -9,9 +9,7 @@ void main() {
     const schema = ModelTypeView(
       id: 1,
       name: 'Expense',
-      attributes: [
-        AttributeDefView(key: 'cost', valueType: 'number'),
-      ],
+      attributes: [AttributeDefView(key: 'cost', valueType: 'number')],
     );
     const expense = Expense(
       id: 42,
@@ -19,17 +17,15 @@ void main() {
       modelTypeId: 1,
       createdAt: '2025-01-15T12:00:00Z',
       attributes: {'cost': 4.5},
-      tags: {'Category': ['Food']},
+      tags: {
+        'Category': ['Food'],
+      },
     );
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ExpenseCard(
-            expense: expense,
-            schema: schema,
-            onTap: () {},
-          ),
+          body: ExpenseCard(expense: expense, schema: schema, onTap: () {}),
         ),
       ),
     );

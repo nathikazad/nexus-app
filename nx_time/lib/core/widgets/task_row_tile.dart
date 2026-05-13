@@ -91,10 +91,7 @@ class TaskRowTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Opacity(
-          opacity: done ? 0.5 : 1,
-          child: row,
-        ),
+        child: Opacity(opacity: done ? 0.5 : 1, child: row),
       ),
     );
   }

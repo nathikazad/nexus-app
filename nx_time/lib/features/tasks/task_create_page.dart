@@ -11,11 +11,7 @@ import 'package:nx_time/features/tasks/task_view_models.dart';
 
 /// New task (`reference/partials/page-task-create.html`).
 class TaskCreatePage extends ConsumerStatefulWidget {
-  const TaskCreatePage({
-    super.key,
-    this.parentTaskId,
-    this.initialProjectId,
-  });
+  const TaskCreatePage({super.key, this.parentTaskId, this.initialProjectId});
 
   final int? parentTaskId;
   final int? initialProjectId;
@@ -54,9 +50,8 @@ class _TaskCreatePageState extends ConsumerState<TaskCreatePage> {
   Future<void> _pickProject() async {
     final id = await Navigator.of(context).push<int?>(
       MaterialPageRoute(
-        builder: (_) => const ProjectsBrowsePage(
-          mode: ProjectsBrowseMode.pickProject,
-        ),
+        builder: (_) =>
+            const ProjectsBrowsePage(mode: ProjectsBrowseMode.pickProject),
       ),
     );
     if (id != null && mounted) {

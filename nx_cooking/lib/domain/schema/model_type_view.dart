@@ -19,9 +19,7 @@ class ModelTypeView {
 
   String? get primaryNumberAttributeKey {
     for (final ad in attributes) {
-      if (ad.valueType == 'number' &&
-          ad.key != null &&
-          ad.key!.isNotEmpty) {
+      if (ad.valueType == 'number' && ad.key != null && ad.key!.isNotEmpty) {
         return ad.key;
       }
     }
@@ -54,6 +52,7 @@ class RelationTypeView {
   });
 
   final int? id;
+
   /// Target model type name.
   final String link;
   final String? multiplicity;
@@ -77,10 +76,7 @@ class TagSystemView {
 }
 
 class TagNodeView {
-  const TagNodeView({
-    required this.name,
-    this.children,
-  });
+  const TagNodeView({required this.name, this.children});
 
   final String name;
   final List<TagNodeView>? children;
@@ -105,18 +101,22 @@ List<FilterChipDescriptor> filterChipDescriptors(ModelTypeView schema) {
     final roots = ts.nodes;
     if (roots.length <= maxRootsForIndividualChips) {
       for (final n in roots) {
-        list.add(FilterChipDescriptor(
-          systemName: ts.name,
-          nodeName: n.name,
-          label: n.name,
-        ));
+        list.add(
+          FilterChipDescriptor(
+            systemName: ts.name,
+            nodeName: n.name,
+            label: n.name,
+          ),
+        );
       }
     } else {
-      list.add(FilterChipDescriptor(
-        systemName: ts.name,
-        nodeName: null,
-        label: ts.name,
-      ));
+      list.add(
+        FilterChipDescriptor(
+          systemName: ts.name,
+          nodeName: null,
+          label: ts.name,
+        ),
+      );
     }
   }
   return list;

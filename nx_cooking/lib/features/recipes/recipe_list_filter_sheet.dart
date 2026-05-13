@@ -109,8 +109,8 @@ class _RecipeTagFilterSheetState extends State<RecipeTagFilterSheet> {
     final filtered = q.isEmpty
         ? widget.ingredients
         : widget.ingredients
-            .where((e) => e.name.toLowerCase().contains(q))
-            .toList();
+              .where((e) => e.name.toLowerCase().contains(q))
+              .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -142,7 +142,10 @@ class _RecipeTagFilterSheetState extends State<RecipeTagFilterSheet> {
                 if (_ingredientSelection.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.orange500,
                       borderRadius: BorderRadius.circular(10),
@@ -253,7 +256,10 @@ class _RecipeTagFilterSheetState extends State<RecipeTagFilterSheet> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'No matches',
-                style: GoogleFonts.inter(fontSize: 12, color: AppColors.zinc400),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppColors.zinc400,
+                ),
               ),
             ),
           const SizedBox(height: 8),
@@ -499,9 +505,7 @@ class _RecipeTagFilterSheetState extends State<RecipeTagFilterSheet> {
                       fontWeight: depth == 0
                           ? FontWeight.w600
                           : FontWeight.w500,
-                      color: depth == 0
-                          ? AppColors.zinc900
-                          : AppColors.zinc700,
+                      color: depth == 0 ? AppColors.zinc900 : AppColors.zinc700,
                     ),
                   ),
                 ),

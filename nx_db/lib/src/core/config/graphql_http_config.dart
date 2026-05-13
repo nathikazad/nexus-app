@@ -10,7 +10,8 @@ String normalizeHttpEndpointForCf(String endpoint) {
 }
 
 /// Headers passed to [HttpLink] for GraphQL HTTP (matches [createClient]).
-Map<String, String> buildHttpLinkDefaultHeaders(String endpoint, String userId) {
+Map<String, String> buildHttpLinkDefaultHeaders(
+    String endpoint, String userId) {
   final attachCf = CfAccess.shouldAttachHeaders(endpoint);
   final cf = attachCf ? CfAccess.headers : const <String, String>{};
   return {

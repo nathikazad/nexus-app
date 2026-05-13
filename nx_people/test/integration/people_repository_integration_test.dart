@@ -82,7 +82,6 @@ void main() {
               SetModelTag(system: kPeopleStatusTagSystem, nodes: [statusNode]),
           ],
         ),
-        domainId: harness.domainId,
       );
       cleanupIds.add(id);
 
@@ -127,26 +126,20 @@ class _IntegrationHarness {
     repo = KgqlPeopleRepository(
       client: client,
       loadPersonSchema: loadPersonSchema,
-      domainId: domainId,
     );
   }
 
   final GraphQLClient client;
   late final KgqlPeopleRepository repo;
-  int get domainId => _domainId;
 
   Future<ModelType> loadPersonSchema() {
-    return fetchKgqlModelTypeByName(
-      client,
-      kPersonModelTypeName,
-      domainId: domainId,
-    );
+    return fetchKgqlModelTypeByName(client, kPersonModelTypeName);
   }
 
   Future<void> deleteModels(Iterable<int> ids) async {
     for (final id in ids) {
       try {
-        await setKgqlModel(client, setKgqlDelete(id), domainId: domainId);
+        await setKgqlModel(client, setKgqlDelete(id));
       } catch (_) {
         // Cleanup should not hide the original assertion failure.
       }
@@ -173,9 +166,3 @@ String get _graphqlEndpoint =>
 
 String get _userId =>
     Platform.environment['NX_PEOPLE_INTEGRATION_USER_ID'] ?? '1';
-
-int get _domainId =>
-    int.tryParse(
-      Platform.environment['NX_PEOPLE_INTEGRATION_DOMAIN_ID'] ?? '',
-    ) ??
-    1;

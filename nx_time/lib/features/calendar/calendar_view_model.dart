@@ -5,10 +5,7 @@ import 'package:nx_time/features/today/action_fold.dart';
 
 /// One calendar day’s folded umbrella rows (after [weekActionsProvider] + [foldDayActions]).
 class CalendarDayData {
-  const CalendarDayData({
-    required this.day,
-    required this.rows,
-  });
+  const CalendarDayData({required this.day, required this.rows});
 
   final DateTime day;
   final List<UmbrellaRow> rows;
@@ -17,7 +14,9 @@ class CalendarDayData {
 /// Seven days (Mon–Sun) derived from [weekActionsProvider] for [currentWeekProvider].
 final calendarWeekProvider = Provider<AsyncValue<List<CalendarDayData>>>((ref) {
   final monday = ref.watch(currentWeekProvider);
-  return ref.watch(weekActionsProvider(monday)).when(
+  return ref
+      .watch(weekActionsProvider(monday))
+      .when(
         data: (wa) {
           return AsyncValue.data(
             List.generate(

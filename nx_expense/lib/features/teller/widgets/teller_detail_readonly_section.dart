@@ -52,7 +52,9 @@ class TellerDetailReadonlySection extends ConsumerWidget {
           ],
         ),
         data: (links) {
-          final tellerLinks = links.where((l) => l.isTellerTimelineEvent).toList();
+          final tellerLinks = links
+              .where((l) => l.isTellerTimelineEvent)
+              .toList();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -119,7 +121,8 @@ class TellerDetailReadonlySection extends ConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           tellerDetailHeadline(link.payload),

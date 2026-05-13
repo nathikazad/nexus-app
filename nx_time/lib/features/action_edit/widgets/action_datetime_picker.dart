@@ -31,7 +31,10 @@ Future<DateTime?> showActionDateTimePicker(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       child: Row(
                         children: [
                           TextButton(
@@ -56,7 +59,8 @@ Future<DateTime?> showActionDateTimePicker(
                             ),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.of(context).pop(selected),
+                            onPressed: () =>
+                                Navigator.of(context).pop(selected),
                             child: const Text(
                               'Done',
                               style: TextStyle(

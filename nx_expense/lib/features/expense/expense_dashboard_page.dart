@@ -37,10 +37,17 @@ class DashboardScreen extends ConsumerWidget {
               SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(RefLayout.px5, RefLayout.appBarTop, RefLayout.px5, RefLayout.pb4),
+                  padding: const EdgeInsets.fromLTRB(
+                    RefLayout.px5,
+                    RefLayout.appBarTop,
+                    RefLayout.px5,
+                    RefLayout.pb4,
+                  ),
                   child: Row(
                     children: [
-                      Expanded(child: Text('Stats', style: refAppBarTitleLarge())),
+                      Expanded(
+                        child: Text('Stats', style: refAppBarTitleLarge()),
+                      ),
                       const ExpenseDateRangeCalendarButton(),
                       const SizedBox(width: 4),
                       const ExpenseAppMenuButton(),
@@ -51,7 +58,8 @@ class DashboardScreen extends ConsumerWidget {
               const ExpenseDateRangeBar(),
               Expanded(
                 child: summaryAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('$e')),
                   data: (s) {
                     // No data — show empty state
@@ -60,7 +68,11 @@ class DashboardScreen extends ConsumerWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.slate300),
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 48,
+                              color: AppColors.slate300,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'No expenses found',
@@ -73,7 +85,10 @@ class DashboardScreen extends ConsumerWidget {
                             const SizedBox(height: 4),
                             Text(
                               'Add some expenses to see your dashboard',
-                              style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate400),
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppColors.slate400,
+                              ),
                             ),
                           ],
                         ),
@@ -82,18 +97,28 @@ class DashboardScreen extends ConsumerWidget {
 
                     // Has data — show stats + charts
                     return ListView(
-                      padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, RefLayout.pb24),
+                      padding: const EdgeInsets.fromLTRB(
+                        RefLayout.px5,
+                        8,
+                        RefLayout.px5,
+                        RefLayout.pb24,
+                      ),
                       children: [
                         Row(
                           children: [
                             Expanded(
-                              child: StatCard(title: 'Count', value: '${s.count}'),
+                              child: StatCard(
+                                title: 'Count',
+                                value: '${s.count}',
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: StatCard(
                                 title: 'Total',
-                                value: s.sumTotal != null ? formatMoney(s.sumTotal) : '—',
+                                value: s.sumTotal != null
+                                    ? formatMoney(s.sumTotal)
+                                    : '—',
                                 highlight: true,
                               ),
                             ),
@@ -104,19 +129,22 @@ class DashboardScreen extends ConsumerWidget {
                           data: (raw) {
                             final entries = parseDaySpendEntries(raw);
                             if (entries.isEmpty) return const SizedBox.shrink();
-                            return SizedBox(height: 240, child: _DayBarChart(entries: entries));
+                            return SizedBox(
+                              height: 240,
+                              child: _DayBarChart(entries: entries),
+                            );
                           },
-                          loading: () => const SizedBox(height: 240, child: Center(child: CircularProgressIndicator())),
+                          loading: () => const SizedBox(
+                            height: 240,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
                           error: (_, __) => const SizedBox.shrink(),
                         ),
                         const SizedBox(height: 24),
                         for (final ts in schema.tagSystems.where(
                           (t) => statsDashboardTagSystemNames.contains(t.name),
                         )) ...[
-                          _TagPieChart(
-                            tagSystem: ts,
-                            totalSpend: s.sumTotal,
-                          ),
+                          _TagPieChart(tagSystem: ts, totalSpend: s.sumTotal),
                           const SizedBox(height: 24),
                         ],
                         for (final relName in allRelationTargetTypeNames(
@@ -124,17 +152,28 @@ class DashboardScreen extends ConsumerWidget {
                         ).where(statsDashboardRelationTypeNames.contains)) ...[
                           Consumer(
                             builder: (context, ref, _) {
-                              final agg = ref.watch(spendByRelationProvider(relName));
+                              final agg = ref.watch(
+                                spendByRelationProvider(relName),
+                              );
                               return agg.when(
                                 data: (raw) {
                                   final entries = appendOtherResidualEntry(
                                     parseGroupedChartEntries(raw),
                                     s.sumTotal,
                                   );
-                                  if (entries.isEmpty) return const SizedBox.shrink();
-                                  return _PieChartCard(title: relName, entries: entries);
+                                  if (entries.isEmpty)
+                                    return const SizedBox.shrink();
+                                  return _PieChartCard(
+                                    title: relName,
+                                    entries: entries,
+                                  );
                                 },
-                                loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+                                loading: () => const SizedBox(
+                                  height: 180,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
                                 error: (_, __) => const SizedBox.shrink(),
                               );
                             },
@@ -161,6 +200,7 @@ class DashboardScreen extends ConsumerWidget {
 class _TagPieChart extends ConsumerStatefulWidget {
   const _TagPieChart({required this.tagSystem, required this.totalSpend});
   final TagSystemView tagSystem;
+
   /// Signed total spend for the current date range (from
   /// [dashboardExpenseSummaryProvider]). Used to compute the "Other" residual
   /// at the root level only — when drilled in, the existing rename already
@@ -187,6 +227,7 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
       }
       return null;
     }
+
     final node = find(widget.tagSystem.nodes);
     return node?.children != null && node!.children!.isNotEmpty;
   }
@@ -202,11 +243,13 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
     // we filter to the parent with include_descendants.
     final int? level = isHierarchical && _breadcrumbs.isEmpty ? 1 : null;
 
-    final agg = ref.watch(spendByTagSystemProvider((
-      systemName: ts.name,
-      parentNode: parentNode,
-      level: level,
-    )));
+    final agg = ref.watch(
+      spendByTagSystemProvider((
+        systemName: ts.name,
+        parentNode: parentNode,
+        level: level,
+      )),
+    );
 
     return agg.when(
       data: (raw) {
@@ -250,14 +293,21 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Center(
-                      child: Icon(Icons.arrow_back, size: 16, color: AppColors.slate500),
+                      child: Icon(
+                        Icons.arrow_back,
+                        size: 16,
+                        color: AppColors.slate500,
+                      ),
                     ),
                   ),
                 )
               : null,
         );
       },
-      loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+      loading: () => const SizedBox(
+        height: 180,
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -275,6 +325,7 @@ class _PieChartCard extends StatefulWidget {
   final String title;
   final List<MapEntry<String, double>> entries;
   final Widget? headerTrailing;
+
   /// Called when a legend row / pie slice is tapped (for drill-down).
   final void Function(String sliceName)? onSliceTap;
 
@@ -384,7 +435,9 @@ class _PieChartCardState extends State<_PieChartCard> {
                   children: [
                     for (var i = 0; i < entries.length; i++)
                       GestureDetector(
-                        onTap: widget.onSliceTap != null ? () => widget.onSliceTap!(entries[i].key) : null,
+                        onTap: widget.onSliceTap != null
+                            ? () => widget.onSliceTap!(entries[i].key)
+                            : null,
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 8),
@@ -402,7 +455,11 @@ class _PieChartCardState extends State<_PieChartCard> {
                               Expanded(
                                 child: Text(
                                   entries[i].key,
-                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate700),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.slate700,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -410,11 +467,19 @@ class _PieChartCardState extends State<_PieChartCard> {
                                 _showDollars
                                     ? formatMoney(entries[i].value)
                                     : '${(entries[i].value.abs() / totalAbs * 100).round()}%',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate900),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.slate900,
+                                ),
                               ),
                               if (widget.onSliceTap != null) ...[
                                 const SizedBox(width: 4),
-                                Icon(Icons.chevron_right, size: 14, color: AppColors.slate300),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 14,
+                                  color: AppColors.slate300,
+                                ),
                               ],
                             ],
                           ),
@@ -461,7 +526,9 @@ class _DayBarChart extends StatelessWidget {
 
     final n = entries.length;
     // Bar geometry uses magnitude; amounts may be signed (negative spend, positive refunds).
-    final maxY = entries.map((e) => e.value.abs()).reduce((a, b) => a > b ? a : b);
+    final maxY = entries
+        .map((e) => e.value.abs())
+        .reduce((a, b) => a > b ? a : b);
     // Show only first, middle, last labels to avoid crowding.
     final labelIndices = <int>{0, n ~/ 2, n - 1};
     // Dynamic bar width based on entry count.
@@ -497,18 +564,29 @@ class _DayBarChart extends StatelessWidget {
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
                         tooltipBorderRadius: BorderRadius.circular(10),
-                        tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        tooltipPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         getTooltipColor: (_) => AppColors.slate900,
                         getTooltipItem: (group, _, rod, __) {
                           final i = group.x;
                           if (i < 0 || i >= entries.length) return null;
                           return BarTooltipItem(
                             '${_longDate(entries[i].key)}\n',
-                            GoogleFonts.inter(fontSize: 11, color: AppColors.slate300, fontWeight: FontWeight.w500),
+                            GoogleFonts.inter(
+                              fontSize: 11,
+                              color: AppColors.slate300,
+                              fontWeight: FontWeight.w500,
+                            ),
                             children: [
                               TextSpan(
                                 text: formatMoney(entries[i].value),
-                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
                               ),
                             ],
                           );
@@ -524,7 +602,9 @@ class _DayBarChart extends StatelessWidget {
                               toY: entries[i].value.abs(),
                               color: AppColors.teal500,
                               width: barWidth,
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(2),
+                              ),
                             ),
                           ],
                         ),
@@ -543,7 +623,11 @@ class _DayBarChart extends StatelessWidget {
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
                                 _shortDate(entries[i].key),
-                                style: GoogleFonts.inter(fontSize: 10, color: AppColors.slate400, fontWeight: FontWeight.w500),
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: AppColors.slate400,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             );
                           },
@@ -561,9 +645,11 @@ class _DayBarChart extends StatelessWidget {
                         // Only show lines at 25% and 75% of max
                         final q1 = maxY * 0.25;
                         final q3 = maxY * 0.75;
-                        return (v - q1).abs() < interval * 0.1 || (v - q3).abs() < interval * 0.1;
+                        return (v - q1).abs() < interval * 0.1 ||
+                            (v - q3).abs() < interval * 0.1;
                       },
-                      getDrawingHorizontalLine: (_) => FlLine(color: AppColors.slate100, strokeWidth: 1),
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: AppColors.slate100, strokeWidth: 1),
                     ),
                     borderData: FlBorderData(show: false),
                   ),
@@ -574,20 +660,30 @@ class _DayBarChart extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final chartH = constraints.maxHeight - 24; // bottom titles
-                    final labelStyle = GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w500, color: AppColors.slate400);
+                    final labelStyle = GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate400,
+                    );
                     return Stack(
                       children: [
                         // 75% line label (25% from top of chart)
                         Positioned(
                           left: 2,
                           top: chartH * 0.25 - 12,
-                          child: Text('\$${(maxY * 0.75).round()}', style: labelStyle),
+                          child: Text(
+                            '\$${(maxY * 0.75).round()}',
+                            style: labelStyle,
+                          ),
                         ),
                         // 25% line label (75% from top of chart)
                         Positioned(
                           left: 2,
                           top: chartH * 0.75 - 12,
-                          child: Text('\$${(maxY * 0.25).round()}', style: labelStyle),
+                          child: Text(
+                            '\$${(maxY * 0.25).round()}',
+                            style: labelStyle,
+                          ),
                         ),
                       ],
                     );

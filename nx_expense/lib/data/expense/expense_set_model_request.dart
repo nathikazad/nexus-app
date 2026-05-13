@@ -27,10 +27,7 @@ SetModelRequest buildExpenseSetModelRequest(ExpenseUpsert u) {
     final create = u.relationCreatesByType[type];
 
     if (create != null && create.isNotEmpty) {
-      relPayload.add(ModelRelation(
-        modelType: type,
-        create: [create],
-      ));
+      relPayload.add(ModelRelation(modelType: type, create: [create]));
       continue;
     }
 
@@ -57,17 +54,11 @@ SetModelRequest buildExpenseSetModelRequest(ExpenseUpsert u) {
 
       final added = curIds.difference(snapIds);
       if (added.isNotEmpty) {
-        relPayload.add(ModelRelation(
-          modelType: type,
-          link: added.toList(),
-        ));
+        relPayload.add(ModelRelation(modelType: type, link: added.toList()));
       }
     } else {
       if (curIds.isNotEmpty) {
-        relPayload.add(ModelRelation(
-          modelType: type,
-          link: curIds.toList(),
-        ));
+        relPayload.add(ModelRelation(modelType: type, link: curIds.toList()));
       }
     }
   }

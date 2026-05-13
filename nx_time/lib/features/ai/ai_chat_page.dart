@@ -58,12 +58,15 @@ class AiChatPage extends StatelessWidget {
                     color: AppColors.slate50,
                     child: ListView(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 24),
+                        horizontal: 20,
+                        vertical: 24,
+                      ),
                       children: const [
                         _BubbleLeft(text: 'Hey! What can I help you with?'),
                         SizedBox(height: 16),
                         _BubbleRight(
-                            text: 'How much deep work did I do this week?'),
+                          text: 'How much deep work did I do this week?',
+                        ),
                         SizedBox(height: 16),
                         _BubbleLeft(
                           text:
@@ -71,7 +74,8 @@ class AiChatPage extends StatelessWidget {
                         ),
                         SizedBox(height: 16),
                         _BubbleRight(
-                            text: "Add a task 'buy new yoga mat' to Saturday"),
+                          text: "Add a task 'buy new yoga mat' to Saturday",
+                        ),
                         SizedBox(height: 16),
                         _BubbleLeftWithActions(),
                       ],
@@ -100,26 +104,35 @@ class AiChatPage extends StatelessWidget {
                                   decoration: InputDecoration(
                                     hintText: 'Ask anything...',
                                     hintStyle: TextStyle(
-                                        color: AppColors.slate400,
-                                        fontSize: 14),
+                                      color: AppColors.slate400,
+                                      fontSize: 14,
+                                    ),
                                     border: InputBorder.none,
                                     isDense: true,
-                                    contentPadding:
-                                        EdgeInsets.symmetric(vertical: 12),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                   ),
                                   style: TextStyle(
-                                      fontSize: 14, color: AppColors.slate900),
+                                    fontSize: 14,
+                                    color: AppColors.slate900,
+                                  ),
                                 ),
                               ),
                               IconButton(
                                 onPressed: () {},
-                                icon: const Icon(SolarLinearIcons.microphone2,
-                                    size: 20),
+                                icon: const Icon(
+                                  SolarLinearIcons.microphone2,
+                                  size: 20,
+                                ),
                                 color: AppColors.slate600,
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(
-                                    right: 4, bottom: 4, top: 4),
+                                  right: 4,
+                                  bottom: 4,
+                                  top: 4,
+                                ),
                                 child: Material(
                                   color: AppColors.accent,
                                   shape: const CircleBorder(),
@@ -129,8 +142,11 @@ class AiChatPage extends StatelessWidget {
                                     child: const SizedBox(
                                       width: 32,
                                       height: 32,
-                                      child: Icon(SolarLinearIcons.arrowUp,
-                                          color: Colors.white, size: 18),
+                                      child: Icon(
+                                        SolarLinearIcons.arrowUp,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -161,8 +177,9 @@ class _BubbleLeft extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.85),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.85,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -180,9 +197,14 @@ class _BubbleLeft extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 14, height: 1.4, color: AppColors.slate900)),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.4,
+            color: AppColors.slate900,
+          ),
+        ),
       ),
     );
   }
@@ -198,8 +220,9 @@ class _BubbleRight extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: Container(
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.85),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.85,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: const BoxDecoration(
           color: AppColors.accent,
@@ -209,14 +232,15 @@ class _BubbleRight extends StatelessWidget {
             bottomLeft: Radius.circular(16),
             bottomRight: Radius.circular(4),
           ),
-          boxShadow: [
-            BoxShadow(color: Color(0x1A000000), blurRadius: 4),
-          ],
+          boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 4)],
         ),
         child: Text(
           text,
-          style:
-              const TextStyle(fontSize: 14, height: 1.45, color: Colors.white),
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.45,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -231,8 +255,9 @@ class _BubbleLeftWithActions extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.85),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.85,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -245,7 +270,9 @@ class _BubbleLeftWithActions extends StatelessWidget {
           border: Border.all(color: AppColors.slate100),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04), blurRadius: 4),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+            ),
           ],
         ),
         child: Column(
@@ -254,7 +281,10 @@ class _BubbleLeftWithActions extends StatelessWidget {
             const Text(
               "Added 'buy new yoga mat' to your Tasks for this Saturday.",
               style: TextStyle(
-                  fontSize: 14, height: 1.45, color: AppColors.slate900),
+                fontSize: 14,
+                height: 1.45,
+                color: AppColors.slate900,
+              ),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -266,28 +296,34 @@ class _BubbleLeftWithActions extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.slate600,
                     side: const BorderSide(color: AppColors.slate200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('View task',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  child: const Text(
+                    'View task',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
                 ),
                 OutlinedButton(
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.slate600,
                     side: const BorderSide(color: AppColors.slate200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('View calendar',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  child: const Text(
+                    'View calendar',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ],
             ),
@@ -299,8 +335,10 @@ class _BubbleLeftWithActions extends StatelessWidget {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 foregroundColor: AppColors.accent,
               ),
-              child: const Text('Undo',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              child: const Text(
+                'Undo',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              ),
             ),
           ],
         ),

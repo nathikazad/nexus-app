@@ -6,7 +6,9 @@ void main() {
     test('counterparty name when present', () {
       expect(
         tellerDetailHeadline({
-          'details': {'counterparty': {'name': 'Vendor Inc'}},
+          'details': {
+            'counterparty': {'name': 'Vendor Inc'},
+          },
         }),
         'Vendor Inc',
       );

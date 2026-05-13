@@ -11,15 +11,11 @@ class KgqlActionRepository implements ActionRepository {
   KgqlActionRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadActionSchema,
-    required int domainId,
-  })  : _client = client,
-        _loadActionSchema = loadActionSchema,
-        _domainId = domainId;
+  }) : _client = client,
+       _loadActionSchema = loadActionSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadActionSchema;
-  final int _domainId;
-
   Map<String, dynamic> _actionFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     // Ensure nested Action self-relation even if schema cache is stale.
@@ -47,15 +43,10 @@ class KgqlActionRepository implements ActionRepository {
             'op': '>=',
             'value': fetchStart.toIso8601String(),
           },
-          {
-            'key': 'start_time',
-            'op': '<',
-            'value': end.toIso8601String(),
-          },
+          {'key': 'start_time', 'op': '<', 'value': end.toIso8601String()},
         ],
       },
       struct: struct,
-      domainId: _domainId,
     );
 
     final actions = models.map(actionFromModel).toList();
@@ -66,7 +57,11 @@ class KgqlActionRepository implements ActionRepository {
 
   @override
   Future<List<Action>> listForWeek(DateTime mondayLocal) async {
-    final weekStart = DateTime(mondayLocal.year, mondayLocal.month, mondayLocal.day);
+    final weekStart = DateTime(
+      mondayLocal.year,
+      mondayLocal.month,
+      mondayLocal.day,
+    );
     final fetchStart = weekStart.subtract(const Duration(days: 1));
     final fetchEnd = weekStart.add(const Duration(days: 8));
 
@@ -83,15 +78,10 @@ class KgqlActionRepository implements ActionRepository {
             'op': '>=',
             'value': fetchStart.toIso8601String(),
           },
-          {
-            'key': 'start_time',
-            'op': '<',
-            'value': fetchEnd.toIso8601String(),
-          },
+          {'key': 'start_time', 'op': '<', 'value': fetchEnd.toIso8601String()},
         ],
       },
       struct: struct,
-      domainId: _domainId,
     );
 
     return models.map(actionFromModel).toList();
@@ -109,7 +99,6 @@ class KgqlActionRepository implements ActionRepository {
       modelTypeName: modelTypeName,
       id: id,
       struct: struct,
-      domainId: _domainId,
     );
     return m == null ? null : actionFromModel(m);
   }
@@ -127,27 +116,23 @@ class KgqlActionRepository implements ActionRepository {
             parentActionId: parentActionId,
           )
         : setModelRequestForCreate(action, modelTypeName);
-    return setKgqlModel(_client, req, domainId: _domainId);
+    return setKgqlModel(_client, req);
   }
 
   @override
-  Future<int> update(
-    Action action, {
-    String? modelTypeNameIfChanged,
-  }) async {
+  Future<int> update(Action action, {String? modelTypeNameIfChanged}) async {
     return setKgqlModel(
       _client,
       setModelRequestForUpdate(
         action,
         modelTypeNameIfChanged: modelTypeNameIfChanged,
       ),
-      domainId: _domainId,
     );
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDelete(id), domainId: _domainId);
+    await setKgqlModel(_client, setModelRequestForDelete(id));
   }
 
   @override
@@ -160,13 +145,9 @@ class KgqlActionRepository implements ActionRepository {
       SetModelRequest(
         id: parentId,
         relations: [
-          ModelRelation(
-            modelType: kActionRelationKey,
-            link: [childId],
-          ),
+          ModelRelation(modelType: kActionRelationKey, link: [childId]),
         ],
       ),
-      domainId: _domainId,
     );
   }
 
@@ -179,14 +160,8 @@ class KgqlActionRepository implements ActionRepository {
       _client,
       SetModelRequest(
         id: parentId,
-        relations: [
-          ModelRelation(
-            id: relationId,
-            delete: true,
-          ),
-        ],
+        relations: [ModelRelation(id: relationId, delete: true)],
       ),
-      domainId: _domainId,
     );
   }
 }

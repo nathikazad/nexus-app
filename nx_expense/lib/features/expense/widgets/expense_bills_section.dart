@@ -44,7 +44,8 @@ Future<void> _showBillImageFullScreen(
   return Navigator.of(context).push<void>(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
-      builder: (ctx) => _BillFullScreenPage(imageUrl: imageUrl, headers: headers),
+      builder: (ctx) =>
+          _BillFullScreenPage(imageUrl: imageUrl, headers: headers),
     ),
   );
 }
@@ -56,7 +57,8 @@ class ExpenseBillsSection extends ConsumerStatefulWidget {
   final int expenseId;
 
   @override
-  ConsumerState<ExpenseBillsSection> createState() => _ExpenseBillsSectionState();
+  ConsumerState<ExpenseBillsSection> createState() =>
+      _ExpenseBillsSectionState();
 }
 
 class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
@@ -71,7 +73,9 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
       ref.invalidate(expenseTimelineLinksProvider(widget.expenseId));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -99,9 +103,9 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
     }
     if (uid == null || uid.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Not signed in.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Not signed in.')));
       }
       return;
     }
@@ -111,7 +115,9 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
     final lower = name.toLowerCase();
     final isPng = lower.endsWith('.png');
     final uploadName = isPng ? 'upload.png' : 'upload.jpg';
-    final mediaType = isPng ? MediaType('image', 'png') : MediaType('image', 'jpeg');
+    final mediaType = isPng
+        ? MediaType('image', 'png')
+        : MediaType('image', 'jpeg');
 
     await _run(() async {
       final client = ref.read(expenseGraphqlClientProvider);
@@ -174,7 +180,10 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
               const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal600),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.teal600,
+                ),
               )
             else
               Material(
@@ -209,13 +218,19 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
             if (base == null || base.isEmpty || uid == null || uid.isEmpty) {
               return Text(
                 'Sign in and configure backend to attach bill photos.',
-                style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.slate400,
+                ),
               );
             }
             if (bills.isEmpty) {
               return Text(
                 'No bill photos yet.',
-                style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate400),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.slate400,
+                ),
               );
             }
             return Wrap(
@@ -260,9 +275,9 @@ class _BillThumb extends StatelessWidget {
         ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
         : imageBaseUrl;
     final base = _normalizeImageBaseForCf(baseRaw);
-    final uri = Uri.parse('$base/images/file').replace(
-      queryParameters: {'name': filename},
-    );
+    final uri = Uri.parse(
+      '$base/images/file',
+    ).replace(queryParameters: {'name': filename});
     final headers = _imageGetHeaders(imageBaseUrl, userId);
 
     final url = uri.toString();
@@ -288,7 +303,11 @@ class _BillThumb extends StatelessWidget {
                   height: 64,
                   color: AppColors.slate100,
                   alignment: Alignment.center,
-                  child: Icon(Icons.broken_image_outlined, color: AppColors.slate400, size: 28),
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.slate400,
+                    size: 28,
+                  ),
                 ),
               ),
             ),
@@ -307,7 +326,11 @@ class _BillThumb extends StatelessWidget {
                 onTap: onRemove,
                 child: const Padding(
                   padding: EdgeInsets.all(2),
-                  child: Icon(Icons.close_rounded, size: 16, color: AppColors.slate500),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: AppColors.slate500,
+                  ),
                 ),
               ),
             ),
@@ -318,10 +341,7 @@ class _BillThumb extends StatelessWidget {
 }
 
 class _BillFullScreenPage extends StatelessWidget {
-  const _BillFullScreenPage({
-    required this.imageUrl,
-    required this.headers,
-  });
+  const _BillFullScreenPage({required this.imageUrl, required this.headers});
 
   final String imageUrl;
   final Map<String, String> headers;
@@ -355,7 +375,7 @@ class _BillFullScreenPage extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.9),
                       value: loadingProgress.expectedTotalBytes != null
                           ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
+                                loadingProgress.expectedTotalBytes!
                           : null,
                     ),
                   );
@@ -372,7 +392,10 @@ class _BillFullScreenPage extends StatelessWidget {
             child: Align(
               alignment: Alignment.topRight,
               child: IconButton(
-                icon: Icon(Icons.close_rounded, color: Colors.white.withValues(alpha: 0.95)),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: Colors.white.withValues(alpha: 0.95),
+                ),
                 tooltip: 'Close',
                 onPressed: () => Navigator.of(context).pop(),
               ),

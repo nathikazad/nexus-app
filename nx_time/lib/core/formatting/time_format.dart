@@ -12,11 +12,7 @@ String formatDurationHm(DateTime? start, DateTime? end) {
 }
 
 /// Time range using locale time format (e.g. "9:30 AM – 10:15 AM").
-String formatTimeRange(
-  DateFormat timeFmt,
-  DateTime? start,
-  DateTime? end,
-) {
+String formatTimeRange(DateFormat timeFmt, DateTime? start, DateTime? end) {
   if (start == null && end == null) return '—';
   if (start != null && end != null) {
     return '${timeFmt.format(start)} – ${timeFmt.format(end)}';

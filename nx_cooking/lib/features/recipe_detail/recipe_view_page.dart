@@ -74,9 +74,7 @@ class _RecipeViewBody extends ConsumerWidget {
           Expanded(
             child: CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
-                  child: _Header(detail: detail),
-                ),
+                SliverToBoxAdapter(child: _Header(detail: detail)),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 120),
                   sliver: SliverList(
@@ -239,15 +237,9 @@ class _Header extends ConsumerWidget {
           ],
         ),
       ),
-      error: (_, __) => _HeaderContent(
-        detail: detail,
-        schema: null,
-      ),
+      error: (_, __) => _HeaderContent(detail: detail, schema: null),
       data: (ModelTypeView? schema) {
-        return _HeaderContent(
-          detail: detail,
-          schema: schema,
-        );
+        return _HeaderContent(detail: detail, schema: schema);
       },
     );
   }
@@ -331,10 +323,7 @@ class _TagGroupsBySystem extends StatelessWidget {
         for (final e in order.entries) ...[
           Text(
             e.key,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: AppColors.zinc500,
-            ),
+            style: GoogleFonts.inter(fontSize: 12, color: AppColors.zinc500),
           ),
           const SizedBox(height: 6),
           Wrap(
@@ -342,11 +331,7 @@ class _TagGroupsBySystem extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final node in e.value)
-                _RecipeTagChip(
-                  systemName: e.key,
-                  node: node,
-                  schema: schema,
-                ),
+                _RecipeTagChip(systemName: e.key, node: node, schema: schema),
             ],
           ),
           const SizedBox(height: 12),
@@ -392,9 +377,7 @@ class _RecipeTagChip extends StatelessWidget {
     final decoration = BoxDecoration(
       color: AppColors.zinc100,
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: AppColors.zinc200.withValues(alpha: 0.6),
-      ),
+      border: Border.all(color: AppColors.zinc200.withValues(alpha: 0.6)),
     );
 
     if (path != null && path.length > 1) {
@@ -416,8 +399,9 @@ class _RecipeTagChip extends StatelessWidget {
       );
     }
 
-    final label =
-        path != null && path.isNotEmpty ? path.join(' \u203A ') : node;
+    final label = path != null && path.isNotEmpty
+        ? path.join(' \u203A ')
+        : node;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: decoration,
@@ -868,10 +852,7 @@ class _NotesBlock extends StatelessWidget {
 }
 
 class _FooterActions extends StatelessWidget {
-  const _FooterActions({
-    required this.onPlan,
-    required this.onCook,
-  });
+  const _FooterActions({required this.onPlan, required this.onCook});
 
   final Future<void> Function() onPlan;
   final VoidCallback onCook;

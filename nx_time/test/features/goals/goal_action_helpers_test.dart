@@ -44,42 +44,47 @@ void main() {
       endTime: null,
     );
     final cap = DateTime(2026, 4, 22, 12, 30);
-    final d = durationOf(
-      a,
-      cap: cap,
-      now: DateTime(2026, 4, 22, 20, 0),
-    );
+    final d = durationOf(a, cap: cap, now: DateTime(2026, 4, 22, 20, 0));
     expect(d, const Duration(hours: 2, minutes: 30));
   });
 
-  test('sumDurationForDay sums only actions on that calendar day (attribution)', () {
-    final mon = DateTime(2026, 4, 20);
-    final a1 = Action(
-      id: 1,
-      name: 'a1',
-      modelTypeId: 1,
-      modelTypeName: 'Sleep',
-      startTime: DateTime(2026, 4, 20, 1, 0),
-      endTime: DateTime(2026, 4, 20, 8, 0),
-    );
-    final a2 = Action(
-      id: 2,
-      name: 'a2',
-      modelTypeId: 1,
-      modelTypeName: 'Sleep',
-      startTime: DateTime(2026, 4, 21, 0, 0),
-      endTime: DateTime(2026, 4, 21, 7, 0),
-    );
-    final wa = WeekActions(
-      weekStart: mon,
-      byDay: const [],
-      all: [a1, a2],
-    );
-    final s0 = sumDurationForDay(wa, [a1, a2], 0, selectedAttribute: 'end_time');
-    expect(s0, const Duration(hours: 7));
-    final s1 = sumDurationForDay(wa, [a1, a2], 1, selectedAttribute: 'end_time');
-    expect(s1, const Duration(hours: 7));
-  });
+  test(
+    'sumDurationForDay sums only actions on that calendar day (attribution)',
+    () {
+      final mon = DateTime(2026, 4, 20);
+      final a1 = Action(
+        id: 1,
+        name: 'a1',
+        modelTypeId: 1,
+        modelTypeName: 'Sleep',
+        startTime: DateTime(2026, 4, 20, 1, 0),
+        endTime: DateTime(2026, 4, 20, 8, 0),
+      );
+      final a2 = Action(
+        id: 2,
+        name: 'a2',
+        modelTypeId: 1,
+        modelTypeName: 'Sleep',
+        startTime: DateTime(2026, 4, 21, 0, 0),
+        endTime: DateTime(2026, 4, 21, 7, 0),
+      );
+      final wa = WeekActions(weekStart: mon, byDay: const [], all: [a1, a2]);
+      final s0 = sumDurationForDay(
+        wa,
+        [a1, a2],
+        0,
+        selectedAttribute: 'end_time',
+      );
+      expect(s0, const Duration(hours: 7));
+      final s1 = sumDurationForDay(
+        wa,
+        [a1, a2],
+        1,
+        selectedAttribute: 'end_time',
+      );
+      expect(s1, const Duration(hours: 7));
+    },
+  );
 
   test('todayAttributedTime is null when the viewed week is not current', () {
     final mon = DateTime(2020, 1, 6);

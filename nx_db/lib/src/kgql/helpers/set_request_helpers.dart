@@ -33,5 +33,4 @@ SetModelRequest setKgqlUpdate({
 }
 
 /// Delete payload for `set_kgql_models`.
-SetModelRequest setKgqlDelete(int id) =>
-    SetModelRequest(id: id, delete: true);
+SetModelRequest setKgqlDelete(int id) => SetModelRequest(id: id, delete: true);

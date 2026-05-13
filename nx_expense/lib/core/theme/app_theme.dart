@@ -43,9 +43,18 @@ ThemeData buildExpenseTheme() {
   );
 
   final textTheme = GoogleFonts.interTextTheme(base.textTheme).copyWith(
-    headlineLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, letterSpacing: -0.5),
-    headlineMedium: GoogleFonts.inter(fontWeight: FontWeight.w600, letterSpacing: -0.5),
-    titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, letterSpacing: -0.3),
+    headlineLarge: GoogleFonts.inter(
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.5,
+    ),
+    headlineMedium: GoogleFonts.inter(
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.5,
+    ),
+    titleLarge: GoogleFonts.inter(
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.3,
+    ),
     titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600),
     titleSmall: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
     bodyLarge: GoogleFonts.inter(color: AppColors.slate700),

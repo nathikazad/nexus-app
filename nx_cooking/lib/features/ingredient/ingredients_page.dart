@@ -34,11 +34,7 @@ class _IngredientsPageState extends ConsumerState<IngredientsPage> {
       data: (items) {
         final filtered = q.isEmpty
             ? items
-            : items
-                .where(
-                  (e) => e.name.toLowerCase().contains(q),
-                )
-                .toList();
+            : items.where((e) => e.name.toLowerCase().contains(q)).toList();
 
         final body = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,9 +118,7 @@ class _IngredientsPageState extends ConsumerState<IngredientsPage> {
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          items.isEmpty
-                              ? 'No ingredients yet.'
-                              : 'No matches',
+                          items.isEmpty ? 'No ingredients yet.' : 'No matches',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: AppColors.zinc500,
@@ -161,10 +155,7 @@ class _IngredientsPageState extends ConsumerState<IngredientsPage> {
           ],
         );
 
-        return Scaffold(
-          backgroundColor: Colors.white,
-          body: body,
-        );
+        return Scaffold(backgroundColor: Colors.white, body: body);
       },
     );
   }

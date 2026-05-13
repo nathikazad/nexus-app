@@ -16,7 +16,8 @@ List<Action> actionsForGoal(WeekActions wa, ActionGoalWeekItem item) {
 /// [selectedAttribute] names end, otherwise start (then end).
 DateTime? attributedDay(Action a, String selectedAttribute) {
   final lower = selectedAttribute.toLowerCase();
-  if (lower == 'end_time' || (lower.contains('end') && !lower.contains('start'))) {
+  if (lower == 'end_time' ||
+      (lower.contains('end') && !lower.contains('start'))) {
     return a.endTime ?? a.startTime;
   }
   if (lower == 'start_time' || lower.contains('start')) {
@@ -65,11 +66,7 @@ Map<int, List<Action>> bucketByDay(
 }
 
 /// Elapsed length of [a]; if open-ended, uses [cap] or [now] for the end.
-Duration durationOf(
-  Action a, {
-  DateTime? cap,
-  DateTime? now,
-}) {
+Duration durationOf(Action a, {DateTime? cap, DateTime? now}) {
   final s = a.startTime;
   if (s == null) {
     return Duration.zero;
@@ -106,28 +103,17 @@ Duration sumDurationForDay(
     if (ad != d0) {
       continue;
     }
-    sum += durationOf(
-      a,
-      cap: capToday ? now : null,
-      now: now,
-    );
+    sum += durationOf(a, cap: capToday ? now : null, now: now);
   }
   return sum;
 }
 
 /// Total duration across the week (each action once).
-Duration weekTotalDuration(
-  List<Action> actions, {
-  bool capAtNow = false,
-}) {
+Duration weekTotalDuration(List<Action> actions, {bool capAtNow = false}) {
   final now = DateTime.now();
   var sum = Duration.zero;
   for (final a in actions) {
-    sum += durationOf(
-      a,
-      cap: capAtNow ? now : null,
-      now: now,
-    );
+    sum += durationOf(a, cap: capAtNow ? now : null, now: now);
   }
   return sum;
 }
@@ -264,10 +250,7 @@ int _clockMinutes(DateTime t) => t.hour * 60 + t.minute;
 
 /// Subtitle under wake hero: “N min before goal”, “N min after goal”, or
 /// `null` to show “no data” / non-comparable.
-String? wakeDeltaVsThresholdLine(
-  ActionGoalWeekItem item,
-  DateTime? wake,
-) {
+String? wakeDeltaVsThresholdLine(ActionGoalWeekItem item, DateTime? wake) {
   if (wake == null) {
     return null;
   }

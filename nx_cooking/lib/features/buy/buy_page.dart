@@ -96,11 +96,9 @@ class _BuyListBodyState extends ConsumerState<_BuyListBody> {
       m['${group.items[j].itemId}'] = _checked![g][j];
     }
     try {
-      await ref.read(cookingPlanRepositoryProvider).updateIngredientChecks(
-        group.taskId,
-        group.taskRelationId,
-        m,
-      );
+      await ref
+          .read(cookingPlanRepositoryProvider)
+          .updateIngredientChecks(group.taskId, group.taskRelationId, m);
       if (!context.mounted) {
         return;
       }
@@ -337,12 +335,8 @@ class _ItemRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: checked
-                            ? AppColors.zinc400
-                            : AppColors.zinc900,
-                        decoration: checked
-                            ? TextDecoration.lineThrough
-                            : null,
+                        color: checked ? AppColors.zinc400 : AppColors.zinc900,
+                        decoration: checked ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     if (item.preparation != null &&

@@ -1,8 +1,4 @@
-enum GoalDayState {
-  hit,
-  miss,
-  pending,
-}
+enum GoalDayState { hit, miss, pending }
 
 GoalDayState goalDayStateFromKgql(String? raw) {
   switch (raw) {
@@ -29,10 +25,7 @@ String goalDayStateToKgql(GoalDayState s) {
 }
 
 class GoalDailyState {
-  const GoalDailyState({
-    required this.date,
-    required this.state,
-  });
+  const GoalDailyState({required this.date, required this.state});
 
   final DateTime date;
   final GoalDayState state;

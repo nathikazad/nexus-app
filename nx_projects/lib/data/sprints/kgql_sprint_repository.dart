@@ -10,15 +10,11 @@ class KgqlSprintRepository implements SprintRepository {
   KgqlSprintRepository({
     required GraphQLClient client,
     required Future<ModelType> Function() loadSprintSchema,
-    required int domainId,
   }) : _client = client,
-       _loadSprintSchema = loadSprintSchema,
-       _domainId = domainId;
+       _loadSprintSchema = loadSprintSchema;
 
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadSprintSchema;
-  final int _domainId;
-
   Map<String, dynamic> _sprintStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
     final merged = Map<String, dynamic>.from(base);
@@ -34,7 +30,6 @@ class KgqlSprintRepository implements SprintRepository {
       _client,
       filter: {'model_type': kSprintModelTypeName},
       struct: struct,
-      domainId: _domainId,
     );
     return models.map(sprintFromModel).toList();
   }
@@ -48,7 +43,6 @@ class KgqlSprintRepository implements SprintRepository {
       modelTypeName: kSprintModelTypeName,
       id: id,
       struct: struct,
-      domainId: _domainId,
     );
     return m == null ? null : sprintFromModel(m);
   }
@@ -58,7 +52,6 @@ class KgqlSprintRepository implements SprintRepository {
     final id = await setKgqlModel(
       _client,
       setModelRequestForCreateSprint(sprint),
-      domainId: _domainId,
     );
     final created = await getById(id);
     if (created == null) {
@@ -69,10 +62,6 @@ class KgqlSprintRepository implements SprintRepository {
 
   @override
   Future<void> update(Sprint sprint) async {
-    await setKgqlModel(
-      _client,
-      setModelRequestForUpdateSprint(sprint),
-      domainId: _domainId,
-    );
+    await setKgqlModel(_client, setModelRequestForUpdateSprint(sprint));
   }
 }

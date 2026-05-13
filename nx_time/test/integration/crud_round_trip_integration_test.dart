@@ -10,9 +10,7 @@ void main() {
   test(
     'Action CRUD via repository',
     () async {
-      final container = ProviderContainer(
-        overrides: timeIntegrationOverrides,
-      );
+      final container = ProviderContainer(overrides: timeIntegrationOverrides);
       addTearDown(container.dispose);
 
       await container.read(authProvider.future);

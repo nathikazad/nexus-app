@@ -7,19 +7,13 @@ abstract class ProjectRepository {
   Future<Project?> getById(int id);
 
   /// Creates a project; [parentProjectId] links via `has_subproject`.
-  Future<int> create(
-    Project project, {
-    int? parentProjectId,
-  });
+  Future<int> create(Project project, {int? parentProjectId});
 
   Future<int> update(Project project);
 
   Future<void> delete(int id);
 
-  Future<int> linkChildProject({
-    required int parentId,
-    required int childId,
-  });
+  Future<int> linkChildProject({required int parentId, required int childId});
 
   Future<void> unlinkChildProject({
     required int parentId,

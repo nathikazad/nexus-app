@@ -13,12 +13,8 @@ import '../../_support/mock_graphql_client.dart';
 class _AuthLoggedIn extends AuthController {
   _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
   @override
-  Future<User?> build() async => User(
-        userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
-        preset: BackendPreset.localhost,
-      );
+  Future<User?> build() async =>
+      User(userId: '1', preset: BackendPreset.localhost);
 }
 
 void main() {
@@ -26,22 +22,25 @@ void main() {
 
   test('linkChildAction sends set_kgql_models with Action link', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 99},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 99},
+        },
+      }),
+    );
 
     final repo = KgqlActionRepository(
       client: mock,
       loadActionSchema: () async => throw UnsupportedError('not used'),
-      domainId: 1,
     );
 
     final id = await repo.linkChildAction(parentId: 10, childId: 20);
     expect(id, 99);
 
-    final captured = verify(() => mock.mutate(captureAny())).captured.single as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 10);
@@ -53,21 +52,24 @@ void main() {
 
   test('unlinkChildAction sends relation delete by id', () async {
     final mock = MockGraphQLClient();
-    when(() => mock.mutate(any())).thenAnswer((_) async => okMutationResult({
-          'setKgqlModels': {
-            'json': {'id': 10},
-          },
-        }));
+    when(() => mock.mutate(any())).thenAnswer(
+      (_) async => okMutationResult({
+        'setKgqlModels': {
+          'json': {'id': 10},
+        },
+      }),
+    );
 
     final repo = KgqlActionRepository(
       client: mock,
       loadActionSchema: () async => throw UnsupportedError('not used'),
-      domainId: 1,
     );
 
     await repo.unlinkChildAction(parentId: 10, relationId: 777);
 
-    final captured = verify(() => mock.mutate(captureAny())).captured.single as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 10);

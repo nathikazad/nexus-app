@@ -62,7 +62,8 @@ void main() {
     });
 
     test('PX10.4 addMessageToTranscript mutation shape', () {
-      expect(addMessageToTranscriptMutation, contains('addMessageToTranscript'));
+      expect(
+          addMessageToTranscriptMutation, contains('addMessageToTranscript'));
       expect(addMessageToTranscriptMutation, contains(r'$input'));
       expect(
         addMessageToTranscriptMutation,
@@ -71,7 +72,8 @@ void main() {
     });
 
     test('transcriptMessageAddedSubscription shape', () {
-      expect(transcriptMessageAddedSubscription, contains('transcriptMessageAdded'));
+      expect(transcriptMessageAddedSubscription,
+          contains('transcriptMessageAdded'));
       expect(transcriptMessageAddedSubscription, contains(r'$transcriptId'));
     });
   });

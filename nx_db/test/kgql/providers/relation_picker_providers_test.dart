@@ -17,8 +17,6 @@ class _AuthLoggedIn extends AuthController {
   @override
   Future<User?> build() async => User(
         userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
         preset: BackendPreset.localhost,
       );
 }
@@ -26,7 +24,9 @@ class _AuthLoggedIn extends AuthController {
 void main() {
   setUpAll(registerGraphqlFallbacks);
 
-  test('relatedModelsByTypeNameProvider uses model_type name filter + picker struct', () async {
+  test(
+      'relatedModelsByTypeNameProvider uses model_type name filter + picker struct',
+      () async {
     final mock = MockGraphQLClient();
     QueryOptions? captured;
     when(() => mock.query(any())).thenAnswer((inv) async {
@@ -47,13 +47,12 @@ void main() {
     addTearDown(container.dispose);
     await container.read(authProvider.future);
 
-    await container.read(
-      relatedModelsByTypeNameProvider((modelTypeName: 'Expense', domainId: 1)).future,
-    );
+    await container.read(relatedModelsByTypeNameProvider('Expense').future);
 
     expect(captured, isNotNull);
-    expect(captured!.variables['filter'], containsPair('model_type', 'Expense'));
+    expect(
+        captured!.variables['filter'], containsPair('model_type', 'Expense'));
     expect(captured!.variables['struct'], kgqlRelationPickerModelStruct);
-    expect(captured!.variables['domainId'], 1);
+    expect(captured!.variables.containsKey('domainId'), isFalse);
   });
 }

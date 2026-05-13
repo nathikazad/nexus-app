@@ -9,6 +9,5 @@ class KgqlActionSchemaRepository {
 
   final Ref _ref;
 
-  Future<ModelType> getActionRoot() =>
-      _ref.read(actionSchemaProvider.future);
+  Future<ModelType> getActionRoot() => _ref.read(actionSchemaProvider.future);
 }

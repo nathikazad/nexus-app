@@ -18,14 +18,15 @@ Person personFromModel(Model m) {
 /// Raw `preference` attribute from a Person [Model] as a mutable map.
 Map<String, dynamic> parsePersonPreferenceMap(Model? person) {
   if (person == null) return {};
-  final raw = _attr(person, kPersonAttrPreference) ??
-      _attr(person, 'Preference');
+  final raw =
+      _attr(person, kPersonAttrPreference) ?? _attr(person, 'Preference');
   if (raw == null) return {};
   if (raw is Map<String, dynamic>) {
     return Map<String, dynamic>.from(raw);
   }
   if (raw is Map) {
-    return Map<String, dynamic>.from(raw.map((k, v) => MapEntry(k.toString(), v)));
+    return Map<String, dynamic>.from(
+        raw.map((k, v) => MapEntry(k.toString(), v)));
   }
   if (raw is String) {
     try {

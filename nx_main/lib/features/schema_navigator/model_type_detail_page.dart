@@ -15,14 +15,11 @@ import 'package:nexus_voice_assistant/core/widgets/loading_indicator.dart';
 /// Formats attribute keys for display (e.g. `first_name` → `First Name`).
 String _formatAttributeKey(String? key) {
   if (key == null || key.isEmpty) return '—';
-  return key
-      .split('_')
-      .map((word) {
-        if (word.isEmpty) return word;
-        final lower = word.toLowerCase();
-        return '${lower[0].toUpperCase()}${lower.length > 1 ? lower.substring(1) : ''}';
-      })
-      .join(' ');
+  return key.split('_').map((word) {
+    if (word.isEmpty) return word;
+    final lower = word.toLowerCase();
+    return '${lower[0].toUpperCase()}${lower.length > 1 ? lower.substring(1) : ''}';
+  }).join(' ');
 }
 
 /// Read-only inspector for a model type (see reference/navigator/model-type-detail.html).
@@ -113,8 +110,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'Delete',
-            onPressed: () =>
-                _confirmDeleteModelType(context, ref, modelType),
+            onPressed: () => _confirmDeleteModelType(context, ref, modelType),
           ),
         ],
       ),
@@ -139,7 +135,8 @@ class ModelTypeDetailPage extends ConsumerWidget {
               const SizedBox(height: 20),
             ],
             _metaRow(context, modelType),
-            if (modelType.description != null && modelType.description!.trim().isNotEmpty) ...[
+            if (modelType.description != null &&
+                modelType.description!.trim().isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
                 modelType.description!,
@@ -156,20 +153,24 @@ class ModelTypeDetailPage extends ConsumerWidget {
               const SizedBox(height: 8),
               ...modelType.traits!.map((t) => _traitTile(context, t)),
             ],
-            if (modelType.attributes != null && modelType.attributes!.isNotEmpty) ...[
+            if (modelType.attributes != null &&
+                modelType.attributes!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _sectionTitle('Attributes'),
               const SizedBox(height: 8),
               _attributeCard(modelType.attributes!, muted: false),
             ],
             _inheritedSection(context, ref, modelType),
-            if (modelType.relations != null && modelType.relations!.isNotEmpty) ...[
+            if (modelType.relations != null &&
+                modelType.relations!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _sectionTitle('Relations'),
               const SizedBox(height: 8),
-              ...modelType.relations!.map((r) => _relationCard(context, ref, r)),
+              ...modelType.relations!
+                  .map((r) => _relationCard(context, ref, r)),
             ],
-            if (modelType.tagSystems != null && modelType.tagSystems!.isNotEmpty) ...[
+            if (modelType.tagSystems != null &&
+                modelType.tagSystems!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _sectionTitle('Tag systems'),
               const SizedBox(height: 8),
@@ -214,7 +215,8 @@ class ModelTypeDetailPage extends ConsumerWidget {
                   alignment: PlaceholderAlignment.baseline,
                   baseline: TextBaseline.alphabetic,
                   child: GestureDetector(
-                    onTap: () => context.push('/model-type/${modelType.parent!.id}'),
+                    onTap: () =>
+                        context.push('/model-type/${modelType.parent!.id}'),
                     child: Text(
                       modelType.parent!.name,
                       style: GoogleFonts.inter(
@@ -313,7 +315,8 @@ class ModelTypeDetailPage extends ConsumerWidget {
                   ),
                   if (attrs[i].valueType != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
                         color: AppColors.gray50,
@@ -321,7 +324,8 @@ class ModelTypeDetailPage extends ConsumerWidget {
                       ),
                       child: Text(
                         attrs[i].valueType!,
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.gray400),
+                        style: GoogleFonts.inter(
+                            fontSize: 11, color: AppColors.gray400),
                       ),
                     ),
                   if (attrs[i].required)
@@ -330,7 +334,9 @@ class ModelTypeDetailPage extends ConsumerWidget {
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: muted ? AppColors.orange600.withValues(alpha: 0.85) : AppColors.orange600,
+                        color: muted
+                            ? AppColors.orange600.withValues(alpha: 0.85)
+                            : AppColors.orange600,
                       ),
                     ),
                 ],
@@ -416,7 +422,8 @@ class ModelTypeDetailPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: canNavigate ? () => context.push('/model-type/$targetId') : null,
+          onTap:
+              canNavigate ? () => context.push('/model-type/$targetId') : null,
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -442,29 +449,34 @@ class ModelTypeDetailPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Icon(Icons.arrow_forward, size: 16, color: AppColors.gray400),
+                          Icon(Icons.arrow_forward,
+                              size: 16, color: AppColors.gray400),
                         ],
                       ),
                     ),
                     if (r.multiplicity != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.gray50,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           r.multiplicity!,
-                          style: GoogleFonts.inter(fontSize: 11, color: AppColors.gray400),
+                          style: GoogleFonts.inter(
+                              fontSize: 11, color: AppColors.gray400),
                         ),
                       ),
                   ],
                 ),
-                if (r.description != null && r.description!.trim().isNotEmpty) ...[
+                if (r.description != null &&
+                    r.description!.trim().isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     r.description!,
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.gray500),
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppColors.gray500),
                   ),
                 ],
                 if (r.relationAttributeDefinitions != null &&
@@ -487,14 +499,16 @@ class ModelTypeDetailPage extends ConsumerWidget {
                         runSpacing: 6,
                         children: r.relationAttributeDefinitions!.map((a) {
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.gray50,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '${_formatAttributeKey(a.key)} · ${a.valueType}',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.gray500),
+                              style: GoogleFonts.inter(
+                                  fontSize: 11, color: AppColors.gray500),
                             ),
                           );
                         }).toList(),
@@ -597,7 +611,9 @@ Future<void> _confirmDeleteModelType(
   );
   if (ok != true || !context.mounted) return;
   try {
-    await ref.read(modelTypeWriteRepositoryProvider).deleteModelType(modelType.id);
+    await ref
+        .read(modelTypeWriteRepositoryProvider)
+        .deleteModelType(modelType.id);
     ref.invalidate(modelTypesProvider);
     ref.invalidate(modelTypeProvider(modelType.id));
     if (context.mounted) {

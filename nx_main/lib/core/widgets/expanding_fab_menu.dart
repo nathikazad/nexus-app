@@ -14,31 +14,32 @@ class ExpandingFabMenu extends StatefulWidget {
   State<ExpandingFabMenu> createState() => _ExpandingFabMenuState();
 }
 
-class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProviderStateMixin {
+class _ExpandingFabMenuState extends State<ExpandingFabMenu>
+    with TickerProviderStateMixin {
   // Animation controllers for FAB menu
   late AnimationController _fabAnimationController;
   late AnimationController _spiralAnimationController;
   late Animation<double> _rotationAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   bool _isFabExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Controller for rotation animation (swivel) - same duration as spiral
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-    
+
     // Controller for spiral animation
     _spiralAnimationController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-    
+
     // Rotation animation: 0 to 1 full turn (360 degrees)
     _rotationAnimation = Tween<double>(
       begin: 0.0,
@@ -47,7 +48,7 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
       parent: _fabAnimationController,
       curve: Curves.easeInOut,
     ));
-    
+
     // Scale animation for spiral effect
     _scaleAnimation = Tween<double>(
       begin: 0.0,
@@ -81,7 +82,8 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_fabAnimationController, _spiralAnimationController]),
+      animation: Listenable.merge(
+          [_fabAnimationController, _spiralAnimationController]),
       builder: (context, child) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -101,7 +103,8 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
                       Opacity(
                         opacity: _spiralAnimationController.value,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(20),
@@ -123,7 +126,9 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
                       Transform.scale(
                         scale: _scaleAnimation.value,
                         child: Transform.rotate(
-                          angle: _spiralAnimationController.value * 2 * 3.14159, // Full rotation
+                          angle: _spiralAnimationController.value *
+                              2 *
+                              3.14159, // Full rotation
                           child: FloatingActionButton(
                             heroTag: "model-type-fab",
                             mini: true,
@@ -153,7 +158,8 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
                       Opacity(
                         opacity: _spiralAnimationController.value,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(20),
@@ -175,7 +181,8 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
                       Transform.scale(
                         scale: _scaleAnimation.value,
                         child: Transform.rotate(
-                          angle: _spiralAnimationController.value * 3.14159, // Full rotation (same as Model Type)
+                          angle: _spiralAnimationController.value *
+                              3.14159, // Full rotation (same as Model Type)
                           child: FloatingActionButton(
                             heroTag: "model-fab",
                             mini: true,
@@ -207,4 +214,3 @@ class _ExpandingFabMenuState extends State<ExpandingFabMenu> with TickerProvider
     );
   }
 }
-

@@ -11,8 +11,7 @@ class VoiceAssistantPage extends ConsumerStatefulWidget {
   const VoiceAssistantPage({super.key, this.onSwitchToHardwareTab});
 
   @override
-  ConsumerState<VoiceAssistantPage> createState() =>
-      _VoiceAssistantPageState();
+  ConsumerState<VoiceAssistantPage> createState() => _VoiceAssistantPageState();
 }
 
 class _VoiceAssistantPageState extends ConsumerState<VoiceAssistantPage> {
@@ -26,7 +25,9 @@ class _VoiceAssistantPageState extends ConsumerState<VoiceAssistantPage> {
     if (!_hasRefreshedOnMount) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ref.read(voiceAssistantViewModelProvider.notifier).refreshTranscript();
+          ref
+              .read(voiceAssistantViewModelProvider.notifier)
+              .refreshTranscript();
           _hasRefreshedOnMount = true;
         }
       });
@@ -74,7 +75,9 @@ class _VoiceAssistantPageState extends ConsumerState<VoiceAssistantPage> {
           ),
           TextButton(
             onPressed: () {
-              ref.read(voiceAssistantViewModelProvider.notifier).refreshTranscript();
+              ref
+                  .read(voiceAssistantViewModelProvider.notifier)
+                  .refreshTranscript();
               Navigator.of(context).pop();
             },
             child: const Text('Refresh'),

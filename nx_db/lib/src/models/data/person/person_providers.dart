@@ -7,7 +7,7 @@ import '../../domain/person/person_repository.dart';
 import 'kgql_person_repository.dart';
 
 /// Cached [ModelType] for `Person` (from [getKgqlModelType] / schema tree).
-final personSchemaProvider = kgqlModelTypeForPersonalDomain('Person');
+final personSchemaProvider = kgqlModelTypeByNameProvider('Person');
 
 /// Resolves only when auth has loaded a non-null user.
 final authenticatedUserProvider = FutureProvider<User>((ref) async {
@@ -21,14 +21,9 @@ final authenticatedUserProvider = FutureProvider<User>((ref) async {
 /// KGQL [Person] fetch and `preference` updates.
 final personRepositoryProvider = Provider<PersonRepository>(
   (ref) {
-    final personal = ref.watch(personalDomainIdProvider);
-    if (personal == null) {
-      throw StateError('personalDomainId required (login)');
-    }
     return KgqlPersonRepository(
       client: ref.watch(graphqlClientProvider),
       loadPersonSchema: () => ref.read(personSchemaProvider.future),
-      domainId: personal,
     );
   },
 );

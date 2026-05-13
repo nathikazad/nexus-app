@@ -69,10 +69,7 @@ void main() {
         final snapshot = container.read(todaySnapshotProvider).requireValue;
         final day = kNxTimeDemoDay;
         expect(snapshot.titleLine, 'Actions');
-        expect(
-          snapshot.dayDateLabel,
-          DateFormat('EEE, MMM d').format(day),
-        );
+        expect(snapshot.dayDateLabel, DateFormat('EEE, MMM d').format(day));
       },
       tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,
@@ -116,7 +113,6 @@ void main() {
 
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
-        final domainId = container.read(personalDomainIdProvider)!;
         final schema = await container.read(actionSchemaProvider.future);
         final struct = buildKgqlStructFromSchema(schema);
 
@@ -124,7 +120,6 @@ void main() {
           client,
           filter: _startTimeDayFilter(kActionModelTypeName, kNxTimeDemoDay),
           struct: struct,
-          domainId: domainId,
         );
         expect(models.length, greaterThanOrEqualTo(6));
         final names = models.map((m) => m.name).join(' ');
@@ -148,15 +143,13 @@ void main() {
 
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
-        final domainId = container.read(personalDomainIdProvider)!;
-        final meetType = await fetchKgqlModelTypeByName(client, 'Meet', domainId: domainId);
+        final meetType = await fetchKgqlModelTypeByName(client, 'Meet');
         final struct = buildKgqlStructFromSchema(meetType);
 
         final meets = await fetchKgqlModels(
           client,
           filter: _startTimeDayFilter('Meet', kNxTimeDemoDay),
           struct: struct,
-          domainId: domainId,
         );
         expect(meets.length, greaterThanOrEqualTo(2));
       },
@@ -174,15 +167,13 @@ void main() {
 
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
-        final domainId = container.read(personalDomainIdProvider)!;
-        final meetType = await fetchKgqlModelTypeByName(client, 'Meet', domainId: domainId);
+        final meetType = await fetchKgqlModelTypeByName(client, 'Meet');
         final struct = buildKgqlStructFromSchema(meetType);
 
         final meets = await fetchKgqlModels(
           client,
           filter: _startTimeDayFilter('Meet', kNxTimeDemoDay),
           struct: struct,
-          domainId: domainId,
         );
         expect(meets, isNotEmpty);
         final id = meets.first.id;
@@ -192,7 +183,6 @@ void main() {
           modelTypeName: 'Meet',
           id: id,
           struct: struct,
-          domainId: domainId,
         );
         expect(one, isNotNull);
         expect(one!.id, id);
@@ -211,8 +201,7 @@ void main() {
 
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
-        final domainId = container.read(personalDomainIdProvider)!;
-        final sleep = await fetchKgqlModelTypeByName(client, 'Sleep', domainId: domainId);
+        final sleep = await fetchKgqlModelTypeByName(client, 'Sleep');
         final keys = {
           for (final a in sleep.attributes ?? const <AttributeDefinition>[])
             if (a.key != null && a.key!.isNotEmpty) a.key!,
@@ -233,18 +222,14 @@ void main() {
 
         await container.read(authProvider.future);
         final client = container.read(graphqlClientProvider);
-        final domainId = container.read(personalDomainIdProvider)!;
-        final tasks = await fetchKgqlModelsForRelationPicker(
-          client,
-          'Task',
-          domainId: domainId,
-        );
+        final tasks = await fetchKgqlModelsForRelationPicker(client, 'Task');
         expect(tasks, isNotEmpty);
         final blob = tasks.map((t) => t.name).join(' ');
         expect(
           blob,
           anyOf(contains('Refactor'), contains('calendar')),
-          reason: 'seed_nx_time_calendar_demo adds Refactor token validation / Ship calendar v1',
+          reason:
+              'seed_nx_time_calendar_demo adds Refactor token validation / Ship calendar v1',
         );
       },
       tags: ['integration'],

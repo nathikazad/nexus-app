@@ -27,8 +27,9 @@ class WeekPage extends ConsumerWidget {
         ),
       ),
       data: (days) {
-        final withMeals =
-            days.where((d) => d.meal != null).toList(growable: false);
+        final withMeals = days
+            .where((d) => d.meal != null)
+            .toList(growable: false);
         final bottomPad = CookingLayout.bottomNavExtra + 88;
         if (withMeals.isEmpty) {
           return ListView(

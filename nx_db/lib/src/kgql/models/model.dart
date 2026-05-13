@@ -56,12 +56,15 @@ class Model {
     if (json['attributes'] != null) {
       if (json['attributes'] is List) {
         final attributesJson = json['attributes'] as List;
-        attributesList = attributesJson.map((attrJson) {
-          if (attrJson is Map<String, dynamic>) {
-            return ModelAttribute.fromJson(attrJson);
-          }
-          return null;
-        }).whereType<ModelAttribute>().toList();
+        attributesList = attributesJson
+            .map((attrJson) {
+              if (attrJson is Map<String, dynamic>) {
+                return ModelAttribute.fromJson(attrJson);
+              }
+              return null;
+            })
+            .whereType<ModelAttribute>()
+            .toList();
 
         final attrMap = <String, dynamic>{};
         for (var attr in attributesList) {
@@ -109,12 +112,15 @@ class Model {
     final typeSpecificRelations = <String, List<Model>>{};
     json.forEach((key, value) {
       if (key[0] == key[0].toUpperCase() && value is List) {
-        final models = value.map((item) {
-          if (item is Map<String, dynamic>) {
-            return Model.fromJson(item);
-          }
-          return null;
-        }).whereType<Model>().toList();
+        final models = value
+            .map((item) {
+              if (item is Map<String, dynamic>) {
+                return Model.fromJson(item);
+              }
+              return null;
+            })
+            .whereType<Model>()
+            .toList();
         if (models.isNotEmpty) {
           typeSpecificRelations[key] = models;
         }
@@ -126,12 +132,15 @@ class Model {
 
     final relationsJson = json['relations'];
     if (relationsJson != null && relationsJson is List) {
-      relationsList = relationsJson.map((relJson) {
-        if (relJson is Map<String, dynamic>) {
-          return Relation.fromJson(relJson);
-        }
-        return null;
-      }).whereType<Relation>().toList();
+      relationsList = relationsJson
+          .map((relJson) {
+            if (relJson is Map<String, dynamic>) {
+              return Relation.fromJson(relJson);
+            }
+            return null;
+          })
+          .whereType<Relation>()
+          .toList();
     }
 
     Map<String, List<String>>? tags;
@@ -175,9 +184,11 @@ class Model {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       if (attributes != null) 'attributes': attributes,
-      if (attributesList != null) 'attributes': attributesList!.map((a) => a.toJson()).toList(),
+      if (attributesList != null)
+        'attributes': attributesList!.map((a) => a.toJson()).toList(),
       if (relations != null) ...relations!,
-      if (relationsList != null) 'relations': relationsList!.map((r) => r.toJson()).toList(),
+      if (relationsList != null)
+        'relations': relationsList!.map((r) => r.toJson()).toList(),
       if (tags != null) 'tags': tags,
       if (modelType != null) 'model_type': modelType!.toJson(),
     };

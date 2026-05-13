@@ -4,7 +4,6 @@ import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_expense/domain/expense/model_names.dart';
 
-final transferModelTypeKgqlProvider =
-    FutureProvider<ModelType>((ref) async {
-  return ref.watch(kgqlModelTypeForHomeDomain(kTransferModelTypeName).future);
+final transferModelTypeKgqlProvider = FutureProvider<ModelType>((ref) async {
+  return ref.watch(kgqlModelTypeByNameProvider(kTransferModelTypeName).future);
 });

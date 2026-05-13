@@ -76,7 +76,9 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
     );
 
     if (result == true && mounted) {
-      await ref.read(hardwareViewModelProvider.notifier).onReturnFromDeviceSelection();
+      await ref
+          .read(hardwareViewModelProvider.notifier)
+          .onReturnFromDeviceSelection();
     }
   }
 
@@ -102,7 +104,9 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
       ),
     );
     if (ok != true || !mounted) return;
-    await ref.read(hardwareViewModelProvider.notifier).forgetPairedAfterConfirm();
+    await ref
+        .read(hardwareViewModelProvider.notifier)
+        .forgetPairedAfterConfirm();
   }
 
   void _showDeviceActionsSheet() {
@@ -230,15 +234,15 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
     ref.listen(hardwareViewModelProvider, (prev, next) {
       final msg = next.snackbarMessage;
       if (msg != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
         n.clearSnackbar();
       }
     });
 
     final hasPairedDevice =
         vm.pairedRemoteId != null && vm.pairedRemoteId!.isNotEmpty;
-    final displayName =
-        vm.deviceName ?? hw.deviceName ?? 'Not connected';
+    final displayName = vm.deviceName ?? hw.deviceName ?? 'Not connected';
 
     String rtcSubtitle = '—';
     if (vm.isConnected && vm.rtcTimeDisplay != null) {
@@ -279,7 +283,8 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
                       child: const SizedBox(
                         width: 40,
                         height: 40,
-                        child: Icon(Icons.menu, color: AppColors.gray600, size: 24),
+                        child: Icon(Icons.menu,
+                            color: AppColors.gray600, size: 24),
                       ),
                     ),
                   ),
@@ -288,272 +293,279 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
             ),
             body: LayoutBuilder(
               builder: (context, constraints) {
-          if (vm.isConnected) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                RefLayout.p4,
-                RefLayout.p4,
-                RefLayout.p4,
-                96,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _DeviceCard(
-                    displayName: displayName,
-                    pairedOffline: false,
-                    isRenaming: vm.isSettingDeviceName,
-                    onCardTap: _onDeviceCardTap,
-                    onVibrate: vm.isConnected && !vm.isPulsingHaptic
-                        ? () {
-                            unawaited(n.pulseHaptic());
-                          }
-                        : null,
-                    pulseBusy: vm.isPulsingHaptic,
-                  ),
-                  const SizedBox(height: RefLayout.gap4),
-                  IntrinsicHeight(
-                    child: Row(
+                if (vm.isConnected) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      RefLayout.p4,
+                      RefLayout.p4,
+                      RefLayout.p4,
+                      96,
+                    ),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: _MetricTile(
-                            label: 'Battery',
-                            trailingIcon:
-                                (vm.isConnected && vm.isCharging == true)
-                                    ? Icon(
-                                        Icons.bolt_rounded,
-                                        size: 18,
-                                        color: AppColors.green500,
-                                      )
-                                    : Icon(
-                                        Icons.bolt_rounded,
-                                        size: 18,
-                                        color: AppColors.gray400,
-                                      ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  vm.isConnected && vm.batteryPercentage != null
-                                      ? '${vm.batteryPercentage}'
-                                      : '—',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: -0.5,
-                                    color: vm.isConnected &&
-                                            vm.batteryPercentage != null
-                                        ? AppColors.gray900
-                                        : AppColors.gray400,
-                                  ),
-                                ),
-                                Text(
-                                  '%',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    color: AppColors.gray500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        _DeviceCard(
+                          displayName: displayName,
+                          pairedOffline: false,
+                          isRenaming: vm.isSettingDeviceName,
+                          onCardTap: _onDeviceCardTap,
+                          onVibrate: vm.isConnected && !vm.isPulsingHaptic
+                              ? () {
+                                  unawaited(n.pulseHaptic());
+                                }
+                              : null,
+                          pulseBusy: vm.isPulsingHaptic,
                         ),
-                        const SizedBox(width: RefLayout.gap4),
-                        Expanded(
-                          child: _MetricTile(
-                            label: 'Voltage',
-                            trailingIcon: Icon(
-                              Icons.show_chart_rounded,
-                              size: 18,
-                              color: AppColors.gray400,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  vm.isConnected && vm.voltage != null
-                                      ? vm.voltage!.toStringAsFixed(2)
-                                      : '—',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: -0.5,
-                                    color: vm.isConnected && vm.voltage != null
-                                        ? AppColors.gray900
-                                        : AppColors.gray400,
-                                  ),
-                                ),
-                                Text(
-                                  ' v',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    color: AppColors.gray500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: RefLayout.gap4),
-                  Container(
-                    padding: const EdgeInsets.all(RefLayout.p4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                      border: Border.all(color: AppColors.gray100),
-                      boxShadow: refCardShadow,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(height: RefLayout.gap4),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text(
-                                'Device Clock',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: AppColors.gray500,
+                              Expanded(
+                                child: _MetricTile(
+                                  label: 'Battery',
+                                  trailingIcon:
+                                      (vm.isConnected && vm.isCharging == true)
+                                          ? Icon(
+                                              Icons.bolt_rounded,
+                                              size: 18,
+                                              color: AppColors.green500,
+                                            )
+                                          : Icon(
+                                              Icons.bolt_rounded,
+                                              size: 18,
+                                              color: AppColors.gray400,
+                                            ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        vm.isConnected &&
+                                                vm.batteryPercentage != null
+                                            ? '${vm.batteryPercentage}'
+                                            : '—',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: -0.5,
+                                          color: vm.isConnected &&
+                                                  vm.batteryPercentage != null
+                                              ? AppColors.gray900
+                                              : AppColors.gray400,
+                                        ),
+                                      ),
+                                      Text(
+                                        '%',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          color: AppColors.gray500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                rtcSubtitle,
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.gray900,
+                              const SizedBox(width: RefLayout.gap4),
+                              Expanded(
+                                child: _MetricTile(
+                                  label: 'Voltage',
+                                  trailingIcon: Icon(
+                                    Icons.show_chart_rounded,
+                                    size: 18,
+                                    color: AppColors.gray400,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        vm.isConnected && vm.voltage != null
+                                            ? vm.voltage!.toStringAsFixed(2)
+                                            : '—',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: -0.5,
+                                          color: vm.isConnected &&
+                                                  vm.voltage != null
+                                              ? AppColors.gray900
+                                              : AppColors.gray400,
+                                        ),
+                                      ),
+                                      Text(
+                                        ' v',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          color: AppColors.gray500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Material(
-                          color: AppColors.orange50,
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: vm.isConnected && !vm.isSettingRTC
-                                ? () {
-                                    unawaited(n.setRtcTimeNow());
-                                  }
-                                : null,
-                            child: SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: vm.isSettingRTC
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(10),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                        const SizedBox(height: RefLayout.gap4),
+                        Container(
+                          padding: const EdgeInsets.all(RefLayout.p4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.circular(RefLayout.rounded2xl),
+                            border: Border.all(color: AppColors.gray100),
+                            boxShadow: refCardShadow,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Device Clock',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: AppColors.gray500,
                                       ),
-                                    )
-                                  : Icon(
-                                      Icons.refresh_rounded,
-                                      color: vm.isConnected
-                                          ? AppColors.orange600
-                                          : AppColors.gray400,
                                     ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      rtcSubtitle,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.gray900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Material(
+                                color: AppColors.orange50,
+                                borderRadius: BorderRadius.circular(12),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: vm.isConnected && !vm.isSettingRTC
+                                      ? () {
+                                          unawaited(n.setRtcTimeNow());
+                                        }
+                                      : null,
+                                  child: SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: vm.isSettingRTC
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(10),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.refresh_rounded,
+                                            color: vm.isConnected
+                                                ? AppColors.orange600
+                                                : AppColors.gray400,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: RefLayout.gap4),
+                        CameraSection(
+                          isConnected: vm.isConnected,
+                          captureInProgress: vm.isTriggeringCamera,
+                          onCapture: () {
+                            unawaited(n.triggerCamera());
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                if (hasPairedDevice) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      RefLayout.p4,
+                      RefLayout.p4,
+                      RefLayout.p4,
+                      96,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _DeviceCard(
+                          displayName: n.rememberedDisplayName(),
+                          pairedOffline: true,
+                          isRenaming: false,
+                          onVibrate: null,
+                          pulseBusy: false,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: n.reconnectPaired,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.orange600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                            shadowColor:
+                                AppColors.orange600.withValues(alpha: 0.35),
+                          ),
+                          icon: const Icon(Icons.bluetooth_rounded, size: 22),
+                          label: Text(
+                            'Connect',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () => unawaited(_forgetPairedDevice()),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.gray600,
+                            side: const BorderSide(color: AppColors.gray200),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Forget Device',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: RefLayout.gap4),
-                  CameraSection(
-                    isConnected: vm.isConnected,
-                    captureInProgress: vm.isTriggeringCamera,
-                    onCapture: () {
-                      unawaited(n.triggerCamera());
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-          if (hasPairedDevice) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                RefLayout.p4,
-                RefLayout.p4,
-                RefLayout.p4,
-                96,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _DeviceCard(
-                    displayName: n.rememberedDisplayName(),
-                    pairedOffline: true,
-                    isRenaming: false,
-                    onVibrate: null,
-                    pulseBusy: false,
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: n.reconnectPaired,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.orange600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                      shadowColor:
-                          AppColors.orange600.withValues(alpha: 0.35),
-                    ),
-                    icon: const Icon(Icons.bluetooth_rounded, size: 22),
-                    label: Text(
-                      'Connect',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                  );
+                }
+                final minH = math.max(0.0, constraints.maxHeight - 120);
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                      RefLayout.p4, 0, RefLayout.p4, 96),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: minH),
+                    child: Center(
+                      child: _NoHardwareEmptyState(
+                        onFindDevice: () =>
+                            unawaited(_navigateToDeviceSelection()),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () => unawaited(_forgetPairedDevice()),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.gray600,
-                      side: const BorderSide(color: AppColors.gray200),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Forget Device',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          final minH = math.max(0.0, constraints.maxHeight - 120);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(RefLayout.p4, 0, RefLayout.p4, 96),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: minH),
-              child: Center(
-                child: _NoHardwareEmptyState(
-                  onFindDevice: () => unawaited(_navigateToDeviceSelection()),
-                ),
-              ),
-            ),
-          );
+                );
               },
             ),
           ),
@@ -678,7 +690,6 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
       ),
     );
   }
-  
 }
 
 class _DeviceCard extends StatelessWidget {
@@ -1028,4 +1039,3 @@ class _DownTrianglePainter extends CustomPainter {
     return oldDelegate.offline != offline;
   }
 }
-

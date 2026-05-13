@@ -46,7 +46,9 @@ void main() {
         'name': 'X',
         'model_type_id': 9,
         'cost': 12.5,
-        'tags': {'Category': ['Coffee']},
+        'tags': {
+          'Category': ['Coffee']
+        },
       });
       expect(m.id, 1);
       expect(m.tags?['Category'], ['Coffee']);

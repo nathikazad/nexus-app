@@ -66,9 +66,9 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open edit: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open edit: $e')));
     }
   }
 
@@ -82,10 +82,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       final repo = ref.read(goalRepositoryProvider);
       final m = ref.read(currentWeekProvider);
       final monday = mondayOfWeek(m);
-      final week = await repo.getActionGoalsWeek(
-        weekStart: monday,
-        goalId: id,
-      );
+      final week = await repo.getActionGoalsWeek(weekStart: monday, goalId: id);
       if (week.items.isEmpty) {
         throw StateError('Goal not found');
       }
@@ -130,7 +127,10 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Could not load goal', style: TextStyle(color: AppColors.slate700)),
+              const Text(
+                'Could not load goal',
+                style: TextStyle(color: AppColors.slate700),
+              ),
               const SizedBox(height: 8),
               Text(
                 '$_error',
@@ -149,9 +149,21 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       final ws = _weekStart!;
       final eff = goalDetailVariantFor(item);
       content = switch (eff) {
-        GoalDetailVariant.wake => _WakeBodyData(item: item, trend: trend, weekStart: ws),
-        GoalDetailVariant.sleep => _SleepBodyData(item: item, trend: trend, weekStart: ws),
-        GoalDetailVariant.gym => _GymBodyData(item: item, trend: trend, weekStart: ws),
+        GoalDetailVariant.wake => _WakeBodyData(
+          item: item,
+          trend: trend,
+          weekStart: ws,
+        ),
+        GoalDetailVariant.sleep => _SleepBodyData(
+          item: item,
+          trend: trend,
+          weekStart: ws,
+        ),
+        GoalDetailVariant.gym => _GymBodyData(
+          item: item,
+          trend: trend,
+          weekStart: ws,
+        ),
       };
     } else {
       content = const SizedBox.shrink();
@@ -195,7 +207,11 @@ class _DetailAppBar extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(SolarLinearIcons.arrowLeft, size: 22, color: AppColors.slate600),
+            icon: const Icon(
+              SolarLinearIcons.arrowLeft,
+              size: 22,
+              color: AppColors.slate600,
+            ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           ),
@@ -213,7 +229,11 @@ class _DetailAppBar extends StatelessWidget {
           ),
           IconButton(
             onPressed: onEdit,
-            icon: const Icon(SolarLinearIcons.pen, size: 22, color: AppColors.slate500),
+            icon: const Icon(
+              SolarLinearIcons.pen,
+              size: 22,
+              color: AppColors.slate500,
+            ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             tooltip: 'Edit goal',
@@ -296,7 +316,6 @@ class _StreakPill extends StatelessWidget {
   }
 }
 
-
 class _WakeBodyData extends ConsumerWidget {
   const _WakeBodyData({
     required this.item,
@@ -311,9 +330,9 @@ class _WakeBodyData extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final w = ref.watch(currentWeekProvider);
-    final asyncWa = ref.watch(weekActionsProvider(
-      DateTime(w.year, w.month, w.day),
-    ));
+    final asyncWa = ref.watch(
+      weekActionsProvider(DateTime(w.year, w.month, w.day)),
+    );
     return asyncWa.when(
       data: (wa) => _wakeColumn(wa),
       loading: () => _wakeColumn(null),
@@ -335,10 +354,16 @@ class _WakeBodyData extends ConsumerWidget {
     if (wa != null && isWeekCurrent(wa.weekStart)) {
       todayWake = todayAttributedTime(wa, item);
     }
-    final dotX = (todayWake != null) ? wakeTrackPositionFromTime(todayWake) : 0.0;
-    final clockMain = (todayWake != null) ? formatHoursMinutes12h(todayWake) : '—';
+    final dotX = (todayWake != null)
+        ? wakeTrackPositionFromTime(todayWake)
+        : 0.0;
+    final clockMain = (todayWake != null)
+        ? formatHoursMinutes12h(todayWake)
+        : '—';
     final clockPeriod = (todayWake != null) ? formatAmPm(todayWake) : '';
-    final deltaLine = (wa != null && isWeekCurrent(wa.weekStart)) ? wakeDeltaVsThresholdLine(item, todayWake) : null;
+    final deltaLine = (wa != null && isWeekCurrent(wa.weekStart))
+        ? wakeDeltaVsThresholdLine(item, todayWake)
+        : null;
     final onTrack = wakeIsOnTrack(item, todayWake);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -396,22 +421,33 @@ class _WakeBodyData extends ConsumerWidget {
                 const SizedBox(height: 2),
                 RichText(
                   text: TextSpan(
-                    style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.slate500,
+                    ),
                     children: [
                       if (wa == null) ...[
                         const TextSpan(text: '…'),
                       ] else if (!isWeekCurrent(wa.weekStart)) ...[
                         const TextSpan(text: 'this week · '),
-                        const TextSpan(text: 'no data', style: TextStyle(fontWeight: FontWeight.w500)),
+                        const TextSpan(
+                          text: 'no data',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ] else if (deltaLine == null) ...[
                         const TextSpan(text: 'today · '),
-                        const TextSpan(text: 'no data', style: TextStyle(fontWeight: FontWeight.w500)),
+                        const TextSpan(
+                          text: 'no data',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ] else ...[
                         const TextSpan(text: 'today · '),
                         TextSpan(
                           text: deltaLine,
                           style: TextStyle(
-                            color: onTrack ? AppColors.goalOnTrack : AppColors.goalMissed,
+                            color: onTrack
+                                ? AppColors.goalOnTrack
+                                : AppColors.goalMissed,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -434,7 +470,9 @@ class _WakeBodyData extends ConsumerWidget {
               final dX = dotX;
               return Stack(
                 children: [
-                  Center(child: Container(height: 1, color: AppColors.slate200)),
+                  Center(
+                    child: Container(height: 1, color: AppColors.slate200),
+                  ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: SizedBox(
@@ -447,12 +485,23 @@ class _WakeBodyData extends ConsumerWidget {
                     left: w * tX,
                     top: 0,
                     bottom: 0,
-                    child: const VerticalDivider(width: 1, color: AppColors.slate700, thickness: 1),
+                    child: const VerticalDivider(
+                      width: 1,
+                      color: AppColors.slate700,
+                      thickness: 1,
+                    ),
                   ),
                   Positioned(
                     left: w * tX - 12,
                     top: -2,
-                    child: Text(thresholdLabel, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w500, color: AppColors.slate700)),
+                    child: Text(
+                      thresholdLabel,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate700,
+                      ),
+                    ),
                   ),
                   if (wa != null && todayWake != null)
                     Positioned(
@@ -465,7 +514,12 @@ class _WakeBodyData extends ConsumerWidget {
                           color: onTrack ? AppColors.dotOk : AppColors.dotMiss,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: const [BoxShadow(color: Color(0x330F172A), blurRadius: 0.5)],
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x330F172A),
+                              blurRadius: 0.5,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -477,8 +531,14 @@ class _WakeBodyData extends ConsumerWidget {
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('5 AM', style: TextStyle(fontSize: 9, color: AppColors.slate400)),
-            Text('8 AM', style: TextStyle(fontSize: 9, color: AppColors.slate400)),
+            Text(
+              '5 AM',
+              style: TextStyle(fontSize: 9, color: AppColors.slate400),
+            ),
+            Text(
+              '8 AM',
+              style: TextStyle(fontSize: 9, color: AppColors.slate400),
+            ),
           ],
         ),
         const SizedBox(height: 28),
@@ -492,7 +552,10 @@ class _WakeBodyData extends ConsumerWidget {
                 children: [
                   TextSpan(
                     text: '$hits',
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.slate700),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate700,
+                    ),
                   ),
                   const TextSpan(text: ' of 7 hit'),
                 ],
@@ -517,9 +580,15 @@ class _WakeBodyData extends ConsumerWidget {
         const SizedBox(height: 8),
         const Row(
           children: [
-            Text('5 AM', style: TextStyle(fontSize: 10, color: AppColors.slate400)),
+            Text(
+              '5 AM',
+              style: TextStyle(fontSize: 10, color: AppColors.slate400),
+            ),
             Expanded(child: Divider(height: 1, color: AppColors.slate100)),
-            Text('8 AM', style: TextStyle(fontSize: 10, color: AppColors.slate400)),
+            Text(
+              '8 AM',
+              style: TextStyle(fontSize: 10, color: AppColors.slate400),
+            ),
           ],
         ),
         const SizedBox(height: 28),
@@ -532,9 +601,7 @@ class _WakeBodyData extends ConsumerWidget {
         const SizedBox(height: 24),
         _HowMeasuredPanel(rows: howMeasuredRowsFor(item)),
         const SizedBox(height: 20),
-        _BottomActions(
-          deleteBlurb: deleteBlurbForModel(item.modelType),
-        ),
+        _BottomActions(deleteBlurb: deleteBlurbForModel(item.modelType)),
       ],
     );
   }
@@ -578,7 +645,10 @@ class _TrendFromBuckets extends StatelessWidget {
                   const TextSpan(text: 'this wk '),
                   TextSpan(
                     text: '${last.successes} / ${last.expected}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.slate700),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate700,
+                    ),
                   ),
                 ],
               ),
@@ -592,7 +662,10 @@ class _TrendFromBuckets extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(buckets.length, (i) {
               final b = buckets[i];
-              final h = trendBarHeight(successes: b.successes, expected: b.expected);
+              final h = trendBarHeight(
+                successes: b.successes,
+                expected: b.expected,
+              );
               final accent = i == buckets.length - 1;
               return Expanded(
                 child: Padding(
@@ -601,7 +674,9 @@ class _TrendFromBuckets extends StatelessWidget {
                     height: height * h,
                     decoration: BoxDecoration(
                       color: accent ? AppColors.accent : AppColors.slate200,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
                     ),
                   ),
                 ),
@@ -613,10 +688,17 @@ class _TrendFromBuckets extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(barLabelLeft, style: const TextStyle(fontSize: 10, color: AppColors.slate400)),
+            Text(
+              barLabelLeft,
+              style: const TextStyle(fontSize: 10, color: AppColors.slate400),
+            ),
             const Text(
               'this wk',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.accent),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppColors.accent,
+              ),
             ),
           ],
         ),
@@ -647,7 +729,9 @@ Widget _wakeSwimRow(
             style: TextStyle(
               fontSize: 10,
               fontWeight: today ? FontWeight.w600 : FontWeight.w500,
-              color: today ? AppColors.accent : (pending ? AppColors.slate300 : AppColors.slate400),
+              color: today
+                  ? AppColors.accent
+                  : (pending ? AppColors.slate300 : AppColors.slate400),
             ),
           ),
         ),
@@ -656,9 +740,14 @@ Widget _wakeSwimRow(
           child: Container(
             height: 12,
             decoration: BoxDecoration(
-              border: Border.all(color: today ? AppColors.accent : Colors.transparent, width: 1),
+              border: Border.all(
+                color: today ? AppColors.accent : Colors.transparent,
+                width: 1,
+              ),
               borderRadius: BorderRadius.circular(4),
-              color: today ? AppColors.accentLight.withValues(alpha: 0.3) : null,
+              color: today
+                  ? AppColors.accentLight.withValues(alpha: 0.3)
+                  : null,
             ),
             child: LayoutBuilder(
               builder: (context, c) {
@@ -678,7 +767,12 @@ Widget _wakeSwimRow(
                           decoration: BoxDecoration(
                             color: dotColor,
                             shape: BoxShape.circle,
-                            border: today ? Border.all(color: AppColors.slate900, width: 2) : null,
+                            border: today
+                                ? Border.all(
+                                    color: AppColors.slate900,
+                                    width: 2,
+                                  )
+                                : null,
                           ),
                         ),
                       ),
@@ -753,7 +847,8 @@ class _SleepBodyData extends ConsumerWidget {
     final todayLabel = (todayDur == null)
         ? '—'
         : formatDurationShort(todayDur, useDashForZero: false);
-    final onTrackToday = isDur &&
+    final onTrackToday =
+        isDur &&
         targetSec > 0 &&
         todayDur != null &&
         todayDur.inSeconds >= targetSec;
@@ -776,7 +871,11 @@ class _SleepBodyData extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           formatGoalSubline(item),
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.slate500,
+          ),
         ),
         const SizedBox(height: 16),
         Row(
@@ -797,7 +896,10 @@ class _SleepBodyData extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   'today so far · $targetStr target',
-                  style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.slate500,
+                  ),
                 ),
               ],
             ),
@@ -829,7 +931,10 @@ class _SleepBodyData extends ConsumerWidget {
                 children: [
                   TextSpan(
                     text: '$hits',
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.slate700),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate700,
+                    ),
                   ),
                   const TextSpan(text: ' of 7 hit'),
                 ],
@@ -877,7 +982,9 @@ class _SleepBodyData extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
-                      color: st.state == GoalDayState.miss ? AppColors.goalMissed : AppColors.slate700,
+                      color: st.state == GoalDayState.miss
+                          ? AppColors.goalMissed
+                          : AppColors.slate700,
                     ),
                   ),
                 ),
@@ -895,9 +1002,7 @@ class _SleepBodyData extends ConsumerWidget {
         const SizedBox(height: 24),
         _HowMeasuredPanel(rows: howMeasuredRowsFor(item)),
         const SizedBox(height: 20),
-        _BottomActions(
-          deleteBlurb: deleteBlurbForModel(item.modelType),
-        ),
+        _BottomActions(deleteBlurb: deleteBlurbForModel(item.modelType)),
       ],
     );
   }
@@ -944,27 +1049,41 @@ class _GymBodyData extends ConsumerWidget {
     final thisWeekRight = isCount
         ? '$hits sessions logged'
         : (item.aggregation == 'sum' && item.metric == 'duration'
-            ? 'target $targetStr'
-            : 'time logged (see week)');
-    final isDurSum = !isCount && item.aggregation == 'sum' && item.metric == 'duration';
-    final total = (wa == null || !isDurSum) ? null : weekTotalDuration(actionsForGoal(wa, item), capAtNow: true);
-    final durStr = (total == null) ? '—' : formatDurationShort(total, useDashForZero: false);
+              ? 'target $targetStr'
+              : 'time logged (see week)');
+    final isDurSum =
+        !isCount && item.aggregation == 'sum' && item.metric == 'duration';
+    final total = (wa == null || !isDurSum)
+        ? null
+        : weekTotalDuration(actionsForGoal(wa, item), capAtNow: true);
+    final durStr = (total == null)
+        ? '—'
+        : formatDurationShort(total, useDashForZero: false);
     final progressVal = isCount && tv > 0
         ? (hits / tv).clamp(0, 1).toDouble()
         : (isDurSum && total != null && item.target.value > 0
-            ? (total.inSeconds / item.target.value).clamp(0, 1).toDouble()
-            : 0.0);
+              ? (total.inSeconds / item.target.value).clamp(0, 1).toDouble()
+              : 0.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           item.label,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.slate900, height: 1.2),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: AppColors.slate900,
+            height: 1.2,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           formatGoalSubline(item),
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.slate500,
+          ),
         ),
         const SizedBox(height: 16),
         Row(
@@ -978,11 +1097,19 @@ class _GymBodyData extends ConsumerWidget {
                 children: [
                   Text(
                     '$hits',
-                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w600, color: AppColors.slate900),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900,
+                    ),
                   ),
                   Text(
                     ' / ${item.target.value}',
-                    style: const TextStyle(fontSize: 18, color: AppColors.slate400, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: AppColors.slate400,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               )
@@ -993,11 +1120,19 @@ class _GymBodyData extends ConsumerWidget {
                 children: [
                   Text(
                     durStr,
-                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w600, color: AppColors.slate900),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900,
+                    ),
                   ),
                   Text(
                     ' of $targetStr',
-                    style: const TextStyle(fontSize: 14, color: AppColors.slate500, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.slate500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               )
@@ -1006,10 +1141,21 @@ class _GymBodyData extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  const Text('—', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w600, color: AppColors.slate900)),
+                  const Text(
+                    '—',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900,
+                    ),
+                  ),
                   Text(
                     ' of $targetStr',
-                    style: const TextStyle(fontSize: 14, color: AppColors.slate500, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.slate500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -1030,7 +1176,9 @@ class _GymBodyData extends ConsumerWidget {
             value: progressVal,
             minHeight: 6,
             backgroundColor: AppColors.slate100,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.goalAtRisk),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.goalAtRisk,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -1041,49 +1189,62 @@ class _GymBodyData extends ConsumerWidget {
               const _Kicker('PREFERRED SLOTS'),
               TextButton(
                 onPressed: () {},
-                child: const Text('edit', style: TextStyle(fontSize: 11, color: AppColors.slate400)),
+                child: const Text(
+                  'edit',
+                  style: TextStyle(fontSize: 11, color: AppColors.slate400),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Row(
-            children: List.generate(
-              slots.length > 3 ? 3 : slots.length,
-              (i) {
-                final s = slots[i];
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: i < (slots.length > 3 ? 3 : slots.length) - 1 ? 8 : 0,
-                    ),
-                    child: _GymSlotCard(
-                      day: s.dow,
-                      done: s.hit == true,
-                      missed: s.hit == false,
-                      time: s.startTime,
-                      sub: s.hit == true
-                          ? '${s.durationMin} min'
-                          : (s.hit == false ? 'missed' : '${s.startTime} scheduled'),
-                    ),
+            children: List.generate(slots.length > 3 ? 3 : slots.length, (i) {
+              final s = slots[i];
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: i < (slots.length > 3 ? 3 : slots.length) - 1
+                        ? 8
+                        : 0,
                   ),
-                );
-              },
-            ),
+                  child: _GymSlotCard(
+                    day: s.dow,
+                    done: s.hit == true,
+                    missed: s.hit == false,
+                    time: s.startTime,
+                    sub: s.hit == true
+                        ? '${s.durationMin} min'
+                        : (s.hit == false
+                              ? 'missed'
+                              : '${s.startTime} scheduled'),
+                  ),
+                ),
+              );
+            }),
           ),
           if (item.meta?.autoGenerateTasks != null) ...[
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text.rich(
                 TextSpan(
-                  style: const TextStyle(fontSize: 11, color: AppColors.slate500),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.slate500,
+                  ),
                   children: [
                     const TextSpan(
                       text: 'Auto-create tasks for these slots — ',
-                      style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.slate700),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate700,
+                      ),
                     ),
                     TextSpan(
                       text: item.meta!.autoGenerateTasks! ? 'on' : 'off',
-                      style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -1119,10 +1280,17 @@ class _GymBodyData extends ConsumerWidget {
                 style: const TextStyle(fontSize: 11),
                 children: [
                   TextSpan(
-                    text: '${trendWeeksHitCount(trend.buckets)} / ${trend.buckets.length}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.slate700),
+                    text:
+                        '${trendWeeksHitCount(trend.buckets)} / ${trend.buckets.length}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate700,
+                    ),
                   ),
-                  const TextSpan(text: ' weeks hit', style: TextStyle(color: AppColors.slate500)),
+                  const TextSpan(
+                    text: ' weeks hit',
+                    style: TextStyle(color: AppColors.slate500),
+                  ),
                 ],
               ),
             ),
@@ -1172,7 +1340,9 @@ class _GymWeekStripData extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               border: isToday ? Border.all(color: AppColors.accent) : null,
-              color: isToday ? AppColors.accentLight.withValues(alpha: 0.35) : null,
+              color: isToday
+                  ? AppColors.accentLight.withValues(alpha: 0.35)
+                  : null,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -1196,8 +1366,10 @@ class _GymWeekStripData extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: fill == null
                         ? (isToday
-                            ? Border.all(color: AppColors.slate300)
-                            : (isFuture ? Border.all(color: AppColors.slate200) : null))
+                              ? Border.all(color: AppColors.slate300)
+                              : (isFuture
+                                    ? Border.all(color: AppColors.slate200)
+                                    : null))
                         : null,
                   ),
                 ),
@@ -1230,7 +1402,9 @@ Widget _gym12GridFromTrend(ActionGoalsTrend trend) {
                 decoration: BoxDecoration(
                   color: hit ? AppColors.dotOk : AppColors.slate100,
                   borderRadius: BorderRadius.circular(2),
-                  border: i == b.length - 1 ? Border.all(color: AppColors.accent) : null,
+                  border: i == b.length - 1
+                      ? Border.all(color: AppColors.accent)
+                      : null,
                 ),
               ),
             ),
@@ -1273,14 +1447,28 @@ class _GymSlotCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(day, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+              Text(
+                day,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate700,
+                ),
+              ),
               if (done)
                 Container(
                   width: 16,
                   height: 16,
-                  decoration: const BoxDecoration(color: AppColors.dotOk, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: AppColors.dotOk,
+                    shape: BoxShape.circle,
+                  ),
                   alignment: Alignment.center,
-                  child: const Icon(SolarLinearIcons.checkRead, size: 8, color: Colors.white),
+                  child: const Icon(
+                    SolarLinearIcons.checkRead,
+                    size: 8,
+                    color: Colors.white,
+                  ),
                 )
               else if (missed)
                 Container(
@@ -1288,7 +1476,10 @@ class _GymSlotCard extends StatelessWidget {
                   height: 16,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFFFCA5A5),
+                      width: 1.5,
+                    ),
                   ),
                 ),
             ],
@@ -1296,7 +1487,10 @@ class _GymSlotCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             time,
-            style: TextStyle(fontSize: 10, color: missed ? AppColors.slate400 : AppColors.slate500),
+            style: TextStyle(
+              fontSize: 10,
+              color: missed ? AppColors.slate400 : AppColors.slate500,
+            ),
           ),
           Text(
             sub,
@@ -1361,13 +1555,23 @@ class _HowMeasuredPanel extends StatelessWidget {
                       children: [
                         SizedBox(
                           width: 120,
-                          child: Text(e.$1, style: const TextStyle(fontSize: 13, color: AppColors.slate400)),
+                          child: Text(
+                            e.$1,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.slate400,
+                            ),
+                          ),
                         ),
                         Expanded(
                           child: Text(
                             e.$2,
                             textAlign: TextAlign.right,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.slate900),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.slate900,
+                            ),
                           ),
                         ),
                       ],
@@ -1383,7 +1587,10 @@ class _HowMeasuredPanel extends StatelessWidget {
 }
 
 class _BottomActions extends StatelessWidget {
-  const _BottomActions({required this.deleteBlurb, this.editSub = 'Change threshold time or filter'});
+  const _BottomActions({
+    required this.deleteBlurb,
+    this.editSub = 'Change threshold time or filter',
+  });
 
   final String deleteBlurb;
   final String editSub;
@@ -1432,7 +1639,11 @@ class _BottomActions extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: Icon(icon, size: 18, color: danger ? AppColors.dotMiss : AppColors.slate600),
+            child: Icon(
+              icon,
+              size: 18,
+              color: danger ? AppColors.dotMiss : AppColors.slate600,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1447,7 +1658,13 @@ class _BottomActions extends StatelessWidget {
                     color: danger ? AppColors.dotMiss : AppColors.slate900,
                   ),
                 ),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.slate500,
+                  ),
+                ),
               ],
             ),
           ),

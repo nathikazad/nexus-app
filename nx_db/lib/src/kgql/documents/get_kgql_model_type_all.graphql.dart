@@ -1,6 +1,6 @@
 /// Loads all root model types (no filter).
 const String getAllModelTypesQuery = '''
-query GetAllModelTypes(\$domainId: Int!) {
+query GetAllModelTypes {
   getKgqlModelType(input: {
     model_types: []
     struct: {
@@ -11,6 +11,6 @@ query GetAllModelTypes(\$domainId: Int!) {
       parent: true
       children: true
     }
-  }, domainId: \$domainId)
+  })
 }
 ''';

@@ -9,13 +9,11 @@ import 'package:nx_time/features/images/images_view_model.dart';
 
 /// Browse images by day for necklace or desktop capture sources.
 class ImagesPage extends ConsumerStatefulWidget {
-  const ImagesPage({
-    super.key,
-    this.initialSource = 'desktop',
-  }) : assert(
-          initialSource == 'necklace' || initialSource == 'desktop',
-          'initialSource must be necklace or desktop',
-        );
+  const ImagesPage({super.key, this.initialSource = 'desktop'})
+    : assert(
+        initialSource == 'necklace' || initialSource == 'desktop',
+        'initialSource must be necklace or desktop',
+      );
 
   /// Starting capture channel; use the app bar action to switch at runtime.
   ///
@@ -52,19 +50,11 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
 
   String _formatTimeLabel(DateTime selected, ImageEntry? e) {
     if (e == null) return '—';
-    final secs =
-        (e.minutesSinceMidnight * 60).round().clamp(0, 24 * 3600 - 1);
+    final secs = (e.minutesSinceMidnight * 60).round().clamp(0, 24 * 3600 - 1);
     final h = secs ~/ 3600;
     final m = (secs % 3600) ~/ 60;
     final s = secs % 60;
-    final dt = DateTime(
-      selected.year,
-      selected.month,
-      selected.day,
-      h,
-      m,
-      s,
-    );
+    final dt = DateTime(selected.year, selected.month, selected.day, h, m, s);
     return DateFormat.jm().format(dt);
   }
 
@@ -85,8 +75,11 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
     } else {
       firstDate = vm.available.reduce((a, b) => a.isBefore(b) ? a : b);
       lastDate = vm.available.reduce((a, b) => a.isAfter(b) ? a : b);
-      var initial =
-          DateTime(vm.selected.year, vm.selected.month, vm.selected.day);
+      var initial = DateTime(
+        vm.selected.year,
+        vm.selected.month,
+        vm.selected.day,
+      );
       if (initial.isBefore(firstDate)) initial = firstDate;
       if (initial.isAfter(lastDate)) initial = lastDate;
       initialDate = initial;
@@ -113,15 +106,14 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(imagesViewModelProvider(_source));
-    final notifier =
-        ref.read(imagesViewModelProvider(_source).notifier);
+    final notifier = ref.read(imagesViewModelProvider(_source).notifier);
 
     ref.listen(imagesViewModelProvider(_source), (prev, next) {
       final msg = next.transientNotice;
       if (msg != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
         notifier.clearTransientNotice();
       }
     });
@@ -132,10 +124,9 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
     final idx = imagesCurrentIndex(vm);
     final entry = imagesEntryForSlider(vm, vm.sliderValue);
 
-    final metaCaptionStyle = Theme.of(context)
-        .textTheme
-        .bodyMedium
-        ?.copyWith(color: Colors.grey.shade700);
+    final metaCaptionStyle = Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700);
 
     return Scaffold(
       appBar: AppBar(
@@ -155,165 +146,157 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
       body: vm.loading
           ? const Center(child: CircularProgressIndicator())
           : vm.error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          vm.error!,
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(vm.error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: notifier.loadDates,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _pickDate(vm),
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(DateFormat.yMMMd().format(vm.selected)),
+                  ),
+                  const SizedBox(height: 12),
+                  if (vm.loadingDay)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (vm.dayEntries.isEmpty)
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'No images on ${DateFormat.yMMMd().format(vm.selected)}.',
+                          style: TextStyle(color: Colors.grey.shade600),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: notifier.loadDates,
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => _pickDate(vm),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(
-                          DateFormat.yMMMd().format(vm.selected),
-                        ),
                       ),
-                      const SizedBox(height: 12),
-                      if (vm.loadingDay)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (vm.dayEntries.isEmpty)
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              'No images on ${DateFormat.yMMMd().format(vm.selected)}.',
-                              style: TextStyle(color: Colors.grey.shade600),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                      else
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Builder(
-                                builder: (context) {
-                                  final canPrev = idx > 0;
-                                  final canNext =
-                                      idx >= 0 && idx < vm.dayEntries.length - 1;
-                                  final timeText =
-                                      _formatTimeLabel(vm.selected, entry);
+                    )
+                  else
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Builder(
+                            builder: (context) {
+                              final canPrev = idx > 0;
+                              final canNext =
+                                  idx >= 0 && idx < vm.dayEntries.length - 1;
+                              final timeText = _formatTimeLabel(
+                                vm.selected,
+                                entry,
+                              );
 
-                                  return Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        onPressed:
-                                            canPrev ? notifier.stepPrev : null,
-                                        icon: const Icon(Icons.chevron_left),
-                                        tooltip: 'Previous image',
-                                      ),
-                                      Expanded(
-                                        child: Text(
-                                          timeText,
-                                          style: metaCaptionStyle,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        onPressed:
-                                            canNext ? notifier.stepNext : null,
-                                        icon: const Icon(Icons.chevron_right),
-                                        tooltip: 'Next image',
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                              if (_source == 'desktop') ...[
-                                if (entry?.currentApp != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    entry!.currentApp!,
-                                    style: metaCaptionStyle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    onPressed: canPrev
+                                        ? notifier.stepPrev
+                                        : null,
+                                    icon: const Icon(Icons.chevron_left),
+                                    tooltip: 'Previous image',
                                   ),
-                                ],
-                              ] else ...[
-                                if (entry?.currentApp != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    entry!.currentApp!,
-                                    style: metaCaptionStyle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                                const SizedBox(height: 4),
-                                Text(
-                                  entry?.filename ?? '',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                              const SizedBox(height: 12),
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: _buildImage(
-                                    context,
-                                    base,
-                                    uid,
-                                    entry,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  top: 4,
-                                  bottom:
-                                      MediaQuery.paddingOf(context).bottom +
-                                          28,
-                                ),
-                                child: Align(
-                                  alignment: Alignment.center,
-                                  child: FractionallySizedBox(
-                                    widthFactor: 0.9,
-                                    child: TimelineSlider(
-                                      value: vm.sliderValue,
-                                      minTime: vm.minTime,
-                                      maxTime: vm.maxTime,
-                                      marks: vm.dayEntries
-                                          .map((e) => e.minutesSinceMidnight)
-                                          .toList(),
-                                      onChanged: notifier.setSlider,
+                                  Expanded(
+                                    child: Text(
+                                      timeText,
+                                      style: metaCaptionStyle,
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
-                                ),
+                                  IconButton(
+                                    onPressed: canNext
+                                        ? notifier.stepNext
+                                        : null,
+                                    icon: const Icon(Icons.chevron_right),
+                                    tooltip: 'Next image',
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          if (_source == 'desktop') ...[
+                            if (entry?.currentApp != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                entry!.currentApp!,
+                                style: metaCaptionStyle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
                               ),
                             ],
+                          ] else ...[
+                            if (entry?.currentApp != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                entry!.currentApp!,
+                                style: metaCaptionStyle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            const SizedBox(height: 4),
+                            Text(
+                              entry?.filename ?? '',
+                              style: Theme.of(context).textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: _buildImage(context, base, uid, entry),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              top: 4,
+                              bottom: MediaQuery.paddingOf(context).bottom + 28,
+                            ),
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: FractionallySizedBox(
+                                widthFactor: 0.9,
+                                child: TimelineSlider(
+                                  value: vm.sliderValue,
+                                  minTime: vm.minTime,
+                                  maxTime: vm.maxTime,
+                                  marks: vm.dayEntries
+                                      .map((e) => e.minutesSinceMidnight)
+                                      .toList(),
+                                  onChanged: notifier.setSlider,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -323,10 +306,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
     String? userId,
     ImageEntry? entry,
   ) {
-    if (baseUrl == null ||
-        userId == null ||
-        userId.isEmpty ||
-        entry == null) {
+    if (baseUrl == null || userId == null || userId.isEmpty || entry == null) {
       return ColoredBox(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Center(
@@ -340,9 +320,8 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
       cacheManager: imageCacheManager,
       httpHeaders: imageHeaders(baseUrl, userId),
       fit: BoxFit.contain,
-      placeholder: (context, url) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      placeholder: (context, url) =>
+          const Center(child: CircularProgressIndicator()),
       errorWidget: (context, url, error) => Center(
         child: Padding(
           padding: const EdgeInsets.all(16),

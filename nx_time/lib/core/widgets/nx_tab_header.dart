@@ -29,9 +29,7 @@ class NxTabHeader extends StatelessWidget {
       child: Container(
         decoration: bottomBorder
             ? BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: borderColor),
-                ),
+                border: Border(bottom: BorderSide(color: borderColor)),
               )
             : null,
         padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),

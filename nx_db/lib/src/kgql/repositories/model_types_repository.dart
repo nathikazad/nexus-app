@@ -28,7 +28,6 @@ Future<ModelType> fetchKgqlModelTypeByName(
   GraphQLClient client,
   String modelTypeName, {
   Map<String, dynamic>? struct,
-  required int domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -38,7 +37,6 @@ Future<ModelType> fetchKgqlModelTypeByName(
           'model_types': [modelTypeName],
           'struct': struct ?? kgqlFullModelTypeStruct,
         },
-        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -53,9 +51,8 @@ Future<ModelType> fetchKgqlModelTypeByName(
     throw StateError('getKgqlModelType returned null');
   }
 
-  final jsonArray = raw is String
-      ? json.decode(raw) as List<dynamic>
-      : raw as List<dynamic>;
+  final jsonArray =
+      raw is String ? json.decode(raw) as List<dynamic> : raw as List<dynamic>;
 
   if (jsonArray.isEmpty) {
     throw StateError('Model type "$modelTypeName" not found');
@@ -68,14 +65,10 @@ Future<ModelType> fetchKgqlModelTypeByName(
 }
 
 /// All root model types (same query as [modelTypesProvider]).
-Future<List<ModelType>> fetchAllModelTypes(
-  GraphQLClient client, {
-  required int domainId,
-}) async {
+Future<List<ModelType>> fetchAllModelTypes(GraphQLClient client) async {
   final result = await client.query(
     QueryOptions(
       document: gql(getAllModelTypesQuery),
-      variables: {'domainId': domainId},
       fetchPolicy: FetchPolicy.networkOnly,
     ),
   );
@@ -108,7 +101,8 @@ Future<List<ModelType>> fetchAllModelTypes(
     return ModelType.fromJson(rootMap, recursive: true);
   }).toList();
 
-  print('📊 getAllModelTypes: Received ${allModelTypes.length} root model types');
+  print(
+      '📊 getAllModelTypes: Received ${allModelTypes.length} root model types');
 
   return allModelTypes;
 }
@@ -116,9 +110,8 @@ Future<List<ModelType>> fetchAllModelTypes(
 /// Loads a single [ModelType] by numeric id.
 Future<ModelType?> fetchKgqlModelTypeById(
   GraphQLClient client,
-  int modelTypeId, {
-  required int domainId,
-}) async {
+  int modelTypeId,
+) async {
   final result = await client.query(
     QueryOptions(
       document: gql(kgqlGetKgqlModelTypeQuery),
@@ -138,7 +131,6 @@ Future<ModelType?> fetchKgqlModelTypeById(
             'tag_systems': true,
           },
         },
-        'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -180,7 +172,6 @@ Future<ModelType?> fetchKgqlModelTypeById(
 Future<int> setKgqlModelType(
   GraphQLClient client,
   SetModelTypeRequest request, {
-  required int domainId,
   DbAuditContext? auditContext,
   String auditSourceKind = '',
 }) async {
@@ -202,7 +193,6 @@ Future<int> setKgqlModelType(
           variables: {
             'input': {
               'data': requestJson,
-              'domainId': domainId,
             },
           },
         ),
@@ -223,7 +213,8 @@ Future<int> setKgqlModelType(
       throw result.exception!;
     }
 
-    final responseData = result.data?['setKgqlModelTypes'] as Map<String, dynamic>?;
+    final responseData =
+        result.data?['setKgqlModelTypes'] as Map<String, dynamic>?;
     if (responseData == null) {
       throw Exception('No data returned from setKgqlModelTypes mutation');
     }

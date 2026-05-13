@@ -52,17 +52,17 @@ class Action {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        description,
-        modelTypeId,
-        modelTypeName,
-        startTime,
-        endTime,
-        parentActionId,
-        Object.hashAll(childActionIds),
-        Object.hashAllUnordered(relationIdByChildId.entries),
-      );
+    id,
+    name,
+    description,
+    modelTypeId,
+    modelTypeName,
+    startTime,
+    endTime,
+    parentActionId,
+    Object.hashAll(childActionIds),
+    Object.hashAllUnordered(relationIdByChildId.entries),
+  );
 }
 
 bool _listEq(List<int> a, List<int> b) {

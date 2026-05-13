@@ -151,7 +151,8 @@ void main() {
     );
     final req = setModelRequestForCreateGoal(g);
     final attrMap = <String, dynamic>{
-      for (final a in req.attributes ?? const <SetModelAttribute>[]) a.key: a.value,
+      for (final a in req.attributes ?? const <SetModelAttribute>[])
+        a.key: a.value,
     };
     final m2 = Model(
       id: 42,

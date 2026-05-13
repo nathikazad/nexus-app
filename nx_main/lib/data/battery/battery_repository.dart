@@ -1,4 +1,5 @@
-import 'package:nexus_voice_assistant/data/battery/battery_chart_service.dart' as svc;
+import 'package:nexus_voice_assistant/data/battery/battery_chart_service.dart'
+    as svc;
 import 'package:nexus_voice_assistant/domain/battery/battery_point.dart';
 import 'package:nexus_voice_assistant/domain/battery/battery_repository.dart';
 

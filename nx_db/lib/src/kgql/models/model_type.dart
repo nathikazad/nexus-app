@@ -39,7 +39,8 @@ class ModelType {
   });
 
   /// Creates a ModelType from a JSON map (typically from GraphQL response)
-  factory ModelType.fromJson(Map<String, dynamic> json, {bool recursive = false}) {
+  factory ModelType.fromJson(Map<String, dynamic> json,
+      {bool recursive = false}) {
     ModelType? parent;
     if (json['parent'] != null) {
       final parentJson = json['parent'] as Map<String, dynamic>;
@@ -57,7 +58,8 @@ class ModelType {
     if (json['children'] != null) {
       final childrenJson = json['children'] as List<dynamic>;
       children = childrenJson.map((childJson) {
-        final childMap = Map<String, dynamic>.from(childJson as Map<String, dynamic>);
+        final childMap =
+            Map<String, dynamic>.from(childJson as Map<String, dynamic>);
         if (currentId != null && !childMap.containsKey('parentId')) {
           childMap['parentId'] = currentId;
         }
@@ -69,7 +71,8 @@ class ModelType {
     if (json['traits'] != null) {
       final traitsJson = json['traits'] as List<dynamic>;
       traits = traitsJson.map((traitJson) {
-        final traitMap = Map<String, dynamic>.from(traitJson as Map<String, dynamic>);
+        final traitMap =
+            Map<String, dynamic>.from(traitJson as Map<String, dynamic>);
         if (currentId != null && !traitMap.containsKey('parentId')) {
           traitMap['parentId'] = currentId;
         }
@@ -77,7 +80,8 @@ class ModelType {
       }).toList();
     }
 
-    final typeKind = json['type_kind'] as String? ?? json['typeKind'] as String?;
+    final typeKind =
+        json['type_kind'] as String? ?? json['typeKind'] as String?;
 
     List<AttributeDefinition>? attributes;
     if (json['attributes'] != null) {
@@ -97,30 +101,35 @@ class ModelType {
     List<RelationshipType>? relations;
     if (json['relations'] != null) {
       final relationsJson = json['relations'] as List<dynamic>;
-      relations = relationsJson.map((relJson) {
-        final rel = relJson as Map<String, dynamic>;
-        final targetModelTypeName = rel['target_model_type'] as String?;
-        if (targetModelTypeName == null) return null;
+      relations = relationsJson
+          .map((relJson) {
+            final rel = relJson as Map<String, dynamic>;
+            final targetModelTypeName = rel['target_model_type'] as String?;
+            if (targetModelTypeName == null) return null;
 
-        final relationAttrsJson = rel['attributes'] as List<dynamic>?;
-        final relationAttributeDefinitions = relationAttrsJson?.map((attrJson) {
-          final attr = attrJson as Map<String, dynamic>;
-          return RelationAttributeDefinition(
-            id: attr['id'] as int?,
-            key: attr['key'] as String,
-            valueType: attr['value_type'] as String,
-            required: attr['required'] as bool? ?? false,
-          );
-        }).toList();
+            final relationAttrsJson = rel['attributes'] as List<dynamic>?;
+            final relationAttributeDefinitions =
+                relationAttrsJson?.map((attrJson) {
+              final attr = attrJson as Map<String, dynamic>;
+              return RelationAttributeDefinition(
+                id: attr['id'] as int?,
+                key: attr['key'] as String,
+                valueType: attr['value_type'] as String,
+                required: attr['required'] as bool? ?? false,
+              );
+            }).toList();
 
-        return RelationshipType(
-          id: rel['id'] as int?,
-          link: targetModelTypeName,
-          multiplicity: rel['multiplicity'] as String? ?? rel['cardinality'] as String?,
-          description: rel['description'] as String?,
-          relationAttributeDefinitions: relationAttributeDefinitions,
-        );
-      }).whereType<RelationshipType>().toList();
+            return RelationshipType(
+              id: rel['id'] as int?,
+              link: targetModelTypeName,
+              multiplicity: rel['multiplicity'] as String? ??
+                  rel['cardinality'] as String?,
+              description: rel['description'] as String?,
+              relationAttributeDefinitions: relationAttributeDefinitions,
+            );
+          })
+          .whereType<RelationshipType>()
+          .toList();
     }
 
     List<TagSystem>? tagSystems;
@@ -157,11 +166,15 @@ class ModelType {
       'parentId': parentId,
       'userId': userId,
       if (parent != null) 'parent': parent!.toJson(),
-      if (children != null) 'children': children!.map((c) => c.toJson()).toList(),
+      if (children != null)
+        'children': children!.map((c) => c.toJson()).toList(),
       if (traits != null) 'traits': traits!.map((t) => t.toJson()).toList(),
-      if (attributes != null) 'attributes': attributes!.map((a) => a.toJson()).toList(),
-      if (relations != null) 'relations': relations!.map((r) => r.toJson()).toList(),
-      if (tagSystems != null) 'tag_systems': tagSystems!.map((t) => t.toJson()).toList(),
+      if (attributes != null)
+        'attributes': attributes!.map((a) => a.toJson()).toList(),
+      if (relations != null)
+        'relations': relations!.map((r) => r.toJson()).toList(),
+      if (tagSystems != null)
+        'tag_systems': tagSystems!.map((t) => t.toJson()).toList(),
     };
   }
 

@@ -102,7 +102,8 @@ void main() {
     });
 
     test('MT2.10 AttributeDefinition delete toJson', () {
-      final ad = AttributeDefinition(id: 5, key: 'x', valueType: 'string', delete: true);
+      final ad = AttributeDefinition(
+          id: 5, key: 'x', valueType: 'string', delete: true);
       expect(ad.toJson(), {'id': 5, 'delete': true});
     });
 

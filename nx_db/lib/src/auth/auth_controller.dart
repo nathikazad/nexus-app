@@ -5,10 +5,6 @@ import '../core/config/backend_presets.dart';
 import 'backend_ping.dart';
 import 'user.dart';
 
-/// Default domain ids for prefs migration (single-user dev / legacy installs).
-const int kDefaultPersonalDomainId = 1;
-const int kDefaultHomeDomainId = 1;
-
 /// AuthController manages user authentication state.
 /// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
@@ -25,8 +21,6 @@ class AuthController extends AsyncNotifier<User?> {
 
   static Future<void> _clearSessionPrefs(SharedPreferences prefs) async {
     await prefs.remove(PrefsKeys.userId);
-    await prefs.remove(PrefsKeys.personalDomainId);
-    await prefs.remove(PrefsKeys.homeDomainId);
     await prefs.remove(PrefsKeys.endpoint);
     await prefs.remove(PrefsKeys.backendPreset);
     await prefs.remove(PrefsKeys.sockWsUrl);
@@ -58,30 +52,9 @@ class AuthController extends AsyncNotifier<User?> {
         print('[AuthController] Migrated legacy prefs to preset=${preset.key}');
       }
 
-      int? personalDomainId = prefs.getInt(PrefsKeys.personalDomainId);
-      int? homeDomainId = prefs.getInt(PrefsKeys.homeDomainId);
-      if (userId != null &&
-          userId.isNotEmpty &&
-          preset != null &&
-          (personalDomainId == null || homeDomainId == null)) {
-        personalDomainId ??= kDefaultPersonalDomainId;
-        homeDomainId ??= kDefaultHomeDomainId;
-        await prefs.setInt(PrefsKeys.personalDomainId, personalDomainId);
-        await prefs.setInt(PrefsKeys.homeDomainId, homeDomainId);
+      if (userId != null && userId.isNotEmpty && preset != null) {
         print(
-          '[AuthController] Migrated missing domain prefs → '
-          'personal=$personalDomainId home=$homeDomainId',
-        );
-      }
-
-      if (userId != null &&
-          userId.isNotEmpty &&
-          preset != null &&
-          personalDomainId != null &&
-          homeDomainId != null) {
-        print(
-          '[AuthController] Found saved credentials: userId=$userId, '
-          'personalDomain=$personalDomainId homeDomain=$homeDomainId preset=${preset.key}',
+          '[AuthController] Found saved credentials: userId=$userId preset=${preset.key}',
         );
         if (!skipBackendPing) {
           try {
@@ -100,8 +73,6 @@ class AuthController extends AsyncNotifier<User?> {
         }
         return User(
           userId: userId,
-          personalDomainId: personalDomainId,
-          homeDomainId: homeDomainId,
           preset: preset,
         );
       } else {
@@ -114,17 +85,11 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
-  /// Logs in with [userId], [preset], and domain ids. Persists to SharedPreferences.
+  /// Logs in with [userId] and [preset]. Persists to SharedPreferences.
   /// Returns null if login was successful, error message String otherwise.
-  Future<String?> login(
-    String userId,
-    BackendPreset preset,
-    int personalDomainId,
-    int homeDomainId,
-  ) async {
+  Future<String?> login(String userId, BackendPreset preset) async {
     print(
-      '[AuthController] login() - user: $userId preset: ${preset.key} '
-      'personalDomain=$personalDomainId homeDomain=$homeDomainId',
+      '[AuthController] login() - user: $userId preset: ${preset.key}',
     );
     state = const AsyncValue.loading();
 
@@ -132,10 +97,6 @@ class AuthController extends AsyncNotifier<User?> {
       if (userId.isEmpty) {
         throw Exception('User ID is required');
       }
-      if (personalDomainId <= 0 || homeDomainId <= 0) {
-        throw Exception('Personal and home domain IDs must be positive integers');
-      }
-
       final urls = resolve(preset);
       if (!skipBackendPing) {
         await pingGraphqlBackend(
@@ -146,16 +107,12 @@ class AuthController extends AsyncNotifier<User?> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.userId, userId);
-      await prefs.setInt(PrefsKeys.personalDomainId, personalDomainId);
-      await prefs.setInt(PrefsKeys.homeDomainId, homeDomainId);
       await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
       await prefs.setString(PrefsKeys.backendPreset, preset.key);
       await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
 
       final user = User(
         userId: userId,
-        personalDomainId: personalDomainId,
-        homeDomainId: homeDomainId,
         preset: preset,
       );
       state = AsyncValue.data(user);

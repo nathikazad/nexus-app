@@ -77,7 +77,8 @@ class ModelTypeColors {
   final Map<String, String> _hexByName;
 
   /// Visible for tests and debugging.
-  Map<String, String> get hexByModelTypeName => Map<String, String>.unmodifiable(_hexByName);
+  Map<String, String> get hexByModelTypeName =>
+      Map<String, String>.unmodifiable(_hexByName);
 
   Color forName(String? name) {
     if (name == null || name.isEmpty) {

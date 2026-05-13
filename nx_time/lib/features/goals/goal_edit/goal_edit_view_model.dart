@@ -18,7 +18,8 @@ class GoalEditViewModel {
     GoalSelectedAttribute a,
   ) {
     if (c != GoalCadence.weekly) return a;
-    if (a == GoalSelectedAttribute.startTime || a == GoalSelectedAttribute.endTime) {
+    if (a == GoalSelectedAttribute.startTime ||
+        a == GoalSelectedAttribute.endTime) {
       return GoalSelectedAttribute.count;
     }
     return a;
@@ -102,7 +103,9 @@ class GoalEditViewModel {
       preferredDays: preferredDays.isEmpty
           ? <int>[]
           : (preferredDays.toList()..sort()),
-      preferredTime: (preferredTimeHHmm == null || preferredTimeHHmm.isEmpty) ? null : preferredTimeHHmm,
+      preferredTime: (preferredTimeHHmm == null || preferredTimeHHmm.isEmpty)
+          ? null
+          : preferredTimeHHmm,
       autoGenerateTasks: autoGenerate,
     );
   }

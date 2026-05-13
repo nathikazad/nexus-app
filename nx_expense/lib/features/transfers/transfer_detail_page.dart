@@ -14,6 +14,7 @@ import 'package:nx_expense/domain/transfer/transfer.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/desktop/panel_chrome.dart';
 import 'package:nx_expense/features/teller/widgets/teller_detail_readonly_section.dart';
+
 /// Read-only transfer detail (amount, date, title, description, attributes, relations).
 class TransferDetailScreen extends ConsumerWidget {
   const TransferDetailScreen({super.key, required this.transferId});
@@ -26,11 +27,13 @@ class TransferDetailScreen extends ConsumerWidget {
     final schemaAsync = ref.watch(transferSchemaViewProvider);
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         return async.when(
-          loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (e, _) => Scaffold(
             appBar: AppBar(),
             body: Center(child: SelectableText('$e')),
@@ -58,7 +61,9 @@ class TransferDetailScreen extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppColors.slate100)),
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.slate100),
+                    ),
                     color: Color(0x4DF8FAFC),
                   ),
                   child: Column(
@@ -98,7 +103,9 @@ class TransferDetailScreen extends ConsumerWidget {
                 ),
                 ..._transferDetailSections(context, ref, transfer, schema),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: RefLayout.px5,
+                  ),
                   child: TellerDetailReadonlySection(modelId: transferId),
                 ),
               ],
@@ -110,13 +117,22 @@ class TransferDetailScreen extends ConsumerWidget {
               return PanelChrome(
                 title: title,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-                  onPressed: () => navTransferDetailBack(context, ref, transferId),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: AppColors.slate400,
+                    size: 22,
+                  ),
+                  onPressed: () =>
+                      navTransferDetailBack(context, ref, transferId),
                 ),
                 actions: [
                   IconButton(
                     tooltip: 'Edit transfer',
-                    icon: const Icon(Icons.edit_outlined, color: AppColors.slate400, size: 22),
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.slate400,
+                      size: 22,
+                    ),
                     onPressed: () => context.push('/transfer/form/$transferId'),
                   ),
                 ],
@@ -128,13 +144,22 @@ class TransferDetailScreen extends ConsumerWidget {
               backgroundColor: Colors.white,
               appBar: AppBar(
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
-                  onPressed: () => navTransferDetailBack(context, ref, transferId),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: AppColors.slate400,
+                    size: 22,
+                  ),
+                  onPressed: () =>
+                      navTransferDetailBack(context, ref, transferId),
                 ),
                 actions: [
                   IconButton(
                     tooltip: 'Edit transfer',
-                    icon: const Icon(Icons.edit_outlined, color: AppColors.slate400, size: 22),
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.slate400,
+                      size: 22,
+                    ),
                     onPressed: () => context.push('/transfer/form/$transferId'),
                   ),
                 ],
@@ -268,11 +293,19 @@ List<Widget> _transferDetailSections(
       if (list.isEmpty) continue;
       out.add(
         Padding(
-          padding: const EdgeInsets.fromLTRB(RefLayout.px5, 24, RefLayout.px5, 0),
+          padding: const EdgeInsets.fromLTRB(
+            RefLayout.px5,
+            24,
+            RefLayout.px5,
+            0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(formatAttributeLabel(e.key), style: refSectionTitle(context)),
+              Text(
+                formatAttributeLabel(e.key),
+                style: refSectionTitle(context),
+              ),
               const SizedBox(height: 12),
               for (final relM in list)
                 Padding(
@@ -311,7 +344,11 @@ List<Widget> _transferDetailSections(
   return out;
 }
 
-String _formatTransferDetailAttr(Transfer model, String key, String? valueType) {
+String _formatTransferDetailAttr(
+  Transfer model,
+  String key,
+  String? valueType,
+) {
   final v = attributeValue(model, key);
   return formatDisplayAttributeValue(v, valueType);
 }
@@ -405,7 +442,11 @@ Widget _transferRelationRow(
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.slate300,
+                size: 22,
+              ),
             ],
           ),
         ),
@@ -472,7 +513,11 @@ Widget _transferLinkedTransferCell(
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.slate300,
+                size: 22,
+              ),
             ],
           ),
         ),

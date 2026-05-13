@@ -51,9 +51,8 @@ class BatteryViewState {
   }) {
     return BatteryViewState(
       loading: loading ?? this.loading,
-      error: identical(error, _batteryCopyUnset)
-          ? this.error
-          : error as String?,
+      error:
+          identical(error, _batteryCopyUnset) ? this.error : error as String?,
       available: available ?? this.available,
       selected: selected ?? this.selected,
       loadingDay: loadingDay ?? this.loadingDay,
@@ -74,9 +73,7 @@ class BatteryViewNotifier extends Notifier<BatteryViewState> {
 
   bool _isToday(DateTime day) {
     final now = DateTime.now();
-    return day.year == now.year &&
-        day.month == now.month &&
-        day.day == now.day;
+    return day.year == now.year && day.month == now.month && day.day == now.day;
   }
 
   @override

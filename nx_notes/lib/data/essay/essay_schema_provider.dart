@@ -3,9 +3,9 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/data/essay/essay_attr_keys.dart';
 
-final essaySchemaProvider = kgqlModelTypeForPersonalDomain(kEssayModelTypeName);
+final essaySchemaProvider = kgqlModelTypeByNameProvider(kEssayModelTypeName);
 
-final essaySnapSchemaProvider = kgqlModelTypeForPersonalDomain(
+final essaySnapSchemaProvider = kgqlModelTypeByNameProvider(
   kEssaySnapModelTypeName,
 );
 

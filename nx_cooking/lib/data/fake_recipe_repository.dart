@@ -10,8 +10,7 @@ final class FakeRecipeRepository implements RecipeRepository {
   Future<List<RecipeSearchResult>> searchRecipes(
     String term, {
     int limitPer = 10,
-  }) async =>
-      const [];
+  }) async => const [];
 
   @override
   Future<List<RecipeSummary>> fetchRecipes({RecipeFilter? filter}) async {
@@ -100,7 +99,9 @@ final class FakeRecipeRepository implements RecipeRepository {
         id: 2,
         title: 'Roasted Salmon',
         tags: ['Healthy'],
-        tagsMap: {'Type': ['Healthy']},
+        tagsMap: {
+          'Type': ['Healthy'],
+        },
         prepTimeMinutes: 40,
         servings: 2,
         notes: null,
@@ -116,7 +117,9 @@ final class FakeRecipeRepository implements RecipeRepository {
         id: 3,
         title: 'Matcha Pancakes',
         tags: ['Breakfast'],
-        tagsMap: {'Meal': ['Breakfast']},
+        tagsMap: {
+          'Meal': ['Breakfast'],
+        },
         prepTimeMinutes: 20,
         servings: 4,
         notes: null,
@@ -129,7 +132,9 @@ final class FakeRecipeRepository implements RecipeRepository {
         id: 4,
         title: 'Classic Beef Stew',
         tags: ['Slow'],
-        tagsMap: {'Prep': ['Slow']},
+        tagsMap: {
+          'Prep': ['Slow'],
+        },
         prepTimeMinutes: 180,
         servings: 6,
         notes: null,

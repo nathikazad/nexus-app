@@ -27,9 +27,14 @@ class Relation {
 
   factory Relation.fromJson(Map<String, dynamic> json) {
     return Relation(
-      relationId: json['relation_id'] as int? ?? json['relationId'] as int? ?? json['id'] as int? ?? 0,
+      relationId: json['relation_id'] as int? ??
+          json['relationId'] as int? ??
+          json['id'] as int? ??
+          0,
       modelId: json['model_id'] as int? ?? json['modelId'] as int? ?? 0,
-      modelType: json['model_type'] as String? ?? json['modelType'] as String? ?? 'Unknown',
+      modelType: json['model_type'] as String? ??
+          json['modelType'] as String? ??
+          'Unknown',
       name: parseOptionalStringField(json['name']),
       description: parseOptionalStringField(json['description']),
       relation: parseOptionalStringField(json['relation']),
@@ -37,7 +42,8 @@ class Relation {
     );
   }
 
-  static Map<String, dynamic>? _parseRelationAttributes(Map<String, dynamic> json) {
+  static Map<String, dynamic>? _parseRelationAttributes(
+      Map<String, dynamic> json) {
     final raw = json['relation_attributes'] ?? json['relationAttributes'];
     if (raw == null) {
       return null;
@@ -134,7 +140,8 @@ class RelationshipType {
     }
 
     if (relationAttributeDefinitions != null) {
-      json['relation_attribute_definitions'] = relationAttributeDefinitions!.map((rad) => rad.toJson()).toList();
+      json['relation_attribute_definitions'] =
+          relationAttributeDefinitions!.map((rad) => rad.toJson()).toList();
     }
 
     return json;

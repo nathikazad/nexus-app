@@ -113,11 +113,7 @@ class _TaskGlyph extends StatelessWidget {
             color: Color(0xFF1D9E75),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.check,
-            size: 11,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.check, size: 11, color: Colors.white),
         );
     }
   }

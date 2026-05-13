@@ -113,4 +113,3 @@ class ModelTypeBasicFields extends StatelessWidget {
     );
   }
 }
-

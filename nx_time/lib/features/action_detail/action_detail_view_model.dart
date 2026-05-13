@@ -12,16 +12,9 @@ import 'package:nx_time/features/today/action_fold.dart';
 import 'package:nx_time/features/today/today_view_model.dart';
 
 /// Matches reference `page-activity-detail-sleep` / `page-activity-detail-deep-work`.
-enum ActivityDetailLayout {
-  sleep,
-  deepWork,
-  umbrella,
-}
+enum ActivityDetailLayout { sleep, deepWork, umbrella }
 
-enum LinkedTaskProgress {
-  partialBlue,
-  doneGreen,
-}
+enum LinkedTaskProgress { partialBlue, doneGreen }
 
 class LinkedTaskItem {
   const LinkedTaskItem({
@@ -105,9 +98,7 @@ class ActivityDetailArgs {
   int get umbrellaChildCount => umbrellaChildren.length;
 
   /// Rebuild with an updated task list (e.g. after linking tasks to the action).
-  ActivityDetailArgs copyWith({
-    List<LinkedTaskItem>? tasks,
-  }) {
+  ActivityDetailArgs copyWith({List<LinkedTaskItem>? tasks}) {
     return ActivityDetailArgs(
       layout: layout,
       detailTitle: detailTitle,
@@ -163,17 +154,22 @@ ActivityDetailArgs activityDetailArgsForAction(
   final sl = model.startTime;
   final el = model.endTime;
   final typeName = model.modelTypeName ?? '';
-  final layout =
-      typeName == 'Sleep' ? ActivityDetailLayout.sleep : ActivityDetailLayout.deepWork;
+  final layout = typeName == 'Sleep'
+      ? ActivityDetailLayout.sleep
+      : ActivityDetailLayout.deepWork;
   final startParts = _splitTimeForDisplay(sl);
   final endParts = _splitTimeForDisplay(el);
   final bar = colors.forId(model.modelTypeId, name: model.modelTypeName);
   final style = categoryPillStyleFromBarColor(bar);
-  final typeLabel = (typeName.isNotEmpty) ? typeName : 'Type ${model.modelTypeId}';
+  final typeLabel = (typeName.isNotEmpty)
+      ? typeName
+      : 'Type ${model.modelTypeId}';
 
   return ActivityDetailArgs(
     layout: layout,
-    detailTitle: model.name.isNotEmpty ? model.name : (model.modelTypeName ?? 'Action'),
+    detailTitle: model.name.isNotEmpty
+        ? model.name
+        : (model.modelTypeName ?? 'Action'),
     categoryPillLabel: typeLabel,
     categoryPillBackground: style.background,
     categoryPillForeground: style.foreground,
@@ -203,8 +199,9 @@ ActivityDetailArgs activityDetailArgsForUmbrella(
   final endParts = _splitTimeForDisplay(el);
   final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
   final style = categoryPillStyleFromBarColor(bar);
-  final typeLabel =
-      (u.modelTypeName != null && u.modelTypeName!.isNotEmpty) ? u.modelTypeName! : 'Type ${u.modelTypeId}';
+  final typeLabel = (u.modelTypeName != null && u.modelTypeName!.isNotEmpty)
+      ? u.modelTypeName!
+      : 'Type ${u.modelTypeId}';
 
   final timeFmt = DateFormat.jm();
   final children = <UmbrellaChildItem>[];
@@ -292,7 +289,9 @@ ActivityDetailArgs activityDetailArgsForTodayRow(
     );
   }
 
-  if (t.contains('platform') || t.contains('sprint') || t.contains('deep work')) {
+  if (t.contains('platform') ||
+      t.contains('sprint') ||
+      t.contains('deep work')) {
     return ActivityDetailArgs(
       layout: ActivityDetailLayout.deepWork,
       detailTitle: 'Deep work — auth refactor',

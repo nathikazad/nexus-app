@@ -247,8 +247,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
     };
     final dup = maps.any(
       (m) =>
-          m['system'] == nextEntry['system'] &&
-          m['node'] == nextEntry['node'],
+          m['system'] == nextEntry['system'] && m['node'] == nextEntry['node'],
     );
     if (!dup) maps.add(nextEntry);
     final ing = current?.ingredientFilters;
@@ -256,9 +255,9 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
       tagFilters: maps.isEmpty ? null : maps,
       ingredientFilters: ing,
     );
-    ref.read(recipeListFilterProvider.notifier).setFilter(
-          nextFilter.isEmpty ? null : nextFilter,
-        );
+    ref
+        .read(recipeListFilterProvider.notifier)
+        .setFilter(nextFilter.isEmpty ? null : nextFilter);
   }
 
   void _mergeIngredientFilter(CookingItemSearchHit hit) {
@@ -266,10 +265,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
     final rows = <Map<String, dynamic>>[
       if (current?.ingredientFilters != null) ...current!.ingredientFilters!,
     ];
-    final nextEntry = <String, dynamic>{
-      'id': hit.id,
-      'name': hit.name,
-    };
+    final nextEntry = <String, dynamic>{'id': hit.id, 'name': hit.name};
     final dup = rows.any((m) => m['id'] == nextEntry['id']);
     if (!dup) rows.add(nextEntry);
     final tags = current?.tagFilters;
@@ -277,9 +273,9 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
       tagFilters: tags,
       ingredientFilters: rows.isEmpty ? null : rows,
     );
-    ref.read(recipeListFilterProvider.notifier).setFilter(
-          nextFilter.isEmpty ? null : nextFilter,
-        );
+    ref
+        .read(recipeListFilterProvider.notifier)
+        .setFilter(nextFilter.isEmpty ? null : nextFilter);
   }
 
   Future<void> _openFilterSheet() async {
@@ -302,9 +298,9 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
       );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load filters')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not load filters')));
       }
     }
   }
@@ -586,7 +582,8 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
               ],
             ),
             if ((tagFilters != null && tagFilters.isNotEmpty) ||
-                (ingredientFilters != null && ingredientFilters.isNotEmpty)) ...[
+                (ingredientFilters != null &&
+                    ingredientFilters.isNotEmpty)) ...[
               const SizedBox(height: 8),
               SizedBox(
                 height: 30,
@@ -609,9 +606,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
                               );
                               ref
                                   .read(recipeListFilterProvider.notifier)
-                                  .setFilter(
-                                    next.isEmpty ? null : next,
-                                  );
+                                  .setFilter(next.isEmpty ? null : next);
                             },
                           ),
                         ),
@@ -622,20 +617,18 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
                           child: _FilterTagChip(
                             label: ingredientFilterLabel(ingredientFilters[j]),
                             onRemove: () {
-                              final nextIng =
-                                  List<Map<String, dynamic>>.from(
+                              final nextIng = List<Map<String, dynamic>>.from(
                                 ingredientFilters,
                               )..removeAt(j);
                               final next = RecipeFilter(
                                 tagFilters: tagFilters,
-                                ingredientFilters:
-                                    nextIng.isEmpty ? null : nextIng,
+                                ingredientFilters: nextIng.isEmpty
+                                    ? null
+                                    : nextIng,
                               );
                               ref
                                   .read(recipeListFilterProvider.notifier)
-                                  .setFilter(
-                                    next.isEmpty ? null : next,
-                                  );
+                                  .setFilter(next.isEmpty ? null : next);
                             },
                           ),
                         ),
@@ -699,7 +692,11 @@ class _FilterTagChip extends StatelessWidget {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close, size: 14, color: AppColors.orange600),
+            child: const Icon(
+              Icons.close,
+              size: 14,
+              color: AppColors.orange600,
+            ),
           ),
         ],
       ),

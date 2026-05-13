@@ -83,7 +83,8 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
                     DropdownMenuItem(value: 'string', child: Text('String')),
                     DropdownMenuItem(value: 'number', child: Text('Number')),
                     DropdownMenuItem(value: 'boolean', child: Text('Boolean')),
-                    DropdownMenuItem(value: 'datetime', child: Text('DateTime')),
+                    DropdownMenuItem(
+                        value: 'datetime', child: Text('DateTime')),
                     DropdownMenuItem(value: 'vector', child: Text('Vector')),
                   ],
                   onChanged: (value) {
@@ -214,10 +215,12 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
                             onPressed: () async {
                               final result =
                                   await context.push('/model-type-selector');
-                              if (result != null && result is Map<String, dynamic>) {
+                              if (result != null &&
+                                  result is Map<String, dynamic>) {
                                 setState(() {
                                   _targetModelTypeId = result['id'] as int;
-                                  _targetModelTypeName = result['name'] as String;
+                                  _targetModelTypeName =
+                                      result['name'] as String;
                                 });
                               }
                             },

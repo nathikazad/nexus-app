@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 
@@ -29,33 +28,25 @@ final expenseGraphqlClientProvider = Provider<GraphQLClient>(
 );
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
-  final client = ref.watch(graphqlClientProvider);
-  final home = ref.watch(homeDomainIdProvider);
-  if (home == null) {
-    throw StateError('homeDomainId required (login)');
-  }
   return KgqlExpenseRepository(
-    client: client,
+    client: ref.watch(graphqlClientProvider),
     loadExpenseSchema: () => ref.read(expenseSchemaProvider.future),
-    domainId: home,
   );
 });
 
 final transferRepositoryProvider = Provider<TransferRepository>((ref) {
-  final client = ref.watch(graphqlClientProvider);
-  final home = ref.watch(homeDomainIdProvider);
-  if (home == null) {
-    throw StateError('homeDomainId required (login)');
-  }
   return KgqlTransferRepository(
-    client: client,
+    client: ref.watch(graphqlClientProvider),
     loadTransferSchema: () => ref.read(transferSchemaProvider.future),
-    domainId: home,
   );
 });
 
-final expenseSchemaProvider = kgqlModelTypeForHomeDomain(kExpenseModelTypeName);
-final transferSchemaProvider = kgqlModelTypeForHomeDomain(kTransferModelTypeName);
+final expenseSchemaProvider = kgqlModelTypeByNameProvider(
+  kExpenseModelTypeName,
+);
+final transferSchemaProvider = kgqlModelTypeByNameProvider(
+  kTransferModelTypeName,
+);
 
 final expenseSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
   final m = await ref.watch(expenseSchemaProvider.future);
@@ -89,7 +80,10 @@ bool _sameCalendarDate(DateTime a, DateTime b) =>
 
 /// True when [range] matches the calendar month containing [reference] (local),
 /// using the same start/end convention as [ExpenseDateRangeNotifier]'s default.
-bool isDateRangeCurrentCalendarMonth(DateTimeRange range, [DateTime? reference]) {
+bool isDateRangeCurrentCalendarMonth(
+  DateTimeRange range, [
+  DateTime? reference,
+]) {
   final refDay = reference ?? DateTime.now();
   final cal = _calendarMonthRange(refDay);
   return _sameCalendarDate(range.start, cal.start) &&
@@ -132,24 +126,23 @@ class ScopedFilteredExpenseDateRangeNotifier extends ExpenseDateRangeNotifier {
   DateTimeRange build() => kScopedFilteredExpenseDateRange();
 }
 
-final expenseListProvider = FutureProvider.family<
-    List<Expense>,
-    ({ExpenseFilter? filter, DateTimeRange dateRange})>((ref, params) async {
-  final repo = ref.watch(expenseRepositoryProvider);
-  return repo.list(
-    filter: params.filter,
-    rangeStart: params.dateRange.start,
-    rangeEnd: params.dateRange.end,
-  );
-});
+final expenseListProvider =
+    FutureProvider.family<
+      List<Expense>,
+      ({ExpenseFilter? filter, DateTimeRange dateRange})
+    >((ref, params) async {
+      final repo = ref.watch(expenseRepositoryProvider);
+      return repo.list(
+        filter: params.filter,
+        rangeStart: params.dateRange.start,
+        rangeEnd: params.dateRange.end,
+      );
+    });
 
 final transferListProvider = FutureProvider<List<Transfer>>((ref) async {
   final repo = ref.watch(transferRepositoryProvider);
   final range = ref.watch(expenseDateRangeProvider);
-  return repo.list(
-    rangeStart: range.start,
-    rangeEnd: range.end,
-  );
+  return repo.list(rangeStart: range.start, rangeEnd: range.end);
 });
 
 final transferListForUiProvider = FutureProvider<List<Transfer>>((ref) async {
@@ -167,10 +160,7 @@ final transferListForUiProvider = FutureProvider<List<Transfer>>((ref) async {
 final transferListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   final repo = ref.watch(transferRepositoryProvider);
   final range = ref.watch(expenseDateRangeProvider);
-  return repo.listSummary(
-    rangeStart: range.start,
-    rangeEnd: range.end,
-  );
+  return repo.listSummary(rangeStart: range.start, rangeEnd: range.end);
 });
 
 final expenseDetailProvider = FutureProvider.family<Expense?, int>((
@@ -181,16 +171,19 @@ final expenseDetailProvider = FutureProvider.family<Expense?, int>((
   return repo.getById(id);
 });
 
-final transferDetailProvider = FutureProvider.family<Transfer?, int>((ref, id) async {
+final transferDetailProvider = FutureProvider.family<Transfer?, int>((
+  ref,
+  id,
+) async {
   final repo = ref.watch(transferRepositoryProvider);
   return repo.getById(id);
 });
 
 final expenseTimelineLinksProvider =
     FutureProvider.family<List<TellerExpenseLink>, int>((ref, modelId) async {
-  final client = ref.watch(expenseGraphqlClientProvider);
-  return fetchExpenseTimelineLinks(client, modelId);
-});
+      final client = ref.watch(expenseGraphqlClientProvider);
+      return fetchExpenseTimelineLinks(client, modelId);
+    });
 
 final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   final repo = ref.watch(expenseRepositoryProvider);
@@ -200,30 +193,23 @@ final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
 /// Relation picker: models of [typeName] with minimal struct.
 final relatedModelsForTypeProvider =
     FutureProvider.family<List<RelatedModel>, String>((ref, typeName) async {
-  final client = ref.watch(expenseGraphqlClientProvider);
-  final home = ref.watch(homeDomainIdProvider);
-  if (home == null) {
-    throw StateError('homeDomainId required (login)');
-  }
-  final models = await fetchKgqlModels(
-    client,
-    filter: {'model_type': typeName},
-    struct: const {'id': true, 'name': true},
-    domainId: home,
-  );
-  return [
-    for (final m in models)
-      RelatedModel(id: m.id, name: m.name),
-  ];
-});
+      final client = ref.watch(expenseGraphqlClientProvider);
+      final models = await fetchKgqlModels(
+        client,
+        filter: {'model_type': typeName},
+        struct: const {'id': true, 'name': true},
+      );
+      return [for (final m in models) RelatedModel(id: m.id, name: m.name)];
+    });
 
 /// Alias used by list filters, bulk actions, and relation pickers.
 final relatedModelsProvider = relatedModelsForTypeProvider;
 
 // ── Teller timeline (data + Riverpod) ─────────────────────────────────────────
 
-final tellerTransactionsProvider =
-    FutureProvider<List<TellerTransaction>>((ref) async {
+final tellerTransactionsProvider = FutureProvider<List<TellerTransaction>>((
+  ref,
+) async {
   final client = ref.watch(expenseGraphqlClientProvider);
   return fetchTellerTimelineEvents(client);
 });
@@ -238,23 +224,24 @@ bool _eventInLocalCalendarRange(DateTime eventUtc, DateTimeRange range) {
 
 final tellerTransactionsInRangeProvider =
     Provider<AsyncValue<List<TellerTransaction>>>((ref) {
-  final all = ref.watch(tellerTransactionsProvider);
-  final range = ref.watch(expenseDateRangeProvider);
-  return all.when(
-    data: (rows) {
-      final filtered =
-          rows.where((r) => _eventInLocalCalendarRange(r.time, range)).toList();
-      final desc = isDateRangeCurrentCalendarMonth(range);
-      filtered.sort((a, b) {
-        final c = a.time.compareTo(b.time);
-        return desc ? -c : c;
-      });
-      return AsyncValue.data(filtered);
-    },
-    loading: () => const AsyncValue.loading(),
-    error: (e, st) => AsyncValue.error(e, st),
-  );
-});
+      final all = ref.watch(tellerTransactionsProvider);
+      final range = ref.watch(expenseDateRangeProvider);
+      return all.when(
+        data: (rows) {
+          final filtered = rows
+              .where((r) => _eventInLocalCalendarRange(r.time, range))
+              .toList();
+          final desc = isDateRangeCurrentCalendarMonth(range);
+          filtered.sort((a, b) {
+            final c = a.time.compareTo(b.time);
+            return desc ? -c : c;
+          });
+          return AsyncValue.data(filtered);
+        },
+        loading: () => const AsyncValue.loading(),
+        error: (e, st) => AsyncValue.error(e, st),
+      );
+    });
 
 class TellerListSummary {
   const TellerListSummary({required this.count, this.sumTotal});
@@ -268,8 +255,9 @@ num? _parseTellerAmount(dynamic raw) {
   return num.tryParse(raw.toString().trim());
 }
 
-final tellerListSummaryProvider =
-    Provider<AsyncValue<TellerListSummary>>((ref) {
+final tellerListSummaryProvider = Provider<AsyncValue<TellerListSummary>>((
+  ref,
+) {
   final async = ref.watch(tellerTransactionsInRangeProvider);
   return async.when(
     data: (rows) {
@@ -280,7 +268,9 @@ final tellerListSummaryProvider =
           sum = (sum ?? 0) + n;
         }
       }
-      return AsyncValue.data(TellerListSummary(count: rows.length, sumTotal: sum));
+      return AsyncValue.data(
+        TellerListSummary(count: rows.length, sumTotal: sum),
+      );
     },
     loading: () => const AsyncValue.loading(),
     error: (e, st) => AsyncValue.error(e, st),

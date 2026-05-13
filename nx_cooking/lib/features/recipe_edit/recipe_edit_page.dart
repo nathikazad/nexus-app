@@ -21,9 +21,8 @@ class RecipeEditPage extends ConsumerWidget {
     final schemaAsync = ref.watch(recipeSchemaViewProvider);
 
     return detailAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -47,9 +46,8 @@ class RecipeEditPage extends ConsumerWidget {
           );
         }
         return schemaAsync.when(
-          loading: () => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (e, _) => Scaffold(
             appBar: AppBar(
               leading: IconButton(
@@ -138,11 +136,9 @@ class _RecipeEditFormState extends ConsumerState<_RecipeEditForm> {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(recipeRepositoryProvider).updateRecipeMeta(
-            widget.recipeId,
-            _name.text,
-            _tagsForSave(),
-          );
+      await ref
+          .read(recipeRepositoryProvider)
+          .updateRecipeMeta(widget.recipeId, _name.text, _tagsForSave());
       ref.invalidate(recipeDetailProvider(widget.recipeId));
       ref.invalidate(recipeListProvider);
       messenger.showSnackBar(const SnackBar(content: Text('Saved')));
@@ -151,9 +147,9 @@ class _RecipeEditFormState extends ConsumerState<_RecipeEditForm> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
       }
     } finally {
       if (mounted) {
@@ -201,9 +197,9 @@ class _RecipeEditFormState extends ConsumerState<_RecipeEditForm> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not delete: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not delete: $e')));
       }
     } finally {
       if (mounted) {
@@ -277,10 +273,7 @@ class _RecipeEditFormState extends ConsumerState<_RecipeEditForm> {
           TextField(
             controller: _name,
             textCapitalization: TextCapitalization.sentences,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              color: AppColors.zinc900,
-            ),
+            style: GoogleFonts.inter(fontSize: 16, color: AppColors.zinc900),
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
@@ -294,7 +287,10 @@ class _RecipeEditFormState extends ConsumerState<_RecipeEditForm> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.orange500, width: 2),
+                borderSide: const BorderSide(
+                  color: AppColors.orange500,
+                  width: 2,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -330,9 +326,8 @@ class _RecipeEditFormState extends ConsumerState<_RecipeEditForm> {
                     TagPickerRow(
                       system: systems[i],
                       value: _tags[systems[i].name] ?? const [],
-                      onChanged: (v) => setState(
-                        () => _tags[systems[i].name] = v,
-                      ),
+                      onChanged: (v) =>
+                          setState(() => _tags[systems[i].name] = v),
                     ),
                     if (i < systems.length - 1)
                       const Divider(height: 1, color: AppColors.zinc100),

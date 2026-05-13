@@ -23,9 +23,7 @@ Map<String, List<String>> recipeTagMapFromModel(Model m) {
   if (tags == null || tags.isEmpty) {
     return const {};
   }
-  return {
-    for (final e in tags.entries) e.key: List<String>.from(e.value),
-  };
+  return {for (final e in tags.entries) e.key: List<String>.from(e.value)};
 }
 
 int? _intAttr(Model m, String key) {
@@ -45,8 +43,7 @@ String _metaLine(Model m) {
   }
   final prep = _intAttr(m, kRecipeAttrPrepTime);
   final prepFromPayload = crawlerPayloadNonEmptyString(payload, 'prep_time');
-  final prepStr =
-      prepFromPayload ?? (prep != null ? '$prep min prep' : '—');
+  final prepStr = prepFromPayload ?? (prep != null ? '$prep min prep' : '—');
   return '$n ingredients · $prepStr';
 }
 
@@ -114,7 +111,8 @@ RecipeDetail recipeDetailFromModel(Model m) {
   final relList = m.relationsList ?? const <Relation>[];
   final prepMin = _intAttr(m, kRecipeAttrPrepTime);
   final payload = crawlerPayloadFromModelAttributes(m.attributes);
-  final prepDisplay = crawlerPayloadNonEmptyString(payload, 'prep_time') ??
+  final prepDisplay =
+      crawlerPayloadNonEmptyString(payload, 'prep_time') ??
       (prepMin != null ? '$prepMin min' : null);
 
   final lines = <IngredientLine>[];

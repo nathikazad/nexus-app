@@ -29,7 +29,6 @@ void main() {
     final repo = KgqlPersonRepository(
       client: mock,
       loadPersonSchema: () => throw UnimplementedError(),
-      domainId: 1,
     );
     await repo.updatePreference(
       const Person(

@@ -5,11 +5,7 @@ import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/domain/log/daily_log.dart';
 
 class LogRow extends StatelessWidget {
-  const LogRow({
-    super.key,
-    required this.log,
-    this.onTap,
-  });
+  const LogRow({super.key, required this.log, this.onTap});
 
   final DailyLog log;
   final VoidCallback? onTap;
@@ -17,7 +13,9 @@ class LogRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeFmt = DateFormat.jm();
-    final timeLabel = log.loggedAt != null ? timeFmt.format(log.loggedAt!) : '—';
+    final timeLabel = log.loggedAt != null
+        ? timeFmt.format(log.loggedAt!)
+        : '—';
     final preview = (log.entry ?? '').trim();
 
     return Material(

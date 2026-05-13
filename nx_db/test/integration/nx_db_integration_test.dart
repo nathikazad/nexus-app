@@ -21,7 +21,8 @@ import 'package:nx_db/kgql.dart';
 /// Optional overrides:
 /// - `NX_DB_INTEGRATION_GRAPHQL_HTTP` — full GraphQL URL if not using localhost.
 /// - `NX_DB_INTEGRATION_USER_ID` — `x-user-id` (default `1`).
-bool get _runIntegration => Platform.environment['RUN_NX_DB_INTEGRATION'] == 'true';
+bool get _runIntegration =>
+    Platform.environment['RUN_NX_DB_INTEGRATION'] == 'true';
 
 GraphQLClient _integrationClient() {
   final fromEnv = Platform.environment['NX_DB_INTEGRATION_GRAPHQL_HTTP'];
@@ -31,9 +32,6 @@ GraphQLClient _integrationClient() {
   final userId = Platform.environment['NX_DB_INTEGRATION_USER_ID'] ?? '1';
   return createClient(graphqlHttp, userId);
 }
-
-int get _integrationDomainId =>
-    int.tryParse(Platform.environment['NX_DB_INTEGRATION_DOMAIN_ID'] ?? '') ?? 1;
 
 void main() {
   group('IN13 integration (RUN_NX_DB_INTEGRATION=true, localhost PGDB)', () {
@@ -47,14 +45,15 @@ void main() {
       final result = await client.query(
         QueryOptions(
           document: gql(getAllModelTypesQuery),
-          variables: {'domainId': _integrationDomainId},
           fetchPolicy: FetchPolicy.networkOnly,
         ),
       );
       expect(result.hasException, isFalse, reason: '${result.exception}');
       final raw = result.data?['getKgqlModelType'];
       expect(raw, isNotNull);
-      final list = raw is String ? json.decode(raw) as List<dynamic> : raw as List<dynamic>;
+      final list = raw is String
+          ? json.decode(raw) as List<dynamic>
+          : raw as List<dynamic>;
       expect(list, isNotEmpty);
       final first = list.first as Map<String, dynamic>;
       ModelType.fromJson(first, recursive: true);
@@ -67,7 +66,6 @@ void main() {
           variables: {
             'filter': {'model_type': 'Expense'},
             'struct': {'id': true, 'name': true},
-            'domainId': _integrationDomainId,
           },
           fetchPolicy: FetchPolicy.networkOnly,
         ),
@@ -87,7 +85,6 @@ void main() {
         client,
         {'model_type': 'Expense'},
         {'metric': 'count', 'key': null, 'group': null},
-        domainId: _integrationDomainId,
       );
       expect(out, isNotEmpty);
     });

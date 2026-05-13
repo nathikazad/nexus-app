@@ -69,11 +69,7 @@ void main() {
         'end_time': '2026-04-18T12:00:00.000',
         'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
         'relations': [
-          {
-            'relation_id': 9001,
-            'model_id': 7,
-            'model_type': 'Action',
-          },
+          {'relation_id': 9001, 'model_id': 7, 'model_type': 'Action'},
         ],
       });
       final a = actionFromModel(m);
@@ -81,89 +77,94 @@ void main() {
       expect(a.relationIdByChildId[7], 9001);
     });
 
-    test('nested Action map: keeps relation==child, drops relation==parent', () {
-      final m = Model.fromJson({
-        'id': 100,
-        'name': 'Middle',
-        'model_type_id': 1,
-        'start_time': '2026-04-18T09:00:00.000',
-        'end_time': '2026-04-18T10:00:00.000',
-        'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
-        'Action': [
-          {
-            'id': 7,
-            'name': 'A child',
-            'model_type_id': 2,
-            'relation': 'child',
-            'start_time': '2026-04-18T09:10:00.000',
-            'end_time': '2026-04-18T09:30:00.000',
-            'model_type': {'id': 2, 'name': 'Meet', 'type_kind': 'base'},
-          },
-          {
-            'id': 50,
-            'name': 'My parent',
-            'model_type_id': 3,
-            'relation': 'parent',
-            'start_time': '2026-04-18T08:00:00.000',
-            'end_time': '2026-04-18T12:00:00.000',
-            'model_type': {'id': 3, 'name': 'Workout', 'type_kind': 'base'},
-          },
-        ],
-      });
-      final a = actionFromModel(m);
-      expect(a.childActionIds, [7]);
-    });
+    test(
+      'nested Action map: keeps relation==child, drops relation==parent',
+      () {
+        final m = Model.fromJson({
+          'id': 100,
+          'name': 'Middle',
+          'model_type_id': 1,
+          'start_time': '2026-04-18T09:00:00.000',
+          'end_time': '2026-04-18T10:00:00.000',
+          'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
+          'Action': [
+            {
+              'id': 7,
+              'name': 'A child',
+              'model_type_id': 2,
+              'relation': 'child',
+              'start_time': '2026-04-18T09:10:00.000',
+              'end_time': '2026-04-18T09:30:00.000',
+              'model_type': {'id': 2, 'name': 'Meet', 'type_kind': 'base'},
+            },
+            {
+              'id': 50,
+              'name': 'My parent',
+              'model_type_id': 3,
+              'relation': 'parent',
+              'start_time': '2026-04-18T08:00:00.000',
+              'end_time': '2026-04-18T12:00:00.000',
+              'model_type': {'id': 3, 'name': 'Workout', 'type_kind': 'base'},
+            },
+          ],
+        });
+        final a = actionFromModel(m);
+        expect(a.childActionIds, [7]);
+      },
+    );
 
-    test('relations list: keeps relation==child only and tracks relation ids', () {
-      final m = Model.fromJson({
-        'id': 100,
-        'name': 'Middle',
-        'model_type_id': 1,
-        'start_time': '2026-04-18T09:00:00.000',
-        'end_time': '2026-04-18T10:00:00.000',
-        'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
-        'relations': [
-          {
-            'relation_id': 9001,
-            'model_id': 7,
-            'model_type': 'Action',
-            'relation': 'child',
-          },
-          {
-            'relation_id': 9002,
-            'model_id': 50,
-            'model_type': 'Action',
-            'relation': 'parent',
-          },
-        ],
-      });
-      final a = actionFromModel(m);
-      expect(a.childActionIds, [7]);
-      expect(a.relationIdByChildId.keys.toList(), [7]);
-      expect(a.relationIdByChildId[7], 9001);
-      expect(a.relationIdByChildId.containsKey(50), isFalse);
-    });
+    test(
+      'relations list: keeps relation==child only and tracks relation ids',
+      () {
+        final m = Model.fromJson({
+          'id': 100,
+          'name': 'Middle',
+          'model_type_id': 1,
+          'start_time': '2026-04-18T09:00:00.000',
+          'end_time': '2026-04-18T10:00:00.000',
+          'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
+          'relations': [
+            {
+              'relation_id': 9001,
+              'model_id': 7,
+              'model_type': 'Action',
+              'relation': 'child',
+            },
+            {
+              'relation_id': 9002,
+              'model_id': 50,
+              'model_type': 'Action',
+              'relation': 'parent',
+            },
+          ],
+        });
+        final a = actionFromModel(m);
+        expect(a.childActionIds, [7]);
+        expect(a.relationIdByChildId.keys.toList(), [7]);
+        expect(a.relationIdByChildId[7], 9001);
+        expect(a.relationIdByChildId.containsKey(50), isFalse);
+      },
+    );
 
-    test('relations list: legacy null relation is treated as child (back-compat)', () {
-      final m = Model.fromJson({
-        'id': 100,
-        'name': 'Middle',
-        'model_type_id': 1,
-        'start_time': '2026-04-18T09:00:00.000',
-        'end_time': '2026-04-18T10:00:00.000',
-        'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
-        'relations': [
-          {
-            'relation_id': 9001,
-            'model_id': 7,
-            'model_type': 'Action',
-          },
-        ],
-      });
-      final a = actionFromModel(m);
-      expect(a.childActionIds, [7]);
-      expect(a.relationIdByChildId[7], 9001);
-    });
+    test(
+      'relations list: legacy null relation is treated as child (back-compat)',
+      () {
+        final m = Model.fromJson({
+          'id': 100,
+          'name': 'Middle',
+          'model_type_id': 1,
+          'start_time': '2026-04-18T09:00:00.000',
+          'end_time': '2026-04-18T10:00:00.000',
+          'model_type': {'id': 1, 'name': 'Goto', 'type_kind': 'base'},
+          'relations': [
+            {'relation_id': 9001, 'model_id': 7, 'model_type': 'Action'},
+          ],
+        });
+        final a = actionFromModel(m);
+        expect(a.childActionIds, [7]);
+        expect(a.relationIdByChildId[7], 9001);
+      },
+    );
   });
 
   group('setModelRequestForCreate', () {

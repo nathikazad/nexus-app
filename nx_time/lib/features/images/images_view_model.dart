@@ -60,9 +60,7 @@ class ImagesViewState {
   }) {
     return ImagesViewState(
       loading: loading ?? this.loading,
-      error: identical(error, _imagesCopyUnset)
-          ? this.error
-          : error as String?,
+      error: identical(error, _imagesCopyUnset) ? this.error : error as String?,
       available: available ?? this.available,
       selected: selected ?? this.selected,
       loadingDay: loadingDay ?? this.loadingDay,
@@ -73,8 +71,8 @@ class ImagesViewState {
       transientNotice: clearTransientNotice
           ? null
           : (identical(transientNotice, _imagesCopyUnset)
-              ? this.transientNotice
-              : transientNotice as String?),
+                ? this.transientNotice
+                : transientNotice as String?),
     );
   }
 }
@@ -114,18 +112,14 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
 
   bool _isToday(DateTime day) {
     final now = DateTime.now();
-    return day.year == now.year &&
-        day.month == now.month &&
-        day.day == now.day;
+    return day.year == now.year && day.month == now.month && day.day == now.day;
   }
 
   @override
   ImagesViewState build() {
     ref.onDispose(_stopPolling);
     final now = DateTime.now();
-    return ImagesViewState.initial(
-      DateTime(now.year, now.month, now.day),
-    );
+    return ImagesViewState.initial(DateTime(now.year, now.month, now.day));
   }
 
   void clearTransientNotice() {
@@ -181,11 +175,13 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
         state.selected,
       );
       final existing = state.dayEntries.map((e) => e.filename).toSet();
-      final newOnes =
-          fresh.where((e) => !existing.contains(e.filename)).toList();
+      final newOnes = fresh
+          .where((e) => !existing.contains(e.filename))
+          .toList();
       if (newOnes.isEmpty) return;
 
-      final merged = [...state.dayEntries, ...newOnes]..sort((a, b) {
+      final merged = [...state.dayEntries, ...newOnes]
+        ..sort((a, b) {
           final c = a.minutesSinceMidnight.compareTo(b.minutesSinceMidnight);
           if (c != 0) return c;
           return a.filename.compareTo(b.filename);
@@ -195,11 +191,7 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
       final minT = mins.reduce((a, b) => a < b ? a : b);
       final maxT = mins.reduce((a, b) => a > b ? a : b);
 
-      state = state.copyWith(
-        dayEntries: merged,
-        minTime: minT,
-        maxTime: maxT,
-      );
+      state = state.copyWith(dayEntries: merged, minTime: minT, maxTime: maxT);
     } catch (_) {}
   }
 
@@ -226,10 +218,7 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
       );
       await loadImagesForSelectedDay();
     } catch (e) {
-      state = state.copyWith(
-        error: e.toString(),
-        loading: false,
-      );
+      state = state.copyWith(error: e.toString(), loading: false);
     }
   }
 
@@ -298,4 +287,6 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
 }
 
 final imagesViewModelProvider = NotifierProvider.autoDispose
-    .family<ImagesViewNotifier, ImagesViewState, String>(ImagesViewNotifier.new);
+    .family<ImagesViewNotifier, ImagesViewState, String>(
+      ImagesViewNotifier.new,
+    );

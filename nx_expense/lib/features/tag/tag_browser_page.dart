@@ -20,7 +20,8 @@ class TagBrowserScreen extends ConsumerWidget {
     final schemaAsync = ref.watch(expenseSchemaViewProvider);
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         final ts = tagSystemByName(schema, systemName);
@@ -31,19 +32,29 @@ class TagBrowserScreen extends ConsumerWidget {
             body: const Center(child: Text('Tag system not found')),
           );
         }
-        final displayTitle = ts.name.toLowerCase() == 'category' ? 'Categories' : ts.name;
+        final displayTitle = ts.name.toLowerCase() == 'category'
+            ? 'Categories'
+            : ts.name;
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+              icon: const Icon(
+                Icons.arrow_back,
+                color: AppColors.slate400,
+                size: 22,
+              ),
               onPressed: () => context.pop(),
             ),
             centerTitle: true,
             title: Text(displayTitle, style: refAppBarTitleBase()),
             actions: [
               IconButton(
-                icon: const Icon(Icons.search, color: AppColors.slate400, size: 22),
+                icon: const Icon(
+                  Icons.search,
+                  color: AppColors.slate400,
+                  size: 22,
+                ),
                 onPressed: () {},
               ),
             ],
@@ -56,7 +67,12 @@ class TagBrowserScreen extends ConsumerWidget {
               ? ListView(
                   children: [
                     for (final n in ts.nodes)
-                      _HierNode(ref: ref, node: n, systemName: ts.name, depth: 0),
+                      _HierNode(
+                        ref: ref,
+                        node: n,
+                        systemName: ts.name,
+                        depth: 0,
+                      ),
                   ],
                 )
               : ListView(
@@ -65,7 +81,10 @@ class TagBrowserScreen extends ConsumerWidget {
                       Material(
                         color: Colors.white,
                         child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: RefLayout.px5,
+                            vertical: 8,
+                          ),
                           title: Text(
                             n.name,
                             style: GoogleFonts.inter(
@@ -76,9 +95,13 @@ class TagBrowserScreen extends ConsumerWidget {
                           ),
                           trailing: Text(
                             '—',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.slate400),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.slate400,
+                            ),
                           ),
-                          onTap: () => _applyFilter(context, ref, ts.name, n.name),
+                          onTap: () =>
+                              _applyFilter(context, ref, ts.name, n.name),
                         ),
                       ),
                   ],
@@ -88,16 +111,21 @@ class TagBrowserScreen extends ConsumerWidget {
     );
   }
 
-  void _applyFilter(BuildContext context, WidgetRef ref, String system, String node) {
-    ref.read(expenseListFilterProvider.notifier).setFilter(ExpenseFilter(
-          tagFilters: [
-            {
-              'system': system,
-              'node': node,
-              'include_descendants': true,
-            },
-          ],
-        ));
+  void _applyFilter(
+    BuildContext context,
+    WidgetRef ref,
+    String system,
+    String node,
+  ) {
+    ref
+        .read(expenseListFilterProvider.notifier)
+        .setFilter(
+          ExpenseFilter(
+            tagFilters: [
+              {'system': system, 'node': node, 'include_descendants': true},
+            ],
+          ),
+        );
     invalidateExpenseListCache(ref);
     context.go('/expenses');
   }
@@ -117,15 +145,19 @@ class _HierNode extends StatelessWidget {
   final int depth;
 
   void _apply(BuildContext context) {
-    ref.read(expenseListFilterProvider.notifier).setFilter(ExpenseFilter(
-          tagFilters: [
-            {
-              'system': systemName,
-              'node': node.name,
-              'include_descendants': true,
-            },
-          ],
-        ));
+    ref
+        .read(expenseListFilterProvider.notifier)
+        .setFilter(
+          ExpenseFilter(
+            tagFilters: [
+              {
+                'system': systemName,
+                'node': node.name,
+                'include_descendants': true,
+              },
+            ],
+          ),
+        );
     invalidateExpenseListCache(ref);
     context.go('/expenses');
   }
@@ -137,7 +169,12 @@ class _HierNode extends StatelessWidget {
       return Material(
         color: Colors.white,
         child: ListTile(
-          contentPadding: EdgeInsets.only(left: 20.0 + depth * 16, right: RefLayout.px5, top: 4, bottom: 4),
+          contentPadding: EdgeInsets.only(
+            left: 20.0 + depth * 16,
+            right: RefLayout.px5,
+            top: 4,
+            bottom: 4,
+          ),
           title: Text(
             node.name,
             style: GoogleFonts.inter(
@@ -158,18 +195,31 @@ class _HierNode extends StatelessWidget {
       data: Theme.of(context).copyWith(dividerColor: AppColors.slate100),
       child: ExpansionTile(
         // Unique key so expand/collapse state survives scroll; required for ExpansionTile in ListView.
-        key: PageStorageKey<String>('tag_browser_${systemName}_${node.name}_$depth'),
-        tilePadding: EdgeInsets.only(left: 20.0 + depth * 8, right: RefLayout.px5),
+        key: PageStorageKey<String>(
+          'tag_browser_${systemName}_${node.name}_$depth',
+        ),
+        tilePadding: EdgeInsets.only(
+          left: 20.0 + depth * 8,
+          right: RefLayout.px5,
+        ),
         childrenPadding: EdgeInsets.zero,
         // Do not set custom leading/trailing: they replace the default expand icon and can break taps
         // on some Flutter versions (Expansible + ListTile header).
         title: Text(
           node.name,
-          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate900),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.slate900,
+          ),
         ),
         subtitle: Text(
           '${ch.length} items',
-          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate400),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.slate400,
+          ),
         ),
         backgroundColor: Colors.white,
         collapsedBackgroundColor: Colors.white,
@@ -179,7 +229,12 @@ class _HierNode extends StatelessWidget {
             child: Column(
               children: [
                 for (final c in ch)
-                  _HierNode(ref: ref, node: c, systemName: systemName, depth: depth + 1),
+                  _HierNode(
+                    ref: ref,
+                    node: c,
+                    systemName: systemName,
+                    depth: depth + 1,
+                  ),
               ],
             ),
           ),

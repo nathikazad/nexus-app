@@ -39,17 +39,18 @@ void main() {
 
   test('projectBrowseRows builds subtitle', () {
     final projects = [
-      const Project(
-        id: 1,
-        name: 'R',
-        modelTypeId: 8,
-        childProjectIds: [2, 3],
-      ),
+      const Project(id: 1, name: 'R', modelTypeId: 8, childProjectIds: [2, 3]),
       const Project(id: 2, name: 'A', modelTypeId: 8, parentProjectId: 1),
       const Project(id: 3, name: 'B', modelTypeId: 8, parentProjectId: 1),
     ];
     final tasks = [
-      const Task(id: 1, name: 't', modelTypeId: 9, projectId: 2, status: TaskStatus.todo),
+      const Task(
+        id: 1,
+        name: 't',
+        modelTypeId: 9,
+        projectId: 2,
+        status: TaskStatus.todo,
+      ),
     ];
     final rows = projectBrowseRows(projects, tasks);
     expect(rows.single.project.id, 1);

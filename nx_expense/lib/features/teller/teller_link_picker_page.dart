@@ -49,8 +49,15 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                     children: [
                       IconButton(
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: AppColors.slate400,
+                          size: 22,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       Expanded(
@@ -66,10 +73,17 @@ class TellerLinkPickerScreen extends ConsumerWidget {
               ),
               const ExpenseDateRangeBar(bottomPadding: 12),
               Padding(
-                padding: const EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  RefLayout.px5,
+                  0,
+                  RefLayout.px5,
+                  4,
+                ),
                 child: summaryAsync.when(
                   data: (s) => Text(
-                    s.sumTotal != null ? '${s.count} · ${formatMoney(s.sumTotal)}' : '${s.count}',
+                    s.sumTotal != null
+                        ? '${s.count} · ${formatMoney(s.sumTotal)}'
+                        : '${s.count}',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -78,7 +92,10 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                   ),
                   loading: () => Text(
                     '...',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate500),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppColors.slate500,
+                    ),
                   ),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
@@ -94,24 +111,34 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                     },
                     color: AppColors.teal600,
                     child: listAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
                             'Error: $e',
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppColors.slate500,
+                            ),
                           ),
                         ),
                       ),
                       data: (rows) {
-                        final candidates = rows.where((r) => !linkedIds.contains(r.eventId)).toList();
+                        final candidates = rows
+                            .where((r) => !linkedIds.contains(r.eventId))
+                            .toList();
                         if (candidates.isEmpty) {
                           return Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.account_balance_outlined, size: 48, color: AppColors.slate300),
+                                Icon(
+                                  Icons.account_balance_outlined,
+                                  size: 48,
+                                  color: AppColors.slate300,
+                                ),
                                 const SizedBox(height: 12),
                                 Text(
                                   linkedIds.isEmpty && rows.isEmpty
@@ -234,9 +261,9 @@ class _PickerTellerCard extends ConsumerWidget {
             Navigator.of(pickerContext).pop();
           } catch (e) {
             if (pickerContext.mounted) {
-              ScaffoldMessenger.of(pickerContext).showSnackBar(
-                SnackBar(content: Text('$e')),
-              );
+              ScaffoldMessenger.of(
+                pickerContext,
+              ).showSnackBar(SnackBar(content: Text('$e')));
             }
           }
         },

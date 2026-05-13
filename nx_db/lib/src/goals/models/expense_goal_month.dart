@@ -1,4 +1,5 @@
-import '../goal_parsing.dart' show parseDateOnly, parseNumLoose, unwrapObjectField;
+import '../goal_parsing.dart'
+    show parseDateOnly, parseNumLoose, unwrapObjectField;
 import 'goal_target.dart';
 
 class ExpenseGoalMonthItem {

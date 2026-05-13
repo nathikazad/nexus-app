@@ -1,15 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 const String _subscribeKgqlModelsSubscription = '''
-subscription SubscribeKgqlModels(\$filter: JSON!, \$domainId: Int!) {
-  subscribeKgqlModels(filter: \$filter, domainId: \$domainId) {
+subscription SubscribeKgqlModels(\$filter: JSON!) {
+  subscribeKgqlModels(filter: \$filter) {
     operation
     modelId
     modelTypeName
-    domainId
   }
 }
 ''';
@@ -19,43 +17,35 @@ class KgqlModelChange {
     required this.operation,
     required this.modelId,
     required this.modelTypeName,
-    required this.domainId,
   });
 
   final String operation;
   final int modelId;
   final String? modelTypeName;
-  final int domainId;
 
   static KgqlModelChange? fromJson(Object? raw) {
     if (raw is! Map<String, dynamic>) return null;
     final operation = raw['operation'];
     final modelId = raw['modelId'];
     final modelTypeName = raw['modelTypeName'];
-    final domainId = raw['domainId'];
-    if (operation is! String || modelId is! int || domainId is! int) {
+    if (operation is! String || modelId is! int) {
       return null;
     }
     return KgqlModelChange(
       operation: operation,
       modelId: modelId,
       modelTypeName: modelTypeName is String ? modelTypeName : null,
-      domainId: domainId,
     );
   }
 }
 
 final kgqlModelChangesProvider = StreamProvider.autoDispose
     .family<KgqlModelChange, String>((ref, modelTypeName) async* {
-      final domainId = ref.watch(personalDomainIdProvider);
-      if (domainId == null) return;
-
       final client = ref.watch(graphqlClientProvider);
       final options = SubscriptionOptions(
         document: gql(_subscribeKgqlModelsSubscription),
         variables: {
           'filter': {'model_type': modelTypeName},
-          'domainId': domainId,
         },
         fetchPolicy: FetchPolicy.noCache,
       );

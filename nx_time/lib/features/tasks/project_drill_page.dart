@@ -32,10 +32,11 @@ class _ProjectDrillPageState extends ConsumerState<ProjectDrillPage> {
     final projectAsync = ref.watch(projectByIdProvider(widget.projectId));
     final subsAsync = ref.watch(subProjectsProvider(widget.projectId));
     final tasksAsync = ref.watch(tasksInProjectProvider(widget.projectId));
-    final crumbsAsync = ref.watch(breadcrumbForProjectProvider(widget.projectId));
+    final crumbsAsync = ref.watch(
+      breadcrumbForProjectProvider(widget.projectId),
+    );
 
-    final showPickChrome =
-        widget.mode == ProjectsBrowseMode.pickTask;
+    final showPickChrome = widget.mode == ProjectsBrowseMode.pickTask;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -71,8 +72,8 @@ class _ProjectDrillPageState extends ConsumerState<ProjectDrillPage> {
                       ),
                       if (widget.mode == ProjectsBrowseMode.pickProject)
                         TextButton(
-                          onPressed: () => Navigator.of(context)
-                              .pop<int>(widget.projectId),
+                          onPressed: () =>
+                              Navigator.of(context).pop<int>(widget.projectId),
                           child: const Text(
                             'Select',
                             style: TextStyle(
@@ -142,19 +143,21 @@ class _ProjectDrillPageState extends ConsumerState<ProjectDrillPage> {
                             children: subs.map((s) {
                               return _navRow(
                                 title: s.name,
-                                subtitle: '${s.childProjectIds.length} sub-projects',
+                                subtitle:
+                                    '${s.childProjectIds.length} sub-projects',
                                 onTap: () async {
                                   if (widget.mode ==
                                       ProjectsBrowseMode.pickProject) {
                                     final picked = await Navigator.of(context)
                                         .push<int?>(
-                                      MaterialPageRoute(
-                                        builder: (_) => ProjectDrillPage(
-                                          projectId: s.id,
-                                          mode: ProjectsBrowseMode.pickProject,
-                                        ),
-                                      ),
-                                    );
+                                          MaterialPageRoute(
+                                            builder: (_) => ProjectDrillPage(
+                                              projectId: s.id,
+                                              mode: ProjectsBrowseMode
+                                                  .pickProject,
+                                            ),
+                                          ),
+                                        );
                                     if (!context.mounted) return;
                                     if (picked != null) {
                                       Navigator.of(context).pop<int>(picked);
@@ -163,13 +166,13 @@ class _ProjectDrillPageState extends ConsumerState<ProjectDrillPage> {
                                   }
                                   final result = await Navigator.of(context)
                                       .push<Set<int>?>(
-                                    MaterialPageRoute(
-                                      builder: (_) => ProjectDrillPage(
-                                        projectId: s.id,
-                                        mode: widget.mode,
-                                      ),
-                                    ),
-                                  );
+                                        MaterialPageRoute(
+                                          builder: (_) => ProjectDrillPage(
+                                            projectId: s.id,
+                                            mode: widget.mode,
+                                          ),
+                                        ),
+                                      );
                                   if (widget.mode ==
                                           ProjectsBrowseMode.pickTask &&
                                       result != null &&
@@ -203,8 +206,7 @@ class _ProjectDrillPageState extends ConsumerState<ProjectDrillPage> {
                           }
                           return Column(
                             children: tasks.map((t) {
-                              final selected =
-                                  _selectedTaskIds.contains(t.id);
+                              final selected = _selectedTaskIds.contains(t.id);
                               return Material(
                                 color: Colors.white,
                                 child: InkWell(
@@ -276,15 +278,14 @@ class _ProjectDrillPageState extends ConsumerState<ProjectDrillPage> {
       bottomNavigationBar: showPickChrome
           ? TaskPickFooter(
               selectedLabel: '${_selectedTaskIds.length} selected',
-              onDone: () => Navigator.of(context).pop<Set<int>>(
-                Set<int>.from(_selectedTaskIds),
-              ),
+              onDone: () => Navigator.of(
+                context,
+              ).pop<Set<int>>(Set<int>.from(_selectedTaskIds)),
               onNewTask: () async {
                 await Navigator.of(context).push<int?>(
                   MaterialPageRoute(
-                    builder: (_) => TaskCreatePage(
-                      initialProjectId: widget.projectId,
-                    ),
+                    builder: (_) =>
+                        TaskCreatePage(initialProjectId: widget.projectId),
                   ),
                 );
                 ref.invalidate(tasksInProjectProvider(widget.projectId));

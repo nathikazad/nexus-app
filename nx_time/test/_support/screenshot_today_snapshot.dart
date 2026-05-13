@@ -38,9 +38,24 @@ TodaySnapshot buildScreenshotTodaySnapshot() {
 
   const sourceActions = [
     Action(id: 1, name: 'Deep sleep', modelTypeId: 1, modelTypeName: 'Sleep'),
-    Action(id: 2, name: 'Morning prep', modelTypeId: 2, modelTypeName: 'Routine'),
-    Action(id: 3, name: 'Morning Run', modelTypeId: 3, modelTypeName: 'Workout'),
-    Action(id: 4, name: 'Platform › Sprint review', modelTypeId: 4, modelTypeName: 'Meet'),
+    Action(
+      id: 2,
+      name: 'Morning prep',
+      modelTypeId: 2,
+      modelTypeName: 'Routine',
+    ),
+    Action(
+      id: 3,
+      name: 'Morning Run',
+      modelTypeId: 3,
+      modelTypeName: 'Workout',
+    ),
+    Action(
+      id: 4,
+      name: 'Platform › Sprint review',
+      modelTypeId: 4,
+      modelTypeName: 'Meet',
+    ),
   ];
 
   final umbrellaRows = [

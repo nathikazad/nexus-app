@@ -17,41 +17,41 @@ import '../_support/riverpod_helpers.dart';
 class _AuthLoggedIn extends AuthController {
   _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
   @override
-  Future<User?> build() async => User(
-        userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
-        preset: BackendPreset.localhost,
-      );
+  Future<User?> build() async =>
+      User(userId: '1', preset: BackendPreset.localhost);
 }
 
 void main() {
-  test('taskRepositoryProvider and projectRepositoryProvider use KGQL impl', () async {
-    final mock = MockGraphQLClient();
-    final container = makeContainer(
-      overrides: [
-        authProvider.overrideWith(_AuthLoggedIn.new),
-        graphqlClientProvider.overrideWithValue(mock),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container.read(authProvider.future);
-    expect(container.read(taskRepositoryProvider), isA<KgqlTaskRepository>());
-    expect(container.read(projectRepositoryProvider), isA<KgqlProjectRepository>());
-    expect(container.read(goalRepositoryProvider), isA<KgqlGoalRepository>());
-    expect(container.read(personRepositoryProvider), isA<KgqlPersonRepository>());
-  });
+  test(
+    'taskRepositoryProvider and projectRepositoryProvider use KGQL impl',
+    () async {
+      final mock = MockGraphQLClient();
+      final container = makeContainer(
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(authProvider.future);
+      expect(container.read(taskRepositoryProvider), isA<KgqlTaskRepository>());
+      expect(
+        container.read(projectRepositoryProvider),
+        isA<KgqlProjectRepository>(),
+      );
+      expect(container.read(goalRepositoryProvider), isA<KgqlGoalRepository>());
+      expect(
+        container.read(personRepositoryProvider),
+        isA<KgqlPersonRepository>(),
+      );
+    },
+  );
 
   test('todaySnapshotProvider uses overridden repository', () async {
     final container = makeContainer(
       overrides: [
         authenticatedUserProvider.overrideWith(
-          (ref) async => User(
-            userId: '1',
-            personalDomainId: 1,
-            homeDomainId: 1,
-            preset: BackendPreset.localhost,
-          ),
+          (ref) async => User(userId: '1', preset: BackendPreset.localhost),
         ),
         actionRepositoryProvider.overrideWith(
           (ref) => FakeActionRepository(initial: const []),

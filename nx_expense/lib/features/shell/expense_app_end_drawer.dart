@@ -31,16 +31,36 @@ class ExpenseAppEndDrawer extends ConsumerWidget {
             ),
             const Divider(height: 1, color: AppColors.slate100),
             ListTile(
-              leading: const Icon(Icons.label_outlined, color: AppColors.slate600, size: 22),
-              title: Text('Tags', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              leading: const Icon(
+                Icons.label_outlined,
+                color: AppColors.slate600,
+                size: 22,
+              ),
+              title: Text(
+                'Tags',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               onTap: () {
                 Navigator.of(context).pop();
                 context.push('/tag-systems');
               },
             ),
             ListTile(
-              leading: const Icon(Icons.logout, color: AppColors.slate600, size: 22),
-              title: Text('Log out', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              leading: const Icon(
+                Icons.logout,
+                color: AppColors.slate600,
+                size: 22,
+              ),
+              title: Text(
+                'Log out',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               onTap: () async {
                 Navigator.of(context).pop();
                 await ref.read(authProvider.notifier).logout();

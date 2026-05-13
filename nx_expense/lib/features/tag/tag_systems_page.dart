@@ -52,11 +52,23 @@ class TagSystemsScreen extends ConsumerWidget {
                       if (context.canPop())
                         IconButton(
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                          icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: AppColors.slate400,
+                            size: 22,
+                          ),
                           onPressed: () => context.pop(),
                         ),
-                      Expanded(child: Text('Tag systems', style: refAppBarTitleLarge())),
+                      Expanded(
+                        child: Text(
+                          'Tag systems',
+                          style: refAppBarTitleLarge(),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -71,7 +83,9 @@ class TagSystemsScreen extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Expanded(child: Text('Tag systems', style: refAppBarTitleLarge())),
+                    Expanded(
+                      child: Text('Tag systems', style: refAppBarTitleLarge()),
+                    ),
                   ],
                 ),
               ),
@@ -83,20 +97,33 @@ class TagSystemsScreen extends ConsumerWidget {
                     ? ListView(
                         padding: const EdgeInsets.all(RefLayout.px5),
                         children: [
-                          _placeholderRow('Category', 'exclusive · tree · 24 nodes'),
-                          _placeholderRow('Priority', 'exclusive · flat · 3 nodes'),
-                          _placeholderRow('Project', 'multiple · flat · 8 nodes'),
+                          _placeholderRow(
+                            'Category',
+                            'exclusive · tree · 24 nodes',
+                          ),
+                          _placeholderRow(
+                            'Priority',
+                            'exclusive · flat · 3 nodes',
+                          ),
+                          _placeholderRow(
+                            'Project',
+                            'multiple · flat · 8 nodes',
+                          ),
                         ],
                       )
                     : ListView.separated(
                         itemCount: systems.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.slate100),
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, color: AppColors.slate100),
                         itemBuilder: (context, i) {
                           final ts = systems[i];
                           return Material(
                             color: Colors.white,
                             child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 8),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: RefLayout.px5,
+                                vertical: 8,
+                              ),
                               title: Text(
                                 ts.name,
                                 style: GoogleFonts.inter(
@@ -113,10 +140,18 @@ class TagSystemsScreen extends ConsumerWidget {
                                   color: AppColors.slate400,
                                 ),
                               ),
-                              trailing: const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: AppColors.slate300,
+                                size: 22,
+                              ),
                               onTap: ts.id == null
                                   ? null
-                                  : () => navToTagSystemEdit(context, ref, ts.id!),
+                                  : () => navToTagSystemEdit(
+                                      context,
+                                      ref,
+                                      ts.id!,
+                                    ),
                             ),
                           );
                         },
@@ -134,7 +169,10 @@ class TagSystemsScreen extends ConsumerWidget {
           backgroundColor: Colors.white,
           body: body,
           floatingActionButton: Container(
-            decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: refFabShadow),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: refFabShadow,
+            ),
             child: FloatingActionButton(
               onPressed: () => navToTagSystemCreate(context, ref),
               backgroundColor: AppColors.teal600,
@@ -154,7 +192,10 @@ class TagSystemsScreen extends ConsumerWidget {
       child: Material(
         color: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: RefLayout.px5, vertical: 16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: RefLayout.px5,
+            vertical: 16,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -181,7 +222,11 @@ class TagSystemsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.slate300, size: 22),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.slate300,
+                size: 22,
+              ),
             ],
           ),
         ),

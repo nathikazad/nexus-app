@@ -30,125 +30,161 @@ void _collectTagNodeNames(TagNodeView n, Set<String> out) {
 
 void main() {
   group('Seed schema (seed-data.md) — Expense app', () {
-    test('Expense type: cost, Company relation, Category/Judgment/Essentiality', () async {
-      final container = ProviderContainer(
-        overrides: expenseIntegrationOverrides,
-      );
-      addTearDown(container.dispose);
+    test(
+      'Expense type: cost, Company relation, Category/Judgment/Essentiality',
+      () async {
+        final container = ProviderContainer(
+          overrides: expenseIntegrationOverrides,
+        );
+        addTearDown(container.dispose);
 
-      await container.read(authProvider.future);
-      final mt = await container.read(expenseSchemaProvider.future);
+        await container.read(authProvider.future);
+        final mt = await container.read(expenseSchemaProvider.future);
 
-      expect(mt.name, kExpenseModelTypeName);
-      final keys = mt.attributes?.map((a) => a.key).whereType<String>().toSet() ?? {};
-      expect(keys, contains('cost'));
+        expect(mt.name, kExpenseModelTypeName);
+        final keys =
+            mt.attributes?.map((a) => a.key).whereType<String>().toSet() ?? {};
+        expect(keys, contains('cost'));
 
-      final view = modelTypeViewFromKgql(mt);
-      final targets = allRelationTargetTypeNames(view);
-      expect(targets, contains('Company'));
+        final view = modelTypeViewFromKgql(mt);
+        final targets = allRelationTargetTypeNames(view);
+        expect(targets, contains('Company'));
 
-      for (final name in ['Category', 'Judgment', 'Essentiality']) {
-        expect(tagSystemByName(view, name), isNotNull, reason: 'Tag system $name');
-      }
-    }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
-
-    test('Category tag tree includes seed root nodes', () async {
-      final container = ProviderContainer(
-        overrides: expenseIntegrationOverrides,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      final mt = await container.read(expenseSchemaProvider.future);
-
-      final category = tagSystemByName(modelTypeViewFromKgql(mt), 'Category');
-      expect(category, isNotNull);
-      final names = <String>{};
-      for (final node in category!.nodes) {
-        _collectTagNodeNames(node, names);
-      }
-      for (final root in ['Food', 'Travel', 'Business', 'Entertainment']) {
-        expect(names, contains(root));
-      }
-    }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
-
-    test('expense_schema helpers: primary amount is cost', () async {
-      final container = ProviderContainer(
-        overrides: expenseIntegrationOverrides,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      final mt = await container.read(expenseSchemaProvider.future);
-
-      expect(primaryNumberAttributeKey(mt), 'cost');
-    }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
-
-    test('expenseSummaryProvider: count > 0 and sum over cost', () async {
-      final container = ProviderContainer(
-        overrides: expenseIntegrationOverrides,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      final summary = await container.read(expenseSummaryProvider.future);
-
-      expect(summary.count, greaterThan(0));
-      expect(summary.sumTotal, isNotNull);
-      expect(summary.sumTotal!, greaterThan(0));
-    }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
-
-    test('demo expense names from seed table appear in list', () async {
-      final container = ProviderContainer(
-        overrides: expenseIntegrationOverrides,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      final list = await container.read(
-        expenseListProvider((filter: null, dateRange: _wideExpenseRange())).future,
-      );
-      final names = list.map((m) => m.name).toSet();
-
-      // seed-data.md § Expenses (demo graph)
-      const expectedAnyOf = [
-        'Coffee Meeting',
-        'Hotel Stay',
-        'Software License',
-        'Team Lunch',
-      ];
-      final matched = expectedAnyOf.where(names.contains).length;
-      expect(
-        matched,
-        greaterThanOrEqualTo(2),
-        reason: 'Expected at least two known demo rows; got names: $names',
-      );
-    }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
-
-    test('at least one expense has tag assignments (struct includes tags)', () async {
-      final container = ProviderContainer(
-        overrides: expenseIntegrationOverrides,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      final list = await container.read(
-        expenseListProvider((filter: null, dateRange: _wideExpenseRange())).future,
-      );
-
-      var anyTags = false;
-      for (final m in list) {
-        final t = m.tags;
-        if (t != null && t.isNotEmpty) {
-          anyTags = true;
-          break;
+        for (final name in ['Category', 'Judgment', 'Essentiality']) {
+          expect(
+            tagSystemByName(view, name),
+            isNotNull,
+            reason: 'Tag system $name',
+          );
         }
-      }
-      expect(
-        anyTags,
-        isTrue,
-        reason: 'Seed assigns Category/Judgment/Essentiality on demo expenses',
-      );
-    }, skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason);
+      },
+      skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,
+    );
+
+    test(
+      'Category tag tree includes seed root nodes',
+      () async {
+        final container = ProviderContainer(
+          overrides: expenseIntegrationOverrides,
+        );
+        addTearDown(container.dispose);
+
+        await container.read(authProvider.future);
+        final mt = await container.read(expenseSchemaProvider.future);
+
+        final category = tagSystemByName(modelTypeViewFromKgql(mt), 'Category');
+        expect(category, isNotNull);
+        final names = <String>{};
+        for (final node in category!.nodes) {
+          _collectTagNodeNames(node, names);
+        }
+        for (final root in ['Food', 'Travel', 'Business', 'Entertainment']) {
+          expect(names, contains(root));
+        }
+      },
+      skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,
+    );
+
+    test(
+      'expense_schema helpers: primary amount is cost',
+      () async {
+        final container = ProviderContainer(
+          overrides: expenseIntegrationOverrides,
+        );
+        addTearDown(container.dispose);
+
+        await container.read(authProvider.future);
+        final mt = await container.read(expenseSchemaProvider.future);
+
+        expect(primaryNumberAttributeKey(mt), 'cost');
+      },
+      skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,
+    );
+
+    test(
+      'expenseSummaryProvider: count > 0 and sum over cost',
+      () async {
+        final container = ProviderContainer(
+          overrides: expenseIntegrationOverrides,
+        );
+        addTearDown(container.dispose);
+
+        await container.read(authProvider.future);
+        final summary = await container.read(expenseSummaryProvider.future);
+
+        expect(summary.count, greaterThan(0));
+        expect(summary.sumTotal, isNotNull);
+        expect(summary.sumTotal!, greaterThan(0));
+      },
+      skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,
+    );
+
+    test(
+      'demo expense names from seed table appear in list',
+      () async {
+        final container = ProviderContainer(
+          overrides: expenseIntegrationOverrides,
+        );
+        addTearDown(container.dispose);
+
+        await container.read(authProvider.future);
+        final list = await container.read(
+          expenseListProvider((
+            filter: null,
+            dateRange: _wideExpenseRange(),
+          )).future,
+        );
+        final names = list.map((m) => m.name).toSet();
+
+        // seed-data.md § Expenses (demo graph)
+        const expectedAnyOf = [
+          'Coffee Meeting',
+          'Hotel Stay',
+          'Software License',
+          'Team Lunch',
+        ];
+        final matched = expectedAnyOf.where(names.contains).length;
+        expect(
+          matched,
+          greaterThanOrEqualTo(2),
+          reason: 'Expected at least two known demo rows; got names: $names',
+        );
+      },
+      skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,
+    );
+
+    test(
+      'at least one expense has tag assignments (struct includes tags)',
+      () async {
+        final container = ProviderContainer(
+          overrides: expenseIntegrationOverrides,
+        );
+        addTearDown(container.dispose);
+
+        await container.read(authProvider.future);
+        final list = await container.read(
+          expenseListProvider((
+            filter: null,
+            dateRange: _wideExpenseRange(),
+          )).future,
+        );
+
+        var anyTags = false;
+        for (final m in list) {
+          final t = m.tags;
+          if (t != null && t.isNotEmpty) {
+            anyTags = true;
+            break;
+          }
+        }
+        expect(
+          anyTags,
+          isTrue,
+          reason:
+              'Seed assigns Category/Judgment/Essentiality on demo expenses',
+        );
+      },
+      skip: runExpenseIntegration ? null : kExpenseIntegrationSkipReason,
+    );
   });
 }

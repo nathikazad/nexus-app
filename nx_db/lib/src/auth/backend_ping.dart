@@ -68,7 +68,8 @@ Future<void> pingGraphqlBackend({
     try {
       decoded = jsonDecode(response.body);
     } catch (_) {
-      throw Exception('Server did not return valid JSON (not a GraphQL endpoint?)');
+      throw Exception(
+          'Server did not return valid JSON (not a GraphQL endpoint?)');
     }
 
     if (decoded is Map && decoded['errors'] != null) {

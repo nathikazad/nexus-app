@@ -50,13 +50,15 @@ num? transferAmountAttribute(dynamic model) {
 
 String expenseDateSortKey(Expense m) {
   final raw = m.attributes?['date'];
-  if (raw is String && raw.isNotEmpty) return normalizeDateAttributeSortKey(raw);
+  if (raw is String && raw.isNotEmpty)
+    return normalizeDateAttributeSortKey(raw);
   return m.createdAt ?? '';
 }
 
 String transferDateSortKey(Transfer m) {
   final raw = m.attributes?['date'];
-  if (raw is String && raw.isNotEmpty) return normalizeDateAttributeSortKey(raw);
+  if (raw is String && raw.isNotEmpty)
+    return normalizeDateAttributeSortKey(raw);
   return m.createdAt ?? '';
 }
 
@@ -157,7 +159,10 @@ List<T> dedupeModelsById<T>(List<T> models) {
   }
 
   final seen = <int>{};
-  return [for (final m in models) if (seen.add(idOf(m))) m];
+  return [
+    for (final m in models)
+      if (seen.add(idOf(m))) m,
+  ];
 }
 
 /// Display label for a schema attribute key (`cost`, `date-time`, `snake_case` → title words).
@@ -182,15 +187,24 @@ bool expenseIgnoredForTotals(Expense model) {
 
 List<int> dedupeIntIdsPreserveOrder(List<int> ids) {
   final seen = <int>{};
-  return [for (final id in ids) if (seen.add(id)) id];
+  return [
+    for (final id in ids)
+      if (seen.add(id)) id,
+  ];
 }
 
 List<Expense> dedupeExpensesById(List<Expense> models) {
   final seen = <int>{};
-  return [for (final m in models) if (seen.add(m.id)) m];
+  return [
+    for (final m in models)
+      if (seen.add(m.id)) m,
+  ];
 }
 
-bool relationPendingCreateEquals(Map<String, dynamic>? a, Map<String, dynamic>? b) {
+bool relationPendingCreateEquals(
+  Map<String, dynamic>? a,
+  Map<String, dynamic>? b,
+) {
   if (identical(a, b)) return true;
   if (a == null || b == null) return a == b;
   if (a.length != b.length) return false;
@@ -214,7 +228,10 @@ bool relationStateMatchesSnapshotForUpdate({
         !snapIds.containsAll(curIds)) {
       return false;
     }
-    if (!relationPendingCreateEquals(createsByType[k], snapshotCreatesByType[k])) {
+    if (!relationPendingCreateEquals(
+      createsByType[k],
+      snapshotCreatesByType[k],
+    )) {
       return false;
     }
   }
@@ -244,14 +261,18 @@ List<Expense> sortExpensesByDateDesc(List<Expense> models) {
 }
 
 /// Parse `getKgqlAggregate` maps for chart labels/values (shape varies by backend).
-List<MapEntry<String, double>> parseGroupedChartEntries(Map<String, dynamic> raw) {
+List<MapEntry<String, double>> parseGroupedChartEntries(
+  Map<String, dynamic> raw,
+) {
   final g = raw['grouped'];
   if (g is! List) return [];
   final out = <MapEntry<String, double>>[];
   for (final item in g) {
     if (item is Map) {
       final m = Map<String, dynamic>.from(item);
-      final label = (m['group_key'] ?? m['name'] ?? m['label'] ?? m['key'] ?? '').toString();
+      final label =
+          (m['group_key'] ?? m['name'] ?? m['label'] ?? m['key'] ?? '')
+              .toString();
       final v = m['aggregated_value'] ?? m['value'];
       if (label.isEmpty) continue;
       if (v is num) {
@@ -299,15 +320,16 @@ List<MapEntry<String, double>> parseDaySpendEntries(Map<String, dynamic> raw) {
   for (final item in g) {
     if (item is Map) {
       final m = Map<String, dynamic>.from(item);
-      final label = (m['group_key'] ??
-              m['key'] ??
-              m['name'] ??
-              m['label'] ??
-              m['day'] ??
-              m['date'] ??
-              m['created_at'] ??
-              '')
-          .toString();
+      final label =
+          (m['group_key'] ??
+                  m['key'] ??
+                  m['name'] ??
+                  m['label'] ??
+                  m['day'] ??
+                  m['date'] ??
+                  m['created_at'] ??
+                  '')
+              .toString();
       final v = m['aggregated_value'] ?? m['value'];
       if (label.isEmpty) continue;
       if (v is num) {

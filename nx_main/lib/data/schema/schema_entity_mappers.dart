@@ -59,9 +59,8 @@ RelationDefinitionDraft relationDraftFromNx(nx.RelationshipType r) {
     link: r.link,
     multiplicity: r.multiplicity,
     description: r.description,
-    relationAttributeDefinitions: r.relationAttributeDefinitions
-        ?.map(relationAttrDraftFromNx)
-        .toList(),
+    relationAttributeDefinitions:
+        r.relationAttributeDefinitions?.map(relationAttrDraftFromNx).toList(),
     delete: r.delete,
   );
 }
@@ -72,9 +71,8 @@ nx.RelationshipType relationDraftToNx(RelationDefinitionDraft d) {
     link: d.link,
     multiplicity: d.multiplicity,
     description: d.description,
-    relationAttributeDefinitions: d.relationAttributeDefinitions
-        ?.map(relationAttrDraftToNx)
-        .toList(),
+    relationAttributeDefinitions:
+        d.relationAttributeDefinitions?.map(relationAttrDraftToNx).toList(),
     delete: d.delete,
   );
 }

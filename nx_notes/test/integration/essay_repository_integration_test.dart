@@ -154,17 +154,10 @@ class _IntegrationHarness {
   _IntegrationHarness() : client = createClient(_graphqlEndpoint, _userId) {
     repo = KgqlEssayRepository(
       client: client,
-      loadEssaySchema: () => fetchKgqlModelTypeByName(
-        client,
-        kEssayModelTypeName,
-        domainId: _domainId,
-      ),
-      loadEssaySnapSchema: () => fetchKgqlModelTypeByName(
-        client,
-        kEssaySnapModelTypeName,
-        domainId: _domainId,
-      ),
-      domainId: _domainId,
+      loadEssaySchema: () =>
+          fetchKgqlModelTypeByName(client, kEssayModelTypeName),
+      loadEssaySnapSchema: () =>
+          fetchKgqlModelTypeByName(client, kEssaySnapModelTypeName),
     );
   }
 
@@ -174,7 +167,7 @@ class _IntegrationHarness {
   Future<void> deleteModels(Iterable<int> ids) async {
     for (final id in ids) {
       try {
-        await setKgqlModel(client, setKgqlDelete(id), domainId: _domainId);
+        await setKgqlModel(client, setKgqlDelete(id));
       } catch (_) {
         // Cleanup should not hide the assertion that originally failed.
       }
@@ -213,9 +206,3 @@ String get _graphqlEndpoint =>
 
 String get _userId =>
     Platform.environment['NX_NOTES_INTEGRATION_USER_ID'] ?? '1';
-
-int get _domainId =>
-    int.tryParse(
-      Platform.environment['NX_NOTES_INTEGRATION_DOMAIN_ID'] ?? '',
-    ) ??
-    1;

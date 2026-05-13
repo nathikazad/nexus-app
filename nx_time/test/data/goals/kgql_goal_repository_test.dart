@@ -20,12 +20,8 @@ import '../../_support/mock_graphql_client.dart';
 class _AuthLoggedIn extends AuthController {
   _AuthLoggedIn() : super(initialDelay: Duration.zero, skipBackendPing: true);
   @override
-  Future<User?> build() async => User(
-        userId: '1',
-        personalDomainId: 1,
-        homeDomainId: 1,
-        preset: BackendPreset.localhost,
-      );
+  Future<User?> build() async =>
+      User(userId: '1', preset: BackendPreset.localhost);
 }
 
 const _week = r'''
@@ -38,9 +34,7 @@ void main() {
   test('getActionGoalsWeek returns empty domain list', () async {
     final mock = MockGraphQLClient();
     when(() => mock.query(any())).thenAnswer(
-      (_) async => okQueryResult({
-        'getActionGoalsWeek': json.decode(_week),
-      }),
+      (_) async => okQueryResult({'getActionGoalsWeek': json.decode(_week)}),
     );
     final container = ProviderContainer(
       overrides: [
@@ -67,7 +61,6 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
-      domainId: 1,
     );
     final t = await repo.getActionGoalsTrend(goalId: 1, weeks: 2);
     expect(t.goalId, 1);
@@ -103,9 +96,10 @@ void main() {
       loadGoalSchema: () async => ModelType(
         id: 1,
         name: 'Goal',
-        attributes: [AttributeDefinition(key: kGoalAttrLabel, valueType: 'string')],
+        attributes: [
+          AttributeDefinition(key: kGoalAttrLabel, valueType: 'string'),
+        ],
       ),
-      domainId: 1,
     );
     final g = await repo.getById(7);
     expect(g, isNotNull);
@@ -128,7 +122,6 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
-      domainId: 1,
     );
     final id = await repo.create(
       Goal(
@@ -143,8 +136,9 @@ void main() {
       ),
     );
     expect(id, 55);
-    final captured = verify(() => mock.mutate(captureAny())).captured.single
-        as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables['input']! as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['name'], 'Gym goal');
@@ -164,7 +158,6 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
-      domainId: 1,
     );
     final id = await repo.update(
       Goal(
@@ -180,8 +173,9 @@ void main() {
       ),
     );
     expect(id, 2);
-    final captured = verify(() => mock.mutate(captureAny())).captured.single
-        as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables['input']! as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 2);
@@ -200,11 +194,11 @@ void main() {
     final repo = KgqlGoalRepository(
       client: mock,
       loadGoalSchema: () => throw UnimplementedError(),
-      domainId: 1,
     );
     await repo.delete(9);
-    final captured = verify(() => mock.mutate(captureAny())).captured.single
-        as MutationOptions;
+    final captured =
+        verify(() => mock.mutate(captureAny())).captured.single
+            as MutationOptions;
     final input = captured.variables['input']! as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     expect(data['id'], 9);

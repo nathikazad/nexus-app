@@ -70,14 +70,21 @@ class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: AppColors.slate200),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    Icon(SolarLinearIcons.magnifer, size: 18, color: AppColors.slate400),
+                    Icon(
+                      SolarLinearIcons.magnifer,
+                      size: 18,
+                      color: AppColors.slate400,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Search all tasks…',
@@ -179,12 +186,12 @@ class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
                         onTap: () async {
                           final extra = await Navigator.of(context)
                               .push<Set<int>?>(
-                            MaterialPageRoute(
-                              builder: (_) => const ProjectsBrowsePage(
-                                mode: ProjectsBrowseMode.pickTask,
-                              ),
-                            ),
-                          );
+                                MaterialPageRoute(
+                                  builder: (_) => const ProjectsBrowsePage(
+                                    mode: ProjectsBrowseMode.pickTask,
+                                  ),
+                                ),
+                              );
                           if (extra != null && mounted) {
                             setState(() => _selectedTaskIds.addAll(extra));
                           }
@@ -241,9 +248,7 @@ class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
         },
         onNewTask: () async {
           final newId = await Navigator.of(context).push<int?>(
-            MaterialPageRoute(
-              builder: (_) => const TaskCreatePage(),
-            ),
+            MaterialPageRoute(builder: (_) => const TaskCreatePage()),
           );
           if (newId != null && mounted) {
             setState(() => _selectedTaskIds.add(newId));

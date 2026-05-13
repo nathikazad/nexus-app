@@ -21,7 +21,11 @@ class TaskSquareCheck extends StatelessWidget {
                 color: AppColors.accent,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Icon(SolarLinearIcons.checkRead, size: 14, color: Colors.white),
+              child: const Icon(
+                SolarLinearIcons.checkRead,
+                size: 14,
+                color: Colors.white,
+              ),
             )
           : Container(
               decoration: BoxDecoration(
@@ -31,7 +35,11 @@ class TaskSquareCheck extends StatelessWidget {
             ),
     );
     if (onTap == null) return box;
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(6), child: box);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: box,
+    );
   }
 }
 
@@ -74,8 +82,13 @@ class TaskPickFooter extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.slate700,
                 side: const BorderSide(color: AppColors.slate200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text(
                 '+ New task',
@@ -88,10 +101,18 @@ class TaskPickFooter extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w500)),
+              child: const Text(
+                'Done',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
             ),
           ],
         ),

@@ -7,10 +7,7 @@ import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 void main() {
   test('snackbarErrorForSave', () {
     expect(
-      ActionEditViewModel.snackbarErrorForSave(
-        nameTrimmed: '',
-        isCreate: true,
-      ),
+      ActionEditViewModel.snackbarErrorForSave(nameTrimmed: '', isCreate: true),
       isNotNull,
     );
     expect(
@@ -63,12 +60,18 @@ void main() {
       name: 'Meet',
       dotColor: Color(0xFF000000),
     );
-    expect(ActionEditViewModel.modelTypeNameIfChanged(initial, catSame), isNull);
+    expect(
+      ActionEditViewModel.modelTypeNameIfChanged(initial, catSame),
+      isNull,
+    );
     const catNew = ActionCategoryOption(
       modelTypeId: 2,
       name: 'Sleep',
       dotColor: Color(0xFF000000),
     );
-    expect(ActionEditViewModel.modelTypeNameIfChanged(initial, catNew), 'Sleep');
+    expect(
+      ActionEditViewModel.modelTypeNameIfChanged(initial, catNew),
+      'Sleep',
+    );
   });
 }

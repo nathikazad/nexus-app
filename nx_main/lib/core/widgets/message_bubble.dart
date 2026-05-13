@@ -5,7 +5,7 @@ class ChatMessage {
   final bool isFromUser;
   final DateTime timestamp;
   final String? audioFilePath;
-  
+
   ChatMessage({
     required this.text,
     required this.isFromUser,
@@ -18,22 +18,22 @@ class MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback? onPlayAudio;
   final bool isPlaying;
-  
+
   const MessageBubble({
     super.key,
     required this.message,
     this.onPlayAudio,
     this.isPlaying = false,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: message.isFromUser 
-          ? MainAxisAlignment.end 
-          : MainAxisAlignment.start,
+        mainAxisAlignment: message.isFromUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!message.isFromUser) ...[
             CircleAvatar(
@@ -45,16 +45,17 @@ class MessageBubble extends StatelessWidget {
           ],
           Flexible(
             child: Column(
-              crossAxisAlignment: message.isFromUser 
-                ? CrossAxisAlignment.end 
-                : CrossAxisAlignment.start,
+              crossAxisAlignment: message.isFromUser
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: message.isFromUser
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey[200],
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey[200],
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -70,7 +71,8 @@ class MessageBubble extends StatelessWidget {
                   GestureDetector(
                     onTap: onPlayAudio,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(16),

@@ -12,5 +12,6 @@ QueryResult okQueryResult(Map<String, dynamic>? data) => QueryResult(
 
 void registerGraphqlFallbacks() {
   registerFallbackValue(QueryOptions(document: gql('query { __typename }')));
-  registerFallbackValue(MutationOptions(document: gql('mutation { __typename }')));
+  registerFallbackValue(
+      MutationOptions(document: gql('mutation { __typename }')));
 }

@@ -2,6 +2,7 @@ import 'package:nx_expense/domain/expense/expense.dart';
 import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:nx_expense/domain/expense/expense_upsert.dart';
 import 'package:nx_expense/domain/expense/expense_summary.dart';
+
 abstract class ExpenseRepository {
   Future<List<Expense>> list({
     ExpenseFilter? filter,

@@ -5,11 +5,10 @@ import 'package:nx_time/domain/goals/goal_repository.dart';
 
 /// In-memory [GoalRepository] for tests.
 class FakeGoalRepository implements GoalRepository {
-  FakeGoalRepository({
-    this.delay = Duration.zero,
-    ActionGoalsWeek? actionWeek,
-  }) : actionWeek = actionWeek ??
-            ActionGoalsWeek(weekStart: DateTime(2000, 1, 3), items: const []);
+  FakeGoalRepository({this.delay = Duration.zero, ActionGoalsWeek? actionWeek})
+    : actionWeek =
+          actionWeek ??
+          ActionGoalsWeek(weekStart: DateTime(2000, 1, 3), items: const []);
 
   final Duration delay;
   ActionGoalsWeek actionWeek;

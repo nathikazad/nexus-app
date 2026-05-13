@@ -109,9 +109,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
     }
     if (m.relationsList != null) {
       for (final rel in m.relationsList!) {
-        _relationEdgeIds
-            .putIfAbsent(rel.modelType, () => {})
-            [rel.modelId] = rel.relationId;
+        _relationEdgeIds.putIfAbsent(rel.modelType, () => {})[rel.modelId] =
+            rel.relationId;
       }
     }
     _captureRelationSnapshot();
@@ -126,7 +125,9 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
     _desc.text = expense.description ?? '';
     final expAmtKey = primaryNumberAttributeKey(expenseSchema);
     final transAmtKey = primaryNumberAttributeKey(transferSchema);
-    if (expAmtKey != null && transAmtKey != null && _attr[transAmtKey] != null) {
+    if (expAmtKey != null &&
+        transAmtKey != null &&
+        _attr[transAmtKey] != null) {
       final v = attributeValue(expense, expAmtKey);
       if (v != null) _attr[transAmtKey]!.text = v.toString();
     }
@@ -134,8 +135,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
     final dateStr = rawDate is String && rawDate.length >= 10
         ? rawDate.substring(0, 10)
         : (expense.createdAt != null && expense.createdAt!.length >= 10
-            ? expense.createdAt!.substring(0, 10)
-            : DateTime.now().toIso8601String().substring(0, 10));
+              ? expense.createdAt!.substring(0, 10)
+              : DateTime.now().toIso8601String().substring(0, 10));
     for (final ad in transferSchema.attributes) {
       final k = ad.key;
       if (k == null) continue;
@@ -184,9 +185,9 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
 
   Future<void> _submit(ModelTypeView schema) async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
     setState(() => _loading = true);
@@ -216,8 +217,9 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
         relationsByType: {
           for (final e in _relations.entries) e.key: List<int>.from(e.value),
         },
-        relationCreatesByType:
-            Map<String, Map<String, dynamic>?>.from(_relationCreates),
+        relationCreatesByType: Map<String, Map<String, dynamic>?>.from(
+          _relationCreates,
+        ),
         relationEdgeIdsByType: {
           for (final e in _relationEdgeIds.entries)
             e.key: Map<int, int>.from(e.value),
@@ -226,11 +228,14 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
           for (final e in _relationSnapshotIds.entries)
             e.key: Set<int>.from(e.value),
         },
-        snapshotCreatesByType:
-            Map<String, Map<String, dynamic>?>.from(_relationSnapshotCreates),
+        snapshotCreatesByType: Map<String, Map<String, dynamic>?>.from(
+          _relationSnapshotCreates,
+        ),
       );
 
-      debugPrint('[TransferForm] creating/updating transfer transferId=${widget.transferId}');
+      debugPrint(
+        '[TransferForm] creating/updating transfer transferId=${widget.transferId}',
+      );
       final savedId = await transferRepo.upsert(upsert);
       debugPrint('[TransferForm] transfer save mutation completed id=$savedId');
 
@@ -265,7 +270,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
       ref.invalidate(expenseTimelineLinksProvider(savedId));
 
       if (!mounted) return;
-      final msg = widget.prefillFromExpenseId != null && widget.transferId == null
+      final msg =
+          widget.prefillFromExpenseId != null && widget.transferId == null
           ? 'Transfer created; expense removed'
           : 'Saved';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -278,7 +284,9 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
       debugPrint('[TransferForm] _submit error: $e');
       debugPrint('[TransferForm] stack: $st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -290,16 +298,25 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
     final schemaAsync = ref.watch(transferSchemaViewProvider);
 
     return schemaAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         _ensureControllers(schema);
-        final title = widget.transferId == null ? 'New transfer' : 'Edit transfer';
-        final saveLabel = widget.transferId == null ? 'Save transfer' : 'Save changes';
+        final title = widget.transferId == null
+            ? 'New transfer'
+            : 'Edit transfer';
+        final saveLabel = widget.transferId == null
+            ? 'Save transfer'
+            : 'Save changes';
 
         if (widget.transferId != null) {
-          return ref.watch(transferDetailProvider(widget.transferId!)).when(
-                loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+          return ref
+              .watch(transferDetailProvider(widget.transferId!))
+              .when(
+                loading: () => const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
                 error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
                 data: (existing) {
                   if (existing == null) {
@@ -311,7 +328,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                   if (!_seeded) {
                     _seeded = true;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) setState(() => _seedFromModel(schema, existing));
+                      if (mounted)
+                        setState(() => _seedFromModel(schema, existing));
                     });
                   }
                   return _buildFormShell(context, schema, title, saveLabel);
@@ -320,24 +338,35 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
         }
 
         if (widget.prefillFromExpenseId != null) {
-          return ref.watch(expenseSchemaViewProvider).when(
+          return ref
+              .watch(expenseSchemaViewProvider)
+              .when(
                 loading: () => Scaffold(
                   appBar: AppBar(title: Text(title)),
                   body: const Center(child: CircularProgressIndicator()),
                 ),
                 error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
                 data: (expenseSchema) {
-                  return ref.watch(expenseDetailProvider(widget.prefillFromExpenseId!)).when(
+                  return ref
+                      .watch(
+                        expenseDetailProvider(widget.prefillFromExpenseId!),
+                      )
+                      .when(
                         loading: () => Scaffold(
                           appBar: AppBar(title: Text(title)),
-                          body: const Center(child: CircularProgressIndicator()),
+                          body: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
                         ),
-                        error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+                        error: (e, _) =>
+                            Scaffold(body: Center(child: Text('$e'))),
                         data: (expense) {
                           if (expense == null) {
                             return Scaffold(
                               appBar: AppBar(title: Text(title)),
-                              body: const Center(child: Text('Expense not found')),
+                              body: const Center(
+                                child: Text('Expense not found'),
+                              ),
                             );
                           }
                           if (!_expensePrefillScheduled) {
@@ -345,12 +374,21 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               if (!mounted) return;
                               setState(() {
-                                _seedFromExpense(expense, expenseSchema, schema);
+                                _seedFromExpense(
+                                  expense,
+                                  expenseSchema,
+                                  schema,
+                                );
                                 _seeded = true;
                               });
                             });
                           }
-                          return _buildFormShell(context, schema, title, saveLabel);
+                          return _buildFormShell(
+                            context,
+                            schema,
+                            title,
+                            saveLabel,
+                          );
                         },
                       );
                 },
@@ -386,7 +424,11 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
         backgroundColor: Colors.white,
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.slate400, size: 22),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: AppColors.slate400,
+              size: 22,
+            ),
             onPressed: () => context.pop(),
           ),
           centerTitle: true,
@@ -404,7 +446,12 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                     child: ColoredBox(
                       color: const Color(0x4DF8FAFC),
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(RefLayout.px5, 20, RefLayout.px5, 120),
+                        padding: const EdgeInsets.fromLTRB(
+                          RefLayout.px5,
+                          20,
+                          RefLayout.px5,
+                          120,
+                        ),
                         children: [
                           _refLabel('Name *'),
                           const SizedBox(height: 6),
@@ -431,12 +478,18 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                           Builder(
                             builder: (context) {
                               final ads = schema.attributes
-                                  .where((ad) => ad.key != null && _attr.containsKey(ad.key))
+                                  .where(
+                                    (ad) =>
+                                        ad.key != null &&
+                                        _attr.containsKey(ad.key),
+                                  )
                                   .toList();
                               return Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                                  borderRadius: BorderRadius.circular(
+                                    RefLayout.rounded2xl,
+                                  ),
                                   border: Border.all(color: AppColors.slate100),
                                   boxShadow: refCardShadow,
                                 ),
@@ -447,10 +500,15 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                                         attribute: ads[i],
                                         controller: _attr[ads[i].key]!,
                                         onChanged: () => setState(() {}),
-                                        inputDecoration: _refInputDeco(hint: ''),
+                                        inputDecoration: _refInputDeco(
+                                          hint: '',
+                                        ),
                                       ),
                                       if (i < ads.length - 1)
-                                        const Divider(height: 1, color: AppColors.slate50),
+                                        const Divider(
+                                          height: 1,
+                                          color: AppColors.slate50,
+                                        ),
                                     ],
                                   ],
                                 ),
@@ -460,7 +518,8 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                           Builder(
                             builder: (context) {
                               final systems = schema.tagSystems;
-                              if (systems.isEmpty) return const SizedBox.shrink();
+                              if (systems.isEmpty)
+                                return const SizedBox.shrink();
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -470,21 +529,33 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.white,
-                                      borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-                                      border: Border.all(color: AppColors.slate100),
+                                      borderRadius: BorderRadius.circular(
+                                        RefLayout.rounded2xl,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.slate100,
+                                      ),
                                       boxShadow: refCardShadow,
                                     ),
                                     child: Column(
                                       children: [
-                                        for (var i = 0; i < systems.length; i++) ...[
+                                        for (
+                                          var i = 0;
+                                          i < systems.length;
+                                          i++
+                                        ) ...[
                                           TagPickerRow(
                                             system: systems[i],
                                             value: _tags[systems[i].name] ?? [],
-                                            onChanged: (v) =>
-                                                setState(() => _tags[systems[i].name] = v),
+                                            onChanged: (v) => setState(
+                                              () => _tags[systems[i].name] = v,
+                                            ),
                                           ),
                                           if (i < systems.length - 1)
-                                            const Divider(height: 1, color: AppColors.slate50),
+                                            const Divider(
+                                              height: 1,
+                                              color: AppColors.slate50,
+                                            ),
                                         ],
                                       ],
                                     ),
@@ -499,7 +570,9 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+                              borderRadius: BorderRadius.circular(
+                                RefLayout.rounded2xl,
+                              ),
                               border: Border.all(color: AppColors.slate100),
                               boxShadow: refCardShadow,
                             ),
@@ -517,13 +590,18 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                                       targetModelTypeName: link,
                                       valueIds: _relations[link] ?? [],
                                       pendingCreate: _relationCreates[link],
-                                      allowMultiple: (rt.multiplicity ?? 'many') != 'one',
-                                      onPicked: (r) => _onRelationPicked(link, r),
+                                      allowMultiple:
+                                          (rt.multiplicity ?? 'many') != 'one',
+                                      onPicked: (r) =>
+                                          _onRelationPicked(link, r),
                                     ),
                                   );
                                   if (i < rels.length - 1) {
                                     rows.add(
-                                      const Divider(height: 1, color: AppColors.slate50),
+                                      const Divider(
+                                        height: 1,
+                                        color: AppColors.slate50,
+                                      ),
                                     );
                                   }
                                 }
@@ -545,16 +623,26 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
                   ),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(RefLayout.px5, 12, RefLayout.px5, 28),
+                    padding: const EdgeInsets.fromLTRB(
+                      RefLayout.px5,
+                      12,
+                      RefLayout.px5,
+                      28,
+                    ),
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      border: Border(top: BorderSide(color: AppColors.slate100)),
+                      border: Border(
+                        top: BorderSide(color: AppColors.slate100),
+                      ),
                     ),
                     child: FilledButton(
                       onPressed: () => _submit(schema),
                       child: Text(
                         saveLabel,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -589,5 +677,4 @@ class _TransferFormScreenState extends ConsumerState<TransferFormScreen> {
       ),
     );
   }
-
 }

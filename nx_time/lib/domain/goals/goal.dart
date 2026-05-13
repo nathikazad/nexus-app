@@ -96,8 +96,9 @@ class Goal {
       thresholdValue: thresholdValue ?? this.thresholdValue,
       filter: clearFilter ? null : (filter ?? this.filter),
       preferredDays: preferredDays ?? this.preferredDays,
-      preferredTime:
-          clearPreferredTime ? null : (preferredTime ?? this.preferredTime),
+      preferredTime: clearPreferredTime
+          ? null
+          : (preferredTime ?? this.preferredTime),
       autoGenerateTasks: autoGenerateTasks ?? this.autoGenerateTasks,
     );
   }

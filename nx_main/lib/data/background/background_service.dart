@@ -450,22 +450,13 @@ class BleBackgroundService {
     service.on('socket.connect').listen((event) async {
       final url = event?['url'] as String?;
       final userId = event?['userId'] as String?;
-      final personalDomainId = event?['personalDomainId'] as int?;
-      final sharedDomainId = event?['sharedDomainId'] as int?;
       final telemetryHttpBaseUrl = event?['telemetryHttpBaseUrl'] as String?;
 
-      if (url == null ||
-          url.isEmpty ||
-          userId == null ||
-          userId.isEmpty ||
-          personalDomainId == null ||
-          sharedDomainId == null) {
+      if (url == null || url.isEmpty || userId == null || userId.isEmpty) {
         debugPrint(
           '[Socket] Ignoring connect without complete auth session '
           '(url=${url != null && url.isNotEmpty}, '
-          'userId=${userId != null && userId.isNotEmpty}, '
-          'personalDomainId=${personalDomainId != null}, '
-          'sharedDomainId=${sharedDomainId != null})',
+          'userId=${userId != null && userId.isNotEmpty})',
         );
         await socketClient.disconnect();
         return;
@@ -473,8 +464,6 @@ class BleBackgroundService {
 
       final headers = <String, String>{
         'X-User-Id': userId,
-        'X-Personal-Domain-Id': personalDomainId.toString(),
-        'X-Shared-Domain-Id': sharedDomainId.toString(),
         if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
@@ -884,16 +873,12 @@ class BleBackgroundService {
     required String url,
     required String telemetryHttpBaseUrl,
     required String userId,
-    required int personalDomainId,
-    required int sharedDomainId,
   }) {
     _fileTxLogUserId = userId;
     _service.invoke('socket.connect', {
       'url': url,
       'telemetryHttpBaseUrl': telemetryHttpBaseUrl,
       'userId': userId,
-      'personalDomainId': personalDomainId,
-      'sharedDomainId': sharedDomainId,
     });
   }
 

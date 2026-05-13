@@ -9,10 +9,7 @@ abstract class ActionRepository {
   /// week starting at [mondayLocal]’s date (see KGQL: [monday−1d, monday+8d)).
   Future<List<Action>> listForWeek(DateTime mondayLocal);
 
-  Future<Action?> getById({
-    required int id,
-    required String modelTypeName,
-  });
+  Future<Action?> getById({required int id, required String modelTypeName});
 
   /// Creates an action; when [parentActionId] is set, links it under that parent via `action_action`.
   Future<int> create(
@@ -22,18 +19,12 @@ abstract class ActionRepository {
   });
 
   /// Update; pass [modelTypeNameIfChanged] only when the concrete type changed.
-  Future<int> update(
-    Action action, {
-    String? modelTypeNameIfChanged,
-  });
+  Future<int> update(Action action, {String? modelTypeNameIfChanged});
 
   Future<void> delete(int id);
 
   /// Adds an `action_action` edge: parent → child (existing models).
-  Future<int> linkChildAction({
-    required int parentId,
-    required int childId,
-  });
+  Future<int> linkChildAction({required int parentId, required int childId});
 
   /// Removes a single `relations` row by id (does not delete the child [Action]).
   Future<void> unlinkChildAction({

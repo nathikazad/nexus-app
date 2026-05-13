@@ -62,7 +62,10 @@ Map<String, dynamic>? crawlerPayloadFromModelAttributes(
 }
 
 /// Non-empty string value for [key] in a decoded crawler payload map.
-String? crawlerPayloadNonEmptyString(Map<String, dynamic>? payload, String key) {
+String? crawlerPayloadNonEmptyString(
+  Map<String, dynamic>? payload,
+  String key,
+) {
   if (payload == null) {
     return null;
   }

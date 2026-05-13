@@ -5,13 +5,18 @@ import 'package:nx_time/domain/projects/project.dart';
 import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/features/tasks/task_view_models.dart';
 
-final projectByIdProvider = FutureProvider.family<Project?, int>((ref, id) async {
+final projectByIdProvider = FutureProvider.family<Project?, int>((
+  ref,
+  id,
+) async {
   await ref.watch(authenticatedUserProvider.future);
   return ref.read(projectRepositoryProvider).getById(id);
 });
 
-final subProjectsProvider =
-    FutureProvider.family<List<Project>, int>((ref, parentId) async {
+final subProjectsProvider = FutureProvider.family<List<Project>, int>((
+  ref,
+  parentId,
+) async {
   await ref.watch(authenticatedUserProvider.future);
   final parent = await ref.watch(projectByIdProvider(parentId).future);
   if (parent == null) return [];
@@ -25,8 +30,10 @@ final subProjectsProvider =
   return out;
 });
 
-final tasksInProjectProvider =
-    FutureProvider.family<List<Task>, int>((ref, projectId) async {
+final tasksInProjectProvider = FutureProvider.family<List<Task>, int>((
+  ref,
+  projectId,
+) async {
   final tasks = await ref.watch(allTasksProvider.future);
   return tasks.where((t) => t.projectId == projectId).toList()
     ..sort((a, b) => a.name.compareTo(b.name));
@@ -55,8 +62,10 @@ List<Project> breadcrumbForProject(int projectId, List<Project> all) {
   return chain.reversed.toList();
 }
 
-final breadcrumbForProjectProvider =
-    FutureProvider.family<List<Project>, int>((ref, projectId) async {
+final breadcrumbForProjectProvider = FutureProvider.family<List<Project>, int>((
+  ref,
+  projectId,
+) async {
   final all = await ref.watch(allProjectsProvider.future);
   return breadcrumbForProject(projectId, all);
 });

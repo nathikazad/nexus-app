@@ -149,8 +149,11 @@ class _LogViewerPageState extends State<LogViewerPage> {
         title: const Text('Log Viewer'),
         actions: [
           IconButton(
-            icon: Icon(_autoScroll ? Icons.vertical_align_bottom : Icons.vertical_align_center),
-            tooltip: _autoScroll ? 'Auto-scroll enabled' : 'Auto-scroll disabled',
+            icon: Icon(_autoScroll
+                ? Icons.vertical_align_bottom
+                : Icons.vertical_align_center),
+            tooltip:
+                _autoScroll ? 'Auto-scroll enabled' : 'Auto-scroll disabled',
             onPressed: () {
               setState(() {
                 _autoScroll = !_autoScroll;
@@ -251,4 +254,3 @@ class _LogEntryWidget extends StatelessWidget {
     );
   }
 }
-

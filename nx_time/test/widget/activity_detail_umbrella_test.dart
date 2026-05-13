@@ -14,7 +14,9 @@ import 'package:nx_time/features/today/action_fold.dart';
 import '../_support/fake_task_repository.dart';
 
 void main() {
-  testWidgets('umbrella layout shows Child actions section and child rows', (tester) async {
+  testWidgets('umbrella layout shows Child actions section and child rows', (
+    tester,
+  ) async {
     final day = DateTime(2026, 4, 18);
     final u = Action(
       id: 1,
@@ -45,12 +47,12 @@ void main() {
           modelTypeColorsProvider.overrideWith(
             (ref) async => ModelTypeColors.fallback,
           ),
-          taskRepositoryProvider.overrideWithValue(const FakeEmptyTaskRepository()),
+          taskRepositoryProvider.overrideWithValue(
+            const FakeEmptyTaskRepository(),
+          ),
           allTasksProvider.overrideWith((ref) async => const []),
         ],
-        child: MaterialApp(
-          home: ActivityDetailPage(args: args),
-        ),
+        child: MaterialApp(home: ActivityDetailPage(args: args)),
       ),
     );
     await tester.pumpAndSettle();

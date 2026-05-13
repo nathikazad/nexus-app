@@ -57,7 +57,9 @@ class AttributeField extends StatelessWidget {
           onTap: () async {
             final date = await showDatePicker(
               context: context,
-              initialDate: value != null ? DateTime.parse(value.toString()) : DateTime.now(),
+              initialDate: value != null
+                  ? DateTime.parse(value.toString())
+                  : DateTime.now(),
               firstDate: DateTime(1900),
               lastDate: DateTime(2100),
             );
@@ -79,4 +81,3 @@ class AttributeField extends StatelessWidget {
     }
   }
 }
-

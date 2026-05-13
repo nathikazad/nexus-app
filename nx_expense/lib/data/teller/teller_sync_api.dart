@@ -23,9 +23,7 @@ Future<void> postTellerSync({
       : imageBaseUrl;
   final base = _normalizeImageBaseForCf(trimmed);
   final uri = Uri.parse('$base/teller/sync');
-  final headers = <String, String>{
-    'x-user-id': userId,
-  };
+  final headers = <String, String>{'x-user-id': userId};
   if (CfAccess.shouldAttachHeaders(base)) {
     headers.addAll(CfAccess.headers);
   }

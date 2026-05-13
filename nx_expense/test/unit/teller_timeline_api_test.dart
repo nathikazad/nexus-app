@@ -22,7 +22,7 @@ void main() {
               'time': '2026-03-10T08:00:00.000Z',
               'id': 'te-1',
               'payload': {'amount': '20', 'description': 'Wire'},
-                'modelTimelineEventLinksByEventTimeAndEventId': {
+              'modelTimelineEventLinksByEventTimeAndEventId': {
                 'nodes': [
                   {
                     'id': 'link-1',
@@ -74,9 +74,7 @@ void main() {
     });
 
     test('falls back to first line of description', () {
-      final p = {
-        'description': 'Line one\nLine two',
-      };
+      final p = {'description': 'Line one\nLine two'};
       expect(tellerTransactionTitleLine(p), 'Line one');
     });
 
@@ -103,7 +101,11 @@ void main() {
       expect(
         tellerRowHasExpenseOrTransferLink(
           rowWithLinks([
-            const LinkedTellerModel(id: 1, name: 'Co', modelTypeName: 'Company'),
+            const LinkedTellerModel(
+              id: 1,
+              name: 'Co',
+              modelTypeName: 'Company',
+            ),
           ]),
         ),
         isFalse,
@@ -125,7 +127,11 @@ void main() {
       expect(
         tellerRowHasExpenseOrTransferLink(
           rowWithLinks([
-            const LinkedTellerModel(id: 3, name: 'T', modelTypeName: 'Transfer'),
+            const LinkedTellerModel(
+              id: 3,
+              name: 'T',
+              modelTypeName: 'Transfer',
+            ),
           ]),
         ),
         isTrue,
@@ -137,7 +143,11 @@ void main() {
         tellerRowHasExpenseOrTransferLink(
           rowWithLinks([
             const LinkedTellerModel(id: 2, name: 'E', modelTypeName: 'Expense'),
-            const LinkedTellerModel(id: 3, name: 'T', modelTypeName: 'Transfer'),
+            const LinkedTellerModel(
+              id: 3,
+              name: 'T',
+              modelTypeName: 'Transfer',
+            ),
           ]),
         ),
         isTrue,
