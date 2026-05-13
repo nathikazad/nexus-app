@@ -118,7 +118,60 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                 ? _SidebarEssays(recent: recent, pinned: pinned)
                 : _SidebarTags(tagSystems: tagSystems),
           ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: _SidebarFooterButton(
+              icon: Icons.logout,
+              label: 'Log out',
+              onTap: () async {
+                await ref.read(authProvider.notifier).logout();
+                if (context.mounted) context.go('/login');
+              },
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SidebarFooterButton extends StatelessWidget {
+  const _SidebarFooterButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          child: Row(
+            children: <Widget>[
+              Icon(icon, size: 17, color: AppColors.faint),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

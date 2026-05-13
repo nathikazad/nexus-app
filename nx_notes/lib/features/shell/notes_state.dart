@@ -36,6 +36,7 @@ class DesktopWorkspaceState {
     this.overlayResultIds = const <int>[],
     this.overlayResults = const <Essay>[],
     this.sidebarTab = SidebarTab.essays,
+    this.inspectorCollapsed = false,
   });
 
   final List<EssayTabState> openTabs;
@@ -45,6 +46,7 @@ class DesktopWorkspaceState {
   final List<int> overlayResultIds;
   final List<Essay> overlayResults;
   final SidebarTab sidebarTab;
+  final bool inspectorCollapsed;
 
   bool get hasOverlay => overlayTitle != null;
 
@@ -65,6 +67,7 @@ class DesktopWorkspaceState {
     List<int>? overlayResultIds,
     List<Essay>? overlayResults,
     SidebarTab? sidebarTab,
+    bool? inspectorCollapsed,
     bool clearOverlay = false,
   }) {
     return DesktopWorkspaceState(
@@ -79,6 +82,7 @@ class DesktopWorkspaceState {
           ? const <Essay>[]
           : overlayResults ?? this.overlayResults,
       sidebarTab: sidebarTab ?? this.sidebarTab,
+      inspectorCollapsed: inspectorCollapsed ?? this.inspectorCollapsed,
     );
   }
 }
@@ -93,6 +97,10 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
 
   void setSidebarTab(SidebarTab tab) {
     state = state.copyWith(sidebarTab: tab);
+  }
+
+  void toggleInspector() {
+    state = state.copyWith(inspectorCollapsed: !state.inspectorCollapsed);
   }
 
   void showOverlay({

@@ -16,12 +16,14 @@ class EssayEditorView extends ConsumerWidget {
     required this.essayId,
     this.contextBar,
     this.onTitleChanged,
+    this.horizontalPadding = 48,
     super.key,
   });
 
   final int essayId;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
+  final double horizontalPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,6 +37,7 @@ class EssayEditorView extends ConsumerWidget {
           essay: essay,
           contextBar: contextBar,
           onTitleChanged: onTitleChanged,
+          horizontalPadding: horizontalPadding,
         );
       },
       error: (error, stackTrace) => Center(child: Text('$error')),
@@ -48,12 +51,14 @@ class EssayEditorBody extends ConsumerStatefulWidget {
     required this.essay,
     this.contextBar,
     this.onTitleChanged,
+    this.horizontalPadding = 48,
     super.key,
   });
 
   final Essay essay;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
+  final double horizontalPadding;
 
   @override
   ConsumerState<EssayEditorBody> createState() => _EssayEditorBodyState();
@@ -102,72 +107,72 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
       children: <Widget>[
         if (widget.contextBar != null) widget.contextBar!,
         Expanded(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(48, 54, 48, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    TextFormField(
-                      key: ValueKey<int>(widget.essay.id),
-                      initialValue: widget.essay.title,
-                      onChanged: _scheduleTitleSave,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: titleSize,
-                        fontWeight: FontWeight.w600,
-                        height: 1.16,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    Expanded(
-                      child: NxAppFlowyEditor(
-                        essay: widget.essay,
-                        searchLinkableModels:
-                            ({required modelType, required query}) {
-                              return ref
-                                  .read(essayRepositoryProvider)
-                                  .searchLinkableModels(
-                                    modelType: modelType,
-                                    query: query,
-                                  );
-                            },
-                        onLinkableModelSelected: (modelType, model) async {
-                          await ref
-                              .read(essayMutationControllerProvider)
-                              .attachLinkedModel(
-                                essayId: widget.essay.id,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              widget.horizontalPadding,
+              54,
+              widget.horizontalPadding,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                TextFormField(
+                  key: ValueKey<int>(widget.essay.id),
+                  initialValue: widget.essay.title,
+                  onChanged: _scheduleTitleSave,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w600,
+                    height: 1.16,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Expanded(
+                  child: NxAppFlowyEditor(
+                    essay: widget.essay,
+                    searchLinkableModels:
+                        ({required modelType, required query}) {
+                          return ref
+                              .read(essayRepositoryProvider)
+                              .searchLinkableModels(
                                 modelType: modelType,
-                                modelId: model.id,
-                                model: model,
+                                query: query,
                               );
                         },
-                        onChanged: (updated) async {
-                          _draftEssay = _draftEssay.copyWith(
-                            document: updated.document,
-                            jsonDocument: updated.jsonDocument,
-                            wordCount: updated.wordCount,
-                            excerpt: updated.excerpt,
+                    onLinkableModelSelected: (modelType, model) async {
+                      await ref
+                          .read(essayMutationControllerProvider)
+                          .attachLinkedModel(
+                            essayId: widget.essay.id,
+                            modelType: modelType,
+                            modelId: model.id,
+                            model: model,
                           );
-                          await ref
-                              .read(essayMutationControllerProvider)
-                              .saveDraft(_draftEssay);
-                        },
-                      ),
-                    ),
-                  ],
+                    },
+                    onChanged: (updated) async {
+                      _draftEssay = _draftEssay.copyWith(
+                        document: updated.document,
+                        jsonDocument: updated.jsonDocument,
+                        wordCount: updated.wordCount,
+                        excerpt: updated.excerpt,
+                      );
+                      await ref
+                          .read(essayMutationControllerProvider)
+                          .saveDraft(_draftEssay);
+                    },
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -578,7 +583,6 @@ const _editorStyle = EditorStyle.desktop(
   cursorColor: AppColors.text,
   selectionColor: Color(0x333B82F6),
   padding: EdgeInsets.zero,
-  maxWidth: 700,
   textStyleConfiguration: TextStyleConfiguration(
     text: TextStyle(color: Color(0xff3f3f46), fontSize: 16, height: 1.62),
     bold: TextStyle(fontWeight: FontWeight.w700),

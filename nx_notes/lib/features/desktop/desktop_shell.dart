@@ -23,6 +23,7 @@ part 'desktop_result_overlay.dart';
 
 const double _sidebarWidth = 256;
 const double _inspectorWidth = 288;
+const double _collapsedInspectorWidth = 44;
 
 class DesktopShell extends ConsumerWidget {
   const DesktopShell({super.key});
@@ -38,10 +39,16 @@ class DesktopShell extends ConsumerWidget {
             children: <Widget>[
               const SizedBox(width: _sidebarWidth, child: _DesktopSidebar()),
               Expanded(child: _DesktopEditorWorkspace(workspace: workspace)),
-              SizedBox(
-                width: _inspectorWidth,
-                child: _DesktopInspector(essayId: workspace.activeEssayId),
-              ),
+              if (workspace.inspectorCollapsed)
+                const SizedBox(
+                  width: _collapsedInspectorWidth,
+                  child: _CollapsedInspector(),
+                )
+              else
+                SizedBox(
+                  width: _inspectorWidth,
+                  child: _DesktopInspector(essayId: workspace.activeEssayId),
+                ),
             ],
           ),
           if (workspace.hasOverlay) _DesktopResultOverlay(workspace: workspace),

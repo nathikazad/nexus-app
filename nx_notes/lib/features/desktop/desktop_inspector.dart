@@ -44,19 +44,18 @@ class _DesktopInspector extends ConsumerWidget {
                 ),
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Log out',
+                  tooltip: 'Collapse inspector',
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints.tightFor(
                     width: 28,
                     height: 28,
                   ),
-                  onPressed: () async {
-                    await ref.read(authProvider.notifier).logout();
-                    if (context.mounted) context.go('/login');
-                  },
+                  onPressed: () => ref
+                      .read(desktopWorkspaceProvider.notifier)
+                      .toggleInspector(),
                   icon: const Icon(
-                    Icons.logout,
+                    Icons.chevron_right,
                     size: 17,
                     color: AppColors.faint,
                   ),
@@ -125,6 +124,54 @@ class _DesktopInspector extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CollapsedInspector extends ConsumerWidget {
+  const _CollapsedInspector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.sidebar,
+        border: Border(left: BorderSide(color: AppColors.line)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: <Widget>[
+            const SizedBox(height: 6),
+            IconButton(
+              tooltip: 'Expand inspector',
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              onPressed: () =>
+                  ref.read(desktopWorkspaceProvider.notifier).toggleInspector(),
+              icon: const Icon(
+                Icons.chevron_left,
+                size: 18,
+                color: AppColors.faint,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const RotatedBox(
+              quarterTurns: 1,
+              child: Text(
+                'INSPECTOR',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.faint,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
