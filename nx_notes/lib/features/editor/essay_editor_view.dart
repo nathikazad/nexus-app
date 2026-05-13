@@ -61,12 +61,20 @@ class EssayEditorBody extends ConsumerStatefulWidget {
 
 class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
   Timer? _titleSaveDebounce;
+  late Essay _draftEssay;
+
+  @override
+  void initState() {
+    super.initState();
+    _draftEssay = widget.essay;
+  }
 
   @override
   void didUpdateWidget(covariant EssayEditorBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.essay.id != widget.essay.id) {
       _titleSaveDebounce?.cancel();
+      _draftEssay = widget.essay;
     }
   }
 
@@ -78,12 +86,11 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
 
   void _scheduleTitleSave(String title) {
     widget.onTitleChanged?.call(title);
+    _draftEssay = _draftEssay.copyWith(title: title);
     _titleSaveDebounce?.cancel();
     _titleSaveDebounce = Timer(const Duration(milliseconds: 450), () async {
       if (!mounted) return;
-      await ref
-          .read(essayMutationControllerProvider)
-          .saveDraft(widget.essay.copyWith(title: title));
+      await ref.read(essayMutationControllerProvider).saveDraft(_draftEssay);
     });
   }
 
@@ -142,12 +149,19 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                                 essayId: widget.essay.id,
                                 modelType: modelType,
                                 modelId: model.id,
+                                model: model,
                               );
                         },
                         onChanged: (updated) async {
+                          _draftEssay = _draftEssay.copyWith(
+                            document: updated.document,
+                            jsonDocument: updated.jsonDocument,
+                            wordCount: updated.wordCount,
+                            excerpt: updated.excerpt,
+                          );
                           await ref
                               .read(essayMutationControllerProvider)
-                              .saveDraft(updated);
+                              .saveDraft(_draftEssay);
                         },
                       ),
                     ),

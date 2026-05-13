@@ -108,23 +108,24 @@ void main() {
       );
       expect(projectSearch.map((model) => model.id), contains(project.id));
 
-      final withProject = await harness.repo.attachLinkedModel(
+      await harness.repo.attachLinkedModel(
         essayId: updated.id,
         modelType: LinkableModelType.project,
         modelId: project.id,
       );
-      final projectLink = withProject.links.firstWhere(
+      final withProject = await harness.repo.getById(updated.id);
+      expect(withProject, isNotNull);
+      final projectLink = withProject!.links.firstWhere(
         (link) => link.modelType == 'Project' && link.id == project.id,
       );
       expect(projectLink.name, project.name);
       expect(projectLink.relationId, isNotNull);
 
-      final withoutProject = await harness.repo.detachProject(
-        updated.id,
-        projectLink.relationId!,
-      );
+      await harness.repo.detachProject(updated.id, projectLink.relationId!);
+      final withoutProject = await harness.repo.getById(updated.id);
+      expect(withoutProject, isNotNull);
       expect(
-        withoutProject.links.where(
+        withoutProject!.links.where(
           (link) => link.modelType == 'Project' && link.id == project.id,
         ),
         isEmpty,

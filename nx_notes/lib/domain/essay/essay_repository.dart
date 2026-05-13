@@ -24,11 +24,11 @@ abstract class EssayRepository {
     required LinkableModelType modelType,
     required String query,
   });
-  Future<Essay> attachLinkedModel({
+  Future<void> attachLinkedModel({
     required int essayId,
     required LinkableModelType modelType,
     required int modelId,
   });
-  Future<Essay> attachProject(int essayId, int projectId);
-  Future<Essay> detachProject(int essayId, int relationId);
+  Future<void> attachProject(int essayId, int projectId);
+  Future<void> detachProject(int essayId, int relationId);
 }

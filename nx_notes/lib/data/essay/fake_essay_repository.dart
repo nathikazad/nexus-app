@@ -146,7 +146,7 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay> attachLinkedModel({
+  Future<void> attachLinkedModel({
     required int essayId,
     required LinkableModelType modelType,
     required int modelId,
@@ -158,7 +158,7 @@ class FakeEssayRepository implements EssayRepository {
     if (essay.links.any(
       (link) => link.modelType == modelType.kgqlName && link.id == modelId,
     )) {
-      return essay;
+      return;
     }
     final model = _fakeLinkableModels.firstWhere(
       (item) => item.modelType == modelType.kgqlName && item.id == modelId,
@@ -168,7 +168,7 @@ class FakeEssayRepository implements EssayRepository {
         modelType: modelType.kgqlName,
       ),
     );
-    return updateDraft(
+    await updateDraft(
       essay.copyWith(
         links: <LinkedModel>[
           ...essay.links,
@@ -184,8 +184,8 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay> attachProject(int essayId, int projectId) async {
-    return attachLinkedModel(
+  Future<void> attachProject(int essayId, int projectId) async {
+    await attachLinkedModel(
       essayId: essayId,
       modelType: LinkableModelType.project,
       modelId: projectId,
@@ -193,12 +193,12 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay> detachProject(int essayId, int relationId) async {
+  Future<void> detachProject(int essayId, int relationId) async {
     final essay = await getById(essayId);
     if (essay == null) {
       throw StateError('Essay $essayId not found');
     }
-    return updateDraft(
+    await updateDraft(
       essay.copyWith(
         links: essay.links
             .where((link) => link.relationId != relationId)

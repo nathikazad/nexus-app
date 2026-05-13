@@ -38,6 +38,7 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
                   title: workspace.activeContext!.title,
                   query: workspace.activeContext!.query,
                   resultIds: workspace.activeContext!.resultIds,
+                  results: workspace.activeContext!.results,
                 ),
             onClear: () => ref
                 .read(desktopWorkspaceProvider.notifier)

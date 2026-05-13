@@ -35,6 +35,11 @@ class Essay {
   final String excerpt;
   final List<LinkedModel> links;
 
+  bool get hasFullDocument =>
+      document.isNotEmpty ||
+      jsonDocument.containsKey('format') ||
+      jsonDocument.containsKey('document');
+
   Essay copyWith({
     String? title,
     String? document,

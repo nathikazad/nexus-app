@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_notes/domain/essay/essay.dart';
 import 'package:nx_notes/domain/essay/essay_query.dart';
 import 'package:nx_notes/domain/essay/essay_result_context.dart';
 
@@ -33,6 +34,7 @@ class DesktopWorkspaceState {
     this.overlayTitle,
     this.overlayQuery,
     this.overlayResultIds = const <int>[],
+    this.overlayResults = const <Essay>[],
     this.sidebarTab = SidebarTab.essays,
   });
 
@@ -41,6 +43,7 @@ class DesktopWorkspaceState {
   final String? overlayTitle;
   final EssayQuery? overlayQuery;
   final List<int> overlayResultIds;
+  final List<Essay> overlayResults;
   final SidebarTab sidebarTab;
 
   bool get hasOverlay => overlayTitle != null;
@@ -60,6 +63,7 @@ class DesktopWorkspaceState {
     String? overlayTitle,
     EssayQuery? overlayQuery,
     List<int>? overlayResultIds,
+    List<Essay>? overlayResults,
     SidebarTab? sidebarTab,
     bool clearOverlay = false,
   }) {
@@ -71,6 +75,9 @@ class DesktopWorkspaceState {
       overlayResultIds: clearOverlay
           ? const <int>[]
           : overlayResultIds ?? this.overlayResultIds,
+      overlayResults: clearOverlay
+          ? const <Essay>[]
+          : overlayResults ?? this.overlayResults,
       sidebarTab: sidebarTab ?? this.sidebarTab,
     );
   }
@@ -92,11 +99,13 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
     required String title,
     required EssayQuery query,
     required List<int> resultIds,
+    List<Essay> results = const <Essay>[],
   }) {
     state = state.copyWith(
       overlayTitle: title,
       overlayQuery: query,
       overlayResultIds: resultIds,
+      overlayResults: results,
     );
   }
 
@@ -119,6 +128,7 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
         title: state.overlayTitle!,
         query: state.overlayQuery!,
         resultIds: state.overlayResultIds,
+        results: state.overlayResults,
       );
     }
     if (index == -1) {

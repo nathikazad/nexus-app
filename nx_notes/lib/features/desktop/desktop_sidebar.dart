@@ -86,6 +86,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                       title: result.title,
                       query: result.query,
                       resultIds: result.resultIds,
+                      results: result.results,
                     );
               },
             ),
@@ -234,6 +235,7 @@ class _SidebarEssays extends ConsumerWidget {
                   title: result.title,
                   query: result.query,
                   resultIds: result.resultIds,
+                  results: result.results,
                 );
           },
           rows: pinned.value?.take(5).toList() ?? const <Essay>[],
@@ -252,6 +254,7 @@ class _SidebarEssays extends ConsumerWidget {
                   title: result.title,
                   query: result.query,
                   resultIds: result.resultIds,
+                  results: result.results,
                 );
           },
           rows: recent.value?.take(5).toList() ?? const <Essay>[],
@@ -413,6 +416,7 @@ class _SidebarTags extends ConsumerWidget {
                   title: result.title,
                   query: result.query,
                   resultIds: result.resultIds,
+                  results: result.results,
                 );
           },
           child: Padding(

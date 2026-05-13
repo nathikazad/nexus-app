@@ -16,19 +16,83 @@ const bool _kLogKgqlFromDefine = bool.fromEnvironment(
   defaultValue: false,
 );
 
-bool _shouldLogKgqlQueries() => kDebugMode || _kLogKgqlFromDefine;
+const int _kMaxGraphQlLogChars = 4000;
+const int _kMaxGraphQlLogStringChars = 500;
+const int _kMaxGraphQlLogCollectionItems = 20;
+const int _kMaxGraphQlLogDepth = 6;
+
+bool _shouldLogKgqlQueries() => _kLogKgqlFromDefine;
 
 void _logOutgoingGraphQlRequest(Request request) {
   final name = request.operation.operationName ?? '(anonymous)';
-  final doc = printNode(request.operation.document);
-  String vars;
-  try {
-    vars = const JsonEncoder.withIndent('  ').convert(request.variables);
-  } catch (_) {
-    vars = request.variables.toString();
-  }
+  final doc = _truncateLogText(printNode(request.operation.document));
+  final vars = formatGraphQlLogValue(request.variables);
   debugPrint('[nx_db:GraphQL] → $name\n$doc');
   debugPrint('[nx_db:GraphQL] variables:\n$vars');
+}
+
+@visibleForTesting
+String formatGraphQlLogValue(Object? value) {
+  final truncated = _truncateGraphQlLogValue(value);
+  final encoded = switch (truncated) {
+    final String s => s,
+    _ => _encodeGraphQlLogValue(truncated),
+  };
+  return _truncateLogText(encoded);
+}
+
+String _encodeGraphQlLogValue(Object? value) {
+  try {
+    return const JsonEncoder.withIndent('  ').convert(value);
+  } catch (_) {
+    return value.toString();
+  }
+}
+
+Object? _truncateGraphQlLogValue(Object? value, {int depth = 0}) {
+  if (value == null || value is num || value is bool) return value;
+  if (value is String) {
+    if (value.length <= _kMaxGraphQlLogStringChars) return value;
+    return '${value.substring(0, _kMaxGraphQlLogStringChars)}... '
+        '<truncated ${value.length - _kMaxGraphQlLogStringChars} chars>';
+  }
+  if (depth >= _kMaxGraphQlLogDepth) {
+    return '<truncated: max depth $_kMaxGraphQlLogDepth>';
+  }
+  if (value is Map) {
+    final entries = value.entries.take(_kMaxGraphQlLogCollectionItems).toList();
+    final result = <String, Object?>{
+      for (final entry in entries)
+        entry.key.toString(): _truncateGraphQlLogValue(
+          entry.value,
+          depth: depth + 1,
+        ),
+    };
+    final extra = value.length - entries.length;
+    if (extra > 0) {
+      result['...'] = '<truncated $extra entries>';
+    }
+    return result;
+  }
+  if (value is Iterable) {
+    final items = value.take(_kMaxGraphQlLogCollectionItems).toList();
+    final result = <Object?>[
+      for (final item in items)
+        _truncateGraphQlLogValue(item, depth: depth + 1),
+    ];
+    final extra = value.length - items.length;
+    if (extra > 0) {
+      result.add('<truncated $extra items>');
+    }
+    return result;
+  }
+  return _truncateGraphQlLogValue(value.toString(), depth: depth);
+}
+
+String _truncateLogText(String value) {
+  if (value.length <= _kMaxGraphQlLogChars) return value;
+  return '${value.substring(0, _kMaxGraphQlLogChars)}... '
+      '<truncated ${value.length - _kMaxGraphQlLogChars} chars>';
 }
 
 Link _kgqlRequestLogLink() {

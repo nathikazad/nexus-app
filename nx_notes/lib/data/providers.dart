@@ -17,6 +17,18 @@ final essayRepositoryProvider = Provider<EssayRepository>((ref) {
   );
 });
 
+class EssayLocalCache extends Notifier<Map<int, Essay>> {
+  @override
+  Map<int, Essay> build() => const <int, Essay>{};
+
+  void put(Essay essay) {
+    state = {...state, essay.id: essay};
+  }
+}
+
+final essayLocalCacheProvider =
+    NotifierProvider<EssayLocalCache, Map<int, Essay>>(EssayLocalCache.new);
+
 final recentEssaysProvider = FutureProvider<List<Essay>>(
   (ref) => ref.watch(essayRepositoryProvider).listRecent(limit: 20),
 );
@@ -29,9 +41,15 @@ final tagSystemsProvider = FutureProvider<List<TagSystem>>(
   (ref) => ref.watch(essayRepositoryProvider).listTagSystems(),
 );
 
-final essayByIdProvider = FutureProvider.family<Essay?, int>(
-  (ref, id) => ref.watch(essayRepositoryProvider).getById(id),
-);
+final essayByIdProvider = FutureProvider.family<Essay?, int>((ref, id) {
+  final cached = ref.watch(
+    essayLocalCacheProvider.select((essays) => essays[id]),
+  );
+  if (cached != null && cached.hasFullDocument) {
+    return cached;
+  }
+  return ref.watch(essayRepositoryProvider).getById(id);
+});
 
 final essaySnapshotsProvider = FutureProvider.family<List<EssaySnap>, int>(
   (ref, id) => ref.watch(essayRepositoryProvider).listSnapshots(id),

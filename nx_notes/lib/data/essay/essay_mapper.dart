@@ -39,6 +39,38 @@ Essay essayFromModel(Model model, {int versionNumber = 0}) {
   );
 }
 
+Essay essaySummaryFromModel(Model model) {
+  final updatedAt =
+      DateTime.tryParse(model.updatedAt ?? '') ??
+      DateTime.tryParse(model.createdAt ?? '') ??
+      DateTime.now();
+  final tags = model.tags ?? const <String, List<String>>{};
+  final topics = List<String>.from(tags[kEssayTopicTagSystem] ?? const []);
+  final areaTags = List<String>.from(tags[kEssayAreaTagSystem] ?? const []);
+  final statusTags = tags[kEssayStatusTagSystem] ?? const [];
+  final excerpt = model.description?.trim() ?? '';
+  return Essay(
+    id: model.id,
+    title: model.name,
+    document: '',
+    jsonDocument: const <String, dynamic>{},
+    wordCount: model.attrInt(kEssayAttrWordCount) ?? 0,
+    status: statusTags.isEmpty ? 'Draft' : statusTags.first,
+    topics: topics,
+    areaTags: areaTags,
+    tagsBySystem: {
+      for (final entry in tags.entries)
+        entry.key: List<String>.from(entry.value),
+    },
+    pinned: model.attrBool(kEssayAttrPinned) ?? false,
+    updatedAt: updatedAt,
+    updatedLabel: _relativeLabel(updatedAt),
+    versionNumber: 0,
+    excerpt: excerpt,
+    links: const <LinkedModel>[],
+  );
+}
+
 EssaySnap essaySnapFromModel(Model model, {required int essayId}) {
   final document = model.attrString(kEssayAttrDocument) ?? '';
   final createdAt = DateTime.tryParse(model.createdAt ?? '') ?? DateTime.now();
@@ -62,6 +94,7 @@ SetModelRequest setModelRequestForCreateEssay() {
   return SetModelRequest(
     modelType: kEssayModelTypeName,
     name: 'Untitled essay',
+    description: _excerptFrom(document),
     attributes: [
       SetModelAttribute(key: kEssayAttrDocument, value: document),
       SetModelAttribute(
@@ -77,6 +110,31 @@ SetModelRequest setModelRequestForCreateEssay() {
   );
 }
 
+Essay essayForCreatedId(int id, {DateTime? now}) {
+  const document = 'Start writing here.';
+  final updatedAt = now ?? DateTime.now();
+  return Essay(
+    id: id,
+    title: 'Untitled essay',
+    document: document,
+    jsonDocument: _blankDocumentJson(document),
+    wordCount: _countWords(document),
+    status: 'Draft',
+    topics: const <String>[],
+    areaTags: const <String>[],
+    tagsBySystem: const <String, List<String>>{
+      kEssayStatusTagSystem: <String>['Draft'],
+      kEssayTopicTagSystem: <String>[],
+    },
+    pinned: false,
+    updatedAt: updatedAt,
+    updatedLabel: _relativeLabel(updatedAt),
+    versionNumber: 0,
+    excerpt: _excerptFrom(document),
+    links: const <LinkedModel>[],
+  );
+}
+
 SetModelRequest setModelRequestForUpdateEssay(
   Essay essay, {
   Set<String> availableTagSystems = const <String>{},
@@ -84,6 +142,7 @@ SetModelRequest setModelRequestForUpdateEssay(
   return SetModelRequest(
     id: essay.id,
     name: essay.title,
+    description: essay.excerpt,
     attributes: [
       SetModelAttribute(key: kEssayAttrDocument, value: essay.document),
       SetModelAttribute(key: kEssayAttrJsonDocument, value: essay.jsonDocument),
@@ -181,6 +240,19 @@ Map<String, dynamic> essayFetchStruct(ModelType schema) {
       kEssaySnapAttrSource: true,
       kEssaySnapAttrChangeSummary: true,
     },
+  };
+}
+
+Map<String, dynamic> essaySummaryFetchStruct() {
+  return {
+    'id': true,
+    'name': true,
+    'description': true,
+    'created_at': true,
+    'updated_at': true,
+    kEssayAttrPinned: true,
+    kEssayAttrWordCount: true,
+    'tags': true,
   };
 }
 

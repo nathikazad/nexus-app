@@ -7,10 +7,7 @@ class _DesktopResultOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rows = workspace.overlayResultIds
-        .map((id) => ref.watch(essayByIdProvider(id)).value)
-        .whereType<Essay>()
-        .toList();
+    final rows = workspace.overlayResults;
     return Positioned.fill(
       left: _sidebarWidth,
       child: Material(

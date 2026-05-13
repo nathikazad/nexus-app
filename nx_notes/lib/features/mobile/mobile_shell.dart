@@ -37,11 +37,7 @@ class MobileShell extends ConsumerWidget {
               await ref.read(authProvider.notifier).logout();
               if (context.mounted) context.go('/login');
             },
-            icon: const Icon(
-              Icons.logout,
-              size: 20,
-              color: AppColors.muted,
-            ),
+            icon: const Icon(Icons.logout, size: 20, color: AppColors.muted),
           ),
         ),
       ),
@@ -374,6 +370,7 @@ class _MobileSearch extends ConsumerWidget {
                     title: 'Search: ${state.searchText}',
                     query: EssayQuery(searchText: state.searchText),
                     resultIds: rows.map((row) => row.id).toList(),
+                    results: rows,
                   ),
                 ),
           ),
@@ -391,10 +388,7 @@ class _MobileResults extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rows = contextState.resultIds
-        .map((id) => ref.watch(essayByIdProvider(id)).value)
-        .whereType<Essay>()
-        .toList();
+    final rows = contextState.results;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: PreferredSize(

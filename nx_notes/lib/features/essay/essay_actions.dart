@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/essay/essay.dart';
@@ -15,28 +17,39 @@ final essayResultControllerProvider = Provider<EssayResultController>(
 );
 
 class EssayMutationController {
-  EssayMutationController(this._ref);
+  EssayMutationController(this._ref) {
+    _ref.onDispose(() {
+      _draftFlushTimer?.cancel();
+    });
+  }
 
   final Ref _ref;
+  static const Duration _draftWriteInterval = Duration(seconds: 90);
+  Timer? _draftFlushTimer;
+  DateTime? _lastDraftWriteAt;
+  Essay? _pendingDraft;
+  Future<void>? _draftWriteInFlight;
 
   Future<Essay> createEssay() async {
     final essay = await _ref.read(essayRepositoryProvider).create();
-    _invalidateLists();
-    _ref.invalidate(tagSystemsProvider);
+    _cacheEssay(essay);
     return essay;
   }
 
   Future<void> saveDraft(Essay essay) async {
-    await _ref.read(essayRepositoryProvider).updateDraft(essay);
-    _invalidateEssay(essay.id);
-    _invalidateLists();
-    _ref.invalidate(tagSystemsProvider);
+    _pendingDraft = essay.copyWith(
+      updatedAt: DateTime.now(),
+      updatedLabel: 'just now',
+    );
+    _cacheEssay(_pendingDraft!);
+    _scheduleDraftWrite();
   }
 
   Future<void> attachLinkedModel({
     required int essayId,
     required LinkableModelType modelType,
     required int modelId,
+    LinkedModel? model,
   }) async {
     await _ref
         .read(essayRepositoryProvider)
@@ -45,20 +58,39 @@ class EssayMutationController {
           modelType: modelType,
           modelId: modelId,
         );
-    _invalidateEssay(essayId);
-    _ref.invalidate(recentEssaysProvider);
+    if (model != null) {
+      _cacheEssayWithLink(essayId, model);
+    }
   }
 
   Future<void> attachProject(int essayId, int projectId) async {
     await _ref.read(essayRepositoryProvider).attachProject(essayId, projectId);
-    _invalidateEssay(essayId);
-    _ref.invalidate(recentEssaysProvider);
+    final projects = _ref
+        .read(projectsProvider)
+        .maybeWhen(data: (rows) => rows, orElse: () => const <LinkedModel>[]);
+    LinkedModel? project;
+    for (final item in projects) {
+      if (item.id == projectId) {
+        project = item;
+        break;
+      }
+    }
+    if (project != null) {
+      _cacheEssayWithLink(essayId, project);
+    }
   }
 
   Future<void> detachProject(int essayId, int relationId) async {
     await _ref.read(essayRepositoryProvider).detachProject(essayId, relationId);
-    _invalidateEssay(essayId);
-    _ref.invalidate(recentEssaysProvider);
+    final cached = _ref.read(essayLocalCacheProvider)[essayId];
+    if (cached == null) return;
+    _cacheEssay(
+      cached.copyWith(
+        links: cached.links
+            .where((link) => link.relationId != relationId)
+            .toList(),
+      ),
+    );
   }
 
   Future<EssaySnap> createSnapshot(
@@ -69,8 +101,6 @@ class EssayMutationController {
     final snap = await _ref
         .read(essayRepositoryProvider)
         .createSnapshot(essayId, source: source, changeSummary: changeSummary);
-    _invalidateEssay(essayId);
-    _ref.invalidate(essaySnapshotsProvider(essayId));
     return snap;
   }
 
@@ -83,16 +113,61 @@ class EssayMutationController {
     await saveDraft(
       essay.copyWith(document: snap.document, jsonDocument: snap.jsonDocument),
     );
-    _ref.invalidate(essaySnapshotsProvider(essay.id));
   }
 
-  void _invalidateEssay(int essayId) {
-    _ref.invalidate(essayByIdProvider(essayId));
+  void _cacheEssay(Essay essay) {
+    _ref.read(essayLocalCacheProvider.notifier).put(essay);
   }
 
-  void _invalidateLists() {
-    _ref.invalidate(recentEssaysProvider);
-    _ref.invalidate(pinnedEssaysProvider);
+  void _cacheEssayWithLink(int essayId, LinkedModel model) {
+    final cached = _ref.read(essayLocalCacheProvider)[essayId];
+    if (cached == null ||
+        cached.links.any(
+          (link) => link.modelType == model.modelType && link.id == model.id,
+        )) {
+      return;
+    }
+    _cacheEssay(cached.copyWith(links: [...cached.links, model]));
+  }
+
+  void _scheduleDraftWrite() {
+    if (_draftWriteInFlight != null) return;
+
+    final now = DateTime.now();
+    final lastWriteAt = _lastDraftWriteAt;
+    if (lastWriteAt == null ||
+        now.difference(lastWriteAt) >= _draftWriteInterval) {
+      _draftFlushTimer?.cancel();
+      _draftFlushTimer = null;
+      _draftWriteInFlight = _flushPendingDraft();
+      return;
+    }
+
+    _draftFlushTimer ??= Timer(
+      _draftWriteInterval - now.difference(lastWriteAt),
+      () {
+        _draftFlushTimer = null;
+        _draftWriteInFlight ??= _flushPendingDraft();
+      },
+    );
+  }
+
+  Future<void> _flushPendingDraft() async {
+    final draft = _pendingDraft;
+    if (draft == null) {
+      _draftWriteInFlight = null;
+      return;
+    }
+    _pendingDraft = null;
+    try {
+      await _ref.read(essayRepositoryProvider).updateDraft(draft);
+      _lastDraftWriteAt = DateTime.now();
+    } finally {
+      _draftWriteInFlight = null;
+      if (_pendingDraft != null) {
+        _scheduleDraftWrite();
+      }
+    }
   }
 }
 
@@ -107,6 +182,7 @@ class EssayResultController {
       title: 'Search: $value',
       query: EssayQuery(searchText: value),
       resultIds: rows.map((essay) => essay.id).toList(),
+      results: rows,
     );
   }
 
@@ -116,6 +192,7 @@ class EssayResultController {
       title: 'Pinned essays',
       query: const EssayQuery(pinnedOnly: true),
       resultIds: rows.map((essay) => essay.id).toList(),
+      results: rows,
     );
   }
 
@@ -125,6 +202,7 @@ class EssayResultController {
       title: 'Recent essays',
       query: const EssayQuery(),
       resultIds: rows.map((essay) => essay.id).toList(),
+      results: rows,
     );
   }
 
@@ -143,6 +221,7 @@ class EssayResultController {
       title: '$system: $node',
       query: EssayQuery(tagFilters: <EssayTagFilter>[filter]),
       resultIds: rows.map((essay) => essay.id).toList(),
+      results: rows,
     );
   }
 }

@@ -24,11 +24,7 @@ class KgqlEssayRepository implements EssayRepository {
   @override
   Future<Essay> create() async {
     final id = await setKgqlModel(_client, setModelRequestForCreateEssay());
-    final essay = await getById(id);
-    if (essay == null) {
-      throw StateError('Created essay $id could not be loaded');
-    }
-    return essay;
+    return essayForCreatedId(id);
   }
 
   @override
@@ -86,8 +82,17 @@ class KgqlEssayRepository implements EssayRepository {
       ),
     );
 
-    final snaps = await listSnapshots(essayId);
-    return snaps.firstWhere((snap) => snap.id == snapId);
+    return EssaySnap(
+      id: snapId,
+      essayId: essayId,
+      name: changeSummary.trim().isEmpty ? source : changeSummary.trim(),
+      versionNumber: nextVersion,
+      document: essay.document,
+      jsonDocument: essay.jsonDocument,
+      source: source,
+      changeSummary: changeSummary,
+      createdAt: DateTime.now(),
+    );
   }
 
   @override
@@ -108,7 +113,6 @@ class KgqlEssayRepository implements EssayRepository {
 
   @override
   Future<List<Essay>> listByTag(EssayTagFilter filter) async {
-    final schema = await _loadEssaySchema();
     final models = await fetchKgqlModels(
       _client,
       filter: {
@@ -121,14 +125,13 @@ class KgqlEssayRepository implements EssayRepository {
           },
         ],
       },
-      struct: essayFetchStruct(schema),
+      struct: essaySummaryFetchStruct(),
     );
-    return _sortedEssays(models);
+    return _sortedEssaySummaries(models);
   }
 
   @override
   Future<List<Essay>> listPinned({int limit = 20}) async {
-    final schema = await _loadEssaySchema();
     final models = await fetchKgqlModels(
       _client,
       filter: {
@@ -137,9 +140,9 @@ class KgqlEssayRepository implements EssayRepository {
           {'key': kEssayAttrPinned, 'op': '=', 'value': true},
         ],
       },
-      struct: essayFetchStruct(schema),
+      struct: essaySummaryFetchStruct(),
     );
-    return _sortedEssays(models).take(limit).toList();
+    return _sortedEssaySummaries(models).take(limit).toList();
   }
 
   @override
@@ -174,7 +177,7 @@ class KgqlEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay> attachLinkedModel({
+  Future<void> attachLinkedModel({
     required int essayId,
     required LinkableModelType modelType,
     required int modelId,
@@ -188,16 +191,11 @@ class KgqlEssayRepository implements EssayRepository {
         ],
       ),
     );
-    final updated = await getById(essayId);
-    if (updated == null) {
-      throw StateError('Updated essay $essayId could not be loaded');
-    }
-    return updated;
   }
 
   @override
-  Future<Essay> attachProject(int essayId, int projectId) async {
-    return attachLinkedModel(
+  Future<void> attachProject(int essayId, int projectId) async {
+    await attachLinkedModel(
       essayId: essayId,
       modelType: LinkableModelType.project,
       modelId: projectId,
@@ -205,7 +203,7 @@ class KgqlEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay> detachProject(int essayId, int relationId) async {
+  Future<void> detachProject(int essayId, int relationId) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
@@ -213,11 +211,6 @@ class KgqlEssayRepository implements EssayRepository {
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
     );
-    final updated = await getById(essayId);
-    if (updated == null) {
-      throw StateError('Updated essay $essayId could not be loaded');
-    }
-    return updated;
   }
 
   @override
@@ -242,7 +235,7 @@ class KgqlEssayRepository implements EssayRepository {
   @override
   Future<List<domain_tags.TagSystem>> listTagSystems() async {
     final schema = await _loadEssaySchema();
-    final essays = await _listAll();
+    final essays = await _listAllSummaries();
     return [
       for (final system in schema.tagSystems ?? const <TagSystem>[])
         domain_tags.TagSystem(
@@ -261,7 +254,7 @@ class KgqlEssayRepository implements EssayRepository {
   Future<List<Essay>> search(String query) async {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return const <Essay>[];
-    final rows = await _listAll();
+    final rows = await _listAllSummaries();
     return rows.where((essay) {
       return [
         essay.title,
@@ -275,46 +268,24 @@ class KgqlEssayRepository implements EssayRepository {
 
   @override
   Future<Essay> updateDraft(Essay essay) async {
-    final schema = await _loadEssaySchema();
-    await setKgqlModel(
-      _client,
-      setModelRequestForUpdateEssay(
-        essay,
-        availableTagSystems: _availableTagSystems(schema),
-      ),
-    );
-    final updated = await getById(essay.id);
-    if (updated == null) {
-      throw StateError('Updated essay ${essay.id} could not be loaded');
-    }
-    return updated;
-  }
-
-  Set<String> _availableTagSystems(ModelType schema) {
-    return {
-      for (final system in schema.tagSystems ?? const <TagSystem>[])
-        system.name,
-    };
+    await setKgqlModel(_client, setModelRequestForUpdateEssay(essay));
+    return essay.copyWith(updatedAt: DateTime.now(), updatedLabel: 'just now');
   }
 
   Future<List<Essay>> _listAll() async {
-    final schema = await _loadEssaySchema();
     final models = await fetchKgqlModels(
       _client,
       filter: {'model_type': kEssayModelTypeName},
-      struct: essayFetchStruct(schema),
+      struct: essaySummaryFetchStruct(),
     );
-    return _sortedEssays(models);
+    return _sortedEssaySummaries(models);
   }
 
-  List<Essay> _sortedEssays(List<Model> models) {
-    final rows = [
-      for (final model in models)
-        essayFromModel(
-          model,
-          versionNumber: _latestVersionNumberFromEssayModel(model),
-        ),
-    ]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  Future<List<Essay>> _listAllSummaries() => _listAll();
+
+  List<Essay> _sortedEssaySummaries(List<Model> models) {
+    final rows = [for (final model in models) essaySummaryFromModel(model)]
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return rows;
   }
 
