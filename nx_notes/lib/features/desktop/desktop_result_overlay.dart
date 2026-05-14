@@ -9,7 +9,7 @@ class _DesktopResultOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rows = workspace.overlayResults;
     return Positioned.fill(
-      left: _sidebarWidth,
+      left: workspace.sidebarCollapsed ? _collapsedSidebarWidth : _sidebarWidth,
       child: Material(
         color: AppColors.panel.withValues(alpha: 0.96),
         child: ListView(

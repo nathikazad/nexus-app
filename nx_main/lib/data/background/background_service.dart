@@ -10,6 +10,7 @@ import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
 import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
     show BleClient;
+import 'package:nexus_voice_assistant/data/gps/gps_upload_manager.dart';
 import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.dart';
@@ -96,6 +97,7 @@ class BleBackgroundService {
     final bleClient = BleClient();
     final socketClient = SocketClient();
     TelemetryUploadManager? telemetryUploadManager;
+    GpsUploadManager? gpsUploadManager;
     String? appLogHttpBaseUrl;
     Map<String, String> appLogHeaders = {};
 
@@ -488,11 +490,23 @@ class BleBackgroundService {
           });
         },
       );
+      await gpsUploadManager?.stop(flushPending: true);
+      gpsUploadManager = GpsUploadManager(
+        httpBaseUrl: uploadBase,
+        headers: {
+          'X-User-Id': userId,
+          if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
+        },
+        flushInterval: const Duration(seconds: 30),
+        timezoneLabel: localTimezoneOffsetLabel(),
+      )..start();
       await socketClient.disconnect();
       await socketClient.connect(url, headers: headers);
     });
 
     service.on('socket.disconnect').listen((event) async {
+      await gpsUploadManager?.stop(flushPending: true);
+      gpsUploadManager = null;
       await socketClient.disconnect();
     });
 
@@ -517,6 +531,8 @@ class BleBackgroundService {
 
     // Service lifecycle events
     service.on('stop').listen((event) async {
+      await gpsUploadManager?.stop(flushPending: true);
+      gpsUploadManager = null;
       await bleClient.disconnect(intentional: true);
       await socketClient.disconnect();
       service.stopSelf();

@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/data/background/background_service.dart';
 import 'package:nexus_voice_assistant/data/battery/battery_repository.dart'
     as data_battery;
+import 'package:nexus_voice_assistant/data/gps/gps_repository.dart' as data_gps;
 import 'package:nexus_voice_assistant/data/hardware/hardware_service.dart';
 import 'package:nexus_voice_assistant/domain/battery/battery_repository.dart';
+import 'package:nexus_voice_assistant/domain/gps/gps_repository.dart';
 
 export 'package:nx_db/nx_db.dart' show imageRepositoryProvider;
 
@@ -26,4 +28,8 @@ final hardwareServiceProvider = Provider<HardwareService>((ref) {
 
 final batteryRepositoryProvider = Provider<BatteryRepository>((ref) {
   return data_battery.HttpBatteryRepository();
+});
+
+final gpsRepositoryProvider = Provider<GpsRepository>((ref) {
+  return data_gps.HttpGpsRepository();
 });

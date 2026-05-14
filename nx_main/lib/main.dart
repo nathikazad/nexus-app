@@ -25,6 +25,8 @@ void main() async {
 
   if (!kIsWeb) {
     await Permission.microphone.request();
+    await Permission.locationWhenInUse.request();
+    await Permission.locationAlways.request();
   }
 
   if (!kIsWeb && Platform.isIOS) {

@@ -58,7 +58,16 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                     ),
                     const Spacer(),
                     _IconSquareButton(
+                      icon: Icons.chevron_left,
+                      tooltip: 'Collapse navigator',
+                      onPressed: () => ref
+                          .read(desktopWorkspaceProvider.notifier)
+                          .toggleSidebar(),
+                    ),
+                    const SizedBox(width: 6),
+                    _IconSquareButton(
                       icon: Icons.add,
+                      tooltip: 'New essay',
                       onPressed: () async {
                         final essay = await ref
                             .read(essayMutationControllerProvider)
@@ -136,6 +145,81 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
   }
 }
 
+class _CollapsedSidebar extends ConsumerWidget {
+  const _CollapsedSidebar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.sidebar,
+        border: Border(right: BorderSide(color: AppColors.line)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: <Widget>[
+            const SizedBox(height: 6),
+            _CollapsedSidebarButton(
+              icon: Icons.chevron_right,
+              tooltip: 'Expand navigator',
+              onTap: () =>
+                  ref.read(desktopWorkspaceProvider.notifier).toggleSidebar(),
+            ),
+            const SizedBox(height: 8),
+            const RotatedBox(
+              quarterTurns: 1,
+              child: Text(
+                'nx_notes',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.faint,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CollapsedSidebarButton extends StatelessWidget {
+  const _CollapsedSidebarButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: AppColors.faint),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SidebarFooterButton extends StatelessWidget {
   const _SidebarFooterButton({
     required this.icon,
@@ -178,14 +262,19 @@ class _SidebarFooterButton extends StatelessWidget {
 }
 
 class _IconSquareButton extends StatelessWidget {
-  const _IconSquareButton({required this.icon, required this.onPressed});
+  const _IconSquareButton({
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
 
   final IconData icon;
   final VoidCallback onPressed;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final button = Material(
       color: AppColors.panel,
       borderRadius: BorderRadius.circular(4),
       child: InkWell(
@@ -202,6 +291,10 @@ class _IconSquareButton extends StatelessWidget {
         ),
       ),
     );
+    if (tooltip == null) {
+      return button;
+    }
+    return Tooltip(message: tooltip!, preferBelow: false, child: button);
   }
 }
 

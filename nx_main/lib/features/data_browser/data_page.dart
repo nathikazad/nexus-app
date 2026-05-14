@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexus_voice_assistant/features/data_browser/battery_page.dart';
+import 'package:nexus_voice_assistant/features/data_browser/gps_page.dart';
 import 'package:nexus_voice_assistant/features/data_browser/images_page.dart';
 
 /// Entry point for data browsing: necklace/desktop images and (future) expenses.
@@ -48,6 +49,18 @@ class DataPage extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) => const BatteryPage(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.map),
+            title: const Text('GPS'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const GpsPage(),
                 ),
               );
             },

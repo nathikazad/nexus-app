@@ -22,6 +22,7 @@ part 'desktop_inspector_history.dart';
 part 'desktop_result_overlay.dart';
 
 const double _sidebarWidth = 256;
+const double _collapsedSidebarWidth = 44;
 const double _inspectorWidth = 288;
 const double _collapsedInspectorWidth = 44;
 
@@ -37,7 +38,13 @@ class DesktopShell extends ConsumerWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const SizedBox(width: _sidebarWidth, child: _DesktopSidebar()),
+              if (workspace.sidebarCollapsed)
+                const SizedBox(
+                  width: _collapsedSidebarWidth,
+                  child: _CollapsedSidebar(),
+                )
+              else
+                const SizedBox(width: _sidebarWidth, child: _DesktopSidebar()),
               Expanded(child: _DesktopEditorWorkspace(workspace: workspace)),
               if (workspace.inspectorCollapsed)
                 const SizedBox(
