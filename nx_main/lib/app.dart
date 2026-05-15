@@ -13,9 +13,28 @@ class NexusVoiceAssistantApp extends ConsumerStatefulWidget {
       _NexusVoiceAssistantAppState();
 }
 
-class _NexusVoiceAssistantAppState
-    extends ConsumerState<NexusVoiceAssistantApp> {
+class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
+    with WidgetsBindingObserver {
   String? _activeSocketSessionKey;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(bleBackgroundServiceProvider).flushGpsBacklog();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

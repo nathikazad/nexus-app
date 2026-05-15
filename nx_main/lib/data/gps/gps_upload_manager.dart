@@ -34,6 +34,23 @@ class GpsSample {
   final bool isMocked;
   final int? floor;
 
+  GpsSample copyWith({DateTime? time}) {
+    return GpsSample(
+      time: time ?? this.time,
+      latitude: latitude,
+      longitude: longitude,
+      accuracyM: accuracyM,
+      altitudeM: altitudeM,
+      altitudeAccuracyM: altitudeAccuracyM,
+      headingDeg: headingDeg,
+      headingAccuracyDeg: headingAccuracyDeg,
+      speedMps: speedMps,
+      speedAccuracyMps: speedAccuracyMps,
+      isMocked: isMocked,
+      floor: floor,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'time': time.toLocal().toIso8601String(),
@@ -70,6 +87,7 @@ class GpsSample {
 }
 
 typedef GpsSampleReader = Future<GpsSample?> Function();
+typedef GpsSampleStreamFactory = Stream<GpsSample> Function();
 
 class GpsUploadManager {
   GpsUploadManager({
@@ -77,17 +95,20 @@ class GpsUploadManager {
     required this.headers,
     http.Client? client,
     GpsSampleReader? sampleReader,
+    GpsSampleStreamFactory? sampleStreamFactory,
     this.sampleInterval = const Duration(seconds: 60),
     this.flushInterval = const Duration(seconds: 600),
     this.source = 'phone',
     this.timezoneLabel,
   })  : _client = client ?? http.Client(),
-        _sampleReader = sampleReader ?? _readCurrentSample;
+        _sampleReader = sampleReader ?? _readCurrentSample,
+        _sampleStreamFactory = sampleStreamFactory ?? _positionSampleStream;
 
   final String httpBaseUrl;
   final Map<String, String> headers;
   final http.Client _client;
   final GpsSampleReader _sampleReader;
+  final GpsSampleStreamFactory _sampleStreamFactory;
   final Duration sampleInterval;
   final Duration flushInterval;
   final String source;
@@ -96,21 +117,45 @@ class GpsUploadManager {
   final List<GpsSample> _pending = [];
   Timer? _sampleTimer;
   Timer? _flushTimer;
+  StreamSubscription<GpsSample>? _positionSubscription;
+  GpsSample? _latestSample;
   bool _isCollecting = false;
   bool _isFlushing = false;
 
   int get pendingCount => _pending.length;
-  bool get isRunning => _sampleTimer != null || _flushTimer != null;
+  bool get isRunning =>
+      _positionSubscription != null ||
+      _sampleTimer != null ||
+      _flushTimer != null;
 
   void start() {
     if (isRunning) return;
     debugPrint(
-      '[GPS Upload] starting sampleInterval=${sampleInterval.inSeconds}s '
+      '[GPS Upload] starting stream sampleInterval=${sampleInterval.inSeconds}s '
       'flushInterval=${flushInterval.inSeconds}s',
     );
-    unawaited(collectOnce());
+    _positionSubscription = _sampleStreamFactory().listen(
+      (sample) {
+        _latestSample = sample;
+        if (_pending.isEmpty) {
+          _recordLatestSample(reason: 'stream-start');
+        } else {
+          debugPrint(
+            '[GPS Upload] stream update '
+            'time=${sample.time.toLocal().toIso8601String()} '
+            'lat=${sample.latitude.toStringAsFixed(6)} '
+            'lon=${sample.longitude.toStringAsFixed(6)} '
+            'accuracy_m=${sample.accuracyM.toStringAsFixed(1)}',
+          );
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('[GPS Upload] stream failed: $error');
+      },
+      cancelOnError: false,
+    );
     _sampleTimer = Timer.periodic(sampleInterval, (_) {
-      unawaited(collectOnce());
+      _recordLatestSample(reason: 'interval');
     });
     _flushTimer = Timer.periodic(flushInterval, (_) {
       debugPrint(
@@ -130,9 +175,29 @@ class GpsUploadManager {
     _sampleTimer = null;
     _flushTimer?.cancel();
     _flushTimer = null;
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
     if (flushPending) {
       await flush();
     }
+  }
+
+  void _recordLatestSample({required String reason}) {
+    final sample = _latestSample;
+    if (sample == null) {
+      debugPrint('[GPS Upload] sample skipped: no streamed position yet');
+      return;
+    }
+    final timestamped = sample.copyWith(time: DateTime.now());
+    _pending.add(timestamped);
+    debugPrint(
+      '[GPS Upload] sampled reason=$reason '
+      'time=${timestamped.time.toLocal().toIso8601String()} '
+      'lat=${timestamped.latitude.toStringAsFixed(6)} '
+      'lon=${timestamped.longitude.toStringAsFixed(6)} '
+      'accuracy_m=${timestamped.accuracyM.toStringAsFixed(1)} '
+      'pending=${_pending.length}',
+    );
   }
 
   Future<void> collectOnce() async {
@@ -230,6 +295,58 @@ class GpsUploadManager {
       ),
     );
     return GpsSample.fromPosition(position);
+  }
+
+  static Stream<GpsSample> _positionSampleStream() async* {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      debugPrint('[GPS Upload] stream unavailable: location services disabled');
+      return;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      debugPrint('[GPS Upload] stream unavailable: permission=$permission');
+      return;
+    }
+
+    yield* Geolocator.getPositionStream(
+      locationSettings: _streamLocationSettings(),
+    ).map(GpsSample.fromPosition);
+  }
+
+  static LocationSettings _streamLocationSettings() {
+    if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return AppleSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+        activityType: ActivityType.other,
+        allowBackgroundLocationUpdates: true,
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: false,
+      );
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+        intervalDuration: const Duration(seconds: 10),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'Nexus GPS active',
+          notificationText: 'Nexus is collecting GPS timeline points.',
+          enableWakeLock: true,
+        ),
+      );
+    }
+    return const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 0,
+    );
   }
 }
 

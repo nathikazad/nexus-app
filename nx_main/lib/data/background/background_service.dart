@@ -497,7 +497,7 @@ class BleBackgroundService {
           'X-User-Id': userId,
           if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
         },
-        flushInterval: const Duration(seconds: 30),
+        flushInterval: const Duration(minutes: 10),
         timezoneLabel: localTimezoneOffsetLabel(),
       )..start();
       await socketClient.disconnect();
@@ -508,6 +508,11 @@ class BleBackgroundService {
       await gpsUploadManager?.stop(flushPending: true);
       gpsUploadManager = null;
       await socketClient.disconnect();
+    });
+
+    service.on('gps.flush').listen((event) async {
+      final ok = await gpsUploadManager?.flush();
+      debugPrint('[GPS Upload] foreground flush requested ok=${ok ?? true}');
     });
 
     // Socket text events
@@ -901,6 +906,10 @@ class BleBackgroundService {
   void disconnectSocket() {
     _fileTxLogUserId = '';
     _service.invoke('socket.disconnect');
+  }
+
+  void flushGpsBacklog() {
+    _service.invoke('gps.flush');
   }
 
   /// Send text to the socket server

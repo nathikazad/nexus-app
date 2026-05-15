@@ -158,7 +158,8 @@ class _GpsMapView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
+        Flexible(
+          flex: 9,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: FlutterMap(
@@ -204,21 +205,28 @@ class _GpsMapView extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _SelectedPointSummary(point: selected, count: points.length),
-        Slider(
-          value: selectedIndex.toDouble(),
-          min: 0,
-          max: (points.length - 1).toDouble(),
-          divisions: points.length > 1 ? points.length - 1 : null,
-          label: selected.timeHms,
-          onChanged: (value) {
-            final next = value.round();
-            onIndexChanged(next);
-            final point = points[next];
-            mapController.move(
-              LatLng(point.latitude, point.longitude),
-              mapController.camera.zoom,
-            );
-          },
+        SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 18),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Slider(
+              value: selectedIndex.toDouble(),
+              min: 0,
+              max: (points.length - 1).toDouble(),
+              divisions: points.length > 1 ? points.length - 1 : null,
+              label: _formatTime(selected.timeHms),
+              onChanged: (value) {
+                final next = value.round();
+                onIndexChanged(next);
+                final point = points[next];
+                mapController.move(
+                  LatLng(point.latitude, point.longitude),
+                  mapController.camera.zoom,
+                );
+              },
+            ),
+          ),
         ),
       ],
     );
@@ -276,7 +284,7 @@ class _SelectedPointSummary extends StatelessWidget {
         Expanded(
           child: Text(
             [
-              point.timeHms,
+              _formatTime(point.timeHms),
               '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}',
               if (accuracy != null) 'accuracy $accuracy',
               if (speed != null) 'speed $speed',
@@ -292,4 +300,14 @@ class _SelectedPointSummary extends StatelessWidget {
       ],
     );
   }
+}
+
+String _formatTime(String hms) {
+  final parts = hms.split(':');
+  if (parts.length < 2) return hms;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return hms;
+  final date = DateTime(2000, 1, 1, hour, minute);
+  return DateFormat.jm().format(date);
 }

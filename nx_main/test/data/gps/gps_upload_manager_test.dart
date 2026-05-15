@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,53 @@ import 'package:http/testing.dart';
 import 'package:nexus_voice_assistant/data/gps/gps_upload_manager.dart';
 
 void main() {
+  GpsSample makeSample({
+    double latitude = 37.7749,
+    double longitude = -122.4194,
+  }) {
+    return GpsSample(
+      time: DateTime.parse('2026-05-14T18:00:00Z'),
+      latitude: latitude,
+      longitude: longitude,
+      accuracyM: 4.2,
+      altitudeM: 12,
+      altitudeAccuracyM: 1.5,
+      headingDeg: 180,
+      headingAccuracyDeg: 3,
+      speedMps: 1.2,
+      speedAccuracyMps: 0.4,
+      isMocked: false,
+    );
+  }
+
+  test('GpsUploadManager records first streamed sample and flushes it',
+      () async {
+    final controller = StreamController<GpsSample>();
+    final requests = <http.Request>[];
+    final manager = GpsUploadManager(
+      httpBaseUrl: 'https://example.test/',
+      headers: {'X-User-Id': '7'},
+      client: MockClient((request) async {
+        requests.add(request);
+        return http.Response(jsonEncode({'ok': true}), 200);
+      }),
+      sampleStreamFactory: () => controller.stream,
+      sampleInterval: const Duration(hours: 1),
+      flushInterval: const Duration(hours: 1),
+    );
+
+    manager.start();
+    controller.add(makeSample(latitude: 1, longitude: 2));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(manager.pendingCount, 1);
+    expect(await manager.flush(), isTrue);
+    expect(manager.pendingCount, 0);
+    expect(requests, hasLength(1));
+    await manager.stop(flushPending: false);
+    await controller.close();
+  });
+
   test('GpsUploadManager batches samples and posts to gps upload endpoint',
       () async {
     final requests = <http.Request>[];
@@ -17,19 +65,7 @@ void main() {
         requests.add(request);
         return http.Response(jsonEncode({'ok': true}), 200);
       }),
-      sampleReader: () async => GpsSample(
-        time: DateTime.parse('2026-05-14T18:00:00Z'),
-        latitude: 37.7749,
-        longitude: -122.4194,
-        accuracyM: 4.2,
-        altitudeM: 12,
-        altitudeAccuracyM: 1.5,
-        headingDeg: 180,
-        headingAccuracyDeg: 3,
-        speedMps: 1.2,
-        speedAccuracyMps: 0.4,
-        isMocked: false,
-      ),
+      sampleReader: () async => makeSample(),
     );
 
     await manager.collectOnce();
@@ -60,19 +96,7 @@ void main() {
       httpBaseUrl: 'https://example.test',
       headers: const {},
       client: MockClient((request) async => http.Response('nope', 500)),
-      sampleReader: () async => GpsSample(
-        time: DateTime.parse('2026-05-14T18:00:00Z'),
-        latitude: 1,
-        longitude: 2,
-        accuracyM: 3,
-        altitudeM: 0,
-        altitudeAccuracyM: 0,
-        headingDeg: 0,
-        headingAccuracyDeg: 0,
-        speedMps: 0,
-        speedAccuracyMps: 0,
-        isMocked: false,
-      ),
+      sampleReader: () async => makeSample(latitude: 1, longitude: 2),
     );
 
     await manager.collectOnce();
