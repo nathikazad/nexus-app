@@ -122,8 +122,13 @@ DateTimeRange kScopedFilteredExpenseDateRange() {
 }
 
 class ScopedFilteredExpenseDateRangeNotifier extends ExpenseDateRangeNotifier {
+  ScopedFilteredExpenseDateRangeNotifier([this.initialDateRange]);
+
+  final DateTimeRange? initialDateRange;
+
   @override
-  DateTimeRange build() => kScopedFilteredExpenseDateRange();
+  DateTimeRange build() =>
+      initialDateRange ?? kScopedFilteredExpenseDateRange();
 }
 
 final expenseListProvider =

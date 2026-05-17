@@ -350,6 +350,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      GoRoute(
+        path: '/expenses/by-date/:date',
+        builder: (context, state) {
+          final date = Uri.decodeComponent(state.pathParameters['date']!);
+          return scopedExpenseListScreen(
+            title: date,
+            initialDateRange: _routeDateRange(state),
+            initialFilter: const ExpenseFilter(),
+          );
+        },
+      ),
     ],
   );
 });

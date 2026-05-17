@@ -134,7 +134,11 @@ class DashboardScreen extends ConsumerWidget {
                             if (entries.isEmpty) return const SizedBox.shrink();
                             return SizedBox(
                               height: 240,
-                              child: _DayBarChart(entries: entries),
+                              child: _DayBarChart(
+                                entries: entries,
+                                onBarLongPress: (dateKey) =>
+                                    _openExpensesForDay(context, dateKey),
+                              ),
                             );
                           },
                           loading: () => const SizedBox(
@@ -246,6 +250,25 @@ void _openExpensesForRelation(
   context.push(
     '/expenses/by-relation/${Uri.encodeComponent(relName)}/$relId/'
     '${Uri.encodeComponent(displayName)}?${_dateRangeQuery(range)}',
+  );
+}
+
+DateTime? _parseDateKey(String value) {
+  try {
+    final parsed = DateTime.parse(value);
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  } catch (_) {
+    return null;
+  }
+}
+
+void _openExpensesForDay(BuildContext context, String dateKey) {
+  final day = _parseDateKey(dateKey);
+  if (day == null) return;
+  final range = DateTimeRange(start: day, end: day);
+  context.push(
+    '/expenses/by-date/${Uri.encodeComponent(_dateOnly(day))}'
+    '?${_dateRangeQuery(range)}',
   );
 }
 
@@ -589,9 +612,10 @@ class _PieChartCardState extends State<_PieChartCard> {
 }
 
 class _DayBarChart extends StatelessWidget {
-  const _DayBarChart({required this.entries});
+  const _DayBarChart({required this.entries, this.onBarLongPress});
 
   final List<MapEntry<String, double>> entries;
+  final void Function(String dateKey)? onBarLongPress;
 
   /// Format an ISO date key like "2026-04-01T00:00:00" → "Apr 1".
   static String _shortDate(String iso) {
@@ -654,6 +678,12 @@ class _DayBarChart extends StatelessWidget {
                 BarChart(
                   BarChartData(
                     barTouchData: BarTouchData(
+                      touchCallback: (event, response) {
+                        if (event is! FlLongPressStart) return;
+                        final i = response?.spot?.touchedBarGroupIndex;
+                        if (i == null || i < 0 || i >= entries.length) return;
+                        onBarLongPress?.call(entries[i].key);
+                      },
                       touchTooltipData: BarTouchTooltipData(
                         tooltipBorderRadius: BorderRadius.circular(10),
                         tooltipPadding: const EdgeInsets.symmetric(

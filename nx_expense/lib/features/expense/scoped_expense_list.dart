@@ -10,6 +10,7 @@ import 'expense_list_page.dart';
 Widget scopedExpenseListScreen({
   required String title,
   required ExpenseFilter initialFilter,
+  DateTimeRange? initialDateRange,
   void Function(int expenseId)? onExpenseTap,
 }) {
   return ProviderScope(
@@ -29,7 +30,7 @@ Widget scopedExpenseListScreen({
         ExpenseListSelectedIdsNotifier.new,
       ),
       expenseDateRangeProvider.overrideWith(
-        ScopedFilteredExpenseDateRangeNotifier.new,
+        () => ScopedFilteredExpenseDateRangeNotifier(initialDateRange),
       ),
       expenseListForUiProvider.overrideWith(
         (ref) => buildExpenseListForUi(ref),

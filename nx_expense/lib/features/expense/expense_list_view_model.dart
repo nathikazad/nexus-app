@@ -287,4 +287,6 @@ void invalidateExpenseListCache(WidgetRef ref) {
   ref.invalidate(expenseSummaryProvider);
   ref.invalidate(dashboardExpenseSummaryProvider);
   ref.invalidate(spendByDayProvider);
+  ref.invalidate(spendByTagSystemProvider);
+  ref.invalidate(spendByRelationProvider);
 }
