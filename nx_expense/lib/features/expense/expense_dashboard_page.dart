@@ -10,6 +10,7 @@ import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/core/widgets/stat_card.dart';
 import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
+import 'package:nx_expense/domain/expense/expense.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/features/expense/expense_dashboard_view_model.dart';
 import 'package:nx_expense/features/expense/expense_stats_dashboard_config.dart';
@@ -26,6 +27,7 @@ class DashboardScreen extends ConsumerWidget {
     final schemaAsync = ref.watch(expenseSchemaViewProvider);
     final summaryAsync = ref.watch(dashboardExpenseSummaryProvider);
     final dayAsync = ref.watch(spendByDayProvider);
+    final excludedAsync = ref.watch(excludedFromStatsExpensesProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -67,38 +69,63 @@ class DashboardScreen extends ConsumerWidget {
                   data: (s) {
                     // No data — show empty state
                     if (s.count == 0) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 48,
-                              color: AppColors.slate300,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No expenses found',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Add some expenses to see your dashboard',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                          ],
-                        ),
+                      if (excludedAsync.hasError) {
+                        return Center(child: Text('${excludedAsync.error}'));
+                      }
+                      final excluded = excludedAsync.maybeWhen(
+                        data: (rows) => rows,
+                        orElse: () => null,
                       );
+                      if (excluded == null) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (excluded.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 48,
+                                color: AppColors.slate300,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No expenses found',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.slate400,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Add some expenses to see your dashboard',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.slate400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                     }
 
                     // Has data — show stats + charts
+                    final statsTotal = s.sumTotal;
+                    final excludedTotal = excludedAsync.maybeWhen(
+                      data: (rows) => _sumExpenseAmounts(
+                        rows,
+                        schema.primaryNumberAttributeKey,
+                      ),
+                      orElse: () => null,
+                    );
+                    final allTotal = statsTotal == null
+                        ? null
+                        : excludedTotal == null
+                        ? null
+                        : statsTotal + excludedTotal;
                     return ListView(
                       padding: const EdgeInsets.fromLTRB(
                         RefLayout.px5,
@@ -111,16 +138,18 @@ class DashboardScreen extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: StatCard(
-                                title: 'Count',
-                                value: '${s.count}',
+                                title: 'Stats Total',
+                                value: statsTotal != null
+                                    ? formatMoney(statsTotal)
+                                    : '—',
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: StatCard(
                                 title: 'Total',
-                                value: s.sumTotal != null
-                                    ? formatMoney(s.sumTotal)
+                                value: allTotal != null
+                                    ? formatMoney(allTotal)
                                     : '—',
                                 highlight: true,
                               ),
@@ -217,6 +246,10 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 24),
                         ],
+                        _ExcludedFromStatsSection(
+                          schema: schema,
+                          excludedAsync: excludedAsync,
+                        ),
                       ],
                     );
                   },
@@ -225,6 +258,159 @@ class DashboardScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+num? _sumExpenseAmounts(List<Expense> expenses, String? amountKey) {
+  if (amountKey == null) return null;
+  return expenses.fold<num>(
+    0,
+    (sum, expense) => sum + numAttr(expense, amountKey),
+  );
+}
+
+class _ExcludedFromStatsSection extends StatelessWidget {
+  const _ExcludedFromStatsSection({
+    required this.schema,
+    required this.excludedAsync,
+  });
+
+  final ModelTypeView schema;
+  final AsyncValue<List<Expense>> excludedAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return excludedAsync.when(
+      data: (rows) {
+        final expenses = rows;
+        final total = _sumExpenseAmounts(
+          expenses,
+          schema.primaryNumberAttributeKey,
+        );
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(RefLayout.rounded3xl),
+            border: Border.all(color: AppColors.slate100),
+            boxShadow: refCardShadow,
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Not included',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    total != null ? formatMoney(total) : '—',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.slate500,
+                    ),
+                  ),
+                ],
+              ),
+              if (expenses.isEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'None',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.slate400,
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 14),
+                for (var i = 0; i < expenses.length; i++) ...[
+                  _ExcludedExpenseRow(
+                    expense: expenses[i],
+                    amountKey: schema.primaryNumberAttributeKey,
+                  ),
+                  if (i != expenses.length - 1)
+                    Divider(height: 16, color: AppColors.slate100),
+                ],
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _ExcludedExpenseRow extends StatelessWidget {
+  const _ExcludedExpenseRow({required this.expense, required this.amountKey});
+
+  final Expense expense;
+  final String? amountKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = amountKey == null ? null : numAttr(expense, amountKey!);
+    final date = expenseDateCellLabel(expense);
+    return InkWell(
+      onTap: () => context.push('/expense/${expense.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    expense.name,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate900,
+                    ),
+                  ),
+                  if (date.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      date,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate400,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (amount != null) ...[
+              const SizedBox(width: 12),
+              Text(
+                formatMoney(amount),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.slate500,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -51,4 +51,9 @@ abstract class ExpenseRepository {
     required DateTime rangeEnd,
     required String targetTypeName,
   });
+
+  Future<List<Expense>> listExcludedFromStats({
+    required DateTime rangeStart,
+    required DateTime rangeEnd,
+  });
 }

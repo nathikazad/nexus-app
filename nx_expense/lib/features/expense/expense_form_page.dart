@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
+import 'package:nx_expense/data/expense/expense_attr_keys.dart';
 import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 import 'package:nx_expense/domain/expense/expense.dart';
@@ -72,6 +73,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   bool _seeded = false;
   bool _tellerPrefillApplied = false;
   bool _tellerPrefillScheduled = false;
+  bool _newExpenseDefaultsApplied = false;
 
   @override
   void dispose() {
@@ -98,6 +100,15 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         _relations.putIfAbsent(link, () => []);
         _relationCreates.putIfAbsent(link, () => null);
       }
+    }
+  }
+
+  void _applyNewExpenseDefaults() {
+    if (_newExpenseDefaultsApplied || widget.expenseId != null) return;
+    _newExpenseDefaultsApplied = true;
+    final includeInStats = _attr[kExpenseIncludeInStatsAttributeKey];
+    if (includeInStats != null && includeInStats.text.trim().isEmpty) {
+      includeInStats.text = 'true';
     }
   }
 
@@ -208,6 +219,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (schema) {
         _ensureControllers(schema);
+        _applyNewExpenseDefaults();
         return existingAsync.when(
           loading: () =>
               const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -743,6 +755,10 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         if (vt == 'number') val = num.tryParse(raw) ?? raw;
         if (vt == 'boolean') val = raw == 'true';
         attrsMap[k] = val;
+      }
+      if (widget.expenseId == null &&
+          attrsMap[kExpenseIncludeInStatsAttributeKey] == true) {
+        attrsMap.remove(kExpenseIncludeInStatsAttributeKey);
       }
 
       final repo = ref.read(expenseRepositoryProvider);

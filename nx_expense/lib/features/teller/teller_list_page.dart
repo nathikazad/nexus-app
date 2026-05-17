@@ -15,6 +15,15 @@ import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart'
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
 import 'teller_transaction_detail_page.dart';
 
+enum _TellerSortMode {
+  dateAsc,
+  dateDesc,
+  amountAsc,
+  amountDesc;
+
+  bool get isDate => this == dateAsc || this == dateDesc;
+}
+
 class TellerListScreen extends ConsumerStatefulWidget {
   const TellerListScreen({super.key});
 
@@ -26,6 +35,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   bool _syncBusy = false;
   bool _pendingOnly = false;
   bool _unlinkedOnly = false;
+  _TellerSortMode? _sortModeOverride;
   final _searchController = TextEditingController();
 
   @override
@@ -75,6 +85,9 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   @override
   Widget build(BuildContext context) {
     final listAsync = ref.watch(tellerTransactionsInRangeProvider);
+    final dateRange = ref.watch(expenseDateRangeProvider);
+    final sortMode =
+        _sortModeOverride ?? _defaultTellerSortModeForDateRange(dateRange);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -218,6 +231,13 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                   selected: _unlinkedOnly,
                   onTap: () => setState(() => _unlinkedOnly = !_unlinkedOnly),
                 ),
+                const Spacer(),
+                _TellerSortButton(
+                  sortMode: sortMode,
+                  active: _sortModeOverride != null,
+                  onSelected: (mode) =>
+                      setState(() => _sortModeOverride = mode),
+                ),
               ],
             ),
           ),
@@ -253,7 +273,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                     ],
                   ),
                   data: (rows) {
-                    final filtered = _applyFilters(rows);
+                    final filtered = _sortRows(_applyFilters(rows), sortMode);
                     if (filtered.isEmpty) {
                       return ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -303,7 +323,9 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                         ],
                       );
                     }
-                    final items = _buildDateGroupedItems(ref, filtered);
+                    final items = sortMode.isDate
+                        ? _buildDateGroupedItems(ref, filtered)
+                        : _buildFlatItems(ref, filtered);
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(
@@ -389,6 +411,30 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     return items;
   }
 
+  List<Widget> _buildFlatItems(WidgetRef ref, List<TellerTransactionRow> rows) {
+    return [
+      for (final r in rows)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _TellerCard(
+            row: r,
+            onTap: (ctx) {
+              if (isDesktopLayout(ctx)) {
+                ref.read(selectedTellerRowProvider.notifier).state = r;
+                ref.read(tellerPanel3Provider.notifier).state = null;
+              } else {
+                Navigator.of(ctx).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TellerTransactionDetailScreen(row: r),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+    ];
+  }
+
   static String _dateLabel(DateTime t) {
     final d = t.toLocal();
     return DateFormat('MMM d, y').format(d);
@@ -404,6 +450,36 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
       if (query.isEmpty) return true;
       return _searchText(row).contains(query);
     }).toList();
+  }
+
+  static _TellerSortMode _defaultTellerSortModeForDateRange(
+    DateTimeRange range,
+  ) {
+    return isDateRangeCurrentCalendarMonth(range)
+        ? _TellerSortMode.dateDesc
+        : _TellerSortMode.dateAsc;
+  }
+
+  static List<TellerTransactionRow> _sortRows(
+    List<TellerTransactionRow> rows,
+    _TellerSortMode mode,
+  ) {
+    final sorted = [...rows];
+    switch (mode) {
+      case _TellerSortMode.dateAsc:
+        sorted.sort((a, b) => a.time.compareTo(b.time));
+      case _TellerSortMode.dateDesc:
+        sorted.sort((a, b) => b.time.compareTo(a.time));
+      case _TellerSortMode.amountAsc:
+        sorted.sort((a, b) => _amountSortKey(a).compareTo(_amountSortKey(b)));
+      case _TellerSortMode.amountDesc:
+        sorted.sort((a, b) => _amountSortKey(b).compareTo(_amountSortKey(a)));
+    }
+    return sorted;
+  }
+
+  static num _amountSortKey(TellerTransactionRow row) {
+    return num.tryParse(row.payload['amount']?.toString().trim() ?? '') ?? 0;
   }
 
   static bool _isPending(TellerTransactionRow row) {
@@ -439,6 +515,99 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     return sum == null
         ? '${rows.length}'
         : '${rows.length} · ${formatMoney(sum)}';
+  }
+}
+
+class _TellerSortButton extends StatelessWidget {
+  const _TellerSortButton({
+    required this.sortMode,
+    required this.active,
+    required this.onSelected,
+  });
+
+  final _TellerSortMode sortMode;
+  final bool active;
+  final ValueChanged<_TellerSortMode> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_TellerSortMode>(
+      tooltip: 'Sort Teller transactions',
+      offset: const Offset(0, 36),
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        _item(
+          mode: _TellerSortMode.dateAsc,
+          current: sortMode,
+          icon: Icons.arrow_upward_rounded,
+          label: 'Date',
+        ),
+        _item(
+          mode: _TellerSortMode.dateDesc,
+          current: sortMode,
+          icon: Icons.arrow_downward_rounded,
+          label: 'Date',
+        ),
+        _item(
+          mode: _TellerSortMode.amountAsc,
+          current: sortMode,
+          icon: Icons.arrow_upward_rounded,
+          label: 'Amount',
+        ),
+        _item(
+          mode: _TellerSortMode.amountDesc,
+          current: sortMode,
+          icon: Icons.arrow_downward_rounded,
+          label: 'Amount',
+        ),
+      ],
+      child: Container(
+        width: 36,
+        height: 34,
+        decoration: BoxDecoration(
+          color: active ? AppColors.teal100 : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? AppColors.teal600 : AppColors.slate200,
+          ),
+        ),
+        child: Icon(
+          Icons.sort,
+          size: 18,
+          color: active ? AppColors.teal700 : AppColors.slate500,
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<_TellerSortMode> _item({
+    required _TellerSortMode mode,
+    required _TellerSortMode current,
+    required IconData icon,
+    required String label,
+  }) {
+    final selected = mode == current;
+    return PopupMenuItem<_TellerSortMode>(
+      value: mode,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.slate500),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.slate700,
+              ),
+            ),
+          ),
+          if (selected)
+            const Icon(Icons.check_rounded, size: 18, color: AppColors.teal600),
+        ],
+      ),
+    );
   }
 }
 

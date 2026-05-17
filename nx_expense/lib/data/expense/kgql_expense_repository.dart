@@ -2,6 +2,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 
 import 'package:nx_expense/data/expense/expense_attr_keys.dart';
+import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart';
 import 'package:nx_expense/data/expense/expense_mapper.dart';
 import 'package:nx_expense/data/expense/expense_set_model_request.dart';
@@ -136,6 +137,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         {'key': 'date', 'op': '>=', 'value': _dateOnlyYmd(rangeStart)},
         {'key': 'date', 'op': '<=', 'value': _dateOnlyYmd(rangeEnd)},
         {'key': kExpenseIgnoreAttributeKey, 'op': '!=', 'value': true},
+        {'key': kExpenseIncludeInStatsAttributeKey, 'op': '!=', 'value': false},
       ],
     };
   }
@@ -284,6 +286,32 @@ class KgqlExpenseRepository implements ExpenseRepository {
         'group': {'key': '$targetTypeName.name'},
       },
     );
+  }
+
+  @override
+  Future<List<Expense>> listExcludedFromStats({
+    required DateTime rangeStart,
+    required DateTime rangeEnd,
+  }) async {
+    final schema = await _loadExpenseSchema();
+    final struct = buildExpenseStruct(schema);
+    final rows = await fetchKgqlModels(
+      _client,
+      filter: {
+        'model_type': kExpenseModelTypeName,
+        'filters': [
+          {'key': 'date', 'op': '>=', 'value': _dateOnlyYmd(rangeStart)},
+          {'key': 'date', 'op': '<=', 'value': _dateOnlyYmd(rangeEnd)},
+          {
+            'key': kExpenseIncludeInStatsAttributeKey,
+            'op': '=',
+            'value': false,
+          },
+        ],
+      },
+      struct: struct,
+    );
+    return sortExpensesByDateDesc(rows.map(expenseFromModel).toList());
   }
 }
 

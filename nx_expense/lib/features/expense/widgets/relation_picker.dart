@@ -84,19 +84,6 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
     super.dispose();
   }
 
-  Future<void> _openCreateSheet() async {
-    final map = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (ctx) =>
-          CreateRelationSheet(targetModelTypeName: widget.targetModelTypeName),
-    );
-    if (!mounted || map == null) return;
-    Navigator.pop(context, RelationPickCreate(map));
-  }
-
   Widget _header() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(RefLayout.px5, 8, RefLayout.px5, 12),
@@ -219,11 +206,78 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
     );
   }
 
+  Widget _createRow(String name, {required bool showDivider}) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: () {
+              Navigator.pop(context, RelationPickCreate({'name': name}));
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: RefLayout.px5,
+                vertical: 14,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.teal100,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      size: 18,
+                      color: AppColors.teal600,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Create ${widget.targetModelTypeName}: ',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.teal700,
+                            ),
+                          ),
+                          TextSpan(
+                            text: name,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.slate900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDivider) const Divider(height: 1, color: AppColors.slate50),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(relatedModelsProvider(widget.targetModelTypeName));
     final maxH = MediaQuery.sizeOf(context).height * 0.88;
-    final q = _qCtrl.text.trim().toLowerCase();
+    final rawQuery = _qCtrl.text.trim();
+    final q = rawQuery.toLowerCase();
 
     return SafeArea(
       child: SizedBox(
@@ -243,13 +297,22 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
                       : models
                             .where((m) => m.name.toLowerCase().contains(q))
                             .toList();
+                  final canCreate =
+                      rawQuery.isNotEmpty &&
+                      !models.any((m) => m.name.trim().toLowerCase() == q);
+                  final noneCount = widget.allowMultiple ? 0 : 1;
+                  final itemCount =
+                      noneCount + filtered.length + (canCreate ? 1 : 0);
                   return ListView.builder(
-                    itemCount: filtered.length + (widget.allowMultiple ? 0 : 1),
+                    itemCount: itemCount,
                     itemBuilder: (context, i) {
                       if (!widget.allowMultiple && i == 0) {
                         return _noneRow();
                       }
                       final idx = widget.allowMultiple ? i : i - 1;
+                      if (idx == filtered.length && canCreate) {
+                        return _createRow(rawQuery, showDivider: false);
+                      }
                       final m = filtered[idx];
                       final on = _sel.contains(m.id);
                       if (widget.allowMultiple) {
@@ -315,54 +378,13 @@ class _RelationPickerBodyState extends ConsumerState<_RelationPickerBody> {
                         ),
                         selected: on,
                         onTap: () => setState(() => _sel = {m.id}),
-                        showDivider: idx < filtered.length - 1,
+                        showDivider: idx < filtered.length - 1 || canCreate,
                       );
                     },
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: SelectableText('$e')),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(
-                RefLayout.px5,
-                12,
-                RefLayout.px5,
-                24,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.slate100)),
-              ),
-              child: OutlinedButton(
-                onPressed: _openCreateSheet,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: AppColors.slate200, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.add_circle_outline,
-                      color: AppColors.slate500,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Create New ${widget.targetModelTypeName}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slate500,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

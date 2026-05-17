@@ -46,3 +46,12 @@ final spendByRelationProvider =
         targetTypeName: targetTypeName,
       );
     });
+
+final excludedFromStatsExpensesProvider = FutureProvider((ref) async {
+  final repo = ref.watch(expenseRepositoryProvider);
+  final range = ref.watch(expenseDateRangeProvider);
+  return repo.listExcludedFromStats(
+    rangeStart: range.start,
+    rangeEnd: range.end,
+  );
+});
