@@ -1,7 +1,8 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 
+import 'package:nx_expense/data/teller/expense_timeline_api.dart'
+    show formatTimelineLocalTimestamp;
 import 'package:nx_expense/domain/expense/model_names.dart';
-import 'package:nx_expense/domain/teller/teller_link.dart';
 import 'package:nx_expense/domain/teller/teller_transaction.dart';
 
 export 'package:nx_expense/domain/teller/teller_link.dart'
@@ -28,26 +29,8 @@ String tellerTransactionTitleLine(Map<String, dynamic> payload) {
 }
 
 const String tellerTimelineEventsQuery = '''
-query TellerTimelineEvents(\$cond: TimelineEventCondition!) {
-  allTimelineEvents(first: 50000, condition: \$cond, orderBy: [TIME_DESC]) {
-    nodes {
-      time
-      id
-      payload
-      modelTimelineEventLinksByEventTimeAndEventId {
-        nodes {
-          id
-          modelByModelId {
-            id
-            name
-            modelTypeByModelTypeId {
-              name
-            }
-          }
-        }
-      }
-    }
-  }
+query TellerTimelineEventsForRange(\$start: Datetime!, \$end: Datetime!, \$first: Int) {
+  tellerTimelineEventsForRange(start: \$start, end: \$end, first: \$first)
 }
 ''';
 
@@ -82,8 +65,11 @@ Map<String, dynamic>? _asMap(dynamic v) {
 
 List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
   final root = data as Map<String, dynamic>?;
+  final rangeRows = root?['tellerTimelineEventsForRange'];
   final conn = root?['allTimelineEvents'] as Map<String, dynamic>?;
-  final nodes = conn?['nodes'] as List<dynamic>? ?? const [];
+  final nodes = rangeRows is List
+      ? rangeRows
+      : conn?['nodes'] as List<dynamic>? ?? const [];
   final out = <TellerTransaction>[];
   for (final raw in nodes) {
     if (raw is! Map<String, dynamic>) continue;
@@ -94,10 +80,13 @@ List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
     final idRaw = raw['id'];
     final eventId = idRaw == null ? '' : idRaw.toString();
     final payload = _asMap(raw['payload']) ?? {};
+    final rangeLinkNodes = raw['linkedModels'];
     final linkConn =
         raw['modelTimelineEventLinksByEventTimeAndEventId']
             as Map<String, dynamic>?;
-    final linkNodes = linkConn?['nodes'] as List<dynamic>? ?? const [];
+    final linkNodes = rangeLinkNodes is List
+        ? rangeLinkNodes
+        : linkConn?['nodes'] as List<dynamic>? ?? const [];
     final linked = <LinkedTellerModel>[];
     for (final ln in linkNodes) {
       if (ln is! Map<String, dynamic>) continue;
@@ -131,18 +120,25 @@ List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
   return out;
 }
 
-/// Loads all Teller timeline rows for the current user (RLS via [GraphQLClient] headers).
+/// Loads Teller timeline rows for the selected local date range.
 Future<List<TellerTransaction>> fetchTellerTimelineEvents(
-  GraphQLClient client,
-) async {
+  GraphQLClient client, {
+  required DateTime rangeStart,
+  required DateTime rangeEnd,
+  int first = 5000,
+}) async {
+  final exclusiveEnd = DateTime(
+    rangeEnd.year,
+    rangeEnd.month,
+    rangeEnd.day,
+  ).add(const Duration(days: 1));
   final result = await client.query(
     QueryOptions(
       document: gql(tellerTimelineEventsQuery),
       variables: {
-        'cond': {
-          'eventType': kTellerTimelineEventType,
-          'source': kTellerTimelineSource,
-        },
+        'start': formatTimelineLocalTimestamp(rangeStart),
+        'end': formatTimelineLocalTimestamp(exclusiveEnd),
+        'first': first,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),

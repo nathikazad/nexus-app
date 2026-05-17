@@ -454,6 +454,7 @@ class _TellerPanel3 extends ConsumerWidget {
             pendingTellerEventTime: row.time,
             prefillName: tellerTransactionTitleLine(p),
             prefillAmount: amt,
+            prefillDate: p['date']?.toString(),
           ),
         );
       case TellerPanel3Kind.newTransferCreate:

@@ -29,6 +29,7 @@ class ExpenseFormScreen extends ConsumerStatefulWidget {
     this.prefillName,
     this.prefillDescription,
     this.prefillAmount,
+    this.prefillDate,
     this.embedded = false,
   });
 
@@ -44,6 +45,7 @@ class ExpenseFormScreen extends ConsumerStatefulWidget {
   final String? prefillName;
   final String? prefillDescription;
   final num? prefillAmount;
+  final String? prefillDate;
 
   @override
   ConsumerState<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
@@ -143,7 +145,8 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     if (_tellerPrefillApplied || widget.expenseId != null) return;
     if (widget.prefillName == null &&
         widget.prefillDescription == null &&
-        widget.prefillAmount == null) {
+        widget.prefillAmount == null &&
+        widget.prefillDate == null) {
       _tellerPrefillApplied = true;
       return;
     }
@@ -157,6 +160,15 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     final pk = primaryNumberAttributeKey(schema);
     if (pk != null && widget.prefillAmount != null && _attr[pk] != null) {
       _attr[pk]!.text = widget.prefillAmount!.toString();
+    }
+    final dateKey = schema.attributes
+        .where((a) => (a.key ?? '').toLowerCase() == 'date')
+        .map((a) => a.key)
+        .firstOrNull;
+    if (dateKey != null &&
+        widget.prefillDate != null &&
+        _attr[dateKey] != null) {
+      _attr[dateKey]!.text = widget.prefillDate!;
     }
   }
 
@@ -238,13 +250,15 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
               data: Theme.of(context).copyWith(
                 switchTheme: SwitchThemeData(
                   thumbColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected))
+                    if (states.contains(WidgetState.selected)) {
                       return Colors.white;
+                    }
                     return AppColors.slate400;
                   }),
                   trackColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected))
+                    if (states.contains(WidgetState.selected)) {
                       return AppColors.teal600;
+                    }
                     return AppColors.slate200;
                   }),
                   trackOutlineColor: WidgetStateProperty.all(
@@ -485,8 +499,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                           break;
                                         }
                                       }
-                                      if (transferRt == null)
+                                      if (transferRt == null) {
                                         return const SizedBox.shrink();
+                                      }
                                       return Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
@@ -617,8 +632,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                             '[ExpenseForm] delete succeeded, invalidating + go /expenses',
                                           );
                                           invalidateExpenseListCache(ref);
-                                          if (context.mounted)
+                                          if (context.mounted) {
                                             context.go('/expenses');
+                                          }
                                         } catch (e, st) {
                                           debugPrint(
                                             '[ExpenseForm] delete FAILED: $e',

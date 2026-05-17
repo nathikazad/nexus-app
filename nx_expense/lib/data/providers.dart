@@ -211,7 +211,12 @@ final tellerTransactionsProvider = FutureProvider<List<TellerTransaction>>((
   ref,
 ) async {
   final client = ref.watch(expenseGraphqlClientProvider);
-  return fetchTellerTimelineEvents(client);
+  final range = ref.watch(expenseDateRangeProvider);
+  return fetchTellerTimelineEvents(
+    client,
+    rangeStart: range.start,
+    rangeEnd: range.end,
+  );
 });
 
 bool _eventInLocalCalendarRange(DateTime eventUtc, DateTimeRange range) {

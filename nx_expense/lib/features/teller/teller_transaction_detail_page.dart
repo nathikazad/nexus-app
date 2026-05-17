@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
@@ -29,6 +30,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
     }
     final processing = dmap?['processing_status']?.toString();
     final cpName = _counterpartyNameFromPayload(p);
+    final amount = num.tryParse(p['amount']?.toString().trim() ?? '');
 
     final listBody = ListView(
       padding: EdgeInsets.fromLTRB(
@@ -43,6 +45,12 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
           value:
               _payloadDate(p) ??
               row.time.toLocal().toIso8601String().split('T').first,
+        ),
+        _DetailRow(
+          label: 'Amount',
+          value: amount == null
+              ? (p['amount']?.toString() ?? '—')
+              : formatMoney(amount),
         ),
         _DetailRow(
           label: 'deleted',
@@ -237,6 +245,10 @@ class _TellerLinkActions extends ConsumerWidget {
                         'prefillName': tellerTransactionTitleLine(p),
                       };
                       if (amt != null) q['prefillAmount'] = amt.toString();
+                      final date = p['date']?.toString();
+                      if (date != null && date.isNotEmpty) {
+                        q['prefillDate'] = date;
+                      }
                       final uri = Uri(
                         path: '/expense/form',
                         queryParameters: q,

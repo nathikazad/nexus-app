@@ -24,6 +24,15 @@ class TellerListScreen extends ConsumerStatefulWidget {
 
 class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   bool _syncBusy = false;
+  bool _pendingOnly = false;
+  bool _unlinkedOnly = false;
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _onSyncFromServer() async {
     if (_syncBusy) return;
@@ -66,7 +75,6 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   @override
   Widget build(BuildContext context) {
     final listAsync = ref.watch(tellerTransactionsInRangeProvider);
-    final summaryAsync = ref.watch(tellerListSummaryProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -141,25 +149,76 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
               RefLayout.px5,
               4,
             ),
-            child: summaryAsync.when(
-              data: (s) => Text(
-                s.sumTotal != null
-                    ? '${s.count} · ${formatMoney(s.sumTotal)}'
-                    : '${s.count}',
-                style: GoogleFonts.inter(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (_) => setState(() {}),
+              style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
+              decoration: InputDecoration(
+                hintText: 'Search Teller transactions...',
+                hintStyle: GoogleFonts.inter(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate400,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 20,
                   color: AppColors.slate500,
                 ),
-              ),
-              loading: () => Text(
-                '...',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppColors.slate500,
+                suffixIcon: _searchController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          size: 20,
+                          color: AppColors.slate400,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {});
+                        },
+                      ),
+                filled: true,
+                fillColor: AppColors.slate100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.teal600),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
                 ),
               ),
-              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              RefLayout.px5,
+              0,
+              RefLayout.px5,
+              8,
+            ),
+            child: Row(
+              children: [
+                _TellerFilterPill(
+                  label: 'Pending',
+                  selected: _pendingOnly,
+                  onTap: () => setState(() => _pendingOnly = !_pendingOnly),
+                ),
+                const SizedBox(width: 8),
+                _TellerFilterPill(
+                  label: 'Unlinked',
+                  selected: _unlinkedOnly,
+                  onTap: () => setState(() => _unlinkedOnly = !_unlinkedOnly),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -194,7 +253,8 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                     ],
                   ),
                   data: (rows) {
-                    if (rows.isEmpty) {
+                    final filtered = _applyFilters(rows);
+                    if (filtered.isEmpty) {
                       return ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(
@@ -214,7 +274,9 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    'No Teller transactions in this range',
+                                    rows.isEmpty
+                                        ? 'No Teller transactions in this range'
+                                        : 'No Teller transactions match',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
@@ -241,7 +303,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                         ],
                       );
                     }
-                    final items = _buildDateGroupedItems(ref, rows);
+                    final items = _buildDateGroupedItems(ref, filtered);
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(
@@ -250,8 +312,23 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                         RefLayout.px5,
                         RefLayout.pb24,
                       ),
-                      itemCount: items.length,
-                      itemBuilder: (context, i) => items[i],
+                      itemCount: items.length + 1,
+                      itemBuilder: (context, i) {
+                        if (i == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              _summaryFor(filtered),
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.slate500,
+                              ),
+                            ),
+                          );
+                        }
+                        return items[i - 1];
+                      },
                     );
                   },
                 ),
@@ -315,6 +392,92 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   static String _dateLabel(DateTime t) {
     final d = t.toLocal();
     return DateFormat('MMM d, y').format(d);
+  }
+
+  List<TellerTransactionRow> _applyFilters(List<TellerTransactionRow> rows) {
+    final query = _searchController.text.trim().toLowerCase();
+    return rows.where((row) {
+      if (_pendingOnly && !_isPending(row)) return false;
+      if (_unlinkedOnly && tellerRowHasExpenseOrTransferLink(row)) {
+        return false;
+      }
+      if (query.isEmpty) return true;
+      return _searchText(row).contains(query);
+    }).toList();
+  }
+
+  static bool _isPending(TellerTransactionRow row) {
+    return row.payload['status']?.toString().trim().toLowerCase() == 'pending';
+  }
+
+  static String _searchText(TellerTransactionRow row) {
+    final details = row.payload['details'];
+    final counterparty = details is Map
+        ? (details['counterparty'] is Map
+              ? (details['counterparty'] as Map)['name']
+              : null)
+        : null;
+    final linked = row.linkedModels.map((m) => '${m.name} ${m.modelTypeName}');
+    return [
+      tellerTransactionTitleLine(row.payload),
+      row.payload['description'],
+      row.payload['amount'],
+      row.payload['status'],
+      row.payload['type'],
+      row.payload['date'],
+      counterparty,
+      ...linked,
+    ].whereType<Object>().join(' ').toLowerCase();
+  }
+
+  static String _summaryFor(List<TellerTransactionRow> rows) {
+    num? sum;
+    for (final row in rows) {
+      final amount = num.tryParse(row.payload['amount']?.toString() ?? '');
+      if (amount != null) sum = (sum ?? 0) + amount;
+    }
+    return sum == null
+        ? '${rows.length}'
+        : '${rows.length} · ${formatMoney(sum)}';
+  }
+}
+
+class _TellerFilterPill extends StatelessWidget {
+  const _TellerFilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.teal100 : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? AppColors.teal600 : AppColors.slate200,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? AppColors.teal700 : AppColors.slate500,
+          ),
+        ),
+      ),
+    );
   }
 }
 

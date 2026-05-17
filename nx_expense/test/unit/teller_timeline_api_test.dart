@@ -1,7 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:nx_expense/data/teller/teller_timeline_api.dart';
 
+class _MockGraphQLClient extends Mock implements GraphQLClient {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(QueryOptions(document: gql('query { __typename }')));
+  });
+
   group('parseTellerTimelineResponse', () {
     test('empty when no nodes', () {
       expect(parseTellerTimelineResponse(null), isEmpty);
@@ -48,6 +56,66 @@ void main() {
       expect(r.linkedModels.first.name, 'Expense A');
       expect(r.linkedModels.first.modelTypeName, 'Expense');
       expect(r.linkedModels.first.linkId, 'link-1');
+    });
+
+    test('parses range query rows with linked models', () {
+      final data = {
+        'tellerTimelineEventsForRange': [
+          {
+            'time': '2026-05-16T00:00:00.000',
+            'id': '16845',
+            'payload': {'amount': '-13.45', 'description': 'Coffee'},
+            'linkedModels': [
+              {
+                'id': 'link-1',
+                'modelByModelId': {
+                  'id': 3295,
+                  'name': 'Coffee',
+                  'modelTypeByModelTypeId': {'name': 'Expense'},
+                },
+              },
+            ],
+          },
+        ],
+      };
+
+      final rows = parseTellerTimelineResponse(data);
+
+      expect(rows.length, 1);
+      expect(rows.first.eventId, '16845');
+      expect(rows.first.time.year, 2026);
+      expect(rows.first.time.month, 5);
+      expect(rows.first.time.day, 16);
+      expect(rows.first.linkedModels.single.id, 3295);
+      expect(rows.first.linkedModels.single.modelTypeName, 'Expense');
+    });
+
+    test('fetches only the selected local date range', () async {
+      final mock = _MockGraphQLClient();
+      when(() => mock.query(any())).thenAnswer(
+        (_) async => QueryResult(
+          options: QueryOptions(document: gql('query { __typename }')),
+          source: QueryResultSource.network,
+          data: const {'tellerTimelineEventsForRange': <dynamic>[]},
+        ),
+      );
+
+      await fetchTellerTimelineEvents(
+        mock,
+        rangeStart: DateTime(2026, 5),
+        rangeEnd: DateTime(2026, 5, 31),
+      );
+
+      final captured =
+          verify(() => mock.query(captureAny())).captured.single
+              as QueryOptions;
+      expect(captured.variables['start'], '2026-05-01T00:00:00');
+      expect(captured.variables['end'], '2026-06-01T00:00:00');
+      expect(captured.variables['first'], 5000);
+      expect(
+        tellerTimelineEventsQuery,
+        contains('tellerTimelineEventsForRange'),
+      );
     });
 
     test('skips invalid time', () {
