@@ -339,6 +339,50 @@ void main() {
       expect(agg!['group'], {'key': 'tag:Category'});
     });
 
+    test('P7.6a spendByTagSystemProvider — drilled group includes node', () async {
+      final mock = _MockGraphQLClient();
+      Map<String, dynamic>? filter;
+      Map<String, dynamic>? agg;
+      var call = 0;
+      when(() => mock.query(any())).thenAnswer((inv) async {
+        final o = inv.positionalArguments[0] as QueryOptions;
+        call++;
+        if (o.variables.containsKey('input')) {
+          return _qr({
+            'getKgqlModelType': [_expenseMtJson()],
+          });
+        }
+        if (o.variables.containsKey('filterkgql')) {
+          filter = o.variables['filterkgql'] as Map<String, dynamic>?;
+          agg = o.variables['aggregate'] as Map<String, dynamic>?;
+          return _qr({'getKgqlAggregate': '{"aggregated_value": 0}'});
+        }
+        throw StateError('unexpected call $call');
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(authProvider.future);
+
+      await container.read(
+        spendByTagSystemProvider((
+          systemName: 'Category',
+          parentNode: 'Shopping',
+          level: null,
+        )).future,
+      );
+
+      expect(agg!['group'], {'key': 'tag:Category', 'node': 'Shopping'});
+      expect(filter!['tag_filters'], [
+        {'system': 'Category', 'node': 'Shopping', 'include_descendants': true},
+      ]);
+    });
+
     test('P7.6b spendByDayProvider — group key date', () async {
       final mock = _MockGraphQLClient();
       Map<String, dynamic>? agg;

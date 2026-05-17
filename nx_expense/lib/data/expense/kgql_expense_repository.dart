@@ -252,6 +252,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
     }
 
     final group = <String, dynamic>{'key': 'tag:$systemName'};
+    if (parentNode != null) group['node'] = parentNode;
     if (level != null) group['level'] = level;
 
     return getKgqlAggregate(_client, filter, {

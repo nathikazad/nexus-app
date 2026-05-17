@@ -29,6 +29,14 @@ import 'package:nx_expense/features/transfers/transfer_form_page.dart';
 import 'package:nx_expense/features/transfers/transfer_relation_picker_page.dart';
 import 'package:nx_expense/features/transfers/transfers_list_page.dart';
 
+DateTimeRange? _routeDateRange(GoRouterState state) {
+  final q = state.uri.queryParameters;
+  final start = DateTime.tryParse(q['start'] ?? '');
+  final end = DateTime.tryParse(q['end'] ?? '');
+  if (start == null || end == null) return null;
+  return DateTimeRange(start: start, end: end);
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authProvider, (_, __) => refresh.value++);
@@ -178,6 +186,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             prefillName: q['prefillName'],
             prefillDescription: q['prefillDescription'],
             prefillAmount: pa != null ? num.tryParse(pa) : null,
+            prefillDate: q['prefillDate'],
           );
         },
       ),
@@ -301,14 +310,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             state.pathParameters['systemName']!,
           );
           final tagNode = Uri.decodeComponent(state.pathParameters['tagNode']!);
+          final includeDescendants =
+              state.uri.queryParameters['includeDescendants'] != 'false';
+          final title = state.uri.queryParameters['title'] ?? tagNode;
           return scopedExpenseListScreen(
-            title: tagNode,
+            title: title,
+            initialDateRange: _routeDateRange(state),
             initialFilter: ExpenseFilter(
               tagFilters: [
                 {
                   'system': systemName,
                   'node': tagNode,
-                  'include_descendants': true,
+                  'include_descendants': includeDescendants,
                 },
               ],
             ),
@@ -325,6 +338,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
           return scopedExpenseListScreen(
             title: relDisplayName,
+            initialDateRange: _routeDateRange(state),
             initialFilter: ExpenseFilter(
               relationFilters: {
                 relName: {relId},

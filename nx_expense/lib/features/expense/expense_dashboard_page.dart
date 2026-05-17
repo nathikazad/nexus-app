@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -14,6 +15,8 @@ import 'package:nx_expense/features/expense/expense_dashboard_view_model.dart';
 import 'package:nx_expense/features/expense/expense_stats_dashboard_config.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
 import 'widgets/expense_date_range_bar.dart';
+
+const _uncategorizedTagNode = 'Uncategorized';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -144,7 +147,7 @@ class DashboardScreen extends ConsumerWidget {
                         for (final ts in schema.tagSystems.where(
                           (t) => statsDashboardTagSystemNames.contains(t.name),
                         )) ...[
-                          _TagPieChart(tagSystem: ts, totalSpend: s.sumTotal),
+                          _TagPieChart(tagSystem: ts),
                           const SizedBox(height: 24),
                         ],
                         for (final relName in allRelationTargetTypeNames(
@@ -161,11 +164,41 @@ class DashboardScreen extends ConsumerWidget {
                                     parseGroupedChartEntries(raw),
                                     s.sumTotal,
                                   );
-                                  if (entries.isEmpty)
+                                  if (entries.isEmpty) {
                                     return const SizedBox.shrink();
+                                  }
+                                  final relatedModels = ref.watch(
+                                    relatedModelsProvider(relName),
+                                  );
+                                  final relationIdsByName = relatedModels
+                                      .maybeWhen(
+                                        data: (models) => {
+                                          for (final model in models)
+                                            model.name: model.id,
+                                        },
+                                        orElse: () => const <String, int>{},
+                                      );
                                   return _PieChartCard(
                                     title: relName,
                                     entries: entries,
+                                    onSliceTap: relationIdsByName.isNotEmpty
+                                        ? (sliceName) {
+                                            final relId =
+                                                relationIdsByName[sliceName];
+                                            if (relId == null) return;
+                                            _openExpensesForRelation(
+                                              context,
+                                              ref,
+                                              relName: relName,
+                                              relId: relId,
+                                              displayName: sliceName,
+                                            );
+                                          }
+                                        : null,
+                                    sliceIsActionable: (sliceName) =>
+                                        relationIdsByName.containsKey(
+                                          sliceName,
+                                        ),
                                   );
                                 },
                                 loading: () => const SizedBox(
@@ -193,19 +226,36 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+String _dateOnly(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-'
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}';
+
+String _dateRangeQuery(DateTimeRange range) =>
+    'start=${Uri.encodeQueryComponent(_dateOnly(range.start))}'
+    '&end=${Uri.encodeQueryComponent(_dateOnly(range.end))}';
+
+void _openExpensesForRelation(
+  BuildContext context,
+  WidgetRef ref, {
+  required String relName,
+  required int relId,
+  required String displayName,
+}) {
+  final range = ref.read(expenseDateRangeProvider);
+  context.push(
+    '/expenses/by-relation/${Uri.encodeComponent(relName)}/$relId/'
+    '${Uri.encodeComponent(displayName)}?${_dateRangeQuery(range)}',
+  );
+}
+
 /// Drill-down pie chart for tag systems.
 /// For hierarchical systems: starts at root level, tap a slice to drill into
 /// its children. Breadcrumb trail shows path; tap to go back.
 /// For flat systems: just shows the pie chart with no drill-down.
 class _TagPieChart extends ConsumerStatefulWidget {
-  const _TagPieChart({required this.tagSystem, required this.totalSpend});
+  const _TagPieChart({required this.tagSystem});
   final TagSystemView tagSystem;
-
-  /// Signed total spend for the current date range (from
-  /// [dashboardExpenseSummaryProvider]). Used to compute the "Other" residual
-  /// at the root level only — when drilled in, the existing rename already
-  /// surfaces expenses tagged directly to the parent as "Other".
-  final num? totalSpend;
 
   @override
   ConsumerState<_TagPieChart> createState() => _TagPieChartState();
@@ -215,8 +265,7 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
   /// Stack of drilled-into node names. Empty = root level.
   final List<String> _breadcrumbs = [];
 
-  /// Check if a node name has children in the tag system tree.
-  bool _hasChildren(String nodeName) {
+  TagNodeView? _findNode(String nodeName) {
     TagNodeView? find(List<TagNodeView> nodes) {
       for (final n in nodes) {
         if (n.name == nodeName) return n;
@@ -228,8 +277,54 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
       return null;
     }
 
-    final node = find(widget.tagSystem.nodes);
+    return find(widget.tagSystem.nodes);
+  }
+
+  /// Check if a node name has children in the tag system tree.
+  bool _hasChildren(String nodeName) {
+    final node = _findNode(nodeName);
     return node?.children != null && node!.children!.isNotEmpty;
+  }
+
+  void _openExpensesForTag(
+    String tagNode, {
+    bool includeDescendants = true,
+    String? title,
+  }) {
+    final range = ref.read(expenseDateRangeProvider);
+    final query = [
+      _dateRangeQuery(range),
+      if (!includeDescendants) 'includeDescendants=false',
+      if (title != null) 'title=${Uri.encodeQueryComponent(title)}',
+    ].join('&');
+    context.push(
+      '/expenses/by-tag/${Uri.encodeComponent(widget.tagSystem.name)}/'
+      '${Uri.encodeComponent(tagNode)}?$query',
+    );
+  }
+
+  void _handleSliceTap(String sliceName) {
+    final parentNode = _breadcrumbs.isNotEmpty ? _breadcrumbs.last : null;
+    if (sliceName == _uncategorizedTagNode) {
+      if (parentNode == null) {
+        _openExpensesForTag(_uncategorizedTagNode);
+      } else {
+        _openExpensesForTag(
+          parentNode,
+          includeDescendants: false,
+          title: _uncategorizedTagNode,
+        );
+      }
+      return;
+    }
+
+    final node = _findNode(sliceName);
+    if (node == null) return;
+    if (_hasChildren(sliceName)) {
+      setState(() => _breadcrumbs.add(sliceName));
+      return;
+    }
+    _openExpensesForTag(node.name);
   }
 
   @override
@@ -238,33 +333,17 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
     final isHierarchical = ts.isHierarchical;
     final parentNode = _breadcrumbs.isNotEmpty ? _breadcrumbs.last : null;
 
-    // At root: group by level 1 (root categories). When drilled in: group by
-    // leaf within the filtered parent — the API returns direct children since
-    // we filter to the parent with include_descendants.
-    final int? level = isHierarchical && _breadcrumbs.isEmpty ? 1 : null;
-
     final agg = ref.watch(
       spendByTagSystemProvider((
         systemName: ts.name,
         parentNode: parentNode,
-        level: level,
+        level: null,
       )),
     );
 
     return agg.when(
       data: (raw) {
         var entries = parseGroupedChartEntries(raw);
-
-        if (parentNode != null) {
-          // Rename entries tagged directly to the parent node to "Other".
-          entries = entries
-              .map((e) => e.key == parentNode ? MapEntry('Other', e.value) : e)
-              .toList();
-        } else {
-          // Root view: backend only returns categories that have data, so the
-          // residual against the dashboard total is uncategorized spend.
-          entries = appendOtherResidualEntry(entries, widget.totalSpend);
-        }
 
         if (entries.isEmpty) return const SizedBox.shrink();
 
@@ -276,11 +355,12 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
           title: title,
           entries: entries,
           onSliceTap: isHierarchical
-              ? (sliceName) {
-                  if (_hasChildren(sliceName)) {
-                    setState(() => _breadcrumbs.add(sliceName));
-                  }
-                }
+              ? (sliceName) => _handleSliceTap(sliceName)
+              : null,
+          sliceIsActionable: isHierarchical
+              ? (sliceName) =>
+                    sliceName == _uncategorizedTagNode ||
+                    _findNode(sliceName) != null
               : null,
           headerTrailing: isHierarchical && _breadcrumbs.isNotEmpty
               ? GestureDetector(
@@ -320,6 +400,7 @@ class _PieChartCard extends StatefulWidget {
     required this.entries,
     this.headerTrailing,
     this.onSliceTap,
+    this.sliceIsActionable,
   });
 
   final String title;
@@ -328,6 +409,9 @@ class _PieChartCard extends StatefulWidget {
 
   /// Called when a legend row / pie slice is tapped (for drill-down).
   final void Function(String sliceName)? onSliceTap;
+
+  /// Allows callers to suppress tap affordances for synthetic slices like "Other".
+  final bool Function(String sliceName)? sliceIsActionable;
 
   @override
   State<_PieChartCard> createState() => _PieChartCardState();
@@ -434,56 +518,64 @@ class _PieChartCardState extends State<_PieChartCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     for (var i = 0; i < entries.length; i++)
-                      GestureDetector(
-                        onTap: widget.onSliceTap != null
-                            ? () => widget.onSliceTap!(entries[i].key)
-                            : null,
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: _palette[i % _palette.length],
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  entries[i].key,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.slate700,
+                      Builder(
+                        builder: (context) {
+                          final isActionable =
+                              widget.onSliceTap != null &&
+                              (widget.sliceIsActionable?.call(entries[i].key) ??
+                                  true);
+                          return GestureDetector(
+                            onTap: isActionable
+                                ? () => widget.onSliceTap!(entries[i].key)
+                                : null,
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: _palette[i % _palette.length],
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      entries[i].key,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.slate700,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    _showDollars
+                                        ? formatMoney(entries[i].value)
+                                        : '${(entries[i].value.abs() / totalAbs * 100).round()}%',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.slate900,
+                                    ),
+                                  ),
+                                  if (isActionable) ...[
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      size: 14,
+                                      color: AppColors.slate300,
+                                    ),
+                                  ],
+                                ],
                               ),
-                              Text(
-                                _showDollars
-                                    ? formatMoney(entries[i].value)
-                                    : '${(entries[i].value.abs() / totalAbs * 100).round()}%',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.slate900,
-                                ),
-                              ),
-                              if (widget.onSliceTap != null) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.chevron_right,
-                                  size: 14,
-                                  color: AppColors.slate300,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),
