@@ -3,6 +3,7 @@ library;
 
 export 'src/kgql/models/model.dart';
 export 'src/kgql/models/model_type.dart';
+export 'src/kgql/models/model_type_domain_options.dart';
 export 'src/kgql/models/attribute.dart';
 export 'src/kgql/models/relation.dart';
 export 'src/kgql/models/tag_node.dart';

@@ -104,6 +104,7 @@ Future<ActionGoalTrendResponse> fetchActionGoalsTrend(
 Future<ExpenseGoalMonthResponse> fetchExpenseGoalsMonth(
   GraphQLClient client, {
   required DateTime monthStart,
+  int? domainId,
   int? goalId,
 }) async {
   final result = await client.query(
@@ -111,6 +112,7 @@ Future<ExpenseGoalMonthResponse> fetchExpenseGoalsMonth(
       document: gql(getExpenseGoalsMonthQuery),
       variables: {
         'monthStart': formatGraphqlDate(monthStart),
+        'domainId': domainId,
         'goalId': goalId,
       },
       fetchPolicy: FetchPolicy.networkOnly,

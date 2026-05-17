@@ -5,8 +5,10 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../core/client/db_audit_context.dart';
 import '../documents/get_kgql_model_type.graphql.dart';
 import '../documents/get_kgql_model_type_all.graphql.dart';
+import '../documents/resolve_model_type_domain_options.graphql.dart';
 import '../documents/set_kgql_model_type.graphql.dart';
 import '../models/model_type.dart';
+import '../models/model_type_domain_options.dart';
 import '../requests/set_model_type_request.dart';
 import 'mutation_debug.dart';
 
@@ -167,6 +169,34 @@ Future<ModelType?> fetchKgqlModelTypeById(
 
   final modelTypeJson = jsonArray[0] as Map<String, dynamic>;
   return ModelType.fromJson(modelTypeJson, recursive: true);
+}
+
+/// Returns the domains available for a model type for the current user.
+Future<ModelTypeDomainOptions> fetchModelTypeDomainOptions(
+  GraphQLClient client, {
+  required String modelTypeName,
+}) async {
+  final result = await client.query(
+    QueryOptions(
+      document: gql(resolveModelTypeDomainOptionsQuery),
+      variables: {'modelTypeName': modelTypeName},
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) {
+    throw result.exception!;
+  }
+
+  final raw = result.data?['resolveModelTypeDomainOptions'];
+  if (raw == null) {
+    return ModelTypeDomainOptions(modelType: modelTypeName, domains: const []);
+  }
+
+  final json = raw is String
+      ? jsonDecode(raw) as Map<String, dynamic>
+      : Map<String, dynamic>.from(raw as Map);
+  return ModelTypeDomainOptions.fromJson(json);
 }
 
 /// Creates or updates a model type via `set_kgql_model_types`.

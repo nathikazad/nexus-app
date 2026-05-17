@@ -8,6 +8,7 @@ import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/teller/teller_timeline_api.dart';
 import 'package:nx_expense/domain/expense/expense_filter.dart';
+import 'package:nx_expense/features/budget/budget_page.dart';
 import 'package:nx_expense/features/expense/expense_list_view_model.dart';
 import 'package:nx_expense/features/expense/expense_dashboard_page.dart';
 import 'package:nx_expense/features/expense/expense_detail_page.dart';
@@ -23,7 +24,6 @@ import 'package:nx_expense/features/teller/teller_transfer_link_picker_page.dart
 import 'package:nx_expense/features/teller/teller_transfer_quick_create_page.dart';
 import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
 import 'package:nx_expense/features/transfers/transfer_detail_page.dart';
-import 'package:nx_expense/features/transfers/transfers_list_page.dart';
 import 'desktop_nav.dart';
 import 'panel_chrome.dart';
 
@@ -95,9 +95,9 @@ class DesktopShell extends ConsumerWidget {
                 label: Text('Stats'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.swap_horiz_outlined),
-                selectedIcon: Icon(Icons.swap_horiz),
-                label: Text('Transfers'),
+                icon: Icon(Icons.savings_outlined),
+                selectedIcon: Icon(Icons.savings),
+                label: Text('Budget'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.account_balance_outlined),
@@ -160,7 +160,7 @@ class _DesktopContent extends ConsumerWidget {
       case 1:
         return const DashboardScreen();
       case 2:
-        return const _TransfersPanels();
+        return const BudgetScreen();
       case 3:
         return const _TellerPanels();
       case 4:
@@ -304,35 +304,6 @@ class _TagSystemsPanels extends ConsumerWidget {
                   tagSystemId: sel.isCreate ? null : sel.editId,
                   embedded: true,
                 ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TransfersPanels extends ConsumerWidget {
-  const _TransfersPanels();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedId = ref.watch(selectedTransferIdProvider);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(width: 360, child: const TransfersListScreen()),
-        const VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: AppColors.slate100,
-        ),
-        Expanded(
-          child: selectedId != null
-              ? TransferDetailScreen(
-                  key: ValueKey('transfer-tab-$selectedId'),
-                  transferId: selectedId,
-                )
-              : _emptyPanel('Select a transfer'),
         ),
       ],
     );

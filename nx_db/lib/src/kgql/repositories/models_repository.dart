@@ -96,6 +96,7 @@ Future<List<Model>> fetchKgqlModelsForRelationPicker(
 Future<int> setKgqlModel(
   GraphQLClient client,
   SetModelRequest request, {
+  int? domainId,
   DbAuditContext? auditContext,
   String auditSourceKind = '',
 }) async {
@@ -112,6 +113,7 @@ Future<int> setKgqlModel(
     final variables = {
       'input': {
         'data': requestJson,
+        if (domainId != null) 'domainId': domainId,
       },
     };
     final result = await client.mutate(

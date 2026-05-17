@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_db/goals.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 
@@ -47,6 +48,33 @@ final expenseSchemaProvider = kgqlModelTypeByNameProvider(
 final transferSchemaProvider = kgqlModelTypeByNameProvider(
   kTransferModelTypeName,
 );
+
+final expenseModelTypeDomainOptionsProvider =
+    FutureProvider<ModelTypeDomainOptions>((ref) async {
+      final client = ref.watch(expenseGraphqlClientProvider);
+      return fetchModelTypeDomainOptions(
+        client,
+        modelTypeName: kExpenseModelTypeName,
+      );
+    });
+
+final expenseDomainIdProvider = FutureProvider<int?>((ref) async {
+  final options = await ref.watch(expenseModelTypeDomainOptionsProvider.future);
+  return options.preferredDomain?.id;
+});
+
+final budgetExpenseGoalsMonthProvider =
+    FutureProvider<ExpenseGoalMonthResponse>((ref) async {
+      final client = ref.watch(expenseGraphqlClientProvider);
+      final domainId = await ref.watch(expenseDomainIdProvider.future);
+      final range = ref.watch(expenseDateRangeProvider);
+      final monthStart = DateTime(range.start.year, range.start.month);
+      return fetchExpenseGoalsMonth(
+        client,
+        monthStart: monthStart,
+        domainId: domainId,
+      );
+    });
 
 final expenseSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
   final m = await ref.watch(expenseSchemaProvider.future);

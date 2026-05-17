@@ -8,6 +8,7 @@ import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:nx_expense/domain/teller/teller_transaction.dart';
 import 'package:nx_expense/features/auth/expense_login_page.dart';
+import 'package:nx_expense/features/budget/budget_page.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/desktop/desktop_shell.dart';
 import 'package:nx_expense/features/expense/expense_dashboard_page.dart';
@@ -114,9 +115,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                   label: 'Stats',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.swap_horiz_outlined),
-                  selectedIcon: Icon(Icons.swap_horiz),
-                  label: 'Transfers',
+                  icon: Icon(Icons.savings_outlined),
+                  selectedIcon: Icon(Icons.savings),
+                  label: 'Budget',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.account_balance_outlined),
@@ -147,8 +148,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/transfers',
-                builder: (context, state) => const TransfersListScreen(),
+                path: '/budget',
+                builder: (context, state) => const BudgetScreen(),
               ),
             ],
           ),
@@ -161,6 +162,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/transfers',
+        builder: (context, state) => const TransfersListScreen(),
+      ),
+      GoRoute(
+        path: '/budget/detail/:goalId',
+        builder: (context, state) {
+          final goalId = int.parse(state.pathParameters['goalId']!);
+          return BudgetDetailScreen(goalId: goalId);
+        },
       ),
       GoRoute(
         path: '/tag-systems',

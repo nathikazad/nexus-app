@@ -6,6 +6,8 @@ import 'package:nx_db/auth.dart';
 
 import 'package:nx_expense/core/theme/app_theme.dart';
 
+enum _ExpenseAppMenuAction { transfers, tags, logout }
+
 /// Panel from the right: Tags (tag systems) and Log out.
 class ExpenseAppEndDrawer extends ConsumerWidget {
   const ExpenseAppEndDrawer({super.key});
@@ -74,17 +76,71 @@ class ExpenseAppEndDrawer extends ConsumerWidget {
   }
 }
 
-/// Opens [ExpenseAppEndDrawer] on the nearest [Scaffold] with [endDrawer] set.
-class ExpenseAppMenuButton extends StatelessWidget {
+/// Popup menu for secondary app sections and account actions.
+class ExpenseAppMenuButton extends ConsumerWidget {
   const ExpenseAppMenuButton({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return IconButton(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<_ExpenseAppMenuAction>(
+      tooltip: 'Menu',
+      icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-      icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
-      onPressed: () => Scaffold.of(context).openEndDrawer(),
+      offset: const Offset(0, 38),
+      color: Colors.white,
+      onSelected: (action) async {
+        switch (action) {
+          case _ExpenseAppMenuAction.transfers:
+            context.push('/transfers');
+          case _ExpenseAppMenuAction.tags:
+            context.push('/tag-systems');
+          case _ExpenseAppMenuAction.logout:
+            await ref.read(authProvider.notifier).logout();
+            if (context.mounted) context.go('/login');
+        }
+      },
+      itemBuilder: (context) => [
+        _item(
+          value: _ExpenseAppMenuAction.transfers,
+          icon: Icons.swap_horiz_outlined,
+          label: 'Transfers',
+        ),
+        _item(
+          value: _ExpenseAppMenuAction.tags,
+          icon: Icons.label_outlined,
+          label: 'Tags',
+        ),
+        _item(
+          value: _ExpenseAppMenuAction.logout,
+          icon: Icons.logout,
+          label: 'Log out',
+        ),
+      ],
+    );
+  }
+
+  PopupMenuItem<_ExpenseAppMenuAction> _item({
+    required _ExpenseAppMenuAction value,
+    required IconData icon,
+    required String label,
+  }) {
+    return PopupMenuItem<_ExpenseAppMenuAction>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.slate600, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.slate900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

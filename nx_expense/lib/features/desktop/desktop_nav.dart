@@ -11,7 +11,7 @@ const double kDesktopBreakpoint = 1100;
 bool isDesktopLayout(BuildContext context) =>
     MediaQuery.sizeOf(context).width >= kDesktopBreakpoint;
 
-/// Selected tab in [DesktopShell] (0–4): Expenses, Stats, Transfers, Teller, Tags.
+/// Selected tab in [DesktopShell] (0–4): Expenses, Stats, Budget, Teller, Tags.
 final desktopShellTabIndexProvider = StateProvider<int>((ref) => 0);
 
 // --- Expenses tab ---
@@ -21,7 +21,7 @@ final selectedExpenseIdProvider = StateProvider<int?>((ref) => null);
 /// Empty = blank third column.
 final panel3StackProvider = StateProvider<List<Panel3State>>((ref) => const []);
 
-// --- Transfers tab ---
+// --- Transfers ---
 final selectedTransferIdProvider = StateProvider<int?>((ref) => null);
 
 // --- Teller tab ---
