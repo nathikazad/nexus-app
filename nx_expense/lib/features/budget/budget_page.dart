@@ -183,46 +183,86 @@ class _BudgetHistoryPoint {
   final int limit;
 }
 
-final budgetGoalHistoryProvider = FutureProvider.family<
-  List<_BudgetHistoryPoint>,
-  ({int goalId, DateTime monthStart})
->((ref, params) async {
-  final client = ref.watch(expenseGraphqlClientProvider);
-  final domainId = await ref.watch(expenseDomainIdProvider.future);
-  final currentMonth = DateTime(
-    params.monthStart.year,
-    params.monthStart.month,
-  );
-  final months = [
-    for (var i = 11; i >= 0; i--)
-      DateTime(currentMonth.year, currentMonth.month - i),
-  ];
+final budgetGoalHistoryProvider =
+    FutureProvider.family<
+      List<_BudgetHistoryPoint>,
+      ({int goalId, DateTime monthStart})
+    >((ref, params) async {
+      final client = ref.watch(expenseGraphqlClientProvider);
+      final domainId = await ref.watch(expenseDomainIdProvider.future);
+      final currentMonth = DateTime(
+        params.monthStart.year,
+        params.monthStart.month,
+      );
+      final months = [
+        for (var i = 11; i >= 0; i--)
+          DateTime(currentMonth.year, currentMonth.month - i),
+      ];
 
-  final out = <_BudgetHistoryPoint>[];
-  for (final month in months) {
-    final response = await fetchExpenseGoalsMonth(
-      client,
-      monthStart: month,
-      domainId: domainId,
-      goalId: params.goalId,
-    );
-    ExpenseGoalMonthItem? item;
-    for (final goal in response.items) {
-      if (goal.id == params.goalId) {
-        item = goal;
-        break;
+      final out = <_BudgetHistoryPoint>[];
+      for (final month in months) {
+        final response = await fetchExpenseGoalsMonth(
+          client,
+          monthStart: month,
+          domainId: domainId,
+          goalId: params.goalId,
+        );
+        ExpenseGoalMonthItem? item;
+        for (final goal in response.items) {
+          if (goal.id == params.goalId) {
+            item = goal;
+            break;
+          }
+        }
+        out.add(
+          _BudgetHistoryPoint(
+            monthStart: month,
+            spent: ((item?.periodValue ?? 0).abs()).round(),
+            limit: (item?.target.value ?? 0).round(),
+          ),
+        );
       }
-    }
-    out.add(
-      _BudgetHistoryPoint(
-        monthStart: month,
-        spent: ((item?.periodValue ?? 0).abs()).round(),
-        limit: (item?.target.value ?? 0).round(),
-      ),
-    );
-  }
-  return out;
-});
+      return out;
+    });
+
+final budgetAllGoalsHistoryProvider =
+    FutureProvider.family<List<_BudgetHistoryPoint>, DateTime>((
+      ref,
+      monthStart,
+    ) async {
+      final client = ref.watch(expenseGraphqlClientProvider);
+      final domainId = await ref.watch(expenseDomainIdProvider.future);
+      final currentMonth = DateTime(monthStart.year, monthStart.month);
+      final months = [
+        for (var i = 11; i >= 0; i--)
+          DateTime(currentMonth.year, currentMonth.month - i),
+      ];
+
+      final out = <_BudgetHistoryPoint>[];
+      for (final month in months) {
+        final response = await fetchExpenseGoalsMonth(
+          client,
+          monthStart: month,
+          domainId: domainId,
+        );
+        final spent = response.items.fold<int>(
+          0,
+          (sum, item) => sum + ((item.periodValue ?? 0).abs()).round(),
+        );
+        final limit = response.items.fold<int>(
+          0,
+          (sum, item) => sum + item.target.value.round(),
+        );
+        out.add(
+          _BudgetHistoryPoint(
+            monthStart: month,
+            spent: spent,
+            limit: limit,
+          ),
+        );
+      }
+      return out;
+    });
 
 Future<void> _saveBudgetGoal(
   WidgetRef ref, {
@@ -735,6 +775,7 @@ class _BudgetDetailContent extends ConsumerStatefulWidget {
 class _BudgetDetailContentState extends ConsumerState<_BudgetDetailContent> {
   late DateTimeRange _range;
   late ExpenseFilter _filter;
+  bool _showChart = false;
 
   @override
   void initState() {
@@ -770,6 +811,12 @@ class _BudgetDetailContentState extends ConsumerState<_BudgetDetailContent> {
     final expensesAsync = ref.watch(
       expenseListProvider((filter: _filter, dateRange: _range)),
     );
+    final historyAsync = ref.watch(
+      budgetGoalHistoryProvider((
+        goalId: row.id,
+        monthStart: widget.monthStart,
+      )),
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -790,66 +837,105 @@ class _BudgetDetailContentState extends ConsumerState<_BudgetDetailContent> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (row.group != null) ...[
-                Text(
-                  row.group!,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-              ],
-              Text(
-                row.name,
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.slate900,
-                ),
-              ),
-              const SizedBox(height: 16),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '\$${row.spent}',
-                    style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.slate900,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (row.group != null) ...[
+                          Text(
+                            row.group!,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.slate500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        Text(
+                          row.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.slate900,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Text(
-                      'of \$${row.limit}',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate500,
-                      ),
+                  IconButton(
+                    tooltip: _showChart ? 'Summary' : 'History',
+                    onPressed: () => setState(() => _showChart = !_showChart),
+                    icon: Icon(
+                      _showChart
+                          ? Icons.view_agenda_outlined
+                          : Icons.bar_chart_rounded,
+                      color: _showChart
+                          ? AppColors.teal600
+                          : AppColors.slate500,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              _BudgetProgressBar(
-                progress: row.progress,
-                color: color,
-                backgroundColor: row.isOver
-                    ? AppColors.red50
-                    : AppColors.slate100,
-                height: 8,
-              ),
               const SizedBox(height: 16),
-              _BudgetDetailStat(
-                label: row.isOver ? 'Over budget' : 'Remaining',
-                value: row.isOver ? '+\$${row.overBy}' : '\$${row.remaining}',
-                color: row.isOver ? AppColors.red600 : AppColors.teal600,
-              ),
+              if (_showChart)
+                historyAsync.when(
+                  loading: () => const SizedBox(
+                    height: 168,
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  error: (error, _) => _BudgetEmptyMessage(
+                    text: 'Could not load history.\n$error',
+                  ),
+                  data: (points) => _BudgetHistoryChart(points: points),
+                )
+              else ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '\$${row.spent}',
+                      style: GoogleFonts.inter(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Text(
+                        'of \$${row.limit}',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _BudgetProgressBar(
+                  progress: row.progress,
+                  color: color,
+                  backgroundColor: row.isOver
+                      ? AppColors.red50
+                      : AppColors.slate100,
+                  height: 8,
+                ),
+                const SizedBox(height: 16),
+                _BudgetDetailStat(
+                  label: row.isOver ? 'Over budget' : 'Remaining',
+                  value: row.isOver ? '+\$${row.overBy}' : '\$${row.remaining}',
+                  color: row.isOver ? AppColors.red600 : AppColors.teal600,
+                ),
+              ],
             ],
           ),
         ),
@@ -935,6 +1021,150 @@ class _BudgetDetailStat extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BudgetHistoryChart extends StatelessWidget {
+  const _BudgetHistoryChart({required this.points});
+
+  final List<_BudgetHistoryPoint> points;
+
+  static const _monthLabels = [
+    'J',
+    'F',
+    'M',
+    'A',
+    'M',
+    'J',
+    'J',
+    'A',
+    'S',
+    'O',
+    'N',
+    'D',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.isEmpty) return const SizedBox(height: 168);
+
+    final maxSpent = points
+        .map((p) => p.spent)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    final maxLimit = points
+        .map((p) => p.limit)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    final maxY = (maxSpent > maxLimit ? maxSpent : maxLimit).toDouble();
+    final chartMaxY = maxY <= 0 ? 1.0 : maxY * 1.18;
+    final labelIndices = <int>{0, points.length ~/ 2, points.length - 1};
+
+    return SizedBox(
+      height: 168,
+      child: BarChart(
+        BarChartData(
+          maxY: chartMaxY,
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              tooltipBorderRadius: BorderRadius.circular(10),
+              tooltipPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              getTooltipColor: (_) => AppColors.slate900,
+              getTooltipItem: (group, _, rod, __) {
+                final i = group.x;
+                if (i < 0 || i >= points.length) return null;
+                final p = points[i];
+                return BarTooltipItem(
+                  '${_monthLabel(p.monthStart)}\n',
+                  GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppColors.slate300,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '\$${p.spent} of \$${p.limit}',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          barGroups: [
+            for (var i = 0; i < points.length; i++)
+              BarChartGroupData(
+                x: i,
+                barsSpace: 3,
+                barRods: [
+                  BarChartRodData(
+                    toY: points[i].spent.toDouble(),
+                    color: points[i].spent > points[i].limit
+                        ? AppColors.red600
+                        : AppColors.teal600,
+                    width: 7,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(2),
+                    ),
+                  ),
+                  BarChartRodData(
+                    toY: points[i].limit.toDouble(),
+                    color: AppColors.slate300,
+                    width: 3,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(2),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 24,
+                getTitlesWidget: (v, _) {
+                  final i = v.toInt();
+                  if (!labelIndices.contains(i) ||
+                      i < 0 ||
+                      i >= points.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final month = points[i].monthStart.month;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      _monthLabels[month - 1],
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: AppColors.slate400,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            leftTitles: const AxisTitles(),
+            topTitles: const AxisTitles(),
+            rightTitles: const AxisTitles(),
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: chartMaxY / 4,
+            getDrawingHorizontalLine: (_) =>
+                FlLine(color: AppColors.slate100, strokeWidth: 1),
+          ),
+          borderData: FlBorderData(show: false),
+        ),
       ),
     );
   }
