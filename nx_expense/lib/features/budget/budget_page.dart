@@ -254,11 +254,7 @@ final budgetAllGoalsHistoryProvider =
           (sum, item) => sum + item.target.value.round(),
         );
         out.add(
-          _BudgetHistoryPoint(
-            monthStart: month,
-            spent: spent,
-            limit: limit,
-          ),
+          _BudgetHistoryPoint(monthStart: month, spent: spent, limit: limit),
         );
       }
       return out;
@@ -540,7 +536,7 @@ class BudgetDetailScreen extends ConsumerWidget {
   }
 }
 
-class _BudgetSummary extends StatelessWidget {
+class _BudgetSummary extends ConsumerStatefulWidget {
   const _BudgetSummary({
     required this.monthStart,
     required this.spent,
@@ -554,9 +550,19 @@ class _BudgetSummary extends StatelessWidget {
   final int overCount;
 
   @override
+  ConsumerState<_BudgetSummary> createState() => _BudgetSummaryState();
+}
+
+class _BudgetSummaryState extends ConsumerState<_BudgetSummary> {
+  bool _showChart = false;
+
+  @override
   Widget build(BuildContext context) {
-    final over = spent - limit;
+    final over = widget.spent - widget.limit;
     final isOver = over > 0;
+    final historyAsync = ref.watch(
+      budgetAllGoalsHistoryProvider(widget.monthStart),
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -572,7 +578,7 @@ class _BudgetSummary extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${_monthLabel(monthStart)} budget',
+                  '${_monthLabel(widget.monthStart)} budget',
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -581,76 +587,93 @@ class _BudgetSummary extends StatelessWidget {
                   ),
                 ),
               ),
-              if (overCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.red600.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: AppColors.red600.withValues(alpha: 0.28),
-                    ),
-                  ),
-                  child: Text(
-                    '$overCount over',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.red100,
-                    ),
-                  ),
+              IconButton(
+                tooltip: _showChart ? 'Summary' : 'History',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () => setState(() => _showChart = !_showChart),
+                icon: Icon(
+                  _showChart
+                      ? Icons.view_agenda_outlined
+                      : Icons.bar_chart_rounded,
+                  size: 20,
+                  color: AppColors.teal100,
                 ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '\$$spent',
+          if (_showChart)
+            historyAsync.when(
+              loading: () => const SizedBox(
+                height: 168,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              error: (_, __) => Text(
+                'Could not load history.',
                 style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.5,
-                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.teal100,
                 ),
               ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text(
-                  'of \$$limit',
+              data: (points) =>
+                  _BudgetHistoryChart(points: points, onDark: true),
+            )
+          else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '\$${widget.spent}',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.teal100,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text(
-                  isOver ? '+\$$over' : '\$${limit - spent} left',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 22,
                     fontWeight: FontWeight.w600,
-                    color: isOver ? AppColors.red100 : AppColors.teal100,
+                    letterSpacing: -0.5,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _BudgetProgressBar(
-            progress: limit <= 0 ? 0 : spent / limit,
-            color: isOver ? AppColors.red100 : Colors.white,
-            backgroundColor: AppColors.teal700,
-            height: 7,
-          ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Text(
+                    'of \$${widget.limit}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.teal100,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Text(
+                    isOver
+                        ? '+\$$over'
+                        : '\$${widget.limit - widget.spent} left',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isOver ? AppColors.red100 : AppColors.teal100,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _BudgetProgressBar(
+              progress: widget.limit <= 0 ? 0 : widget.spent / widget.limit,
+              color: isOver ? AppColors.red100 : Colors.white,
+              backgroundColor: AppColors.teal700,
+              height: 7,
+            ),
+          ],
         ],
       ),
     );
@@ -1027,9 +1050,10 @@ class _BudgetDetailStat extends StatelessWidget {
 }
 
 class _BudgetHistoryChart extends StatelessWidget {
-  const _BudgetHistoryChart({required this.points});
+  const _BudgetHistoryChart({required this.points, this.onDark = false});
 
   final List<_BudgetHistoryPoint> points;
+  final bool onDark;
 
   static const _monthLabels = [
     'J',
@@ -1059,6 +1083,13 @@ class _BudgetHistoryChart extends StatelessWidget {
     final maxY = (maxSpent > maxLimit ? maxSpent : maxLimit).toDouble();
     final chartMaxY = maxY <= 0 ? 1.0 : maxY * 1.18;
     final labelIndices = <int>{0, points.length ~/ 2, points.length - 1};
+    final labelColor = onDark ? AppColors.teal100 : AppColors.slate400;
+    final gridColor = onDark
+        ? AppColors.teal700.withValues(alpha: 0.55)
+        : AppColors.slate100;
+    final limitColor = onDark
+        ? AppColors.teal100.withValues(alpha: 0.5)
+        : AppColors.slate300;
 
     return SizedBox(
       height: 168,
@@ -1108,6 +1139,8 @@ class _BudgetHistoryChart extends StatelessWidget {
                     toY: points[i].spent.toDouble(),
                     color: points[i].spent > points[i].limit
                         ? AppColors.red600
+                        : onDark
+                        ? Colors.white
                         : AppColors.teal600,
                     width: 7,
                     borderRadius: const BorderRadius.vertical(
@@ -1116,7 +1149,7 @@ class _BudgetHistoryChart extends StatelessWidget {
                   ),
                   BarChartRodData(
                     toY: points[i].limit.toDouble(),
-                    color: AppColors.slate300,
+                    color: limitColor,
                     width: 3,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(2),
@@ -1144,7 +1177,7 @@ class _BudgetHistoryChart extends StatelessWidget {
                       _monthLabels[month - 1],
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: AppColors.slate400,
+                        color: labelColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1161,7 +1194,7 @@ class _BudgetHistoryChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: chartMaxY / 4,
             getDrawingHorizontalLine: (_) =>
-                FlLine(color: AppColors.slate100, strokeWidth: 1),
+                FlLine(color: gridColor, strokeWidth: 1),
           ),
           borderData: FlBorderData(show: false),
         ),
