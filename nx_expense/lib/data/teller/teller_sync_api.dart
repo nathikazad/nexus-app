@@ -17,6 +17,7 @@ String _normalizeImageBaseForCf(String url) {
 Future<void> postTellerSync({
   required String imageBaseUrl,
   required String userId,
+  http.Client? httpClient,
 }) async {
   final trimmed = imageBaseUrl.endsWith('/')
       ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
@@ -27,16 +28,22 @@ Future<void> postTellerSync({
   if (CfAccess.shouldAttachHeaders(base)) {
     headers.addAll(CfAccess.headers);
   }
-  final resp = await http.post(uri, headers: headers);
-  if (resp.statusCode < 200 || resp.statusCode >= 300) {
-    throw StateError('Teller sync failed (${resp.statusCode}): ${resp.body}');
-  }
-  final decoded = jsonDecode(resp.body);
-  if (decoded is! Map<String, dynamic>) {
-    throw StateError('Invalid teller sync response');
-  }
-  if (decoded['ok'] != true) {
-    final err = decoded['error']?.toString() ?? 'unknown error';
-    throw StateError(err);
+  final client = httpClient ?? http.Client();
+  final closeClient = httpClient == null;
+  try {
+    final resp = await client.post(uri, headers: headers);
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw StateError('Teller sync failed (${resp.statusCode}): ${resp.body}');
+    }
+    final decoded = jsonDecode(resp.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw StateError('Invalid teller sync response');
+    }
+    if (decoded['ok'] != true) {
+      final err = decoded['error']?.toString() ?? 'unknown error';
+      throw StateError(err);
+    }
+  } finally {
+    if (closeClient) client.close();
   }
 }

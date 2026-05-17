@@ -1,11 +1,12 @@
 @Tags(['repository'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:test/test.dart' show Tags;
 
 import '../../_support/mock_graphql_client.dart';
 
@@ -180,19 +181,37 @@ void main() {
 
     test('mutate exception propagates', () async {
       final mock = MockGraphQLClient();
+      final exception = OperationException(
+        graphqlErrors: [
+          const GraphQLError(
+            message: 'name cannot be empty',
+            extensions: {'code': 'BAD_USER_INPUT'},
+          ),
+        ],
+      );
       when(() => mock.mutate(any())).thenAnswer(
         (_) async => QueryResult(
           options: MutationOptions(document: gql('mutation { __typename }')),
           source: QueryResultSource.network,
-          exception: OperationException(),
+          exception: exception,
           data: null,
         ),
       );
 
-      expect(
-        () => setKgqlModel(mock, SetModelRequest(modelType: 'P', name: 'n')),
+      final logs = <String>[];
+      await expectLater(
+        runZoned(
+          () => setKgqlModel(mock, SetModelRequest(modelType: 'P', name: 'n')),
+          zoneSpecification: ZoneSpecification(
+            print: (_, __, ___, line) => logs.add(line),
+          ),
+        ),
         throwsA(isA<OperationException>()),
       );
+      expect(logs.join('\n'), contains('KGQL mutation error: setKgqlModels'));
+      expect(logs.join('\n'), contains('mutation SetKgqlModels'));
+      expect(logs.join('\n'), contains('"model_type": "P"'));
+      expect(logs.join('\n'), contains('name cannot be empty'));
     });
 
     test('missing id in non-delete response throws', () async {

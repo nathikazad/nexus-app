@@ -81,7 +81,7 @@ BackendUrls resolve(BackendPreset p) {
       return const BackendUrls(
         graphqlHttp: 'https://graphql.supacharger.ai/graphql',
         sockWs: 'wss://sock.supacharger.ai',
-        imageHttp: 'https://sock.supacharger.ai',
+        imageHttp: 'https://http.supacharger.ai',
       );
   }
 }

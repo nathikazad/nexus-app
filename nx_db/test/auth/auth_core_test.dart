@@ -37,6 +37,14 @@ void main() {
       }
     });
 
+    test('CR11.4b pi WAN splits GraphQL, socket, and HTTP hosts', () {
+      final u = resolve(BackendPreset.piWan);
+
+      expect(u.graphqlHttp, 'https://graphql.supacharger.ai/graphql');
+      expect(u.sockWs, 'wss://sock.supacharger.ai');
+      expect(u.imageHttp, 'https://http.supacharger.ai');
+    });
+
     test('CR11.5 login persists prefs', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(

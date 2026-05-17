@@ -101,25 +101,32 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
   required String imageBaseUrl,
   required String userId,
   required String recipeUrl,
+  http.Client? httpClient,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
   final uri = Uri.parse('$base/import-recipe');
-  final resp = await http.post(
-    uri,
-    headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{'url': recipeUrl}),
-  );
-  if (resp.statusCode < 200 || resp.statusCode >= 300) {
-    _throwFromResponse(resp);
+  final client = httpClient ?? http.Client();
+  final closeClient = httpClient == null;
+  try {
+    final resp = await client.post(
+      uri,
+      headers: _mcpHeaders(base, userId, jsonBody: true),
+      body: jsonEncode(<String, dynamic>{'url': recipeUrl}),
+    );
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      _throwFromResponse(resp);
+    }
+    final decoded = jsonDecode(resp.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw StateError('Invalid import-recipe response');
+    }
+    if (decoded['ok'] != true) {
+      _throwFromResponse(resp);
+    }
+    return _parseOkBody(decoded);
+  } finally {
+    if (closeClient) client.close();
   }
-  final decoded = jsonDecode(resp.body);
-  if (decoded is! Map<String, dynamic>) {
-    throw StateError('Invalid import-recipe response');
-  }
-  if (decoded['ok'] != true) {
-    _throwFromResponse(resp);
-  }
-  return _parseOkBody(decoded);
 }
 
 /// `POST {imageBaseUrl}/import-recipe` with body `{"text":"..."}` — paste recipe text (skips fetch).
@@ -130,23 +137,30 @@ Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   required String imageBaseUrl,
   required String userId,
   required String recipeText,
+  http.Client? httpClient,
 }) async {
   final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
   final uri = Uri.parse('$base/import-recipe');
-  final resp = await http.post(
-    uri,
-    headers: _mcpHeaders(base, userId, jsonBody: true),
-    body: jsonEncode(<String, dynamic>{'text': recipeText}),
-  );
-  if (resp.statusCode < 200 || resp.statusCode >= 300) {
-    _throwFromResponse(resp);
+  final client = httpClient ?? http.Client();
+  final closeClient = httpClient == null;
+  try {
+    final resp = await client.post(
+      uri,
+      headers: _mcpHeaders(base, userId, jsonBody: true),
+      body: jsonEncode(<String, dynamic>{'text': recipeText}),
+    );
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      _throwFromResponse(resp);
+    }
+    final decoded = jsonDecode(resp.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw StateError('Invalid import-recipe response');
+    }
+    if (decoded['ok'] != true) {
+      _throwFromResponse(resp);
+    }
+    return _parseOkBody(decoded);
+  } finally {
+    if (closeClient) client.close();
   }
-  final decoded = jsonDecode(resp.body);
-  if (decoded is! Map<String, dynamic>) {
-    throw StateError('Invalid import-recipe response');
-  }
-  if (decoded['ok'] != true) {
-    _throwFromResponse(resp);
-  }
-  return _parseOkBody(decoded);
 }

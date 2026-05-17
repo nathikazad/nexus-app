@@ -1,8 +1,67 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import 'package:nx_expense/domain/teller/teller_link.dart';
+
+String _prettyJson(Object? value) {
+  const encoder = JsonEncoder.withIndent('  ');
+  return encoder.convert(value);
+}
+
+String _twoDigits(int value) => value.toString().padLeft(2, '0');
+String _threeDigits(int value) => value.toString().padLeft(3, '0');
+
+/// Formats timeline timestamps for `timestamp without time zone` columns.
+///
+/// `timeline_events.time` is a user-local wall-clock timestamp, so GraphQL
+/// mutations must preserve the DateTime fields instead of normalizing to UTC.
+String formatTimelineLocalTimestamp(DateTime value) {
+  final date = [
+    value.year.toString().padLeft(4, '0'),
+    _twoDigits(value.month),
+    _twoDigits(value.day),
+  ].join('-');
+  final time = [
+    _twoDigits(value.hour),
+    _twoDigits(value.minute),
+    _twoDigits(value.second),
+  ].join(':');
+  if (value.microsecond != 0) {
+    final fraction =
+        '${_threeDigits(value.millisecond)}${_threeDigits(value.microsecond)}';
+    return '${date}T$time.$fraction';
+  }
+  if (value.millisecond != 0) {
+    return '${date}T$time.${_threeDigits(value.millisecond)}';
+  }
+  return '${date}T$time';
+}
+
+void _printTimelineMutationError({
+  required String operationName,
+  required String document,
+  required Map<String, dynamic> variables,
+  required OperationException exception,
+}) {
+  print('Timeline mutation error: $operationName');
+  print('Mutation:');
+  print(document);
+  print('Variables:');
+  print(_prettyJson(variables));
+  print('Error: $exception');
+  for (final error in exception.graphqlErrors) {
+    print('GraphQL error: ${error.message}');
+    if (error.extensions != null) {
+      print('Extensions: ${_prettyJson(error.extensions)}');
+    }
+  }
+  if (exception.linkException != null) {
+    print('Link exception: ${exception.linkException}');
+  }
+}
 
 const String expenseTimelineLinksQuery = '''
 query ExpenseTimelineLinks(\$id: Int!) {
@@ -97,15 +156,22 @@ Future<void> deleteExpenseTimelineLink(
   GraphQLClient client,
   String linkId,
 ) async {
+  final variables = {
+    'input': {'id': linkId},
+  };
   final result = await client.mutate(
     MutationOptions(
       document: gql(deleteModelTimelineEventLinkByIdMutation),
-      variables: {
-        'input': {'id': linkId},
-      },
+      variables: variables,
     ),
   );
   if (result.hasException) {
+    _printTimelineMutationError(
+      operationName: 'DeleteModelTimelineEventLinkById',
+      document: deleteModelTimelineEventLinkByIdMutation,
+      variables: variables,
+      exception: result.exception!,
+    );
     throw result.exception!;
   }
 }
@@ -126,21 +192,28 @@ Future<void> linkExpenseToTimelineEvent(
   required DateTime eventTime,
   required String eventId,
 }) async {
+  final variables = {
+    'input': {
+      'modelTimelineEventLink': {
+        'modelId': modelId,
+        'eventTime': formatTimelineLocalTimestamp(eventTime),
+        'eventId': eventId,
+      },
+    },
+  };
   final result = await client.mutate(
     MutationOptions(
       document: gql(createModelTimelineEventLinkMutation),
-      variables: {
-        'input': {
-          'modelTimelineEventLink': {
-            'modelId': modelId,
-            'eventTime': eventTime.toUtc().toIso8601String(),
-            'eventId': eventId,
-          },
-        },
-      },
+      variables: variables,
     ),
   );
   if (result.hasException) {
+    _printTimelineMutationError(
+      operationName: 'CreateModelTimelineEventLink',
+      document: createModelTimelineEventLinkMutation,
+      variables: variables,
+      exception: result.exception!,
+    );
     throw result.exception!;
   }
 }
@@ -188,24 +261,31 @@ Future<({DateTime time, String eventId})> createTellerTimelineEvent(
   if (d == null) {
     throw ArgumentError('Invalid "date": $dateStr');
   }
-  final timeUtc = DateTime.utc(d.year, d.month, d.day);
+  final time = DateTime(d.year, d.month, d.day);
+  final variables = {
+    'input': {
+      'timelineEvent': {
+        'time': formatTimelineLocalTimestamp(time),
+        'userId': userId,
+        'eventType': kTellerTimelineEventType,
+        'source': kTellerTimelineSource,
+        'payload': payload,
+      },
+    },
+  };
   final result = await client.mutate(
     MutationOptions(
       document: gql(createTimelineEventMutation),
-      variables: {
-        'input': {
-          'timelineEvent': {
-            'time': timeUtc.toIso8601String(),
-            'userId': userId,
-            'eventType': kTellerTimelineEventType,
-            'source': kTellerTimelineSource,
-            'payload': payload,
-          },
-        },
-      },
+      variables: variables,
     ),
   );
   if (result.hasException) {
+    _printTimelineMutationError(
+      operationName: 'CreateTimelineEvent',
+      document: createTimelineEventMutation,
+      variables: variables,
+      exception: result.exception!,
+    );
     throw result.exception!;
   }
   final te =
@@ -245,19 +325,26 @@ Future<void> updateTellerTimelinePayload(
   required String eventId,
   required Map<String, dynamic> payload,
 }) async {
+  final variables = {
+    'input': {
+      'time': formatTimelineLocalTimestamp(eventTime),
+      'id': eventId,
+      'timelineEventPatch': {'payload': payload},
+    },
+  };
   final result = await client.mutate(
     MutationOptions(
       document: gql(updateTimelineEventByTimeAndIdMutation),
-      variables: {
-        'input': {
-          'time': eventTime.toUtc().toIso8601String(),
-          'id': eventId,
-          'timelineEventPatch': {'payload': payload},
-        },
-      },
+      variables: variables,
     ),
   );
   if (result.hasException) {
+    _printTimelineMutationError(
+      operationName: 'UpdateTimelineEventByTimeAndId',
+      document: updateTimelineEventByTimeAndIdMutation,
+      variables: variables,
+      exception: result.exception!,
+    );
     throw result.exception!;
   }
 }

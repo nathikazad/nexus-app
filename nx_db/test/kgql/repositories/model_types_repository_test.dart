@@ -1,11 +1,12 @@
 @Tags(['repository'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:test/test.dart' show Tags;
 
 import '../../_support/mock_graphql_client.dart';
 
@@ -113,6 +114,41 @@ void main() {
         SetModelTypeRequest(name: 'NewType', typeKind: 'base'),
       );
       expect(id, 42);
+    });
+
+    test('mutate exception logs mutation and variables', () async {
+      final mock = MockGraphQLClient();
+      final exception = OperationException(
+        graphqlErrors: [
+          const GraphQLError(message: 'duplicate model type'),
+        ],
+      );
+      when(() => mock.mutate(any())).thenAnswer(
+        (_) async => QueryResult(
+          options: MutationOptions(document: gql('mutation { __typename }')),
+          source: QueryResultSource.network,
+          exception: exception,
+        ),
+      );
+
+      final logs = <String>[];
+      await expectLater(
+        runZoned(
+          () => setKgqlModelType(
+            mock,
+            SetModelTypeRequest(name: 'NewType', typeKind: 'base'),
+          ),
+          zoneSpecification: ZoneSpecification(
+            print: (_, __, ___, line) => logs.add(line),
+          ),
+        ),
+        throwsA(isA<OperationException>()),
+      );
+      expect(
+          logs.join('\n'), contains('KGQL mutation error: setKgqlModelTypes'));
+      expect(logs.join('\n'), contains('mutation SetKgqlModelTypes'));
+      expect(logs.join('\n'), contains('"name": "NewType"'));
+      expect(logs.join('\n'), contains('duplicate model type'));
     });
   });
 }

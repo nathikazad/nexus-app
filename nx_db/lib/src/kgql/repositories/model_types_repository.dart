@@ -8,6 +8,7 @@ import '../documents/get_kgql_model_type_all.graphql.dart';
 import '../documents/set_kgql_model_type.graphql.dart';
 import '../models/model_type.dart';
 import '../requests/set_model_type_request.dart';
+import 'mutation_debug.dart';
 
 /// Default struct for loading a full [ModelType] by name (Expense / Transfer apps).
 Map<String, dynamic> get kgqlFullModelTypeStruct => const {
@@ -185,31 +186,28 @@ Future<int> setKgqlModelType(
       );
 
   try {
+    final variables = {
+      'input': {
+        'data': requestJson,
+      },
+    };
     final result = await runWithDbAuditContext(
       context,
       () => client.mutate(
         MutationOptions(
           document: gql(setKgqlModelTypesMutation),
-          variables: {
-            'input': {
-              'data': requestJson,
-            },
-          },
+          variables: variables,
         ),
       ),
     );
 
     if (result.hasException) {
-      print('❌ Mutation Error in setKgqlModelTypes:');
-      print('Exception: ${result.exception}');
-      if (result.exception?.graphqlErrors != null) {
-        for (var error in result.exception!.graphqlErrors) {
-          print('  - ${error.message}');
-          if (error.extensions != null) {
-            print('    Extensions: ${error.extensions}');
-          }
-        }
-      }
+      printKgqlMutationError(
+        operationName: 'setKgqlModelTypes',
+        mutation: setKgqlModelTypesMutation,
+        variables: variables,
+        exception: result.exception!,
+      );
       throw result.exception!;
     }
 

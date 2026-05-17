@@ -19,6 +19,9 @@ import 'package:http/http.dart' as http;
 
 String _httpBaseFromSocketUrl(String socketUrl) {
   final uri = Uri.parse(socketUrl);
+  if (uri.host == 'sock.supacharger.ai') {
+    return 'https://http.supacharger.ai';
+  }
   final scheme = uri.scheme == 'wss' ? 'https' : 'http';
   final port = uri.hasPort && uri.port == 8002 ? 8001 : uri.port;
   return Uri(

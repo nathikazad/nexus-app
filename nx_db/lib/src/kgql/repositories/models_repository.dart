@@ -8,6 +8,7 @@ import '../documents/get_kgql_models.graphql.dart';
 import '../documents/set_kgql_models.graphql.dart';
 import '../models/model.dart';
 import '../requests/set_model_request.dart';
+import 'mutation_debug.dart';
 
 /// Parse `getKgqlModels` JSON (string or list) into [Model] list.
 List<Model> parseKgqlModelsResult(dynamic jsonResult) {
@@ -108,18 +109,25 @@ Future<int> setKgqlModel(
       );
 
   return runWithDbAuditContext(context, () async {
+    final variables = {
+      'input': {
+        'data': requestJson,
+      },
+    };
     final result = await client.mutate(
       MutationOptions(
         document: gql(setKgqlModelsMutation),
-        variables: {
-          'input': {
-            'data': requestJson,
-          },
-        },
+        variables: variables,
       ),
     );
 
     if (result.hasException) {
+      printKgqlMutationError(
+        operationName: 'setKgqlModels',
+        mutation: setKgqlModelsMutation,
+        variables: variables,
+        exception: result.exception!,
+      );
       throw result.exception!;
     }
 

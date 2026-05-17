@@ -24,6 +24,20 @@ Map<String, String> imageHeaders(String baseUrl, String userId) => {
 /// Strips trailing slashes from [baseUrl] for joining paths.
 String _normalizeBase(String baseUrl) => baseUrl.replaceAll(RegExp(r'/+$'), '');
 
+String _urlOnBase(String url, String baseUrl) {
+  final base = Uri.parse(_normalizeBase(baseUrl));
+  final parsed = Uri.parse(url);
+  if (!parsed.hasScheme) {
+    return base.resolveUri(parsed).toString();
+  }
+  return parsed
+      .replace(
+          scheme: base.scheme,
+          host: base.host,
+          port: base.hasPort ? base.port : null)
+      .toString();
+}
+
 /// Parses `name` query from [url] and returns minutes since midnight, or null.
 /// Desktop and necklace both use `YYMMDDHHmmss` as the filename stem.
 double? minutesFromImageFilename(String url) {
@@ -141,16 +155,19 @@ Future<List<ImageEntry>> fetchImagesForDay(
       if (item is! Map<String, dynamic>) continue;
       final url = item['url'];
       if (url is! String) continue;
-      final name = Uri.parse(url).queryParameters['name'] ?? '';
-      final m = minutesFromImageFilename(url);
+      final normalizedUrl = _urlOnBase(url, base);
+      final name = Uri.parse(normalizedUrl).queryParameters['name'] ?? '';
+      final m = minutesFromImageFilename(normalizedUrl);
       if (m == null) continue;
       final currentApp = item['current_app'] as String?;
-      out.add(ImageEntry(
-        url: url,
-        filename: name,
-        minutesSinceMidnight: m,
-        currentApp: currentApp,
-      ));
+      out.add(
+        ImageEntry(
+          url: normalizedUrl,
+          filename: name,
+          minutesSinceMidnight: m,
+          currentApp: currentApp,
+        ),
+      );
     }
     return out;
   } finally {

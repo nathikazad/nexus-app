@@ -231,7 +231,9 @@ class _TellerLinkActions extends ConsumerWidget {
                       );
                       final q = <String, String>{
                         'tellerEventId': row.eventId,
-                        'tellerEventTime': row.time.toUtc().toIso8601String(),
+                        'tellerEventTime': formatTimelineLocalTimestamp(
+                          row.time,
+                        ),
                         'prefillName': tellerTransactionTitleLine(p),
                       };
                       if (amt != null) q['prefillAmount'] = amt.toString();

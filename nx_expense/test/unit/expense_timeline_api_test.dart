@@ -1,8 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart';
 import 'package:nx_expense/domain/teller/teller_link.dart';
 
+class _MockGraphQLClient extends Mock implements GraphQLClient {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(
+      MutationOptions(document: gql('mutation { __typename }')),
+    );
+  });
+
   group('parseExpenseTimelineLinks', () {
     test('empty when modelById null', () {
       expect(parseExpenseTimelineLinks(null), isEmpty);
@@ -127,6 +139,95 @@ void main() {
 
     test('rejects non-object', () {
       expect(() => parseTellerPayloadJson('[1]'), throwsArgumentError);
+    });
+  });
+
+  group('linkExpenseToTimelineEvent', () {
+    test('sends eventTime as local timestamp without timezone', () async {
+      final mock = _MockGraphQLClient();
+      when(() => mock.mutate(any())).thenAnswer(
+        (_) async => QueryResult(
+          options: MutationOptions(document: gql('mutation { __typename }')),
+          source: QueryResultSource.network,
+          data: const {
+            'createModelTimelineEventLink': {
+              'modelTimelineEventLink': {'id': 1},
+            },
+          },
+        ),
+      );
+
+      await linkExpenseToTimelineEvent(
+        mock,
+        modelId: 3295,
+        eventTime: DateTime(2026, 5, 16),
+        eventId: '16845',
+      );
+
+      final captured =
+          verify(() => mock.mutate(captureAny())).captured.single
+              as MutationOptions;
+      expect(
+        captured.variables['input']['modelTimelineEventLink']['eventTime'],
+        '2026-05-16T00:00:00',
+      );
+    });
+
+    test('formats local timestamps without converting UTC instances', () {
+      expect(
+        formatTimelineLocalTimestamp(DateTime.utc(2026, 5, 16, 7)),
+        '2026-05-16T07:00:00',
+      );
+      expect(
+        formatTimelineLocalTimestamp(DateTime(2026, 5, 16, 0, 0, 0, 123, 456)),
+        '2026-05-16T00:00:00.123456',
+      );
+    });
+
+    test('logs mutation and error when link mutation fails', () async {
+      final mock = _MockGraphQLClient();
+      final exception = OperationException(
+        graphqlErrors: [
+          const GraphQLError(
+            message: 'duplicate timeline link',
+            extensions: {'code': '23505'},
+          ),
+        ],
+      );
+      when(() => mock.mutate(any())).thenAnswer(
+        (_) async => QueryResult(
+          options: MutationOptions(document: gql('mutation { __typename }')),
+          source: QueryResultSource.network,
+          exception: exception,
+        ),
+      );
+
+      final logs = <String>[];
+      await expectLater(
+        runZoned(
+          () => linkExpenseToTimelineEvent(
+            mock,
+            modelId: 3295,
+            eventTime: DateTime.utc(2026, 5, 15),
+            eventId: 'evt-1',
+          ),
+          zoneSpecification: ZoneSpecification(
+            print: (_, __, ___, line) => logs.add(line),
+          ),
+        ),
+        throwsA(isA<OperationException>()),
+      );
+
+      final out = logs.join('\n');
+      expect(
+        out,
+        contains('Timeline mutation error: CreateModelTimelineEventLink'),
+      );
+      expect(out, contains('mutation CreateModelTimelineEventLink'));
+      expect(out, contains('"modelId": 3295'));
+      expect(out, contains('"eventId": "evt-1"'));
+      expect(out, contains('duplicate timeline link'));
+      expect(out, contains('"code": "23505"'));
     });
   });
 }

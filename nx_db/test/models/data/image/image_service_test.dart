@@ -66,5 +66,28 @@ void main() {
       expect(images.first.currentApp, 'cam');
       expect(images.first.minutesSinceMidnight, closeTo(12 * 60, 0.001));
     });
+
+    test('rewrites returned file URLs onto the request base', () async {
+      final mock = MockClient((request) async {
+        return http.Response(
+          '''
+{"images":[{"url":"https://sock.supacharger.ai/images/file?name=250418120000.jpg"}]}
+''',
+          200,
+        );
+      });
+      final day = DateTime(2025, 4, 18);
+      final images = await fetchImagesForDay(
+        'https://http.supacharger.ai',
+        'u',
+        'necklace',
+        day,
+        httpClient: mock,
+      );
+      expect(
+        images.single.url,
+        'https://http.supacharger.ai/images/file?name=250418120000.jpg',
+      );
+    });
   });
 }
