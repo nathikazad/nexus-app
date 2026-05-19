@@ -37,6 +37,8 @@ dependencies:
   shared_preferences: ^2.2.2
   nx_db:
     path: ../nx_db
+  nx_views:
+    path: ../nx_views
   web_socket_channel: ^3.0.1
   fl_chart: ^1.2.0
   google_fonts: ^6.2.1

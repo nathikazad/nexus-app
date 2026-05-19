@@ -11,6 +11,7 @@ class TimelineSlider extends StatelessWidget {
     required this.maxTime,
     required this.marks,
     required this.onChanged,
+    this.segments = const [],
   });
 
   final double value;
@@ -18,6 +19,7 @@ class TimelineSlider extends StatelessWidget {
   final double maxTime;
   final List<double> marks;
   final ValueChanged<double> onChanged;
+  final List<TimelineSegment> segments;
 
   static double _valueToX(double v, double width, double min, double max) {
     final r = max - min;
@@ -60,6 +62,7 @@ class TimelineSlider extends StatelessWidget {
                 minTime: minTime,
                 maxTime: maxTime,
                 marks: marks,
+                segments: segments,
                 trackColor: trackColor,
                 fillColor: fillColor,
                 markColor: markColor,
@@ -74,12 +77,25 @@ class TimelineSlider extends StatelessWidget {
   }
 }
 
+class TimelineSegment {
+  const TimelineSegment({
+    required this.start,
+    required this.end,
+    required this.color,
+  });
+
+  final double start;
+  final double end;
+  final Color color;
+}
+
 class _TimelinePainter extends CustomPainter {
   _TimelinePainter({
     required this.value,
     required this.minTime,
     required this.maxTime,
     required this.marks,
+    required this.segments,
     required this.trackColor,
     required this.fillColor,
     required this.markColor,
@@ -91,6 +107,7 @@ class _TimelinePainter extends CustomPainter {
   final double minTime;
   final double maxTime;
   final List<double> marks;
+  final List<TimelineSegment> segments;
   final Color trackColor;
   final Color fillColor;
   final Color markColor;
@@ -109,8 +126,30 @@ class _TimelinePainter extends CustomPainter {
     );
     canvas.drawRRect(trackRect, Paint()..color = trackColor);
 
+    if (segments.isNotEmpty) {
+      canvas.save();
+      canvas.clipRRect(trackRect);
+      final segmentPaint = Paint();
+      for (final segment in segments) {
+        if (segment.end <= minTime || segment.start >= maxTime) continue;
+        final left = valueToX(
+          segment.start.clamp(minTime, maxTime),
+        ).clamp(0.0, w);
+        final right = valueToX(
+          segment.end.clamp(minTime, maxTime),
+        ).clamp(0.0, w);
+        if (right <= left) continue;
+        segmentPaint.color = segment.color;
+        canvas.drawRect(
+          Rect.fromLTRB(left, trackY, right, trackY + trackH),
+          segmentPaint,
+        );
+      }
+      canvas.restore();
+    }
+
     final thumbX = valueToX(value).clamp(0.0, w);
-    if (thumbX > 0) {
+    if (thumbX > 0 && segments.isEmpty) {
       final fillRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(0, trackY, thumbX, trackH),
         const Radius.circular(2),
@@ -149,11 +188,19 @@ class _TimelinePainter extends CustomPainter {
         minTime != oldDelegate.minTime ||
         maxTime != oldDelegate.maxTime ||
         trackColor != oldDelegate.trackColor ||
-        marks.length != oldDelegate.marks.length) {
+        marks.length != oldDelegate.marks.length ||
+        segments.length != oldDelegate.segments.length) {
       return true;
     }
     for (var i = 0; i < marks.length; i++) {
       if (marks[i] != oldDelegate.marks[i]) return true;
+    }
+    for (var i = 0; i < segments.length; i++) {
+      final a = segments[i];
+      final b = oldDelegate.segments[i];
+      if (a.start != b.start || a.end != b.end || a.color != b.color) {
+        return true;
+      }
     }
     return false;
   }

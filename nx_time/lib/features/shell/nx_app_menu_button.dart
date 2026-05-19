@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_views/nx_views.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/images/images_page.dart';
@@ -32,9 +33,27 @@ class NxAppMenuButton extends ConsumerWidget {
           Navigator.of(context).push<void>(
             MaterialPageRoute<void>(builder: (_) => const LogTagsPage()),
           );
-        } else if (value == 'images') {
+        } else if (value == 'desktop') {
           Navigator.of(context).push<void>(
-            MaterialPageRoute<void>(builder: (_) => const ImagesPage()),
+            MaterialPageRoute<void>(
+              builder: (_) => const ImagesPage(
+                initialSource: 'desktop',
+                allowSourceSwitch: false,
+              ),
+            ),
+          );
+        } else if (value == 'necklace') {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const ImagesPage(
+                initialSource: 'necklace',
+                allowSourceSwitch: false,
+              ),
+            ),
+          );
+        } else if (value == 'gps') {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) => const GpsPage()),
           );
         } else if (value == 'logout') {
           await ref.read(authProvider.notifier).logout();
@@ -48,7 +67,9 @@ class NxAppMenuButton extends ConsumerWidget {
       itemBuilder: (context) => [
         _menuItem('tags', Icons.label_outline, 'Tags'),
         _menuItem('colors', Icons.palette_outlined, 'Colors'),
-        _menuItem('images', Icons.image_outlined, 'Images'),
+        _menuItem('desktop', Icons.desktop_windows_outlined, 'Desktop'),
+        _menuItem('necklace', Icons.camera_alt_outlined, 'Necklace'),
+        _menuItem('gps', Icons.location_on_outlined, 'GPS'),
         _menuItem('logout', Icons.logout, 'Logout'),
       ],
     );

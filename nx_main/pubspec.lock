@@ -967,6 +967,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  nx_views:
+    dependency: "direct main"
+    description:
+      path: "../nx_views"
+      relative: true
+    source: path
+    version: "0.1.0+1"
   octo_image:
     dependency: transitive
     description:

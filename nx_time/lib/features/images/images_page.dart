@@ -7,19 +7,39 @@ import 'package:nx_db/nx_db.dart';
 import 'package:nx_time/core/widgets/timeline_slider.dart';
 import 'package:nx_time/features/images/images_view_model.dart';
 
+const _desktopAppPalette = [
+  Colors.indigo,
+  Colors.teal,
+  Colors.pink,
+  Colors.amber,
+  Colors.deepPurple,
+  Colors.green,
+  Colors.cyan,
+  Colors.deepOrange,
+  Colors.blueGrey,
+  Colors.lime,
+];
+const _desktopSnapshotCoverageMinutes = 2.0;
+
 /// Browse images by day for necklace or desktop capture sources.
 class ImagesPage extends ConsumerStatefulWidget {
-  const ImagesPage({super.key, this.initialSource = 'desktop'})
-    : assert(
-        initialSource == 'necklace' || initialSource == 'desktop',
-        'initialSource must be necklace or desktop',
-      );
+  const ImagesPage({
+    super.key,
+    this.initialSource = 'desktop',
+    this.allowSourceSwitch = true,
+  }) : assert(
+         initialSource == 'necklace' || initialSource == 'desktop',
+         'initialSource must be necklace or desktop',
+       );
 
   /// Starting capture channel; use the app bar action to switch at runtime.
   ///
   /// Matches server `source` query param (`necklace` | `desktop`).
   /// Copy this screen and change [initialSource] for a different default (e.g. necklace).
   final String initialSource;
+
+  /// When false, this page is locked to [initialSource].
+  final bool allowSourceSwitch;
 
   @override
   ConsumerState<ImagesPage> createState() => _ImagesPageState();
@@ -123,6 +143,9 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
 
     final idx = imagesCurrentIndex(vm);
     final entry = imagesEntryForSlider(vm, vm.sliderValue);
+    final desktopSegments = _source == 'desktop'
+        ? _desktopAppSegments(vm.dayEntries, vm.minTime, vm.maxTime)
+        : const <TimelineSegment>[];
 
     final metaCaptionStyle = Theme.of(
       context,
@@ -131,17 +154,21 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_title),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _source == 'necklace' ? Icons.desktop_windows : Icons.camera_alt,
-            ),
-            tooltip: _source == 'necklace'
-                ? 'Switch to desktop images'
-                : 'Switch to necklace images',
-            onPressed: _switchSource,
-          ),
-        ],
+        actions: widget.allowSourceSwitch
+            ? [
+                IconButton(
+                  icon: Icon(
+                    _source == 'necklace'
+                        ? Icons.desktop_windows
+                        : Icons.camera_alt,
+                  ),
+                  tooltip: _source == 'necklace'
+                      ? 'Switch to desktop images'
+                      : 'Switch to necklace images',
+                  onPressed: _switchSource,
+                ),
+              ]
+            : null,
       ),
       body: vm.loading
           ? const Center(child: CircularProgressIndicator())
@@ -286,6 +313,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
                                   marks: vm.dayEntries
                                       .map((e) => e.minutesSinceMidnight)
                                       .toList(),
+                                  segments: desktopSegments,
                                   onChanged: notifier.setSlider,
                                 ),
                               ),
@@ -333,4 +361,54 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
       ),
     );
   }
+}
+
+List<TimelineSegment> _desktopAppSegments(
+  List<ImageEntry> entries,
+  double minTime,
+  double maxTime,
+) {
+  if (entries.isEmpty) return const [];
+
+  final appColors = <String, Color>{};
+  final segments = <TimelineSegment>[];
+  for (var i = 0; i < entries.length; i++) {
+    final app = entries[i].currentApp?.trim();
+    if (app == null || app.isEmpty) continue;
+
+    final color = appColors.putIfAbsent(
+      app,
+      () => _desktopAppPalette[appColors.length % _desktopAppPalette.length],
+    );
+    final start = entries[i].minutesSinceMidnight;
+    final nextStart = i + 1 < entries.length
+        ? entries[i + 1].minutesSinceMidnight
+        : null;
+    final end = nextStart == null
+        ? (start + _desktopSnapshotCoverageMinutes).clamp(minTime, maxTime)
+        : nextStart - start <= _desktopSnapshotCoverageMinutes
+        ? nextStart
+        : (start + _desktopSnapshotCoverageMinutes).clamp(minTime, maxTime);
+    if (end <= start) continue;
+
+    if (segments.isNotEmpty &&
+        segments.last.color == color &&
+        (segments.last.end - start).abs() < 0.001) {
+      final prev = segments.removeLast();
+      segments.add(TimelineSegment(start: prev.start, end: end, color: color));
+    } else {
+      segments.add(TimelineSegment(start: start, end: end, color: color));
+    }
+  }
+
+  return segments
+      .map(
+        (segment) => TimelineSegment(
+          start: segment.start.clamp(minTime, maxTime),
+          end: segment.end.clamp(minTime, maxTime),
+          color: segment.color,
+        ),
+      )
+      .where((segment) => segment.end > segment.start)
+      .toList();
 }
