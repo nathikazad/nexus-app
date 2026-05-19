@@ -17,6 +17,9 @@ import 'package:nx_expense/features/expense/expense_form_page.dart';
 import 'package:nx_expense/features/expense/expense_list_page.dart';
 import 'package:nx_expense/features/expense/expense_list_view_model.dart';
 import 'package:nx_expense/features/expense/scoped_expense_list.dart';
+import 'package:nx_expense/features/orders/order_detail_page.dart';
+import 'package:nx_expense/features/orders/order_link_picker_page.dart';
+import 'package:nx_expense/features/orders/orders_list_page.dart';
 import 'package:nx_expense/features/tag/tag_browser_page.dart';
 import 'package:nx_expense/features/tag/tag_system_form_page.dart';
 import 'package:nx_expense/features/tag/tag_systems_page.dart';
@@ -166,6 +169,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/transfers',
         builder: (context, state) => const TransfersListScreen(),
+      ),
+      GoRoute(
+        path: '/orders',
+        builder: (context, state) => const OrdersListScreen(),
+      ),
+      GoRoute(
+        path: '/orders/:id',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return OrderDetailScreen(orderId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expense/:id/link-order',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return OrderLinkPickerScreen(expenseId: id);
+        },
       ),
       GoRoute(
         path: '/budget/detail/:goalId',

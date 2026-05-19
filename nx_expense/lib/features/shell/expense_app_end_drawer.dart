@@ -6,7 +6,7 @@ import 'package:nx_db/auth.dart';
 
 import 'package:nx_expense/core/theme/app_theme.dart';
 
-enum _ExpenseAppMenuAction { transfers, tags, logout }
+enum _ExpenseAppMenuAction { orders, transfers, tags, logout }
 
 /// Panel from the right: Tags (tag systems) and Log out.
 class ExpenseAppEndDrawer extends ConsumerWidget {
@@ -32,6 +32,42 @@ class ExpenseAppEndDrawer extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1, color: AppColors.slate100),
+            ListTile(
+              leading: const Icon(
+                Icons.inventory_2_outlined,
+                color: AppColors.slate600,
+                size: 22,
+              ),
+              title: Text(
+                'Orders',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/orders');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.swap_horiz_outlined,
+                color: AppColors.slate600,
+                size: 22,
+              ),
+              title: Text(
+                'Transfers',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/transfers');
+              },
+            ),
             ListTile(
               leading: const Icon(
                 Icons.label_outlined,
@@ -91,6 +127,8 @@ class ExpenseAppMenuButton extends ConsumerWidget {
       color: Colors.white,
       onSelected: (action) async {
         switch (action) {
+          case _ExpenseAppMenuAction.orders:
+            context.push('/orders');
           case _ExpenseAppMenuAction.transfers:
             context.push('/transfers');
           case _ExpenseAppMenuAction.tags:
@@ -101,6 +139,11 @@ class ExpenseAppMenuButton extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
+        _item(
+          value: _ExpenseAppMenuAction.orders,
+          icon: Icons.inventory_2_outlined,
+          label: 'Orders',
+        ),
         _item(
           value: _ExpenseAppMenuAction.transfers,
           icon: Icons.swap_horiz_outlined,

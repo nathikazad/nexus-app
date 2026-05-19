@@ -6,8 +6,10 @@ import 'package:nx_db/goals.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
 
+import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/data/expense/expense_struct.dart';
 import 'package:nx_expense/data/expense/kgql_expense_repository.dart';
+import 'package:nx_expense/data/order/kgql_order_repository.dart';
 import 'package:nx_expense/data/schema/model_type_view_mapper.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart';
 import 'package:nx_expense/data/teller/teller_accounts_api.dart';
@@ -19,6 +21,7 @@ import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:nx_expense/domain/expense/expense_repository.dart';
 import 'package:nx_expense/domain/expense/expense_summary.dart';
 import 'package:nx_expense/domain/expense/model_names.dart';
+import 'package:nx_expense/domain/order/order.dart';
 import 'package:nx_expense/domain/expense/related_model.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/domain/teller/teller_link.dart';
@@ -44,12 +47,20 @@ final transferRepositoryProvider = Provider<TransferRepository>((ref) {
   );
 });
 
+final orderRepositoryProvider = Provider<KgqlOrderRepository>((ref) {
+  return KgqlOrderRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadOrderSchema: () => ref.read(orderSchemaProvider.future),
+  );
+});
+
 final expenseSchemaProvider = kgqlModelTypeByNameProvider(
   kExpenseModelTypeName,
 );
 final transferSchemaProvider = kgqlModelTypeByNameProvider(
   kTransferModelTypeName,
 );
+final orderSchemaProvider = kgqlModelTypeByNameProvider(kOrderModelTypeName);
 
 final expenseModelTypeDomainOptionsProvider =
     FutureProvider<ModelTypeDomainOptions>((ref) async {
@@ -190,6 +201,47 @@ final transferListForUiProvider = FutureProvider<List<Transfer>>((ref) async {
     return desc ? -c : c;
   });
   return sorted;
+});
+
+final orderListProvider = FutureProvider<List<Order>>((ref) async {
+  final repo = ref.watch(orderRepositoryProvider);
+  final range = ref.watch(expenseDateRangeProvider);
+  return repo.list(rangeStart: range.start, rangeEnd: range.end);
+});
+
+final orderListForUiProvider = FutureProvider<List<Order>>((ref) async {
+  final list = await ref.watch(orderListProvider.future);
+  final range = ref.watch(expenseDateRangeProvider);
+  final sorted = [...list];
+  final desc = isDateRangeCurrentCalendarMonth(range);
+  sorted.sort((a, b) {
+    final c = normalizeDateAttributeSortKey(
+      a.orderDate,
+    ).compareTo(normalizeDateAttributeSortKey(b.orderDate));
+    return desc ? -c : c;
+  });
+  return sorted;
+});
+
+final orderDetailProvider = FutureProvider.family<Order?, int>((ref, id) async {
+  final repo = ref.watch(orderRepositoryProvider);
+  return repo.getById(id);
+});
+
+final orderListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
+  final orders = await ref.watch(orderListProvider.future);
+  num total = 0;
+  var hasTotal = false;
+  for (final order in orders) {
+    if (order.total != null) {
+      total += order.total!;
+      hasTotal = true;
+    }
+  }
+  return ExpenseSummary(
+    count: orders.length,
+    sumTotal: hasTotal ? total : null,
+  );
 });
 
 final transferListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {

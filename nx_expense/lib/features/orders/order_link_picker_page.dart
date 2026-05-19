@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nx_db/kgql.dart';
 
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
-import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
-import 'package:nx_expense/domain/schema/model_type_view.dart';
-import 'package:nx_expense/domain/transfer/transfer.dart';
-import 'package:nx_expense/features/desktop/desktop_nav.dart';
+import 'package:nx_expense/domain/expense/model_names.dart';
+import 'package:nx_expense/domain/order/order.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
-import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
 
-class TransfersListScreen extends ConsumerWidget {
-  const TransfersListScreen({super.key});
+class OrderLinkPickerScreen extends ConsumerWidget {
+  const OrderLinkPickerScreen({super.key, required this.expenseId});
+
+  final int expenseId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final listAsync = ref.watch(transferListForUiProvider);
-    final summaryAsync = ref.watch(transferListSummaryProvider);
-    final schemaAsync = ref.watch(transferSchemaViewProvider);
+    final ordersAsync = ref.watch(orderListForUiProvider);
+    final summaryAsync = ref.watch(orderListSummaryProvider);
+    final expenseAsync = ref.watch(expenseDetailProvider(expenseId));
 
     return Scaffold(
       backgroundColor: Colors.white,
-      endDrawer: const ExpenseAppEndDrawer(),
-      body: schemaAsync.when(
+      body: expenseAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: SelectableText('Schema: $e')),
-        data: (schema) {
+        error: (e, _) => Center(child: SelectableText('Expense: $e')),
+        data: (expense) {
+          final linkedIds =
+              expense?.relations?[kOrderModelTypeName]
+                  ?.map((m) => m.id)
+                  .toSet() ??
+              <int>{};
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -45,7 +48,6 @@ class TransfersListScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       IconButton(
-                        visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(
                           minWidth: 40,
@@ -56,15 +58,12 @@ class TransfersListScreen extends ConsumerWidget {
                           color: AppColors.slate400,
                           size: 22,
                         ),
-                        onPressed: () => context.pop(),
+                        onPressed: () => Navigator.of(context).pop(),
                       ),
-                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text('Transfers', style: refAppBarTitleLarge()),
+                        child: Text('Link Order', style: refAppBarTitleLarge()),
                       ),
                       const ExpenseDateRangeCalendarButton(),
-                      const SizedBox(width: 4),
-                      const ExpenseAppMenuButton(),
                     ],
                   ),
                 ),
@@ -103,13 +102,13 @@ class TransfersListScreen extends ConsumerWidget {
                   color: AppColors.slate50.withValues(alpha: 0.5),
                   child: RefreshIndicator(
                     onRefresh: () async {
-                      ref.invalidate(transferSchemaViewProvider);
-                      ref.invalidate(transferListProvider);
-                      ref.invalidate(transferListForUiProvider);
-                      ref.invalidate(transferListSummaryProvider);
+                      ref.invalidate(orderSchemaProvider);
+                      ref.invalidate(orderListProvider);
+                      ref.invalidate(orderListForUiProvider);
+                      ref.invalidate(orderListSummaryProvider);
                     },
                     color: AppColors.teal600,
-                    child: listAsync.when(
+                    child: ordersAsync.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(
@@ -124,20 +123,26 @@ class TransfersListScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      data: (models) {
-                        if (models.isEmpty) {
+                      data: (orders) {
+                        final candidates = orders
+                            .where((o) => !linkedIds.contains(o.id))
+                            .toList();
+                        if (candidates.isEmpty) {
                           return Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.swap_horiz_rounded,
+                                const Icon(
+                                  Icons.inventory_2_outlined,
                                   size: 48,
                                   color: AppColors.slate300,
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'No transfers in this range',
+                                  orders.isEmpty
+                                      ? 'No orders in this range'
+                                      : 'All orders in this range are already linked',
+                                  textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -149,10 +154,8 @@ class TransfersListScreen extends ConsumerWidget {
                           );
                         }
                         final items = _buildDateGroupedItems(
+                          candidates,
                           context,
-                          ref,
-                          models,
-                          schema,
                         );
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(
@@ -177,17 +180,14 @@ class TransfersListScreen extends ConsumerWidget {
   }
 
   List<Widget> _buildDateGroupedItems(
+    List<Order> orders,
     BuildContext context,
-    WidgetRef ref,
-    List<Transfer> models,
-    ModelTypeView schema,
   ) {
     final items = <Widget>[];
     String? lastDate;
-    final amountKey = primaryNumberAttributeKey(schema);
 
-    for (final m in models) {
-      final dateStr = transferCellDateLabel(m);
+    for (final order in orders) {
+      final dateStr = formatModelDate(order.orderDate);
       if (dateStr != lastDate) {
         items.add(
           Padding(
@@ -208,41 +208,60 @@ class TransfersListScreen extends ConsumerWidget {
       items.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: _TransferCard(
-            title: transferDisplayTitle(m),
-            amount: amountKey != null ? _num(m, amountKey) : null,
-            onOpen: () => navToTransferDetailDirect(context, ref, m.id),
+          child: _PickerOrderCard(
+            order: order,
+            expenseId: expenseId,
+            pickerContext: context,
           ),
         ),
       );
     }
     return items;
   }
-
-  static num? _num(Transfer m, String key) {
-    final raw = attributeValue(m, key);
-    if (raw is num) return raw;
-    return num.tryParse('$raw');
-  }
 }
 
-class _TransferCard extends StatelessWidget {
-  const _TransferCard({
-    required this.title,
-    required this.amount,
-    required this.onOpen,
+class _PickerOrderCard extends ConsumerWidget {
+  const _PickerOrderCard({
+    required this.order,
+    required this.expenseId,
+    required this.pickerContext,
   });
 
-  final String title;
-  final num? amount;
-  final VoidCallback onOpen;
+  final Order order;
+  final int expenseId;
+  final BuildContext pickerContext;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onOpen,
+        onTap: () async {
+          final client = ref.read(expenseGraphqlClientProvider);
+          try {
+            await setKgqlModel(
+              client,
+              SetModelRequest(
+                id: expenseId,
+                relations: [
+                  ModelRelation(
+                    modelType: kOrderModelTypeName,
+                    link: [order.id],
+                  ),
+                ],
+              ),
+            );
+            ref.invalidate(expenseDetailProvider(expenseId));
+            if (!pickerContext.mounted) return;
+            Navigator.of(pickerContext).pop();
+          } catch (e) {
+            if (pickerContext.mounted) {
+              ScaffoldMessenger.of(
+                pickerContext,
+              ).showSnackBar(SnackBar(content: Text('$e')));
+            }
+          }
+        },
         borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
         child: Ink(
           decoration: BoxDecoration(
@@ -256,24 +275,42 @@ class _TransferCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate900,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      order.companyName ?? 'Unknown',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.slate900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      order.orderNumber,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (amount != null)
-                Text(
-                  formatMoney(amount),
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.teal600,
-                  ),
+              const SizedBox(width: 12),
+              Text(
+                formatMoney(order.total),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.teal600,
                 ),
+              ),
             ],
           ),
         ),

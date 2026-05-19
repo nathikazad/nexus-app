@@ -16,6 +16,7 @@ import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/expense/expense_list_view_model.dart';
 import 'widgets/expense_bills_section.dart';
 import 'widgets/expense_teller_links_section.dart';
+import 'widgets/expense_order_links_section.dart';
 import 'widgets/model_attribute_form_field.dart';
 import 'widgets/relation_picker.dart';
 import 'widgets/tag_picker.dart';
@@ -469,6 +470,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                         final rels = relsAll.where((rt) {
                                           final link = rt.link;
                                           return link.isNotEmpty &&
+                                              link != kOrderModelTypeName &&
                                               link != kTransferModelTypeName;
                                         }).toList();
                                         final rows = <Widget>[];
@@ -565,6 +567,10 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                   if (widget.expenseId != null) ...[
                                     const SizedBox(height: 24),
                                     ExpenseTellerLinksFormSection(
+                                      expenseId: widget.expenseId!,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ExpenseOrderLinksFormSection(
                                       expenseId: widget.expenseId!,
                                     ),
                                     const SizedBox(height: 24),
