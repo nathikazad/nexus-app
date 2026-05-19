@@ -79,9 +79,9 @@ BackendUrls resolve(BackendPreset p) {
       );
     case BackendPreset.piWan:
       return const BackendUrls(
-        graphqlHttp: 'https://graphql.supacharger.ai/graphql',
-        sockWs: 'wss://sock.supacharger.ai',
-        imageHttp: 'https://http.supacharger.ai',
+        graphqlHttp: 'https://graphql.nathikazad.com/graphql',
+        sockWs: 'wss://socket.nathikazad.com',
+        imageHttp: 'https://nexus.nathikazad.com',
       );
   }
 }

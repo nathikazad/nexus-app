@@ -17,8 +17,8 @@ void main() {
 
     test('CR11.2 normalizeHttpEndpointForCf upgrades CF http to https', () {
       expect(
-        normalizeHttpEndpointForCf('http://graphql.supacharger.ai/graphql'),
-        'https://graphql.supacharger.ai/graphql',
+        normalizeHttpEndpointForCf('http://graphql.nathikazad.com/graphql'),
+        'https://graphql.nathikazad.com/graphql',
       );
     });
 
@@ -40,9 +40,9 @@ void main() {
     test('CR11.4b pi WAN splits GraphQL, socket, and HTTP hosts', () {
       final u = resolve(BackendPreset.piWan);
 
-      expect(u.graphqlHttp, 'https://graphql.supacharger.ai/graphql');
-      expect(u.sockWs, 'wss://sock.supacharger.ai');
-      expect(u.imageHttp, 'https://http.supacharger.ai');
+      expect(u.graphqlHttp, 'https://graphql.nathikazad.com/graphql');
+      expect(u.sockWs, 'wss://socket.nathikazad.com');
+      expect(u.imageHttp, 'https://nexus.nathikazad.com');
     });
 
     test('CR11.5 login persists prefs', () async {

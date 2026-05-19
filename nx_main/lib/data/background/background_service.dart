@@ -19,8 +19,8 @@ import 'package:http/http.dart' as http;
 
 String _httpBaseFromSocketUrl(String socketUrl) {
   final uri = Uri.parse(socketUrl);
-  if (uri.host == 'sock.supacharger.ai') {
-    return 'https://http.supacharger.ai';
+  if (uri.host == 'socket.nathikazad.com') {
+    return 'https://nexus.nathikazad.com';
   }
   final scheme = uri.scheme == 'wss' ? 'https' : 'http';
   final port = uri.hasPort && uri.port == 8002 ? 8001 : uri.port;
@@ -101,6 +101,10 @@ class BleBackgroundService {
     final socketClient = SocketClient();
     TelemetryUploadManager? telemetryUploadManager;
     GpsUploadManager? gpsUploadManager;
+    bool appIsForeground = true;
+    String? gpsHttpBaseUrl;
+    Map<String, String> gpsHeaders = {};
+    String? gpsTimezoneLabel;
     String? appLogHttpBaseUrl;
     Map<String, String> appLogHeaders = {};
 
@@ -209,6 +213,40 @@ class BleBackgroundService {
         sw.stop();
         debugPrint('[Clock Sync] GET /time error: $e');
       }
+    }
+
+    Future<void> startGpsIfBackground(String reason) async {
+      if (appIsForeground) {
+        debugPrint('[GPS Upload] not starting in foreground reason=$reason');
+        return;
+      }
+      final base = gpsHttpBaseUrl;
+      if (base == null || base.isEmpty || gpsHeaders.isEmpty) {
+        debugPrint('[GPS Upload] not starting: missing upload session');
+        return;
+      }
+      gpsUploadManager ??= GpsUploadManager(
+        httpBaseUrl: base,
+        headers: gpsHeaders,
+        flushInterval: const Duration(minutes: 10),
+        timezoneLabel: gpsTimezoneLabel,
+      );
+      if (gpsUploadManager!.isRunning) {
+        debugPrint('[GPS Upload] already running reason=$reason');
+        return;
+      }
+      debugPrint('[GPS Upload] starting for background reason=$reason');
+      gpsUploadManager!.start();
+    }
+
+    Future<void> stopGpsForForeground(String reason) async {
+      final manager = gpsUploadManager;
+      if (manager == null || !manager.isRunning) {
+        debugPrint('[GPS Upload] already stopped in foreground reason=$reason');
+        return;
+      }
+      debugPrint('[GPS Upload] stopping for foreground reason=$reason');
+      await manager.stop(flushPending: true);
     }
 
     bleClient.onConnectionStateChanged = (state) {
@@ -494,15 +532,14 @@ class BleBackgroundService {
         },
       );
       await gpsUploadManager?.stop(flushPending: true);
-      gpsUploadManager = GpsUploadManager(
-        httpBaseUrl: uploadBase,
-        headers: {
-          'X-User-Id': userId,
-          if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
-        },
-        flushInterval: const Duration(minutes: 10),
-        timezoneLabel: localTimezoneOffsetLabel(),
-      )..start();
+      gpsUploadManager = null;
+      gpsHttpBaseUrl = uploadBase;
+      gpsHeaders = {
+        'X-User-Id': userId,
+        if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
+      };
+      gpsTimezoneLabel = localTimezoneOffsetLabel();
+      await startGpsIfBackground('socket.connect');
       await socketClient.disconnect();
       await socketClient.connect(url, headers: headers);
     });
@@ -510,12 +547,35 @@ class BleBackgroundService {
     service.on('socket.disconnect').listen((event) async {
       await gpsUploadManager?.stop(flushPending: true);
       gpsUploadManager = null;
+      gpsHttpBaseUrl = null;
+      gpsHeaders = {};
+      gpsTimezoneLabel = null;
       await socketClient.disconnect();
     });
 
     service.on('gps.flush').listen((event) async {
       final ok = await gpsUploadManager?.flush();
       debugPrint('[GPS Upload] foreground flush requested ok=${ok ?? true}');
+    });
+
+    service.on('app.lifecycle').listen((event) async {
+      final state = event?['state'] as String?;
+      debugPrint('[GPS Upload] app lifecycle state=$state');
+      switch (state) {
+        case 'resumed':
+        case 'inactive':
+          appIsForeground = true;
+          await stopGpsForForeground(state ?? 'foreground');
+          break;
+        case 'paused':
+        case 'hidden':
+        case 'detached':
+          appIsForeground = false;
+          await startGpsIfBackground(state ?? 'background');
+          break;
+        default:
+          break;
+      }
     });
 
     // Socket text events
@@ -541,6 +601,9 @@ class BleBackgroundService {
     service.on('stop').listen((event) async {
       await gpsUploadManager?.stop(flushPending: true);
       gpsUploadManager = null;
+      gpsHttpBaseUrl = null;
+      gpsHeaders = {};
+      gpsTimezoneLabel = null;
       await bleClient.disconnect(intentional: true);
       await socketClient.disconnect();
       service.stopSelf();
@@ -913,6 +976,10 @@ class BleBackgroundService {
 
   void flushGpsBacklog() {
     _service.invoke('gps.flush');
+  }
+
+  void updateAppLifecycleState(AppLifecycleState state) {
+    _service.invoke('app.lifecycle', {'state': state.name});
   }
 
   /// Send text to the socket server

@@ -1,4 +1,4 @@
-/// Cloudflare Access service token for [supacharger.ai] tunnel routes.
+/// Cloudflare Access service token for Nexus WAN tunnel routes.
 class CfAccess {
   CfAccess._();
 
@@ -12,8 +12,8 @@ class CfAccess {
       };
 
   static bool endpointNeedsCfAccess(String url) =>
-      url.contains('supacharger.ai');
+      url.contains('nathikazad.com') || url.contains('supacharger.ai');
 
-  /// Attach [headers] for supacharger.ai in all build modes (debug pi-wan needs CF).
+  /// Attach [headers] for WAN routes in all build modes (debug pi-wan needs CF).
   static bool shouldAttachHeaders(String url) => endpointNeedsCfAccess(url);
 }

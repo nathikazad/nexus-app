@@ -31,6 +31,8 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
     final processing = dmap?['processing_status']?.toString();
     final cpName = _counterpartyNameFromPayload(p);
     final amount = num.tryParse(p['amount']?.toString().trim() ?? '');
+    final accountNames = ref.watch(tellerAccountNameByIdProvider);
+    final accountLabel = _accountLabelFromPayload(p, accountNames);
 
     final listBody = ListView(
       padding: EdgeInsets.fromLTRB(
@@ -60,6 +62,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
           label: 'Description',
           value: (p['description'] as String?)?.trim() ?? '—',
         ),
+        _DetailRow(label: 'Account', value: accountLabel ?? '—'),
         _DetailRow(label: 'Type', value: p['type']?.toString() ?? '—'),
         _DetailRow(label: 'Status', value: p['status']?.toString() ?? '—'),
         _DetailRow(label: 'Id', value: p['id']?.toString() ?? '—'),
@@ -130,6 +133,16 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
     final raw = p['date'];
     if (raw == null) return null;
     return raw.toString();
+  }
+
+  static String? _accountLabelFromPayload(
+    Map<String, dynamic> payload,
+    Map<String, String> accountNames,
+  ) {
+    final raw = payload['account_id']?.toString().trim();
+    if (raw == null || raw.isEmpty) return null;
+    final name = accountNames[raw]?.trim();
+    return name == null || name.isEmpty ? raw : name;
   }
 }
 

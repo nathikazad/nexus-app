@@ -71,14 +71,14 @@ void main() {
       final mock = MockClient((request) async {
         return http.Response(
           '''
-{"images":[{"url":"https://sock.supacharger.ai/images/file?name=250418120000.jpg"}]}
+{"images":[{"url":"https://socket.nathikazad.com/images/file?name=250418120000.jpg"}]}
 ''',
           200,
         );
       });
       final day = DateTime(2025, 4, 18);
       final images = await fetchImagesForDay(
-        'https://http.supacharger.ai',
+        'https://nexus.nathikazad.com',
         'u',
         'necklace',
         day,
@@ -86,7 +86,7 @@ void main() {
       );
       expect(
         images.single.url,
-        'https://http.supacharger.ai/images/file?name=250418120000.jpg',
+        'https://nexus.nathikazad.com/images/file?name=250418120000.jpg',
       );
     });
   });

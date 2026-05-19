@@ -13,7 +13,7 @@ void main() {
       expect(request.method, 'POST');
       expect(
         request.url.toString(),
-        'https://http.supacharger.ai/import-recipe',
+        'https://nexus.nathikazad.com/import-recipe',
       );
       expect(request.headers['x-user-id'], '1');
       expect(jsonDecode(request.body), {'url': 'https://example.com/recipe'});

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/goals.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:nx_expense/data/expense/expense_struct.dart';
 import 'package:nx_expense/data/expense/kgql_expense_repository.dart';
 import 'package:nx_expense/data/schema/model_type_view_mapper.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart';
+import 'package:nx_expense/data/teller/teller_accounts_api.dart';
 import 'package:nx_expense/data/teller/teller_timeline_api.dart';
 import 'package:nx_expense/data/transfer/kgql_transfer_repository.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
@@ -239,6 +241,28 @@ final relatedModelsForTypeProvider =
 final relatedModelsProvider = relatedModelsForTypeProvider;
 
 // ── Teller timeline (data + Riverpod) ─────────────────────────────────────────
+
+final tellerAccountsProvider = FutureProvider<List<TellerLinkedAccount>>((
+  ref,
+) async {
+  final base = ref.watch(imageBaseUrlProvider);
+  final userId = ref.watch(userIdProvider);
+  if (base == null || base.isEmpty || userId == null || userId.isEmpty) {
+    return const [];
+  }
+  return fetchTellerAccounts(imageBaseUrl: base, userId: userId);
+});
+
+final tellerAccountNameByIdProvider = Provider<Map<String, String>>((ref) {
+  final accounts = ref
+      .watch(tellerAccountsProvider)
+      .maybeWhen(data: (value) => value, orElse: () => const []);
+  return {
+    for (final account in accounts)
+      if (account.accountId.trim().isNotEmpty)
+        account.accountId: account.displayName,
+  };
+});
 
 final tellerTransactionsProvider = FutureProvider<List<TellerTransaction>>((
   ref,

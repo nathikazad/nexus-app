@@ -41,6 +41,7 @@ dependencies:
   http: ^1.2.2
   http_parser: ^4.1.0
   image_picker: ^1.1.2
+  teller_connect: ^0.1.0+1
 
 dependency_overrides:
   connectivity_plus: 6.1.4

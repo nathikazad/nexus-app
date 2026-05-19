@@ -140,13 +140,13 @@ class GpsUploadManager {
         if (_pending.isEmpty) {
           _recordLatestSample(reason: 'stream-start');
         } else {
-          debugPrint(
-            '[GPS Upload] stream update '
-            'time=${sample.time.toLocal().toIso8601String()} '
-            'lat=${sample.latitude.toStringAsFixed(6)} '
-            'lon=${sample.longitude.toStringAsFixed(6)} '
-            'accuracy_m=${sample.accuracyM.toStringAsFixed(1)}',
-          );
+          // debugPrint(
+          //   '[GPS Upload] stream update '
+          //   'time=${sample.time.toLocal().toIso8601String()} '
+          //   'lat=${sample.latitude.toStringAsFixed(6)} '
+          //   'lon=${sample.longitude.toStringAsFixed(6)} '
+          //   'accuracy_m=${sample.accuracyM.toStringAsFixed(1)}',
+          // );
         }
       },
       onError: (Object error, StackTrace stackTrace) {

@@ -21,6 +21,11 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(bleBackgroundServiceProvider)
+          .updateAppLifecycleState(AppLifecycleState.resumed);
+    });
   }
 
   @override
@@ -31,9 +36,7 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.read(bleBackgroundServiceProvider).flushGpsBacklog();
-    }
+    ref.read(bleBackgroundServiceProvider).updateAppLifecycleState(state);
   }
 
   @override

@@ -7,8 +7,11 @@ import 'package:nx_db/goals.dart';
 import 'package:nx_db/kgql.dart';
 
 import 'package:nx_expense/core/layout/layout.dart';
+import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
+import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
+import 'package:nx_expense/domain/expense/expense.dart';
 import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/features/expense/widgets/expense_card.dart';
@@ -985,17 +988,10 @@ class _BudgetDetailContentState extends ConsumerState<_BudgetDetailContent> {
                   text: 'No expenses for this budget.',
                 );
               }
-              return Column(
-                children: [
-                  for (var i = 0; i < expenses.length; i++) ...[
-                    ExpenseCard(
-                      expense: expenses[i],
-                      schema: schema,
-                      onTap: () => context.push('/expense/${expenses[i].id}'),
-                    ),
-                    if (i != expenses.length - 1) const SizedBox(height: 10),
-                  ],
-                ],
+              return _BudgetGroupedExpenseList(
+                expenses: expenses,
+                schema: schema,
+                dateRange: _range,
               );
             },
           ),
@@ -1046,6 +1042,100 @@ class _BudgetDetailStat extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _BudgetGroupedExpenseList extends StatelessWidget {
+  const _BudgetGroupedExpenseList({
+    required this.expenses,
+    required this.schema,
+    required this.dateRange,
+  });
+
+  final List<Expense> expenses;
+  final ModelTypeView schema;
+  final DateTimeRange dateRange;
+
+  @override
+  Widget build(BuildContext context) {
+    final sortMode = defaultExpenseSortModeForDateRange(dateRange);
+    final sorted = [...expenses]
+      ..sort((a, b) {
+        final va = expenseDateSortKey(a);
+        final vb = expenseDateSortKey(b);
+        return sortMode == ExpenseSortMode.dateDesc
+            ? vb.compareTo(va)
+            : va.compareTo(vb);
+      });
+    final amountKey = schema.primaryNumberAttributeKey;
+    final dailyTotals = <String, num>{};
+
+    if (amountKey != null) {
+      for (final expense in sorted) {
+        if (expenseIgnoredForTotals(expense)) continue;
+        final label = expenseDateCellLabel(expense);
+        dailyTotals[label] =
+            (dailyTotals[label] ?? 0) + numAttr(expense, amountKey);
+      }
+    }
+
+    final children = <Widget>[];
+    String? lastDate;
+    for (final expense in sorted) {
+      final dateLabel = expenseDateCellLabel(expense);
+      if (dateLabel != lastDate) {
+        final dayTotal = dailyTotals[dateLabel];
+        children.add(
+          Padding(
+            padding: EdgeInsets.only(top: lastDate == null ? 0 : 12, bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(
+                  child: Text(
+                    dateLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                      color: AppColors.slate400,
+                    ),
+                  ),
+                ),
+                if (dayTotal != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    formatMoney(dayTotal),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                      color: AppColors.teal600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+        lastDate = dateLabel;
+      }
+
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ExpenseCard(
+            expense: expense,
+            schema: schema,
+            onTap: () => context.push('/expense/${expense.id}'),
+          ),
+        ),
+      );
+    }
+
+    return Column(children: children);
   }
 }
 
