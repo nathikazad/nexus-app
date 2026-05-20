@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:logger/logger.dart';
+import 'package:opus_dart/opus_dart.dart';
 
 import 'opus_codec.dart';
 
@@ -13,8 +14,9 @@ class NxWavAudioPlayer {
     this.sampleRate = 16000,
     this.channels = 1,
     this.bitsPerSample = 16,
-    this.chunksPerBatch = 20,
+    this.chunksPerBatch = 40,
     this.batchTimeout = const Duration(milliseconds: 200),
+    this.bufferSize = 8192,
   });
 
   final int sampleRate;
@@ -22,139 +24,137 @@ class NxWavAudioPlayer {
   final int bitsPerSample;
   final int chunksPerBatch;
   final Duration batchTimeout;
+  final int bufferSize;
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  final Queue<String> _queuedFiles = Queue<String>();
-  final List<Uint8List> _currentBatch = [];
-  StreamSubscription<void>? _completeSubscription;
-  Timer? _batchTimer;
+  final FlutterSoundPlayer _player = FlutterSoundPlayer(logLevel: Level.off);
+  final Queue<Uint8List> _pcmQueue = Queue<Uint8List>();
+  SimpleOpusDecoder? _decoder;
+  Future<void>? _startFuture;
+  bool _playerOpen = false;
+  bool _streamStarted = false;
+  bool _isFeeding = false;
   bool _isPlaying = false;
-  bool _isCreatingBatch = false;
-  bool _isTransitioningPlayback = false;
+  Future<void> _opusDecodeChain = Future<void>.value();
 
   void Function(bool isPlaying)? onPlaybackStateChanged;
 
-  Future<void> addOpusPacket(Uint8List opus) async {
-    final pcm = await NxOpusCodec.decodeToPcm16(
-      [opus],
-      sampleRate: sampleRate,
-      channels: channels,
-    );
-    await addPcmChunk(pcm);
+  Future<void> addOpusPacket(Uint8List opus) {
+    final packet = Uint8List.fromList(opus);
+    final next = _opusDecodeChain.then((_) => _decodeAndAddOpusPacket(packet));
+    _opusDecodeChain = next.catchError((Object error) {
+      debugPrint('[nx_voice player] opus decode error: $error');
+    });
+    return next;
+  }
+
+  Future<void> _decodeAndAddOpusPacket(Uint8List opus) async {
+    await NxOpusCodec.initialize();
+    _decoder ??= SimpleOpusDecoder(sampleRate: sampleRate, channels: channels);
+    final samples = _decoder!.decode(input: opus);
+    await addPcmChunk(Uint8List.sublistView(samples));
   }
 
   Future<void> addPcmChunk(Uint8List pcm) async {
-    _batchTimer?.cancel();
-    _currentBatch.add(pcm);
-    if (_currentBatch.length >= chunksPerBatch) {
-      await _createBatch();
-    } else {
-      _batchTimer = Timer(batchTimeout, () {
-        unawaited(_createBatch());
-      });
-    }
-
-    if (!_isPlaying && _queuedFiles.isNotEmpty) {
-      _startPlayback();
-    }
+    if (pcm.isEmpty) return;
+    _pcmQueue.add(Uint8List.fromList(pcm));
+    await _ensureStarted();
+    _markPlaying(true);
+    unawaited(_drainQueue());
   }
 
   Future<void> flush() async {
-    _batchTimer?.cancel();
-    await _createBatch();
-    if (!_isPlaying && _queuedFiles.isNotEmpty) {
-      _startPlayback();
-    }
+    await _opusDecodeChain;
+    await _drainQueue();
+    _resetDecoder();
   }
 
   Future<void> stop() async {
-    _batchTimer?.cancel();
-    await _audioPlayer.stop();
-    _queuedFiles.clear();
-    _currentBatch.clear();
-    _isPlaying = false;
-    onPlaybackStateChanged?.call(false);
+    _pcmQueue.clear();
+    _isFeeding = false;
+    _opusDecodeChain = Future<void>.value();
+    _resetDecoder();
+    if (_streamStarted || _playerOpen) {
+      try {
+        await _player.stopPlayer();
+      } catch (error) {
+        debugPrint('[nx_voice player] stopPlayer error: $error');
+      }
+    }
+    _streamStarted = false;
+    _markPlaying(false);
   }
 
   Future<void> dispose() async {
     await stop();
-    await _completeSubscription?.cancel();
-    await _audioPlayer.dispose();
+    if (_playerOpen) {
+      try {
+        await _player.closePlayer();
+      } catch (error) {
+        debugPrint('[nx_voice player] closePlayer error: $error');
+      }
+      _playerOpen = false;
+    }
   }
 
-  Future<void> _createBatch() async {
-    if (_isCreatingBatch || _currentBatch.isEmpty) return;
-    _isCreatingBatch = true;
-    _batchTimer?.cancel();
+  Future<void> _ensureStarted() {
+    return _startFuture ??= _startStream();
+  }
 
+  Future<void> _startStream() async {
     try {
-      final batch = List<Uint8List>.from(_currentBatch);
-      _currentBatch.clear();
-      final total = batch.fold<int>(0, (sum, chunk) => sum + chunk.length);
-      final pcm = Uint8List(total);
-      var offset = 0;
-      for (final chunk in batch) {
-        pcm.setRange(offset, offset + chunk.length, chunk);
-        offset += chunk.length;
+      if (!_playerOpen) {
+        await _player.openPlayer();
+        _playerOpen = true;
       }
-
-      final wav = pcmToWav(
-        pcm,
-        sampleRate: sampleRate,
-        channels: channels,
-        bitsPerSample: bitsPerSample,
-      );
-      String source;
-      if (kIsWeb) {
-        source = Uri.dataFromBytes(wav, mimeType: 'audio/wav').toString();
-      } else {
-        final dir = await getTemporaryDirectory();
-        final file = File(
-          '${dir.path}/nx_voice_${DateTime.now().microsecondsSinceEpoch}.wav',
+      if (!_streamStarted) {
+        await _player.startPlayerFromStream(
+          codec: Codec.pcm16,
+          interleaved: true,
+          numChannels: channels,
+          sampleRate: sampleRate,
+          bufferSize: bufferSize,
+          onBufferUnderflow: () {
+            if (_pcmQueue.isEmpty && !_isFeeding) {
+              _markPlaying(false);
+            }
+          },
         );
-        await file.writeAsBytes(wav);
-        source = file.path;
+        _streamStarted = true;
       }
-      _queuedFiles.add(source);
     } finally {
-      _isCreatingBatch = false;
+      _startFuture = null;
     }
   }
 
-  void _startPlayback() {
-    _isPlaying = true;
-    onPlaybackStateChanged?.call(true);
-    _completeSubscription?.cancel();
-    _completeSubscription = _audioPlayer.onPlayerComplete.listen((_) {
-      if (_isTransitioningPlayback) return;
-      if (_queuedFiles.isNotEmpty) {
-        Future<void>.delayed(const Duration(milliseconds: 50), _playNext);
-      } else {
-        _isPlaying = false;
-        onPlaybackStateChanged?.call(false);
-      }
-    });
-    unawaited(_playNext());
-  }
-
-  Future<void> _playNext() async {
-    if (_queuedFiles.isEmpty) {
-      _isPlaying = false;
-      onPlaybackStateChanged?.call(false);
-      return;
-    }
-
-    final source = _queuedFiles.removeFirst();
-    _isTransitioningPlayback = true;
+  Future<void> _drainQueue() async {
+    if (_isFeeding) return;
+    _isFeeding = true;
     try {
-      if (kIsWeb && source.startsWith('data:')) {
-        await _audioPlayer.play(UrlSource(source));
-      } else {
-        await _audioPlayer.play(DeviceFileSource(source));
+      await _ensureStarted();
+      while (_pcmQueue.isNotEmpty && _streamStarted) {
+        final pcm = _pcmQueue.removeFirst();
+        await _player.feedUint8FromStream(pcm);
       }
+    } catch (error) {
+      debugPrint('[nx_voice player] feed error: $error');
+      _markPlaying(false);
     } finally {
-      _isTransitioningPlayback = false;
+      _isFeeding = false;
+      if (_pcmQueue.isNotEmpty) {
+        unawaited(_drainQueue());
+      }
     }
+  }
+
+  void _markPlaying(bool value) {
+    if (_isPlaying == value) return;
+    _isPlaying = value;
+    onPlaybackStateChanged?.call(value);
+  }
+
+  void _resetDecoder() {
+    _decoder?.destroy();
+    _decoder = null;
   }
 
   static Uint8List pcmToWav(
