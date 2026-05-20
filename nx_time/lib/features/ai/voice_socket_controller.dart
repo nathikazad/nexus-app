@@ -20,13 +20,28 @@ class VoiceTranscriptMessage {
     required this.role,
     required this.text,
     this.turnkey,
+    this.ephemeral = false,
   });
 
   final String role;
   final String text;
   final String? turnkey;
+  final bool ephemeral;
 
   bool get fromUser => role == 'user';
+
+  VoiceTranscriptMessage copyWith({
+    String? text,
+    String? turnkey,
+    bool? ephemeral,
+  }) {
+    return VoiceTranscriptMessage(
+      role: role,
+      text: text ?? this.text,
+      turnkey: turnkey ?? this.turnkey,
+      ephemeral: ephemeral ?? this.ephemeral,
+    );
+  }
 }
 
 class VoiceSocketState {
@@ -129,6 +144,75 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         'turn_meta': turn.metaForPacket(0),
       },
     };
+  }
+
+  void _applyTranscript({
+    required String role,
+    required String text,
+    required String? turnkey,
+  }) {
+    final messages = List<VoiceTranscriptMessage>.from(state.messages);
+    final replaceIndex = role == 'assistant'
+        ? _findMessageIndex(messages, role: role, turnkey: turnkey)
+        : -1;
+    if (replaceIndex >= 0) {
+      messages[replaceIndex] = messages[replaceIndex].copyWith(
+        text: text,
+        turnkey: turnkey,
+        ephemeral: false,
+      );
+    } else {
+      messages.add(
+        VoiceTranscriptMessage(role: role, text: text, turnkey: turnkey),
+      );
+    }
+    state = state.copyWith(overlayVisible: true, messages: messages);
+  }
+
+  void _applyTranscriptDelta({
+    required String role,
+    required String text,
+    required String? turnkey,
+    required bool ephemeral,
+  }) {
+    if (role != 'assistant') return;
+    final messages = List<VoiceTranscriptMessage>.from(state.messages);
+    final index = _findMessageIndex(messages, role: role, turnkey: turnkey);
+    if (index >= 0) {
+      final existing = messages[index];
+      messages[index] = existing.copyWith(
+        text: ephemeral || existing.ephemeral ? text : existing.text + text,
+        turnkey: turnkey,
+        ephemeral: ephemeral,
+      );
+    } else {
+      messages.add(
+        VoiceTranscriptMessage(
+          role: role,
+          text: text,
+          turnkey: turnkey,
+          ephemeral: ephemeral,
+        ),
+      );
+    }
+    state = state.copyWith(overlayVisible: true, messages: messages);
+  }
+
+  int _findMessageIndex(
+    List<VoiceTranscriptMessage> messages, {
+    required String role,
+    required String? turnkey,
+  }) {
+    for (var index = messages.length - 1; index >= 0; index--) {
+      final message = messages[index];
+      if (message.role != role) continue;
+      if (turnkey == null ||
+          message.turnkey == null ||
+          message.turnkey == turnkey) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   void dismissOverlay() {
@@ -404,37 +488,47 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         try {
           final decoded = jsonDecode(packet.text);
           if (decoded is Map<String, dynamic> &&
-              decoded['type'] == 'transcript') {
+              (decoded['type'] == 'transcript' ||
+                  decoded['type'] == 'transcript-delta')) {
             final role = decoded['role'];
             final text = decoded['text'];
             final turnkey = decoded['turnkey'];
+            final isDelta = decoded['type'] == 'transcript-delta';
+            final ephemeral = decoded['ephemeral'] == true;
             debugPrint(
-              '[nx_time voice] transcript $role '
-              'turnkey=$turnkey: $text',
+              '[nx_time voice] ${isDelta ? 'transcript-delta' : 'transcript'} '
+              '$role turnkey=$turnkey ephemeral=$ephemeral: $text',
             );
             if (role is String && text is String && text.trim().isNotEmpty) {
               _uploadAppLog(
-                eventName: 'voice_transcript_text',
+                eventName: isDelta
+                    ? 'voice_transcript_delta'
+                    : 'voice_transcript_text',
                 category: 'audio',
                 message: text,
                 payload: {
                   'role': role,
                   'text': text,
+                  'is_delta': isDelta,
+                  if (isDelta) 'ephemeral': ephemeral,
                   if (turnkey is String) 'turnkey': turnkey,
                   ..._turnPayload(_lastTurn),
                 },
               );
-              state = state.copyWith(
-                overlayVisible: true,
-                messages: [
-                  ...state.messages,
-                  VoiceTranscriptMessage(
-                    role: role,
-                    text: text,
-                    turnkey: turnkey is String ? turnkey : null,
-                  ),
-                ],
-              );
+              if (isDelta) {
+                _applyTranscriptDelta(
+                  role: role,
+                  text: text,
+                  turnkey: turnkey is String ? turnkey : null,
+                  ephemeral: ephemeral,
+                );
+              } else {
+                _applyTranscript(
+                  role: role,
+                  text: text,
+                  turnkey: turnkey is String ? turnkey : null,
+                );
+              }
             }
           } else {
             debugPrint('[nx_time voice] text: ${packet.text}');

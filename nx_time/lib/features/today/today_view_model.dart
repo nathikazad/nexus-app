@@ -143,7 +143,12 @@ TodayActivity _activityFromAction(
 ) {
   final start = m.startTime;
   final end = m.endTime;
-  final title = m.name.isNotEmpty ? m.name : 'Action';
+  final modelTypeName = m.modelTypeName;
+  final title = m.name.isNotEmpty
+      ? m.name
+      : (modelTypeName != null && modelTypeName.isNotEmpty)
+      ? modelTypeName
+      : 'Action';
   final rangeLabel = formatTimeRange(timeFmt, start, end);
   final durationLabel = formatDurationHm(start, end);
   final color = colors.forId(m.modelTypeId, name: m.modelTypeName);
