@@ -1,32 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/features/ai/voice_socket_controller.dart';
 
-/// Voice mode UI (`overlay-voice` in reference). Dimmed region stops above the ~80px bottom nav.
-Future<void> showVoiceListeningOverlay(BuildContext context) {
-  return Navigator.of(context).push<void>(
-    PageRouteBuilder<void>(
-      opaque: false,
-      barrierDismissible: true,
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (context, animation, _) {
-        return FadeTransition(
-          opacity: animation,
-          child: const SizedBox.expand(child: _VoiceOverlayBody()),
-        );
-      },
-    ),
-  );
-}
-
-class _VoiceOverlayBody extends StatelessWidget {
-  const _VoiceOverlayBody();
+/// Voice mode UI (`overlay-voice` in reference). Dimmed region stops above the bottom nav.
+class VoiceListeningOverlay extends ConsumerWidget {
+  const VoiceListeningOverlay({super.key});
 
   static const double _navReserve = 80;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voiceState = ref.watch(voiceSocketControllerProvider);
     final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Stack(
@@ -40,7 +26,9 @@ class _VoiceOverlayBody extends StatelessWidget {
           bottom: _navReserve + bottom,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).maybePop(),
+            onTap: () => ref
+                .read(voiceSocketControllerProvider.notifier)
+                .dismissOverlay(),
             child: Container(color: const Color(0x660F172A)),
           ),
         ),
@@ -52,9 +40,16 @@ class _VoiceOverlayBody extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _VoiceMessagePair(),
-              const SizedBox(height: 24),
-              Center(child: _ListeningPill()),
+              _VoiceMessages(messages: voiceState.messages),
+              if (voiceState.active || voiceState.error != null) ...[
+                const SizedBox(height: 24),
+                Center(
+                  child: _ListeningPill(
+                    phase: voiceState.phase,
+                    error: voiceState.error,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -63,94 +58,82 @@ class _VoiceOverlayBody extends StatelessWidget {
   }
 }
 
-class _VoiceMessagePair extends StatelessWidget {
-  const _VoiceMessagePair();
+class _VoiceMessages extends StatelessWidget {
+  const _VoiceMessages({required this.messages});
+
+  final List<VoiceTranscriptMessage> messages;
 
   @override
   Widget build(BuildContext context) {
+    if (messages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final visible = messages.length <= 4
+        ? messages
+        : messages.sublist(messages.length - 4);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.85,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-              color: AppColors.accent,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(4),
-              ),
-              boxShadow: [BoxShadow(color: Color(0x26000000), blurRadius: 8)],
-            ),
-            child: const Text(
-              'Move the blog post task to Monday',
-              style: TextStyle(fontSize: 14, height: 1.45, color: Colors.white),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.85,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-                bottomLeft: Radius.circular(4),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Done — moved 'Draft blog post outline' from today to Monday, Apr 20.",
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.45,
-                    color: AppColors.slate900,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: AppColors.accent,
-                  ),
-                  child: const Text(
-                    'Undo',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        for (var i = 0; i < visible.length; i++) ...[
+          _VoiceBubble(message: visible[i]),
+          if (i != visible.length - 1) const SizedBox(height: 12),
+        ],
       ],
     );
   }
 }
 
+class _VoiceBubble extends StatelessWidget {
+  const _VoiceBubble({required this.message});
+
+  final VoiceTranscriptMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final fromUser = message.fromUser;
+    return Align(
+      alignment: fromUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.85,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: fromUser ? AppColors.accent : Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(fromUser ? 16 : 4),
+            bottomRight: Radius.circular(fromUser ? 4 : 16),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: fromUser ? 0.15 : 0.08),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.45,
+            color: fromUser ? Colors.white : AppColors.slate900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ListeningPill extends StatefulWidget {
+  const _ListeningPill({required this.phase, this.error});
+
+  final VoiceSocketPhase phase;
+  final String? error;
+
   @override
   State<_ListeningPill> createState() => _ListeningPillState();
 }
@@ -174,8 +157,22 @@ class _ListeningPillState extends State<_ListeningPill>
     super.dispose();
   }
 
+  String get _label {
+    if (widget.error != null) return widget.error!;
+    return switch (widget.phase) {
+      VoiceSocketPhase.connecting => 'Connecting...',
+      VoiceSocketPhase.recording => 'Listening...',
+      VoiceSocketPhase.waiting => 'Thinking...',
+      VoiceSocketPhase.responding => 'Responding...',
+      VoiceSocketPhase.error => 'Voice unavailable',
+      VoiceSocketPhase.idle => 'Done',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isError =
+        widget.error != null || widget.phase == VoiceSocketPhase.error;
     return Material(
       color: Colors.white,
       elevation: 8,
@@ -189,46 +186,55 @@ class _ListeningPillState extends State<_ListeningPill>
             Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEF4444),
+              decoration: BoxDecoration(
+                color: isError ? AppColors.slate400 : const Color(0xFFEF4444),
                 shape: BoxShape.circle,
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'Listening...',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.slate600,
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.62,
+              ),
+              child: Text(
+                _label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate600,
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(4, (i) {
-                    final t = (_controller.value + i * 0.15) % 1.0;
-                    final h =
-                        6.0 + 8 * (0.5 + 0.5 * (t < 0.5 ? t * 2 : 2 - t * 2));
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 3),
-                      child: Container(
-                        width: 2,
-                        height: h,
-                        decoration: BoxDecoration(
-                          color: AppColors.slate300,
-                          borderRadius: BorderRadius.circular(1),
+            if (!isError) ...[
+              const SizedBox(width: 10),
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: List.generate(4, (i) {
+                      final t = (_controller.value + i * 0.15) % 1.0;
+                      final h =
+                          6.0 + 8 * (0.5 + 0.5 * (t < 0.5 ? t * 2 : 2 - t * 2));
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 3),
+                        child: Container(
+                          width: 2,
+                          height: h,
+                          decoration: BoxDecoration(
+                            color: AppColors.slate300,
+                            borderRadius: BorderRadius.circular(1),
+                          ),
                         ),
-                      ),
-                    );
-                  }),
-                );
-              },
-            ),
+                      );
+                    }),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

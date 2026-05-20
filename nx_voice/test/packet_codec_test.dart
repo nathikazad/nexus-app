@@ -70,6 +70,32 @@ void main() {
     expect(eof.packetIndex, 6);
   });
 
+  test('audio turn keeps nonce and turn id across packet metadata', () {
+    final turn = NxVoiceAudioTurn(streamIndex: 18, turnRandom: 11, turnId: 2);
+
+    final first = NxVoicePacketCodec.parse(
+      NxVoicePacketCodec.serializeAudioChunk(
+        Uint8List.fromList([1]),
+        streamIndex: turn.streamIndex,
+        meta: turn.metaForPacket(0),
+      ),
+    ) as NxVoiceAudioChunk;
+    final eof = NxVoicePacketCodec.parse(
+      NxVoicePacketCodec.serializeAudioEof(
+        streamIndex: turn.streamIndex,
+        meta: turn.metaForPacket(9),
+      ),
+    ) as NxVoiceAudioEof;
+
+    expect(turn.turnkey, '11:2');
+    expect(first.turnRandom, 11);
+    expect(first.turnId, 2);
+    expect(first.packetIndex, 0);
+    expect(eof.turnRandom, 11);
+    expect(eof.turnId, 2);
+    expect(eof.packetIndex, 9);
+  });
+
   test('parses legacy server device request layout', () {
     final payload = utf8.encode(jsonEncode({'action': 'get_gps'}));
     final raw = Uint8List(12 + payload.length);

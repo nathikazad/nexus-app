@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 enum NxVoicePacketType {
@@ -96,6 +97,38 @@ class NxVoiceUnknownPacket extends NxVoicePacket {
   const NxVoiceUnknownPacket(this.bytes);
 
   final Uint8List bytes;
+}
+
+class NxVoiceAudioTurn {
+  NxVoiceAudioTurn({
+    required this.streamIndex,
+    required this.turnRandom,
+    required this.turnId,
+  });
+
+  factory NxVoiceAudioTurn.create({required int streamIndex}) {
+    return NxVoiceAudioTurn(
+      streamIndex: streamIndex,
+      turnRandom: _random.nextInt(16),
+      turnId: streamIndex & 0x0F,
+    );
+  }
+
+  static final Random _random = Random.secure();
+
+  final int streamIndex;
+  final int turnRandom;
+  final int turnId;
+
+  String get turnkey => '$turnRandom:$turnId';
+
+  int metaForPacket(int packetIndex) {
+    return NxVoicePacketCodec.audioMeta(
+      turnRandom: turnRandom,
+      turnId: turnId,
+      packetIndex: packetIndex,
+    );
+  }
 }
 
 class NxVoicePacketCodec {

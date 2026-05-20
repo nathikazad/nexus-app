@@ -11,7 +11,7 @@ import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
-import 'package:nx_time/features/ai/ai_chat_page.dart';
+import 'package:nx_time/features/ai/voice_listening_overlay.dart';
 import 'package:nx_time/features/ai/voice_socket_controller.dart';
 import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
@@ -101,18 +101,6 @@ class _AppShellState extends ConsumerState<AppShell>
     }
   }
 
-  void _onAiTap() {
-    Navigator.of(context).push<void>(
-      PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (_, __, ___) => const AiChatPage(),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final snapshotAsync = ref.watch(todaySnapshotProvider);
@@ -157,97 +145,106 @@ class _AppShellState extends ConsumerState<AppShell>
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _index,
+      body: Stack(
         children: [
-          snapshotAsync.when(
-            data: (snapshot) => TodayPage(
-              snapshot: snapshot,
-              onActivityTap: (index) {
-                final row = index < snapshot.umbrellaRows.length
-                    ? snapshot.umbrellaRows[index]
-                    : null;
-                final Action? rowAction = index < snapshot.sourceActions.length
-                    ? snapshot.sourceActions[index]
-                    : null;
-                late final ActivityDetailArgs args;
-                if (row != null && row.children.isNotEmpty) {
-                  args = activityDetailArgsForUmbrella(
-                    row,
-                    snapshot.dayDateLabel,
-                    colors,
-                  );
-                } else if (rowAction != null) {
-                  args = activityDetailArgsForAction(
-                    rowAction,
-                    snapshot.dayDateLabel,
-                    colors,
-                  );
-                } else {
-                  args = activityDetailArgsForTodayRow(
-                    snapshot.actions[index],
-                    snapshot.dayDateLabel,
-                  );
-                }
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => ActivityDetailPage(args: args),
+          IndexedStack(
+            index: _index,
+            children: [
+              snapshotAsync.when(
+                data: (snapshot) => TodayPage(
+                  snapshot: snapshot,
+                  onActivityTap: (index) {
+                    final row = index < snapshot.umbrellaRows.length
+                        ? snapshot.umbrellaRows[index]
+                        : null;
+                    final Action? rowAction =
+                        index < snapshot.sourceActions.length
+                        ? snapshot.sourceActions[index]
+                        : null;
+                    late final ActivityDetailArgs args;
+                    if (row != null && row.children.isNotEmpty) {
+                      args = activityDetailArgsForUmbrella(
+                        row,
+                        snapshot.dayDateLabel,
+                        colors,
+                      );
+                    } else if (rowAction != null) {
+                      args = activityDetailArgsForAction(
+                        rowAction,
+                        snapshot.dayDateLabel,
+                        colors,
+                      );
+                    } else {
+                      args = activityDetailArgsForTodayRow(
+                        snapshot.actions[index],
+                        snapshot.dayDateLabel,
+                      );
+                    }
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => ActivityDetailPage(args: args),
+                      ),
+                    );
+                  },
+                  onChildTap: (rowIndex, childIndex) {
+                    final row = snapshot.umbrellaRows[rowIndex];
+                    if (childIndex < 0 || childIndex >= row.children.length) {
+                      return;
+                    }
+                    final child = row.children[childIndex];
+                    final args = activityDetailArgsForAction(
+                      child,
+                      snapshot.dayDateLabel,
+                      colors,
+                    );
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => ActivityDetailPage(args: args),
+                      ),
+                    );
+                  },
+                  onAddManualTap: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ActionEditPage(),
+                      ),
+                    );
+                  },
+                  onLogTap: (log) {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            LogEditPage(mode: LogEditMode.edit, initial: log),
+                      ),
+                    );
+                  },
+                  onAddLogTap: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LogEditPage(),
+                      ),
+                    );
+                  },
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Could not load Actions: $e'),
                   ),
-                );
-              },
-              onChildTap: (rowIndex, childIndex) {
-                final row = snapshot.umbrellaRows[rowIndex];
-                if (childIndex < 0 || childIndex >= row.children.length) return;
-                final child = row.children[childIndex];
-                final args = activityDetailArgsForAction(
-                  child,
-                  snapshot.dayDateLabel,
-                  colors,
-                );
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => ActivityDetailPage(args: args),
-                  ),
-                );
-              },
-              onAddManualTap: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ActionEditPage(),
-                  ),
-                );
-              },
-              onLogTap: (log) {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) =>
-                        LogEditPage(mode: LogEditMode.edit, initial: log),
-                  ),
-                );
-              },
-              onAddLogTap: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (_) => const LogEditPage()),
-                );
-              },
-            ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Could not load Actions: $e'),
+                ),
               ),
-            ),
+              const TasksPage(),
+              const GoalsPage(),
+              _index == 3 ? const CalendarPage() : const SizedBox.shrink(),
+            ],
           ),
-          const TasksPage(),
-          const GoalsPage(),
-          _index == 3 ? const CalendarPage() : const SizedBox.shrink(),
+          if (voiceState.overlayVisible) const VoiceListeningOverlay(),
         ],
       ),
       bottomNavigationBar: _BottomNav(
         currentIndex: _index,
         onChanged: (i) => setState(() => _index = i),
-        onAiTap: _onAiTap,
         onAiHoldStart: () {
           debugPrint('[nx_time voice] spark hold start');
           unawaited(
@@ -270,7 +267,6 @@ class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.currentIndex,
     required this.onChanged,
-    required this.onAiTap,
     required this.onAiHoldStart,
     required this.onAiHoldEnd,
     required this.voiceState,
@@ -278,7 +274,6 @@ class _BottomNav extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
-  final VoidCallback onAiTap;
   final VoidCallback onAiHoldStart;
   final VoidCallback onAiHoldEnd;
   final VoiceSocketState voiceState;
@@ -317,7 +312,6 @@ class _BottomNav extends StatelessWidget {
                 ),
                 Expanded(
                   child: _AiSlot(
-                    onTap: onAiTap,
                     onHoldStart: onAiHoldStart,
                     onHoldEnd: onAiHoldEnd,
                     voiceState: voiceState,
@@ -422,13 +416,11 @@ class _NavItem extends StatelessWidget {
 
 class _AiSlot extends StatelessWidget {
   const _AiSlot({
-    required this.onTap,
     required this.onHoldStart,
     required this.onHoldEnd,
     required this.voiceState,
   });
 
-  final VoidCallback onTap;
   final VoidCallback onHoldStart;
   final VoidCallback onHoldEnd;
   final VoiceSocketState voiceState;
@@ -473,17 +465,13 @@ class _AiSlot extends StatelessWidget {
                 ),
                 elevation: active ? 7 : 4,
                 shadowColor: Colors.black26,
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: onTap,
-                  child: const SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: Icon(
-                      SolarBoldIcons.bolt,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                child: const SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Icon(
+                    SolarBoldIcons.bolt,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
               ),
