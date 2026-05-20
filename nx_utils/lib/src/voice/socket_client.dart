@@ -251,7 +251,7 @@ class NxVoiceSocketClient {
       try {
         _channel!.sink.add(packet.bytes);
       } catch (error) {
-        debugPrint('[nx_voice] failed to flush packet: $error');
+        debugPrint('[nx_utils voice] failed to flush packet: $error');
         _queuePacket(packet.bytes);
         _handleDisconnection();
         return;

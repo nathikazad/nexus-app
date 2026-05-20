@@ -28,14 +28,15 @@ class NxMicrophoneOpusStreamer {
 
   Future<bool> ensurePermission() async {
     if (kIsWeb) {
-      debugPrint('[nx_voice mic] web platform: microphone permission assumed');
+      debugPrint(
+          '[nx_utils voice mic] web platform: microphone permission assumed');
       return true;
     }
 
     final existingRecordPermission =
         await _recorder.hasPermission(request: false);
     debugPrint(
-      '[nx_voice mic] record hasPermission(request:false)='
+      '[nx_utils voice mic] record hasPermission(request:false)='
       '$existingRecordPermission',
     );
     if (existingRecordPermission) {
@@ -43,18 +44,19 @@ class NxMicrophoneOpusStreamer {
     }
 
     final status = await Permission.microphone.status;
-    debugPrint('[nx_voice mic] permission_handler status=$status');
+    debugPrint('[nx_utils voice mic] permission_handler status=$status');
     if (status.isGranted) return true;
 
     // Prefer the record plugin's native microphone permission request. In some
     // iOS builds permission_handler can report permanentlyDenied while AVAudio
     // has already granted recording access.
     final recordPermission = await _recorder.hasPermission();
-    debugPrint('[nx_voice mic] record hasPermission()=$recordPermission');
+    debugPrint('[nx_utils voice mic] record hasPermission()=$recordPermission');
     if (recordPermission) return true;
 
     final result = await Permission.microphone.request();
-    debugPrint('[nx_voice mic] permission_handler request result=$result');
+    debugPrint(
+        '[nx_utils voice mic] permission_handler request result=$result');
     return result.isGranted;
   }
 
@@ -63,16 +65,17 @@ class NxMicrophoneOpusStreamer {
     void Function(Object error)? onError,
   }) async {
     debugPrint(
-      '[nx_voice mic] start requested sampleRate=$sampleRate '
+      '[nx_utils voice mic] start requested sampleRate=$sampleRate '
       'channels=$channels frameTime=$frameTime isRecording=$_isRecording',
     );
     if (_isRecording) return true;
     if (!await ensurePermission()) {
-      debugPrint('[nx_voice mic] start blocked: microphone permission denied');
+      debugPrint(
+          '[nx_utils voice mic] start blocked: microphone permission denied');
       return false;
     }
     await NxOpusCodec.initialize();
-    debugPrint('[nx_voice mic] opus initialized');
+    debugPrint('[nx_utils voice mic] opus initialized');
 
     final config = RecordConfig(
       encoder: AudioEncoder.pcm16bits,
@@ -84,7 +87,7 @@ class NxMicrophoneOpusStreamer {
     try {
       final supported = await _recorder.isEncoderSupported(config.encoder);
       debugPrint(
-        '[nx_voice mic] encoder=${config.encoder} supported=$supported',
+        '[nx_utils voice mic] encoder=${config.encoder} supported=$supported',
       );
       if (!supported) {
         onError?.call(
@@ -95,31 +98,31 @@ class NxMicrophoneOpusStreamer {
       _isRecording = true;
       _pendingPcm.clear();
       _loggedFirstPcmChunk = false;
-      debugPrint('[nx_voice mic] recorder stream started');
+      debugPrint('[nx_utils voice mic] recorder stream started');
       _recordingSubscription = stream.listen(
         (chunk) async {
           try {
             if (!_loggedFirstPcmChunk) {
               _loggedFirstPcmChunk = true;
               debugPrint(
-                  '[nx_voice mic] received pcm chunk bytes=${chunk.length}');
+                  '[nx_utils voice mic] received pcm chunk bytes=${chunk.length}');
             }
             for (final packet in await _encodeCompleteFrames(chunk)) {
               await onOpusPacket(packet);
             }
           } catch (error) {
-            debugPrint('[nx_voice mic] encode/send error: $error');
+            debugPrint('[nx_utils voice mic] encode/send error: $error');
             onError?.call(error);
           }
         },
         onError: (Object error) {
-          debugPrint('[nx_voice mic] stream error: $error');
+          debugPrint('[nx_utils voice mic] stream error: $error');
           onError?.call(error);
         },
       );
       return true;
     } catch (error) {
-      debugPrint('[nx_voice mic] startStream error: $error');
+      debugPrint('[nx_utils voice mic] startStream error: $error');
       onError?.call(error);
       return false;
     }

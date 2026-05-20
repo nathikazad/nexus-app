@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_voice/nx_voice.dart';
+import 'package:nx_utils/nx_utils.dart';
 
 void main() {
   test('serializes and parses opus audio chunk', () {

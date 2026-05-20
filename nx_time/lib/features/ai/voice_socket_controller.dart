@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_voice/nx_voice.dart';
+import 'package:nx_utils/nx_utils.dart';
 
 enum VoiceSocketPhase {
   idle,
@@ -81,7 +81,12 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   int _streamIndex = 0;
   int _packetIndex = 0;
   int _sentPacketsThisTurn = 0;
+  int _sentBytesThisTurn = 0;
+  int _receivedPacketsThisTurn = 0;
+  int _receivedBytesThisTurn = 0;
   NxVoiceAudioTurn? _activeTurn;
+  NxVoiceAudioTurn? _lastTurn;
+  NxAppLogUploader? _appLogUploader;
   bool _stopInFlight = false;
 
   @override
@@ -92,6 +97,38 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       unawaited(_socket?.disconnect());
     });
     return const VoiceSocketState.idle();
+  }
+
+  void _uploadAppLog({
+    required String eventName,
+    required String category,
+    required String message,
+    required Map<String, dynamic> payload,
+  }) {
+    unawaited(
+      _appLogUploader?.upload(
+        eventName: eventName,
+        category: category,
+        message: message,
+        payload: {
+          'client_app': 'nx_time',
+          'agent_id': 'nx_time',
+          'agent_name': 'Nx Time Assistant',
+          ...payload,
+        },
+      ),
+    );
+  }
+
+  Map<String, dynamic> _turnPayload(NxVoiceAudioTurn? turn) {
+    return {
+      if (turn != null) ...{
+        'turn_id': turn.turnId,
+        'nonce': turn.turnRandom,
+        'turnkey': turn.turnkey,
+        'turn_meta': turn.metaForPacket(0),
+      },
+    };
   }
 
   void dismissOverlay() {
@@ -131,7 +168,11 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       _streamIndex++;
       _packetIndex = 0;
       _sentPacketsThisTurn = 0;
+      _sentBytesThisTurn = 0;
+      _receivedPacketsThisTurn = 0;
+      _receivedBytesThisTurn = 0;
       _activeTurn = NxVoiceAudioTurn.create(streamIndex: _streamIndex);
+      _lastTurn = _activeTurn;
       _stopInFlight = false;
       debugPrint(
         '[nx_time voice] starting mic stream streamIndex=$_streamIndex '
@@ -146,6 +187,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
             );
           }
           _sentPacketsThisTurn++;
+          _sentBytesThisTurn += opus.length;
           socket.sendAudioChunk(
             opus,
             streamIndex: _streamIndex,
@@ -181,6 +223,12 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         return;
       }
       debugPrint('[nx_time voice] recording started');
+      _uploadAppLog(
+        eventName: 'mic_record_start',
+        category: 'audio',
+        message: 'nx_time mic recording started',
+        payload: {'stream_index': _streamIndex, ..._turnPayload(_activeTurn)},
+      );
       state = state.copyWith(
         phase: VoiceSocketPhase.recording,
         overlayVisible: true,
@@ -229,6 +277,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       );
       for (final opus in remaining) {
         _sentPacketsThisTurn++;
+        _sentBytesThisTurn += opus.length;
         socket.sendAudioChunk(
           opus,
           streamIndex: _streamIndex,
@@ -244,6 +293,29 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       debugPrint(
         '[nx_time voice] sent audio EOF streamIndex=$_streamIndex '
         'totalPackets=$_sentPacketsThisTurn turnkey=${turn?.turnkey}',
+      );
+      _uploadAppLog(
+        eventName: 'socket_audio_sent_summary',
+        category: 'audio',
+        message:
+            'nx_time sent $_sentPacketsThisTurn opus packets, $_sentBytesThisTurn bytes',
+        payload: {
+          'stream_index': _streamIndex,
+          'opus_packets': _sentPacketsThisTurn,
+          'opus_bytes': _sentBytesThisTurn,
+          ..._turnPayload(turn),
+        },
+      );
+      _uploadAppLog(
+        eventName: 'mic_record_stop',
+        category: 'audio',
+        message: 'nx_time mic recording stopped',
+        payload: {
+          'stream_index': _streamIndex,
+          'opus_packets': _sentPacketsThisTurn,
+          'opus_bytes': _sentBytesThisTurn,
+          ..._turnPayload(turn),
+        },
       );
     } catch (error) {
       debugPrint('[nx_time voice] stop error: $error');
@@ -263,9 +335,19 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     required String userId,
   }) async {
     final key = '$socketUrl|$userId';
+    final httpBaseUrl =
+        ref.read(imageBaseUrlProvider) ?? httpBaseFromSocketUrl(socketUrl);
     final existing = _socket;
     if (existing != null && existing.isConnected && _sessionKey == key) {
       debugPrint('[nx_time voice] reusing socket session $key');
+      _appLogUploader ??= NxAppLogUploader(
+        httpBaseUrl: httpBaseUrl,
+        origin: 'nx_time',
+        headers: {
+          'X-User-Id': userId,
+          if (CfAccess.shouldAttachHeaders(httpBaseUrl)) ...CfAccess.headers,
+        },
+      );
       return existing;
     }
 
@@ -278,9 +360,19 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       'port=${parsedSocketUri?.hasPort == true ? parsedSocketUri!.port : '<default>'}',
     );
     await existing?.disconnect();
+    _appLogUploader = NxAppLogUploader(
+      httpBaseUrl: httpBaseUrl,
+      origin: 'nx_time',
+      headers: {
+        'X-User-Id': userId,
+        if (CfAccess.shouldAttachHeaders(httpBaseUrl)) ...CfAccess.headers,
+      },
+    );
     final player = _player ??= NxWavAudioPlayer();
     final socket = NxVoiceSocketClient()
       ..onAudioChunk = (packet) {
+        _receivedPacketsThisTurn++;
+        _receivedBytesThisTurn += packet.opus.length;
         debugPrint(
           '[nx_time voice] received audio packet '
           'bytes=${packet.opus.length} stream=${packet.streamIndex} '
@@ -293,6 +385,18 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       }
       ..onAudioEof = (_) {
         debugPrint('[nx_time voice] received audio EOF');
+        _uploadAppLog(
+          eventName: 'websocket_opus_reception_summary',
+          category: 'audio',
+          message:
+              'nx_time received $_receivedPacketsThisTurn opus packets, $_receivedBytesThisTurn bytes',
+          payload: {
+            'stream_index': _streamIndex,
+            'opus_packets': _receivedPacketsThisTurn,
+            'opus_bytes': _receivedBytesThisTurn,
+            ..._turnPayload(_lastTurn),
+          },
+        );
         unawaited(player.flush());
         state = state.copyWith(phase: VoiceSocketPhase.idle);
       }
@@ -309,6 +413,17 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
               'turnkey=$turnkey: $text',
             );
             if (role is String && text is String && text.trim().isNotEmpty) {
+              _uploadAppLog(
+                eventName: 'voice_transcript_text',
+                category: 'audio',
+                message: text,
+                payload: {
+                  'role': role,
+                  'text': text,
+                  if (turnkey is String) 'turnkey': turnkey,
+                  ..._turnPayload(_lastTurn),
+                },
+              );
               state = state.copyWith(
                 overlayVisible: true,
                 messages: [

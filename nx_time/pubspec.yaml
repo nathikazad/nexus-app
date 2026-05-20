@@ -18,8 +18,8 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   nx_db:
     path: ../nx_db
-  nx_voice:
-    path: ../nx_voice
+  nx_utils:
+    path: ../nx_utils
   nx_views:
     path: ../nx_views
   flutter_riverpod: ^3.2.0

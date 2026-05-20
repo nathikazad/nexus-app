@@ -42,7 +42,7 @@ class NxWavAudioPlayer {
     final packet = Uint8List.fromList(opus);
     final next = _opusDecodeChain.then((_) => _decodeAndAddOpusPacket(packet));
     _opusDecodeChain = next.catchError((Object error) {
-      debugPrint('[nx_voice player] opus decode error: $error');
+      debugPrint('[nx_utils voice player] opus decode error: $error');
     });
     return next;
   }
@@ -77,7 +77,7 @@ class NxWavAudioPlayer {
       try {
         await _player.stopPlayer();
       } catch (error) {
-        debugPrint('[nx_voice player] stopPlayer error: $error');
+        debugPrint('[nx_utils voice player] stopPlayer error: $error');
       }
     }
     _streamStarted = false;
@@ -90,7 +90,7 @@ class NxWavAudioPlayer {
       try {
         await _player.closePlayer();
       } catch (error) {
-        debugPrint('[nx_voice player] closePlayer error: $error');
+        debugPrint('[nx_utils voice player] closePlayer error: $error');
       }
       _playerOpen = false;
     }
@@ -136,7 +136,7 @@ class NxWavAudioPlayer {
         await _player.feedUint8FromStream(pcm);
       }
     } catch (error) {
-      debugPrint('[nx_voice player] feed error: $error');
+      debugPrint('[nx_utils voice player] feed error: $error');
       _markPlaying(false);
     } finally {
       _isFeeding = false;

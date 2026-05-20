@@ -15,21 +15,8 @@ import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.dart';
 import 'package:nexus_voice_assistant/domain/ble/ble_connection_state.dart';
+import 'package:nx_utils/nx_utils.dart';
 import 'package:http/http.dart' as http;
-
-String _httpBaseFromSocketUrl(String socketUrl) {
-  final uri = Uri.parse(socketUrl);
-  if (uri.host == 'socket.nathikazad.com') {
-    return 'https://nexus.nathikazad.com';
-  }
-  final scheme = uri.scheme == 'wss' ? 'https' : 'http';
-  final port = uri.hasPort && uri.port == 8002 ? 8001 : uri.port;
-  return Uri(
-    scheme: scheme,
-    host: uri.host,
-    port: port,
-  ).toString().replaceAll(RegExp(r'/+$'), '');
-}
 
 int _opusBytesFromNrfAudioPayload(Uint8List data) {
   if (data.length >= 6 && data[0] == 0x01 && data[1] == 0x00) {
@@ -101,12 +88,11 @@ class BleBackgroundService {
     final socketClient = SocketClient();
     TelemetryUploadManager? telemetryUploadManager;
     GpsUploadManager? gpsUploadManager;
+    NxAppLogUploader? appLogUploader;
     bool appIsForeground = true;
     String? gpsHttpBaseUrl;
     Map<String, String> gpsHeaders = {};
     String? gpsTimezoneLabel;
-    String? appLogHttpBaseUrl;
-    Map<String, String> appLogHeaders = {};
 
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -130,51 +116,25 @@ class BleBackgroundService {
       required String message,
       required Map<String, dynamic> payload,
     }) async {
-      final base = appLogHttpBaseUrl;
-      if (base == null || base.isEmpty) return;
-      final uri = Uri.parse(
-        '${base.replaceAll(RegExp(r'/+$'), '')}/logs/app/upload',
+      await appLogUploader?.upload(
+        eventName: eventName,
+        category: category,
+        message: message,
+        payload: payload,
       );
-      final now = DateTime.now().toUtc();
-      final row = {
-        'time': now.toIso8601String(),
-        'origin_kind': 'app',
-        'origin': 'nx_main',
-        'severity': 'info',
-        'event_name': eventName,
-        'category': category,
-        'message': message,
-        'payload': payload,
-      };
-      try {
-        final response = await http
-            .post(
-              uri,
-              headers: {
-                ...appLogHeaders,
-                'content-type': 'application/json',
-              },
-              body: jsonEncode({'row': row}),
-            )
-            .timeout(const Duration(seconds: 5));
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          debugPrint(
-            '[BLE BG] app log upload failed: ${response.statusCode} ${response.body}',
-          );
-        }
-      } catch (e) {
-        debugPrint('[BLE BG] app log upload error: $e');
-      }
     }
 
-    Future<void> printServerClockDrift(String httpBaseUrl) async {
+    Future<void> printServerClockDrift(
+      String httpBaseUrl,
+      Map<String, String> headers,
+    ) async {
       final base = httpBaseUrl.replaceAll(RegExp(r'/+$'), '');
       final uri = Uri.parse('$base/time');
       final localSend = DateTime.now().toUtc();
       final sw = Stopwatch()..start();
       try {
         final response = await http
-            .get(uri, headers: appLogHeaders)
+            .get(uri, headers: headers)
             .timeout(const Duration(seconds: 5));
         final localReceive = DateTime.now().toUtc();
         sw.stop();
@@ -511,19 +471,23 @@ class BleBackgroundService {
       };
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
           ? telemetryHttpBaseUrl!
-          : _httpBaseFromSocketUrl(url);
-      appLogHttpBaseUrl = uploadBase;
-      appLogHeaders = {
-        'X-User-Id': userId,
-        if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
-      };
-      unawaited(printServerClockDrift(uploadBase));
-      telemetryUploadManager = TelemetryUploadManager(
+          : httpBaseFromSocketUrl(url);
+      appLogUploader = NxAppLogUploader(
         httpBaseUrl: uploadBase,
+        origin: 'nx_main',
         headers: {
           'X-User-Id': userId,
           if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
         },
+      );
+      final uploadHeaders = {
+        'X-User-Id': userId,
+        if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
+      };
+      unawaited(printServerClockDrift(uploadBase, uploadHeaders));
+      telemetryUploadManager = TelemetryUploadManager(
+        httpBaseUrl: uploadBase,
+        headers: uploadHeaders,
         onCommitted: (transferId) async {
           await bleClient.writeFileRx(telemetryCommittedAck(transferId));
           service.invoke('ble.debugLog', {
@@ -534,10 +498,7 @@ class BleBackgroundService {
       await gpsUploadManager?.stop(flushPending: true);
       gpsUploadManager = null;
       gpsHttpBaseUrl = uploadBase;
-      gpsHeaders = {
-        'X-User-Id': userId,
-        if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
-      };
+      gpsHeaders = uploadHeaders;
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
       await socketClient.disconnect();
@@ -550,6 +511,7 @@ class BleBackgroundService {
       gpsHttpBaseUrl = null;
       gpsHeaders = {};
       gpsTimezoneLabel = null;
+      appLogUploader = null;
       await socketClient.disconnect();
     });
 
