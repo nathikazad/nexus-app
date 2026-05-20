@@ -974,6 +974,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0+1"
+  nx_voice:
+    dependency: "direct main"
+    description:
+      path: "../nx_voice"
+      relative: true
+    source: path
+    version: "0.1.0"
   octo_image:
     dependency: transitive
     description:

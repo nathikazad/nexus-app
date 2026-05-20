@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -10,7 +12,7 @@ import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
 import 'package:nx_time/features/ai/ai_chat_page.dart';
-import 'package:nx_time/features/ai/voice_listening_overlay.dart';
+import 'package:nx_time/features/ai/voice_socket_controller.dart';
 import 'package:nx_time/features/calendar/calendar_providers.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
 import 'package:nx_time/features/goals/goals_page.dart';
@@ -111,10 +113,6 @@ class _AppShellState extends ConsumerState<AppShell>
     );
   }
 
-  void _onAiLongPress() {
-    showVoiceListeningOverlay(context);
-  }
-
   @override
   Widget build(BuildContext context) {
     final snapshotAsync = ref.watch(todaySnapshotProvider);
@@ -122,6 +120,7 @@ class _AppShellState extends ConsumerState<AppShell>
       ref.watch(modelTypeColorsProvider),
     );
     final todayMode = ref.watch(todayViewModeProvider);
+    final voiceState = ref.watch(voiceSocketControllerProvider);
     final actionsTabVisible = _routeVisible && _index == 0;
 
     ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
@@ -249,7 +248,19 @@ class _AppShellState extends ConsumerState<AppShell>
         currentIndex: _index,
         onChanged: (i) => setState(() => _index = i),
         onAiTap: _onAiTap,
-        onAiLongPress: _onAiLongPress,
+        onAiHoldStart: () {
+          debugPrint('[nx_time voice] spark hold start');
+          unawaited(
+            ref.read(voiceSocketControllerProvider.notifier).startRecording(),
+          );
+        },
+        onAiHoldEnd: () {
+          debugPrint('[nx_time voice] spark hold end');
+          unawaited(
+            ref.read(voiceSocketControllerProvider.notifier).stopRecording(),
+          );
+        },
+        voiceState: voiceState,
       ),
     );
   }
@@ -260,13 +271,17 @@ class _BottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onChanged,
     required this.onAiTap,
-    required this.onAiLongPress,
+    required this.onAiHoldStart,
+    required this.onAiHoldEnd,
+    required this.voiceState,
   });
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
   final VoidCallback onAiTap;
-  final VoidCallback onAiLongPress;
+  final VoidCallback onAiHoldStart;
+  final VoidCallback onAiHoldEnd;
+  final VoiceSocketState voiceState;
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +316,12 @@ class _BottomNav extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: _AiSlot(onTap: onAiTap, onLongPress: onAiLongPress),
+                  child: _AiSlot(
+                    onTap: onAiTap,
+                    onHoldStart: onAiHoldStart,
+                    onHoldEnd: onAiHoldEnd,
+                    voiceState: voiceState,
+                  ),
                 ),
                 Expanded(
                   child: _NavItem(
@@ -401,13 +421,30 @@ class _NavItem extends StatelessWidget {
 }
 
 class _AiSlot extends StatelessWidget {
-  const _AiSlot({required this.onTap, required this.onLongPress});
+  const _AiSlot({
+    required this.onTap,
+    required this.onHoldStart,
+    required this.onHoldEnd,
+    required this.voiceState,
+  });
 
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback onHoldStart;
+  final VoidCallback onHoldEnd;
+  final VoiceSocketState voiceState;
 
   @override
   Widget build(BuildContext context) {
+    final active = voiceState.active;
+    final color = switch (voiceState.phase) {
+      VoiceSocketPhase.recording => const Color(0xFFEF4444),
+      VoiceSocketPhase.waiting ||
+      VoiceSocketPhase.responding => const Color(0xFF2563EB),
+      VoiceSocketPhase.connecting => const Color(0xFFF59E0B),
+      VoiceSocketPhase.error => const Color(0xFF64748B),
+      VoiceSocketPhase.idle => AppColors.accent,
+    };
+
     return SizedBox(
       height: 56,
       child: Stack(
@@ -416,24 +453,37 @@ class _AiSlot extends StatelessWidget {
         children: [
           Positioned(
             top: -22,
-            child: Material(
-              color: AppColors.accent,
-              shape: const CircleBorder(
-                side: BorderSide(color: Colors.white, width: 4),
-              ),
-              elevation: 4,
-              shadowColor: Colors.black26,
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: onTap,
-                onLongPress: onLongPress,
-                child: const SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: Icon(
-                    SolarBoldIcons.bolt,
-                    color: Colors.white,
-                    size: 28,
+            child: GestureDetector(
+              onTapDown: (_) {
+                debugPrint('[nx_time voice] GestureDetector tapDown');
+                onHoldStart();
+              },
+              onTapUp: (_) {
+                debugPrint('[nx_time voice] GestureDetector tapUp');
+                onHoldEnd();
+              },
+              onTapCancel: () {
+                debugPrint('[nx_time voice] GestureDetector tapCancel');
+                onHoldEnd();
+              },
+              child: Material(
+                color: color,
+                shape: const CircleBorder(
+                  side: BorderSide(color: Colors.white, width: 4),
+                ),
+                elevation: active ? 7 : 4,
+                shadowColor: Colors.black26,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onTap,
+                  child: const SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Icon(
+                      SolarBoldIcons.bolt,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                   ),
                 ),
               ),
