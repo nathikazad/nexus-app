@@ -15,6 +15,7 @@ import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
+import 'package:nx_expense/features/teller/widgets/teller_expense_review_sheet.dart';
 import 'teller_transaction_detail_page.dart';
 
 enum _TellerSortMode {
@@ -37,6 +38,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   bool _syncBusy = false;
   bool _connectBusy = false;
   bool _pendingOnly = false;
+  bool _deletedOnly = false;
   bool _unlinkedOnly = false;
   _TellerSortMode? _sortModeOverride;
   final _searchController = TextEditingController();
@@ -73,9 +75,41 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     }
     setState(() => _syncBusy = true);
     try {
-      await postTellerSync(imageBaseUrl: base, userId: uid);
+      final result = await postTellerSync(imageBaseUrl: base, userId: uid);
       ref.invalidate(tellerTransactionsProvider);
       await ref.read(tellerTransactionsProvider.future);
+      if (mounted) setState(() => _syncBusy = false);
+      final review = result.expenseReview;
+      if (!mounted || review == null || review.items.isEmpty) return;
+      final decisions = await showTellerExpenseReviewSheet(
+        context: context,
+        review: review,
+      );
+      if (!mounted || decisions == null || decisions.isEmpty) return;
+      setState(() => _syncBusy = true);
+      final applyResult = await applyTellerExpenseReview(
+        imageBaseUrl: base,
+        userId: uid,
+        domainId: review.domainId,
+        decisions: decisions,
+      );
+      ref.invalidate(tellerTransactionsProvider);
+      ref.invalidate(expenseListProvider);
+      ref.invalidate(budgetExpenseGoalsMonthProvider);
+      await ref.read(tellerTransactionsProvider.future);
+      if (mounted) {
+        final counts = applyResult.counts;
+        final created = counts['created'] ?? 0;
+        final linked = counts['linked'] ?? 0;
+        final skipped = counts['skipped'] ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Expense review applied: $created created, $linked linked, $skipped skipped.',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -421,7 +455,19 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                 _TellerFilterPill(
                   label: 'Pending',
                   selected: _pendingOnly,
-                  onTap: () => setState(() => _pendingOnly = !_pendingOnly),
+                  onTap: () => setState(() {
+                    _pendingOnly = !_pendingOnly;
+                    if (_pendingOnly) _deletedOnly = false;
+                  }),
+                ),
+                const SizedBox(width: 8),
+                _TellerFilterPill(
+                  label: 'Deleted',
+                  selected: _deletedOnly,
+                  onTap: () => setState(() {
+                    _deletedOnly = !_deletedOnly;
+                    if (_deletedOnly) _pendingOnly = false;
+                  }),
                 ),
                 const SizedBox(width: 8),
                 _TellerFilterPill(
@@ -645,7 +691,10 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   List<TellerTransactionRow> _applyFilters(List<TellerTransactionRow> rows) {
     final query = _searchController.text.trim().toLowerCase();
     return rows.where((row) {
-      if (_pendingOnly && !_isPending(row)) return false;
+      final deleted = tellerPayloadIsDeleted(row.payload);
+      if (!_deletedOnly && deleted) return false;
+      if (_pendingOnly && (deleted || !_isPending(row))) return false;
+      if (_deletedOnly && !deleted) return false;
       if (_unlinkedOnly && tellerRowHasExpenseOrTransferLink(row)) {
         return false;
       }

@@ -17,7 +17,7 @@ import 'package:nx_expense/features/expense/expense_list_view_model.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 
 /// List + filters for picking an expense to link (also used in desktop Teller panel 3).
-class TellerExpenseLinkPickerBody extends ConsumerWidget {
+class TellerExpenseLinkPickerBody extends ConsumerStatefulWidget {
   const TellerExpenseLinkPickerBody({
     super.key,
     required this.row,
@@ -29,6 +29,21 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
   /// When true, successful link clears [tellerPanel3Provider] instead of [Navigator.pop].
   final bool embedded;
 
+  @override
+  ConsumerState<TellerExpenseLinkPickerBody> createState() =>
+      _TellerExpenseLinkPickerBodyState();
+}
+
+class _TellerExpenseLinkPickerBodyState
+    extends ConsumerState<TellerExpenseLinkPickerBody> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   static Set<int> _linkedExpenseIds(TellerTransactionRow r) {
     return {
       for (final m in r.linkedModels)
@@ -37,11 +52,11 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final listAsync = ref.watch(expenseListForUiProvider);
     final schemaAsync = ref.watch(expenseSchemaViewProvider);
     final summaryAsync = ref.watch(expenseListSummaryProvider);
-    final linked = _linkedExpenseIds(row);
+    final linked = _linkedExpenseIds(widget.row);
 
     return schemaAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -52,6 +67,65 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const ExpenseDateRangeBar(bottomPadding: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                RefLayout.px5,
+                0,
+                RefLayout.px5,
+                8,
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.slate900,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search expenses...',
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate400,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.slate500,
+                  ),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 20,
+                            color: AppColors.slate400,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        ),
+                  filled: true,
+                  fillColor: AppColors.slate100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.teal600),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 RefLayout.px5,
@@ -99,8 +173,10 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
                     ),
                   ),
                   data: (models) {
+                    final query = _searchController.text.trim().toLowerCase();
                     final candidates = models
                         .where((m) => !linked.contains(m.id))
+                        .where((m) => _matchesSearch(m, amountKey, query))
                         .toList();
                     if (candidates.isEmpty) {
                       return Center(
@@ -116,6 +192,8 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
                             Text(
                               linked.isEmpty && models.isEmpty
                                   ? 'No expenses in this range'
+                                  : query.isNotEmpty
+                                  ? 'No expenses match'
                                   : 'All expenses in range are already linked',
                               style: GoogleFonts.inter(
                                 fontSize: 16,
@@ -131,9 +209,9 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
                     final items = _buildDateGroupedItems(
                       candidates,
                       amountKey,
-                      row,
+                      widget.row,
                       context,
-                      embedded,
+                      widget.embedded,
                     );
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
@@ -153,6 +231,22 @@ class TellerExpenseLinkPickerBody extends ConsumerWidget {
         );
       },
     );
+  }
+
+  static bool _matchesSearch(Expense expense, String? amountKey, String query) {
+    if (query.isEmpty) return true;
+    final parts = <Object?>[
+      expense.name,
+      expense.description,
+      modelDateCellLabel(expense),
+      expense.createdAt,
+      if (amountKey != null) attributeValue(expense, amountKey),
+      ...?expense.tags?.values.expand((values) => values),
+      ...?expense.relations?.values.expand(
+        (models) => models.map((m) => m.name),
+      ),
+    ];
+    return parts.whereType<Object>().join(' ').toLowerCase().contains(query);
   }
 
   List<Widget> _buildDateGroupedItems(

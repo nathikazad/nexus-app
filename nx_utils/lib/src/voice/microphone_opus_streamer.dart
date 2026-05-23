@@ -33,16 +33,6 @@ class NxMicrophoneOpusStreamer {
       return true;
     }
 
-    final existingRecordPermission =
-        await _recorder.hasPermission(request: false);
-    debugPrint(
-      '[nx_utils voice mic] record hasPermission(request:false)='
-      '$existingRecordPermission',
-    );
-    if (existingRecordPermission) {
-      return true;
-    }
-
     final status = await Permission.microphone.status;
     debugPrint('[nx_utils voice mic] permission_handler status=$status');
     if (status.isGranted) return true;

@@ -107,6 +107,8 @@ class BleBackgroundService {
     int audioSendOpusByteCount = 0;
     int? audioSendTurnId;
     int? audioSendNonce;
+    bool audioForwardNoSocketLogged = false;
+    bool audioForwardConnectStarted = false;
 
     String utcNow() => DateTime.now().toUtc().toIso8601String();
 
@@ -209,6 +211,70 @@ class BleBackgroundService {
       await manager.stop(flushPending: true);
     }
 
+    Future<void> logAudioForwardEvent({
+      required String eventName,
+      required String message,
+      String? turnkey,
+      Map<String, dynamic> payload = const {},
+    }) async {
+      await uploadAppLog(
+        eventName: eventName,
+        category: 'audio',
+        message: message,
+        payload: {
+          ...payload,
+          if (turnkey != null) 'turnkey': turnkey,
+          'socket_state': socketClient.connectionState.name,
+          'queued_packets': socketClient.queuedPacketCount,
+        },
+      );
+    }
+
+    void ensureSocketForAudioTurn(String? turnkey) {
+      if (socketClient.isConnected) return;
+      if (!audioForwardNoSocketLogged) {
+        audioForwardNoSocketLogged = true;
+        final state = socketClient.connectionState.name;
+        final turnkeyText = turnkey == null ? '' : ', turnkey=$turnkey';
+        unawaited(logAudioForwardEvent(
+          eventName: 'audio_forward_no_socket',
+          message:
+              'audio forward has no socket connection$turnkeyText, state=$state',
+          turnkey: turnkey,
+        ));
+      }
+      if (audioForwardConnectStarted) return;
+      audioForwardConnectStarted = true;
+      final turnkeyText = turnkey == null ? '' : ', turnkey=$turnkey';
+      unawaited(logAudioForwardEvent(
+        eventName: 'audio_forward_connect_started',
+        message: 'audio forward socket connect started$turnkeyText',
+        turnkey: turnkey,
+      ));
+      unawaited(socketClient
+          .ensureConnected(
+              reason: 'ble_audio${turnkey == null ? '' : ':$turnkey'}')
+          .then((connected) async {
+        if (connected) {
+          await logAudioForwardEvent(
+            eventName: 'audio_forward_connect_succeeded',
+            message: 'audio forward socket connect succeeded$turnkeyText',
+            turnkey: turnkey,
+          );
+          return;
+        }
+        final dropped = socketClient.queuedPacketCount;
+        socketClient.clearQueue();
+        await logAudioForwardEvent(
+          eventName: 'audio_forward_connect_failed',
+          message:
+              'audio forward socket connect failed$turnkeyText, dropped $dropped queued packets',
+          turnkey: turnkey,
+          payload: {'dropped_packets': dropped},
+        );
+      }));
+    }
+
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
       service.invoke('ble.status', {'status': state.name});
@@ -231,6 +297,8 @@ class BleBackgroundService {
         audioSendOpusByteCount = 0;
         audioSendTurnId = null;
         audioSendNonce = null;
+        audioForwardNoSocketLogged = false;
+        audioForwardConnectStarted = false;
         debugPrint("[BLE BG] ${utcNow()} UTC nrf opus reception started");
       }
       if (!isAudioEof) {
@@ -239,10 +307,21 @@ class BleBackgroundService {
         audioSendTurnId ??= _turnIdFromNrfAudioPayload(data);
         audioSendNonce ??= _nonceFromNrfAudioPayload(data);
       }
+      final currentTurnkey = _turnkey(audioSendNonce, audioSendTurnId);
+      ensureSocketForAudioTurn(currentTurnkey);
 
       // Forward BLE payload with 4B index (consistent with text/image/EOF)
       audioPacketCount++;
-      socketClient.sendPacket(data, index: audioPacketCount);
+      final sendStatus = socketClient.sendPacket(data, index: audioPacketCount);
+      if (sendStatus == SocketSendStatus.queuedAfterSendFailure) {
+        unawaited(logAudioForwardEvent(
+          eventName: 'audio_forward_send_failed',
+          message:
+              'audio forward socket send failed, queued packet for reconnect${currentTurnkey == null ? '' : ', turnkey=$currentTurnkey'}',
+          turnkey: currentTurnkey,
+        ));
+        ensureSocketForAudioTurn(currentTurnkey);
+      }
       if (isAudioEof) {
         final turnText =
             audioSendTurnId == null ? "" : ", turn_id=$audioSendTurnId";
@@ -267,6 +346,20 @@ class BleBackgroundService {
             if (turnkey != null) 'turnkey': turnkey,
           },
         ));
+        if (!socketClient.isConnected) {
+          unawaited(logAudioForwardEvent(
+            eventName: 'audio_forward_eof_no_socket',
+            message:
+                'audio forward reached EOF without socket connection$turnkeyText',
+            turnkey: turnkey,
+            payload: {
+              'opus_packets': audioSendPacketCount,
+              'opus_bytes': audioSendOpusByteCount,
+              if (audioSendTurnId != null) 'turn_id': audioSendTurnId,
+              if (audioSendNonce != null) 'nonce': audioSendNonce,
+            },
+          ));
+        }
         audioSendActive = false;
       }
       // Send ACK back to the device
@@ -501,7 +594,6 @@ class BleBackgroundService {
       gpsHeaders = uploadHeaders;
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
-      await socketClient.disconnect();
       await socketClient.connect(url, headers: headers);
     });
 
@@ -527,6 +619,7 @@ class BleBackgroundService {
         case 'resumed':
         case 'inactive':
           appIsForeground = true;
+          unawaited(socketClient.ensureConnected(reason: 'foreground'));
           await stopGpsForForeground(state ?? 'foreground');
           break;
         case 'paused':

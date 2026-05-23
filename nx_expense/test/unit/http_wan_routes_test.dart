@@ -24,6 +24,44 @@ void main() {
       await postTellerSync(imageBaseUrl: base, userId: '1', httpClient: client);
     });
 
+    test(
+      'Teller expense review apply posts decisions to pi WAN HTTP host',
+      () async {
+        final base = resolve(BackendPreset.piWan).imageHttp;
+        final client = MockClient((request) async {
+          expect(request.method, 'POST');
+          expect(
+            request.url.toString(),
+            'https://nexus.nathikazad.com/teller/expense-review/apply',
+          );
+          expect(request.headers['x-user-id'], '1');
+          expect(request.headers['content-type'], 'application/json');
+          expect(jsonDecode(request.body), {
+            'domain_id': 2,
+            'decisions': [
+              {'review_id': 'teller:tx-1', 'event_id': 123, 'action': 'skip'},
+            ],
+          });
+          return http.Response(
+            '{"ok":true,"counts":{"created":0,"linked":0,"skipped":1,"errors":0},"results":[]}',
+            200,
+          );
+        });
+
+        final result = await applyTellerExpenseReview(
+          imageBaseUrl: base,
+          userId: '1',
+          domainId: 2,
+          decisions: [
+            {'review_id': 'teller:tx-1', 'event_id': 123, 'action': 'skip'},
+          ],
+          httpClient: client,
+        );
+
+        expect(result.counts['skipped'], 1);
+      },
+    );
+
     test('Recipe import posts to pi WAN HTTP host', () async {
       final base = resolve(BackendPreset.piWan).imageHttp;
       final client = MockClient((request) async {

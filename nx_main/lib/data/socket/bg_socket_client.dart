@@ -12,6 +12,18 @@ class _QueuedPacket {
   _QueuedPacket(this.data, this.index);
 }
 
+enum SocketConnectionState {
+  disconnected,
+  connecting,
+  connected,
+}
+
+enum SocketSendStatus {
+  sent,
+  queuedNoConnection,
+  queuedAfterSendFailure,
+}
+
 class SocketClient {
   static const int _opusAudioPacket = 0x0001;
   static const int _audioEofPacket = 0xFFFC;
@@ -20,17 +32,13 @@ class SocketClient {
   String? _url;
   Map<String, String>? _accessHeaders;
   bool _isConnected = false;
-  Timer? _reconnectTimer;
-  int _reconnectAttempts = 0;
+  Future<bool>? _connectFuture;
   bool _audioReceiveActive = false;
   int _audioReceivePacketCount = 0;
   int _audioReceiveOpusByteCount = 0;
   int? _audioReceiveTurnId;
   int? _audioReceiveNonce;
   int? _audioReceiveMeta;
-  static const int maxReconnectAttempts = 5;
-  static const Duration reconnectDelay = Duration(seconds: 3);
-
   // Packet queue for when socket is disconnected
   final List<_QueuedPacket> _packetQueue = [];
   static const int maxQueueSize =
@@ -46,6 +54,13 @@ class SocketClient {
       onDeviceRequest;
 
   bool get isConnected => _isConnected;
+  bool get isConnecting => _connectFuture != null;
+  SocketConnectionState get connectionState {
+    if (_isConnected) return SocketConnectionState.connected;
+    if (_connectFuture != null) return SocketConnectionState.connecting;
+    return SocketConnectionState.disconnected;
+  }
+
   int get queuedPacketCount => _packetQueue.length;
 
   Future<bool> connect(String url, {Map<String, String>? headers}) async {
@@ -54,9 +69,31 @@ class SocketClient {
       debugPrint("[Socket] Already connected to $url");
       return true;
     }
+    if (_isConnected && _url != url) {
+      await disconnect(clearQueuedPackets: false);
+    }
 
     _url = url;
-    return await _connect();
+    return ensureConnected(reason: 'connect');
+  }
+
+  Future<bool> ensureConnected({String reason = 'ensureConnected'}) {
+    if (_isConnected && _channel != null) {
+      return Future.value(true);
+    }
+    if (_connectFuture != null) {
+      debugPrint("[Socket] Connect already in progress reason=$reason");
+      return _connectFuture!;
+    }
+
+    debugPrint("[Socket] Starting connection reason=$reason");
+    final future = _connect();
+    _connectFuture = future;
+    return future.whenComplete(() {
+      if (identical(_connectFuture, future)) {
+        _connectFuture = null;
+      }
+    });
   }
 
   Future<bool> _connect() async {
@@ -77,12 +114,8 @@ class SocketClient {
 
       await _channel!.ready;
       _isConnected = true;
-      _reconnectAttempts = 0;
 
       debugPrint("[Socket] Connected to $_url");
-
-      // Send queued packets if any
-      _flushPacketQueue();
 
       // Listen for messages from server
       _channel!.stream.listen(
@@ -117,29 +150,34 @@ class SocketClient {
         cancelOnError: true,
       );
 
+      // Send queued packets after the response listener is active.
+      _flushPacketQueue();
+
       return true;
     } catch (e) {
       debugPrint("[Socket] Connection failed: $e");
       _isConnected = false;
-      _scheduleReconnect();
+      _channel = null;
       return false;
     }
   }
 
-  void sendPacket(Uint8List data, {int? index}) {
+  SocketSendStatus sendPacket(Uint8List data, {int? index}) {
     // If not connected, queue the packet
     if (!_isConnected || _channel == null) {
       _queuePacket(data, index);
-      return;
+      return SocketSendStatus.queuedNoConnection;
     }
 
     try {
       _sendPacketData(data, index);
+      return SocketSendStatus.sent;
     } catch (e) {
       debugPrint("[Socket] Send error: $e");
       // Queue the packet if send fails
       _queuePacket(data, index);
       _handleDisconnection();
+      return SocketSendStatus.queuedAfterSendFailure;
     }
   }
 
@@ -505,27 +543,11 @@ class SocketClient {
 
     _isConnected = false;
     _channel = null;
-    _scheduleReconnect();
-  }
-
-  void _scheduleReconnect() {
-    if (_reconnectAttempts >= maxReconnectAttempts) {
-      debugPrint("[Socket] Max reconnect attempts reached");
-      return;
-    }
-
-    _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(reconnectDelay * (_reconnectAttempts + 1), () {
-      _reconnectAttempts++;
-      debugPrint("[Socket] Reconnecting (attempt $_reconnectAttempts)...");
-      _connect();
-    });
   }
 
   Future<void> disconnect({bool clearQueuedPackets = true}) async {
-    _reconnectTimer?.cancel();
-    _reconnectTimer = null;
     _isConnected = false;
+    _connectFuture = null;
 
     if (_channel != null) {
       try {
