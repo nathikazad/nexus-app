@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gql_exec/gql_exec.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/src/core/client/graphql_client.dart' as graphql_client;
@@ -26,7 +27,7 @@ void main() {
     expect(formatted, isNot(contains('x' * 800)));
   });
 
-  test('dbAuditContextLink adds audit headers to mutations', () async {
+  test('dbAuditContextLink adds audit extensions to mutations', () async {
     Request? captured;
     final captureLink = Link.function((request, [forward]) {
       captured = request;
@@ -59,11 +60,16 @@ void main() {
           .drain<void>(),
     );
 
-    final headers = captured!.context.entry<HttpLinkHeaders>()!.headers;
-    expect(headers['X-Nexus-Operation-Id'], 'operation-1');
-    expect(headers['X-Nexus-Source-Kind'], 'nx_time');
-    expect(headers['X-Nexus-Source-Id'], 'action-1');
-    expect(headers['X-Nexus-Source-Label'], 'create Work');
+    final extensions = captured!.context
+        .entry<RequestExtensionsThunk>()!
+        .getRequestExtensions(captured!);
+    expect(extensions['nexusAudit'], {
+      'operationId': 'operation-1',
+      'sourceKind': 'nx_time',
+      'sourceId': 'action-1',
+      'sourceLabel': 'create Work',
+    });
+    expect(captured!.context.entry<HttpLinkHeaders>(), isNull);
   });
 
   test('dbAuditContextLink uses app source kind when helper context omits it',
@@ -100,10 +106,15 @@ void main() {
           .drain<void>(),
     );
 
-    final headers = captured!.context.entry<HttpLinkHeaders>()!.headers;
-    expect(headers['X-Nexus-Operation-Id'], 'operation-2');
-    expect(headers['X-Nexus-Source-Kind'], 'nx_time');
-    expect(headers['X-Nexus-Source-Id'], 'set_kgql_models:Work');
-    expect(headers['X-Nexus-Source-Label'], 'create Work');
+    final extensions = captured!.context
+        .entry<RequestExtensionsThunk>()!
+        .getRequestExtensions(captured!);
+    expect(extensions['nexusAudit'], {
+      'operationId': 'operation-2',
+      'sourceKind': 'nx_time',
+      'sourceId': 'set_kgql_models:Work',
+      'sourceLabel': 'create Work',
+    });
+    expect(captured!.context.entry<HttpLinkHeaders>(), isNull);
   });
 }

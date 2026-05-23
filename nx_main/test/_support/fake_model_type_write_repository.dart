@@ -11,6 +11,7 @@ class FakeModelTypeWriteRepository implements ModelTypeWriteRepository {
   String? lastName;
   String? lastTypeKind;
   String? lastDescription;
+  String? lastAgentInstructions;
   int? lastParentId;
   List<AttributeDefinitionDraft>? lastAttributes;
   List<RelationDefinitionDraft>? lastRelations;
@@ -22,6 +23,7 @@ class FakeModelTypeWriteRepository implements ModelTypeWriteRepository {
     required String name,
     required String typeKind,
     String? description,
+    String? agentInstructions,
     int? parentId,
     required List<AttributeDefinitionDraft> attributeDefinitions,
     required List<RelationDefinitionDraft> relationshipTypes,
@@ -31,6 +33,7 @@ class FakeModelTypeWriteRepository implements ModelTypeWriteRepository {
     lastName = name;
     lastTypeKind = typeKind;
     lastDescription = description;
+    lastAgentInstructions = agentInstructions;
     lastParentId = parentId;
     lastAttributes = List<AttributeDefinitionDraft>.from(attributeDefinitions);
     lastRelations = List<RelationDefinitionDraft>.from(relationshipTypes);

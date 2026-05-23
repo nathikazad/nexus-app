@@ -500,21 +500,20 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
               '$role turnkey=$turnkey ephemeral=$ephemeral: $text',
             );
             if (role is String && text is String && text.trim().isNotEmpty) {
-              _uploadAppLog(
-                eventName: isDelta
-                    ? 'voice_transcript_delta'
-                    : 'voice_transcript_text',
-                category: 'audio',
-                message: text,
-                payload: {
-                  'role': role,
-                  'text': text,
-                  'is_delta': isDelta,
-                  if (isDelta) 'ephemeral': ephemeral,
-                  if (turnkey is String) 'turnkey': turnkey,
-                  ..._turnPayload(_lastTurn),
-                },
-              );
+              if (!isDelta) {
+                _uploadAppLog(
+                  eventName: 'voice_transcript_text',
+                  category: 'audio',
+                  message: text,
+                  payload: {
+                    'role': role,
+                    'text': text,
+                    'is_delta': false,
+                    if (turnkey is String) 'turnkey': turnkey,
+                    ..._turnPayload(_lastTurn),
+                  },
+                );
+              }
               if (isDelta) {
                 _applyTranscriptDelta(
                   role: role,

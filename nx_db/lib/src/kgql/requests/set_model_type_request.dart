@@ -10,6 +10,7 @@ class SetModelTypeRequest {
   final String name;
   final String typeKind;
   final String? description;
+  final String? agentInstructions;
   final ParentLink? parent;
   final List<AttributeDefinition>? attributeDefinitions;
   final List<RelationshipType>? relationshipTypes;
@@ -20,6 +21,7 @@ class SetModelTypeRequest {
     required this.name,
     required this.typeKind,
     this.description,
+    this.agentInstructions,
     this.parent,
     this.attributeDefinitions,
     this.relationshipTypes,
@@ -38,6 +40,10 @@ class SetModelTypeRequest {
 
     if (description != null) {
       json['description'] = description;
+    }
+
+    if (agentInstructions != null) {
+      json['agent_instructions'] = agentInstructions;
     }
 
     if (parent != null) {

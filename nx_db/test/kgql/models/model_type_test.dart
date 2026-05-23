@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:test/test.dart' show Tags;
 
 void main() {
   group('MT ModelType', () {
@@ -91,6 +90,7 @@ void main() {
       final mt = ModelType.fromJson({
         'id': 7,
         'name': 'Expense',
+        'agent_instructions': {'Expense': 'Use merchant lookup.'},
         'attributes': [
           {'key': 'cost', 'value_type': 'number'},
         ],
@@ -98,6 +98,8 @@ void main() {
       final j = mt.toJson();
       expect(j['id'], 7);
       expect(j['name'], 'Expense');
+      expect(mt.agentInstructions, {'Expense': 'Use merchant lookup.'});
+      expect(j['agent_instructions'], {'Expense': 'Use merchant lookup.'});
       expect(j['attributes'], isNotNull);
     });
 

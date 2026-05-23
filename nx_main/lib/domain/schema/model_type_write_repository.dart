@@ -9,6 +9,7 @@ abstract class ModelTypeWriteRepository {
     required String name,
     required String typeKind,
     String? description,
+    String? agentInstructions,
     int? parentId,
     required List<AttributeDefinitionDraft> attributeDefinitions,
     required List<RelationDefinitionDraft> relationshipTypes,

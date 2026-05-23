@@ -6,6 +6,7 @@ import 'schema_model_type.dart';
 class ModelTypeFormFields {
   final String name;
   final String description;
+  final String agentInstructions;
   final String typeKind;
   final int? parentId;
   final String? parentName;
@@ -15,6 +16,7 @@ class ModelTypeFormFields {
   const ModelTypeFormFields({
     required this.name,
     required this.description,
+    required this.agentInstructions,
     required this.typeKind,
     this.parentId,
     this.parentName,
@@ -26,6 +28,7 @@ class ModelTypeFormFields {
     return ModelTypeFormFields(
       name: data.name,
       description: data.description ?? '',
+      agentInstructions: _editableAgentInstructions(data),
       typeKind: data.typeKind ?? 'base',
       parentId: data.parentId,
       parentName: data.parentId != null && data.parent != null
@@ -39,4 +42,15 @@ class ModelTypeFormFields {
       ),
     );
   }
+}
+
+String _editableAgentInstructions(SchemaModelType data) {
+  final instructions = data.agentInstructions;
+  if (instructions == null || instructions.isEmpty) return '';
+
+  final ownInstructions = instructions[data.name];
+  if (ownInstructions != null) return ownInstructions;
+
+  if (instructions.length == 1) return instructions.values.single;
+  return '';
 }

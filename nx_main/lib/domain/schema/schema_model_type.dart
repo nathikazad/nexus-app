@@ -8,6 +8,7 @@ class SchemaModelType {
   final String name;
   final String? typeKind;
   final String? description;
+  final Map<String, String>? agentInstructions;
   final int? parentId;
   final int? userId;
   final SchemaModelType? parent;
@@ -22,6 +23,7 @@ class SchemaModelType {
     required this.name,
     this.typeKind,
     this.description,
+    this.agentInstructions,
     this.parentId,
     this.userId,
     this.parent,
@@ -37,6 +39,7 @@ class SchemaModelType {
     String? name,
     String? typeKind,
     String? description,
+    Map<String, String>? agentInstructions,
     int? parentId,
     int? userId,
     SchemaModelType? parent,
@@ -51,6 +54,7 @@ class SchemaModelType {
       name: name ?? this.name,
       typeKind: typeKind ?? this.typeKind,
       description: description ?? this.description,
+      agentInstructions: agentInstructions ?? this.agentInstructions,
       parentId: parentId ?? this.parentId,
       userId: userId ?? this.userId,
       parent: parent ?? this.parent,

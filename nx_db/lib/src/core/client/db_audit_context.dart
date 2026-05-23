@@ -29,15 +29,15 @@ class DbAuditContext {
   final String? sourceId;
   final String? sourceLabel;
 
-  Map<String, String> toHeaders({String? fallbackSourceKind}) {
+  Map<String, String> toNexusAudit({String? fallbackSourceKind}) {
     final effectiveSourceKind =
         sourceKind.trim().isNotEmpty ? sourceKind : fallbackSourceKind;
     return {
-      'X-Nexus-Operation-Id': operationId,
+      'operationId': operationId,
       if (_hasValue(effectiveSourceKind))
-        'X-Nexus-Source-Kind': effectiveSourceKind!.trim(),
-      if (_hasValue(sourceId)) 'X-Nexus-Source-Id': sourceId!.trim(),
-      if (_hasValue(sourceLabel)) 'X-Nexus-Source-Label': sourceLabel!.trim(),
+        'sourceKind': effectiveSourceKind!.trim(),
+      if (_hasValue(sourceId)) 'sourceId': sourceId!.trim(),
+      if (_hasValue(sourceLabel)) 'sourceLabel': sourceLabel!.trim(),
     };
   }
 

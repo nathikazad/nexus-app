@@ -39,6 +39,7 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
     final f = ModelTypeFormFields.fromSchemaModelType(data);
     state.nameController.text = f.name;
     state.descriptionController.text = f.description;
+    state.agentInstructionsController.text = f.agentInstructions;
     state = state.copyWith(
       typeKind: f.typeKind,
       parentId: f.parentId,
@@ -56,6 +57,11 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
 
   void setDescription(String description) {
     state.descriptionController.text = description;
+    state = state.copyWith();
+  }
+
+  void setAgentInstructions(String agentInstructions) {
+    state.agentInstructionsController.text = agentInstructions;
     state = state.copyWith();
   }
 
@@ -146,6 +152,9 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
         description: state.descriptionController.text.isEmpty
             ? null
             : state.descriptionController.text,
+        agentInstructions: state.agentInstructionsController.text.trim().isEmpty
+            ? (isEditing ? '' : null)
+            : state.agentInstructionsController.text,
         parentId: state.parentId,
         attributeDefinitions: state.attributeDefinitions,
         relationshipTypes: state.relationshipTypes,
@@ -179,6 +188,7 @@ class ModelTypeFormController extends Notifier<ModelTypeFormState> {
   void dispose() {
     state.nameController.dispose();
     state.descriptionController.dispose();
+    state.agentInstructionsController.dispose();
   }
 }
 
@@ -186,6 +196,7 @@ class ModelTypeFormState {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameController;
   final TextEditingController descriptionController;
+  final TextEditingController agentInstructionsController;
   final String typeKind;
   final int? parentId;
   final String? parentName;
@@ -197,6 +208,7 @@ class ModelTypeFormState {
     GlobalKey<FormState>? formKey,
     TextEditingController? nameController,
     TextEditingController? descriptionController,
+    TextEditingController? agentInstructionsController,
     String? typeKind,
     int? parentId,
     String? parentName,
@@ -207,6 +219,8 @@ class ModelTypeFormState {
         nameController = nameController ?? TextEditingController(),
         descriptionController =
             descriptionController ?? TextEditingController(),
+        agentInstructionsController =
+            agentInstructionsController ?? TextEditingController(),
         typeKind = typeKind ?? 'base',
         parentId = parentId,
         parentName = parentName,
@@ -218,8 +232,10 @@ class ModelTypeFormState {
     GlobalKey<FormState>? formKey,
     TextEditingController? nameController,
     TextEditingController? descriptionController,
+    TextEditingController? agentInstructionsController,
     String? name,
     String? description,
+    String? agentInstructions,
     String? typeKind,
     int? parentId,
     String? parentName,
@@ -230,6 +246,8 @@ class ModelTypeFormState {
     final newNameController = nameController ?? this.nameController;
     final newDescriptionController =
         descriptionController ?? this.descriptionController;
+    final newAgentInstructionsController =
+        agentInstructionsController ?? this.agentInstructionsController;
 
     if (name != null) {
       newNameController.text = name;
@@ -237,11 +255,15 @@ class ModelTypeFormState {
     if (description != null) {
       newDescriptionController.text = description;
     }
+    if (agentInstructions != null) {
+      newAgentInstructionsController.text = agentInstructions;
+    }
 
     return ModelTypeFormState(
       formKey: formKey ?? this.formKey,
       nameController: newNameController,
       descriptionController: newDescriptionController,
+      agentInstructionsController: newAgentInstructionsController,
       typeKind: typeKind ?? this.typeKind,
       parentId: parentId ?? this.parentId,
       parentName: parentName ?? this.parentName,

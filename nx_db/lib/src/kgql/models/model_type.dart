@@ -10,6 +10,7 @@ class ModelType {
   final String name;
   final String? typeKind;
   final String? description;
+  final Map<String, String>? agentInstructions;
   final int? parentId;
   final int? userId;
 
@@ -28,6 +29,7 @@ class ModelType {
     required this.name,
     this.typeKind,
     this.description,
+    this.agentInstructions,
     this.parentId,
     this.userId,
     this.parent,
@@ -82,6 +84,13 @@ class ModelType {
 
     final typeKind =
         json['type_kind'] as String? ?? json['typeKind'] as String?;
+    final agentInstructionsJson =
+        json['agent_instructions'] ?? json['agentInstructions'];
+    final Map<String, String>? agentInstructions = agentInstructionsJson is Map
+        ? agentInstructionsJson.map(
+            (key, value) => MapEntry(key.toString(), value.toString()),
+          )
+        : null;
 
     List<AttributeDefinition>? attributes;
     if (json['attributes'] != null) {
@@ -145,6 +154,7 @@ class ModelType {
       name: json['name'] as String? ?? '',
       typeKind: typeKind,
       description: json['description'] as String?,
+      agentInstructions: agentInstructions,
       parentId: json['parentId'] as int? ?? parent?.id,
       userId: json['userId'] as int?,
       parent: parent,
@@ -163,6 +173,7 @@ class ModelType {
       'name': name,
       'typeKind': typeKind,
       'description': description,
+      if (agentInstructions != null) 'agent_instructions': agentInstructions,
       'parentId': parentId,
       'userId': userId,
       if (parent != null) 'parent': parent!.toJson(),
@@ -180,7 +191,7 @@ class ModelType {
 
   @override
   String toString() {
-    return 'ModelType(id: $id, name: $name, typeKind: $typeKind, description: $description, parentId: $parentId, userId: $userId, children: ${children?.length ?? 0}, traits: ${traits?.length ?? 0})';
+    return 'ModelType(id: $id, name: $name, typeKind: $typeKind, description: $description, agentInstructions: $agentInstructions, parentId: $parentId, userId: $userId, children: ${children?.length ?? 0}, traits: ${traits?.length ?? 0})';
   }
 
   @override
@@ -192,6 +203,7 @@ class ModelType {
           name == other.name &&
           typeKind == other.typeKind &&
           description == other.description &&
+          agentInstructions == other.agentInstructions &&
           parentId == other.parentId &&
           userId == other.userId;
 
@@ -201,6 +213,7 @@ class ModelType {
       name.hashCode ^
       typeKind.hashCode ^
       description.hashCode ^
+      agentInstructions.hashCode ^
       parentId.hashCode ^
       userId.hashCode;
 }

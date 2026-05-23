@@ -1,8 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:gql/language.dart' show printNode;
 import 'package:gql/ast.dart' show OperationType;
+import 'package:gql/language.dart' show printNode;
+import 'package:gql_exec/gql_exec.dart' show RequestExtensionsThunk;
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../config/backend_presets.dart';
@@ -126,13 +127,16 @@ Link dbAuditContextLink(String sourceKind) {
           sourceId: request.operation.operationName,
           sourceLabel: request.operation.operationName,
         );
-    final auditedRequest = request.updateContextEntry<HttpLinkHeaders>(
-      (headers) => HttpLinkHeaders(
-        headers: <String, String>{
-          ...headers?.headers ?? <String, String>{},
-          ...context.toHeaders(fallbackSourceKind: sourceKind),
-        },
-      ),
+    final previousExtensions = request.context.entry<RequestExtensionsThunk>();
+    final audit = context.toNexusAudit(fallbackSourceKind: sourceKind);
+    final auditedRequest = request.withContextEntry(
+      RequestExtensionsThunk((request) {
+        final existing = previousExtensions?.getRequestExtensions(request);
+        return <String, dynamic>{
+          if (existing is Map) ...existing,
+          'nexusAudit': audit,
+        };
+      }),
     );
     return forward(auditedRequest);
   });

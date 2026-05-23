@@ -38,6 +38,7 @@ class KgqlModelTypeRepository implements ModelTypeWriteRepository {
     required String name,
     required String typeKind,
     String? description,
+    String? agentInstructions,
     int? parentId,
     required List<AttributeDefinitionDraft> attributeDefinitions,
     required List<RelationDefinitionDraft> relationshipTypes,
@@ -48,6 +49,7 @@ class KgqlModelTypeRepository implements ModelTypeWriteRepository {
       name: name,
       typeKind: typeKind,
       description: description,
+      agentInstructions: agentInstructions,
       parent: parentId != null ? nx.ParentLink.fromId(parentId) : null,
       attributeDefinitions: attributeDefinitions.isNotEmpty
           ? attributeDefinitions.map(attributeDraftToNx).toList()

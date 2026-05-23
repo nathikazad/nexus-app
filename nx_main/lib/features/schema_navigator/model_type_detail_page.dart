@@ -147,6 +147,13 @@ class ModelTypeDetailPage extends ConsumerWidget {
                 ),
               ),
             ],
+            if (modelType.agentInstructions != null &&
+                modelType.agentInstructions!.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              _sectionTitle('Agent instructions'),
+              const SizedBox(height: 8),
+              _agentInstructionsCard(modelType),
+            ],
             if (modelType.traits != null && modelType.traits!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _sectionTitle('Traits'),
@@ -242,6 +249,47 @@ class ModelTypeDetailPage extends ConsumerWidget {
         fontWeight: FontWeight.w600,
         letterSpacing: 1.2,
         color: AppColors.gray400,
+      ),
+    );
+  }
+
+  Widget _agentInstructionsCard(SchemaModelType modelType) {
+    final entries = modelType.agentInstructions!.entries.toList();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gray100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < entries.length; i++) ...[
+            if (i > 0) const Divider(height: 24, color: AppColors.gray100),
+            if (entries.length > 1) ...[
+              Text(
+                entries[i].key,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: entries[i].key == modelType.name
+                      ? AppColors.orange600
+                      : AppColors.gray500,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
+            Text(
+              entries[i].value,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                height: 1.45,
+                color: AppColors.gray600,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

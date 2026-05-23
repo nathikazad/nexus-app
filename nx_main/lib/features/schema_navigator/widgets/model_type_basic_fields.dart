@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class ModelTypeBasicFields extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController descriptionController;
+  final TextEditingController agentInstructionsController;
   final String typeKind;
   final Function(String) onTypeKindChanged;
   final int? parentId;
@@ -14,6 +15,7 @@ class ModelTypeBasicFields extends StatelessWidget {
     super.key,
     required this.nameController,
     required this.descriptionController,
+    required this.agentInstructionsController,
     required this.typeKind,
     required this.onTypeKindChanged,
     this.parentId,
@@ -83,7 +85,7 @@ class ModelTypeBasicFields extends StatelessWidget {
         const SizedBox(height: 16),
         // Type Kind dropdown
         DropdownButtonFormField<String>(
-          value: typeKind,
+          initialValue: typeKind,
           decoration: const InputDecoration(
             labelText: 'Type Kind',
             border: OutlineInputBorder(),
@@ -108,6 +110,16 @@ class ModelTypeBasicFields extends StatelessWidget {
             border: OutlineInputBorder(),
           ),
           maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: agentInstructionsController,
+          decoration: const InputDecoration(
+            labelText: 'Agent instructions',
+            border: OutlineInputBorder(),
+          ),
+          minLines: 3,
+          maxLines: 8,
         ),
       ],
     );

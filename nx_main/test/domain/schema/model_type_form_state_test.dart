@@ -9,12 +9,14 @@ void main() {
       name: 'Child',
       typeKind: 'base',
       description: 'desc',
+      agentInstructions: const {'Child': 'Use exact interval fields.'},
       parentId: 1,
       parent: const SchemaModelType(id: 1, name: 'Parent'),
     );
     final f = ModelTypeFormFields.fromSchemaModelType(mt);
     expect(f.name, 'Child');
     expect(f.description, 'desc');
+    expect(f.agentInstructions, 'Use exact interval fields.');
     expect(f.typeKind, 'base');
     expect(f.parentId, 1);
     expect(f.parentName, 'Parent');
@@ -28,5 +30,17 @@ void main() {
     );
     final f = ModelTypeFormFields.fromSchemaModelType(mt);
     expect(f.parentName, isNull);
+  });
+
+  test('uses visible inherited agent instruction when own entry is absent', () {
+    const mt = SchemaModelType(
+      id: 2,
+      name: 'Sleep',
+      agentInstructions: {'Action': 'Use interval start and end times.'},
+    );
+
+    final f = ModelTypeFormFields.fromSchemaModelType(mt);
+
+    expect(f.agentInstructions, 'Use interval start and end times.');
   });
 }

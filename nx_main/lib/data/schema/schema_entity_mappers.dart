@@ -92,6 +92,7 @@ SchemaModelType schemaModelTypeFromNx(nx.ModelType m) {
     name: m.name,
     typeKind: m.typeKind,
     description: m.description,
+    agentInstructions: m.agentInstructions,
     parentId: m.parentId,
     userId: m.userId,
     parent: m.parent != null ? schemaModelTypeFromNx(m.parent!) : null,

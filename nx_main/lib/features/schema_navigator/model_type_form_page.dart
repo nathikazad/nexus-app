@@ -85,6 +85,8 @@ class _ModelTypeFormPageState extends ConsumerState<ModelTypeFormPage> {
             ModelTypeBasicFields(
               nameController: controllerState.nameController,
               descriptionController: controllerState.descriptionController,
+              agentInstructionsController:
+                  controllerState.agentInstructionsController,
               typeKind: controllerState.typeKind,
               onTypeKindChanged: (value) {
                 controllerNotifier.setTypeKind(value);

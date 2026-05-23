@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:test/test.dart' show Tags;
 
 void main() {
   group('RT SetModelTypeRequest', () {
@@ -62,6 +61,18 @@ void main() {
         'id': 3,
         'delete': true,
       });
+    });
+
+    test('RT6.6 agent_instructions', () {
+      final r = SetModelTypeRequest(
+        name: 'Expense',
+        typeKind: 'base',
+        agentInstructions: 'Use merchant search before creating companies.',
+      );
+      expect(
+        r.toJson()['agent_instructions'],
+        'Use merchant search before creating companies.',
+      );
     });
   });
 }
