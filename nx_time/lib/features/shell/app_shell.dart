@@ -116,7 +116,9 @@ class _AppShellState extends ConsumerState<AppShell>
         debugPrint('[nx_time shell] todaySnapshot: ${next.error}');
       }
     });
-    if (actionsTabVisible && todayMode == TodayViewMode.actions) {
+    if (actionsTabVisible &&
+        (todayMode == TodayViewMode.actions ||
+            todayMode == TodayViewMode.stats)) {
       ref.listen<AsyncValue<KgqlModelChange>>(
         kgqlModelChangesProvider('Action'),
         (prev, next) {
@@ -129,7 +131,7 @@ class _AppShellState extends ConsumerState<AppShell>
         },
       );
     }
-    if (actionsTabVisible && todayMode == TodayViewMode.logs) {
+    if (actionsTabVisible && todayMode == TodayViewMode.actions) {
       ref.listen<AsyncValue<KgqlModelChange>>(
         kgqlModelChangesProvider('Daily Log'),
         (prev, next) {

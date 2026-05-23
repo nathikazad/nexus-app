@@ -27,15 +27,15 @@ class TodayViewToggle extends StatelessWidget {
         children: [
           _ToggleButton(
             icon: SolarLinearIcons.running,
-            tooltip: 'Actions',
+            tooltip: 'Actions and logs',
             selected: mode == TodayViewMode.actions,
             onTap: () => onChanged(TodayViewMode.actions),
           ),
           _ToggleButton(
-            icon: SolarLinearIcons.notebook,
-            tooltip: 'Logs',
-            selected: mode == TodayViewMode.logs,
-            onTap: () => onChanged(TodayViewMode.logs),
+            icon: SolarLinearIcons.chartSquare,
+            tooltip: 'Stats',
+            selected: mode == TodayViewMode.stats,
+            onTap: () => onChanged(TodayViewMode.stats),
           ),
         ],
       ),

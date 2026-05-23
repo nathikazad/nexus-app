@@ -9,6 +9,7 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/domain/log/daily_log.dart';
 import 'package:nx_time/core/widgets/nx_tab_header.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/shell/nx_app_menu_button.dart';
@@ -27,7 +28,7 @@ class CalendarPage extends ConsumerStatefulWidget {
   ConsumerState<CalendarPage> createState() => _CalendarPageState();
 }
 
-enum _CalendarView { actions, logs, tasks, stats }
+enum _CalendarView { actions, tasks, stats }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
   /// Index 0 = Monday … 6 = Sunday; `null` until first frame picks default for the week.
@@ -49,7 +50,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     setState(() {
       _selectedDayIndex = null;
       _view = _CalendarView.actions;
-      _weekOverview = false;
     });
   }
 
@@ -62,7 +62,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     setState(() {
       _selectedDayIndex = null;
       _view = _CalendarView.actions;
-      _weekOverview = false;
     });
   }
 
@@ -125,9 +124,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 tooltip: _weekOverview ? 'Week schedule' : 'Week overview',
                 icon: Icon(
-                  SolarLinearIcons.pieChart2,
+                  _weekOverview
+                      ? SolarLinearIcons.chartSquare
+                      : SolarLinearIcons.pieChart2,
                   size: 22,
-                  color: _weekOverview ? AppColors.accent : AppColors.slate400,
+                  color: AppColors.slate400,
                 ),
               ),
               const NxAppMenuButton(),
@@ -355,7 +356,6 @@ class _CalendarDayPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final heading = DateFormat('EEEE, MMM d').format(dayData.day);
-    final rows = dayData.rows;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -382,16 +382,9 @@ class _CalendarDayPanel extends StatelessWidget {
                 children: [
                   _CalViewIcon(
                     icon: SolarLinearIcons.running,
-                    tooltip: 'Actions',
+                    tooltip: 'Actions and logs',
                     selected: view == _CalendarView.actions,
                     onTap: () => onSelectView(_CalendarView.actions),
-                  ),
-                  const SizedBox(width: 4),
-                  _CalViewIcon(
-                    icon: SolarLinearIcons.notebook,
-                    tooltip: 'Daily logs',
-                    selected: view == _CalendarView.logs,
-                    onTap: () => onSelectView(_CalendarView.logs),
                   ),
                   const SizedBox(width: 4),
                   _CalViewIcon(
@@ -420,59 +413,14 @@ class _CalendarDayPanel extends StatelessWidget {
                 style: TextStyle(fontSize: 14, color: AppColors.slate500),
               ),
             ),
-            _CalendarView.logs => _CalendarLogsList(day: dayData.day),
             _CalendarView.stats => _StatsList(
               stats: _statsForDay(dayData, colors),
             ),
-            _CalendarView.actions =>
-              rows.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No actions',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.slate500,
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 120),
-                      itemCount: rows.length + 1,
-                      itemBuilder: (context, i) {
-                        if (i == rows.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 6),
-                            child: Text(
-                              'tap any row to view activity detail',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                          );
-                        }
-                        final row = rows[i];
-                        final u = row.umbrella;
-                        final bar = colors.forId(
-                          u.modelTypeId,
-                          name: u.modelTypeName,
-                        );
-                        final name = u.name.isNotEmpty
-                            ? u.name
-                            : (u.modelTypeName ?? 'Action');
-                        final start = u.startTime;
-                        final end = u.endTime;
-                        return _CalActRow(
-                          color: bar,
-                          timeRange: _compactTimeRange(start, end),
-                          title: name,
-                          duration: formatDurationHm(start, end),
-                          showBottomBorder: i < rows.length - 1,
-                          onTap: () => onRowTap(row),
-                        );
-                      },
-                    ),
+            _CalendarView.actions => _CalendarTimelineList(
+              dayData: dayData,
+              colors: colors,
+              onRowTap: onRowTap,
+            ),
           },
         ),
       ],
@@ -480,21 +428,28 @@ class _CalendarDayPanel extends StatelessWidget {
   }
 }
 
-class _CalendarLogsList extends ConsumerWidget {
-  const _CalendarLogsList({required this.day});
+class _CalendarTimelineList extends ConsumerWidget {
+  const _CalendarTimelineList({
+    required this.dayData,
+    required this.colors,
+    required this.onRowTap,
+  });
 
-  final DateTime day;
+  final CalendarDayData dayData;
+  final ModelTypeColors colors;
+  final void Function(UmbrellaRow row) onRowTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final logsAsync = ref.watch(dailyLogsForDayProvider(day));
+    final logsAsync = ref.watch(dailyLogsForDayProvider(dayData.day));
 
     return logsAsync.when(
       data: (logs) {
-        if (logs.isEmpty) {
+        final entries = _calendarTimelineEntries(dayData.rows, logs);
+        if (entries.isEmpty) {
           return const Center(
             child: Text(
-              'No logs',
+              'No actions or logs',
               style: TextStyle(fontSize: 14, color: AppColors.slate500),
             ),
           );
@@ -502,39 +457,189 @@ class _CalendarLogsList extends ConsumerWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-          itemCount: logs.length,
+          itemCount: entries.length + 1,
           itemBuilder: (context, i) {
-            final log = logs[i];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: LogRow(
-                log: log,
-                onTap: () {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          LogEditPage(mode: LogEditMode.edit, initial: log),
-                    ),
-                  );
-                },
-              ),
+            if (i == entries.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 6),
+                child: Text(
+                  'tap any row to view activity detail',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: AppColors.slate400),
+                ),
+              );
+            }
+
+            final entry = entries[i];
+            final log = entry.log;
+            if (log != null) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: LogRow(
+                  log: log,
+                  onTap: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            LogEditPage(mode: LogEditMode.edit, initial: log),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+
+            final row = entry.row!;
+            final u = row.umbrella;
+            final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
+            final name = u.name.isNotEmpty
+                ? u.name
+                : (u.modelTypeName ?? 'Action');
+            final start = u.startTime;
+            final end = u.endTime;
+            return _CalActRow(
+              color: bar,
+              timeRange: _compactTimeRange(start, end),
+              title: name,
+              duration: formatDurationHm(start, end),
+              showBottomBorder: i < entries.length - 1,
+              onTap: () => onRowTap(row),
             );
           },
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Could not load logs: $e',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.slate500),
-          ),
-        ),
-      ),
+      loading: () => dayData.rows.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+              itemCount: dayData.rows.length + 1,
+              itemBuilder: (context, i) {
+                if (i == dayData.rows.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final row = dayData.rows[i];
+                final u = row.umbrella;
+                final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
+                final name = u.name.isNotEmpty
+                    ? u.name
+                    : (u.modelTypeName ?? 'Action');
+                final start = u.startTime;
+                final end = u.endTime;
+                return _CalActRow(
+                  color: bar,
+                  timeRange: _compactTimeRange(start, end),
+                  title: name,
+                  duration: formatDurationHm(start, end),
+                  showBottomBorder: i < dayData.rows.length - 1,
+                  onTap: () => onRowTap(row),
+                );
+              },
+            ),
+      error: (e, _) {
+        if (dayData.rows.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Could not load logs: $e',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: AppColors.slate500),
+              ),
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          itemCount: dayData.rows.length + 1,
+          itemBuilder: (context, i) {
+            if (i == dayData.rows.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(
+                  'Could not load logs: $e',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.slate400,
+                  ),
+                ),
+              );
+            }
+            final row = dayData.rows[i];
+            final u = row.umbrella;
+            final bar = colors.forId(u.modelTypeId, name: u.modelTypeName);
+            final name = u.name.isNotEmpty
+                ? u.name
+                : (u.modelTypeName ?? 'Action');
+            final start = u.startTime;
+            final end = u.endTime;
+            return _CalActRow(
+              color: bar,
+              timeRange: _compactTimeRange(start, end),
+              title: name,
+              duration: formatDurationHm(start, end),
+              showBottomBorder: i < dayData.rows.length - 1,
+              onTap: () => onRowTap(row),
+            );
+          },
+        );
+      },
     );
   }
+}
+
+class _CalendarTimelineEntry {
+  const _CalendarTimelineEntry.action({
+    required this.sortTime,
+    required this.order,
+    required this.row,
+  }) : log = null;
+
+  const _CalendarTimelineEntry.log({
+    required this.sortTime,
+    required this.order,
+    required this.log,
+  }) : row = null;
+
+  final DateTime? sortTime;
+  final int order;
+  final UmbrellaRow? row;
+  final DailyLog? log;
+}
+
+List<_CalendarTimelineEntry> _calendarTimelineEntries(
+  List<UmbrellaRow> rows,
+  List<DailyLog> logs,
+) {
+  final entries = <_CalendarTimelineEntry>[
+    for (var i = 0; i < rows.length; i++)
+      _CalendarTimelineEntry.action(
+        sortTime: rows[i].umbrella.startTime,
+        order: i * 2,
+        row: rows[i],
+      ),
+    for (var i = 0; i < logs.length; i++)
+      _CalendarTimelineEntry.log(
+        sortTime: logs[i].loggedAt,
+        order: i * 2 + 1,
+        log: logs[i],
+      ),
+  ];
+
+  entries.sort((a, b) {
+    final at = a.sortTime;
+    final bt = b.sortTime;
+    if (at == null && bt == null) return a.order.compareTo(b.order);
+    if (at == null) return 1;
+    if (bt == null) return -1;
+    final cmp = at.compareTo(bt);
+    if (cmp != 0) return cmp;
+    return a.order.compareTo(b.order);
+  });
+  return entries;
 }
 
 class _CalViewIcon extends StatelessWidget {

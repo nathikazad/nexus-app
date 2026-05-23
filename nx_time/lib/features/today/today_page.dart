@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/log/daily_log.dart';
 import 'package:nx_time/features/shell/nx_app_menu_button.dart';
 import 'package:nx_time/features/today/log_view_model.dart';
@@ -38,6 +39,9 @@ class TodayPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.paddingOf(context).top;
     final mode = ref.watch(todayViewModeProvider);
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
 
     return CustomScrollView(
       clipBehavior: Clip.hardEdge,
@@ -53,66 +57,39 @@ class TodayPage extends ConsumerWidget {
           ),
         ),
         if (mode == TodayViewMode.actions)
-          _buildActionsSliver(context)
+          _buildTimelineSliver(context, ref)
         else
-          _buildLogsSliver(context, ref),
+          _buildStatsSliver(colors),
       ],
     );
   }
 
-  Widget _buildActionsSliver(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-      sliver: SliverList(
-        delegate: SliverChildListDelegate([
-          for (var i = 0; i < snapshot.actions.length; i++) ...[
-            ActivityRow(
-              activity: snapshot.actions[i],
-              onTap: onActivityTap != null ? () => onActivityTap!(i) : null,
-              onChildTap: onChildTap != null
-                  ? (ci) => onChildTap!(i, ci)
-                  : null,
-            ),
-            const SizedBox(height: 4),
-          ],
-          const SizedBox(height: 12),
-          _DashedAddButton(
-            label: 'Add time block manually',
-            onTap: onAddManualTap,
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildLogsSliver(BuildContext context, WidgetRef ref) {
+  Widget _buildTimelineSliver(BuildContext context, WidgetRef ref) {
     final logsAsync = ref.watch(todayLogsProvider);
 
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
       sliver: logsAsync.when(
         data: (logs) {
+          final entries = _buildTimelineEntries(snapshot, logs);
           return SliverList(
             delegate: SliverChildListDelegate([
-              if (logs.isEmpty) ...[
+              if (entries.isEmpty) ...[
                 const SizedBox(height: 24),
                 const Center(
                   child: Text(
-                    'No logs yet today',
+                    'No actions or logs yet today',
                     style: TextStyle(fontSize: 13, color: AppColors.slate400),
                   ),
                 ),
                 const SizedBox(height: 16),
               ] else
-                for (final log in logs) ...[
-                  LogRow(
-                    log: log,
-                    onTap: onLogTap != null ? () => onLogTap!(log) : null,
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                for (final entry in entries) ..._widgetsForTimelineEntry(entry),
               const SizedBox(height: 12),
-              _DashedAddButton(label: 'Add log', onTap: onAddLogTap),
+              _TimelineAddActions(
+                onAddManualTap: onAddManualTap,
+                onAddLogTap: onAddLogTap,
+              ),
             ]),
           );
         },
@@ -135,6 +112,243 @@ class TodayPage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  List<Widget> _widgetsForTimelineEntry(_TodayTimelineEntry entry) {
+    final log = entry.log;
+    if (log != null) {
+      return [
+        LogRow(log: log, onTap: onLogTap != null ? () => onLogTap!(log) : null),
+        const SizedBox(height: 8),
+      ];
+    }
+
+    final actionIndex = entry.actionIndex!;
+    return [
+      ActivityRow(
+        activity: snapshot.actions[actionIndex],
+        onTap: onActivityTap != null ? () => onActivityTap!(actionIndex) : null,
+        onChildTap: onChildTap != null
+            ? (ci) => onChildTap!(actionIndex, ci)
+            : null,
+      ),
+      const SizedBox(height: 4),
+    ];
+  }
+
+  Widget _buildStatsSliver(ModelTypeColors colors) {
+    final stats = _statsForToday(snapshot, colors);
+    if (stats.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Text(
+            'No actions',
+            style: TextStyle(fontSize: 14, color: AppColors.slate500),
+          ),
+        ),
+      );
+    }
+    final maxMinutes = stats.first.totalMinutes;
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+      sliver: SliverList.builder(
+        itemCount: stats.length,
+        itemBuilder: (context, i) {
+          final stat = stats[i];
+          final fraction = maxMinutes <= 0
+              ? 0.0
+              : stat.totalMinutes / maxMinutes;
+          return _TodayStatRow(stat: stat, fraction: fraction);
+        },
+      ),
+    );
+  }
+}
+
+class _TodayActionStat {
+  _TodayActionStat({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+  int totalMinutes = 0;
+}
+
+class _TodayTimelineEntry {
+  const _TodayTimelineEntry.action({
+    required this.sortTime,
+    required this.actionIndex,
+  }) : log = null;
+
+  const _TodayTimelineEntry.log({required this.sortTime, required this.log})
+    : actionIndex = null;
+
+  final DateTime? sortTime;
+  final int? actionIndex;
+  final DailyLog? log;
+}
+
+List<_TodayTimelineEntry> _buildTimelineEntries(
+  TodaySnapshot snapshot,
+  List<DailyLog> logs,
+) {
+  final entries = <_TodayTimelineEntry>[
+    for (var i = 0; i < snapshot.umbrellaRows.length; i++)
+      _TodayTimelineEntry.action(
+        sortTime: snapshot.umbrellaRows[i].umbrella.startTime,
+        actionIndex: i,
+      ),
+    for (final log in logs)
+      _TodayTimelineEntry.log(sortTime: log.loggedAt, log: log),
+  ];
+
+  entries.sort((a, b) {
+    final at = a.sortTime;
+    final bt = b.sortTime;
+    if (at == null && bt == null) return 0;
+    if (at == null) return 1;
+    if (bt == null) return -1;
+    return at.compareTo(bt);
+  });
+
+  return entries;
+}
+
+List<_TodayActionStat> _statsForToday(
+  TodaySnapshot snapshot,
+  ModelTypeColors colors,
+) {
+  final byType = <int, _TodayActionStat>{};
+  final dayStart = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
+  final dayEnd = dayStart.add(const Duration(days: 1));
+
+  for (final row in snapshot.umbrellaRows) {
+    final action = row.umbrella;
+    var start = action.startTime;
+    var end = action.endTime;
+    if (start == null) continue;
+    end ??= start.add(const Duration(hours: 1));
+    if (start.isBefore(dayStart)) start = dayStart;
+    if (end.isAfter(dayEnd)) end = dayEnd;
+    if (!end.isAfter(start)) continue;
+
+    final minutes = end.difference(start).inMinutes;
+    if (minutes <= 0) continue;
+
+    final id = action.modelTypeId;
+    final stat = byType.putIfAbsent(
+      id,
+      () => _TodayActionStat(
+        label:
+            (action.modelTypeName != null && action.modelTypeName!.isNotEmpty)
+            ? action.modelTypeName!
+            : 'Type $id',
+        color: colors.forId(id, name: action.modelTypeName),
+      ),
+    );
+    stat.totalMinutes += minutes;
+  }
+
+  return byType.values.toList()
+    ..sort((a, b) => b.totalMinutes.compareTo(a.totalMinutes));
+}
+
+String _formatStatHm(int totalMinutes) {
+  final h = totalMinutes ~/ 60;
+  final m = totalMinutes.remainder(60);
+  if (h <= 0) return '${m}m';
+  if (m == 0) return '${h}h';
+  return '${h}h ${m}m';
+}
+
+class _TodayStatRow extends StatelessWidget {
+  const _TodayStatRow({required this.stat, required this.fraction});
+
+  final _TodayActionStat stat;
+  final double fraction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: stat.color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  stat.label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.slate900,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Text(
+                _formatStatHm(stat.totalMinutes),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.slate500,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: Stack(
+              children: [
+                Container(height: 6, color: AppColors.slate100),
+                FractionallySizedBox(
+                  widthFactor: fraction.clamp(0.0, 1.0),
+                  child: Container(height: 6, color: stat.color),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineAddActions extends StatelessWidget {
+  const _TimelineAddActions({
+    required this.onAddManualTap,
+    required this.onAddLogTap,
+  });
+
+  final VoidCallback? onAddManualTap;
+  final VoidCallback? onAddLogTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _DashedAddButton(
+          label: 'Add time block manually',
+          onTap: onAddManualTap,
+        ),
+        const SizedBox(height: 8),
+        _DashedAddButton(label: 'Add log', onTap: onAddLogTap),
+      ],
     );
   }
 }

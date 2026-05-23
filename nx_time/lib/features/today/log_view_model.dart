@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/log/daily_log.dart';
 
-/// Today tab view mode — toggles between the actions list and the daily-log list.
-enum TodayViewMode { actions, logs }
+/// Today tab view mode — toggles between the activity timeline and stats list.
+enum TodayViewMode { actions, stats }
 
 class TodayViewModeNotifier extends Notifier<TodayViewMode> {
   @override
