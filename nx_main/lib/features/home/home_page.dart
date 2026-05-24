@@ -80,13 +80,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         currentIndex: _currentIndex,
         onChanged: (index) => setState(() => _currentIndex = index),
         onAiHoldStart: () {
-          debugPrint('[nx_main voice] spark hold start');
           unawaited(
             ref.read(voiceSocketControllerProvider.notifier).startRecording(),
           );
         },
         onAiHoldEnd: () {
-          debugPrint('[nx_main voice] spark hold end');
           unawaited(
             ref.read(voiceSocketControllerProvider.notifier).stopRecording(),
           );

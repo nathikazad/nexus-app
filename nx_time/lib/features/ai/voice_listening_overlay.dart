@@ -8,12 +8,9 @@ import 'package:nx_time/features/ai/voice_socket_controller.dart';
 class VoiceListeningOverlay extends ConsumerWidget {
   const VoiceListeningOverlay({super.key});
 
-  static const double _navReserve = 80;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final voiceState = ref.watch(voiceSocketControllerProvider);
-    final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Stack(
       fit: StackFit.expand,
@@ -23,7 +20,7 @@ class VoiceListeningOverlay extends ConsumerWidget {
           top: 0,
           left: 0,
           right: 0,
-          bottom: _navReserve + bottom,
+          bottom: 0,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => ref
@@ -35,7 +32,7 @@ class VoiceListeningOverlay extends ConsumerWidget {
         Positioned(
           left: 20,
           right: 20,
-          bottom: _navReserve + bottom + 8,
+          bottom: 8,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

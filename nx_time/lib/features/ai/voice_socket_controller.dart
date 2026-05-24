@@ -485,6 +485,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         state = state.copyWith(phase: VoiceSocketPhase.idle);
       }
       ..onTextChunk = (packet) {
+        final textFallback = packet.text.trim();
         try {
           final decoded = jsonDecode(packet.text);
           if (decoded is Map<String, dynamic> &&
@@ -531,9 +532,23 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
             }
           } else {
             debugPrint('[nx_time voice] text: ${packet.text}');
+            if (textFallback.isNotEmpty) {
+              _applyTranscript(
+                role: 'assistant',
+                text: textFallback,
+                turnkey: null,
+              );
+            }
           }
         } catch (_) {
           debugPrint('[nx_time voice] text: ${packet.text}');
+          if (textFallback.isNotEmpty) {
+            _applyTranscript(
+              role: 'assistant',
+              text: textFallback,
+              turnkey: null,
+            );
+          }
         }
         if (state.phase == VoiceSocketPhase.waiting) {
           state = state.copyWith(phase: VoiceSocketPhase.responding);

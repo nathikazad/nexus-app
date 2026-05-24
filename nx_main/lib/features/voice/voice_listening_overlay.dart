@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
 import 'package:nexus_voice_assistant/features/voice/voice_socket_controller.dart';
@@ -7,12 +8,9 @@ import 'package:nexus_voice_assistant/features/voice/voice_socket_controller.dar
 class VoiceListeningOverlay extends ConsumerWidget {
   const VoiceListeningOverlay({super.key});
 
-  static const double _navReserve = 80;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final voiceState = ref.watch(voiceSocketControllerProvider);
-    final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Stack(
       fit: StackFit.expand,
@@ -22,7 +20,7 @@ class VoiceListeningOverlay extends ConsumerWidget {
           top: 0,
           left: 0,
           right: 0,
-          bottom: _navReserve + bottom,
+          bottom: 0,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => ref
@@ -34,7 +32,7 @@ class VoiceListeningOverlay extends ConsumerWidget {
         Positioned(
           left: 20,
           right: 20,
-          bottom: _navReserve + bottom + 8,
+          bottom: 8,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,14 +108,60 @@ class _VoiceBubble extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            fontSize: 14,
-            height: 1.45,
-            color: fromUser ? Colors.white : AppColors.gray900,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message.text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: fromUser ? Colors.white : AppColors.gray900,
+              ),
+            ),
+            if (!fromUser && message.links.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              for (final link in message.links)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: _VoiceLinkButton(link: link),
+                ),
+            ],
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _VoiceLinkButton extends StatelessWidget {
+  const _VoiceLinkButton({required this.link});
+
+  final VoiceAppLink link;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: () => context.push(link.url),
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.orange700,
+        backgroundColor: AppColors.orange50,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+          side: const BorderSide(color: AppColors.orange600),
+        ),
+        textStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      icon: const Icon(Icons.open_in_new_rounded, size: 16),
+      label: Text(
+        link.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

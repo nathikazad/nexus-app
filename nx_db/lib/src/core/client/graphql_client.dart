@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:gql/ast.dart' show OperationType;
 import 'package:gql/language.dart' show printNode;
-import 'package:gql_exec/gql_exec.dart' show RequestExtensionsThunk;
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../config/backend_presets.dart';
@@ -189,5 +188,6 @@ GraphQLClient createClient(
   return GraphQLClient(
     link: link,
     cache: GraphQLCache(),
+    queryRequestTimeout: const Duration(seconds: 30),
   );
 }

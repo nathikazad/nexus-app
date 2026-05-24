@@ -82,10 +82,14 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
   @override
   Widget build(BuildContext context) {
     final query = ref.watch(schemaModelListQueryProvider(widget.modelTypeId));
-    final modelsAsync = ref.watch(schemaModelsForQueryProvider(query));
     final modelTypeAsync =
         ref.watch(schemaModelTypeProvider(widget.modelTypeId));
     final modelType = modelTypeAsync.whenOrNull(data: (value) => value);
+    var effectiveQuery = query;
+    final waitingForRouteHydration = !_didApplyInitialRouteQuery &&
+        !widget.initialRouteQuery.isEmpty &&
+        modelType == null &&
+        modelTypeAsync.isLoading;
 
     if (!_didApplyInitialRouteQuery && modelType != null) {
       _didApplyInitialRouteQuery = true;
@@ -94,6 +98,7 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
           modelTypeId: widget.modelTypeId,
           modelType: modelType,
         );
+        effectiveQuery = initialQuery;
         _isApplyingRouteQuery = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
@@ -106,6 +111,9 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
         });
       }
     }
+    final modelsAsync = waitingForRouteHydration
+        ? null
+        : ref.watch(schemaModelsForQueryProvider(effectiveQuery));
 
     ref.listen<SchemaModelListQuery>(
       schemaModelListQueryProvider(widget.modelTypeId),
@@ -117,8 +125,8 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
       },
     );
 
-    if (_searchController.text != query.search) {
-      _searchController.text = query.search;
+    if (_searchController.text != effectiveQuery.search) {
+      _searchController.text = effectiveQuery.search;
       _searchController.selection = TextSelection.collapsed(
         offset: _searchController.text.length,
       );
@@ -128,7 +136,13 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
         ),
         title: modelTypeAsync.when(
           data: (data) => Text(data?.name ?? 'Models'),
@@ -140,7 +154,7 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
             tooltip: 'Search',
             icon: Icon(
               Icons.search_rounded,
-              color: query.search.trim().isNotEmpty || _searchExpanded
+              color: effectiveQuery.search.trim().isNotEmpty || _searchExpanded
                   ? Theme.of(context).colorScheme.primary
                   : null,
             ),
@@ -152,30 +166,31 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
           IconButton(
             tooltip: 'Filter',
             icon: Badge.count(
-              count: query.filters.length,
-              isLabelVisible: query.filters.isNotEmpty,
+              count: effectiveQuery.filters.length,
+              isLabelVisible: effectiveQuery.filters.isNotEmpty,
               child: Icon(
                 Icons.filter_alt_outlined,
-                color: query.filters.isNotEmpty
+                color: effectiveQuery.filters.isNotEmpty
                     ? Theme.of(context).colorScheme.primary
                     : null,
               ),
             ),
             onPressed: modelType == null
                 ? null
-                : () => _showFilterSheet(context, ref, modelType, query),
+                : () =>
+                    _showFilterSheet(context, ref, modelType, effectiveQuery),
           ),
           IconButton(
             tooltip: 'Sort',
             icon: Icon(
               Icons.sort_rounded,
-              color: query.sort != null
+              color: effectiveQuery.sort != null
                   ? Theme.of(context).colorScheme.primary
                   : null,
             ),
             onPressed: modelType == null
                 ? null
-                : () => _showSortSheet(context, ref, modelType, query),
+                : () => _showSortSheet(context, ref, modelType, effectiveQuery),
           ),
         ],
       ),
@@ -204,9 +219,9 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
                 ),
               ),
             ),
-          if (query.isActive)
+          if (effectiveQuery.isActive)
             _ActiveQueryChips(
-              query: query,
+              query: effectiveQuery,
               onClearSearch: _clearSearch,
               onRemoveFilter: (index) => ref
                   .read(
@@ -227,20 +242,25 @@ class _ModelsListPageState extends ConsumerState<ModelsListPage> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                return modelsAsync.when(
+                final async = modelsAsync;
+                if (async == null) {
+                  return const LoadingIndicator();
+                }
+                return async.when(
                   data: (page) => _ModelsContent(
                     page: page,
                     constraints: constraints,
                     modelTypeId: widget.modelTypeId,
-                    query: query,
+                    query: effectiveQuery,
                     onPageChanged: (nextPage) => ref
                         .read(schemaModelListQueryProvider(widget.modelTypeId)
                             .notifier)
                         .setPage(nextPage),
                     onRefresh: () async {
-                      ref.invalidate(schemaModelsForQueryProvider(query));
-                      await ref
-                          .read(schemaModelsForQueryProvider(query).future);
+                      ref.invalidate(
+                          schemaModelsForQueryProvider(effectiveQuery));
+                      await ref.read(
+                          schemaModelsForQueryProvider(effectiveQuery).future);
                     },
                   ),
                   loading: () => const LoadingIndicator(),

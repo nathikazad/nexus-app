@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_utils/nx_utils.dart';
@@ -21,12 +20,14 @@ class VoiceOverlayMessage {
     required this.text,
     this.turnkey,
     this.ephemeral = false,
+    this.links = const [],
   });
 
   final String role;
   final String text;
   final String? turnkey;
   final bool ephemeral;
+  final List<VoiceAppLink> links;
 
   bool get fromUser => role == 'user';
 
@@ -34,14 +35,39 @@ class VoiceOverlayMessage {
     String? text,
     String? turnkey,
     bool? ephemeral,
+    List<VoiceAppLink>? links,
   }) {
     return VoiceOverlayMessage(
       role: role,
       text: text ?? this.text,
       turnkey: turnkey ?? this.turnkey,
       ephemeral: ephemeral ?? this.ephemeral,
+      links: links ?? this.links,
     );
   }
+}
+
+class VoiceAppLink {
+  const VoiceAppLink({
+    required this.label,
+    required this.url,
+    this.kind = 'app_route',
+    this.routeName,
+  });
+
+  factory VoiceAppLink.fromJson(Map<dynamic, dynamic> json) {
+    return VoiceAppLink(
+      label: (json['label'] ?? 'Open view').toString(),
+      url: (json['url'] ?? '').toString(),
+      kind: (json['kind'] ?? 'app_route').toString(),
+      routeName: json['route_name']?.toString(),
+    );
+  }
+
+  final String label;
+  final String url;
+  final String kind;
+  final String? routeName;
 }
 
 class VoiceSocketState {
@@ -120,7 +146,6 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   }
 
   Future<void> startRecording() async {
-    debugPrint('[nx_main voice] startRecording requested phase=${state.phase}');
     if (state.phase == VoiceSocketPhase.recording ||
         state.phase == VoiceSocketPhase.connecting) {
       return;
@@ -207,7 +232,6 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   }
 
   Future<void> stopRecording() async {
-    debugPrint('[nx_main voice] stopRecording requested phase=${state.phase}');
     if (_stopInFlight || state.phase != VoiceSocketPhase.recording) {
       return;
     }
@@ -352,11 +376,18 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   }
 
   void _handleTextPacket(String raw) {
+    final textFallback = raw.trim();
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) return;
+      if (decoded is! Map<String, dynamic>) {
+        _applyRawAssistantText(textFallback);
+        return;
+      }
       final type = decoded['type'];
-      if (type != 'transcript' && type != 'transcript-delta') return;
+      if (type != 'transcript' && type != 'transcript-delta') {
+        _applyRawAssistantText(textFallback);
+        return;
+      }
       final role = decoded['role'];
       final text = decoded['text'];
       final turnkey = decoded['turnkey'];
@@ -385,17 +416,24 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
           role: role,
           text: text,
           turnkey: turnkey is String ? turnkey : null,
+          links: _parseAppLinks(decoded['links']),
         );
       }
     } catch (_) {
-      debugPrint('[nx_main voice] text: $raw');
+      _applyRawAssistantText(textFallback);
     }
+  }
+
+  void _applyRawAssistantText(String text) {
+    if (text.isEmpty) return;
+    _applyTranscript(role: 'assistant', text: text, turnkey: null);
   }
 
   void _applyTranscript({
     required String role,
     required String text,
     required String? turnkey,
+    List<VoiceAppLink> links = const [],
   }) {
     final messages = List<VoiceOverlayMessage>.from(state.messages);
     final replaceIndex = role == 'assistant'
@@ -406,10 +444,17 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         text: text,
         turnkey: turnkey,
         ephemeral: false,
+        links: links.isEmpty ? messages[replaceIndex].links : links,
       );
     } else {
-      messages
-          .add(VoiceOverlayMessage(role: role, text: text, turnkey: turnkey));
+      messages.add(
+        VoiceOverlayMessage(
+          role: role,
+          text: text,
+          turnkey: turnkey,
+          links: links,
+        ),
+      );
     }
     state = state.copyWith(overlayVisible: true, messages: messages);
   }
@@ -458,6 +503,19 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       }
     }
     return -1;
+  }
+
+  List<VoiceAppLink> _parseAppLinks(Object? raw) {
+    if (raw is! List) return const [];
+    final links = <VoiceAppLink>[];
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final link = VoiceAppLink.fromJson(item);
+      if (link.url.trim().isNotEmpty) {
+        links.add(link);
+      }
+    }
+    return links;
   }
 
   void _configureAppLogUploader({

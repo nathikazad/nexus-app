@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../../core/json/payload_unwrap.dart';
@@ -31,22 +32,30 @@ Future<List<Model>> fetchKgqlModels(
   required Map<String, dynamic> filter,
   required Map<String, dynamic> struct,
 }) async {
+  final variables = {
+    'filter': filter,
+    'struct': struct,
+  };
+  debugPrint(
+    '[nx_db kgql] getKgqlModels query=${kgqlGetKgqlModelsQuery.trim()} '
+    'variables=${jsonEncode(variables)}',
+  );
   final result = await client.query(
     QueryOptions(
       document: gql(kgqlGetKgqlModelsQuery),
-      variables: {
-        'filter': filter,
-        'struct': struct,
-      },
+      variables: variables,
       fetchPolicy: FetchPolicy.networkOnly,
     ),
   );
 
   if (result.hasException) {
+    debugPrint('[nx_db kgql] getKgqlModels exception=${result.exception}');
     throw result.exception!;
   }
 
-  return parseKgqlModelsResult(result.data?['getKgqlModels']);
+  final rows = parseKgqlModelsResult(result.data?['getKgqlModels']);
+  debugPrint('[nx_db kgql] getKgqlModels rows=${rows.length}');
+  return rows;
 }
 
 /// Loads a single model by numeric id within [modelTypeName].
