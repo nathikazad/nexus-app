@@ -70,6 +70,17 @@ final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {
           'model_type': true,
           'name': true,
           'description': true,
+          'relation': true,
+          'relation_attributes': {
+            'key': true,
+            'value': true,
+          },
+        },
+        'tags': true,
+        'model_type': {
+          'id': true,
+          'name': true,
+          'description': true,
         },
       },
     },

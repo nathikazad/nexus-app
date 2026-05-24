@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
-import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
 import 'package:nexus_voice_assistant/domain/ble/ble_constants.dart';
 
 class DeviceSelectionPage extends ConsumerStatefulWidget {
@@ -70,13 +69,13 @@ class _DeviceSelectionPageState extends ConsumerState<DeviceSelectionPage> {
           });
         },
         onError: (e) {
-          LoggingService.instance.log('Scan error: $e');
+          debugPrint('Scan error: $e');
         },
       );
 
       await FlutterBluePlus.startScan(withServices: [serviceGuid]);
     } catch (e) {
-      LoggingService.instance.log('Start scan failed: $e');
+      debugPrint('Start scan failed: $e');
       if (mounted) {
         setState(() => _isScanning = false);
       }
@@ -127,7 +126,7 @@ class _DeviceSelectionPageState extends ConsumerState<DeviceSelectionPage> {
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      LoggingService.instance.log('Error saving paired device: $e');
+      debugPrint('Error saving paired device: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),

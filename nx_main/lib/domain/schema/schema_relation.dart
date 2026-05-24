@@ -5,6 +5,8 @@ class SchemaRelation {
   final String modelType;
   final String? name;
   final String? description;
+  final String? relation;
+  final Map<String, dynamic>? relationAttributes;
 
   const SchemaRelation({
     required this.relationId,
@@ -12,5 +14,7 @@ class SchemaRelation {
     required this.modelType,
     this.name,
     this.description,
+    this.relation,
+    this.relationAttributes,
   });
 }

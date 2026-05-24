@@ -66,3 +66,7 @@ export 'src/models/data/transcript/transcript_providers.dart';
 
 // Goals (app schema orchestrators)
 export 'goals.dart';
+
+// Logs / telemetry
+export 'src/logs/log_models.dart';
+export 'src/logs/logs_repository.dart';

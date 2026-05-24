@@ -31,16 +31,4 @@ void main() {
     final f = ModelTypeFormFields.fromSchemaModelType(mt);
     expect(f.parentName, isNull);
   });
-
-  test('uses visible inherited agent instruction when own entry is absent', () {
-    const mt = SchemaModelType(
-      id: 2,
-      name: 'Sleep',
-      agentInstructions: {'Action': 'Use interval start and end times.'},
-    );
-
-    final f = ModelTypeFormFields.fromSchemaModelType(mt);
-
-    expect(f.agentInstructions, 'Use interval start and end times.');
-  });
 }

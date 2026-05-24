@@ -1,132 +1,79 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexus_voice_assistant/core/widgets/error_widget.dart';
 import 'package:nexus_voice_assistant/core/widgets/loading_indicator.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
-import 'package:nx_db/riverpod.dart' show modelProvider;
 import 'package:nexus_voice_assistant/domain/schema/schema_model.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_model_attribute.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_relation.dart';
+import 'package:nx_db/riverpod.dart' show modelProvider;
 
 class ModelDetailPage extends ConsumerWidget {
-  final int modelId;
-
   const ModelDetailPage({
     super.key,
     required this.modelId,
   });
 
+  final int modelId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final modelAsync = ref.watch(schemaModelProvider(modelId));
+    final typeNames = ref.watch(schemaModelTypeIdToNameProvider);
 
     return Scaffold(
+      backgroundColor: _ModelUi.gray50,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+        title: const Text('Model'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: _ModelUi.gray200),
         ),
-        title: const Text('Model Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              modelAsync.whenData((model) {
-                if (model != null) {
-                  context.push(
-                    '/model-form?modelId=$modelId&modelTypeId=${model.modelTypeId}',
-                  );
-                }
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete Model'),
-                  content:
-                      const Text('Are you sure you want to delete this model?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Delete'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirmed == true) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Delete functionality not yet implemented'),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
       ),
       body: modelAsync.when(
         data: (model) {
           if (model == null) {
             return const Center(child: Text('Model not found'));
           }
+          final modelTypeName = model.modelType?.name ??
+              typeNames[model.modelTypeId] ??
+              'Model type ${model.modelTypeId}';
 
-          return SingleChildScrollView(
+          return ListView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  model.name,
-                  style: Theme.of(context).textTheme.headlineMedium,
+            children: [
+              _ModelHeader(model: model, modelTypeName: modelTypeName),
+              _Section(
+                title: 'Model Type',
+                child: _ModelTypeLink(
+                  modelTypeId: model.modelTypeId,
+                  modelTypeName: modelTypeName,
+                  description: model.modelType?.description,
                 ),
-                const SizedBox(height: 16),
-                if (model.description != null && model.description!.isNotEmpty)
-                  Text(
-                    model.description!,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                const SizedBox(height: 24),
-                if (model.attributesList != null &&
-                    model.attributesList!.isNotEmpty)
-                  _buildSection(
-                    context,
-                    'Attributes',
-                    _buildAttributesList(model.attributesList!),
-                  )
-                else if (model.attributes != null &&
-                    model.attributes!.isNotEmpty)
-                  _buildSection(
-                    context,
-                    'Attributes',
-                    _buildAttributes(model.attributes!),
-                  ),
-                if (model.relationsByModelType.isNotEmpty)
-                  _buildSection(
-                    context,
-                    'Relations',
-                    _buildRelationsByRelationName(
-                      context,
-                      model.relationsByModelType,
-                    ),
-                  )
-                else if (model.relations != null && model.relations!.isNotEmpty)
-                  _buildSection(
-                    context,
-                    'Relations',
-                    _buildRelations(context, model.relations!),
-                  ),
-              ],
-            ),
+              ),
+              _Section(
+                title: 'Attributes',
+                child: _AttributesGrid(
+                  attributes: model.attributesList,
+                  fallback: model.attributes,
+                ),
+              ),
+              _Section(
+                title: 'Relations',
+                child:
+                    _RelationsList(relations: model.relationsList ?? const []),
+              ),
+              _Section(
+                title: 'Tags',
+                child: _TagsPanel(tags: model.tags ?? const {}),
+              ),
+            ],
           );
         },
         loading: () => const LoadingIndicator(),
@@ -139,148 +86,512 @@ class ModelDetailPage extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildSection(BuildContext context, String title, Widget content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge,
+class _ModelHeader extends StatelessWidget {
+  const _ModelHeader({required this.model, required this.modelTypeName});
+
+  final SchemaModel model;
+  final String modelTypeName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: _panelDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: _ModelUi.orange.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.data_object_rounded,
+                  color: _ModelUi.orange,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      model.name.isEmpty ? 'Model #${model.id}' : model.name,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: _ModelUi.gray950,
+                            fontWeight: FontWeight.w800,
+                            height: 1.12,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _Chip(text: modelTypeName, color: _ModelUi.orange),
+                        _Chip(text: '#${model.id}', color: _ModelUi.gray600),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if ((model.description ?? '').isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              model.description!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: _ModelUi.gray700,
+                    height: 1.45,
+                  ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if ((model.createdAt ?? '').isNotEmpty)
+                _Meta(text: 'Created ${model.createdAt}'),
+              if ((model.updatedAt ?? '').isNotEmpty)
+                _Meta(text: 'Updated ${model.updatedAt}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelTypeLink extends StatelessWidget {
+  const _ModelTypeLink({
+    required this.modelTypeId,
+    required this.modelTypeName,
+    required this.description,
+  });
+
+  final int modelTypeId;
+  final String modelTypeName;
+  final String? description;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => context.push('/model-type/$modelTypeId'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: _ModelUi.orange.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.schema_rounded,
+                color: _ModelUi.orange,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    modelTypeName,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: _ModelUi.gray950,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  if ((description ?? '').isNotEmpty)
+                    Text(
+                      description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: _ModelUi.gray600,
+                            height: 1.35,
+                          ),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: _ModelUi.gray500),
+          ],
         ),
-        const SizedBox(height: 8),
-        content,
-        const SizedBox(height: 24),
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 8),
+            child: Text(
+              title.toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: _ModelUi.gray500,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.7,
+                  ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: _panelDecoration(),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttributesGrid extends StatelessWidget {
+  const _AttributesGrid({required this.attributes, required this.fallback});
+
+  final List<SchemaModelAttribute>? attributes;
+  final Map<String, dynamic>? fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = <MapEntry<String, dynamic>>[
+      if (attributes != null)
+        for (final attr in attributes!) MapEntry(attr.key, attr.value),
+      if ((attributes == null || attributes!.isEmpty) && fallback != null)
+        ...fallback!.entries,
+    ];
+    if (entries.isEmpty) return const _EmptyState(text: 'No attributes');
+
+    return Column(
+      children: [
+        for (final entry in entries)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _ModelUi.gray50,
+              border: Border.all(color: _ModelUi.gray200),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    entry.key,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: _ModelUi.gray700,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                Expanded(
+                  child: SelectableText(
+                    _formatValue(entry.value),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _ModelUi.gray700,
+                          height: 1.35,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
+}
 
-  Widget _buildAttributes(Map<String, dynamic> attributes) {
-    if (attributes.isEmpty) {
-      return const Text('No attributes');
-    }
+class _RelationsList extends StatelessWidget {
+  const _RelationsList({required this.relations});
 
-    return Column(
-      children: attributes.entries.map((entry) {
-        return Card(
-          child: ListTile(
-            title: Text(entry.key),
-            subtitle: Text(_formatAttributeValue(entry.value)),
-          ),
-        );
-      }).toList(),
-    );
-  }
+  final List<SchemaRelation> relations;
 
-  Widget _buildAttributesList(List<SchemaModelAttribute> attributes) {
-    if (attributes.isEmpty) {
-      return const Text('No attributes');
-    }
-
-    return Column(
-      children: attributes.map((attr) {
-        return Card(
-          child: ListTile(
-            title: Text(attr.key),
-            subtitle: Text(_formatAttributeValue(attr.value)),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildRelationsByRelationName(
-    BuildContext context,
-    Map<String, List<SchemaRelation>> relationsByModelType,
-  ) {
-    if (relationsByModelType.isEmpty) {
-      return const Text('No relations');
+  @override
+  Widget build(BuildContext context) {
+    if (relations.isEmpty) return const _EmptyState(text: 'No relations');
+    final grouped = <String, List<SchemaRelation>>{};
+    for (final relation in relations) {
+      grouped.putIfAbsent(relation.modelType, () => []).add(relation);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: relationsByModelType.entries.map((entry) {
-        final modelTypeName = entry.key;
-        final relationsForType = entry.value;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 4),
-              child: Text(
-                modelTypeName,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
+      children: [
+        for (final group in grouped.entries) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 8),
+            child: Text(
+              group.key,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: _ModelUi.gray950,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
-            ...relationsForType.map((relation) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(relation.name ?? 'Untitled'),
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () {
-                    context.push('/model-detail/${relation.modelId}');
-                  },
-                ),
-              );
-            }),
-            const SizedBox(height: 8),
-          ],
-        );
-      }).toList(),
+          ),
+          for (final relation in group.value) _RelationTile(relation: relation),
+        ],
+      ],
     );
   }
+}
 
-  Widget _buildRelations(
-    BuildContext context,
-    Map<String, List<SchemaModel>> relations,
-  ) {
+class _RelationTile extends StatelessWidget {
+  const _RelationTile({required this.relation});
+
+  final SchemaRelation relation;
+
+  @override
+  Widget build(BuildContext context) {
+    final attrs = relation.relationAttributes ?? const <String, dynamic>{};
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: _ModelUi.gray200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => context.push('/model-detail/${relation.modelId}'),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      relation.name?.isNotEmpty == true
+                          ? relation.name!
+                          : '${relation.modelType} #${relation.modelId}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: _ModelUi.gray950,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: _ModelUi.gray500),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _Meta(text: '${relation.modelType} #${relation.modelId}'),
+                  if ((relation.relation ?? '').isNotEmpty)
+                    _Meta(text: relation.relation!),
+                  _Meta(text: 'relation #${relation.relationId}'),
+                ],
+              ),
+              if ((relation.description ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  relation.description!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _ModelUi.gray600,
+                        height: 1.35,
+                      ),
+                ),
+              ],
+              if (attrs.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final entry in attrs.entries)
+                      _Chip(
+                        text: '${entry.key}: ${_formatValue(entry.value)}',
+                        color: _ModelUi.blue,
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TagsPanel extends StatelessWidget {
+  const _TagsPanel({required this.tags});
+
+  final Map<String, List<String>> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tags.isEmpty) return const _EmptyState(text: 'No tags');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: relations.entries.map((entry) {
-        final modelTypeName = entry.key;
-        final relatedModels = entry.value;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 4),
-              child: Text(
-                modelTypeName,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ),
-            ...relatedModels.map((relatedModel) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(relatedModel.name),
-                  subtitle: relatedModel.description != null &&
-                          relatedModel.description!.isNotEmpty
-                      ? Text(relatedModel.description!)
-                      : null,
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () {
-                    context.push('/model-detail/${relatedModel.id}');
-                  },
+      children: [
+        for (final system in tags.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  system.key,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: _ModelUi.gray700,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
-              );
-            }),
-            const SizedBox(height: 8),
-          ],
-        );
-      }).toList(),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final tag in system.value)
+                      _Chip(text: tag, color: _ModelUi.green),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
+}
 
-  String _formatAttributeValue(dynamic value) {
-    if (value == null) return 'No value';
-    return value.toString();
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: _ModelUi.gray500,
+            fontWeight: FontWeight.w600,
+          ),
+    );
   }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Meta extends StatelessWidget {
+  const _Meta({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _ModelUi.gray50,
+        border: Border.all(color: _ModelUi.gray200),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: _ModelUi.gray600,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+BoxDecoration _panelDecoration() {
+  return BoxDecoration(
+    color: Colors.white,
+    border: Border.all(color: _ModelUi.gray200),
+    borderRadius: BorderRadius.circular(10),
+    boxShadow: const [
+      BoxShadow(
+        color: Color(0x06000000),
+        blurRadius: 10,
+        offset: Offset(0, 3),
+      ),
+    ],
+  );
+}
+
+String _formatValue(dynamic value) {
+  if (value == null) return '-';
+  if (value is String) return value;
+  if (value is num || value is bool) return value.toString();
+  return const JsonEncoder.withIndent('  ').convert(value);
+}
+
+abstract final class _ModelUi {
+  static const gray50 = Color(0xFFF9FAFB);
+  static const gray200 = Color(0xFFE5E7EB);
+  static const gray500 = Color(0xFF6B7280);
+  static const gray600 = Color(0xFF4B5563);
+  static const gray700 = Color(0xFF374151);
+  static const gray950 = Color(0xFF030712);
+  static const orange = Color(0xFFEA580C);
+  static const blue = Color(0xFF2563EB);
+  static const green = Color(0xFF15803D);
 }

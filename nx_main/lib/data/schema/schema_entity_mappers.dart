@@ -119,6 +119,8 @@ SchemaRelation schemaRelationFromNx(nx.Relation r) {
     modelType: r.modelType,
     name: r.name,
     description: r.description,
+    relation: r.relation,
+    relationAttributes: r.relationAttributes,
   );
 }
 

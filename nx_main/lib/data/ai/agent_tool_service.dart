@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
 
 /// Calls an MCP tool and returns the result
 ///
@@ -14,8 +14,7 @@ Future<Map<String, dynamic>> callMCPTool(
   Map<String, dynamic>? arguments,
   String mcpUrl = 'https://b79fcf799613.ngrok-free.app/mcp',
 }) async {
-  LoggingService.instance
-      .log('MCP tool called: $toolName with params: $arguments');
+  debugPrint('MCP tool called: $toolName with params: $arguments');
 
   try {
     final requestBody = {
@@ -39,7 +38,7 @@ Future<Map<String, dynamic>> callMCPTool(
 
     if (response.statusCode == 200) {
       final result = jsonDecode(response.body);
-      LoggingService.instance.log('MCP $toolName API result: $result');
+      debugPrint('MCP $toolName API result: $result');
 
       // Check for MCP errors
       if (result['error'] != null) {
@@ -85,12 +84,12 @@ Future<Map<String, dynamic>> callMCPTool(
         'error': 'Invalid response format from MCP server: no result field'
       };
     } else {
-      LoggingService.instance.log(
+      debugPrint(
           'MCP $toolName API error: ${response.statusCode} - ${response.body}');
       return {'error': 'HTTP ${response.statusCode}: ${response.body}'};
     }
   } catch (e) {
-    LoggingService.instance.log('MCP $toolName API error: $e');
+    debugPrint('MCP $toolName API error: $e');
     return {'error': e.toString()};
   }
 }

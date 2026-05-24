@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
 import 'package:nx_db/nx_db.dart';
-import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
 import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
     show BleClient;
 import 'package:nexus_voice_assistant/data/gps/gps_upload_manager.dart';
@@ -69,11 +68,6 @@ String? _turnkey(int? nonce, int? turnId) {
   return '$nonce:$turnId';
 }
 
-String _requestIdFromImageFilename(String filename) {
-  final dot = filename.lastIndexOf('.');
-  return dot > 0 ? filename.substring(0, dot) : filename;
-}
-
 class BleBackgroundService {
   /// Start the background service (called from onStart entry point)
   static Future<void> startBackgroundService(ServiceInstance service) async {
@@ -88,7 +82,6 @@ class BleBackgroundService {
     final socketClient = SocketClient();
     TelemetryUploadManager? telemetryUploadManager;
     GpsUploadManager? gpsUploadManager;
-    NxAppLogUploader? appLogUploader;
     bool appIsForeground = true;
     String? gpsHttpBaseUrl;
     Map<String, String> gpsHeaders = {};
@@ -111,20 +104,6 @@ class BleBackgroundService {
     bool audioForwardConnectStarted = false;
 
     String utcNow() => DateTime.now().toUtc().toIso8601String();
-
-    Future<void> uploadAppLog({
-      required String eventName,
-      required String category,
-      required String message,
-      required Map<String, dynamic> payload,
-    }) async {
-      await appLogUploader?.upload(
-        eventName: eventName,
-        category: category,
-        message: message,
-        payload: payload,
-      );
-    }
 
     Future<void> printServerClockDrift(
       String httpBaseUrl,
@@ -211,22 +190,16 @@ class BleBackgroundService {
       await manager.stop(flushPending: true);
     }
 
-    Future<void> logAudioForwardEvent({
+    void logAudioForwardEvent({
       required String eventName,
       required String message,
       String? turnkey,
       Map<String, dynamic> payload = const {},
-    }) async {
-      await uploadAppLog(
-        eventName: eventName,
-        category: 'audio',
-        message: message,
-        payload: {
-          ...payload,
-          if (turnkey != null) 'turnkey': turnkey,
-          'socket_state': socketClient.connectionState.name,
-          'queued_packets': socketClient.queuedPacketCount,
-        },
+    }) {
+      debugPrint(
+        '[Audio Forward] $eventName: $message '
+        'turnkey=$turnkey state=${socketClient.connectionState.name} '
+        'queued=${socketClient.queuedPacketCount} payload=$payload',
       );
     }
 
@@ -236,27 +209,27 @@ class BleBackgroundService {
         audioForwardNoSocketLogged = true;
         final state = socketClient.connectionState.name;
         final turnkeyText = turnkey == null ? '' : ', turnkey=$turnkey';
-        unawaited(logAudioForwardEvent(
+        logAudioForwardEvent(
           eventName: 'audio_forward_no_socket',
           message:
               'audio forward has no socket connection$turnkeyText, state=$state',
           turnkey: turnkey,
-        ));
+        );
       }
       if (audioForwardConnectStarted) return;
       audioForwardConnectStarted = true;
       final turnkeyText = turnkey == null ? '' : ', turnkey=$turnkey';
-      unawaited(logAudioForwardEvent(
+      logAudioForwardEvent(
         eventName: 'audio_forward_connect_started',
         message: 'audio forward socket connect started$turnkeyText',
         turnkey: turnkey,
-      ));
+      );
       unawaited(socketClient
           .ensureConnected(
               reason: 'ble_audio${turnkey == null ? '' : ':$turnkey'}')
           .then((connected) async {
         if (connected) {
-          await logAudioForwardEvent(
+          logAudioForwardEvent(
             eventName: 'audio_forward_connect_succeeded',
             message: 'audio forward socket connect succeeded$turnkeyText',
             turnkey: turnkey,
@@ -265,7 +238,7 @@ class BleBackgroundService {
         }
         final dropped = socketClient.queuedPacketCount;
         socketClient.clearQueue();
-        await logAudioForwardEvent(
+        logAudioForwardEvent(
           eventName: 'audio_forward_connect_failed',
           message:
               'audio forward socket connect failed$turnkeyText, dropped $dropped queued packets',
@@ -314,12 +287,12 @@ class BleBackgroundService {
       audioPacketCount++;
       final sendStatus = socketClient.sendPacket(data, index: audioPacketCount);
       if (sendStatus == SocketSendStatus.queuedAfterSendFailure) {
-        unawaited(logAudioForwardEvent(
+        logAudioForwardEvent(
           eventName: 'audio_forward_send_failed',
           message:
               'audio forward socket send failed, queued packet for reconnect${currentTurnkey == null ? '' : ', turnkey=$currentTurnkey'}',
           turnkey: currentTurnkey,
-        ));
+        );
         ensureSocketForAudioTurn(currentTurnkey);
       }
       if (isAudioEof) {
@@ -334,20 +307,8 @@ class BleBackgroundService {
         debugPrint(
           "[BLE BG] ${utcNow()} UTC $message",
         );
-        unawaited(uploadAppLog(
-          eventName: 'nrf_opus_reception_summary',
-          category: 'audio',
-          message: message,
-          payload: {
-            'opus_packets': audioSendPacketCount,
-            'opus_bytes': audioSendOpusByteCount,
-            if (audioSendTurnId != null) 'turn_id': audioSendTurnId,
-            if (audioSendNonce != null) 'nonce': audioSendNonce,
-            if (turnkey != null) 'turnkey': turnkey,
-          },
-        ));
         if (!socketClient.isConnected) {
-          unawaited(logAudioForwardEvent(
+          logAudioForwardEvent(
             eventName: 'audio_forward_eof_no_socket',
             message:
                 'audio forward reached EOF without socket connection$turnkeyText',
@@ -358,7 +319,7 @@ class BleBackgroundService {
               if (audioSendTurnId != null) 'turn_id': audioSendTurnId,
               if (audioSendNonce != null) 'nonce': audioSendNonce,
             },
-          ));
+          );
         }
         audioSendActive = false;
       }
@@ -395,10 +356,6 @@ class BleBackgroundService {
       socketClient.sendText(jsonEncode(push));
     };
 
-    bleClient.onDiagnosticLog = (message) {
-      service.invoke('ble.debugLog', {'message': message});
-    };
-
     await bleClient.initialize();
 
     // ============================================================================
@@ -416,13 +373,9 @@ class BleBackgroundService {
       final turnText = turnId == null ? '' : ', turn_id=$turnId';
       final nonceText = nonce == null ? '' : ', nonce=$nonce';
       final turnkeyText = turnkey == null ? '' : ', turnkey=$turnkey';
-      unawaited(uploadAppLog(
-        eventName: 'websocket_opus_reception_summary',
-        category: 'audio',
-        message:
-            'websocket opus reception finished $packets packets, $bytes bytes$turnText$nonceText$turnkeyText',
-        payload: summary,
-      ));
+      debugPrint(
+        'websocket opus reception finished $packets packets, $bytes bytes$turnText$nonceText$turnkeyText',
+      );
     };
 
     // Handle device requests (e.g. take_photo, camera record)
@@ -430,16 +383,6 @@ class BleBackgroundService {
       try {
         switch (action) {
           case 'take_photo':
-            unawaited(uploadAppLog(
-              eventName: 'nx_camera_capture_requested',
-              category: 'camera',
-              message: 'nx_main requested camera capture',
-              payload: {
-                'device_request_id': requestId,
-                'trigger': 'server_tool',
-                'action': action,
-              },
-            ));
             final success =
                 await bleClient.writeCamera(CameraCommand.capture.toBytes());
             return jsonEncode({'success': success});
@@ -565,14 +508,6 @@ class BleBackgroundService {
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
           ? telemetryHttpBaseUrl!
           : httpBaseFromSocketUrl(url);
-      appLogUploader = NxAppLogUploader(
-        httpBaseUrl: uploadBase,
-        origin: 'nx_main',
-        headers: {
-          'X-User-Id': userId,
-          if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
-        },
-      );
       final uploadHeaders = {
         'X-User-Id': userId,
         if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
@@ -583,9 +518,7 @@ class BleBackgroundService {
         headers: uploadHeaders,
         onCommitted: (transferId) async {
           await bleClient.writeFileRx(telemetryCommittedAck(transferId));
-          service.invoke('ble.debugLog', {
-            'message': 'Telemetry upload committed transfer=$transferId',
-          });
+          debugPrint('Telemetry upload committed transfer=$transferId');
         },
       );
       await gpsUploadManager?.stop(flushPending: true);
@@ -603,7 +536,6 @@ class BleBackgroundService {
       gpsHttpBaseUrl = null;
       gpsHeaders = {};
       gpsTimezoneLabel = null;
-      appLogUploader = null;
       await socketClient.disconnect();
     });
 
@@ -807,42 +739,7 @@ class BleBackgroundService {
     bleClient.onFileTxDataReceived = (data) {
       if (data.length >= 5 && data[0] == 0x00 && data[1] == 0x01) {
         imagePacketCount++;
-        final pktNum = data[2];
-        final totalPkts = data[3];
-        int end = 4;
-        while (end < data.length && data[end] != 0) end++;
-        final filename = end < data.length
-            ? String.fromCharCodes(data.sublist(4, end))
-            : 'unknown.jpg';
-        final requestId = _requestIdFromImageFilename(filename);
-        if (pktNum == 0) {
-          unawaited(uploadAppLog(
-            eventName: 'nx_image_reception_started',
-            category: 'camera',
-            message: 'nx_main image reception started',
-            payload: {
-              'request_id': requestId,
-              'filename': filename,
-              'packet_id': pktNum,
-              'total_packets': totalPkts,
-            },
-          ));
-        }
         socketClient.sendImagePacket(data, imagePacketCount);
-        if (pktNum + 1 == totalPkts) {
-          unawaited(uploadAppLog(
-            eventName: 'nx_image_received',
-            category: 'camera',
-            message: 'nx_main image received',
-            payload: {
-              'request_id': requestId,
-              'filename': filename,
-              'packet_id': pktNum,
-              'total_packets': totalPkts,
-              'size': data.length,
-            },
-          ));
-        }
       } else if (data.length >= 19 && data[0] == 0x00 && data[1] == 0x02) {
         telemetryUploadManager?.handlePacket(data);
       }
@@ -930,13 +827,6 @@ class BleBackgroundService {
         // Fallback to scanning if parsing fails
         lastKnownBleStatus = BleConnectionState.idle;
         _statusController.add(BleConnectionState.idle);
-      }
-    });
-
-    _service.on('ble.debugLog').listen((event) {
-      final message = event?['message'] as String?;
-      if (message != null && message.isNotEmpty) {
-        LoggingService.instance.log('[BLE] $message');
       }
     });
 

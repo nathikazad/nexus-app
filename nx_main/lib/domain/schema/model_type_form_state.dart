@@ -28,7 +28,7 @@ class ModelTypeFormFields {
     return ModelTypeFormFields(
       name: data.name,
       description: data.description ?? '',
-      agentInstructions: _editableAgentInstructions(data),
+      agentInstructions: data.agentInstructions?[data.name] ?? '',
       typeKind: data.typeKind ?? 'base',
       parentId: data.parentId,
       parentName: data.parentId != null && data.parent != null
@@ -42,15 +42,4 @@ class ModelTypeFormFields {
       ),
     );
   }
-}
-
-String _editableAgentInstructions(SchemaModelType data) {
-  final instructions = data.agentInstructions;
-  if (instructions == null || instructions.isEmpty) return '';
-
-  final ownInstructions = instructions[data.name];
-  if (ownInstructions != null) return ownInstructions;
-
-  if (instructions.length == 1) return instructions.values.single;
-  return '';
 }

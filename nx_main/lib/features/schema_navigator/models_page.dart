@@ -138,11 +138,12 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
           showTopDivider: showTopDivider,
           onTap: () {
             if (hasChildren) {
-              _toggleExpand(modelType.id);
+              context.push('/model-type/${modelType.id}');
             } else {
               context.push('/model-type/${modelType.id}');
             }
           },
+          onToggle: hasChildren ? () => _toggleExpand(modelType.id) : null,
         ),
       );
 

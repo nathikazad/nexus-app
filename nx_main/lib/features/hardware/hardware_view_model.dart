@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
 import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/hardware/hardware_service.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
@@ -210,7 +210,7 @@ class HardwareViewNotifier extends Notifier<HardwareViewState> {
         );
       }
     } catch (e) {
-      LoggingService.instance.log('Error reading battery data: $e');
+      debugPrint('Error reading battery data: $e');
     }
   }
 
@@ -227,22 +227,22 @@ class HardwareViewNotifier extends Notifier<HardwareViewState> {
         );
       }
     } catch (e) {
-      LoggingService.instance.log('Error reading RTC data: $e');
+      debugPrint('Error reading RTC data: $e');
     }
   }
 
   Future<void> readDeviceName() async {
-    LoggingService.instance.log('Reading device name');
+    debugPrint('Reading device name');
     if (!state.isConnected) return;
     try {
-      LoggingService.instance.log('Reading device name from device');
+      debugPrint('Reading device name from device');
       final name = await _hw.readDeviceName();
-      LoggingService.instance.log('Device name read: $name');
+      debugPrint('Device name read: $name');
       state = state.copyWith(
         deviceName: name ?? _hw.deviceName,
       );
     } catch (e) {
-      LoggingService.instance.log('Error reading device name: $e');
+      debugPrint('Error reading device name: $e');
       state = state.copyWith(deviceName: _hw.deviceName);
     }
   }

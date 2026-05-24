@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/features/auth/login_page.dart';
 import 'package:nexus_voice_assistant/features/home/home_page.dart';
+import 'package:nexus_voice_assistant/features/logs/log_detail_page.dart';
+import 'package:nexus_voice_assistant/features/logs/logs_providers.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/model_detail_page.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/model_type_detail_page.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/model_type_form_page.dart';
@@ -72,6 +74,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/model-type-selector',
         builder: (context, state) => const ModelTypeSelectorPage(),
+      ),
+      GoRoute(
+        path: '/logs/audio',
+        builder: (context, state) {
+          final date = parseLogDate(state.uri.queryParameters['date']);
+          final turnkey = state.uri.queryParameters['turnkey'] ?? '';
+          return AudioLogDetailPage(date: date, turnkey: turnkey);
+        },
+      ),
+      GoRoute(
+        path: '/logs/agent/:runId',
+        builder: (context, state) {
+          final date = parseLogDate(state.uri.queryParameters['date']);
+          final runId = state.pathParameters['runId'] ?? '';
+          return AgentLogDetailPage(date: date, runId: runId);
+        },
+      ),
+      GoRoute(
+        path: '/logs/db/:operationId',
+        builder: (context, state) {
+          final date = parseLogDate(state.uri.queryParameters['date']);
+          final operationId = state.pathParameters['operationId'] ?? '';
+          return DbChangeDetailPage(date: date, operationId: operationId);
+        },
       ),
     ],
     redirect: (context, state) {

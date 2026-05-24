@@ -12,6 +12,7 @@ class ModelTypeTreeRow extends StatelessWidget {
     required this.indentLevel,
     this.isExpanded = false,
     this.onTap,
+    this.onToggle,
     this.showTopDivider = false,
   });
 
@@ -20,6 +21,7 @@ class ModelTypeTreeRow extends StatelessWidget {
   final int indentLevel;
   final bool isExpanded;
   final VoidCallback? onTap;
+  final VoidCallback? onToggle;
   final bool showTopDivider;
 
   static const _orange500 = Color(0xFFF97316);
@@ -51,15 +53,32 @@ class ModelTypeTreeRow extends StatelessWidget {
                 child: Row(
                   children: [
                     if (isGroupHeader) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Icon(
-                          isExpanded ? Icons.expand_more : Icons.chevron_right,
-                          size: 18,
-                          color: AppColors.gray400,
+                      InkWell(
+                        onTap: onToggle,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 4, 4, 4),
+                          child: Icon(
+                            isExpanded
+                                ? Icons.expand_more
+                                : Icons.chevron_right,
+                            size: 18,
+                            color: AppColors.gray400,
+                          ),
                         ),
                       ),
-                      Icon(Icons.folder_outlined, size: 22, color: folderColor),
+                      InkWell(
+                        onTap: onToggle,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.folder_outlined,
+                            size: 22,
+                            color: folderColor,
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(

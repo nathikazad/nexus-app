@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nexus_voice_assistant/core/layout/layout.dart';
-import 'package:nexus_voice_assistant/core/logging/logging_service.dart';
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
 import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/hardware/hardware_service.dart';
@@ -144,7 +143,7 @@ class CameraSectionState extends ConsumerState<CameraSection>
       if (!mounted || status == null) return;
       _onCameraStatus(status);
     } catch (e) {
-      LoggingService.instance.log('CameraSection: initial read failed: $e');
+      debugPrint('CameraSection: initial read failed: $e');
     }
   }
 

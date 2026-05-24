@@ -69,10 +69,6 @@ class BleClient {
   void Function(Uint8List)? onBatteryReceived;
   void Function(String)? onError;
 
-  /// Curated connection lifecycle lines (scanning, found, connected, disconnected).
-  /// Bridged to [LoggingService] on the main isolate via the background service.
-  void Function(String message)? onDiagnosticLog;
-
   void _setState(BleConnectionState newState) {
     _state = newState;
     onConnectionStateChanged?.call(newState);
@@ -84,7 +80,6 @@ class BleClient {
 
   void _diagnosticLog(String message) {
     _log(message);
-    onDiagnosticLog?.call(message);
   }
 
   // ===========================================================================
