@@ -123,7 +123,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            if (modelType.typeKind == 'base') ...[
+            if (_canViewInstances(modelType)) ...[
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -630,6 +630,12 @@ class ModelTypeDetailPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+bool _canViewInstances(SchemaModelType modelType) {
+  if (modelType.typeKind == 'trait') return false;
+  return modelType.typeKind == 'base' ||
+      (modelType.children != null && modelType.children!.isNotEmpty);
 }
 
 Future<void> _confirmDeleteModelType(

@@ -8,7 +8,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
-import 'package:test/test.dart' show Tags;
 
 import '../../_support/mock_graphql_client.dart';
 
@@ -77,6 +76,48 @@ void main() {
       final list = await container.read(modelsProvider(9).future);
       expect(list.length, 1);
       expect(list.first.name, 'A');
+    });
+
+    test('modelListProvider preserves descendant model types', () async {
+      final mock = MockGraphQLClient();
+      QueryOptions? captured;
+      when(() => mock.query(any())).thenAnswer((inv) async {
+        captured = inv.positionalArguments[0] as QueryOptions;
+        return okQueryResult({
+          'getKgqlModels': [
+            {
+              'id': 1,
+              'name': 'Run',
+              'model_type_id': 10,
+              'model_type': {'id': 10, 'name': 'Run'},
+            },
+            {
+              'id': 2,
+              'name': 'Yoga',
+              'model_type_id': 11,
+              'model_type': {'id': 11, 'name': 'Yoga'},
+            },
+          ],
+        });
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(_AuthLoggedIn.new),
+          graphqlClientProvider.overrideWithValue(mock),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(authProvider.future);
+
+      final list = await container.read(
+        modelListProvider(const ModelListQuery(modelTypeId: 9)).future,
+      );
+
+      expect(captured, isNotNull);
+      expect(captured!.variables['filter'], containsPair('model_type', 9));
+      expect(list.map((model) => model.modelTypeId), [10, 11]);
+      expect(list.last.modelType?.name, 'Yoga');
     });
 
     test('PM7.4 modelProvider filter id eq', () async {

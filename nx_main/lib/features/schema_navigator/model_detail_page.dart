@@ -60,6 +60,10 @@ class ModelDetailPage extends ConsumerWidget {
               _Section(
                 title: 'Attributes',
                 child: _AttributesGrid(
+                  coreFields: {
+                    'name': model.name,
+                    'description': model.description,
+                  },
                   attributes: model.attributesList,
                   fallback: model.attributes,
                 ),
@@ -276,18 +280,28 @@ class _Section extends StatelessWidget {
 }
 
 class _AttributesGrid extends StatelessWidget {
-  const _AttributesGrid({required this.attributes, required this.fallback});
+  const _AttributesGrid({
+    required this.coreFields,
+    required this.attributes,
+    required this.fallback,
+  });
 
+  final Map<String, dynamic> coreFields;
   final List<SchemaModelAttribute>? attributes;
   final Map<String, dynamic>? fallback;
 
   @override
   Widget build(BuildContext context) {
+    final seen = <String>{};
     final entries = <MapEntry<String, dynamic>>[
+      for (final entry in coreFields.entries)
+        if (seen.add(entry.key)) entry,
       if (attributes != null)
-        for (final attr in attributes!) MapEntry(attr.key, attr.value),
+        for (final attr in attributes!)
+          if (seen.add(attr.key)) MapEntry(attr.key, attr.value),
       if ((attributes == null || attributes!.isEmpty) && fallback != null)
-        ...fallback!.entries,
+        for (final entry in fallback!.entries)
+          if (seen.add(entry.key)) entry,
     ];
     if (entries.isEmpty) return const _EmptyState(text: 'No attributes');
 

@@ -35,6 +35,7 @@ ThemeData buildNexusMainTheme() {
       error: AppColors.red600,
     ),
     scaffoldBackgroundColor: AppColors.gray50,
+    canvasColor: Colors.white,
     dividerColor: AppColors.gray100,
   );
 
@@ -45,12 +46,21 @@ ThemeData buildNexusMainTheme() {
         GoogleFonts.inter(fontWeight: FontWeight.w600, letterSpacing: -0.5),
     titleLarge:
         GoogleFonts.inter(fontWeight: FontWeight.w600, letterSpacing: -0.3),
-    titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600),
-    titleSmall: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+    titleMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.w600, color: AppColors.gray900),
+    titleSmall: GoogleFonts.inter(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+      color: AppColors.gray900,
+    ),
     bodyLarge: GoogleFonts.inter(color: AppColors.gray600),
     bodyMedium: GoogleFonts.inter(color: AppColors.gray600),
     bodySmall: GoogleFonts.inter(color: AppColors.gray400, fontSize: 12),
-    labelLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+    labelLarge: GoogleFonts.inter(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+      color: AppColors.gray900,
+    ),
   );
 
   return base.copyWith(
@@ -130,6 +140,12 @@ ThemeData buildNexusMainTheme() {
         fontWeight: FontWeight.w600,
         color: AppColors.gray500,
         letterSpacing: 0.5,
+      ),
+    ),
+    menuTheme: MenuThemeData(
+      style: MenuStyle(
+        backgroundColor: const WidgetStatePropertyAll(Colors.white),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
     ),
     cardTheme: CardThemeData(

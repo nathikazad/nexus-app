@@ -503,6 +503,8 @@ class BleBackgroundService {
 
       final headers = <String, String>{
         'X-User-Id': userId,
+        'X-Client-App': 'nx_main',
+        'X-Agent-Id': 'nx_main',
         if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true

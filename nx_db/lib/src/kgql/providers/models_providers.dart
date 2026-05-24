@@ -4,6 +4,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../core/client/graphql_client_provider.dart';
 import '../documents/get_kgql_models.graphql.dart';
 import '../models/model.dart';
+import '../models/model_list_query.dart';
 import '../repositories/models_repository.dart';
 import '../requests/set_model_request.dart';
 
@@ -38,6 +39,31 @@ final modelsProvider =
   final models = parseKgqlModelsResult(result.data?['getKgqlModels']);
 
   return models.where((model) => model.modelTypeId == modelTypeId).toList();
+});
+
+final modelListProvider =
+    FutureProvider.family<List<Model>, ModelListQuery>((ref, query) async {
+  final client = ref.watch(graphqlClientProvider);
+
+  final rows = await fetchKgqlModels(
+    client,
+    filter: query.toKgqlFilter(),
+    struct: const {
+      'id': true,
+      'name': true,
+      'description': true,
+      'model_type_id': true,
+      'created_at': true,
+      'updated_at': true,
+      'model_type': {
+        'id': true,
+        'name': true,
+        'description': true,
+      },
+    },
+  );
+
+  return rows;
 });
 
 final modelProvider = FutureProvider.family<Model?, int>((ref, modelId) async {

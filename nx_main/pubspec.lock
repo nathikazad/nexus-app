@@ -1458,6 +1458,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  solar_icon_pack:
+    dependency: "direct main"
+    description:
+      name: solar_icon_pack
+      sha256: "2b3f167cacde9d8d2d1b9a319f2f2e21874203531278acf602f008de066b04c3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   source_gen:
     dependency: transitive
     description:

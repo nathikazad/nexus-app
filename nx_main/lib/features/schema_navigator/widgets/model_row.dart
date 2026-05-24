@@ -18,6 +18,7 @@ class ModelRow extends StatelessWidget {
     final description = model.description;
     final createdAt = model.createdAt;
     final updatedAt = model.updatedAt;
+    final modelTypeName = model.modelType?.name;
 
     String? formatDate(String? dateStr) {
       if (dateStr == null) return null;
@@ -36,6 +37,14 @@ class ModelRow extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (modelTypeName != null && modelTypeName.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  modelTypeName,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
             if (description != null && description.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
+import 'package:nexus_voice_assistant/domain/schema/schema_model_list_query.dart';
 import 'package:nexus_voice_assistant/features/auth/login_page.dart';
 import 'package:nexus_voice_assistant/features/home/home_page.dart';
 import 'package:nexus_voice_assistant/features/logs/log_detail_page.dart';
@@ -52,7 +53,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/models/:modelTypeId',
         builder: (context, state) {
           final modelTypeId = int.parse(state.pathParameters['modelTypeId']!);
-          return ModelsListPage(modelTypeId: modelTypeId);
+          return ModelsListPage(
+            modelTypeId: modelTypeId,
+            initialRouteQuery: SchemaModelRouteQuery.fromQueryParameters(
+              state.uri.queryParameters,
+            ),
+          );
         },
       ),
       GoRoute(
