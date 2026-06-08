@@ -1,5 +1,11 @@
 library;
 
+export 'chat/features/current_transcript_chat_page.dart'
+    show
+        CurrentTranscriptChatMessage,
+        CurrentTranscriptChatPage,
+        CurrentTranscriptChatLink,
+        CurrentTranscriptChatTheme;
 export 'gps/data/gps_chart_service.dart'
     show GpsChartException, fetchGpsDates, fetchGpsDay;
 export 'gps/data/gps_repository.dart' show HttpGpsRepository;

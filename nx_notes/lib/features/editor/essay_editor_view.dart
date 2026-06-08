@@ -16,6 +16,9 @@ class EssayEditorView extends ConsumerWidget {
     required this.essayId,
     this.contextBar,
     this.onTitleChanged,
+    this.onOpenEssayLink,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
     this.horizontalPadding = 48,
     super.key,
   });
@@ -23,6 +26,9 @@ class EssayEditorView extends ConsumerWidget {
   final int essayId;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
+  final ValueChanged<int>? onOpenEssayLink;
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
   final double horizontalPadding;
 
   @override
@@ -37,6 +43,9 @@ class EssayEditorView extends ConsumerWidget {
           essay: essay,
           contextBar: contextBar,
           onTitleChanged: onTitleChanged,
+          onOpenEssayLink: onOpenEssayLink,
+          canNavigateBack: canNavigateBack,
+          onNavigateBack: onNavigateBack,
           horizontalPadding: horizontalPadding,
         );
       },
@@ -51,6 +60,9 @@ class EssayEditorBody extends ConsumerStatefulWidget {
     required this.essay,
     this.contextBar,
     this.onTitleChanged,
+    this.onOpenEssayLink,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
     this.horizontalPadding = 48,
     super.key,
   });
@@ -58,6 +70,9 @@ class EssayEditorBody extends ConsumerStatefulWidget {
   final Essay essay;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
+  final ValueChanged<int>? onOpenEssayLink;
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
   final double horizontalPadding;
 
   @override
@@ -67,11 +82,13 @@ class EssayEditorBody extends ConsumerStatefulWidget {
 class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
   Timer? _titleSaveDebounce;
   late Essay _draftEssay;
+  late Future<bool> Function(String? href) _previousLaunchUrl;
 
   @override
   void initState() {
     super.initState();
     _draftEssay = widget.essay;
+    _installEssayLinkHandler();
   }
 
   @override
@@ -86,7 +103,30 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
   @override
   void dispose() {
     _titleSaveDebounce?.cancel();
+    editorLaunchUrl = _previousLaunchUrl;
     super.dispose();
+  }
+
+  void _installEssayLinkHandler() {
+    _previousLaunchUrl = editorLaunchUrl;
+    editorLaunchUrl = (href) async {
+      final essayId = _essayIdFromHref(href);
+      if (essayId != null && widget.onOpenEssayLink != null) {
+        widget.onOpenEssayLink!(essayId);
+        return true;
+      }
+      return _previousLaunchUrl(href);
+    };
+  }
+
+  int? _essayIdFromHref(String? href) {
+    if (href == null || href.trim().isEmpty) return null;
+    final uri = Uri.tryParse(href.trim());
+    if (uri == null || uri.scheme.toLowerCase() != 'kgql') return null;
+    final modelType = uri.host;
+    if (modelType.toLowerCase() != 'essay') return null;
+    final idText = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
+    return int.tryParse(idText ?? '');
   }
 
   void _scheduleTitleSave(String title) {
@@ -117,6 +157,24 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                if (widget.canNavigateBack && widget.onNavigateBack != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: TextButton.icon(
+                      onPressed: widget.onNavigateBack,
+                      icon: const Icon(Icons.arrow_back, size: 16),
+                      label: const Text('Back'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.muted,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 6,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
                 TextFormField(
                   key: ValueKey<int>(widget.essay.id),
                   initialValue: widget.essay.title,

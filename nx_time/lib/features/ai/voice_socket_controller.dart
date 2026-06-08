@@ -103,10 +103,13 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   NxVoiceAudioTurn? _lastTurn;
   NxAppLogUploader? _appLogUploader;
   bool _stopInFlight = false;
+  bool _showOverlayForCurrentTurn = true;
+  Timer? _textIdleTimer;
 
   @override
   VoiceSocketState build() {
     ref.onDispose(() {
+      _textIdleTimer?.cancel();
       unawaited(_mic?.dispose());
       unawaited(_player?.dispose());
       unawaited(_socket?.disconnect());
@@ -150,6 +153,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     required String role,
     required String text,
     required String? turnkey,
+    bool showOverlay = true,
   }) {
     final messages = List<VoiceTranscriptMessage>.from(state.messages);
     final replaceIndex = role == 'assistant'
@@ -166,7 +170,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         VoiceTranscriptMessage(role: role, text: text, turnkey: turnkey),
       );
     }
-    state = state.copyWith(overlayVisible: true, messages: messages);
+    state = state.copyWith(
+      overlayVisible: showOverlay ? true : state.overlayVisible,
+      messages: messages,
+    );
   }
 
   void _applyTranscriptDelta({
@@ -174,6 +181,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     required String text,
     required String? turnkey,
     required bool ephemeral,
+    bool showOverlay = true,
   }) {
     if (role != 'assistant') return;
     final messages = List<VoiceTranscriptMessage>.from(state.messages);
@@ -195,7 +203,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         ),
       );
     }
-    state = state.copyWith(overlayVisible: true, messages: messages);
+    state = state.copyWith(
+      overlayVisible: showOverlay ? true : state.overlayVisible,
+      messages: messages,
+    );
   }
 
   int _findMessageIndex(
@@ -258,6 +269,8 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       _activeTurn = NxVoiceAudioTurn.create(streamIndex: _streamIndex);
       _lastTurn = _activeTurn;
       _stopInFlight = false;
+      _showOverlayForCurrentTurn = true;
+      _textIdleTimer?.cancel();
       debugPrint(
         '[nx_time voice] starting mic stream streamIndex=$_streamIndex '
         'turnkey=${_activeTurn!.turnkey}',
@@ -414,6 +427,61 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     }
   }
 
+  Future<void> sendTextMessage(String raw) async {
+    final text = raw.trim();
+    if (text.isEmpty) return;
+    if (state.phase == VoiceSocketPhase.recording ||
+        state.phase == VoiceSocketPhase.connecting) {
+      throw StateError('Voice socket is busy.');
+    }
+
+    final userId = ref.read(userIdProvider);
+    final socketUrl = ref.read(sockWsUrlProvider);
+    if (userId == null || userId.isEmpty || socketUrl == null) {
+      state = const VoiceSocketState(
+        phase: VoiceSocketPhase.error,
+        overlayVisible: true,
+        error: 'Not logged in or missing socket URL.',
+      );
+      throw StateError('Not logged in or missing socket URL.');
+    }
+
+    state = state.copyWith(
+      phase: VoiceSocketPhase.connecting,
+      clearError: true,
+    );
+    try {
+      final socket = await _ensureSocket(socketUrl: socketUrl, userId: userId);
+      _streamIndex++;
+      _receivedPacketsThisTurn = 0;
+      _receivedBytesThisTurn = 0;
+      _showOverlayForCurrentTurn = false;
+      _textIdleTimer?.cancel();
+      _lastTurn = null;
+      _applyTranscript(
+        role: 'user',
+        text: text,
+        turnkey: null,
+        showOverlay: false,
+      );
+      socket.sendTextTurn(text, streamIndex: _streamIndex);
+      _uploadAppLog(
+        eventName: 'socket_text_sent',
+        category: 'audio',
+        message: text,
+        payload: {'stream_index': _streamIndex, 'text': text},
+      );
+      state = state.copyWith(phase: VoiceSocketPhase.waiting, clearError: true);
+    } catch (error) {
+      state = state.copyWith(
+        phase: VoiceSocketPhase.error,
+        overlayVisible: false,
+        error: error.toString(),
+      );
+      rethrow;
+    }
+  }
+
   Future<NxVoiceSocketClient> _ensureSocket({
     required String socketUrl,
     required String userId,
@@ -455,6 +523,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     final player = _player ??= NxWavAudioPlayer();
     final socket = NxVoiceSocketClient()
       ..onAudioChunk = (packet) {
+        _textIdleTimer?.cancel();
         _receivedPacketsThisTurn++;
         _receivedBytesThisTurn += packet.opus.length;
         debugPrint(
@@ -468,6 +537,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         unawaited(player.addOpusPacket(packet.opus));
       }
       ..onAudioEof = (_) {
+        _textIdleTimer?.cancel();
         debugPrint('[nx_time voice] received audio EOF');
         _uploadAppLog(
           eventName: 'websocket_opus_reception_summary',
@@ -485,7 +555,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         state = state.copyWith(phase: VoiceSocketPhase.idle);
       }
       ..onTextChunk = (packet) {
-        final textFallback = packet.text.trim();
+        final textFallback = packet.text;
         try {
           final decoded = jsonDecode(packet.text);
           if (decoded is Map<String, dynamic> &&
@@ -521,41 +591,52 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
                   text: text,
                   turnkey: turnkey is String ? turnkey : null,
                   ephemeral: ephemeral,
+                  showOverlay: _showOverlayForCurrentTurn,
                 );
               } else {
                 _applyTranscript(
                   role: role,
                   text: text,
                   turnkey: turnkey is String ? turnkey : null,
+                  showOverlay: _showOverlayForCurrentTurn,
                 );
               }
             }
           } else {
             debugPrint('[nx_time voice] text: ${packet.text}');
             if (textFallback.isNotEmpty) {
-              _applyTranscript(
+              _applyTranscriptDelta(
                 role: 'assistant',
                 text: textFallback,
                 turnkey: null,
+                ephemeral: false,
+                showOverlay: _showOverlayForCurrentTurn,
               );
             }
           }
         } catch (_) {
           debugPrint('[nx_time voice] text: ${packet.text}');
           if (textFallback.isNotEmpty) {
-            _applyTranscript(
+            _applyTranscriptDelta(
               role: 'assistant',
               text: textFallback,
               turnkey: null,
+              ephemeral: false,
+              showOverlay: _showOverlayForCurrentTurn,
             );
           }
         }
         if (state.phase == VoiceSocketPhase.waiting) {
           state = state.copyWith(phase: VoiceSocketPhase.responding);
         }
+        if (!_showOverlayForCurrentTurn) {
+          _scheduleTextIdleFallback();
+        }
       }
       ..onTextEof = (_) {
         debugPrint('[nx_time voice] received text EOF');
+        _textIdleTimer?.cancel();
+        _showOverlayForCurrentTurn = true;
         state = state.copyWith(phase: VoiceSocketPhase.idle);
       }
       ..onError = (error) {
@@ -586,5 +667,16 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     _sessionKey = key;
     debugPrint('[nx_time voice] socket connected');
     return socket;
+  }
+
+  void _scheduleTextIdleFallback() {
+    _textIdleTimer?.cancel();
+    _textIdleTimer = Timer(const Duration(milliseconds: 900), () {
+      if (state.phase == VoiceSocketPhase.waiting ||
+          state.phase == VoiceSocketPhase.responding) {
+        _showOverlayForCurrentTurn = true;
+        state = state.copyWith(phase: VoiceSocketPhase.idle);
+      }
+    });
   }
 }

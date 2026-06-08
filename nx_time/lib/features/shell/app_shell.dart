@@ -11,6 +11,7 @@ import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/features/action_detail/action_detail_page.dart';
 import 'package:nx_time/features/action_detail/action_detail_view_model.dart';
 import 'package:nx_time/features/action_edit/action_edit_page.dart';
+import 'package:nx_time/features/ai/ai_chat_page.dart';
 import 'package:nx_time/features/ai/voice_listening_overlay.dart';
 import 'package:nx_time/features/ai/voice_socket_controller.dart';
 import 'package:nx_time/features/calendar/calendar_providers.dart';
@@ -247,6 +248,17 @@ class _AppShellState extends ConsumerState<AppShell>
       bottomNavigationBar: _BottomNav(
         currentIndex: _index,
         onChanged: (i) => setState(() => _index = i),
+        onAiTap: () {
+          Navigator.of(context).push<void>(
+            PageRouteBuilder<void>(
+              transitionDuration: const Duration(milliseconds: 220),
+              pageBuilder: (_, __, ___) => const AiChatPage(),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          );
+        },
         onAiHoldStart: () {
           debugPrint('[nx_time voice] spark hold start');
           unawaited(
@@ -269,6 +281,7 @@ class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.currentIndex,
     required this.onChanged,
+    required this.onAiTap,
     required this.onAiHoldStart,
     required this.onAiHoldEnd,
     required this.voiceState,
@@ -276,6 +289,7 @@ class _BottomNav extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
+  final VoidCallback onAiTap;
   final VoidCallback onAiHoldStart;
   final VoidCallback onAiHoldEnd;
   final VoiceSocketState voiceState;
@@ -314,6 +328,7 @@ class _BottomNav extends StatelessWidget {
                 ),
                 Expanded(
                   child: _AiSlot(
+                    onTap: onAiTap,
                     onHoldStart: onAiHoldStart,
                     onHoldEnd: onAiHoldEnd,
                     voiceState: voiceState,
@@ -418,11 +433,13 @@ class _NavItem extends StatelessWidget {
 
 class _AiSlot extends StatelessWidget {
   const _AiSlot({
+    required this.onTap,
     required this.onHoldStart,
     required this.onHoldEnd,
     required this.voiceState,
   });
 
+  final VoidCallback onTap;
   final VoidCallback onHoldStart;
   final VoidCallback onHoldEnd;
   final VoiceSocketState voiceState;
@@ -448,16 +465,17 @@ class _AiSlot extends StatelessWidget {
           Positioned(
             top: -22,
             child: GestureDetector(
-              onTapDown: (_) {
-                debugPrint('[nx_time voice] GestureDetector tapDown');
+              onTap: onTap,
+              onLongPressStart: (_) {
+                debugPrint('[nx_time voice] GestureDetector longPressStart');
                 onHoldStart();
               },
-              onTapUp: (_) {
-                debugPrint('[nx_time voice] GestureDetector tapUp');
+              onLongPressEnd: (_) {
+                debugPrint('[nx_time voice] GestureDetector longPressEnd');
                 onHoldEnd();
               },
-              onTapCancel: () {
-                debugPrint('[nx_time voice] GestureDetector tapCancel');
+              onLongPressCancel: () {
+                debugPrint('[nx_time voice] GestureDetector longPressCancel');
                 onHoldEnd();
               },
               child: Material(

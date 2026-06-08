@@ -16,15 +16,21 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
             color: AppColors.sidebar,
             border: Border(bottom: BorderSide(color: AppColors.line)),
           ),
-          child: ListView(
-            padding: const EdgeInsets.only(left: 8, top: 8),
-            scrollDirection: Axis.horizontal,
+          child: Row(
             children: <Widget>[
-              for (final tab in workspace.openTabs)
-                _EditorTab(
-                  tab: tab,
-                  active: tab.essayId == workspace.activeEssayId,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.only(left: 8, top: 8),
+                  scrollDirection: Axis.horizontal,
+                  children: <Widget>[
+                    for (final tab in workspace.openTabs)
+                      _EditorTab(
+                        tab: tab,
+                        active: tab.essayId == workspace.activeEssayId,
+                      ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
@@ -47,7 +53,16 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
         Expanded(
           child: activeEssayId == null
               ? const _NoEssaySelected()
-              : EssayEditorView(essayId: activeEssayId),
+              : EssayEditorView(
+                  essayId: activeEssayId,
+                  onOpenEssayLink: (essayId) => ref
+                      .read(desktopWorkspaceProvider.notifier)
+                      .openEssayInActiveTab(essayId),
+                  canNavigateBack: workspace.canNavigateActiveTabBack,
+                  onNavigateBack: () => ref
+                      .read(desktopWorkspaceProvider.notifier)
+                      .backInActiveTab(),
+                ),
         ),
       ],
     );

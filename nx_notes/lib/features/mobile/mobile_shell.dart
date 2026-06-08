@@ -458,6 +458,9 @@ class _MobileEditor extends ConsumerWidget {
       ),
       body: EssayEditorView(
         essayId: essayId,
+        onOpenEssayLink: (linkedEssayId) => ref
+            .read(mobileNotesProvider.notifier)
+            .openEssayFromLink(linkedEssayId),
         contextBar: state.resultContext == null
             ? null
             : EditorContextBar(

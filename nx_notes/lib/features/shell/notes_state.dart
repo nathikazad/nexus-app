@@ -8,21 +8,26 @@ class EssayTabState {
     required this.essayId,
     this.context,
     this.dirty = false,
+    this.history = const <int>[],
   });
 
   final int essayId;
   final EssayResultContext? context;
   final bool dirty;
+  final List<int> history;
 
   EssayTabState copyWith({
+    int? essayId,
     EssayResultContext? context,
     bool? dirty,
+    List<int>? history,
     bool clearContext = false,
   }) {
     return EssayTabState(
-      essayId: essayId,
+      essayId: essayId ?? this.essayId,
       context: clearContext ? null : context ?? this.context,
       dirty: dirty ?? this.dirty,
+      history: history ?? this.history,
     );
   }
 }
@@ -59,6 +64,15 @@ class DesktopWorkspaceState {
       }
     }
     return null;
+  }
+
+  bool get canNavigateActiveTabBack {
+    for (final tab in openTabs) {
+      if (tab.essayId == activeEssayId) {
+        return tab.history.isNotEmpty;
+      }
+    }
+    return false;
   }
 
   DesktopWorkspaceState copyWith({
@@ -159,6 +173,47 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
     );
   }
 
+  void openEssayInActiveTab(int essayId) {
+    final activeEssayId = state.activeEssayId;
+    if (activeEssayId == null || activeEssayId == essayId) {
+      return;
+    }
+    final tabs = [
+      for (final tab in state.openTabs)
+        if (tab.essayId == essayId)
+          // Keep navigation within the active tab. If the target essay is
+          // already open in another tab, remove that tab to avoid duplicate
+          // essay ids confusing active-tab history lookup.
+          ...const <EssayTabState>[]
+        else if (tab.essayId == activeEssayId)
+          tab.copyWith(
+            essayId: essayId,
+            history: [...tab.history, activeEssayId],
+          )
+        else
+          tab,
+    ];
+    state = state.copyWith(openTabs: tabs, activeEssayId: essayId);
+  }
+
+  void backInActiveTab() {
+    final activeEssayId = state.activeEssayId;
+    if (activeEssayId == null) return;
+    final tabs = <EssayTabState>[];
+    int? nextActiveEssayId;
+    for (final tab in state.openTabs) {
+      if (tab.essayId != activeEssayId || tab.history.isEmpty) {
+        tabs.add(tab);
+        continue;
+      }
+      final history = [...tab.history];
+      nextActiveEssayId = history.removeLast();
+      tabs.add(tab.copyWith(essayId: nextActiveEssayId, history: history));
+    }
+    if (nextActiveEssayId == null) return;
+    state = state.copyWith(openTabs: tabs, activeEssayId: nextActiveEssayId);
+  }
+
   void closeTab(int essayId) {
     if (state.openTabs.length == 1) {
       state = const DesktopWorkspaceState(openTabs: <EssayTabState>[]);
@@ -201,6 +256,7 @@ class MobileNotesState {
     this.resultContext,
     this.searchText = '',
     this.showResults = false,
+    this.history = const <int>[],
   });
 
   final MobileSection section;
@@ -208,6 +264,7 @@ class MobileNotesState {
   final EssayResultContext? resultContext;
   final String searchText;
   final bool showResults;
+  final List<int> history;
 
   MobileNotesState copyWith({
     MobileSection? section,
@@ -215,6 +272,7 @@ class MobileNotesState {
     EssayResultContext? resultContext,
     String? searchText,
     bool? showResults,
+    List<int>? history,
     bool clearEssay = false,
     bool clearContext = false,
   }) {
@@ -224,6 +282,7 @@ class MobileNotesState {
       resultContext: clearContext ? null : resultContext ?? this.resultContext,
       searchText: searchText ?? this.searchText,
       showResults: showResults ?? this.showResults,
+      history: clearEssay ? const <int>[] : history ?? this.history,
     );
   }
 }
@@ -264,8 +323,22 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
     );
   }
 
+  void openEssayFromLink(int id) {
+    final activeEssayId = state.activeEssayId;
+    if (activeEssayId == null || activeEssayId == id) return;
+    state = state.copyWith(
+      activeEssayId: id,
+      history: [...state.history, activeEssayId],
+      showResults: false,
+    );
+  }
+
   void back() {
-    if (state.activeEssayId != null && state.resultContext != null) {
+    if (state.activeEssayId != null && state.history.isNotEmpty) {
+      final history = [...state.history];
+      final previousEssayId = history.removeLast();
+      state = state.copyWith(activeEssayId: previousEssayId, history: history);
+    } else if (state.activeEssayId != null && state.resultContext != null) {
       state = state.copyWith(clearEssay: true, showResults: true);
     } else if (state.activeEssayId != null) {
       state = state.copyWith(
