@@ -16,7 +16,7 @@ SetModelRequest buildExpenseSetModelRequest(ExpenseUpsert u) {
 
   final tagPayload = <SetModelTag>[
     for (final e in u.tags.entries)
-      if (e.value.isNotEmpty) SetModelTag(system: e.key, nodes: e.value),
+      SetModelTag(system: e.key, nodes: e.value, clear: e.value.isEmpty),
   ];
 
   final relPayload = <ModelRelation>[];

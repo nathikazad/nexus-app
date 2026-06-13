@@ -192,7 +192,6 @@ final budgetGoalHistoryProvider =
       ({int goalId, DateTime monthStart})
     >((ref, params) async {
       final client = ref.watch(expenseGraphqlClientProvider);
-      final domainId = await ref.watch(expenseDomainIdProvider.future);
       final currentMonth = DateTime(
         params.monthStart.year,
         params.monthStart.month,
@@ -207,7 +206,6 @@ final budgetGoalHistoryProvider =
         final response = await fetchExpenseGoalsMonth(
           client,
           monthStart: month,
-          domainId: domainId,
           goalId: params.goalId,
         );
         ExpenseGoalMonthItem? item;
@@ -234,7 +232,6 @@ final budgetAllGoalsHistoryProvider =
       monthStart,
     ) async {
       final client = ref.watch(expenseGraphqlClientProvider);
-      final domainId = await ref.watch(expenseDomainIdProvider.future);
       final currentMonth = DateTime(monthStart.year, monthStart.month);
       final months = [
         for (var i = 11; i >= 0; i--)
@@ -246,7 +243,6 @@ final budgetAllGoalsHistoryProvider =
         final response = await fetchExpenseGoalsMonth(
           client,
           monthStart: month,
-          domainId: domainId,
         );
         final spent = response.items.fold<int>(
           0,
@@ -271,7 +267,6 @@ Future<void> _saveBudgetGoal(
   required num amount,
 }) async {
   final client = ref.read(expenseGraphqlClientProvider);
-  final domainId = await ref.read(expenseDomainIdProvider.future);
   await setKgqlModel(
     client,
     _goalSetModelRequest(
@@ -280,7 +275,6 @@ Future<void> _saveBudgetGoal(
       categoryNode: categoryNode,
       amount: amount,
     ),
-    domainId: domainId,
     auditSourceKind: 'nx_expense_budget',
   );
   ref.invalidate(budgetExpenseGoalsMonthProvider);
@@ -288,11 +282,9 @@ Future<void> _saveBudgetGoal(
 
 Future<void> _deleteBudgetGoal(WidgetRef ref, int id) async {
   final client = ref.read(expenseGraphqlClientProvider);
-  final domainId = await ref.read(expenseDomainIdProvider.future);
   await setKgqlModel(
     client,
     SetModelRequest(id: id, delete: true),
-    domainId: domainId,
     auditSourceKind: 'nx_expense_budget',
   );
   ref.invalidate(budgetExpenseGoalsMonthProvider);

@@ -62,31 +62,12 @@ final transferSchemaProvider = kgqlModelTypeByNameProvider(
 );
 final orderSchemaProvider = kgqlModelTypeByNameProvider(kOrderModelTypeName);
 
-final expenseModelTypeDomainOptionsProvider =
-    FutureProvider<ModelTypeDomainOptions>((ref) async {
-      final client = ref.watch(expenseGraphqlClientProvider);
-      return fetchModelTypeDomainOptions(
-        client,
-        modelTypeName: kExpenseModelTypeName,
-      );
-    });
-
-final expenseDomainIdProvider = FutureProvider<int?>((ref) async {
-  final options = await ref.watch(expenseModelTypeDomainOptionsProvider.future);
-  return options.preferredDomain?.id;
-});
-
 final budgetExpenseGoalsMonthProvider =
     FutureProvider<ExpenseGoalMonthResponse>((ref) async {
       final client = ref.watch(expenseGraphqlClientProvider);
-      final domainId = await ref.watch(expenseDomainIdProvider.future);
       final range = ref.watch(expenseDateRangeProvider);
       final monthStart = DateTime(range.start.year, range.start.month);
-      return fetchExpenseGoalsMonth(
-        client,
-        monthStart: monthStart,
-        domainId: domainId,
-      );
+      return fetchExpenseGoalsMonth(client, monthStart: monthStart);
     });
 
 final expenseSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {

@@ -30,17 +30,6 @@ class ModelTypeDomainOptions {
   final String? modelType;
   final List<ModelTypeDomainOption> domains;
 
-  ModelTypeDomainOption? get overrideDomain {
-    for (final domain in domains) {
-      if (domain.source == 'override') return domain;
-    }
-    return null;
-  }
-
-  ModelTypeDomainOption? get preferredDomain {
-    return overrideDomain ?? (domains.isEmpty ? null : domains.first);
-  }
-
   factory ModelTypeDomainOptions.fromJson(Map<String, dynamic> json) {
     final rawDomains = json['domains'];
     final domains = rawDomains is List
