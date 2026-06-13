@@ -8,6 +8,7 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeEssayId = workspace.activeEssayId;
+    final activeTab = workspace.activeTab;
     return Column(
       children: <Widget>[
         Container(
@@ -51,20 +52,77 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
                 .clearActiveContext(),
           ),
         Expanded(
-          child: activeEssayId == null
+          child: activeEssayId == null || activeTab == null
               ? const _NoEssaySelected()
-              : EssayEditorView(
-                  essayId: activeEssayId,
-                  onOpenEssayLink: (essayId) => ref
-                      .read(desktopWorkspaceProvider.notifier)
-                      .openEssayInActiveTab(essayId),
+              : _MountedEditorStack(
+                  tab: activeTab,
                   canNavigateBack: workspace.canNavigateActiveTabBack,
-                  onNavigateBack: () => ref
-                      .read(desktopWorkspaceProvider.notifier)
-                      .backInActiveTab(),
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _MountedEditorStack extends ConsumerWidget {
+  const _MountedEditorStack({required this.tab, required this.canNavigateBack});
+
+  final EssayTabState tab;
+  final bool canNavigateBack;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stack = tab.editorStack;
+    final rawActiveIndex = stack.indexOf(tab.essayId);
+    final activeIndex = rawActiveIndex < 0 ? 0 : rawActiveIndex;
+    return IndexedStack(
+      index: activeIndex,
+      sizing: StackFit.expand,
+      children: <Widget>[
+        for (final essayId in stack)
+          _MountedEditorSession(
+            key: ValueKey<int>(essayId),
+            essayId: essayId,
+            active: essayId == tab.essayId,
+            canNavigateBack: canNavigateBack,
+          ),
+      ],
+    );
+  }
+}
+
+class _MountedEditorSession extends ConsumerWidget {
+  const _MountedEditorSession({
+    required this.essayId,
+    required this.active,
+    required this.canNavigateBack,
+    super.key,
+  });
+
+  final int essayId;
+  final bool active;
+  final bool canNavigateBack;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TickerMode(
+      enabled: active,
+      child: IgnorePointer(
+        ignoring: !active,
+        child: EssayEditorView(
+          essayId: essayId,
+          active: active,
+          onOpenEssayLink: (linkedEssayId) => ref
+              .read(desktopWorkspaceProvider.notifier)
+              .openEssayInActiveTab(linkedEssayId),
+          canNavigateBack: active && canNavigateBack,
+          onNavigateBack: active
+              ? () => ref
+                    .read(desktopWorkspaceProvider.notifier)
+                    .backInActiveTab()
+              : null,
+        ),
+      ),
     );
   }
 }

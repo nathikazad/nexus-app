@@ -16,6 +16,8 @@ class EssayTabState {
   final bool dirty;
   final List<int> history;
 
+  List<int> get editorStack => <int>[...history, essayId];
+
   EssayTabState copyWith({
     int? essayId,
     EssayResultContext? context,
@@ -57,22 +59,21 @@ class DesktopWorkspaceState {
 
   bool get hasOverlay => overlayTitle != null;
 
-  EssayResultContext? get activeContext {
+  EssayTabState? get activeTab {
     for (final tab in openTabs) {
       if (tab.essayId == activeEssayId) {
-        return tab.context;
+        return tab;
       }
     }
     return null;
   }
 
+  EssayResultContext? get activeContext {
+    return activeTab?.context;
+  }
+
   bool get canNavigateActiveTabBack {
-    for (final tab in openTabs) {
-      if (tab.essayId == activeEssayId) {
-        return tab.history.isNotEmpty;
-      }
-    }
-    return false;
+    return activeTab?.history.isNotEmpty ?? false;
   }
 
   DesktopWorkspaceState copyWith({
@@ -108,6 +109,8 @@ class DesktopWorkspaceState {
 enum SidebarTab { essays, tags }
 
 class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
+  static const int _maxMountedEditorsPerTab = 5;
+
   @override
   DesktopWorkspaceState build() {
     return const DesktopWorkspaceState(openTabs: <EssayTabState>[]);
@@ -186,10 +189,7 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
           // essay ids confusing active-tab history lookup.
           ...const <EssayTabState>[]
         else if (tab.essayId == activeEssayId)
-          tab.copyWith(
-            essayId: essayId,
-            history: [...tab.history, activeEssayId],
-          )
+          _tabAfterInTabNavigation(tab, essayId)
         else
           tab,
     ];
@@ -239,6 +239,30 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
           tab,
     ];
     state = state.copyWith(openTabs: tabs);
+  }
+
+  List<int> _boundedHistoryForPush(List<int> history, int essayId) {
+    final next = <int>[...history, essayId];
+    final maxHistory = _maxMountedEditorsPerTab - 1;
+    if (next.length <= maxHistory) {
+      return next;
+    }
+    return next.sublist(next.length - maxHistory);
+  }
+
+  EssayTabState _tabAfterInTabNavigation(EssayTabState tab, int essayId) {
+    final existingIndex = tab.editorStack.indexOf(essayId);
+    if (existingIndex != -1) {
+      final stack = tab.editorStack.sublist(0, existingIndex + 1);
+      return tab.copyWith(
+        essayId: essayId,
+        history: stack.sublist(0, stack.length - 1),
+      );
+    }
+    return tab.copyWith(
+      essayId: essayId,
+      history: _boundedHistoryForPush(tab.history, tab.essayId),
+    );
   }
 }
 

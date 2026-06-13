@@ -22,6 +22,7 @@ class EssayEditorView extends ConsumerWidget {
     this.canNavigateBack = false,
     this.onNavigateBack,
     this.horizontalPadding = 48,
+    this.active = true,
     super.key,
   });
 
@@ -32,6 +33,7 @@ class EssayEditorView extends ConsumerWidget {
   final bool canNavigateBack;
   final VoidCallback? onNavigateBack;
   final double horizontalPadding;
+  final bool active;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,6 +51,7 @@ class EssayEditorView extends ConsumerWidget {
           canNavigateBack: canNavigateBack,
           onNavigateBack: onNavigateBack,
           horizontalPadding: horizontalPadding,
+          active: active,
         );
       },
       error: (error, stackTrace) => Center(child: Text('$error')),
@@ -66,6 +69,7 @@ class EssayEditorBody extends ConsumerStatefulWidget {
     this.canNavigateBack = false,
     this.onNavigateBack,
     this.horizontalPadding = 48,
+    this.active = true,
     super.key,
   });
 
@@ -76,21 +80,60 @@ class EssayEditorBody extends ConsumerStatefulWidget {
   final bool canNavigateBack;
   final VoidCallback? onNavigateBack;
   final double horizontalPadding;
+  final bool active;
 
   @override
   ConsumerState<EssayEditorBody> createState() => _EssayEditorBodyState();
 }
 
+typedef _LaunchUrlHandler = Future<bool> Function(String? href);
+
+class _EssayLinkLaunchDispatcher {
+  static final Map<Object, _LaunchUrlHandler> _handlers =
+      <Object, _LaunchUrlHandler>{};
+  static Object? _activeOwner;
+  static _LaunchUrlHandler? _fallback;
+  static var _installed = false;
+
+  static void activate(Object owner, _LaunchUrlHandler handler) {
+    _ensureInstalled();
+    _handlers[owner] = handler;
+    _activeOwner = owner;
+  }
+
+  static void deactivate(Object owner) {
+    _handlers.remove(owner);
+    if (_activeOwner == owner) {
+      _activeOwner = null;
+    }
+  }
+
+  static void _ensureInstalled() {
+    if (_installed) return;
+    _fallback = editorLaunchUrl;
+    editorLaunchUrl = (href) async {
+      final handler = _handlers[_activeOwner];
+      if (handler != null && await handler(href)) {
+        return true;
+      }
+      return _fallback!(href);
+    };
+    _installed = true;
+  }
+}
+
 class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
   Timer? _titleSaveDebounce;
   late Essay _draftEssay;
-  late Future<bool> Function(String? href) _previousLaunchUrl;
+  late String _titleText;
+  final Object _linkHandlerOwner = Object();
 
   @override
   void initState() {
     super.initState();
     _draftEssay = widget.essay;
-    _installEssayLinkHandler();
+    _titleText = widget.essay.title;
+    _syncEssayLinkHandler();
   }
 
   @override
@@ -99,39 +142,43 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
     if (oldWidget.essay.id != widget.essay.id) {
       _titleSaveDebounce?.cancel();
       _draftEssay = widget.essay;
+      _titleText = widget.essay.title;
+    }
+    if (oldWidget.active != widget.active ||
+        oldWidget.onOpenEssayLink != widget.onOpenEssayLink) {
+      _syncEssayLinkHandler();
     }
   }
 
   @override
   void dispose() {
     _titleSaveDebounce?.cancel();
-    editorLaunchUrl = _previousLaunchUrl;
+    _EssayLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
     super.dispose();
   }
 
-  void _installEssayLinkHandler() {
-    _previousLaunchUrl = editorLaunchUrl;
-    editorLaunchUrl = (href) async {
-      final essayId = _essayIdFromHref(href);
-      if (essayId != null && widget.onOpenEssayLink != null) {
-        widget.onOpenEssayLink!(essayId);
-        return true;
-      }
-      return _previousLaunchUrl(href);
-    };
+  void _syncEssayLinkHandler() {
+    if (!widget.active) {
+      _EssayLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
+      return;
+    }
+    _EssayLinkLaunchDispatcher.activate(
+      _linkHandlerOwner,
+      _handleEssayLinkLaunch,
+    );
   }
 
-  int? _essayIdFromHref(String? href) {
-    if (href == null || href.trim().isEmpty) return null;
-    final uri = Uri.tryParse(href.trim());
-    if (uri == null || uri.scheme.toLowerCase() != 'kgql') return null;
-    final modelType = uri.host;
-    if (modelType.toLowerCase() != 'essay') return null;
-    final idText = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
-    return int.tryParse(idText ?? '');
+  Future<bool> _handleEssayLinkLaunch(String? href) async {
+    final essayId = nxEssayIdFromHref(href);
+    if (essayId != null && widget.onOpenEssayLink != null) {
+      widget.onOpenEssayLink!(essayId);
+      return true;
+    }
+    return false;
   }
 
   void _scheduleTitleSave(String title) {
+    setState(() => _titleText = title);
     widget.onTitleChanged?.call(title);
     _draftEssay = _draftEssay.copyWith(title: title);
     _titleSaveDebounce?.cancel();
@@ -177,29 +224,41 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                       ),
                     ),
                   ),
-                TextFormField(
-                  key: ValueKey<int>(widget.essay.id),
-                  initialValue: widget.essay.title,
-                  onChanged: _scheduleTitleSave,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: TextStyle(
-                    color: AppColors.text,
-                    fontSize: titleSize,
-                    fontWeight: FontWeight.w600,
-                    height: 1.16,
-                    letterSpacing: 0,
-                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final fittedTitleSize = _fittedTitleFontSize(
+                      context: context,
+                      text: _titleText,
+                      maxWidth: constraints.maxWidth,
+                      baseSize: titleSize,
+                    );
+                    return TextFormField(
+                      key: ValueKey<int>(widget.essay.id),
+                      initialValue: widget.essay.title,
+                      onChanged: _scheduleTitleSave,
+                      maxLines: 1,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontSize: fittedTitleSize,
+                        fontWeight: FontWeight.w600,
+                        height: 1.16,
+                        letterSpacing: 0,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
                 Expanded(
                   child: NxAppFlowyEditor(
                     essay: widget.essay,
+                    active: widget.active,
                     searchLinkableModels:
                         ({required modelType, required query}) {
                           return ref
@@ -251,6 +310,78 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
   }
 }
 
+double _fittedTitleFontSize({
+  required BuildContext context,
+  required String text,
+  required double maxWidth,
+  required double baseSize,
+}) {
+  final title = text.trim().isEmpty ? 'Untitled essay' : text.trim();
+  const minSize = 12.0;
+  if (maxWidth <= 0 || title.isEmpty) {
+    return baseSize;
+  }
+
+  final minWidth = _titleWidth(
+    context: context,
+    text: title,
+    fontSize: minSize,
+  );
+  if (minWidth > maxWidth && minWidth > 0) {
+    return (minSize * maxWidth / minWidth).clamp(8.0, minSize).toDouble();
+  }
+
+  var low = minSize;
+  var high = baseSize;
+  for (var i = 0; i < 8; i++) {
+    final mid = (low + high) / 2;
+    if (_titleFits(
+      context: context,
+      text: title,
+      maxWidth: maxWidth,
+      fontSize: mid,
+    )) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+}
+
+bool _titleFits({
+  required BuildContext context,
+  required String text,
+  required double maxWidth,
+  required double fontSize,
+}) {
+  return _titleWidth(context: context, text: text, fontSize: fontSize) <=
+      maxWidth;
+}
+
+double _titleWidth({
+  required BuildContext context,
+  required String text,
+  required double fontSize,
+}) {
+  final textScaler = MediaQuery.textScalerOf(context);
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w600,
+        height: 1.16,
+        letterSpacing: 0,
+      ),
+    ),
+    maxLines: 1,
+    textDirection: Directionality.of(context),
+    textScaler: textScaler,
+  )..layout(maxWidth: double.infinity);
+  return painter.width;
+}
+
 class NxAppFlowyEditor extends StatefulWidget {
   const NxAppFlowyEditor({
     required this.essay,
@@ -258,10 +389,12 @@ class NxAppFlowyEditor extends StatefulWidget {
     required this.searchLinkableModels,
     required this.onLinkableModelSelected,
     required this.createLinkedEssay,
+    this.active = true,
     super.key,
   });
 
   final Essay essay;
+  final bool active;
   final Future<void> Function(Essay essay) onChanged;
   final Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
@@ -295,12 +428,21 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     if (oldWidget.essay.id != widget.essay.id) {
       _disposeEditor();
       _createEditor();
+      return;
+    }
+    if (oldWidget.active != widget.active) {
+      if (widget.active) {
+        _scheduleActiveHeadingPublish();
+      } else {
+        _clearActiveHeading();
+      }
     }
   }
 
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    _clearActiveHeading();
     _disposeEditor();
     super.dispose();
   }
@@ -412,6 +554,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _scheduleActiveHeadingPublish() {
+    if (!widget.active) return;
     if (_activeHeadingPublishScheduled) return;
     _activeHeadingPublishScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -421,7 +564,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _publishActiveHeading() {
-    if (!mounted) return;
+    if (!mounted || !widget.active) return;
     final children = _editorState.document.root.children;
     final headingIndexes = <int>[
       for (var i = 0; i < children.length; i++)
@@ -469,6 +612,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _setActiveHeading(int? blockIndex) {
+    if (!widget.active) return;
     final current = essayActiveHeadingNotifier.value;
     if (blockIndex == null) {
       if (current?.essayId == widget.essay.id) {
@@ -484,6 +628,13 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       essayId: widget.essay.id,
       blockIndex: blockIndex,
     );
+  }
+
+  void _clearActiveHeading() {
+    final current = essayActiveHeadingNotifier.value;
+    if (current?.essayId == widget.essay.id) {
+      essayActiveHeadingNotifier.value = null;
+    }
   }
 
   @override
