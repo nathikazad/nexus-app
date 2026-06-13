@@ -272,6 +272,11 @@ class KgqlEssayRepository implements EssayRepository {
     return essay.copyWith(updatedAt: DateTime.now(), updatedLabel: 'just now');
   }
 
+  @override
+  Future<void> delete(int id) async {
+    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+  }
+
   Future<List<Essay>> _listAll() async {
     final models = await fetchKgqlModels(
       _client,

@@ -12,6 +12,7 @@ abstract class EssayRepository {
   Future<Essay?> getById(int id);
   Future<Essay> create();
   Future<Essay> updateDraft(Essay essay);
+  Future<void> delete(int id);
   Future<EssaySnap> createSnapshot(
     int essayId, {
     required String source,

@@ -99,6 +99,7 @@ class _DesktopInspector extends ConsumerWidget {
                               label: 'Version',
                               value: '${essay.versionNumber}',
                             ),
+                            _InspectorPinnedSwitch(essay: essay),
                           ],
                         ),
                       ),
@@ -115,7 +116,7 @@ class _DesktopInspector extends ConsumerWidget {
                         title: 'Links',
                         child: _InspectorLinksEditor(essay: essay),
                       ),
-                      _InspectorSaveButton(essay: essay),
+                      _InspectorActions(essay: essay),
                       _InspectorSection(
                         icon: Icons.history,
                         title: 'History',
@@ -130,51 +131,144 @@ class _DesktopInspector extends ConsumerWidget {
   }
 }
 
-class _InspectorSaveButton extends ConsumerStatefulWidget {
-  const _InspectorSaveButton({required this.essay});
+class _InspectorPinnedSwitch extends ConsumerStatefulWidget {
+  const _InspectorPinnedSwitch({required this.essay});
 
   final Essay essay;
 
   @override
-  ConsumerState<_InspectorSaveButton> createState() =>
-      _InspectorSaveButtonState();
+  ConsumerState<_InspectorPinnedSwitch> createState() =>
+      _InspectorPinnedSwitchState();
 }
 
-class _InspectorSaveButtonState extends ConsumerState<_InspectorSaveButton> {
+class _InspectorPinnedSwitchState
+    extends ConsumerState<_InspectorPinnedSwitch> {
   bool _saving = false;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
-      child: SizedBox(
-        width: double.infinity,
-        child: FilledButton.icon(
-          style: FilledButton.styleFrom(
-            alignment: Alignment.centerLeft,
-            backgroundColor: AppColors.text,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: <Widget>[
+          const Text(
+            'Pinned',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: 42,
+            height: 24,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: Switch.adaptive(
+                value: widget.essay.pinned,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                activeThumbColor: AppColors.text,
+                onChanged: _saving ? null : _setPinned,
+              ),
             ),
           ),
-          onPressed: _saving ? null : _saveNow,
-          icon: _saving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.save_outlined, size: 16),
-          label: Text(_saving ? 'Saving...' : 'Save now'),
-        ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setPinned(bool pinned) async {
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(essayMutationControllerProvider)
+          .setPinned(widget.essay, pinned);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not update pin: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+}
+
+class _InspectorActions extends ConsumerStatefulWidget {
+  const _InspectorActions({required this.essay});
+
+  final Essay essay;
+
+  @override
+  ConsumerState<_InspectorActions> createState() => _InspectorActionsState();
+}
+
+class _InspectorActionsState extends ConsumerState<_InspectorActions> {
+  bool _saving = false;
+  bool _deleting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        children: <Widget>[
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                backgroundColor: AppColors.text,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: _saving || _deleting ? null : _saveNow,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.save_outlined, size: 16),
+              label: Text(_saving ? 'Saving...' : 'Save now'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                foregroundColor: AppColors.red,
+                side: const BorderSide(color: AppColors.red),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: _saving || _deleting ? null : _confirmDelete,
+              icon: _deleting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.delete_outline, size: 16),
+              label: Text(_deleting ? 'Deleting...' : 'Delete'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -195,6 +289,53 @@ class _InspectorSaveButtonState extends ConsumerState<_InspectorSaveButton> {
     } finally {
       if (mounted) {
         setState(() => _saving = false);
+      }
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete essay?'),
+        content: Text('Delete "${widget.essay.title}" permanently?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _deleteEssay();
+  }
+
+  Future<void> _deleteEssay() async {
+    setState(() => _deleting = true);
+    try {
+      await ref.read(essayMutationControllerProvider).deleteEssay(widget.essay);
+      ref.read(desktopWorkspaceProvider.notifier).closeTab(widget.essay.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Essay deleted')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete essay: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _deleting = false);
       }
     }
   }

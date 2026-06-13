@@ -24,6 +24,12 @@ class EssayLocalCache extends Notifier<Map<int, Essay>> {
   void put(Essay essay) {
     state = {...state, essay.id: essay};
   }
+
+  void remove(int id) {
+    final next = {...state};
+    next.remove(id);
+    state = next;
+  }
 }
 
 final essayLocalCacheProvider =

@@ -324,6 +324,16 @@ class FakeEssayRepository implements EssayRepository {
     return updated;
   }
 
+  @override
+  Future<void> delete(int id) async {
+    final index = _essays.indexWhere((essay) => essay.id == id);
+    if (index == -1) {
+      throw StateError('Essay $id not found');
+    }
+    _essays.removeAt(index);
+    _snaps.remove(id);
+  }
+
   static int _recentSort(Essay a, Essay b) =>
       b.updatedAt.compareTo(a.updatedAt);
 }

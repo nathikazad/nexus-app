@@ -61,6 +61,35 @@ class EssayMutationController {
     await _draftWriteInFlight;
   }
 
+  Future<void> deleteEssay(Essay essay) async {
+    _draftFlushTimer?.cancel();
+    _draftFlushTimer = null;
+    if (_draftWriteInFlight != null) {
+      await _draftWriteInFlight;
+    }
+    _pendingDraft = null;
+    await _ref.read(essayRepositoryProvider).delete(essay.id);
+    _ref.read(essayLocalCacheProvider.notifier).remove(essay.id);
+    _ref.invalidate(recentEssaysProvider);
+    _ref.invalidate(pinnedEssaysProvider);
+    _ref.invalidate(tagSystemsProvider);
+    _ref.invalidate(essayByIdProvider(essay.id));
+    _ref.invalidate(essaySnapshotsProvider(essay.id));
+  }
+
+  Future<void> setPinned(Essay essay, bool pinned) async {
+    final updated = essay.copyWith(
+      pinned: pinned,
+      updatedAt: DateTime.now(),
+      updatedLabel: 'just now',
+    );
+    _cacheEssay(updated);
+    await _ref.read(essayRepositoryProvider).updateDraft(updated);
+    _lastDraftWriteAt = DateTime.now();
+    _ref.invalidate(recentEssaysProvider);
+    _ref.invalidate(pinnedEssaysProvider);
+  }
+
   Future<void> attachLinkedModel({
     required int essayId,
     required LinkableModelType modelType,
