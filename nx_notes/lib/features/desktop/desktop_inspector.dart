@@ -115,6 +115,7 @@ class _DesktopInspector extends ConsumerWidget {
                         title: 'Links',
                         child: _InspectorLinksEditor(essay: essay),
                       ),
+                      _InspectorSaveButton(essay: essay),
                       _InspectorSection(
                         icon: Icons.history,
                         title: 'History',
@@ -126,6 +127,76 @@ class _DesktopInspector extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _InspectorSaveButton extends ConsumerStatefulWidget {
+  const _InspectorSaveButton({required this.essay});
+
+  final Essay essay;
+
+  @override
+  ConsumerState<_InspectorSaveButton> createState() =>
+      _InspectorSaveButtonState();
+}
+
+class _InspectorSaveButtonState extends ConsumerState<_InspectorSaveButton> {
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            backgroundColor: AppColors.text,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          onPressed: _saving ? null : _saveNow,
+          icon: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.save_outlined, size: 16),
+          label: Text(_saving ? 'Saving...' : 'Save now'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveNow() async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(essayMutationControllerProvider).saveNow(widget.essay);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Essay saved')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save essay: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 }
 

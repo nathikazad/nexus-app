@@ -45,6 +45,22 @@ class EssayMutationController {
     _scheduleDraftWrite();
   }
 
+  Future<void> saveNow(Essay fallback) async {
+    _draftFlushTimer?.cancel();
+    _draftFlushTimer = null;
+    _pendingDraft ??= fallback.copyWith(
+      updatedAt: DateTime.now(),
+      updatedLabel: 'just now',
+    );
+    _cacheEssay(_pendingDraft!);
+    if (_draftWriteInFlight != null) {
+      await _draftWriteInFlight;
+      if (_pendingDraft == null) return;
+    }
+    _draftWriteInFlight = _flushPendingDraft();
+    await _draftWriteInFlight;
+  }
+
   Future<void> attachLinkedModel({
     required int essayId,
     required LinkableModelType modelType,

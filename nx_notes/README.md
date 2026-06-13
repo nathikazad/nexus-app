@@ -21,9 +21,9 @@ Build the Flutter web app with the `/notes/` base path and copy it into the MCP 
 
 ```sh
 flutter build web --release --base-href /notes/
-rsync -az --delete build/web/ ../../servers/mcp/new_server/static/nx_notes/
+rsync -az --delete build/web/ ../../servers/mcp/server/static/nx_notes/
 
-rsync -az --delete build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/new_server/static/nx_notes/
+rsync -az --delete build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/server/static/nx_notes/
 
 http://100.108.43.37:8001/notes/
 ```

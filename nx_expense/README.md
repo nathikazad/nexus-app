@@ -14,3 +14,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+flutter build web --release --base-href /expenses/
+ssh nathik@100.108.43.37 'mkdir -p ~/Nexus/nexus-server/mcp/server/static/nx_expense'
+rsync -az --delete build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/server/static/nx_expense/
