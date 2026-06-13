@@ -10,6 +10,7 @@ import 'package:nx_notes/domain/essay/essay_result_context.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/essay/essay_actions.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
+import 'package:nx_notes/features/editor/nx_highlight_notes.dart';
 
 class EssayEditorView extends ConsumerWidget {
   const EssayEditorView({
@@ -292,6 +293,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _createEditor() {
+    registerNxHighlightNoteAttribute();
     _editorState = EditorState(document: _documentFromEssay(widget.essay));
     _scrollController = EditorScrollController(
       editorState: _editorState,
@@ -487,6 +489,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
         linkItem,
         buildTextColorItem(),
         buildHighlightColorItem(),
+        nxHighlightNoteToolbarItem,
         ...alignmentItems,
       ],
       tooltipBuilder: (context, _, message, child) {
@@ -725,6 +728,8 @@ const _editorStyle = EditorStyle.desktop(
   cursorColor: AppColors.text,
   selectionColor: Color(0x333B82F6),
   padding: EdgeInsets.zero,
+  textSpanDecorator: nxHighlightNoteTextSpanDecorator,
+  textSpanOverlayBuilder: nxHighlightNoteOverlayBuilder,
   textStyleConfiguration: TextStyleConfiguration(
     text: TextStyle(color: Color(0xff3f3f46), fontSize: 16, height: 1.62),
     bold: TextStyle(fontWeight: FontWeight.w700),
