@@ -22,9 +22,12 @@ class KgqlEssayRepository implements EssayRepository {
   final Future<ModelType> Function() _loadEssaySchema;
   final Future<ModelType> Function() _loadEssaySnapSchema;
   @override
-  Future<Essay> create() async {
-    final id = await setKgqlModel(_client, setModelRequestForCreateEssay());
-    return essayForCreatedId(id);
+  Future<Essay> create({String? title}) async {
+    final id = await setKgqlModel(
+      _client,
+      setModelRequestForCreateEssay(title: title),
+    );
+    return essayForCreatedId(id, title: title);
   }
 
   @override

@@ -10,7 +10,7 @@ abstract class EssayRepository {
   Future<List<Essay>> search(String query);
   Future<List<Essay>> listByTag(EssayTagFilter filter);
   Future<Essay?> getById(int id);
-  Future<Essay> create();
+  Future<Essay> create({String? title});
   Future<Essay> updateDraft(Essay essay);
   Future<void> delete(int id);
   Future<EssaySnap> createSnapshot(

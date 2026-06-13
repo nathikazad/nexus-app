@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/features/editor/nx_essay_link.dart';
 import 'package:provider/provider.dart';
 
 const String nxHighlightNoteIdAttribute = 'nx_note_id';
@@ -71,7 +72,8 @@ TextSpan nxHighlightNoteTextSpanDecorator(
 ) {
   final attributes = text.attributes;
   final noteId = attributes?[nxHighlightNoteIdAttribute];
-  if (noteId is! String || noteId.trim().isEmpty) {
+  final href = attributes?[AppFlowyRichTextKeys.href] as String?;
+  if ((noteId is! String || noteId.trim().isEmpty) && href == null) {
     return defaultTextSpanDecoratorForAttribute(
       context,
       node,
@@ -83,7 +85,6 @@ TextSpan nxHighlightNoteTextSpanDecorator(
   }
 
   final editorState = context.read<EditorState>();
-  final href = attributes?[AppFlowyRichTextKeys.href] as String?;
   final selection = Selection.single(
     path: node.path,
     startOffset: index,
@@ -95,24 +96,29 @@ TextSpan nxHighlightNoteTextSpanDecorator(
     style: after.style ?? before.style,
     mouseCursor: SystemMouseCursors.click,
     onEnter: (event) {
-      final noteText = nxHighlightNoteText(editorState, noteId);
-      if (noteText == null || noteText.trim().isEmpty) {
+      final noteText = noteId is String
+          ? nxHighlightNoteText(editorState, noteId)
+          : null;
+      if ((noteText == null || noteText.trim().isEmpty) && href == null) {
         return;
       }
-      _NxHighlightNoteHoverOverlay.show(
+      _NxInlineHoverOverlay.show(
         context: context,
         editorState: editorState,
         position: event.position,
-        text: noteText,
+        noteText: noteText,
+        href: href,
+        selection: selection,
       );
     },
-    onExit: (_) => _NxHighlightNoteHoverOverlay.hide(),
+    onExit: (_) => _NxInlineHoverOverlay.scheduleHide(),
     recognizer: TapGestureRecognizer()
       ..onTap = () {
-        if (href != null &&
-            (HardwareKeyboard.instance.isControlPressed ||
-                HardwareKeyboard.instance.isMetaPressed)) {
+        if (href != null) {
           unawaited(editorLaunchUrl(href));
+          return;
+        }
+        if (noteId is! String) {
           return;
         }
         editorState.updateSelectionWithReason(
@@ -146,28 +152,31 @@ List<Widget> nxHighlightNoteOverlayBuilder(
   var index = 0;
   for (final textInsert in delta.whereType<TextInsert>()) {
     final noteId = textInsert.attributes?[nxHighlightNoteIdAttribute];
-    if (noteId is String && noteId.trim().isNotEmpty) {
-      final noteText = nxHighlightNoteText(editorState, noteId);
-      if (noteText != null && noteText.trim().isNotEmpty) {
-        final selection = Selection.single(
-          path: node.path,
-          startOffset: index,
-          endOffset: index + textInsert.length,
-        );
-        final rects = delegate.getRectsInSelection(selection);
-        for (final rect in rects) {
-          widgets.add(
-            Positioned.fromRect(
-              rect: rect,
-              child: _NxHighlightNoteHoverTarget(
-                editorState: editorState,
-                selection: selection,
-                noteId: noteId,
-                noteText: noteText,
-              ),
+    final href = textInsert.attributes?[AppFlowyRichTextKeys.href] as String?;
+    final noteText = noteId is String && noteId.trim().isNotEmpty
+        ? nxHighlightNoteText(editorState, noteId)
+        : null;
+    final hasNote = noteText != null && noteText.trim().isNotEmpty;
+    if (hasNote || href != null) {
+      final selection = Selection.single(
+        path: node.path,
+        startOffset: index,
+        endOffset: index + textInsert.length,
+      );
+      final rects = delegate.getRectsInSelection(selection);
+      for (final rect in rects) {
+        widgets.add(
+          Positioned.fromRect(
+            rect: rect,
+            child: _NxInlineHoverTarget(
+              editorState: editorState,
+              selection: selection,
+              noteId: noteId is String ? noteId : null,
+              noteText: noteText,
+              href: href,
             ),
-          );
-        }
+          ),
+        );
       }
     }
     index += textInsert.length;
@@ -666,35 +675,48 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
   }
 }
 
-class _NxHighlightNoteHoverTarget extends StatelessWidget {
-  const _NxHighlightNoteHoverTarget({
+class _NxInlineHoverTarget extends StatelessWidget {
+  const _NxInlineHoverTarget({
     required this.editorState,
     required this.selection,
     required this.noteId,
     required this.noteText,
+    required this.href,
   });
 
   final EditorState editorState;
   final Selection selection;
-  final String noteId;
-  final String noteText;
+  final String? noteId;
+  final String? noteText;
+  final String? href;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (event) {
-        _NxHighlightNoteHoverOverlay.show(
+        _NxInlineHoverOverlay.show(
           context: context,
           editorState: editorState,
           position: event.position,
-          text: noteText,
+          noteText: noteText,
+          href: href,
+          selection: selection,
         );
       },
-      onExit: (_) => _NxHighlightNoteHoverOverlay.hide(),
+      onExit: (_) => _NxInlineHoverOverlay.scheduleHide(),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () {
+          final link = href;
+          if (link != null) {
+            unawaited(editorLaunchUrl(link));
+            return;
+          }
+          final id = noteId;
+          if (id == null) {
+            return;
+          }
           editorState.updateSelectionWithReason(
             selection,
             reason: SelectionUpdateReason.uiEvent,
@@ -704,7 +726,7 @@ class _NxHighlightNoteHoverTarget extends StatelessWidget {
               context,
               editorState,
               selection,
-              noteId: noteId,
+              noteId: id,
             ),
           );
         },
@@ -713,15 +735,22 @@ class _NxHighlightNoteHoverTarget extends StatelessWidget {
   }
 }
 
-class _NxHighlightNoteHoverOverlay {
+class _NxInlineHoverOverlay {
   static OverlayEntry? _entry;
+  static Timer? _hideTimer;
 
   static void show({
     required BuildContext context,
     required EditorState editorState,
     required Offset position,
-    required String text,
+    required String? noteText,
+    required String? href,
+    required Selection selection,
   }) {
+    final hasNote = noteText != null && noteText.trim().isNotEmpty;
+    if (!hasNote && href == null) {
+      return;
+    }
     hide();
     final overlay = Overlay.of(context, rootOverlay: true);
     _entry = OverlayEntry(
@@ -730,10 +759,17 @@ class _NxHighlightNoteHoverOverlay {
         const margin = 8.0;
         const gap = 12.0;
         final editorWidth = editorState.renderBox?.size.width ?? size.width;
-        final maxWidth = math.min(editorWidth * 0.7, size.width - margin * 2);
+        final maxWidth = math.min(
+          math.max(editorWidth * 0.7, size.width * 0.52),
+          size.width - margin * 2,
+        );
+        final fixedWidth =
+            _expandedHoverNoteWidth(noteText ?? href ?? '', maxWidth) ??
+            (href == null ? null : math.min(360.0, maxWidth));
+        final horizontalFootprint = fixedWidth ?? maxWidth;
         final left = (position.dx + gap).clamp(
           margin,
-          size.width - maxWidth - margin,
+          size.width - horizontalFootprint - margin,
         );
         final belowSpace = size.height - position.dy - gap - margin;
         final aboveSpace = position.dy - gap - margin;
@@ -748,35 +784,84 @@ class _NxHighlightNoteHoverOverlay {
           bottom: bottom,
           child: Material(
             color: Colors.transparent,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxWidth,
-                maxHeight: maxHeight,
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.text,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: const <BoxShadow>[
-                    BoxShadow(
-                      color: Color(0x26000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 9,
+            child: MouseRegion(
+              onEnter: (_) => _cancelHide(),
+              onExit: (_) => scheduleHide(),
+              child: SizedBox(
+                width: fixedWidth,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: maxWidth,
+                    maxHeight: maxHeight,
                   ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        height: 1.4,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.text,
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: const <BoxShadow>[
+                        BoxShadow(
+                          color: Color(0x26000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 9,
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (hasNote)
+                              Text(
+                                noteText,
+                                textWidthBasis: fixedWidth == null
+                                    ? TextWidthBasis.longestLine
+                                    : TextWidthBasis.parent,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                            if (hasNote && href != null)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Divider(
+                                  height: 1,
+                                  color: Color(0x33ffffff),
+                                ),
+                              ),
+                            if (href != null)
+                              _NxInlineLinkActions(
+                                href: href,
+                                onOpen: () {
+                                  hide();
+                                  unawaited(editorLaunchUrl(href));
+                                },
+                                onCopy: () {
+                                  unawaited(
+                                    Clipboard.setData(
+                                      ClipboardData(text: href),
+                                    ),
+                                  );
+                                  hide();
+                                },
+                                onRemove: () {
+                                  unawaited(
+                                    editorState.formatDelta(selection, {
+                                      BuiltInAttributeKey.href: null,
+                                    }),
+                                  );
+                                  hide();
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -790,8 +875,120 @@ class _NxHighlightNoteHoverOverlay {
     overlay.insert(_entry!);
   }
 
+  static void scheduleHide() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 160), hide);
+  }
+
   static void hide() {
+    _hideTimer?.cancel();
+    _hideTimer = null;
     _entry?.remove();
     _entry = null;
   }
+
+  static void _cancelHide() {
+    _hideTimer?.cancel();
+    _hideTimer = null;
+  }
+}
+
+class _NxInlineLinkActions extends StatelessWidget {
+  const _NxInlineLinkActions({
+    required this.href,
+    required this.onOpen,
+    required this.onCopy,
+    required this.onRemove,
+  });
+
+  final String href;
+  final VoidCallback onOpen;
+  final VoidCallback onCopy;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final essayId = nxEssayIdFromHref(href);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          essayId == null ? href : 'Essay $essayId',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: <Widget>[
+            _NxInlineHoverButton(
+              icon: Icons.open_in_new,
+              label: 'Open',
+              onPressed: onOpen,
+            ),
+            _NxInlineHoverButton(
+              icon: Icons.copy,
+              label: 'Copy',
+              onPressed: onCopy,
+            ),
+            _NxInlineHoverButton(
+              icon: Icons.link_off,
+              label: 'Remove',
+              onPressed: onRemove,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _NxInlineHoverButton extends StatelessWidget {
+  const _NxInlineHoverButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: const Color(0x1fffffff),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+      icon: Icon(icon, size: 13),
+      label: Text(label),
+    );
+  }
+}
+
+double? _expandedHoverNoteWidth(String text, double maxWidth) {
+  final trimmed = text.trim();
+  final lines = trimmed.split('\n');
+  final longestLine = lines.fold<int>(
+    0,
+    (longest, line) => math.max(longest, line.trimRight().length),
+  );
+  final shouldExpand =
+      trimmed.length >= 120 || lines.length >= 3 || longestLine >= 80;
+  return shouldExpand ? maxWidth : null;
 }

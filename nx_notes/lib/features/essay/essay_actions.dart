@@ -30,8 +30,8 @@ class EssayMutationController {
   Essay? _pendingDraft;
   Future<void>? _draftWriteInFlight;
 
-  Future<Essay> createEssay() async {
-    final essay = await _ref.read(essayRepositoryProvider).create();
+  Future<Essay> createEssay({String? title}) async {
+    final essay = await _ref.read(essayRepositoryProvider).create(title: title);
     _cacheEssay(essay);
     return essay;
   }

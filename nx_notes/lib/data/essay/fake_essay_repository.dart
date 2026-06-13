@@ -15,12 +15,16 @@ class FakeEssayRepository implements EssayRepository {
   int _nextRelationId = 5000;
 
   @override
-  Future<Essay> create() async {
+  Future<Essay> create({String? title}) async {
     final id = _nextEssayId++;
     final now = DateTime.now();
+    final trimmedTitle = title?.trim();
+    final essayTitle = trimmedTitle == null || trimmedTitle.isEmpty
+        ? 'Untitled essay'
+        : trimmedTitle;
     final essay = Essay(
       id: id,
-      title: 'Untitled essay',
+      title: essayTitle,
       document: 'Start writing here.',
       jsonDocument: const <String, dynamic>{
         'format': 'appflowy_document',

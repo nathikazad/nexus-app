@@ -6,6 +6,7 @@ CharacterShortcutEvent nxSlashCommand({
     required String query,
   })
   searchLinkableModels,
+  required Future<LinkedModel> Function(String title) createLinkedEssay,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
 }) {
@@ -30,6 +31,7 @@ CharacterShortcutEvent nxSlashCommand({
         context,
         editorState,
         searchLinkableModels: searchLinkableModels,
+        createLinkedEssay: createLinkedEssay,
         onLinkableModelSelected: onLinkableModelSelected,
       );
       return true;
@@ -58,6 +60,7 @@ void _showNxSlashOverlay(
     required String query,
   })
   searchLinkableModels,
+  required Future<LinkedModel> Function(String title) createLinkedEssay,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
 }) {
@@ -79,6 +82,7 @@ void _showNxSlashOverlay(
           editorState: editorState,
           menuService: menuService,
           searchLinkableModels: searchLinkableModels,
+          createLinkedEssay: createLinkedEssay,
           onLinkableModelSelected: onLinkableModelSelected,
           onDismiss: () {
             if (entry.mounted) {
@@ -97,6 +101,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
     required this.editorState,
     required this.menuService,
     required this.searchLinkableModels,
+    required this.createLinkedEssay,
     required this.onLinkableModelSelected,
     required this.onDismiss,
     super.key,
@@ -109,6 +114,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
     required String query,
   })
   searchLinkableModels;
+  final Future<LinkedModel> Function(String title) createLinkedEssay;
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
   final VoidCallback onDismiss;
@@ -199,6 +205,13 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     final selectedType = _selectedLinkableType;
     if (selectedType != null) {
       return <_NxSlashRow>[
+        if (selectedType == LinkableModelType.essay)
+          _NxLinkableModelResultRow(
+            icon: Icons.add,
+            title: 'Create "$_linkableQueryTitle"',
+            subtitle: 'New essay',
+            onSelected: () => _createAndSelectEssay(_linkableQueryTitle),
+          ),
         for (final model in _linkableResults)
           _NxLinkableModelResultRow(
             model: model,
@@ -234,6 +247,17 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
       return null;
     }
     return LinkableModelType.fromCommand(_keyword.substring(0, slashIndex));
+  }
+
+  String get _linkableQuery {
+    final modelType = _selectedLinkableType;
+    if (modelType == null) return '';
+    return _keyword.substring(modelType.command.length + 1);
+  }
+
+  String get _linkableQueryTitle {
+    final query = _linkableQuery.trim();
+    return query.isEmpty ? 'Untitled essay' : query;
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -369,6 +393,14 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     widget.onDismiss();
   }
 
+  Future<void> _createAndSelectEssay(String title) async {
+    final model = await widget.createLinkedEssay(title);
+    if (!mounted) return;
+    _deleteSlashKeywordAndInsertLinkableModel(LinkableModelType.essay, model);
+    await widget.onLinkableModelSelected(LinkableModelType.essay, model);
+    widget.onDismiss();
+  }
+
   void _insertText(String text) {
     final selection = widget.editorState.selection;
     if (selection == null || !selection.isSingle) {
@@ -417,7 +449,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
         plainText[commandStart] != '/') {
       return;
     }
-    final href = 'kgql://${modelType.kgqlName}/${model.id}';
+    final href = nxKgqlHrefForModel(modelType, model);
     final needsLeadingSpace =
         commandStart > 0 &&
         plainText.substring(0, commandStart).trimRight().length == commandStart;
@@ -487,11 +519,17 @@ class _NxLinkableModelCommandRow implements _NxSlashRow {
 
 class _NxLinkableModelResultRow implements _NxSlashRow {
   const _NxLinkableModelResultRow({
-    required this.model,
+    this.model,
+    this.icon,
+    this.title,
+    this.subtitle,
     required this.onSelected,
   });
 
-  final LinkedModel model;
+  final LinkedModel? model;
+  final IconData? icon;
+  final String? title;
+  final String? subtitle;
   final VoidCallback onSelected;
 
   @override
@@ -501,11 +539,12 @@ class _NxLinkableModelResultRow implements _NxSlashRow {
     required EditorState editorState,
     required SelectionMenuStyle style,
   }) {
+    final model = this.model;
     return _NxSlashTile(
       selected: selected,
-      icon: _iconForModelTypeName(model.modelType),
-      title: model.name,
-      subtitle: model.modelType,
+      icon: icon ?? _iconForModelTypeName(model?.modelType ?? ''),
+      title: title ?? model?.name ?? '',
+      subtitle: subtitle ?? model?.modelType,
       onTap: onSelected,
     );
   }

@@ -89,11 +89,12 @@ EssaySnap essaySnapFromModel(Model model, {required int essayId}) {
   );
 }
 
-SetModelRequest setModelRequestForCreateEssay() {
+SetModelRequest setModelRequestForCreateEssay({String? title}) {
   const document = 'Start writing here.';
+  final essayTitle = _essayTitleOrFallback(title);
   return SetModelRequest(
     modelType: kEssayModelTypeName,
-    name: 'Untitled essay',
+    name: essayTitle,
     description: _excerptFrom(document),
     attributes: [
       SetModelAttribute(key: kEssayAttrDocument, value: document),
@@ -110,12 +111,12 @@ SetModelRequest setModelRequestForCreateEssay() {
   );
 }
 
-Essay essayForCreatedId(int id, {DateTime? now}) {
+Essay essayForCreatedId(int id, {DateTime? now, String? title}) {
   const document = 'Start writing here.';
   final updatedAt = now ?? DateTime.now();
   return Essay(
     id: id,
-    title: 'Untitled essay',
+    title: _essayTitleOrFallback(title),
     document: document,
     jsonDocument: _blankDocumentJson(document),
     wordCount: _countWords(document),
@@ -133,6 +134,11 @@ Essay essayForCreatedId(int id, {DateTime? now}) {
     excerpt: _excerptFrom(document),
     links: const <LinkedModel>[],
   );
+}
+
+String _essayTitleOrFallback(String? title) {
+  final trimmed = title?.trim();
+  return trimmed == null || trimmed.isEmpty ? 'Untitled essay' : trimmed;
 }
 
 SetModelRequest setModelRequestForUpdateEssay(

@@ -10,6 +10,7 @@ import 'package:nx_notes/domain/essay/essay_result_context.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/essay/essay_actions.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
+import 'package:nx_notes/features/editor/nx_essay_link.dart';
 import 'package:nx_notes/features/editor/nx_highlight_notes.dart';
 
 class EssayEditorView extends ConsumerWidget {
@@ -218,6 +219,16 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                             model: model,
                           );
                     },
+                    createLinkedEssay: (title) async {
+                      final essay = await ref
+                          .read(essayMutationControllerProvider)
+                          .createEssay(title: title);
+                      return LinkedModel(
+                        id: essay.id,
+                        name: essay.title,
+                        modelType: LinkableModelType.essay.kgqlName,
+                      );
+                    },
                     onChanged: (updated) async {
                       _draftEssay = _draftEssay.copyWith(
                         document: updated.document,
@@ -246,6 +257,7 @@ class NxAppFlowyEditor extends StatefulWidget {
     required this.onChanged,
     required this.searchLinkableModels,
     required this.onLinkableModelSelected,
+    required this.createLinkedEssay,
     super.key,
   });
 
@@ -258,6 +270,7 @@ class NxAppFlowyEditor extends StatefulWidget {
   searchLinkableModels;
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
+  final Future<LinkedModel> Function(String title) createLinkedEssay;
 
   @override
   State<NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
@@ -490,6 +503,11 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
         buildTextColorItem(),
         buildHighlightColorItem(),
         nxHighlightNoteToolbarItem,
+        buildNxEssayLinkToolbarItem(
+          searchLinkableModels: widget.searchLinkableModels,
+          createEssay: widget.createLinkedEssay,
+          onLinkableModelSelected: widget.onLinkableModelSelected,
+        ),
         ...alignmentItems,
       ],
       tooltipBuilder: (context, _, message, child) {
@@ -506,6 +524,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
           ),
           nxSlashCommand(
             searchLinkableModels: widget.searchLinkableModels,
+            createLinkedEssay: widget.createLinkedEssay,
             onLinkableModelSelected: widget.onLinkableModelSelected,
           ),
         ],

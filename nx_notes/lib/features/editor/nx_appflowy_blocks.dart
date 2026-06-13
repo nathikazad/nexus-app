@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
+import 'package:nx_notes/features/editor/nx_essay_link.dart';
 import 'package:provider/provider.dart';
 
 part 'nx_slash_menu.dart';
