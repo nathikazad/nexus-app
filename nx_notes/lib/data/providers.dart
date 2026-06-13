@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/data/essay/essay_schema_provider.dart';
@@ -16,6 +17,15 @@ final essayRepositoryProvider = Provider<EssayRepository>((ref) {
     loadEssaySnapSchema: () => ref.read(essaySnapSchemaProvider.future),
   );
 });
+
+class EssayActiveHeading {
+  const EssayActiveHeading({required this.essayId, required this.blockIndex});
+
+  final int essayId;
+  final int blockIndex;
+}
+
+final essayActiveHeadingNotifier = ValueNotifier<EssayActiveHeading?>(null);
 
 class EssayLocalCache extends Notifier<Map<int, Essay>> {
   @override

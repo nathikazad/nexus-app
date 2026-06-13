@@ -1,13 +1,22 @@
 part of 'desktop_shell.dart';
 
-class _DesktopInspector extends ConsumerWidget {
+enum _InspectorTab { details, contents }
+
+class _DesktopInspector extends ConsumerStatefulWidget {
   const _DesktopInspector({required this.essayId});
 
   final int? essayId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final id = essayId;
+  ConsumerState<_DesktopInspector> createState() => _DesktopInspectorState();
+}
+
+class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
+  _InspectorTab _tab = _InspectorTab.details;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = widget.essayId;
     final essay = id == null ? null : ref.watch(essayByIdProvider(id)).value;
     final snaps = id == null
         ? const <EssaySnap>[]
@@ -63,10 +72,29 @@ class _DesktopInspector extends ConsumerWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            child: Row(
+              children: <Widget>[
+                _InspectorTabButton(
+                  label: 'Details',
+                  active: _tab == _InspectorTab.details,
+                  onTap: () => setState(() => _tab = _InspectorTab.details),
+                ),
+                _InspectorTabButton(
+                  label: 'Contents',
+                  active: _tab == _InspectorTab.contents,
+                  onTap: () => setState(() => _tab = _InspectorTab.contents),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
           Expanded(
             child: essay == null
                 ? const SizedBox.shrink()
-                : ListView(
+                : _tab == _InspectorTab.details
+                ? ListView(
                     padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
                     children: <Widget>[
                       _InspectorSection(
@@ -123,12 +151,180 @@ class _DesktopInspector extends ConsumerWidget {
                         child: _InspectorHistory(essay: essay, snaps: snaps),
                       ),
                     ],
-                  ),
+                  )
+                : _InspectorContents(essay: essay),
           ),
         ],
       ),
     );
   }
+}
+
+class _InspectorTabButton extends StatelessWidget {
+  const _InspectorTabButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: active
+            ? const BoxDecoration(
+                color: AppColors.panel,
+                border: Border(
+                  top: BorderSide(color: AppColors.line),
+                  left: BorderSide(color: AppColors.line),
+                  right: BorderSide(color: AppColors.line),
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+              )
+            : null,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: active ? AppColors.text : AppColors.muted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InspectorContents extends StatelessWidget {
+  const _InspectorContents({required this.essay});
+
+  final Essay essay;
+
+  @override
+  Widget build(BuildContext context) {
+    final headings = _headingsFromEssay(essay);
+    return ValueListenableBuilder<EssayActiveHeading?>(
+      valueListenable: essayActiveHeadingNotifier,
+      builder: (context, activeHeading, _) {
+        final activeBlockIndex = activeHeading?.essayId == essay.id
+            ? activeHeading?.blockIndex
+            : null;
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 32),
+          children: <Widget>[
+            if (headings.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(6, 6, 6, 0),
+                child: Text(
+                  'No headings',
+                  style: TextStyle(fontSize: 12, color: AppColors.faint),
+                ),
+              )
+            else
+              for (final heading in headings)
+                _InspectorHeadingRow(
+                  heading: heading,
+                  active: heading.blockIndex == activeBlockIndex,
+                ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _InspectorHeadingRow extends StatelessWidget {
+  const _InspectorHeadingRow({required this.heading, required this.active});
+
+  final _EssayHeading heading;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final indent = (heading.level - 1).clamp(0, 4).toDouble() * 10.0;
+    return Padding(
+      padding: EdgeInsets.only(left: indent, bottom: 2),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: active ? AppColors.subtle : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+          border: active ? Border.all(color: AppColors.line) : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: Text(
+            heading.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: heading.level == 1 ? 12.5 : 12,
+              color: active ? AppColors.text : AppColors.muted,
+              fontWeight: active || heading.level <= 2
+                  ? FontWeight.w700
+                  : FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EssayHeading {
+  const _EssayHeading({
+    required this.title,
+    required this.level,
+    required this.blockIndex,
+  });
+
+  final String title;
+  final int level;
+  final int blockIndex;
+}
+
+List<_EssayHeading> _headingsFromEssay(Essay essay) {
+  final document = essay.jsonDocument['document'];
+  final children = document is Map ? document['children'] : null;
+  if (children is! List) return const <_EssayHeading>[];
+
+  final headings = <_EssayHeading>[];
+  for (var i = 0; i < children.length; i++) {
+    final raw = children[i];
+    if (raw is! Map || raw['type'] != 'heading') continue;
+    final text = _nodeText(raw).trim();
+    if (text.isEmpty) continue;
+    headings.add(
+      _EssayHeading(title: text, level: _headingLevel(raw), blockIndex: i),
+    );
+  }
+  return headings;
+}
+
+int _headingLevel(Map<dynamic, dynamic> node) {
+  final data = node['data'];
+  final value = data is Map ? data['level'] : node['level'];
+  if (value is int) return value.clamp(1, 6).toInt();
+  if (value is num) return value.toInt().clamp(1, 6);
+  return 1;
+}
+
+String _nodeText(Map<dynamic, dynamic> node) {
+  final data = node['data'];
+  final rawDelta = data is Map ? data['delta'] : node['delta'];
+  if (rawDelta is! List) return '';
+  final buffer = StringBuffer();
+  for (final op in rawDelta) {
+    if (op is Map && op['insert'] is String) {
+      buffer.write(op['insert']);
+    }
+  }
+  return buffer.toString();
 }
 
 class _InspectorPinnedSwitch extends ConsumerStatefulWidget {

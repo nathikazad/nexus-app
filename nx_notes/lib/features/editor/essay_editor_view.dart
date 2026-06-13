@@ -267,6 +267,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   late EditorScrollController _scrollController;
   StreamSubscription<EditorTransactionValue>? _transactionSubscription;
   Timer? _saveDebounce;
+  bool _activeHeadingPublishScheduled = false;
 
   @override
   void initState() {
@@ -296,17 +297,25 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       editorState: _editorState,
       shrinkWrap: false,
     );
+    _scrollController.itemPositionsListener.itemPositions.addListener(
+      _scheduleActiveHeadingPublish,
+    );
     _transactionSubscription = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
           !options.inMemoryUpdate &&
           transaction.operations.isNotEmpty) {
         _scheduleSave();
+        _scheduleActiveHeadingPublish();
       }
     });
+    _scheduleActiveHeadingPublish();
   }
 
   void _disposeEditor() {
+    _scrollController.itemPositionsListener.itemPositions.removeListener(
+      _scheduleActiveHeadingPublish,
+    );
     _transactionSubscription?.cancel();
     _scrollController.dispose();
     _editorState.dispose();
@@ -385,6 +394,81 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       return normalized;
     }
     return '${normalized.substring(0, 137)}...';
+  }
+
+  void _scheduleActiveHeadingPublish() {
+    if (_activeHeadingPublishScheduled) return;
+    _activeHeadingPublishScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _activeHeadingPublishScheduled = false;
+      _publishActiveHeading();
+    });
+  }
+
+  void _publishActiveHeading() {
+    if (!mounted) return;
+    final children = _editorState.document.root.children;
+    final headingIndexes = <int>[
+      for (var i = 0; i < children.length; i++)
+        if (children[i].type == 'heading' &&
+            (children[i].delta?.toPlainText().trim().isNotEmpty ?? false))
+          i,
+    ];
+    if (headingIndexes.isEmpty) {
+      _setActiveHeading(null);
+      return;
+    }
+
+    final visible = _scrollController.itemPositionsListener.itemPositions.value
+        .where(
+          (position) =>
+              position.itemTrailingEdge > 0 && position.itemLeadingEdge < 1,
+        )
+        .toList();
+    if (visible.isEmpty) return;
+
+    double distanceToCenter(dynamic position) {
+      final center = (position.itemLeadingEdge + position.itemTrailingEdge) / 2;
+      return (center - 0.5).abs();
+    }
+
+    final visibleHeadingPositions = visible
+        .where((position) => headingIndexes.contains(position.index))
+        .toList();
+    if (visibleHeadingPositions.isNotEmpty) {
+      visibleHeadingPositions.sort(
+        (a, b) => distanceToCenter(a).compareTo(distanceToCenter(b)),
+      );
+      _setActiveHeading(visibleHeadingPositions.first.index);
+      return;
+    }
+
+    visible.sort((a, b) => distanceToCenter(a).compareTo(distanceToCenter(b)));
+    final centerBlockIndex = visible.first.index;
+    final previousHeadings = headingIndexes
+        .where((index) => index <= centerBlockIndex)
+        .toList();
+    _setActiveHeading(
+      previousHeadings.isEmpty ? headingIndexes.first : previousHeadings.last,
+    );
+  }
+
+  void _setActiveHeading(int? blockIndex) {
+    final current = essayActiveHeadingNotifier.value;
+    if (blockIndex == null) {
+      if (current?.essayId == widget.essay.id) {
+        essayActiveHeadingNotifier.value = null;
+      }
+      return;
+    }
+    if (current?.essayId == widget.essay.id &&
+        current?.blockIndex == blockIndex) {
+      return;
+    }
+    essayActiveHeadingNotifier.value = EssayActiveHeading(
+      essayId: widget.essay.id,
+      blockIndex: blockIndex,
+    );
   }
 
   @override
