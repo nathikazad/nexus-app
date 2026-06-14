@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 
 const String nxHighlightNoteIdAttribute = 'nx_note_id';
 const String nxHighlightNotesDocumentAttribute = 'nx_highlight_notes';
-const String _defaultNoteHighlightColor = '0x4dffeb3b';
+const String _defaultNoteHighlightColor = '0x4def4444';
 
 void registerNxHighlightNoteAttribute() {
   if (!AppFlowyRichTextKeys.supportSliced.contains(
