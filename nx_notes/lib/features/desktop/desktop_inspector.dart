@@ -1,6 +1,6 @@
 part of 'desktop_shell.dart';
 
-enum _InspectorTab { details, contents }
+enum _InspectorTab { contents, details }
 
 class _DesktopInspector extends ConsumerStatefulWidget {
   const _DesktopInspector({required this.essayId});
@@ -12,7 +12,7 @@ class _DesktopInspector extends ConsumerStatefulWidget {
 }
 
 class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
-  _InspectorTab _tab = _InspectorTab.details;
+  _InspectorTab _tab = _InspectorTab.contents;
 
   @override
   Widget build(BuildContext context) {
@@ -77,14 +77,14 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
             child: Row(
               children: <Widget>[
                 _InspectorTabButton(
-                  label: 'Details',
-                  active: _tab == _InspectorTab.details,
-                  onTap: () => setState(() => _tab = _InspectorTab.details),
-                ),
-                _InspectorTabButton(
                   label: 'Contents',
                   active: _tab == _InspectorTab.contents,
                   onTap: () => setState(() => _tab = _InspectorTab.contents),
+                ),
+                _InspectorTabButton(
+                  label: 'Details',
+                  active: _tab == _InspectorTab.details,
+                  onTap: () => setState(() => _tab = _InspectorTab.details),
                 ),
               ],
             ),
