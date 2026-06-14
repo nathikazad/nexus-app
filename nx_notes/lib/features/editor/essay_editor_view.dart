@@ -415,6 +415,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   StreamSubscription<EditorTransactionValue>? _transactionSubscription;
   Timer? _saveDebounce;
   bool _activeHeadingPublishScheduled = false;
+  int? _handledHeadingScrollRequestSerial;
 
   @override
   void initState() {
@@ -457,6 +458,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _scrollController.itemPositionsListener.itemPositions.addListener(
       _scheduleActiveHeadingPublish,
     );
+    essayHeadingScrollRequestNotifier.addListener(_handleHeadingScrollRequest);
     _transactionSubscription = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
@@ -472,6 +474,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   void _disposeEditor() {
     _scrollController.itemPositionsListener.itemPositions.removeListener(
       _scheduleActiveHeadingPublish,
+    );
+    essayHeadingScrollRequestNotifier.removeListener(
+      _handleHeadingScrollRequest,
     );
     _transactionSubscription?.cancel();
     _scrollController.dispose();
@@ -560,6 +565,32 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _activeHeadingPublishScheduled = false;
       _publishActiveHeading();
+    });
+  }
+
+  void _handleHeadingScrollRequest() {
+    final request = essayHeadingScrollRequestNotifier.value;
+    if (!mounted ||
+        !widget.active ||
+        request == null ||
+        request.essayId != widget.essay.id ||
+        request.serial == _handledHeadingScrollRequestSerial) {
+      return;
+    }
+    _handledHeadingScrollRequestSerial = request.serial;
+
+    final blockIndex = request.blockIndex;
+    if (blockIndex < 0 ||
+        blockIndex >= _editorState.document.root.children.length) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.active) return;
+      final itemScrollController = _scrollController.itemScrollController;
+      if (!itemScrollController.isAttached) return;
+      itemScrollController.jumpTo(index: blockIndex, alignment: 0.08);
+      _scheduleActiveHeadingPublish();
     });
   }
 

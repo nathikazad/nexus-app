@@ -201,73 +201,155 @@ class _InspectorTabButton extends StatelessWidget {
   }
 }
 
-class _InspectorContents extends StatelessWidget {
+class _InspectorContents extends StatefulWidget {
   const _InspectorContents({required this.essay});
 
   final Essay essay;
 
   @override
+  State<_InspectorContents> createState() => _InspectorContentsState();
+}
+
+class _InspectorContentsState extends State<_InspectorContents> {
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _headingKeys = <int, GlobalKey>{};
+  int? _lastEnsuredBlockIndex;
+
+  @override
+  void didUpdateWidget(covariant _InspectorContents oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.essay.id != widget.essay.id) {
+      _headingKeys.clear();
+      _lastEnsuredBlockIndex = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final headings = _headingsFromEssay(essay);
+    final headings = _headingsFromEssay(widget.essay);
+    _syncHeadingKeys(headings);
     return ValueListenableBuilder<EssayActiveHeading?>(
       valueListenable: essayActiveHeadingNotifier,
       builder: (context, activeHeading, _) {
-        final activeBlockIndex = activeHeading?.essayId == essay.id
+        final activeBlockIndex = activeHeading?.essayId == widget.essay.id
             ? activeHeading?.blockIndex
             : null;
-        return ListView(
+        _scheduleActiveHeadingVisibility(activeBlockIndex);
+        return SingleChildScrollView(
+          controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(14, 16, 14, 32),
-          children: <Widget>[
-            if (headings.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(6, 6, 6, 0),
-                child: Text(
-                  'No headings',
-                  style: TextStyle(fontSize: 12, color: AppColors.faint),
-                ),
-              )
-            else
-              for (final heading in headings)
-                _InspectorHeadingRow(
-                  heading: heading,
-                  active: heading.blockIndex == activeBlockIndex,
-                ),
-          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (headings.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(6, 6, 6, 0),
+                  child: Text(
+                    'No headings',
+                    style: TextStyle(fontSize: 12, color: AppColors.faint),
+                  ),
+                )
+              else
+                for (final heading in headings)
+                  _InspectorHeadingRow(
+                    key: _headingKeys[heading.blockIndex],
+                    heading: heading,
+                    active: heading.blockIndex == activeBlockIndex,
+                    onTap: () => requestEssayHeadingScroll(
+                      essayId: widget.essay.id,
+                      blockIndex: heading.blockIndex,
+                    ),
+                  ),
+            ],
+          ),
         );
       },
     );
   }
+
+  void _syncHeadingKeys(List<_EssayHeading> headings) {
+    final blockIndexes = headings.map((heading) => heading.blockIndex).toSet();
+    _headingKeys.removeWhere(
+      (blockIndex, _) => !blockIndexes.contains(blockIndex),
+    );
+    for (final heading in headings) {
+      _headingKeys.putIfAbsent(heading.blockIndex, GlobalKey.new);
+    }
+  }
+
+  void _scheduleActiveHeadingVisibility(int? activeBlockIndex) {
+    if (activeBlockIndex == null ||
+        activeBlockIndex == _lastEnsuredBlockIndex) {
+      return;
+    }
+    _lastEnsuredBlockIndex = activeBlockIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final context = _headingKeys[activeBlockIndex]?.currentContext;
+      if (context == null) return;
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.45,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
 }
 
 class _InspectorHeadingRow extends StatelessWidget {
-  const _InspectorHeadingRow({required this.heading, required this.active});
+  const _InspectorHeadingRow({
+    required this.heading,
+    required this.active,
+    required this.onTap,
+    super.key,
+  });
 
   final _EssayHeading heading;
   final bool active;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final indent = (heading.level - 1).clamp(0, 4).toDouble() * 10.0;
     return Padding(
       padding: EdgeInsets.only(left: indent, bottom: 2),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: active ? AppColors.subtle : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          border: active ? Border.all(color: AppColors.line) : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          child: Text(
-            heading.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: heading.level == 1 ? 12.5 : 12,
-              color: active ? AppColors.text : AppColors.muted,
-              fontWeight: active || heading.level <= 2
-                  ? FontWeight.w700
-                  : FontWeight.w600,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: active ? AppColors.subtle : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
+              border: active ? Border.all(color: AppColors.line) : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              child: Text(
+                heading.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: heading.level == 1 ? 12.5 : 12,
+                  color: active ? AppColors.text : AppColors.muted,
+                  fontWeight: active || heading.level <= 2
+                      ? FontWeight.w700
+                      : FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ),

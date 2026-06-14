@@ -27,6 +27,33 @@ class EssayActiveHeading {
 
 final essayActiveHeadingNotifier = ValueNotifier<EssayActiveHeading?>(null);
 
+class EssayHeadingScrollRequest {
+  const EssayHeadingScrollRequest({
+    required this.essayId,
+    required this.blockIndex,
+    required this.serial,
+  });
+
+  final int essayId;
+  final int blockIndex;
+  final int serial;
+}
+
+final essayHeadingScrollRequestNotifier =
+    ValueNotifier<EssayHeadingScrollRequest?>(null);
+
+void requestEssayHeadingScroll({
+  required int essayId,
+  required int blockIndex,
+}) {
+  final nextSerial = (essayHeadingScrollRequestNotifier.value?.serial ?? 0) + 1;
+  essayHeadingScrollRequestNotifier.value = EssayHeadingScrollRequest(
+    essayId: essayId,
+    blockIndex: blockIndex,
+    serial: nextSerial,
+  );
+}
+
 class EssayLocalCache extends Notifier<Map<int, Essay>> {
   @override
   Map<int, Essay> build() => const <int, Essay>{};
