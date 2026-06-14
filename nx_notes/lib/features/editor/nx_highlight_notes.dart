@@ -44,7 +44,7 @@ final ToolbarItem nxHighlightNoteToolbarItem = ToolbarItem(
         padding: EdgeInsets.zero,
         tooltip: 'Note',
         icon: Icon(
-          hasNote ? Icons.description : Icons.description_outlined,
+          hasNote ? Icons.article : Icons.article_outlined,
           color: effectiveIconColor,
           size: 18,
         ),

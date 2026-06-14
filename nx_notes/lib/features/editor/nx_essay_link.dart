@@ -63,7 +63,7 @@ ToolbarItem buildNxEssayLinkToolbarItem({
           padding: EdgeInsets.zero,
           tooltip: 'Essay',
           icon: Icon(
-            Icons.article_outlined,
+            Icons.description_outlined,
             color: effectiveIconColor,
             size: 18,
           ),
