@@ -30,7 +30,10 @@ final ToolbarItem nxHighlightNoteToolbarItem = ToolbarItem(
     final hasNote =
         selection != null &&
         nxHighlightNoteIdInSelection(editorState, selection) != null;
-    final effectiveIconColor = hasNote ? highlightColor : iconColor;
+    final disabled = selection == null || selection.isCollapsed;
+    final effectiveIconColor = disabled
+        ? Colors.white.withValues(alpha: 0.42)
+        : Colors.white;
     final child = SizedBox(
       width: 30,
       height: 30,
@@ -41,11 +44,11 @@ final ToolbarItem nxHighlightNoteToolbarItem = ToolbarItem(
         padding: EdgeInsets.zero,
         tooltip: 'Note',
         icon: Icon(
-          hasNote ? Icons.sticky_note_2 : Icons.sticky_note_2_outlined,
+          hasNote ? Icons.description : Icons.description_outlined,
           color: effectiveIconColor,
           size: 18,
         ),
-        onPressed: selection == null || selection.isCollapsed
+        onPressed: disabled
             ? null
             : () {
                 unawaited(
