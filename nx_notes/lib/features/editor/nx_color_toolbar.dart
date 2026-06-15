@@ -238,7 +238,7 @@ class _NxCompactColorToolbarButton extends StatelessWidget {
             Icon(icon, size: 18, color: iconColor),
             if (hasSelectedColor)
               Positioned(
-                right: 5,
+                right: 2,
                 bottom: 5,
                 child: _NxColorSwatch(
                   color: selectedColor,
