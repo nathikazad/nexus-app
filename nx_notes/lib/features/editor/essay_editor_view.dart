@@ -410,11 +410,16 @@ class NxAppFlowyEditor extends StatefulWidget {
 }
 
 class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
+  static const _caretEditIdleDelay = Duration(seconds: 8);
+  static const _caretScrollIdleDelay = Duration(seconds: 5);
+
   late EditorState _editorState;
   late EditorScrollController _scrollController;
   StreamSubscription<EditorTransactionValue>? _transactionSubscription;
   Timer? _saveDebounce;
+  Timer? _caretIdleTimer;
   bool _activeHeadingPublishScheduled = false;
+  bool _caretVisible = true;
   int? _handledHeadingScrollRequestSerial;
 
   @override
@@ -450,6 +455,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   void _createEditor() {
     registerNxHighlightNoteAttribute();
+    _caretVisible = true;
     _editorState = EditorState(document: _documentFromEssay(widget.essay));
     _scrollController = EditorScrollController(
       editorState: _editorState,
@@ -458,22 +464,32 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _scrollController.itemPositionsListener.itemPositions.addListener(
       _scheduleActiveHeadingPublish,
     );
+    _scrollController.offsetNotifier.addListener(_handleEditorScrolled);
+    _editorState.selectionNotifier.addListener(_handleEditorSelectionChanged);
     essayHeadingScrollRequestNotifier.addListener(_handleHeadingScrollRequest);
     _transactionSubscription = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
           !options.inMemoryUpdate &&
           transaction.operations.isNotEmpty) {
+        _showCaretTemporarily();
         _scheduleSave();
         _scheduleActiveHeadingPublish();
       }
     });
+    _scheduleCaretHide(_caretEditIdleDelay);
     _scheduleActiveHeadingPublish();
   }
 
   void _disposeEditor() {
+    _caretIdleTimer?.cancel();
+    _caretIdleTimer = null;
     _scrollController.itemPositionsListener.itemPositions.removeListener(
       _scheduleActiveHeadingPublish,
+    );
+    _scrollController.offsetNotifier.removeListener(_handleEditorScrolled);
+    _editorState.selectionNotifier.removeListener(
+      _handleEditorSelectionChanged,
     );
     essayHeadingScrollRequestNotifier.removeListener(
       _handleHeadingScrollRequest,
@@ -498,6 +514,36 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     }
 
     return Document.blank(withInitialText: true);
+  }
+
+  void _handleEditorSelectionChanged() {
+    _showCaretTemporarily();
+  }
+
+  void _handleEditorScrolled() {
+    if (_caretVisible && _caretIdleTimer == null) {
+      _scheduleCaretHide(_caretScrollIdleDelay);
+    }
+  }
+
+  void _showCaretTemporarily() {
+    if (!mounted) return;
+    if (!_caretVisible) {
+      setState(() => _caretVisible = true);
+    }
+    _scheduleCaretHide(_caretEditIdleDelay);
+  }
+
+  void _scheduleCaretHide(Duration delay) {
+    _caretIdleTimer?.cancel();
+    _caretIdleTimer = Timer(delay, _hideCaret);
+  }
+
+  void _hideCaret() {
+    _caretIdleTimer?.cancel();
+    _caretIdleTimer = null;
+    if (!mounted || !_caretVisible) return;
+    setState(() => _caretVisible = false);
   }
 
   void _scheduleSave() {
@@ -670,48 +716,54 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingToolbar(
-      editorState: _editorState,
-      editorScrollController: _scrollController,
-      textDirection: Directionality.of(context),
-      items: [
-        paragraphItem,
-        ...headingItems,
-        ...markdownFormatItems,
-        quoteItem,
-        bulletedListItem,
-        numberedListItem,
-        linkItem,
-        buildTextColorItem(),
-        buildHighlightColorItem(),
-        nxHighlightNoteToolbarItem,
-        buildNxEssayLinkToolbarItem(
-          searchLinkableModels: widget.searchLinkableModels,
-          createEssay: widget.createLinkedEssay,
-          onLinkableModelSelected: widget.onLinkableModelSelected,
-        ),
-        ...alignmentItems,
-      ],
-      tooltipBuilder: (context, _, message, child) {
-        return Tooltip(message: message, preferBelow: false, child: child);
-      },
-      child: AppFlowyEditor(
+    final editorStyle = _editorStyle.copyWith(
+      cursorColor: _caretVisible ? AppColors.text : Colors.transparent,
+    );
+    return Listener(
+      onPointerDown: (_) => _showCaretTemporarily(),
+      child: FloatingToolbar(
         editorState: _editorState,
         editorScrollController: _scrollController,
-        editorStyle: _editorStyle,
-        blockComponentBuilders: nxBlockComponentBuilders(),
-        characterShortcutEvents: <CharacterShortcutEvent>[
-          ...standardCharacterShortcutEvents.where(
-            (event) => event.key != 'show the slash menu',
-          ),
-          nxSlashCommand(
+        textDirection: Directionality.of(context),
+        items: [
+          paragraphItem,
+          ...headingItems,
+          ...markdownFormatItems,
+          quoteItem,
+          bulletedListItem,
+          numberedListItem,
+          linkItem,
+          buildTextColorItem(),
+          buildHighlightColorItem(),
+          nxHighlightNoteToolbarItem,
+          buildNxEssayLinkToolbarItem(
             searchLinkableModels: widget.searchLinkableModels,
-            createLinkedEssay: widget.createLinkedEssay,
+            createEssay: widget.createLinkedEssay,
             onLinkableModelSelected: widget.onLinkableModelSelected,
           ),
+          ...alignmentItems,
         ],
-        commandShortcutEvents: standardCommandShortcutEvents,
-        footer: const SizedBox(height: 120),
+        tooltipBuilder: (context, _, message, child) {
+          return Tooltip(message: message, preferBelow: false, child: child);
+        },
+        child: AppFlowyEditor(
+          editorState: _editorState,
+          editorScrollController: _scrollController,
+          editorStyle: editorStyle,
+          blockComponentBuilders: nxBlockComponentBuilders(),
+          characterShortcutEvents: <CharacterShortcutEvent>[
+            ...standardCharacterShortcutEvents.where(
+              (event) => event.key != 'show the slash menu',
+            ),
+            nxSlashCommand(
+              searchLinkableModels: widget.searchLinkableModels,
+              createLinkedEssay: widget.createLinkedEssay,
+              onLinkableModelSelected: widget.onLinkableModelSelected,
+            ),
+          ],
+          commandShortcutEvents: standardCommandShortcutEvents,
+          footer: const SizedBox(height: 120),
+        ),
       ),
     );
   }
