@@ -1,24 +1,32 @@
+import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/editor/nx_essay_link.dart';
+import 'package:nx_notes/features/editor/nx_excalidraw_frame.dart';
 import 'package:provider/provider.dart';
 
 part 'nx_slash_menu.dart';
 part 'nx_toggle_block.dart';
 part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
+part 'nx_excalidraw_block.dart';
 
 const String nxToggleBlockType = 'nx_toggle';
 const String nxBlogLinkBlockType = 'nx_blog_link';
+const String nxExcalidrawBlockType = 'nx_excalidraw';
 
 Map<String, BlockComponentBuilder> nxBlockComponentBuilders() {
   final builders = <String, BlockComponentBuilder>{
     ...standardBlockComponentBuilderMap,
     nxToggleBlockType: NxToggleBlockComponentBuilder(),
     nxBlogLinkBlockType: NxBlogLinkBlockComponentBuilder(),
+    nxExcalidrawBlockType: NxExcalidrawBlockComponentBuilder(),
   };
   for (final entry in builders.entries) {
     if (entry.key == PageBlockKeys.type) {
@@ -46,6 +54,8 @@ String nxPlainTextForCustomNode(Node node) {
     case nxBlogLinkBlockType:
       final title = _stringAttribute(node, 'title', 'Blog document');
       return 'Blog: $title';
+    case nxExcalidrawBlockType:
+      return _stringAttribute(node, 'title', 'Excalidraw');
     default:
       return '';
   }

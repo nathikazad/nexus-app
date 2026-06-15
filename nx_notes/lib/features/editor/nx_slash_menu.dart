@@ -48,6 +48,13 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems() {
       nodeBuilder: (_, __) => nxToggleNode(),
       replace: _replaceCurrentParagraph,
     ),
+    SelectionMenuItem.node(
+      getName: () => 'Excalidraw',
+      keywords: const <String>['excalidraw', 'drawing', 'diagram', 'canvas'],
+      iconData: Icons.draw_outlined,
+      nodeBuilder: (_, __) => nxExcalidrawNode(),
+      replace: _replaceCurrentParagraph,
+    ),
     ...standardSelectionMenuItems,
   ];
 }
