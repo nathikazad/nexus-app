@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/essay/essay.dart';
@@ -16,6 +17,8 @@ final essayResultControllerProvider = Provider<EssayResultController>(
   EssayResultController.new,
 );
 
+enum DraftSavePolicy { deferred, immediate }
+
 class EssayMutationController {
   EssayMutationController(this._ref) {
     _ref.onDispose(() {
@@ -24,41 +27,41 @@ class EssayMutationController {
   }
 
   final Ref _ref;
-  static const Duration _draftWriteInterval = Duration(seconds: 90);
+  static const Duration _draftWriteDelay = Duration(seconds: 10);
   Timer? _draftFlushTimer;
-  DateTime? _lastDraftWriteAt;
   Essay? _pendingDraft;
   Future<void>? _draftWriteInFlight;
 
   Future<Essay> createEssay({String? title}) async {
     final essay = await _ref.read(essayRepositoryProvider).create(title: title);
+    _logDbSync('create_essay', essayId: essay.id);
     _cacheEssay(essay);
     return essay;
   }
 
-  Future<void> saveDraft(Essay essay) async {
+  Future<void> saveDraft(
+    Essay essay, {
+    DraftSavePolicy policy = DraftSavePolicy.deferred,
+  }) async {
     _pendingDraft = essay.copyWith(
       updatedAt: DateTime.now(),
       updatedLabel: 'just now',
     );
     _cacheEssay(_pendingDraft!);
+    if (policy == DraftSavePolicy.immediate) {
+      await _flushDraftNow();
+      return;
+    }
     _scheduleDraftWrite();
   }
 
   Future<void> saveNow(Essay fallback) async {
-    _draftFlushTimer?.cancel();
-    _draftFlushTimer = null;
     _pendingDraft ??= fallback.copyWith(
       updatedAt: DateTime.now(),
       updatedLabel: 'just now',
     );
     _cacheEssay(_pendingDraft!);
-    if (_draftWriteInFlight != null) {
-      await _draftWriteInFlight;
-      if (_pendingDraft == null) return;
-    }
-    _draftWriteInFlight = _flushPendingDraft();
-    await _draftWriteInFlight;
+    await _flushDraftNow();
   }
 
   Future<void> deleteEssay(Essay essay) async {
@@ -69,6 +72,7 @@ class EssayMutationController {
     }
     _pendingDraft = null;
     await _ref.read(essayRepositoryProvider).delete(essay.id);
+    _logDbSync('delete_essay', essayId: essay.id);
     _ref.read(essayLocalCacheProvider.notifier).remove(essay.id);
     _ref.invalidate(recentEssaysProvider);
     _ref.invalidate(pinnedEssaysProvider);
@@ -85,7 +89,7 @@ class EssayMutationController {
     );
     _cacheEssay(updated);
     await _ref.read(essayRepositoryProvider).updateDraft(updated);
-    _lastDraftWriteAt = DateTime.now();
+    _logDbSync('set_pinned', essayId: essay.id, detail: 'pinned=$pinned');
     _ref.invalidate(recentEssaysProvider);
     _ref.invalidate(pinnedEssaysProvider);
   }
@@ -103,6 +107,11 @@ class EssayMutationController {
           modelType: modelType,
           modelId: modelId,
         );
+    _logDbSync(
+      'attach_link',
+      essayId: essayId,
+      detail: 'model=${modelType.kgqlName}:$modelId',
+    );
     if (model != null) {
       _cacheEssayWithLink(essayId, model);
     }
@@ -110,6 +119,11 @@ class EssayMutationController {
 
   Future<void> attachProject(int essayId, int projectId) async {
     await _ref.read(essayRepositoryProvider).attachProject(essayId, projectId);
+    _logDbSync(
+      'attach_project',
+      essayId: essayId,
+      detail: 'project=$projectId',
+    );
     final projects = _ref
         .read(projectsProvider)
         .maybeWhen(data: (rows) => rows, orElse: () => const <LinkedModel>[]);
@@ -127,6 +141,11 @@ class EssayMutationController {
 
   Future<void> detachProject(int essayId, int relationId) async {
     await _ref.read(essayRepositoryProvider).detachProject(essayId, relationId);
+    _logDbSync(
+      'detach_project',
+      essayId: essayId,
+      detail: 'relation=$relationId',
+    );
     final cached = _ref.read(essayLocalCacheProvider)[essayId];
     if (cached == null) return;
     _cacheEssay(
@@ -146,6 +165,11 @@ class EssayMutationController {
     final snap = await _ref
         .read(essayRepositoryProvider)
         .createSnapshot(essayId, source: source, changeSummary: changeSummary);
+    _logDbSync(
+      'create_snapshot',
+      essayId: essayId,
+      detail: 'snapshot=${snap.id} source=$source',
+    );
     return snap;
   }
 
@@ -157,6 +181,7 @@ class EssayMutationController {
     );
     await saveDraft(
       essay.copyWith(document: snap.document, jsonDocument: snap.jsonDocument),
+      policy: DraftSavePolicy.immediate,
     );
   }
 
@@ -177,24 +202,21 @@ class EssayMutationController {
 
   void _scheduleDraftWrite() {
     if (_draftWriteInFlight != null) return;
-
-    final now = DateTime.now();
-    final lastWriteAt = _lastDraftWriteAt;
-    if (lastWriteAt == null ||
-        now.difference(lastWriteAt) >= _draftWriteInterval) {
-      _draftFlushTimer?.cancel();
+    _draftFlushTimer ??= Timer(_draftWriteDelay, () {
       _draftFlushTimer = null;
-      _draftWriteInFlight = _flushPendingDraft();
-      return;
-    }
+      _draftWriteInFlight ??= _flushPendingDraft();
+    });
+  }
 
-    _draftFlushTimer ??= Timer(
-      _draftWriteInterval - now.difference(lastWriteAt),
-      () {
-        _draftFlushTimer = null;
-        _draftWriteInFlight ??= _flushPendingDraft();
-      },
-    );
+  Future<void> _flushDraftNow() async {
+    _draftFlushTimer?.cancel();
+    _draftFlushTimer = null;
+    if (_draftWriteInFlight != null) {
+      await _draftWriteInFlight;
+      if (_pendingDraft == null) return;
+    }
+    _draftWriteInFlight = _flushPendingDraft();
+    await _draftWriteInFlight;
   }
 
   Future<void> _flushPendingDraft() async {
@@ -206,13 +228,26 @@ class EssayMutationController {
     _pendingDraft = null;
     try {
       await _ref.read(essayRepositoryProvider).updateDraft(draft);
-      _lastDraftWriteAt = DateTime.now();
+      _logDbSync(
+        'update_draft',
+        essayId: draft.id,
+        detail: 'words=${draft.wordCount}',
+      );
     } finally {
       _draftWriteInFlight = null;
       if (_pendingDraft != null) {
         _scheduleDraftWrite();
       }
     }
+  }
+
+  void _logDbSync(String action, {int? essayId, String? detail}) {
+    final timestamp = DateTime.now().toIso8601String();
+    final essayPart = essayId == null ? '' : ' essay=$essayId';
+    final detailPart = detail == null ? '' : ' $detail';
+    debugPrint(
+      '[nx_notes db sync] $timestamp action=$action$essayPart$detailPart',
+    );
   }
 }
 

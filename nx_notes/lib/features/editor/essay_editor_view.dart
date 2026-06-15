@@ -289,7 +289,7 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                         modelType: LinkableModelType.essay.kgqlName,
                       );
                     },
-                    onChanged: (updated) async {
+                    onChanged: (updated, policy) async {
                       _draftEssay = _draftEssay.copyWith(
                         document: updated.document,
                         jsonDocument: updated.jsonDocument,
@@ -298,7 +298,7 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                       );
                       await ref
                           .read(essayMutationControllerProvider)
-                          .saveDraft(_draftEssay);
+                          .saveDraft(_draftEssay, policy: policy);
                     },
                   ),
                 ),
@@ -396,7 +396,7 @@ class NxAppFlowyEditor extends StatefulWidget {
 
   final Essay essay;
   final bool active;
-  final Future<void> Function(Essay essay) onChanged;
+  final Future<void> Function(Essay essay, DraftSavePolicy policy) onChanged;
   final Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
     required String query,
@@ -413,14 +413,20 @@ class NxAppFlowyEditor extends StatefulWidget {
 class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   static const _caretEditIdleDelay = Duration(seconds: 8);
   static const _caretScrollIdleDelay = Duration(seconds: 5);
+  static const _pasteShortcutKeys = <String>{
+    'paste the content',
+    'paste the content as plain text',
+  };
 
   late EditorState _editorState;
   late EditorScrollController _scrollController;
   StreamSubscription<EditorTransactionValue>? _transactionSubscription;
   Timer? _saveDebounce;
   Timer? _caretIdleTimer;
+  Timer? _nextImmediateSaveTimer;
   bool _activeHeadingPublishScheduled = false;
   bool _caretVisible = true;
+  bool _saveNextTransactionImmediately = false;
   int? _handledHeadingScrollRequestSerial;
 
   @override
@@ -449,6 +455,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    _nextImmediateSaveTimer?.cancel();
     _clearActiveHeading();
     _disposeEditor();
     super.dispose();
@@ -474,7 +481,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
           !options.inMemoryUpdate &&
           transaction.operations.isNotEmpty) {
         _showCaretTemporarily();
-        _scheduleSave();
+        _scheduleSave(_savePolicyForTransaction(transaction));
         _scheduleActiveHeadingPublish();
       }
     });
@@ -485,6 +492,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   void _disposeEditor() {
     _caretIdleTimer?.cancel();
     _caretIdleTimer = null;
+    _nextImmediateSaveTimer?.cancel();
+    _nextImmediateSaveTimer = null;
+    _saveNextTransactionImmediately = false;
     _scrollController.itemPositionsListener.itemPositions.removeListener(
       _scheduleActiveHeadingPublish,
     );
@@ -547,10 +557,21 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     setState(() => _caretVisible = false);
   }
 
-  void _scheduleSave() {
+  void _scheduleSave(DraftSavePolicy policy) {
     _saveDebounce?.cancel();
-    _saveDebounce = Timer(const Duration(milliseconds: 450), () {
-      final plainText = _documentPlainText(_editorState.document).trimRight();
+    if (policy == DraftSavePolicy.immediate) {
+      _saveCurrentDraft(policy);
+      return;
+    }
+    _saveDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => _saveCurrentDraft(policy),
+    );
+  }
+
+  void _saveCurrentDraft(DraftSavePolicy policy) {
+    final plainText = _documentPlainText(_editorState.document).trimRight();
+    unawaited(
       widget.onChanged(
         widget.essay.copyWith(
           document: plainText,
@@ -562,8 +583,89 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
           wordCount: _countWords(plainText),
           excerpt: _excerptFrom(plainText),
         ),
-      );
+        policy,
+      ),
+    );
+  }
+
+  DraftSavePolicy _savePolicyForTransaction(Transaction transaction) {
+    if (_consumeImmediateSaveMarker()) {
+      return DraftSavePolicy.immediate;
+    }
+    return _transactionLooksLikeTyping(transaction)
+        ? DraftSavePolicy.deferred
+        : DraftSavePolicy.immediate;
+  }
+
+  bool _transactionLooksLikeTyping(Transaction transaction) {
+    return transaction.operations.every(_operationLooksLikeTyping);
+  }
+
+  bool _operationLooksLikeTyping(Operation operation) {
+    if (operation is! UpdateTextOperation) {
+      return false;
+    }
+
+    var changedText = false;
+    for (final deltaOperation in operation.delta) {
+      if (deltaOperation is TextRetain) {
+        if (deltaOperation.attributes?.isNotEmpty ?? false) {
+          return false;
+        }
+      } else if (deltaOperation is TextInsert) {
+        final attributes = deltaOperation.attributes;
+        if ((attributes?[BuiltInAttributeKey.href] != null) ||
+            (attributes?[nxHighlightNoteIdAttribute] != null) ||
+            deltaOperation.text.length > 1) {
+          return false;
+        }
+        changedText = true;
+      } else if (deltaOperation is TextDelete) {
+        if (deltaOperation.length > 1) {
+          return false;
+        }
+        changedText = true;
+      }
+    }
+    return changedText;
+  }
+
+  void _markNextTransactionForImmediateSave() {
+    _saveNextTransactionImmediately = true;
+    _nextImmediateSaveTimer?.cancel();
+    _nextImmediateSaveTimer = Timer(const Duration(seconds: 5), () {
+      _saveNextTransactionImmediately = false;
+      _nextImmediateSaveTimer = null;
     });
+  }
+
+  bool _consumeImmediateSaveMarker() {
+    if (!_saveNextTransactionImmediately) {
+      return false;
+    }
+    _saveNextTransactionImmediately = false;
+    _nextImmediateSaveTimer?.cancel();
+    _nextImmediateSaveTimer = null;
+    return true;
+  }
+
+  List<CommandShortcutEvent> _commandShortcutEvents() {
+    return <CommandShortcutEvent>[
+      for (final event in standardCommandShortcutEvents)
+        if (_pasteShortcutKeys.contains(event.key))
+          event.copyWith(
+            handler: (editorState) {
+              _markNextTransactionForImmediateSave();
+              final result = event.handler(editorState);
+              if (result == KeyEventResult.ignored) {
+                _consumeImmediateSaveMarker();
+              }
+              return result;
+            },
+          )
+        else
+          event,
+    ];
   }
 
   String _documentPlainText(Document document) {
@@ -762,7 +864,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
               onLinkableModelSelected: widget.onLinkableModelSelected,
             ),
           ],
-          commandShortcutEvents: standardCommandShortcutEvents,
+          commandShortcutEvents: _commandShortcutEvents(),
           footer: const SizedBox(height: 120),
         ),
       ),

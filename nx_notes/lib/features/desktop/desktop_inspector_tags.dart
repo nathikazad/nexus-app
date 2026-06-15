@@ -198,5 +198,7 @@ List<String> _flattenTagNodes(List<TagNode> nodes) {
 }
 
 Future<void> _saveEssayMetadata(WidgetRef ref, Essay essay) async {
-  await ref.read(essayMutationControllerProvider).saveDraft(essay);
+  await ref
+      .read(essayMutationControllerProvider)
+      .saveDraft(essay, policy: DraftSavePolicy.immediate);
 }
