@@ -59,9 +59,9 @@ ToolbarItem _buildNxColorItem({
           isTextColor: isTextColor,
         ),
         hasSelectedColor: selectedColorHex != null,
-        onPressed: () {
+        onPressed: (buttonContext) {
           _showNxCompactColorMenu(
-            context: context,
+            context: buttonContext,
             editorState: editorState,
             selection: selection,
             selectedColorHex: selectedColorHex,
@@ -139,19 +139,7 @@ void _showNxCompactColorMenu({
   final rects = editorState.selectionRects();
   if (rects.isEmpty || editorState.renderBox == null) return;
 
-  final rect = rects.first;
-  final left = rect.left + 10;
-  double? top;
-  double? bottom;
-  final offset = rect.center;
-  final editorOffset = editorState.renderBox!.localToGlobal(Offset.zero);
-  final editorHeight = editorState.renderBox!.size.height;
-  final threshold = editorOffset.dy + editorHeight - 190;
-  if (offset.dy > threshold) {
-    bottom = editorOffset.dy + editorHeight - rect.top - 5;
-  } else {
-    top = rect.bottom + 5;
-  }
+  final (top, bottom, left) = _compactColorMenuPosition(context, editorState);
 
   OverlayEntry? overlay;
   var holdsFocus = false;
@@ -220,39 +208,81 @@ class _NxCompactColorToolbarButton extends StatelessWidget {
   final Color iconColor;
   final Color selectedColor;
   final bool hasSelectedColor;
-  final VoidCallback onPressed;
+  final ValueChanged<BuildContext> onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: 30,
-      child: IconButton(
-        hoverColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        padding: EdgeInsets.zero,
-        onPressed: onPressed,
-        icon: Stack(
-          alignment: Alignment.center,
-          children: <Widget>[
-            Icon(icon, size: 18, color: iconColor),
-            if (hasSelectedColor)
-              Positioned(
-                right: 2,
-                bottom: 5,
-                child: _NxColorSwatch(
-                  color: selectedColor,
-                  selected: false,
-                  clear: false,
-                  size: const Size.square(8),
-                  radius: 4,
-                ),
+    return Builder(
+      builder: (buttonContext) {
+        return SizedBox.square(
+          dimension: 30,
+          child: IconButton(
+            hoverColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            padding: EdgeInsets.zero,
+            onPressed: () => onPressed(buttonContext),
+            icon: SizedBox.square(
+              dimension: 30,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: <Widget>[
+                  Icon(icon, size: 18, color: iconColor),
+                  if (hasSelectedColor)
+                    Positioned(
+                      right: 1,
+                      bottom: 5,
+                      child: _NxColorSwatch(
+                        color: selectedColor,
+                        selected: false,
+                        clear: false,
+                        size: const Size.square(8),
+                        radius: 4,
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
+}
+
+(double? top, double? bottom, double left) _compactColorMenuPosition(
+  BuildContext buttonContext,
+  EditorState editorState,
+) {
+  const menuWidth = 128.0;
+  const verticalGap = 8.0;
+  final screenSize = MediaQuery.sizeOf(buttonContext);
+  final buttonBox = buttonContext.findRenderObject() as RenderBox?;
+  if (buttonBox != null && buttonBox.hasSize) {
+    final buttonOffset = buttonBox.localToGlobal(Offset.zero);
+    final buttonRect = buttonOffset & buttonBox.size;
+    final left = (buttonRect.center.dx - menuWidth / 2).clamp(
+      8.0,
+      screenSize.width - menuWidth - 8.0,
+    );
+    final top = buttonRect.bottom + verticalGap;
+    return (top, null, left);
+  }
+
+  final rects = editorState.selectionRects();
+  if (rects.isEmpty || editorState.renderBox == null) {
+    return (8.0, null, 8.0);
+  }
+  final rect = rects.first;
+  final editorOffset = editorState.renderBox!.localToGlobal(Offset.zero);
+  final editorHeight = editorState.renderBox!.size.height;
+  final threshold = editorOffset.dy + editorHeight - 190;
+  final left = (rect.left + 10).clamp(8.0, screenSize.width - menuWidth - 8.0);
+  if (rect.center.dy > threshold) {
+    return (null, editorOffset.dy + editorHeight - rect.top - 5, left);
+  }
+  return (rect.bottom + 5, null, left);
 }
 
 class _NxCompactColorMenu extends StatelessWidget {
