@@ -6,6 +6,7 @@ Node nxExcalidrawNode() {
     attributes: <String, Object?>{
       'title': 'Excalidraw',
       'scene': _emptyExcalidrawScene(),
+      'preview_height': _defaultExcalidrawPreviewHeight,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     },
   );
@@ -58,10 +59,13 @@ class _NxExcalidrawBlockComponentWidgetState
     extends State<NxExcalidrawBlockComponentWidget>
     with SelectableMixin {
   final _blockKey = GlobalKey(debugLabel: nxExcalidrawBlockType);
+  double? _dragPreviewHeight;
 
   @override
   Widget build(BuildContext context) {
     final scene = _excalidrawSceneFromNode(widget.node);
+    final previewHeight =
+        _dragPreviewHeight ?? _excalidrawPreviewHeightFromNode(widget.node);
     Widget child = Padding(
       key: _blockKey,
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -82,10 +86,26 @@ class _NxExcalidrawBlockComponentWidgetState
             ],
           ),
           child: SizedBox(
-            height: 190,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: _ExcalidrawPreview(scene: scene),
+            height: previewHeight,
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: _ExcalidrawPreview(scene: scene),
+                  ),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: _ExcalidrawResizeHandle(
+                    onVerticalDragUpdate: _resizePreview,
+                    onVerticalDragEnd: (_) => _commitPreviewHeight(),
+                    onVerticalDragCancel: _commitPreviewHeight,
+                    onDoubleTap: _resetPreviewHeight,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -135,6 +155,39 @@ class _NxExcalidrawBlockComponentWidgetState
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _resizePreview(DragUpdateDetails details) {
+    setState(() {
+      _dragPreviewHeight = _clampExcalidrawPreviewHeight(
+        (_dragPreviewHeight ?? _excalidrawPreviewHeightFromNode(widget.node)) +
+            details.delta.dy,
+      );
+    });
+  }
+
+  void _commitPreviewHeight() {
+    final height = _dragPreviewHeight;
+    if (height == null) {
+      return;
+    }
+    _savePreviewHeight(height);
+    setState(() => _dragPreviewHeight = null);
+  }
+
+  void _resetPreviewHeight() {
+    _savePreviewHeight(_defaultExcalidrawPreviewHeight);
+    setState(() => _dragPreviewHeight = null);
+  }
+
+  void _savePreviewHeight(double height) {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final transaction = widget.editorState.transaction
+      ..updateNode(widget.node, <String, Object?>{
+        'preview_height': _clampExcalidrawPreviewHeight(height),
+        'updated_at': now,
+      });
+    widget.editorState.apply(transaction);
   }
 
   RenderBox? get _renderBox =>
@@ -190,6 +243,57 @@ class _NxExcalidrawBlockComponentWidgetState
   @override
   Offset localToGlobal(Offset offset, {bool shiftWithBaseOffset = false}) {
     return _renderBox?.localToGlobal(offset) ?? Offset.zero;
+  }
+}
+
+class _ExcalidrawResizeHandle extends StatelessWidget {
+  const _ExcalidrawResizeHandle({
+    required this.onVerticalDragUpdate,
+    required this.onVerticalDragEnd,
+    required this.onVerticalDragCancel,
+    required this.onDoubleTap,
+  });
+
+  final GestureDragUpdateCallback onVerticalDragUpdate;
+  final GestureDragEndCallback onVerticalDragEnd;
+  final GestureDragCancelCallback onVerticalDragCancel;
+  final GestureTapCallback onDoubleTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeUpDown,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragUpdate: onVerticalDragUpdate,
+        onVerticalDragEnd: onVerticalDragEnd,
+        onVerticalDragCancel: onVerticalDragCancel,
+        onDoubleTap: onDoubleTap,
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.9),
+                border: Border.all(color: AppColors.line),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const SizedBox(
+                width: 18,
+                height: 18,
+                child: Icon(
+                  Icons.drag_handle,
+                  size: 14,
+                  color: AppColors.muted,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -570,19 +674,10 @@ class _ExcalidrawPreviewPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final background = Paint()..color = backgroundColor;
-    final grid = Paint()
-      ..color = const Color(0xffececec)
-      ..strokeWidth = 1;
     canvas.drawRRect(
       RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(5)),
       background,
     );
-    for (var x = 16.0; x < size.width; x += 24) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
-    }
-    for (var y = 16.0; y < size.height; y += 24) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
-    }
 
     if (elements.isEmpty) {
       final stroke = Paint()
@@ -954,6 +1049,23 @@ Map<String, dynamic> _emptyExcalidrawScene() {
 
 String _prettyJson(Map<String, dynamic> scene) {
   return const JsonEncoder.withIndent('  ').convert(scene);
+}
+
+const _defaultExcalidrawPreviewHeight = 190.0;
+const _minExcalidrawPreviewHeight = 120.0;
+const _maxExcalidrawPreviewHeight = 620.0;
+
+double _excalidrawPreviewHeightFromNode(Node node) {
+  return _clampExcalidrawPreviewHeight(
+    _doubleValue(
+      node.attributes['preview_height'],
+      fallback: _defaultExcalidrawPreviewHeight,
+    ),
+  );
+}
+
+double _clampExcalidrawPreviewHeight(double height) {
+  return height.clamp(_minExcalidrawPreviewHeight, _maxExcalidrawPreviewHeight);
 }
 
 Map<String, dynamic> _excalidrawSceneFromNode(Node node) {
