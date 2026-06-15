@@ -10,6 +10,7 @@ import 'package:nx_notes/domain/essay/essay_result_context.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/essay/essay_actions.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
+import 'package:nx_notes/features/editor/nx_color_toolbar.dart';
 import 'package:nx_notes/features/editor/nx_essay_link.dart';
 import 'package:nx_notes/features/editor/nx_highlight_notes.dart';
 
@@ -733,8 +734,8 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
           bulletedListItem,
           numberedListItem,
           linkItem,
-          buildTextColorItem(),
-          buildHighlightColorItem(),
+          buildNxTextColorItem(),
+          buildNxHighlightColorItem(),
           nxHighlightNoteToolbarItem,
           buildNxEssayLinkToolbarItem(
             searchLinkableModels: widget.searchLinkableModels,
