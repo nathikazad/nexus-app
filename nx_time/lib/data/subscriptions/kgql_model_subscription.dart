@@ -52,7 +52,7 @@ final kgqlModelChangesProvider = StreamProvider.autoDispose
         client,
         modelTypeName: modelTypeName,
       );
-      final domainId = domainOptions.preferredDomain?.id;
+      final domainId = _subscriptionDomainId(domainOptions);
       if (domainId == null) {
         throw StateError('No domain available for $modelTypeName subscription');
       }
@@ -77,3 +77,8 @@ final kgqlModelChangesProvider = StreamProvider.autoDispose
         }
       }
     });
+
+int? _subscriptionDomainId(ModelTypeDomainOptions domainOptions) {
+  if (domainOptions.domains.isEmpty) return null;
+  return domainOptions.domains.first.id;
+}
