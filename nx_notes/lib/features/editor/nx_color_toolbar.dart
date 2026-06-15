@@ -59,7 +59,6 @@ ToolbarItem _buildNxColorItem({
           isTextColor: isTextColor,
         ),
         hasSelectedColor: selectedColorHex != null,
-        isTextColor: isTextColor,
         onPressed: () {
           _showNxCompactColorMenu(
             context: context,
@@ -214,7 +213,6 @@ class _NxCompactColorToolbarButton extends StatelessWidget {
     required this.iconColor,
     required this.selectedColor,
     required this.hasSelectedColor,
-    required this.isTextColor,
     required this.onPressed,
   });
 
@@ -222,7 +220,6 @@ class _NxCompactColorToolbarButton extends StatelessWidget {
   final Color iconColor;
   final Color selectedColor;
   final bool hasSelectedColor;
-  final bool isTextColor;
   final VoidCallback onPressed;
 
   @override
@@ -238,17 +235,19 @@ class _NxCompactColorToolbarButton extends StatelessWidget {
         icon: Stack(
           alignment: Alignment.center,
           children: <Widget>[
-            Positioned(top: 4, child: Icon(icon, size: 17, color: iconColor)),
-            Positioned(
-              bottom: 4,
-              child: _NxColorSwatch(
-                color: selectedColor,
-                selected: hasSelectedColor,
-                clear: !isTextColor && !hasSelectedColor,
-                size: const Size(15, 5),
-                radius: 2,
+            Icon(icon, size: 18, color: iconColor),
+            if (hasSelectedColor)
+              Positioned(
+                right: 5,
+                bottom: 5,
+                child: _NxColorSwatch(
+                  color: selectedColor,
+                  selected: false,
+                  clear: false,
+                  size: const Size.square(8),
+                  radius: 4,
+                ),
               ),
-            ),
           ],
         ),
       ),
