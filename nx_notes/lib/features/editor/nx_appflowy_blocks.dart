@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -16,14 +17,27 @@ part 'nx_toggle_block.dart';
 part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
 part 'nx_excalidraw_block.dart';
+part 'nx_document_image_block.dart';
 
 const String nxToggleBlockType = 'nx_toggle';
 const String nxBlogLinkBlockType = 'nx_blog_link';
 const String nxExcalidrawBlockType = 'nx_excalidraw';
 
-Map<String, BlockComponentBuilder> nxBlockComponentBuilders() {
+Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
+  Future<void> Function(String url)? deleteDocumentImage,
+}) {
   final builders = <String, BlockComponentBuilder>{
     ...standardBlockComponentBuilderMap,
+    ImageBlockKeys.type: ImageBlockComponentBuilder(
+      showMenu: true,
+      menuBuilder: (node, state) {
+        return NxDocumentImageBlockMenu(
+          node: node,
+          state: state,
+          deleteDocumentImage: deleteDocumentImage,
+        );
+      },
+    ),
     nxToggleBlockType: NxToggleBlockComponentBuilder(),
     nxBlogLinkBlockType: NxBlogLinkBlockComponentBuilder(),
     nxExcalidrawBlockType: NxExcalidrawBlockComponentBuilder(),

@@ -31,7 +31,7 @@ class FakeDocumentRepository implements DocumentRepository {
       id: id,
       title: documentTitle,
       modelTypeName: kind.modelTypeName,
-      document: 'Start writing here.',
+      document: '',
       jsonDocument: const <String, dynamic>{
         'format': 'appflowy_document',
         'document': <String, dynamic>{
@@ -41,14 +41,14 @@ class FakeDocumentRepository implements DocumentRepository {
               'type': 'paragraph',
               'data': <String, dynamic>{
                 'delta': <Map<String, dynamic>>[
-                  <String, dynamic>{'insert': 'Start writing here.'},
+                  <String, dynamic>{'insert': ''},
                 ],
               },
             },
           ],
         },
       },
-      wordCount: 3,
+      wordCount: 0,
       status: 'Draft',
       topics: const <String>[],
       areaTags: const <String>[],
@@ -61,7 +61,7 @@ class FakeDocumentRepository implements DocumentRepository {
       updatedAt: now,
       updatedLabel: 'just now',
       versionNumber: 1,
-      excerpt: 'New document draft.',
+      excerpt: '',
       links: const <LinkedModel>[],
     );
     _documents.insert(0, document);

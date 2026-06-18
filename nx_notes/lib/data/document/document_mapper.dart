@@ -96,7 +96,7 @@ SetModelRequest setModelRequestForCreateDocument({
   String? title,
   DocumentKind kind = DocumentKind.document,
 }) {
-  const document = 'Start writing here.';
+  const document = '';
   final documentTitle = _documentTitleOrFallback(title);
   return SetModelRequest(
     modelType: kind.modelTypeName,
@@ -123,7 +123,7 @@ NxDocument documentForCreatedId(
   String? title,
   DocumentKind kind = DocumentKind.document,
 }) {
-  const document = 'Start writing here.';
+  const document = '';
   final updatedAt = now ?? DateTime.now();
   return NxDocument(
     id: id,

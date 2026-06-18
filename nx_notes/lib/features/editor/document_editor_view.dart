@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
@@ -127,6 +128,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   Timer? _titleSaveDebounce;
   late NxDocument _draftDocument;
   late String _titleText;
+  late final TextEditingController _titleController;
+  late final FocusNode _titleFocusNode;
+  bool _editingTitle = false;
   final Object _linkHandlerOwner = Object();
 
   @override
@@ -134,6 +138,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     super.initState();
     _draftDocument = widget.document;
     _titleText = widget.document.title;
+    _titleController = TextEditingController(text: _titleText);
+    _titleFocusNode = FocusNode()..addListener(_handleTitleFocusChange);
     _syncDocumentLinkHandler();
   }
 
@@ -143,7 +149,11 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     if (oldWidget.document.id != widget.document.id) {
       _titleSaveDebounce?.cancel();
       _draftDocument = widget.document;
-      _titleText = widget.document.title;
+      _replaceTitleText(widget.document.title);
+      _titleFocusNode.unfocus();
+    } else if (!_titleFocusNode.hasFocus &&
+        widget.document.title != _titleController.text) {
+      _replaceTitleText(widget.document.title);
     }
     if (oldWidget.active != widget.active ||
         oldWidget.onOpenDocumentLink != widget.onOpenDocumentLink) {
@@ -155,7 +165,26 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   void dispose() {
     _titleSaveDebounce?.cancel();
     _DocumentLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
+    _titleFocusNode
+      ..removeListener(_handleTitleFocusChange)
+      ..dispose();
+    _titleController.dispose();
     super.dispose();
+  }
+
+  void _handleTitleFocusChange() {
+    if (!mounted || _editingTitle == _titleFocusNode.hasFocus) {
+      return;
+    }
+    setState(() => _editingTitle = _titleFocusNode.hasFocus);
+  }
+
+  void _replaceTitleText(String title) {
+    _titleText = title;
+    _titleController.value = TextEditingValue(
+      text: title,
+      selection: TextSelection.collapsed(offset: title.length),
+    );
   }
 
   void _syncDocumentLinkHandler() {
@@ -195,6 +224,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final titleSize = width < 700 ? 30.0 : 38.0;
+    final imageAssetService = ref.watch(documentImageAssetServiceProvider);
     return Column(
       children: <Widget>[
         if (widget.contextBar != null) widget.contextBar!,
@@ -232,27 +262,80 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                     final fittedTitleSize = _fittedTitleFontSize(
                       context: context,
                       text: _titleText,
-                      maxWidth: constraints.maxWidth,
+                      maxWidth: constraints.maxWidth - 4,
                       baseSize: titleSize,
                     );
-                    return TextFormField(
-                      key: ValueKey<int>(widget.document.id),
-                      initialValue: widget.document.title,
-                      onChanged: _scheduleTitleSave,
-                      maxLines: 1,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: fittedTitleSize,
-                        fontWeight: FontWeight.w600,
-                        height: 1.16,
-                        letterSpacing: 0,
+                    final titleStyle = TextStyle(
+                      color: AppColors.text,
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.w600,
+                      height: 1.16,
+                      letterSpacing: 0,
+                    );
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: titleSize * 1.26,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 90),
+                        child: _editingTitle
+                            ? TextField(
+                                key: ValueKey<String>(
+                                  'title-editor-${widget.document.id}',
+                                ),
+                                controller: _titleController,
+                                focusNode: _titleFocusNode,
+                                onChanged: _scheduleTitleSave,
+                                onSubmitted: (_) => _titleFocusNode.unfocus(),
+                                onTapOutside: (_) => _titleFocusNode.unfocus(),
+                                maxLines: 1,
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: titleStyle.copyWith(
+                                  fontSize: fittedTitleSize,
+                                ),
+                              )
+                            : MouseRegion(
+                                key: ValueKey<String>(
+                                  'title-display-${widget.document.id}',
+                                ),
+                                cursor: SystemMouseCursors.text,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    setState(() => _editingTitle = true);
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (!mounted) return;
+                                          _titleFocusNode.requestFocus();
+                                          _titleController.selection =
+                                              TextSelection.collapsed(
+                                                offset: _titleController
+                                                    .text
+                                                    .length,
+                                              );
+                                        });
+                                  },
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: AutoSizeText(
+                                      _titleText.trim().isEmpty
+                                          ? 'Untitled document'
+                                          : _titleText.trim(),
+                                      maxLines: 1,
+                                      minFontSize: 8,
+                                      stepGranularity: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: titleStyle,
+                                    ),
+                                  ),
+                                ),
+                              ),
                       ),
                     );
                   },
@@ -291,6 +374,19 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                         modelType: LinkableModelType.document.kgqlName,
                       );
                     },
+                    uploadDocumentImage: imageAssetService == null
+                        ? null
+                        : (source) {
+                            return imageAssetService.storeImageSource(
+                              documentId: widget.document.id,
+                              source: source,
+                            );
+                          },
+                    deleteDocumentImage: imageAssetService == null
+                        ? null
+                        : (url) async {
+                            await imageAssetService.deleteImageUrl(url);
+                          },
                     onChanged: (updated, policy) async {
                       _draftDocument = _draftDocument.copyWith(
                         document: updated.document,
@@ -392,6 +488,8 @@ class NxAppFlowyEditor extends StatefulWidget {
     required this.searchLinkableModels,
     required this.onLinkableModelSelected,
     required this.createLinkedDocument,
+    this.uploadDocumentImage,
+    this.deleteDocumentImage,
     this.active = true,
     super.key,
   });
@@ -408,6 +506,8 @@ class NxAppFlowyEditor extends StatefulWidget {
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
   final Future<LinkedModel> Function(String title) createLinkedDocument;
+  final Future<String> Function(String source)? uploadDocumentImage;
+  final Future<void> Function(String url)? deleteDocumentImage;
 
   @override
   State<NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
@@ -1034,7 +1134,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
               editorState: _editorState,
               editorScrollController: _scrollController,
               editorStyle: editorStyle,
-              blockComponentBuilders: nxBlockComponentBuilders(),
+              blockComponentBuilders: nxBlockComponentBuilders(
+                deleteDocumentImage: widget.deleteDocumentImage,
+              ),
               characterShortcutEvents: <CharacterShortcutEvent>[
                 ...standardCharacterShortcutEvents.where(
                   (event) => event.key != 'show the slash menu',
@@ -1043,6 +1145,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
                   searchLinkableModels: widget.searchLinkableModels,
                   createLinkedDocument: widget.createLinkedDocument,
                   onLinkableModelSelected: widget.onLinkableModelSelected,
+                  uploadDocumentImage: widget.uploadDocumentImage,
                 ),
               ],
               commandShortcutEvents: _commandShortcutEvents(),

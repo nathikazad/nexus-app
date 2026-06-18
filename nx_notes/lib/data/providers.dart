@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_notes/data/document/document_image_assets.dart';
 import 'package:nx_notes/data/document/document_schema_provider.dart';
 import 'package:nx_notes/data/document/kgql_document_repository.dart';
 import 'package:nx_notes/domain/document/document.dart';
@@ -15,6 +18,23 @@ final documentRepositoryProvider = Provider<DocumentRepository>((ref) {
     client: ref.watch(graphqlClientProvider),
     loadDocumentSchema: () => ref.read(documentSchemaProvider.future),
     loadDocumentSnapSchema: () => ref.read(documentSnapSchemaProvider.future),
+  );
+});
+
+final documentImageAssetServiceProvider = Provider<DocumentImageAssetService?>((
+  ref,
+) {
+  final baseUrl = ref.watch(imageBaseUrlProvider);
+  final userId = ref.watch(userIdProvider);
+  if (baseUrl == null || userId == null) {
+    return null;
+  }
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return DocumentImageAssetService(
+    baseUrl: baseUrl,
+    userId: userId,
+    client: client,
   );
 });
 

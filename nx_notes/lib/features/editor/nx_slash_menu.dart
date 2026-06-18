@@ -9,6 +9,7 @@ CharacterShortcutEvent nxSlashCommand({
   required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
+  Future<String> Function(String source)? uploadDocumentImage,
 }) {
   return CharacterShortcutEvent(
     key: 'show nx slash menu',
@@ -33,13 +34,16 @@ CharacterShortcutEvent nxSlashCommand({
         searchLinkableModels: searchLinkableModels,
         createLinkedDocument: createLinkedDocument,
         onLinkableModelSelected: onLinkableModelSelected,
+        uploadDocumentImage: uploadDocumentImage,
       );
       return true;
     },
   );
 }
 
-List<SelectionMenuItem> _nxStaticSelectionMenuItems() {
+List<SelectionMenuItem> _nxStaticSelectionMenuItems({
+  Future<String> Function(String source)? uploadDocumentImage,
+}) {
   return <SelectionMenuItem>[
     SelectionMenuItem.node(
       getName: () => 'Toggle',
@@ -55,8 +59,62 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems() {
       nodeBuilder: (_, __) => nxExcalidrawNode(),
       replace: _replaceCurrentParagraph,
     ),
-    ...standardSelectionMenuItems,
+    _nxImageSelectionMenuItem(uploadDocumentImage: uploadDocumentImage),
+    for (final item in standardSelectionMenuItems)
+      if (!item.allKeywords.contains('image')) item,
   ];
+}
+
+SelectionMenuItem _nxImageSelectionMenuItem({
+  Future<String> Function(String source)? uploadDocumentImage,
+}) {
+  return SelectionMenuItem(
+    getName: () => AppFlowyEditorL10n.current.image,
+    icon: (editorState, isSelected, style) => SelectionMenuIconWidget(
+      name: 'image',
+      isSelected: isSelected,
+      style: style,
+    ),
+    keywords: const <String>['image'],
+    handler: (editorState, menuService, context) {
+      final container = Overlay.of(context, rootOverlay: true);
+      showImageMenu(
+        container,
+        editorState,
+        menuService,
+        onInsertImage: (source) {
+          unawaited(
+            _uploadAndInsertDocumentImage(
+              context: context,
+              editorState: editorState,
+              source: source,
+              uploadDocumentImage: uploadDocumentImage,
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Future<void> _uploadAndInsertDocumentImage({
+  required BuildContext context,
+  required EditorState editorState,
+  required String source,
+  required Future<String> Function(String source)? uploadDocumentImage,
+}) async {
+  try {
+    final url = uploadDocumentImage == null
+        ? source
+        : await uploadDocumentImage(source);
+    await editorState.insertImageNode(url);
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Could not insert image: $error')),
+      );
+    }
+  }
 }
 
 void _showNxSlashOverlay(
@@ -70,6 +128,7 @@ void _showNxSlashOverlay(
   required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
+  Future<String> Function(String source)? uploadDocumentImage,
 }) {
   final overlay = Overlay.of(anchorContext);
   final renderBox = anchorContext.findRenderObject() as RenderBox?;
@@ -91,6 +150,7 @@ void _showNxSlashOverlay(
           searchLinkableModels: searchLinkableModels,
           createLinkedDocument: createLinkedDocument,
           onLinkableModelSelected: onLinkableModelSelected,
+          uploadDocumentImage: uploadDocumentImage,
           onDismiss: () {
             if (entry.mounted) {
               entry.remove();
@@ -110,6 +170,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
     required this.searchLinkableModels,
     required this.createLinkedDocument,
     required this.onLinkableModelSelected,
+    this.uploadDocumentImage,
     required this.onDismiss,
     super.key,
   });
@@ -124,6 +185,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
   final Future<LinkedModel> Function(String title) createLinkedDocument;
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
+  final Future<String> Function(String source)? uploadDocumentImage;
   final VoidCallback onDismiss;
 
   @override
@@ -132,7 +194,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
 
 class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   final _focusNode = FocusNode(debugLabel: 'nx_slash_menu');
-  final _staticItems = _nxStaticSelectionMenuItems();
+  late final List<SelectionMenuItem> _staticItems;
   var _keyword = '';
   var _selectedIndex = 0;
   var _loadingLinkableModels = false;
@@ -142,6 +204,9 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   @override
   void initState() {
     super.initState();
+    _staticItems = _nxStaticSelectionMenuItems(
+      uploadDocumentImage: widget.uploadDocumentImage,
+    );
     for (final item in _staticItems) {
       item.onSelected = widget.onDismiss;
     }

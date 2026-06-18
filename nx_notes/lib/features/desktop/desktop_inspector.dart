@@ -581,24 +581,7 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete document?'),
-        content: Text('Delete "${widget.document.title}" permanently?'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      builder: (context) => _DeleteDocumentDialog(title: widget.document.title),
     );
     if (confirmed != true || !mounted) return;
     await _deleteDocument();
@@ -625,6 +608,127 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
         setState(() => _deleting = false);
       }
     }
+  }
+}
+
+class _DeleteDocumentDialog extends StatelessWidget {
+  const _DeleteDocumentDialog({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.panel,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Row(
+                children: <Widget>[
+                  Icon(Icons.delete_outline, size: 17, color: AppColors.red),
+                  SizedBox(width: 8),
+                  Text(
+                    'Delete document?',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'This permanently removes the document and closes its open tab.',
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 13,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.sidebar,
+                  border: Border.all(color: AppColors.line),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  title.trim().isEmpty ? 'Untitled document' : title.trim(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: <Widget>[
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.muted,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    icon: const Icon(Icons.delete_outline, size: 15),
+                    label: const Text('Delete'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
