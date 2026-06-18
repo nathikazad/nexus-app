@@ -24,16 +24,20 @@ final documentRepositoryProvider = Provider<DocumentRepository>((ref) {
 final documentImageAssetServiceProvider = Provider<DocumentImageAssetService?>((
   ref,
 ) {
-  final baseUrl = ref.watch(imageBaseUrlProvider);
-  final userId = ref.watch(userIdProvider);
-  if (baseUrl == null || userId == null) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) {
     return null;
   }
+  final imageBaseUrl = resolve(user.preset).imageHttp;
+  debugPrint(
+    '[nx_notes image] connector preset=${user.preset.key} '
+    'image_base=$imageBaseUrl app_base=${Uri.base}',
+  );
   final client = http.Client();
   ref.onDispose(client.close);
   return DocumentImageAssetService(
-    baseUrl: baseUrl,
-    userId: userId,
+    baseUrl: imageBaseUrl,
+    userId: user.userId,
     client: client,
   );
 });

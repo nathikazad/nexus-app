@@ -101,42 +101,52 @@ class _NxDocumentImageBlockComponentWidgetState
             onTap: editorState.editable
                 ? () => setState(() => _controlsPinned = true)
                 : null,
-            child: Stack(
+            child: SizedBox(
               key: _imageKey,
-              children: <Widget>[
-                Padding(
-                  padding: padding,
-                  child: _NxDebuggableImage(
-                    key: ValueKey<String>(
-                      '$resolvedSrc:${displayWidth.toStringAsFixed(1)}',
-                    ),
-                    src: resolvedSrc,
+              width: double.infinity,
+              child: Padding(
+                padding: padding,
+                child: Align(
+                  alignment: alignment,
+                  child: SizedBox(
                     width: displayWidth,
-                    height: null,
-                    alignment: alignment,
+                    child: Stack(
+                      children: <Widget>[
+                        _NxDebuggableImage(
+                          key: ValueKey<String>(
+                            '$resolvedSrc:${displayWidth.toStringAsFixed(1)}',
+                          ),
+                          src: resolvedSrc,
+                          width: displayWidth,
+                          height: null,
+                          alignment: Alignment.center,
+                        ),
+                        if (showControls) ...<Widget>[
+                          Positioned(
+                            top: 10,
+                            right: 18,
+                            child: _NxImageDeleteButton(
+                              deleting: _deleting,
+                              onPressed: _delete,
+                            ),
+                          ),
+                          Positioned(
+                            right: 18,
+                            bottom: 10,
+                            child: _NxImageResizeHandle(
+                              onPanUpdate: (details) =>
+                                  _resizeImage(details, maxWidth),
+                              onPanEnd: (_) => _commitImageWidth(),
+                              onPanCancel: _commitImageWidth,
+                              onDoubleTap: () => _resetImageWidth(maxWidth),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-                if (showControls) ...<Widget>[
-                  Positioned(
-                    top: padding.top + 8,
-                    right: padding.right + 8,
-                    child: _NxImageDeleteButton(
-                      deleting: _deleting,
-                      onPressed: _delete,
-                    ),
-                  ),
-                  Positioned(
-                    right: padding.right + 4,
-                    bottom: padding.bottom + 4,
-                    child: _NxImageResizeHandle(
-                      onPanUpdate: (details) => _resizeImage(details, maxWidth),
-                      onPanEnd: (_) => _commitImageWidth(),
-                      onPanCancel: _commitImageWidth,
-                      onDoubleTap: () => _resetImageWidth(maxWidth),
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         );

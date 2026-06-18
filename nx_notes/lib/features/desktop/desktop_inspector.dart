@@ -117,6 +117,10 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                                         .map((node) => node.name)
                                         .toList(),
                             ),
+                            _InspectorPair(
+                              label: 'Model ID',
+                              value: '${document.id}',
+                            ),
                             const _InspectorPair(
                               label: 'Created',
                               value: 'Oct 24, 2023',
