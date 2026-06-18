@@ -124,10 +124,6 @@ TextSpan nxHighlightNoteTextSpanDecorator(
         if (noteId is! String) {
           return;
         }
-        editorState.updateSelectionWithReason(
-          selection,
-          reason: SelectionUpdateReason.uiEvent,
-        );
         unawaited(
           showNxHighlightNoteDialog(
             context,
@@ -194,6 +190,7 @@ Future<void> showNxHighlightNoteDialog(
   Selection selection, {
   String? noteId,
 }) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
   final normalized = selection.normalized;
   final effectiveNoteId =
       noteId ?? nxHighlightNoteIdInSelection(editorState, normalized);
@@ -201,8 +198,13 @@ Future<void> showNxHighlightNoteDialog(
       ? ''
       : nxHighlightNoteText(editorState, effectiveNoteId) ?? '';
   final quote = editorState.getTextInSelection(normalized).join('\n').trim();
+  _NxInlineHoverOverlay.hide();
+  _suppressFloatingToolbar(editorState);
+  if (!navigator.mounted) {
+    return;
+  }
   final result = await showDialog<_NxHighlightNoteDialogResult>(
-    context: context,
+    context: navigator.context,
     builder: (context) {
       return _NxHighlightNoteDialog(
         initialText: initialText,
@@ -229,6 +231,20 @@ Future<void> showNxHighlightNoteDialog(
         await _deleteHighlightNote(editorState, effectiveNoteId);
       }
   }
+}
+
+void _suppressFloatingToolbar(EditorState editorState) {
+  final currentSelection = editorState.selection?.normalized;
+  if (currentSelection == null || currentSelection.isCollapsed) {
+    return;
+  }
+  unawaited(
+    editorState.updateSelectionWithReason(
+      currentSelection,
+      reason: SelectionUpdateReason.uiEvent,
+      extraInfo: {selectionExtraInfoDisableToolbar: true},
+    ),
+  );
 }
 
 String? nxHighlightNoteText(EditorState editorState, String noteId) {
@@ -720,10 +736,6 @@ class _NxInlineHoverTarget extends StatelessWidget {
           if (id == null) {
             return;
           }
-          editorState.updateSelectionWithReason(
-            selection,
-            reason: SelectionUpdateReason.uiEvent,
-          );
           unawaited(
             showNxHighlightNoteDialog(
               context,
