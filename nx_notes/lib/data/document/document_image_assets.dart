@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:nx_notes/data/document/document_image_file_reader_stub.dart'
@@ -19,25 +19,34 @@ class DocumentImageAssetService {
   final String _userId;
   final http.Client _client;
 
+  String get imageBaseUrl => _baseUri.toString();
+
   Future<String> storeImageSource({
     required int documentId,
     required String source,
   }) async {
     if (isNetworkImageUrl(source)) {
+      _debugDocumentImage(
+        'insert external image document_id=$documentId source=$source',
+      );
       return source;
     }
     final payload = await _imagePayloadFromSource(source);
-    final request =
-        http.MultipartRequest('POST', _baseUri.resolve('/notes/assets/images'))
-          ..headers['X-User-Id'] = _userId
-          ..fields['document_id'] = '$documentId'
-          ..files.add(
-            http.MultipartFile.fromBytes(
-              'file',
-              payload.bytes,
-              filename: payload.filename,
-            ),
-          );
+    final uploadUri = _baseUri.resolve('/notes/assets/images');
+    _debugDocumentImage(
+      'upload start document_id=$documentId uri=$uploadUri '
+      'filename=${payload.filename} bytes=${payload.bytes.length}',
+    );
+    final request = http.MultipartRequest('POST', uploadUri)
+      ..headers['X-User-Id'] = _userId
+      ..fields['document_id'] = '$documentId'
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          payload.bytes,
+          filename: payload.filename,
+        ),
+      );
     final response = await http.Response.fromStream(
       await _client.send(request),
     );
@@ -48,22 +57,45 @@ class DocumentImageAssetService {
     if (decoded is! Map || decoded['url'] is! String) {
       throw StateError('Image upload returned an invalid response');
     }
-    return _absoluteAssetUrl(decoded['url'] as String);
+    final storedUrl = _storedDocumentImageUrl(decoded['url'] as String);
+    _debugDocumentImage(
+      'upload complete document_id=$documentId status=${response.statusCode} '
+      'stored_url=$storedUrl resolved_url=${resolveImageUrl(storedUrl)}',
+    );
+    return storedUrl;
   }
 
   Future<bool> deleteImageUrl(String url) async {
-    final ref = DocumentImageAssetRef.tryParse(url);
+    final ref = DocumentImageAssetRef.tryParseRelative(url);
     if (ref == null) {
+      _debugDocumentImage('skip delete for external image url=$url');
       return false;
     }
-    final response = await _client.delete(_absoluteAssetUri(ref.relativeUrl));
+    final deleteUri = _absoluteAssetUri(ref.relativeUrl);
+    _debugDocumentImage('delete start uri=$deleteUri');
+    final response = await _client.delete(deleteUri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('Image delete failed (${response.statusCode})');
     }
+    _debugDocumentImage('delete complete status=${response.statusCode}');
     return true;
   }
 
-  String _absoluteAssetUrl(String raw) => _absoluteAssetUri(raw).toString();
+  String resolveImageUrl(String storedUrl) {
+    final ref = DocumentImageAssetRef.tryParseRelative(storedUrl);
+    if (ref == null) {
+      return storedUrl;
+    }
+    return _absoluteAssetUri(ref.relativeUrl).toString();
+  }
+
+  String _storedDocumentImageUrl(String raw) {
+    final ref = DocumentImageAssetRef.tryParse(raw);
+    if (ref == null) {
+      throw StateError('Image upload returned an invalid image URL');
+    }
+    return ref.relativeUrl;
+  }
 
   Uri _absoluteAssetUri(String raw) {
     final uri = Uri.parse(raw);
@@ -118,11 +150,23 @@ class DocumentImageAssetRef {
       name: name,
     );
   }
+
+  static DocumentImageAssetRef? tryParseRelative(String raw) {
+    final uri = Uri.tryParse(raw);
+    if (uri == null || uri.hasScheme || uri.host.isNotEmpty) {
+      return null;
+    }
+    return tryParse(raw);
+  }
 }
 
 bool isNetworkImageUrl(String source) {
   final uri = Uri.tryParse(source);
   return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+}
+
+void _debugDocumentImage(String message) {
+  debugPrint('[nx_notes image] $message');
 }
 
 Future<_ImagePayload> _imagePayloadFromSource(String source) async {

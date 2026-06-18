@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:file_picker/file_picker.dart' as file_picker;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
@@ -25,18 +27,15 @@ const String nxExcalidrawBlockType = 'nx_excalidraw';
 
 Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
   Future<void> Function(String url)? deleteDocumentImage,
+  String Function(String url)? resolveDocumentImage,
+  String? documentImageBaseUrl,
 }) {
   final builders = <String, BlockComponentBuilder>{
     ...standardBlockComponentBuilderMap,
-    ImageBlockKeys.type: ImageBlockComponentBuilder(
-      showMenu: true,
-      menuBuilder: (node, state) {
-        return NxDocumentImageBlockMenu(
-          node: node,
-          state: state,
-          deleteDocumentImage: deleteDocumentImage,
-        );
-      },
+    ImageBlockKeys.type: NxDocumentImageBlockComponentBuilder(
+      deleteDocumentImage: deleteDocumentImage,
+      resolveDocumentImage: resolveDocumentImage,
+      documentImageBaseUrl: documentImageBaseUrl,
     ),
     nxToggleBlockType: NxToggleBlockComponentBuilder(),
     nxBlogLinkBlockType: NxBlogLinkBlockComponentBuilder(),

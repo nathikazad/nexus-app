@@ -387,6 +387,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                         : (url) async {
                             await imageAssetService.deleteImageUrl(url);
                           },
+                    resolveDocumentImage: imageAssetService?.resolveImageUrl,
+                    documentImageBaseUrl: imageAssetService?.imageBaseUrl,
                     onChanged: (updated, policy) async {
                       _draftDocument = _draftDocument.copyWith(
                         document: updated.document,
@@ -490,6 +492,8 @@ class NxAppFlowyEditor extends StatefulWidget {
     required this.createLinkedDocument,
     this.uploadDocumentImage,
     this.deleteDocumentImage,
+    this.resolveDocumentImage,
+    this.documentImageBaseUrl,
     this.active = true,
     super.key,
   });
@@ -508,6 +512,8 @@ class NxAppFlowyEditor extends StatefulWidget {
   final Future<LinkedModel> Function(String title) createLinkedDocument;
   final Future<String> Function(String source)? uploadDocumentImage;
   final Future<void> Function(String url)? deleteDocumentImage;
+  final String Function(String url)? resolveDocumentImage;
+  final String? documentImageBaseUrl;
 
   @override
   State<NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
@@ -1136,6 +1142,8 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
               editorStyle: editorStyle,
               blockComponentBuilders: nxBlockComponentBuilders(
                 deleteDocumentImage: widget.deleteDocumentImage,
+                resolveDocumentImage: widget.resolveDocumentImage,
+                documentImageBaseUrl: widget.documentImageBaseUrl,
               ),
               characterShortcutEvents: <CharacterShortcutEvent>[
                 ...standardCharacterShortcutEvents.where(
