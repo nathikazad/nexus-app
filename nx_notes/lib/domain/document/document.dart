@@ -1,9 +1,10 @@
 import 'package:nx_notes/domain/links/linked_model.dart';
 
-class Essay {
-  const Essay({
+class NxDocument {
+  const NxDocument({
     required this.id,
     required this.title,
+    required this.modelTypeName,
     required this.document,
     required this.jsonDocument,
     required this.wordCount,
@@ -21,6 +22,7 @@ class Essay {
 
   final int id;
   final String title;
+  final String modelTypeName;
   final String document;
   final Map<String, dynamic> jsonDocument;
   final int wordCount;
@@ -40,8 +42,11 @@ class Essay {
       jsonDocument.containsKey('format') ||
       jsonDocument.containsKey('document');
 
-  Essay copyWith({
+  bool get isBook => modelTypeName == 'Book';
+
+  NxDocument copyWith({
     String? title,
+    String? modelTypeName,
     String? document,
     Map<String, dynamic>? jsonDocument,
     int? wordCount,
@@ -56,9 +61,10 @@ class Essay {
     String? excerpt,
     List<LinkedModel>? links,
   }) {
-    return Essay(
+    return NxDocument(
       id: id,
       title: title ?? this.title,
+      modelTypeName: modelTypeName ?? this.modelTypeName,
       document: document ?? this.document,
       jsonDocument: jsonDocument ?? this.jsonDocument,
       wordCount: wordCount ?? this.wordCount,

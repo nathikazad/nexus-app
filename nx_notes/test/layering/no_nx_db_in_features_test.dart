@@ -6,7 +6,8 @@ void main() {
   test('features do not import KGQL, GraphQL, or nx_db internals', () {
     final featuresDir = Directory('lib/features');
     final offenders = <String>[];
-    for (final file in featuresDir.listSync(recursive: true).whereType<File>()) {
+    for (final file
+        in featuresDir.listSync(recursive: true).whereType<File>()) {
       if (!file.path.endsWith('.dart')) {
         continue;
       }

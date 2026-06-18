@@ -1,9 +1,9 @@
 part of 'desktop_shell.dart';
 
 class _InspectorTagsEditor extends ConsumerWidget {
-  const _InspectorTagsEditor({required this.essay, required this.systems});
+  const _InspectorTagsEditor({required this.document, required this.systems});
 
-  final Essay essay;
+  final NxDocument document;
   final List<TagSystem> systems;
 
   @override
@@ -33,16 +33,16 @@ class _InspectorTagsEditor extends ConsumerWidget {
             spacing: 6,
             runSpacing: 6,
             children: <Widget>[
-              for (final tag in _tagsForSystem(essay, system.name))
+              for (final tag in _tagsForSystem(document, system.name))
                 _TagPill(
                   label: tag,
-                  onRemove: () => _saveEssayMetadata(
+                  onRemove: () => _saveDocumentMetadata(
                     ref,
-                    _essayWithTagSystem(
-                      essay,
+                    _documentWithTagSystem(
+                      document,
                       system.name,
                       _tagsForSystem(
-                        essay,
+                        document,
                         system.name,
                       ).where((item) => item != tag).toList(),
                     ),
@@ -50,15 +50,15 @@ class _InspectorTagsEditor extends ConsumerWidget {
                 ),
               _AddTagMenu(
                 system: system,
-                selected: _tagsForSystem(essay, system.name),
+                selected: _tagsForSystem(document, system.name),
                 onSelected: (tag) {
-                  final current = _tagsForSystem(essay, system.name);
+                  final current = _tagsForSystem(document, system.name);
                   final next = system.exclusive
                       ? <String>[tag]
                       : <String>{...current, tag}.toList();
-                  _saveEssayMetadata(
+                  _saveDocumentMetadata(
                     ref,
-                    _essayWithTagSystem(essay, system.name, next),
+                    _documentWithTagSystem(document, system.name, next),
                   );
                 },
               ),
@@ -164,18 +164,25 @@ class _AddTagMenu extends StatelessWidget {
   }
 }
 
-List<String> _tagsForSystem(Essay essay, String system) {
+List<String> _tagsForSystem(NxDocument document, String system) {
   return switch (system) {
-    'Status' => <String>[essay.status],
-    'Topic' => essay.topics,
-    'Area' => essay.areaTags,
-    _ => essay.tagsBySystem[system] ?? const <String>[],
+    'Status' => <String>[document.status],
+    'Topic' => document.topics,
+    'Area' => document.areaTags,
+    _ => document.tagsBySystem[system] ?? const <String>[],
   };
 }
 
-Essay _essayWithTagSystem(Essay essay, String system, List<String> tags) {
-  final nextTags = <String, List<String>>{...essay.tagsBySystem, system: tags};
-  return essay.copyWith(
+NxDocument _documentWithTagSystem(
+  NxDocument document,
+  String system,
+  List<String> tags,
+) {
+  final nextTags = <String, List<String>>{
+    ...document.tagsBySystem,
+    system: tags,
+  };
+  return document.copyWith(
     topics: system == 'Topic' ? tags : null,
     areaTags: system == 'Area' ? tags : null,
     tagsBySystem: nextTags,
@@ -197,8 +204,8 @@ List<String> _flattenTagNodes(List<TagNode> nodes) {
   return tags;
 }
 
-Future<void> _saveEssayMetadata(WidgetRef ref, Essay essay) async {
+Future<void> _saveDocumentMetadata(WidgetRef ref, NxDocument document) async {
   await ref
-      .read(essayMutationControllerProvider)
-      .saveDraft(essay, policy: DraftSavePolicy.immediate);
+      .read(documentMutationControllerProvider)
+      .saveDraft(document, policy: DraftSavePolicy.immediate);
 }

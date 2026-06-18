@@ -16,7 +16,7 @@ enum LinkableModelType {
   project('project', 'Project'),
   person('person', 'Person'),
   company('company', 'Company'),
-  essay('essay', 'Essay');
+  document('document', 'Document');
 
   const LinkableModelType(this.command, this.kgqlName);
 

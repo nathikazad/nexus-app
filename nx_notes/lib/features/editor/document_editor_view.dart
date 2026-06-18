@@ -5,21 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
-import 'package:nx_notes/domain/essay/essay_result_context.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_result_context.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
-import 'package:nx_notes/features/essay/essay_actions.dart';
+import 'package:nx_notes/features/document/document_actions.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 import 'package:nx_notes/features/editor/nx_color_toolbar.dart';
-import 'package:nx_notes/features/editor/nx_essay_link.dart';
+import 'package:nx_notes/features/editor/nx_document_link.dart';
 import 'package:nx_notes/features/editor/nx_highlight_notes.dart';
 
-class EssayEditorView extends ConsumerWidget {
-  const EssayEditorView({
-    required this.essayId,
+class DocumentEditorView extends ConsumerWidget {
+  const DocumentEditorView({
+    required this.documentId,
     this.contextBar,
     this.onTitleChanged,
-    this.onOpenEssayLink,
+    this.onOpenDocumentLink,
     this.canNavigateBack = false,
     this.onNavigateBack,
     this.horizontalPadding = 48,
@@ -27,10 +27,10 @@ class EssayEditorView extends ConsumerWidget {
     super.key,
   });
 
-  final int essayId;
+  final int documentId;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
-  final ValueChanged<int>? onOpenEssayLink;
+  final ValueChanged<int>? onOpenDocumentLink;
   final bool canNavigateBack;
   final VoidCallback? onNavigateBack;
   final double horizontalPadding;
@@ -38,17 +38,17 @@ class EssayEditorView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncEssay = ref.watch(essayByIdProvider(essayId));
-    return asyncEssay.when(
-      data: (essay) {
-        if (essay == null) {
-          return const Center(child: Text('Essay not found'));
+    final asyncDocument = ref.watch(documentByIdProvider(documentId));
+    return asyncDocument.when(
+      data: (document) {
+        if (document == null) {
+          return const Center(child: Text('Document not found'));
         }
-        return EssayEditorBody(
-          essay: essay,
+        return DocumentEditorBody(
+          document: document,
           contextBar: contextBar,
           onTitleChanged: onTitleChanged,
-          onOpenEssayLink: onOpenEssayLink,
+          onOpenDocumentLink: onOpenDocumentLink,
           canNavigateBack: canNavigateBack,
           onNavigateBack: onNavigateBack,
           horizontalPadding: horizontalPadding,
@@ -61,12 +61,12 @@ class EssayEditorView extends ConsumerWidget {
   }
 }
 
-class EssayEditorBody extends ConsumerStatefulWidget {
-  const EssayEditorBody({
-    required this.essay,
+class DocumentEditorBody extends ConsumerStatefulWidget {
+  const DocumentEditorBody({
+    required this.document,
     this.contextBar,
     this.onTitleChanged,
-    this.onOpenEssayLink,
+    this.onOpenDocumentLink,
     this.canNavigateBack = false,
     this.onNavigateBack,
     this.horizontalPadding = 48,
@@ -74,22 +74,22 @@ class EssayEditorBody extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Essay essay;
+  final NxDocument document;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
-  final ValueChanged<int>? onOpenEssayLink;
+  final ValueChanged<int>? onOpenDocumentLink;
   final bool canNavigateBack;
   final VoidCallback? onNavigateBack;
   final double horizontalPadding;
   final bool active;
 
   @override
-  ConsumerState<EssayEditorBody> createState() => _EssayEditorBodyState();
+  ConsumerState<DocumentEditorBody> createState() => _DocumentEditorBodyState();
 }
 
 typedef _LaunchUrlHandler = Future<bool> Function(String? href);
 
-class _EssayLinkLaunchDispatcher {
+class _DocumentLinkLaunchDispatcher {
   static final Map<Object, _LaunchUrlHandler> _handlers =
       <Object, _LaunchUrlHandler>{};
   static Object? _activeOwner;
@@ -123,56 +123,56 @@ class _EssayLinkLaunchDispatcher {
   }
 }
 
-class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
+class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   Timer? _titleSaveDebounce;
-  late Essay _draftEssay;
+  late NxDocument _draftDocument;
   late String _titleText;
   final Object _linkHandlerOwner = Object();
 
   @override
   void initState() {
     super.initState();
-    _draftEssay = widget.essay;
-    _titleText = widget.essay.title;
-    _syncEssayLinkHandler();
+    _draftDocument = widget.document;
+    _titleText = widget.document.title;
+    _syncDocumentLinkHandler();
   }
 
   @override
-  void didUpdateWidget(covariant EssayEditorBody oldWidget) {
+  void didUpdateWidget(covariant DocumentEditorBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.essay.id != widget.essay.id) {
+    if (oldWidget.document.id != widget.document.id) {
       _titleSaveDebounce?.cancel();
-      _draftEssay = widget.essay;
-      _titleText = widget.essay.title;
+      _draftDocument = widget.document;
+      _titleText = widget.document.title;
     }
     if (oldWidget.active != widget.active ||
-        oldWidget.onOpenEssayLink != widget.onOpenEssayLink) {
-      _syncEssayLinkHandler();
+        oldWidget.onOpenDocumentLink != widget.onOpenDocumentLink) {
+      _syncDocumentLinkHandler();
     }
   }
 
   @override
   void dispose() {
     _titleSaveDebounce?.cancel();
-    _EssayLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
+    _DocumentLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
     super.dispose();
   }
 
-  void _syncEssayLinkHandler() {
+  void _syncDocumentLinkHandler() {
     if (!widget.active) {
-      _EssayLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
+      _DocumentLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
       return;
     }
-    _EssayLinkLaunchDispatcher.activate(
+    _DocumentLinkLaunchDispatcher.activate(
       _linkHandlerOwner,
-      _handleEssayLinkLaunch,
+      _handleDocumentLinkLaunch,
     );
   }
 
-  Future<bool> _handleEssayLinkLaunch(String? href) async {
-    final essayId = nxEssayIdFromHref(href);
-    if (essayId != null && widget.onOpenEssayLink != null) {
-      widget.onOpenEssayLink!(essayId);
+  Future<bool> _handleDocumentLinkLaunch(String? href) async {
+    final documentId = nxDocumentIdFromHref(href);
+    if (documentId != null && widget.onOpenDocumentLink != null) {
+      widget.onOpenDocumentLink!(documentId);
       return true;
     }
     return false;
@@ -181,11 +181,13 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
   void _scheduleTitleSave(String title) {
     setState(() => _titleText = title);
     widget.onTitleChanged?.call(title);
-    _draftEssay = _draftEssay.copyWith(title: title);
+    _draftDocument = _draftDocument.copyWith(title: title);
     _titleSaveDebounce?.cancel();
     _titleSaveDebounce = Timer(const Duration(milliseconds: 450), () async {
       if (!mounted) return;
-      await ref.read(essayMutationControllerProvider).saveDraft(_draftEssay);
+      await ref
+          .read(documentMutationControllerProvider)
+          .saveDraft(_draftDocument);
     });
   }
 
@@ -234,8 +236,8 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                       baseSize: titleSize,
                     );
                     return TextFormField(
-                      key: ValueKey<int>(widget.essay.id),
-                      initialValue: widget.essay.title,
+                      key: ValueKey<int>(widget.document.id),
+                      initialValue: widget.document.title,
                       onChanged: _scheduleTitleSave,
                       maxLines: 1,
                       decoration: const InputDecoration(
@@ -258,12 +260,12 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                 const SizedBox(height: 28),
                 Expanded(
                   child: NxAppFlowyEditor(
-                    essay: widget.essay,
+                    document: widget.document,
                     active: widget.active,
                     searchLinkableModels:
                         ({required modelType, required query}) {
                           return ref
-                              .read(essayRepositoryProvider)
+                              .read(documentRepositoryProvider)
                               .searchLinkableModels(
                                 modelType: modelType,
                                 query: query,
@@ -271,34 +273,34 @@ class _EssayEditorBodyState extends ConsumerState<EssayEditorBody> {
                         },
                     onLinkableModelSelected: (modelType, model) async {
                       await ref
-                          .read(essayMutationControllerProvider)
+                          .read(documentMutationControllerProvider)
                           .attachLinkedModel(
-                            essayId: widget.essay.id,
+                            documentId: widget.document.id,
                             modelType: modelType,
                             modelId: model.id,
                             model: model,
                           );
                     },
-                    createLinkedEssay: (title) async {
-                      final essay = await ref
-                          .read(essayMutationControllerProvider)
-                          .createEssay(title: title);
+                    createLinkedDocument: (title) async {
+                      final document = await ref
+                          .read(documentMutationControllerProvider)
+                          .createDocument(title: title);
                       return LinkedModel(
-                        id: essay.id,
-                        name: essay.title,
-                        modelType: LinkableModelType.essay.kgqlName,
+                        id: document.id,
+                        name: document.title,
+                        modelType: LinkableModelType.document.kgqlName,
                       );
                     },
                     onChanged: (updated, policy) async {
-                      _draftEssay = _draftEssay.copyWith(
+                      _draftDocument = _draftDocument.copyWith(
                         document: updated.document,
                         jsonDocument: updated.jsonDocument,
                         wordCount: updated.wordCount,
                         excerpt: updated.excerpt,
                       );
                       await ref
-                          .read(essayMutationControllerProvider)
-                          .saveDraft(_draftEssay, policy: policy);
+                          .read(documentMutationControllerProvider)
+                          .saveDraft(_draftDocument, policy: policy);
                     },
                   ),
                 ),
@@ -317,7 +319,7 @@ double _fittedTitleFontSize({
   required double maxWidth,
   required double baseSize,
 }) {
-  final title = text.trim().isEmpty ? 'Untitled essay' : text.trim();
+  final title = text.trim().isEmpty ? 'Untitled document' : text.trim();
   const minSize = 12.0;
   if (maxWidth <= 0 || title.isEmpty) {
     return baseSize;
@@ -385,18 +387,19 @@ double _titleWidth({
 
 class NxAppFlowyEditor extends StatefulWidget {
   const NxAppFlowyEditor({
-    required this.essay,
+    required this.document,
     required this.onChanged,
     required this.searchLinkableModels,
     required this.onLinkableModelSelected,
-    required this.createLinkedEssay,
+    required this.createLinkedDocument,
     this.active = true,
     super.key,
   });
 
-  final Essay essay;
+  final NxDocument document;
   final bool active;
-  final Future<void> Function(Essay essay, DraftSavePolicy policy) onChanged;
+  final Future<void> Function(NxDocument document, DraftSavePolicy policy)
+  onChanged;
   final Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
     required String query,
@@ -404,7 +407,7 @@ class NxAppFlowyEditor extends StatefulWidget {
   searchLinkableModels;
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
-  final Future<LinkedModel> Function(String title) createLinkedEssay;
+  final Future<LinkedModel> Function(String title) createLinkedDocument;
 
   @override
   State<NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
@@ -432,11 +435,11 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   bool _caretVisible = true;
   bool _scrollAnchorSaveEnabled = false;
   bool _saveNextTransactionImmediately = false;
-  late Essay _editorEssay;
-  late int _editorEssayId;
+  late NxDocument _editorDocument;
+  late int _editorDocumentId;
   int? _handledHeadingScrollRequestSerial;
   int _scrollAnchorRestoreAttempts = 0;
-  _EssayScrollAnchor? _lastSavedScrollAnchor;
+  _DocumentScrollAnchor? _lastSavedScrollAnchor;
 
   @override
   void initState() {
@@ -447,7 +450,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   @override
   void didUpdateWidget(covariant NxAppFlowyEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.essay.id != widget.essay.id) {
+    if (oldWidget.document.id != widget.document.id) {
       _disposeEditor();
       _createEditor();
       return;
@@ -472,12 +475,14 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   void _createEditor() {
     registerNxHighlightNoteAttribute();
-    _editorEssay = widget.essay;
-    _editorEssayId = widget.essay.id;
+    _editorDocument = widget.document;
+    _editorDocumentId = widget.document.id;
     _lastSavedScrollAnchor = null;
     _scrollAnchorSaveEnabled = false;
     _caretVisible = true;
-    _editorState = EditorState(document: _documentFromEssay(widget.essay));
+    _editorState = EditorState(
+      document: _documentFromDocument(widget.document),
+    );
     _scrollController = EditorScrollController(
       editorState: _editorState,
       shrinkWrap: false,
@@ -487,7 +492,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     );
     _scrollController.offsetNotifier.addListener(_handleEditorScrolled);
     _editorState.selectionNotifier.addListener(_handleEditorSelectionChanged);
-    essayHeadingScrollRequestNotifier.addListener(_handleHeadingScrollRequest);
+    documentHeadingScrollRequestNotifier.addListener(
+      _handleHeadingScrollRequest,
+    );
     _transactionSubscription = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
@@ -520,7 +527,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _editorState.selectionNotifier.removeListener(
       _handleEditorSelectionChanged,
     );
-    essayHeadingScrollRequestNotifier.removeListener(
+    documentHeadingScrollRequestNotifier.removeListener(
       _handleHeadingScrollRequest,
     );
     _transactionSubscription?.cancel();
@@ -528,9 +535,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _editorState.dispose();
   }
 
-  Document _documentFromEssay(Essay essay) {
-    if (essay.jsonDocument['format'] == 'appflowy_document') {
-      final documentJson = essay.jsonDocument['document'];
+  Document _documentFromDocument(NxDocument document) {
+    if (document.jsonDocument['format'] == 'appflowy_document') {
+      final documentJson = document.jsonDocument['document'];
       if (documentJson is Map) {
         return Document.fromJson(<String, dynamic>{
           'document': Map<String, dynamic>.from(documentJson),
@@ -538,8 +545,8 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       }
     }
 
-    if (essay.document.trim().isNotEmpty) {
-      return markdownToDocument(essay.document);
+    if (document.document.trim().isNotEmpty) {
+      return markdownToDocument(document.document);
     }
 
     return Document.blank(withInitialText: true);
@@ -594,30 +601,30 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _saveCurrentDraft(DraftSavePolicy policy) {
-    unawaited(widget.onChanged(_currentDraftEssay(), policy));
+    unawaited(widget.onChanged(_currentDraftDocument(), policy));
   }
 
-  Essay _currentDraftEssay({_EssayScrollAnchor? scrollAnchor}) {
+  NxDocument _currentDraftDocument({_DocumentScrollAnchor? scrollAnchor}) {
     final plainText = _documentPlainText(_editorState.document).trimRight();
-    final baseEssay = widget.essay.id == _editorEssayId
-        ? widget.essay
-        : _editorEssay;
+    final baseDocument = widget.document.id == _editorDocumentId
+        ? widget.document
+        : _editorDocument;
     final nextScrollAnchor =
         scrollAnchor ??
         _lastSavedScrollAnchor ??
-        _scrollAnchorFromJsonDocument(baseEssay.jsonDocument);
+        _scrollAnchorFromJsonDocument(baseDocument.jsonDocument);
     final jsonDocument = <String, dynamic>{
-      ...baseEssay.jsonDocument,
+      ...baseDocument.jsonDocument,
       'format': 'appflowy_document',
       'document': _editorState.document.toJson()['document'],
     };
     if (nextScrollAnchor != null) {
       jsonDocument['view_state'] = _jsonDocumentViewStateWithScrollAnchor(
-        baseEssay.jsonDocument,
+        baseDocument.jsonDocument,
         nextScrollAnchor,
       );
     }
-    return baseEssay.copyWith(
+    return baseDocument.copyWith(
       document: plainText,
       jsonDocument: jsonDocument,
       wordCount: _countWords(plainText),
@@ -755,14 +762,14 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _restoreScrollAnchor() {
-    final essayId = _editorEssayId;
+    final documentId = _editorDocumentId;
     _scrollAnchorSaveEnabled = false;
     _scrollAnchorRestoreAttempts = 0;
-    final anchor = _scrollAnchorFromJsonDocument(widget.essay.jsonDocument);
-    if (!mounted || _editorEssayId != essayId) {
+    final anchor = _scrollAnchorFromJsonDocument(widget.document.jsonDocument);
+    if (!mounted || _editorDocumentId != documentId) {
       return;
     }
-    if (anchor == null || anchor.essayId != essayId) {
+    if (anchor == null || anchor.documentId != documentId) {
       _scrollAnchorSaveEnabled = true;
       return;
     }
@@ -770,9 +777,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _attemptScrollAnchorRestore(anchor);
   }
 
-  void _attemptScrollAnchorRestore(_EssayScrollAnchor anchor) {
+  void _attemptScrollAnchorRestore(_DocumentScrollAnchor anchor) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _editorEssayId != anchor.essayId) {
+      if (!mounted || _editorDocumentId != anchor.documentId) {
         return;
       }
       final itemScrollController = _scrollController.itemScrollController;
@@ -825,12 +832,12 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     }
     _lastSavedScrollAnchor = anchor;
     await widget.onChanged(
-      _currentDraftEssay(scrollAnchor: anchor),
+      _currentDraftDocument(scrollAnchor: anchor),
       DraftSavePolicy.deferred,
     );
   }
 
-  _EssayScrollAnchor? _currentScrollAnchor() {
+  _DocumentScrollAnchor? _currentScrollAnchor() {
     final children = _editorState.document.root.children;
     if (children.isEmpty) {
       return null;
@@ -856,15 +863,15 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     visible.sort((a, b) => distanceToCenter(a).compareTo(distanceToCenter(b)));
     final position = visible.first;
     final block = children[position.index];
-    return _EssayScrollAnchor(
-      essayId: _editorEssayId,
+    return _DocumentScrollAnchor(
+      documentId: _editorDocumentId,
       blockIndex: position.index,
       blockKey: _scrollAnchorBlockKey(block),
       alignment: position.itemLeadingEdge.clamp(-2.0, 2.0).toDouble(),
     );
   }
 
-  int? _resolveScrollAnchorBlockIndex(_EssayScrollAnchor anchor) {
+  int? _resolveScrollAnchorBlockIndex(_DocumentScrollAnchor anchor) {
     final children = _editorState.document.root.children;
     final matchingIndexes = <int>[];
     for (var i = 0; i < children.length; i++) {
@@ -890,11 +897,11 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _handleHeadingScrollRequest() {
-    final request = essayHeadingScrollRequestNotifier.value;
+    final request = documentHeadingScrollRequestNotifier.value;
     if (!mounted ||
         !widget.active ||
         request == null ||
-        request.essayId != widget.essay.id ||
+        request.documentId != widget.document.id ||
         request.serial == _handledHeadingScrollRequestSerial) {
       return;
     }
@@ -965,27 +972,27 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   void _setActiveHeading(int? blockIndex) {
     if (!widget.active) return;
-    final current = essayActiveHeadingNotifier.value;
+    final current = documentActiveHeadingNotifier.value;
     if (blockIndex == null) {
-      if (current?.essayId == widget.essay.id) {
-        essayActiveHeadingNotifier.value = null;
+      if (current?.documentId == widget.document.id) {
+        documentActiveHeadingNotifier.value = null;
       }
       return;
     }
-    if (current?.essayId == widget.essay.id &&
+    if (current?.documentId == widget.document.id &&
         current?.blockIndex == blockIndex) {
       return;
     }
-    essayActiveHeadingNotifier.value = EssayActiveHeading(
-      essayId: widget.essay.id,
+    documentActiveHeadingNotifier.value = DocumentActiveHeading(
+      documentId: widget.document.id,
       blockIndex: blockIndex,
     );
   }
 
   void _clearActiveHeading() {
-    final current = essayActiveHeadingNotifier.value;
-    if (current?.essayId == widget.essay.id) {
-      essayActiveHeadingNotifier.value = null;
+    final current = documentActiveHeadingNotifier.value;
+    if (current?.documentId == widget.document.id) {
+      documentActiveHeadingNotifier.value = null;
     }
   }
 
@@ -1011,9 +1018,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
           buildNxTextColorItem(),
           buildNxHighlightColorItem(),
           nxHighlightNoteToolbarItem,
-          buildNxEssayLinkToolbarItem(
+          buildNxDocumentLinkToolbarItem(
             searchLinkableModels: widget.searchLinkableModels,
-            createEssay: widget.createLinkedEssay,
+            createDocument: widget.createLinkedDocument,
             onLinkableModelSelected: widget.onLinkableModelSelected,
           ),
           ...alignmentItems,
@@ -1021,38 +1028,80 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
         tooltipBuilder: (context, _, message, child) {
           return Tooltip(message: message, preferBelow: false, child: child);
         },
-        child: AppFlowyEditor(
-          editorState: _editorState,
-          editorScrollController: _scrollController,
-          editorStyle: editorStyle,
-          blockComponentBuilders: nxBlockComponentBuilders(),
-          characterShortcutEvents: <CharacterShortcutEvent>[
-            ...standardCharacterShortcutEvents.where(
-              (event) => event.key != 'show the slash menu',
+        child: Stack(
+          children: <Widget>[
+            AppFlowyEditor(
+              editorState: _editorState,
+              editorScrollController: _scrollController,
+              editorStyle: editorStyle,
+              blockComponentBuilders: nxBlockComponentBuilders(),
+              characterShortcutEvents: <CharacterShortcutEvent>[
+                ...standardCharacterShortcutEvents.where(
+                  (event) => event.key != 'show the slash menu',
+                ),
+                nxSlashCommand(
+                  searchLinkableModels: widget.searchLinkableModels,
+                  createLinkedDocument: widget.createLinkedDocument,
+                  onLinkableModelSelected: widget.onLinkableModelSelected,
+                ),
+              ],
+              commandShortcutEvents: _commandShortcutEvents(),
+              footer: const SizedBox(height: 120),
             ),
-            nxSlashCommand(
-              searchLinkableModels: widget.searchLinkableModels,
-              createLinkedEssay: widget.createLinkedEssay,
-              onLinkableModelSelected: widget.onLinkableModelSelected,
-            ),
+            if (_caretVisible && widget.active)
+              Positioned(
+                top: 2,
+                right: 2,
+                child: _HideCaretButton(onPressed: _hideCaret),
+              ),
           ],
-          commandShortcutEvents: _commandShortcutEvents(),
-          footer: const SizedBox(height: 120),
         ),
       ),
     );
   }
 }
 
-class _EssayScrollAnchor {
-  const _EssayScrollAnchor({
-    required this.essayId,
+class _HideCaretButton extends StatelessWidget {
+  const _HideCaretButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Hide cursor',
+      preferBelow: false,
+      child: Material(
+        color: const Color(0xf2ffffff),
+        elevation: 2,
+        shadowColor: const Color(0x1f000000),
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(6),
+          child: const SizedBox.square(
+            dimension: 30,
+            child: Icon(
+              Icons.edit_off_outlined,
+              size: 16,
+              color: AppColors.muted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DocumentScrollAnchor {
+  const _DocumentScrollAnchor({
+    required this.documentId,
     required this.blockIndex,
     required this.blockKey,
     required this.alignment,
   });
 
-  final int essayId;
+  final int documentId;
   final int blockIndex;
   final String blockKey;
   final double alignment;
@@ -1060,27 +1109,27 @@ class _EssayScrollAnchor {
   Map<String, Object> toJson() {
     return <String, Object>{
       'version': 1,
-      'essayId': essayId,
+      'documentId': documentId,
       'blockIndex': blockIndex,
       'blockKey': blockKey,
       'alignment': alignment,
     };
   }
 
-  static _EssayScrollAnchor? tryParse(Map<String, dynamic> json) {
-    final essayId = _intFromJson(json['essayId']);
+  static _DocumentScrollAnchor? tryParse(Map<String, dynamic> json) {
+    final documentId = _intFromJson(json['documentId']);
     final blockIndex = _intFromJson(json['blockIndex']);
     final blockKey = json['blockKey'];
     final alignment = _doubleFromJson(json['alignment']);
-    if (essayId == null ||
+    if (documentId == null ||
         blockIndex == null ||
         blockKey is! String ||
         blockKey.isEmpty ||
         alignment == null) {
       return null;
     }
-    return _EssayScrollAnchor(
-      essayId: essayId,
+    return _DocumentScrollAnchor(
+      documentId: documentId,
       blockIndex: blockIndex,
       blockKey: blockKey,
       alignment: alignment.clamp(-2.0, 2.0).toDouble(),
@@ -1089,18 +1138,18 @@ class _EssayScrollAnchor {
 
   @override
   bool operator ==(Object other) {
-    return other is _EssayScrollAnchor &&
-        other.essayId == essayId &&
+    return other is _DocumentScrollAnchor &&
+        other.documentId == documentId &&
         other.blockIndex == blockIndex &&
         other.blockKey == blockKey &&
         other.alignment == alignment;
   }
 
   @override
-  int get hashCode => Object.hash(essayId, blockIndex, blockKey, alignment);
+  int get hashCode => Object.hash(documentId, blockIndex, blockKey, alignment);
 }
 
-_EssayScrollAnchor? _scrollAnchorFromJsonDocument(
+_DocumentScrollAnchor? _scrollAnchorFromJsonDocument(
   Map<String, dynamic> jsonDocument,
 ) {
   final viewState = jsonDocument['view_state'];
@@ -1111,12 +1160,14 @@ _EssayScrollAnchor? _scrollAnchorFromJsonDocument(
   if (scrollAnchor is! Map) {
     return null;
   }
-  return _EssayScrollAnchor.tryParse(Map<String, dynamic>.from(scrollAnchor));
+  return _DocumentScrollAnchor.tryParse(
+    Map<String, dynamic>.from(scrollAnchor),
+  );
 }
 
 Map<String, dynamic> _jsonDocumentViewStateWithScrollAnchor(
   Map<String, dynamic> jsonDocument,
-  _EssayScrollAnchor scrollAnchor,
+  _DocumentScrollAnchor scrollAnchor,
 ) {
   final existing = jsonDocument['view_state'];
   return <String, dynamic>{
@@ -1419,20 +1470,20 @@ const _editorStyle = EditorStyle.desktop(
 class EditorContextBar extends StatelessWidget {
   const EditorContextBar({
     required this.resultContext,
-    required this.activeEssayId,
+    required this.activeDocumentId,
     required this.onBack,
     required this.onClear,
     super.key,
   });
 
-  final EssayResultContext resultContext;
-  final int activeEssayId;
+  final DocumentResultContext resultContext;
+  final int activeDocumentId;
   final VoidCallback onBack;
   final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    final index = resultContext.resultIds.indexOf(activeEssayId);
+    final index = resultContext.resultIds.indexOf(activeDocumentId);
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 16),

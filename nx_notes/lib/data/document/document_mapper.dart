@@ -1,25 +1,27 @@
 import 'dart:convert';
 
 import 'package:nx_db/kgql.dart';
-import 'package:nx_notes/data/essay/essay_attr_keys.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
-import 'package:nx_notes/domain/essay/essay_snap.dart';
+import 'package:nx_notes/data/document/document_attr_keys.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_repository.dart';
+import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 
-Essay essayFromModel(Model model, {int versionNumber = 0}) {
-  final document = model.attrString(kEssayAttrDocument) ?? '';
-  final jsonDocument = _jsonMap(model.attributes?[kEssayAttrJsonDocument]);
+NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
+  final document = model.attrString(kDocumentAttrDocument) ?? '';
+  final jsonDocument = _jsonMap(model.attributes?[kDocumentAttrJsonDocument]);
   final updatedAt =
       DateTime.tryParse(model.updatedAt ?? '') ??
       DateTime.tryParse(model.createdAt ?? '') ??
       DateTime.now();
   final tags = model.tags ?? const <String, List<String>>{};
-  final topics = List<String>.from(tags[kEssayTopicTagSystem] ?? const []);
-  final areaTags = List<String>.from(tags[kEssayAreaTagSystem] ?? const []);
-  final statusTags = tags[kEssayStatusTagSystem] ?? const [];
-  return Essay(
+  final topics = List<String>.from(tags[kDocumentTopicTagSystem] ?? const []);
+  final areaTags = List<String>.from(tags[kDocumentAreaTagSystem] ?? const []);
+  final statusTags = tags[kDocumentStatusTagSystem] ?? const [];
+  return NxDocument(
     id: model.id,
     title: model.name,
+    modelTypeName: model.modelType?.name ?? '',
     document: document,
     jsonDocument: jsonDocument,
     wordCount: _countWords(document),
@@ -30,7 +32,7 @@ Essay essayFromModel(Model model, {int versionNumber = 0}) {
       for (final entry in tags.entries)
         entry.key: List<String>.from(entry.value),
     },
-    pinned: model.attrBool(kEssayAttrPinned) ?? false,
+    pinned: model.attrBool(kDocumentAttrPinned) ?? false,
     updatedAt: updatedAt,
     updatedLabel: _relativeLabel(updatedAt),
     versionNumber: versionNumber,
@@ -39,22 +41,23 @@ Essay essayFromModel(Model model, {int versionNumber = 0}) {
   );
 }
 
-Essay essaySummaryFromModel(Model model) {
+NxDocument documentSummaryFromModel(Model model) {
   final updatedAt =
       DateTime.tryParse(model.updatedAt ?? '') ??
       DateTime.tryParse(model.createdAt ?? '') ??
       DateTime.now();
   final tags = model.tags ?? const <String, List<String>>{};
-  final topics = List<String>.from(tags[kEssayTopicTagSystem] ?? const []);
-  final areaTags = List<String>.from(tags[kEssayAreaTagSystem] ?? const []);
-  final statusTags = tags[kEssayStatusTagSystem] ?? const [];
+  final topics = List<String>.from(tags[kDocumentTopicTagSystem] ?? const []);
+  final areaTags = List<String>.from(tags[kDocumentAreaTagSystem] ?? const []);
+  final statusTags = tags[kDocumentStatusTagSystem] ?? const [];
   final excerpt = model.description?.trim() ?? '';
-  return Essay(
+  return NxDocument(
     id: model.id,
     title: model.name,
+    modelTypeName: model.modelType?.name ?? '',
     document: '',
     jsonDocument: const <String, dynamic>{},
-    wordCount: model.attrInt(kEssayAttrWordCount) ?? 0,
+    wordCount: model.attrInt(kDocumentAttrWordCount) ?? 0,
     status: statusTags.isEmpty ? 'Draft' : statusTags.first,
     topics: topics,
     areaTags: areaTags,
@@ -62,7 +65,7 @@ Essay essaySummaryFromModel(Model model) {
       for (final entry in tags.entries)
         entry.key: List<String>.from(entry.value),
     },
-    pinned: model.attrBool(kEssayAttrPinned) ?? false,
+    pinned: model.attrBool(kDocumentAttrPinned) ?? false,
     updatedAt: updatedAt,
     updatedLabel: _relativeLabel(updatedAt),
     versionNumber: 0,
@@ -71,52 +74,61 @@ Essay essaySummaryFromModel(Model model) {
   );
 }
 
-EssaySnap essaySnapFromModel(Model model, {required int essayId}) {
-  final document = model.attrString(kEssayAttrDocument) ?? '';
+DocumentSnap documentSnapFromModel(Model model, {required int documentId}) {
+  final document = model.attrString(kDocumentAttrDocument) ?? '';
   final createdAt = DateTime.tryParse(model.createdAt ?? '') ?? DateTime.now();
-  return EssaySnap(
+  return DocumentSnap(
     id: model.id,
-    essayId: essayId,
+    documentId: documentId,
     name: model.name,
-    versionNumber: model.attrInt(kEssaySnapAttrVersionNumber) ?? 0,
+    versionNumber: model.attrInt(kDocumentSnapAttrVersionNumber) ?? 0,
     document: document,
-    jsonDocument: _jsonMap(model.attributes?[kEssayAttrJsonDocument]),
-    source: model.attrString(kEssaySnapAttrSource) ?? '',
+    jsonDocument: _jsonMap(model.attributes?[kDocumentAttrJsonDocument]),
+    source: model.attrString(kDocumentSnapAttrSource) ?? '',
     changeSummary: _changeSummaryLabel(
-      model.attributes?[kEssaySnapAttrChangeSummary],
+      model.attributes?[kDocumentSnapAttrChangeSummary],
     ),
     createdAt: createdAt,
   );
 }
 
-SetModelRequest setModelRequestForCreateEssay({String? title}) {
+SetModelRequest setModelRequestForCreateDocument({
+  String? title,
+  DocumentKind kind = DocumentKind.document,
+}) {
   const document = 'Start writing here.';
-  final essayTitle = _essayTitleOrFallback(title);
+  final documentTitle = _documentTitleOrFallback(title);
   return SetModelRequest(
-    modelType: kEssayModelTypeName,
-    name: essayTitle,
+    modelType: kind.modelTypeName,
+    name: documentTitle,
     description: _excerptFrom(document),
     attributes: [
-      SetModelAttribute(key: kEssayAttrDocument, value: document),
+      SetModelAttribute(key: kDocumentAttrDocument, value: document),
       SetModelAttribute(
-        key: kEssayAttrJsonDocument,
+        key: kDocumentAttrJsonDocument,
         value: _blankDocumentJson(document),
       ),
-      SetModelAttribute(key: kEssayAttrPinned, value: false),
-      SetModelAttribute(key: kEssayAttrShareToWeb, value: false),
+      SetModelAttribute(key: kDocumentAttrPinned, value: false),
+      SetModelAttribute(key: kDocumentAttrShareToWeb, value: false),
     ],
     tags: [
-      SetModelTag(system: kEssayStatusTagSystem, nodes: const ['Draft']),
+      SetModelTag(system: kDocumentStatusTagSystem, nodes: const ['Draft']),
     ],
   );
 }
 
-Essay essayForCreatedId(int id, {DateTime? now, String? title}) {
+NxDocument documentForCreatedId(
+  int id, {
+  DateTime? now,
+  String? title,
+  DocumentKind kind = DocumentKind.document,
+}) {
   const document = 'Start writing here.';
   final updatedAt = now ?? DateTime.now();
-  return Essay(
+  return NxDocument(
     id: id,
-    title: _essayTitleOrFallback(title),
+    title: _documentTitleOrFallback(title),
+    modelTypeName: kind.modelTypeName,
     document: document,
     jsonDocument: _blankDocumentJson(document),
     wordCount: _countWords(document),
@@ -124,8 +136,8 @@ Essay essayForCreatedId(int id, {DateTime? now, String? title}) {
     topics: const <String>[],
     areaTags: const <String>[],
     tagsBySystem: const <String, List<String>>{
-      kEssayStatusTagSystem: <String>['Draft'],
-      kEssayTopicTagSystem: <String>[],
+      kDocumentStatusTagSystem: <String>['Draft'],
+      kDocumentTopicTagSystem: <String>[],
     },
     pinned: false,
     updatedAt: updatedAt,
@@ -136,30 +148,33 @@ Essay essayForCreatedId(int id, {DateTime? now, String? title}) {
   );
 }
 
-String _essayTitleOrFallback(String? title) {
+String _documentTitleOrFallback(String? title) {
   final trimmed = title?.trim();
-  return trimmed == null || trimmed.isEmpty ? 'Untitled essay' : trimmed;
+  return trimmed == null || trimmed.isEmpty ? 'Untitled document' : trimmed;
 }
 
-SetModelRequest setModelRequestForUpdateEssay(
-  Essay essay, {
+SetModelRequest setModelRequestForUpdateDocument(
+  NxDocument document, {
   Set<String> availableTagSystems = const <String>{},
 }) {
   return SetModelRequest(
-    id: essay.id,
-    name: essay.title,
-    description: essay.excerpt,
+    id: document.id,
+    name: document.title,
+    description: document.excerpt,
     attributes: [
-      SetModelAttribute(key: kEssayAttrDocument, value: essay.document),
-      SetModelAttribute(key: kEssayAttrJsonDocument, value: essay.jsonDocument),
-      SetModelAttribute(key: kEssayAttrPinned, value: essay.pinned),
+      SetModelAttribute(key: kDocumentAttrDocument, value: document.document),
+      SetModelAttribute(
+        key: kDocumentAttrJsonDocument,
+        value: document.jsonDocument,
+      ),
+      SetModelAttribute(key: kDocumentAttrPinned, value: document.pinned),
     ],
-    tags: _setModelTagsForEssay(essay, availableTagSystems),
+    tags: _setModelTagsForDocument(document, availableTagSystems),
   );
 }
 
-List<SetModelTag>? _setModelTagsForEssay(
-  Essay essay,
+List<SetModelTag>? _setModelTagsForDocument(
+  NxDocument document,
   Set<String> availableTagSystems,
 ) {
   bool canWrite(String system) {
@@ -167,52 +182,59 @@ List<SetModelTag>? _setModelTagsForEssay(
   }
 
   final tags = <SetModelTag>[
-    if (canWrite(kEssayStatusTagSystem))
-      SetModelTag(system: kEssayStatusTagSystem, nodes: [essay.status]),
-    for (final entry in _editableTagSystemsForEssay(essay).entries)
+    if (canWrite(kDocumentStatusTagSystem))
+      SetModelTag(system: kDocumentStatusTagSystem, nodes: [document.status]),
+    for (final entry in _editableTagSystemsForDocument(document).entries)
       if (canWrite(entry.key))
         SetModelTag(system: entry.key, nodes: entry.value, clear: true),
   ];
   return tags.isEmpty ? null : tags;
 }
 
-Map<String, List<String>> _editableTagSystemsForEssay(Essay essay) {
+Map<String, List<String>> _editableTagSystemsForDocument(NxDocument document) {
   final tags = <String, List<String>>{
-    for (final entry in essay.tagsBySystem.entries)
-      if (entry.key != kEssayStatusTagSystem) entry.key: entry.value,
+    for (final entry in document.tagsBySystem.entries)
+      if (entry.key != kDocumentStatusTagSystem) entry.key: entry.value,
   };
-  tags[kEssayTopicTagSystem] = essay.topics;
-  if (essay.areaTags.isNotEmpty || tags.containsKey(kEssayAreaTagSystem)) {
-    tags[kEssayAreaTagSystem] = essay.areaTags;
+  tags[kDocumentTopicTagSystem] = document.topics;
+  if (document.areaTags.isNotEmpty ||
+      tags.containsKey(kDocumentAreaTagSystem)) {
+    tags[kDocumentAreaTagSystem] = document.areaTags;
   }
   return tags;
 }
 
 SetModelRequest setModelRequestForCreateSnapshot({
-  required Essay essay,
+  required NxDocument document,
   required int versionNumber,
   required String source,
   required String name,
   required Object? changeSummary,
 }) {
   return SetModelRequest(
-    modelType: kEssaySnapModelTypeName,
+    modelType: kDocumentSnapModelTypeName,
     name: name,
     attributes: [
-      SetModelAttribute(key: kEssayAttrDocument, value: essay.document),
-      SetModelAttribute(key: kEssayAttrJsonDocument, value: essay.jsonDocument),
-      SetModelAttribute(key: kEssaySnapAttrVersionNumber, value: versionNumber),
-      SetModelAttribute(key: kEssaySnapAttrSource, value: source),
+      SetModelAttribute(key: kDocumentAttrDocument, value: document.document),
+      SetModelAttribute(
+        key: kDocumentAttrJsonDocument,
+        value: document.jsonDocument,
+      ),
+      SetModelAttribute(
+        key: kDocumentSnapAttrVersionNumber,
+        value: versionNumber,
+      ),
+      SetModelAttribute(key: kDocumentSnapAttrSource, value: source),
       if (changeSummary != null)
         SetModelAttribute(
-          key: kEssaySnapAttrChangeSummary,
+          key: kDocumentSnapAttrChangeSummary,
           value: changeSummary,
         ),
     ],
   );
 }
 
-Map<String, dynamic> essayFetchStruct(ModelType schema) {
+Map<String, dynamic> documentFetchStruct(ModelType schema) {
   return {
     ...buildKgqlStructFromSchema(
       schema,
@@ -225,9 +247,9 @@ Map<String, dynamic> essayFetchStruct(ModelType schema) {
         'model_type_id',
       ],
     ),
-    kEssayAttrDocument: true,
-    kEssayAttrJsonDocument: true,
-    kEssayAttrPinned: true,
+    kDocumentAttrDocument: true,
+    kDocumentAttrJsonDocument: true,
+    kDocumentAttrPinned: true,
     'tags': true,
     'relations': {
       'relation_id': true,
@@ -236,33 +258,35 @@ Map<String, dynamic> essayFetchStruct(ModelType schema) {
       'name': true,
       'description': true,
     },
-    'EssaySnap': {
+    'model_type': {'id': true, 'name': true},
+    'DocumentSnap': {
       'id': true,
       'name': true,
       'created_at': true,
-      kEssayAttrDocument: true,
-      kEssayAttrJsonDocument: true,
-      kEssaySnapAttrVersionNumber: true,
-      kEssaySnapAttrSource: true,
-      kEssaySnapAttrChangeSummary: true,
+      kDocumentAttrDocument: true,
+      kDocumentAttrJsonDocument: true,
+      kDocumentSnapAttrVersionNumber: true,
+      kDocumentSnapAttrSource: true,
+      kDocumentSnapAttrChangeSummary: true,
     },
   };
 }
 
-Map<String, dynamic> essaySummaryFetchStruct() {
+Map<String, dynamic> documentSummaryFetchStruct() {
   return {
     'id': true,
     'name': true,
     'description': true,
     'created_at': true,
     'updated_at': true,
-    kEssayAttrPinned: true,
-    kEssayAttrWordCount: true,
+    kDocumentAttrPinned: true,
+    kDocumentAttrWordCount: true,
     'tags': true,
+    'model_type': {'id': true, 'name': true},
   };
 }
 
-Map<String, dynamic> essaySnapFetchStruct(ModelType schema) {
+Map<String, dynamic> documentSnapFetchStruct(ModelType schema) {
   return {
     ...buildKgqlStructFromSchema(
       schema,
@@ -275,19 +299,20 @@ Map<String, dynamic> essaySnapFetchStruct(ModelType schema) {
         'model_type_id',
       ],
     ),
-    kEssayAttrDocument: true,
-    kEssayAttrJsonDocument: true,
-    kEssaySnapAttrVersionNumber: true,
-    kEssaySnapAttrSource: true,
-    kEssaySnapAttrChangeSummary: true,
+    kDocumentAttrDocument: true,
+    kDocumentAttrJsonDocument: true,
+    kDocumentSnapAttrVersionNumber: true,
+    kDocumentSnapAttrSource: true,
+    kDocumentSnapAttrChangeSummary: true,
   };
 }
 
-List<EssaySnap> essaySnapsFromEssayModel(Model model) {
-  final nested = model.relations?[kEssaySnapModelTypeName] ?? const <Model>[];
-  final byId = <int, EssaySnap>{};
+List<DocumentSnap> documentSnapsFromDocumentModel(Model model) {
+  final nested =
+      model.relations?[kDocumentSnapModelTypeName] ?? const <Model>[];
+  final byId = <int, DocumentSnap>{};
   for (final snap in nested) {
-    byId[snap.id] = essaySnapFromModel(snap, essayId: model.id);
+    byId[snap.id] = documentSnapFromModel(snap, documentId: model.id);
   }
   final snaps = byId.values.toList()
     ..sort((a, b) {
@@ -362,7 +387,7 @@ List<LinkedModel> _linksFromModel(Model model) {
   if (relations == null || relations.isEmpty) return const <LinkedModel>[];
   return [
     for (final rel in relations)
-      if (rel.modelType != kEssaySnapModelTypeName)
+      if (rel.modelType != kDocumentSnapModelTypeName)
         LinkedModel(
           id: rel.modelId,
           name: rel.name ?? '${rel.modelType} ${rel.modelId}',

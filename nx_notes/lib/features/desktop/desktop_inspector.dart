@@ -3,9 +3,9 @@ part of 'desktop_shell.dart';
 enum _InspectorTab { contents, details }
 
 class _DesktopInspector extends ConsumerStatefulWidget {
-  const _DesktopInspector({required this.essayId});
+  const _DesktopInspector({required this.documentId});
 
-  final int? essayId;
+  final int? documentId;
 
   @override
   ConsumerState<_DesktopInspector> createState() => _DesktopInspectorState();
@@ -16,11 +16,13 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
 
   @override
   Widget build(BuildContext context) {
-    final id = widget.essayId;
-    final essay = id == null ? null : ref.watch(essayByIdProvider(id)).value;
+    final id = widget.documentId;
+    final document = id == null
+        ? null
+        : ref.watch(documentByIdProvider(id)).value;
     final snaps = id == null
-        ? const <EssaySnap>[]
-        : ref.watch(essaySnapshotsProvider(id)).value ?? const [];
+        ? const <DocumentSnap>[]
+        : ref.watch(documentSnapshotsProvider(id)).value ?? const [];
     final tagSystems = ref.watch(tagSystemsProvider).value ?? const [];
     final statusSystem = tagSystems.where((system) => system.name == 'Status');
     final editableTagSystems = tagSystems
@@ -91,7 +93,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: essay == null
+            child: document == null
                 ? const SizedBox.shrink()
                 : _tab == _InspectorTab.details
                 ? ListView(
@@ -103,7 +105,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                         child: Column(
                           children: <Widget>[
                             _InspectorStatusPair(
-                              essay: essay,
+                              document: document,
                               statuses: statusSystem.isEmpty
                                   ? const <String>[
                                       'Draft',
@@ -121,13 +123,13 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                             ),
                             _InspectorPair(
                               label: 'Word count',
-                              value: '${essay.wordCount} words',
+                              value: '${document.wordCount} words',
                             ),
                             _InspectorPair(
                               label: 'Version',
-                              value: '${essay.versionNumber}',
+                              value: '${document.versionNumber}',
                             ),
-                            _InspectorPinnedSwitch(essay: essay),
+                            _InspectorPinnedSwitch(document: document),
                           ],
                         ),
                       ),
@@ -135,24 +137,27 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                         icon: Icons.sell_outlined,
                         title: 'Tags',
                         child: _InspectorTagsEditor(
-                          essay: essay,
+                          document: document,
                           systems: editableTagSystems,
                         ),
                       ),
                       _InspectorSection(
                         icon: Icons.link,
                         title: 'Links',
-                        child: _InspectorLinksEditor(essay: essay),
+                        child: _InspectorLinksEditor(document: document),
                       ),
-                      _InspectorActions(essay: essay),
+                      _InspectorActions(document: document),
                       _InspectorSection(
                         icon: Icons.history,
                         title: 'History',
-                        child: _InspectorHistory(essay: essay, snaps: snaps),
+                        child: _InspectorHistory(
+                          document: document,
+                          snaps: snaps,
+                        ),
                       ),
                     ],
                   )
-                : _InspectorContents(essay: essay),
+                : _InspectorContents(document: document),
           ),
         ],
       ),
@@ -202,9 +207,9 @@ class _InspectorTabButton extends StatelessWidget {
 }
 
 class _InspectorContents extends StatefulWidget {
-  const _InspectorContents({required this.essay});
+  const _InspectorContents({required this.document});
 
-  final Essay essay;
+  final NxDocument document;
 
   @override
   State<_InspectorContents> createState() => _InspectorContentsState();
@@ -218,7 +223,7 @@ class _InspectorContentsState extends State<_InspectorContents> {
   @override
   void didUpdateWidget(covariant _InspectorContents oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.essay.id != widget.essay.id) {
+    if (oldWidget.document.id != widget.document.id) {
       _headingKeys.clear();
       _lastEnsuredBlockIndex = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -237,12 +242,12 @@ class _InspectorContentsState extends State<_InspectorContents> {
 
   @override
   Widget build(BuildContext context) {
-    final headings = _headingsFromEssay(widget.essay);
+    final headings = _headingsFromDocument(widget.document);
     _syncHeadingKeys(headings);
-    return ValueListenableBuilder<EssayActiveHeading?>(
-      valueListenable: essayActiveHeadingNotifier,
+    return ValueListenableBuilder<DocumentActiveHeading?>(
+      valueListenable: documentActiveHeadingNotifier,
       builder: (context, activeHeading, _) {
-        final activeBlockIndex = activeHeading?.essayId == widget.essay.id
+        final activeBlockIndex = activeHeading?.documentId == widget.document.id
             ? activeHeading?.blockIndex
             : null;
         _scheduleActiveHeadingVisibility(activeBlockIndex);
@@ -266,8 +271,8 @@ class _InspectorContentsState extends State<_InspectorContents> {
                     key: _headingKeys[heading.blockIndex],
                     heading: heading,
                     active: heading.blockIndex == activeBlockIndex,
-                    onTap: () => requestEssayHeadingScroll(
-                      essayId: widget.essay.id,
+                    onTap: () => requestDocumentHeadingScroll(
+                      documentId: widget.document.id,
                       blockIndex: heading.blockIndex,
                     ),
                   ),
@@ -278,7 +283,7 @@ class _InspectorContentsState extends State<_InspectorContents> {
     );
   }
 
-  void _syncHeadingKeys(List<_EssayHeading> headings) {
+  void _syncHeadingKeys(List<_DocumentHeading> headings) {
     final blockIndexes = headings.map((heading) => heading.blockIndex).toSet();
     _headingKeys.removeWhere(
       (blockIndex, _) => !blockIndexes.contains(blockIndex),
@@ -316,7 +321,7 @@ class _InspectorHeadingRow extends StatelessWidget {
     super.key,
   });
 
-  final _EssayHeading heading;
+  final _DocumentHeading heading;
   final bool active;
   final VoidCallback onTap;
 
@@ -358,8 +363,8 @@ class _InspectorHeadingRow extends StatelessWidget {
   }
 }
 
-class _EssayHeading {
-  const _EssayHeading({
+class _DocumentHeading {
+  const _DocumentHeading({
     required this.title,
     required this.level,
     required this.blockIndex,
@@ -370,19 +375,19 @@ class _EssayHeading {
   final int blockIndex;
 }
 
-List<_EssayHeading> _headingsFromEssay(Essay essay) {
-  final document = essay.jsonDocument['document'];
-  final children = document is Map ? document['children'] : null;
-  if (children is! List) return const <_EssayHeading>[];
+List<_DocumentHeading> _headingsFromDocument(NxDocument nxDocument) {
+  final documentJson = nxDocument.jsonDocument['document'];
+  final children = documentJson is Map ? documentJson['children'] : null;
+  if (children is! List) return const <_DocumentHeading>[];
 
-  final headings = <_EssayHeading>[];
+  final headings = <_DocumentHeading>[];
   for (var i = 0; i < children.length; i++) {
     final raw = children[i];
     if (raw is! Map || raw['type'] != 'heading') continue;
     final text = _nodeText(raw).trim();
     if (text.isEmpty) continue;
     headings.add(
-      _EssayHeading(title: text, level: _headingLevel(raw), blockIndex: i),
+      _DocumentHeading(title: text, level: _headingLevel(raw), blockIndex: i),
     );
   }
   return headings;
@@ -410,9 +415,9 @@ String _nodeText(Map<dynamic, dynamic> node) {
 }
 
 class _InspectorPinnedSwitch extends ConsumerStatefulWidget {
-  const _InspectorPinnedSwitch({required this.essay});
+  const _InspectorPinnedSwitch({required this.document});
 
-  final Essay essay;
+  final NxDocument document;
 
   @override
   ConsumerState<_InspectorPinnedSwitch> createState() =>
@@ -440,7 +445,7 @@ class _InspectorPinnedSwitchState
             child: FittedBox(
               fit: BoxFit.contain,
               child: Switch.adaptive(
-                value: widget.essay.pinned,
+                value: widget.document.pinned,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 activeThumbColor: AppColors.text,
                 onChanged: _saving ? null : _setPinned,
@@ -456,8 +461,8 @@ class _InspectorPinnedSwitchState
     setState(() => _saving = true);
     try {
       await ref
-          .read(essayMutationControllerProvider)
-          .setPinned(widget.essay, pinned);
+          .read(documentMutationControllerProvider)
+          .setPinned(widget.document, pinned);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -472,9 +477,9 @@ class _InspectorPinnedSwitchState
 }
 
 class _InspectorActions extends ConsumerStatefulWidget {
-  const _InspectorActions({required this.essay});
+  const _InspectorActions({required this.document});
 
-  final Essay essay;
+  final NxDocument document;
 
   @override
   ConsumerState<_InspectorActions> createState() => _InspectorActionsState();
@@ -554,16 +559,18 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
   Future<void> _saveNow() async {
     setState(() => _saving = true);
     try {
-      await ref.read(essayMutationControllerProvider).saveNow(widget.essay);
+      await ref
+          .read(documentMutationControllerProvider)
+          .saveNow(widget.document);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Essay saved')));
+      ).showSnackBar(const SnackBar(content: Text('Document saved')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save essay: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save document: $error')),
+      );
     } finally {
       if (mounted) {
         setState(() => _saving = false);
@@ -575,8 +582,8 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete essay?'),
-        content: Text('Delete "${widget.essay.title}" permanently?'),
+        title: const Text('Delete document?'),
+        content: Text('Delete "${widget.document.title}" permanently?'),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -594,23 +601,25 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _deleteEssay();
+    await _deleteDocument();
   }
 
-  Future<void> _deleteEssay() async {
+  Future<void> _deleteDocument() async {
     setState(() => _deleting = true);
     try {
-      await ref.read(essayMutationControllerProvider).deleteEssay(widget.essay);
-      ref.read(desktopWorkspaceProvider.notifier).closeTab(widget.essay.id);
+      await ref
+          .read(documentMutationControllerProvider)
+          .deleteDocument(widget.document);
+      ref.read(desktopWorkspaceProvider.notifier).closeTab(widget.document.id);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Essay deleted')));
+      ).showSnackBar(const SnackBar(content: Text('Document deleted')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not delete essay: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete document: $error')),
+      );
     } finally {
       if (mounted) {
         setState(() => _deleting = false);
@@ -735,16 +744,16 @@ class _InspectorPair extends StatelessWidget {
 }
 
 class _InspectorStatusPair extends ConsumerWidget {
-  const _InspectorStatusPair({required this.essay, required this.statuses});
+  const _InspectorStatusPair({required this.document, required this.statuses});
 
-  final Essay essay;
+  final NxDocument document;
   final List<String> statuses;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final values = statuses.contains(essay.status)
+    final values = statuses.contains(document.status)
         ? statuses
-        : <String>[essay.status, ...statuses];
+        : <String>[document.status, ...statuses];
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -764,7 +773,7 @@ class _InspectorStatusPair extends ConsumerWidget {
               padding: const EdgeInsets.only(left: 8, right: 4),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: essay.status,
+                  value: document.status,
                   isDense: true,
                   icon: const Icon(
                     Icons.keyboard_arrow_down,
@@ -786,13 +795,13 @@ class _InspectorStatusPair extends ConsumerWidget {
                       ),
                   ],
                   onChanged: (value) {
-                    if (value == null || value == essay.status) return;
-                    _saveEssayMetadata(
+                    if (value == null || value == document.status) return;
+                    _saveDocumentMetadata(
                       ref,
-                      essay.copyWith(
+                      document.copyWith(
                         status: value,
                         tagsBySystem: <String, List<String>>{
-                          ...essay.tagsBySystem,
+                          ...document.tagsBySystem,
                           'Status': <String>[value],
                         },
                       ),

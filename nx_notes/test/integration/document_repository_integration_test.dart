@@ -4,23 +4,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:nx_notes/data/essay/essay_attr_keys.dart';
-import 'package:nx_notes/data/essay/kgql_essay_repository.dart';
-import 'package:nx_notes/domain/essay/essay_query.dart';
+import 'package:nx_notes/data/document/document_attr_keys.dart';
+import 'package:nx_notes/data/document/kgql_document_repository.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 
 void main() {
   test(
-    'loads Essay schema and tag systems from localhost',
+    'loads Document schema and tag systems from localhost',
     () async {
       final harness = _IntegrationHarness();
 
       final systems = await harness.repo.listTagSystems();
       final status = systems.singleWhere(
-        (system) => system.name == kEssayStatusTagSystem,
+        (system) => system.name == kDocumentStatusTagSystem,
       );
       final topic = systems.singleWhere(
-        (system) => system.name == kEssayTopicTagSystem,
+        (system) => system.name == kDocumentTopicTagSystem,
       );
 
       expect(status.hierarchical, isFalse);
@@ -29,7 +29,7 @@ void main() {
       expect(topic.nodes.map((node) => node.name), isNotEmpty);
       expect(
         systems.map((system) => system.name),
-        isNot(contains(kEssayAreaTagSystem)),
+        isNot(contains(kDocumentAreaTagSystem)),
       );
     },
     skip: runNotesIntegration ? null : kNotesIntegrationSkipReason,
@@ -37,7 +37,7 @@ void main() {
   );
 
   test(
-    'Essay repository main actions round trip through localhost',
+    'Document repository main actions round trip through localhost',
     () async {
       final harness = _IntegrationHarness();
       final cleanupIds = <int>[];
@@ -45,7 +45,7 @@ void main() {
 
       final systems = await harness.repo.listTagSystems();
       final topicSystem = systems.singleWhere(
-        (system) => system.name == kEssayTopicTagSystem,
+        (system) => system.name == kDocumentTopicTagSystem,
       );
       final topicName = topicSystem.nodes.first.name;
       final marker =
@@ -54,13 +54,13 @@ void main() {
       final created = await harness.repo.create();
       cleanupIds.add(created.id);
 
-      expect(created.title, 'Untitled essay');
+      expect(created.title, 'Untitled document');
       expect(created.status, 'Draft');
       expect(created.topics, isEmpty);
 
       final updated = await harness.repo.updateDraft(
         created.copyWith(
-          title: 'Essay repository round trip $marker',
+          title: 'Document repository round trip $marker',
           document: 'This body belongs to $marker and should be searchable.',
           jsonDocument: _appflowyDocumentJson(
             'This body belongs to $marker and should be searchable.',
@@ -81,23 +81,29 @@ void main() {
       expect(loaded!.title, updated.title);
 
       final searchResults = await harness.repo.search(marker);
-      expect(searchResults.map((essay) => essay.id), contains(updated.id));
+      expect(
+        searchResults.map((document) => document.id),
+        contains(updated.id),
+      );
 
       final recent = await harness.repo.listRecent(limit: 50);
-      expect(recent.map((essay) => essay.id), contains(updated.id));
+      expect(recent.map((document) => document.id), contains(updated.id));
 
       final pinned = await harness.repo.listPinned(limit: 50);
-      expect(pinned.map((essay) => essay.id), contains(updated.id));
+      expect(pinned.map((document) => document.id), contains(updated.id));
 
       final statusTagged = await harness.repo.listByTag(
-        const EssayTagFilter(system: kEssayStatusTagSystem, node: 'Draft'),
+        const DocumentTagFilter(
+          system: kDocumentStatusTagSystem,
+          node: 'Draft',
+        ),
       );
-      expect(statusTagged.map((essay) => essay.id), contains(updated.id));
+      expect(statusTagged.map((document) => document.id), contains(updated.id));
 
       final topicTagged = await harness.repo.listByTag(
-        EssayTagFilter(system: kEssayTopicTagSystem, node: topicName),
+        DocumentTagFilter(system: kDocumentTopicTagSystem, node: topicName),
       );
-      expect(topicTagged.map((essay) => essay.id), contains(updated.id));
+      expect(topicTagged.map((document) => document.id), contains(updated.id));
 
       final projects = await harness.repo.listProjects();
       expect(projects, isNotEmpty);
@@ -109,7 +115,7 @@ void main() {
       expect(projectSearch.map((model) => model.id), contains(project.id));
 
       await harness.repo.attachLinkedModel(
-        essayId: updated.id,
+        documentId: updated.id,
         modelType: LinkableModelType.project,
         modelId: project.id,
       );
@@ -138,7 +144,7 @@ void main() {
       );
       cleanupIds.add(snapshot.id);
 
-      expect(snapshot.essayId, updated.id);
+      expect(snapshot.documentId, updated.id);
       expect(snapshot.versionNumber, greaterThanOrEqualTo(1));
       expect(snapshot.document, updated.document);
       expect(snapshot.changeSummary, 'first checkpoint');
@@ -153,17 +159,17 @@ void main() {
 
 class _IntegrationHarness {
   _IntegrationHarness() : client = createClient(_graphqlEndpoint, _userId) {
-    repo = KgqlEssayRepository(
+    repo = KgqlDocumentRepository(
       client: client,
-      loadEssaySchema: () =>
-          fetchKgqlModelTypeByName(client, kEssayModelTypeName),
-      loadEssaySnapSchema: () =>
-          fetchKgqlModelTypeByName(client, kEssaySnapModelTypeName),
+      loadDocumentSchema: () =>
+          fetchKgqlModelTypeByName(client, kDocumentModelTypeName),
+      loadDocumentSnapSchema: () =>
+          fetchKgqlModelTypeByName(client, kDocumentSnapModelTypeName),
     );
   }
 
   final GraphQLClient client;
-  late final KgqlEssayRepository repo;
+  late final KgqlDocumentRepository repo;
 
   Future<void> deleteModels(Iterable<int> ids) async {
     for (final id in ids) {

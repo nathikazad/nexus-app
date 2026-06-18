@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_notes/domain/essay/essay_query.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
 
 void main() {
   test('tag filter records hierarchy intent', () {
-    const filter = EssayTagFilter(
+    const filter = DocumentTagFilter(
       system: 'Area',
       node: 'Work',
       includeDescendants: true,

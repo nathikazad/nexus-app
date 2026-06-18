@@ -1,30 +1,36 @@
-import 'package:nx_notes/domain/essay/essay.dart';
-import 'package:nx_notes/domain/essay/essay_query.dart';
-import 'package:nx_notes/domain/essay/essay_repository.dart';
-import 'package:nx_notes/domain/essay/essay_snap.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/document/document_repository.dart';
+import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 
-class FakeEssayRepository implements EssayRepository {
-  FakeEssayRepository() : _essays = _seedEssays(), _snaps = _seedSnaps();
+class FakeDocumentRepository implements DocumentRepository {
+  FakeDocumentRepository()
+    : _documents = _seedDocuments(),
+      _snaps = _seedSnaps();
 
-  final List<Essay> _essays;
-  final Map<int, List<EssaySnap>> _snaps;
-  int _nextEssayId = 100;
+  final List<NxDocument> _documents;
+  final Map<int, List<DocumentSnap>> _snaps;
+  int _nextDocumentId = 100;
   int _nextSnapId = 1000;
   int _nextRelationId = 5000;
 
   @override
-  Future<Essay> create({String? title}) async {
-    final id = _nextEssayId++;
+  Future<NxDocument> create({
+    String? title,
+    DocumentKind kind = DocumentKind.document,
+  }) async {
+    final id = _nextDocumentId++;
     final now = DateTime.now();
     final trimmedTitle = title?.trim();
-    final essayTitle = trimmedTitle == null || trimmedTitle.isEmpty
-        ? 'Untitled essay'
+    final documentTitle = trimmedTitle == null || trimmedTitle.isEmpty
+        ? 'Untitled document'
         : trimmedTitle;
-    final essay = Essay(
+    final document = NxDocument(
       id: id,
-      title: essayTitle,
+      title: documentTitle,
+      modelTypeName: kind.modelTypeName,
       document: 'Start writing here.',
       jsonDocument: const <String, dynamic>{
         'format': 'appflowy_document',
@@ -55,71 +61,79 @@ class FakeEssayRepository implements EssayRepository {
       updatedAt: now,
       updatedLabel: 'just now',
       versionNumber: 1,
-      excerpt: 'New essay draft.',
+      excerpt: 'New document draft.',
       links: const <LinkedModel>[],
     );
-    _essays.insert(0, essay);
-    _snaps[id] = <EssaySnap>[];
-    return essay;
+    _documents.insert(0, document);
+    _snaps[id] = <DocumentSnap>[];
+    return document;
   }
 
   @override
-  Future<EssaySnap> createSnapshot(
-    int essayId, {
+  Future<DocumentSnap> createSnapshot(
+    int documentId, {
     required String source,
     String changeSummary = '',
   }) async {
-    final essay = await getById(essayId);
-    if (essay == null) {
-      throw StateError('Essay $essayId not found');
+    final document = await getById(documentId);
+    if (document == null) {
+      throw StateError('Document $documentId not found');
     }
-    final existing = _snaps[essayId] ?? <EssaySnap>[];
+    final existing = _snaps[documentId] ?? <DocumentSnap>[];
     final nextVersion = existing.isEmpty
         ? 1
         : existing
                   .map((snap) => snap.versionNumber)
                   .reduce((a, b) => a > b ? a : b) +
               1;
-    final snap = EssaySnap(
+    final snap = DocumentSnap(
       id: _nextSnapId++,
-      essayId: essayId,
+      documentId: documentId,
       name: changeSummary.trim().isEmpty ? source : changeSummary.trim(),
       versionNumber: nextVersion,
-      document: essay.document,
-      jsonDocument: essay.jsonDocument,
+      document: document.document,
+      jsonDocument: document.jsonDocument,
       source: source,
       changeSummary: changeSummary,
       createdAt: DateTime.now(),
     );
-    _snaps.putIfAbsent(essayId, () => <EssaySnap>[]).insert(0, snap);
+    _snaps.putIfAbsent(documentId, () => <DocumentSnap>[]).insert(0, snap);
     return snap;
   }
 
   @override
-  Future<Essay?> getById(int id) async {
-    for (final essay in _essays) {
-      if (essay.id == id) {
-        return essay;
+  Future<NxDocument?> getById(int id) async {
+    for (final document in _documents) {
+      if (document.id == id) {
+        return document;
       }
     }
     return null;
   }
 
   @override
-  Future<List<Essay>> listByTag(EssayTagFilter filter) async {
-    final rows = _essays.where((essay) {
+  Future<List<NxDocument>> listByTag(DocumentTagFilter filter) async {
+    final rows = _documents.where((document) {
       if (filter.system == 'Status') {
-        return essay.status == filter.node;
+        return document.status == filter.node;
       }
-      return essay.tagsBySystem[filter.system]?.contains(filter.node) ?? false;
+      return document.tagsBySystem[filter.system]?.contains(filter.node) ??
+          false;
     }).toList();
     rows.sort(_recentSort);
     return rows;
   }
 
   @override
-  Future<List<Essay>> listPinned({int limit = 20}) async {
-    final rows = _essays.where((essay) => essay.pinned).toList()
+  Future<List<NxDocument>> listPinned({int limit = 20}) async {
+    final rows = _documents.where((document) => document.pinned).toList()
+      ..sort(_recentSort);
+    return rows.take(limit).toList();
+  }
+
+  @override
+  Future<List<NxDocument>> listBooks({int limit = 50}) async {
+    final rows = _documents.where((document) => document.isBook).toList()
       ..sort(_recentSort);
     return rows.take(limit).toList();
   }
@@ -151,15 +165,15 @@ class FakeEssayRepository implements EssayRepository {
 
   @override
   Future<void> attachLinkedModel({
-    required int essayId,
+    required int documentId,
     required LinkableModelType modelType,
     required int modelId,
   }) async {
-    final essay = await getById(essayId);
-    if (essay == null) {
-      throw StateError('Essay $essayId not found');
+    final document = await getById(documentId);
+    if (document == null) {
+      throw StateError('Document $documentId not found');
     }
-    if (essay.links.any(
+    if (document.links.any(
       (link) => link.modelType == modelType.kgqlName && link.id == modelId,
     )) {
       return;
@@ -173,9 +187,9 @@ class FakeEssayRepository implements EssayRepository {
       ),
     );
     await updateDraft(
-      essay.copyWith(
+      document.copyWith(
         links: <LinkedModel>[
-          ...essay.links,
+          ...document.links,
           LinkedModel(
             id: model.id,
             name: model.name,
@@ -188,23 +202,23 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<void> attachProject(int essayId, int projectId) async {
+  Future<void> attachProject(int documentId, int projectId) async {
     await attachLinkedModel(
-      essayId: essayId,
+      documentId: documentId,
       modelType: LinkableModelType.project,
       modelId: projectId,
     );
   }
 
   @override
-  Future<void> detachProject(int essayId, int relationId) async {
-    final essay = await getById(essayId);
-    if (essay == null) {
-      throw StateError('Essay $essayId not found');
+  Future<void> detachProject(int documentId, int relationId) async {
+    final document = await getById(documentId);
+    if (document == null) {
+      throw StateError('Document $documentId not found');
     }
     await updateDraft(
-      essay.copyWith(
-        links: essay.links
+      document.copyWith(
+        links: document.links
             .where((link) => link.relationId != relationId)
             .toList(),
       ),
@@ -212,14 +226,14 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<List<Essay>> listRecent({int limit = 20}) async {
-    final rows = [..._essays]..sort(_recentSort);
+  Future<List<NxDocument>> listRecent({int limit = 20}) async {
+    final rows = [..._documents]..sort(_recentSort);
     return rows.take(limit).toList();
   }
 
   @override
-  Future<List<EssaySnap>> listSnapshots(int essayId) async {
-    return [...?_snaps[essayId]]
+  Future<List<DocumentSnap>> listSnapshots(int documentId) async {
+    return [...?_snaps[documentId]]
       ..sort((a, b) => b.versionNumber.compareTo(a.versionNumber));
   }
 
@@ -238,7 +252,9 @@ class FakeEssayRepository implements EssayRepository {
           ])
             TagNode(
               name: name,
-              count: _essays.where((essay) => essay.status == name).length,
+              count: _documents
+                  .where((document) => document.status == name)
+                  .length,
             ),
         ],
       ),
@@ -254,8 +270,8 @@ class FakeEssayRepository implements EssayRepository {
           ])
             TagNode(
               name: name,
-              count: _essays
-                  .where((essay) => essay.topics.contains(name))
+              count: _documents
+                  .where((document) => document.topics.contains(name))
                   .length,
             ),
         ],
@@ -266,28 +282,31 @@ class FakeEssayRepository implements EssayRepository {
         nodes: <TagNode>[
           TagNode(
             name: 'Work',
-            count: _essays
-                .where((essay) => essay.areaTags.contains('Work'))
+            count: _documents
+                .where((document) => document.areaTags.contains('Work'))
                 .length,
             children: <TagNode>[
               TagNode(
                 name: 'Product',
-                count: _essays
-                    .where((essay) => essay.areaTags.contains('Product'))
+                count: _documents
+                    .where((document) => document.areaTags.contains('Product'))
                     .length,
               ),
               TagNode(
                 name: 'Infrastructure',
-                count: _essays
-                    .where((essay) => essay.areaTags.contains('Infrastructure'))
+                count: _documents
+                    .where(
+                      (document) =>
+                          document.areaTags.contains('Infrastructure'),
+                    )
                     .length,
               ),
             ],
           ),
           TagNode(
             name: 'Personal',
-            count: _essays
-                .where((essay) => essay.areaTags.contains('Personal'))
+            count: _documents
+                .where((document) => document.areaTags.contains('Personal'))
                 .length,
           ),
         ],
@@ -296,18 +315,18 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<List<Essay>> search(String query) async {
+  Future<List<NxDocument>> search(String query) async {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) {
-      return const <Essay>[];
+      return const <NxDocument>[];
     }
-    final rows = _essays.where((essay) {
+    final rows = _documents.where((document) {
       return [
-        essay.title,
-        essay.document,
-        essay.excerpt,
-        essay.status,
-        ...essay.tagsBySystem.values.expand((tags) => tags),
+        document.title,
+        document.document,
+        document.excerpt,
+        document.status,
+        ...document.tagsBySystem.values.expand((tags) => tags),
       ].join(' ').toLowerCase().contains(q);
     }).toList();
     rows.sort(_recentSort);
@@ -315,36 +334,36 @@ class FakeEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay> updateDraft(Essay essay) async {
-    final index = _essays.indexWhere((item) => item.id == essay.id);
+  Future<NxDocument> updateDraft(NxDocument document) async {
+    final index = _documents.indexWhere((item) => item.id == document.id);
     if (index == -1) {
-      throw StateError('Essay ${essay.id} not found');
+      throw StateError('Document ${document.id} not found');
     }
-    final updated = essay.copyWith(
+    final updated = document.copyWith(
       updatedAt: DateTime.now(),
       updatedLabel: 'just now',
     );
-    _essays[index] = updated;
+    _documents[index] = updated;
     return updated;
   }
 
   @override
   Future<void> delete(int id) async {
-    final index = _essays.indexWhere((essay) => essay.id == id);
+    final index = _documents.indexWhere((document) => document.id == id);
     if (index == -1) {
-      throw StateError('Essay $id not found');
+      throw StateError('Document $id not found');
     }
-    _essays.removeAt(index);
+    _documents.removeAt(index);
     _snaps.remove(id);
   }
 
-  static int _recentSort(Essay a, Essay b) =>
+  static int _recentSort(NxDocument a, NxDocument b) =>
       b.updatedAt.compareTo(a.updatedAt);
 }
 
-List<Essay> _seedEssays() {
+List<NxDocument> _seedDocuments() {
   final now = DateTime.now();
-  Essay essay({
+  NxDocument document({
     required int id,
     required String title,
     required String status,
@@ -356,10 +375,12 @@ List<Essay> _seedEssays() {
     required int version,
     required String excerpt,
     required String document,
+    String modelTypeName = 'Document',
   }) {
-    return Essay(
+    return NxDocument(
       id: id,
       title: title,
+      modelTypeName: modelTypeName,
       document: document,
       jsonDocument: <String, dynamic>{'plainText': document},
       wordCount: words,
@@ -384,8 +405,8 @@ List<Essay> _seedEssays() {
     );
   }
 
-  return <Essay>[
-    essay(
+  return <NxDocument>[
+    document(
       id: 1,
       title: 'Draft: API design notes',
       status: 'Draft',
@@ -397,9 +418,9 @@ List<Essay> _seedEssays() {
       version: 18,
       excerpt: 'Notes on KGQL, AppFlowy JSON, raw text, tags, and snapshots.',
       document:
-          'The mobile app should have one essay open at a time.\n\nNavigation is stack based: home, tags, or search leads to a result list, then the editor opens from one selected row.',
+          'The mobile app should have one document open at a time.\n\nNavigation is stack based: home, tags, or search leads to a result list, then the editor opens from one selected row.',
     ),
-    essay(
+    document(
       id: 2,
       title: 'Meditation and the Mind',
       status: 'Published',
@@ -409,11 +430,12 @@ List<Essay> _seedEssays() {
       minutesAgo: 120,
       words: 4500,
       version: 24,
-      excerpt: 'A polished essay about attention, meditation, and returning.',
+      excerpt:
+          'A polished document about attention, meditation, and returning.',
       document:
           'Attention is not a possession. It is an activity that has to be returned to again and again.\n\nMeditation makes that return visible.',
     ),
-    essay(
+    document(
       id: 3,
       title: 'The Economics of Meditation',
       status: 'In Progress',
@@ -427,7 +449,7 @@ List<Essay> _seedEssays() {
       document:
           'A day has a budget of attention. The question is whether that budget is spent by intention or auctioned away by default.',
     ),
-    essay(
+    document(
       id: 4,
       title: 'Internal notes app direction',
       status: 'Draft',
@@ -441,7 +463,7 @@ List<Essay> _seedEssays() {
       document:
           'The app should open directly into work. Navigation is secondary to writing and retrieval.',
     ),
-    essay(
+    document(
       id: 5,
       title: 'KGQL API shape for notes',
       status: 'In Progress',
@@ -453,9 +475,9 @@ List<Essay> _seedEssays() {
       version: 9,
       excerpt: 'set_kgql_models calls, relation links, and query structs.',
       document:
-          'The app writes current documents to Essay. Meaningful saves create EssaySnap rows.',
+          'The app writes current documents to Document. Meaningful saves create DocumentSnap rows.',
     ),
-    essay(
+    document(
       id: 6,
       title: 'Notes product spec',
       status: 'In Progress',
@@ -469,7 +491,7 @@ List<Essay> _seedEssays() {
       document:
           'Desktop is a workspace. Mobile is a stack. Both share the same repository and document model.',
     ),
-    essay(
+    document(
       id: 7,
       title: 'KGQL document model',
       status: 'Draft',
@@ -479,11 +501,12 @@ List<Essay> _seedEssays() {
       minutesAgo: 3000,
       words: 1370,
       version: 6,
-      excerpt: 'Abstract Essay, Essay, and EssaySnap model type notes.',
+      excerpt:
+          'Abstract Document, Document, and DocumentSnap model type notes.',
       document:
-          'Abstract Essay owns document and json_document. Essay is the canonical live document.',
+          'Abstract Document owns document and json_document. Document is the canonical live document.',
     ),
-    essay(
+    document(
       id: 8,
       title: 'Writing system principles',
       status: 'Published',
@@ -493,27 +516,27 @@ List<Essay> _seedEssays() {
       minutesAgo: 7000,
       words: 1650,
       version: 15,
-      excerpt: 'How internal essays connect to actions, nouns, and context.',
+      excerpt: 'How internal documents connect to actions, nouns, and context.',
       document:
           'A good writing system makes capture easy, retrieval precise, and revision low friction.',
     ),
   ];
 }
 
-Map<int, List<EssaySnap>> _seedSnaps() {
-  return <int, List<EssaySnap>>{
-    for (final essay in _seedEssays())
-      essay.id: <EssaySnap>[
-        EssaySnap(
-          id: essay.id * 10,
-          essayId: essay.id,
+Map<int, List<DocumentSnap>> _seedSnaps() {
+  return <int, List<DocumentSnap>>{
+    for (final document in _seedDocuments())
+      document.id: <DocumentSnap>[
+        DocumentSnap(
+          id: document.id * 10,
+          documentId: document.id,
           name: 'Latest checkpoint',
-          versionNumber: essay.versionNumber,
-          document: essay.document,
-          jsonDocument: essay.jsonDocument,
+          versionNumber: document.versionNumber,
+          document: document.document,
+          jsonDocument: document.jsonDocument,
           source: 'manual',
           changeSummary: 'Latest checkpoint',
-          createdAt: essay.updatedAt,
+          createdAt: document.updatedAt,
         ),
       ],
   };
@@ -530,7 +553,11 @@ const List<LinkedModel> _fakeLinkableModels = <LinkedModel>[
   LinkedModel(id: 301, name: 'Nexus Labs', modelType: 'Company'),
   LinkedModel(id: 302, name: 'OpenAI', modelType: 'Company'),
   LinkedModel(id: 303, name: 'Apple', modelType: 'Company'),
-  LinkedModel(id: 1, name: 'Draft: API design notes', modelType: 'Essay'),
-  LinkedModel(id: 4, name: 'Internal notes app direction', modelType: 'Essay'),
-  LinkedModel(id: 7, name: 'KGQL document model', modelType: 'Essay'),
+  LinkedModel(id: 1, name: 'Draft: API design notes', modelType: 'Document'),
+  LinkedModel(
+    id: 4,
+    name: 'Internal notes app direction',
+    modelType: 'Document',
+  ),
+  LinkedModel(id: 7, name: 'KGQL document model', modelType: 'Document'),
 ];

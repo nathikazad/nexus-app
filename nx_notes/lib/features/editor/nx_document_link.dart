@@ -11,7 +11,7 @@ typedef NxSearchLinkableModels =
       required String query,
     });
 
-typedef NxCreateLinkedEssay = Future<LinkedModel> Function(String title);
+typedef NxCreateLinkedDocument = Future<LinkedModel> Function(String title);
 
 typedef NxLinkableModelSelected =
     Future<void> Function(LinkableModelType modelType, LinkedModel model);
@@ -20,37 +20,38 @@ String nxKgqlHrefForModel(LinkableModelType modelType, LinkedModel model) {
   return 'kgql://${modelType.kgqlName}/${model.id}';
 }
 
-bool nxIsEssayHref(String? href) => nxEssayIdFromHref(href) != null;
+bool nxIsDocumentHref(String? href) => nxDocumentIdFromHref(href) != null;
 
-int? nxEssayIdFromHref(String? href) {
+int? nxDocumentIdFromHref(String? href) {
   if (href == null || href.trim().isEmpty) return null;
   final uri = Uri.tryParse(href.trim());
   if (uri == null || uri.scheme.toLowerCase() != 'kgql') return null;
-  if (uri.host.toLowerCase() !=
-      LinkableModelType.essay.kgqlName.toLowerCase()) {
+  final modelType = uri.host.toLowerCase();
+  if (modelType != LinkableModelType.document.kgqlName.toLowerCase() &&
+      modelType != 'essay') {
     return null;
   }
   final idText = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
   return int.tryParse(idText ?? '');
 }
 
-ToolbarItem buildNxEssayLinkToolbarItem({
+ToolbarItem buildNxDocumentLinkToolbarItem({
   required NxSearchLinkableModels searchLinkableModels,
-  required NxCreateLinkedEssay createEssay,
+  required NxCreateLinkedDocument createDocument,
   required NxLinkableModelSelected onLinkableModelSelected,
 }) {
   return ToolbarItem(
-    id: 'nx.essayLink',
+    id: 'nx.documentLink',
     group: 4,
     isActive: onlyShowInSingleSelectionAndTextType,
     builder: (context, editorState, highlightColor, iconColor, tooltipBuilder) {
       final selection = editorState.selection?.normalized;
       final disabled = selection == null || selection.isCollapsed;
-      final isEssayLink =
-          selection != null && _selectionIsEssayLink(editorState, selection);
+      final isDocumentLink =
+          selection != null && _selectionIsDocumentLink(editorState, selection);
       final effectiveIconColor = disabled
           ? (iconColor ?? Colors.white).withValues(alpha: 0.35)
-          : isEssayLink
+          : isDocumentLink
           ? highlightColor
           : iconColor;
       final child = SizedBox(
@@ -61,7 +62,7 @@ ToolbarItem buildNxEssayLinkToolbarItem({
           highlightColor: Colors.transparent,
           splashColor: Colors.transparent,
           padding: EdgeInsets.zero,
-          tooltip: 'Essay',
+          tooltip: 'Document',
           icon: Icon(
             Icons.description_outlined,
             color: effectiveIconColor,
@@ -70,7 +71,7 @@ ToolbarItem buildNxEssayLinkToolbarItem({
           onPressed: disabled
               ? null
               : () {
-                  showNxEssayLinkPicker(
+                  showNxDocumentLinkPicker(
                     context: context,
                     editorState: editorState,
                     selection: selection,
@@ -79,9 +80,9 @@ ToolbarItem buildNxEssayLinkToolbarItem({
                         .join(' ')
                         .trim(),
                     searchLinkableModels: searchLinkableModels,
-                    createEssay: createEssay,
+                    createDocument: createDocument,
                     onSelected: (model) async {
-                      await nxApplyEssayLinkToSelection(
+                      await nxApplyDocumentLinkToSelection(
                         editorState: editorState,
                         selection: selection,
                         model: model,
@@ -96,12 +97,12 @@ ToolbarItem buildNxEssayLinkToolbarItem({
       if (tooltipBuilder == null) {
         return child;
       }
-      return tooltipBuilder(context, 'nx.essayLink', 'Essay', child);
+      return tooltipBuilder(context, 'nx.documentLink', 'Document', child);
     },
   );
 }
 
-Future<void> nxApplyEssayLinkToSelection({
+Future<void> nxApplyDocumentLinkToSelection({
   required EditorState editorState,
   required Selection selection,
   required LinkedModel model,
@@ -109,20 +110,20 @@ Future<void> nxApplyEssayLinkToSelection({
 }) async {
   await editorState.formatDelta(selection.normalized, {
     BuiltInAttributeKey.href: nxKgqlHrefForModel(
-      LinkableModelType.essay,
+      LinkableModelType.document,
       model,
     ),
   });
-  await onLinkableModelSelected(LinkableModelType.essay, model);
+  await onLinkableModelSelected(LinkableModelType.document, model);
 }
 
-void showNxEssayLinkPicker({
+void showNxDocumentLinkPicker({
   required BuildContext context,
   required EditorState editorState,
   required Selection selection,
   required String initialQuery,
   required NxSearchLinkableModels searchLinkableModels,
-  required NxCreateLinkedEssay createEssay,
+  required NxCreateLinkedDocument createDocument,
   required Future<void> Function(LinkedModel model) onSelected,
 }) {
   final overlay = Overlay.of(context, rootOverlay: true);
@@ -150,10 +151,10 @@ void showNxEssayLinkPicker({
             left: left,
             top: top,
             width: width,
-            child: NxEssayLinkPicker(
+            child: NxDocumentLinkPicker(
               initialQuery: initialQuery,
               searchLinkableModels: searchLinkableModels,
-              createEssay: createEssay,
+              createDocument: createDocument,
               onSelected: (model) async {
                 await onSelected(model);
                 if (entry.mounted) entry.remove();
@@ -183,21 +184,21 @@ Offset _selectionAnchor(BuildContext context, EditorState editorState) {
   return Offset(rect.left, rect.bottom + 8);
 }
 
-bool _selectionIsEssayLink(EditorState editorState, Selection selection) {
+bool _selectionIsDocumentLink(EditorState editorState, Selection selection) {
   final nodes = editorState.getNodesInSelection(selection);
   if (nodes.isEmpty) return false;
   return nodes.allSatisfyInSelection(selection, (delta) {
     return delta.everyAttributes((attributes) {
-      return nxIsEssayHref(attributes[BuiltInAttributeKey.href] as String?);
+      return nxIsDocumentHref(attributes[BuiltInAttributeKey.href] as String?);
     });
   });
 }
 
-class NxEssayLinkPicker extends StatefulWidget {
-  const NxEssayLinkPicker({
+class NxDocumentLinkPicker extends StatefulWidget {
+  const NxDocumentLinkPicker({
     required this.initialQuery,
     required this.searchLinkableModels,
-    required this.createEssay,
+    required this.createDocument,
     required this.onSelected,
     required this.onDismiss,
     super.key,
@@ -205,17 +206,17 @@ class NxEssayLinkPicker extends StatefulWidget {
 
   final String initialQuery;
   final NxSearchLinkableModels searchLinkableModels;
-  final NxCreateLinkedEssay createEssay;
+  final NxCreateLinkedDocument createDocument;
   final Future<void> Function(LinkedModel model) onSelected;
   final VoidCallback onDismiss;
 
   @override
-  State<NxEssayLinkPicker> createState() => _NxEssayLinkPickerState();
+  State<NxDocumentLinkPicker> createState() => _NxDocumentLinkPickerState();
 }
 
-class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
+class _NxDocumentLinkPickerState extends State<NxDocumentLinkPicker> {
   late final TextEditingController _controller;
-  final _focusNode = FocusNode(debugLabel: 'nx_essay_link_picker');
+  final _focusNode = FocusNode(debugLabel: 'nx_document_link_picker');
   Timer? _debounce;
   var _requestId = 0;
   var _loading = false;
@@ -254,7 +255,7 @@ class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
     setState(() => _loading = true);
     try {
       final results = await widget.searchLinkableModels(
-        modelType: LinkableModelType.essay,
+        modelType: LinkableModelType.document,
         query: query,
       );
       if (!mounted || requestId != _requestId) return;
@@ -285,7 +286,7 @@ class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final model = await widget.createEssay(_createTitle);
+      final model = await widget.createDocument(_createTitle);
       await widget.onSelected(model);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -294,7 +295,7 @@ class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
 
   String get _createTitle {
     final query = _controller.text.trim();
-    return query.isEmpty ? 'Untitled essay' : query;
+    return query.isEmpty ? 'Untitled document' : query;
   }
 
   @override
@@ -332,7 +333,7 @@ class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
                     height: 1.35,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Search essays...',
+                    hintText: 'Search documents...',
                     hintStyle: const TextStyle(
                       color: AppColors.faint,
                       fontSize: 13,
@@ -370,23 +371,25 @@ class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
                   shrinkWrap: true,
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   children: <Widget>[
-                    _EssayPickerTile(
+                    _DocumentPickerTile(
                       icon: Icons.add,
                       title: 'Create "$_createTitle"',
-                      subtitle: 'New essay',
+                      subtitle: 'New document',
                       enabled: !_busy,
                       onTap: _create,
                     ),
                     if (_loading)
-                      const _EssayPickerMessage(text: 'Loading essays...')
+                      const _DocumentPickerMessage(text: 'Loading documents...')
                     else if (_results.isEmpty)
-                      const _EssayPickerMessage(text: 'No existing essays')
+                      const _DocumentPickerMessage(
+                        text: 'No existing documents',
+                      )
                     else
                       for (final model in _results.take(12))
-                        _EssayPickerTile(
+                        _DocumentPickerTile(
                           icon: Icons.article_outlined,
                           title: model.name,
-                          subtitle: 'Existing essay',
+                          subtitle: 'Existing document',
                           enabled: !_busy,
                           onTap: () => unawaited(_select(model)),
                         ),
@@ -408,8 +411,8 @@ class _NxEssayLinkPickerState extends State<NxEssayLinkPicker> {
   }
 }
 
-class _EssayPickerTile extends StatelessWidget {
-  const _EssayPickerTile({
+class _DocumentPickerTile extends StatelessWidget {
+  const _DocumentPickerTile({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -479,8 +482,8 @@ class _EssayPickerTile extends StatelessWidget {
   }
 }
 
-class _EssayPickerMessage extends StatelessWidget {
-  const _EssayPickerMessage({required this.text});
+class _DocumentPickerMessage extends StatelessWidget {
+  const _DocumentPickerMessage({required this.text});
 
   final String text;
 

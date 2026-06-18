@@ -1,7 +1,7 @@
-class EssaySnap {
-  const EssaySnap({
+class DocumentSnap {
+  const DocumentSnap({
     required this.id,
-    required this.essayId,
+    required this.documentId,
     required this.name,
     required this.versionNumber,
     required this.document,
@@ -12,7 +12,7 @@ class EssaySnap {
   });
 
   final int id;
-  final int essayId;
+  final int documentId;
   final String name;
   final int versionNumber;
   final String document;

@@ -1,32 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
-import 'package:nx_notes/domain/essay/essay_query.dart';
-import 'package:nx_notes/domain/essay/essay_result_context.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/document/document_result_context.dart';
 
-class EssayTabState {
-  const EssayTabState({
-    required this.essayId,
+class DocumentTabState {
+  const DocumentTabState({
+    required this.documentId,
     this.context,
     this.dirty = false,
     this.history = const <int>[],
   });
 
-  final int essayId;
-  final EssayResultContext? context;
+  final int documentId;
+  final DocumentResultContext? context;
   final bool dirty;
   final List<int> history;
 
-  List<int> get editorStack => <int>[...history, essayId];
+  List<int> get editorStack => <int>[...history, documentId];
 
-  EssayTabState copyWith({
-    int? essayId,
-    EssayResultContext? context,
+  DocumentTabState copyWith({
+    int? documentId,
+    DocumentResultContext? context,
     bool? dirty,
     List<int>? history,
     bool clearContext = false,
   }) {
-    return EssayTabState(
-      essayId: essayId ?? this.essayId,
+    return DocumentTabState(
+      documentId: documentId ?? this.documentId,
       context: clearContext ? null : context ?? this.context,
       dirty: dirty ?? this.dirty,
       history: history ?? this.history,
@@ -37,38 +37,38 @@ class EssayTabState {
 class DesktopWorkspaceState {
   const DesktopWorkspaceState({
     required this.openTabs,
-    this.activeEssayId,
+    this.activeDocumentId,
     this.overlayTitle,
     this.overlayQuery,
     this.overlayResultIds = const <int>[],
-    this.overlayResults = const <Essay>[],
-    this.sidebarTab = SidebarTab.essays,
+    this.overlayResults = const <NxDocument>[],
+    this.sidebarTab = SidebarTab.documents,
     this.sidebarCollapsed = false,
     this.inspectorCollapsed = false,
   });
 
-  final List<EssayTabState> openTabs;
-  final int? activeEssayId;
+  final List<DocumentTabState> openTabs;
+  final int? activeDocumentId;
   final String? overlayTitle;
-  final EssayQuery? overlayQuery;
+  final DocumentQuery? overlayQuery;
   final List<int> overlayResultIds;
-  final List<Essay> overlayResults;
+  final List<NxDocument> overlayResults;
   final SidebarTab sidebarTab;
   final bool sidebarCollapsed;
   final bool inspectorCollapsed;
 
   bool get hasOverlay => overlayTitle != null;
 
-  EssayTabState? get activeTab {
+  DocumentTabState? get activeTab {
     for (final tab in openTabs) {
-      if (tab.essayId == activeEssayId) {
+      if (tab.documentId == activeDocumentId) {
         return tab;
       }
     }
     return null;
   }
 
-  EssayResultContext? get activeContext {
+  DocumentResultContext? get activeContext {
     return activeTab?.context;
   }
 
@@ -77,12 +77,12 @@ class DesktopWorkspaceState {
   }
 
   DesktopWorkspaceState copyWith({
-    List<EssayTabState>? openTabs,
-    int? activeEssayId,
+    List<DocumentTabState>? openTabs,
+    int? activeDocumentId,
     String? overlayTitle,
-    EssayQuery? overlayQuery,
+    DocumentQuery? overlayQuery,
     List<int>? overlayResultIds,
-    List<Essay>? overlayResults,
+    List<NxDocument>? overlayResults,
     SidebarTab? sidebarTab,
     bool? sidebarCollapsed,
     bool? inspectorCollapsed,
@@ -90,14 +90,14 @@ class DesktopWorkspaceState {
   }) {
     return DesktopWorkspaceState(
       openTabs: openTabs ?? this.openTabs,
-      activeEssayId: activeEssayId ?? this.activeEssayId,
+      activeDocumentId: activeDocumentId ?? this.activeDocumentId,
       overlayTitle: clearOverlay ? null : overlayTitle ?? this.overlayTitle,
       overlayQuery: clearOverlay ? null : overlayQuery ?? this.overlayQuery,
       overlayResultIds: clearOverlay
           ? const <int>[]
           : overlayResultIds ?? this.overlayResultIds,
       overlayResults: clearOverlay
-          ? const <Essay>[]
+          ? const <NxDocument>[]
           : overlayResults ?? this.overlayResults,
       sidebarTab: sidebarTab ?? this.sidebarTab,
       sidebarCollapsed: sidebarCollapsed ?? this.sidebarCollapsed,
@@ -106,14 +106,14 @@ class DesktopWorkspaceState {
   }
 }
 
-enum SidebarTab { essays, tags }
+enum SidebarTab { documents, books, tags }
 
 class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
   static const int _maxMountedEditorsPerTab = 5;
 
   @override
   DesktopWorkspaceState build() {
-    return const DesktopWorkspaceState(openTabs: <EssayTabState>[]);
+    return const DesktopWorkspaceState(openTabs: <DocumentTabState>[]);
   }
 
   void setSidebarTab(SidebarTab tab) {
@@ -130,9 +130,9 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
 
   void showOverlay({
     required String title,
-    required EssayQuery query,
+    required DocumentQuery query,
     required List<int> resultIds,
-    List<Essay> results = const <Essay>[],
+    List<NxDocument> results = const <NxDocument>[],
   }) {
     state = state.copyWith(
       overlayTitle: title,
@@ -146,18 +146,18 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
     state = state.copyWith(clearOverlay: true);
   }
 
-  void openEssay(
-    int essayId, {
+  void openDocument(
+    int documentId, {
     bool fromOverlay = false,
-    EssayResultContext? context,
+    DocumentResultContext? context,
   }) {
     var tabs = [...state.openTabs];
-    final index = tabs.indexWhere((tab) => tab.essayId == essayId);
-    EssayResultContext? nextContext = context;
+    final index = tabs.indexWhere((tab) => tab.documentId == documentId);
+    DocumentResultContext? nextContext = context;
     if (fromOverlay &&
         state.overlayTitle != null &&
         state.overlayQuery != null) {
-      nextContext = EssayResultContext(
+      nextContext = DocumentResultContext(
         title: state.overlayTitle!,
         query: state.overlayQuery!,
         resultIds: state.overlayResultIds,
@@ -165,75 +165,84 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
       );
     }
     if (index == -1) {
-      tabs.add(EssayTabState(essayId: essayId, context: nextContext));
+      tabs.add(DocumentTabState(documentId: documentId, context: nextContext));
     } else if (nextContext != null) {
       tabs[index] = tabs[index].copyWith(context: nextContext);
     }
     state = state.copyWith(
       openTabs: tabs,
-      activeEssayId: essayId,
+      activeDocumentId: documentId,
       clearOverlay: true,
     );
   }
 
-  void openEssayInActiveTab(int essayId) {
-    final activeEssayId = state.activeEssayId;
-    if (activeEssayId == null || activeEssayId == essayId) {
+  void openDocumentInActiveTab(int documentId) {
+    final activeDocumentId = state.activeDocumentId;
+    if (activeDocumentId == null || activeDocumentId == documentId) {
       return;
     }
     final tabs = [
       for (final tab in state.openTabs)
-        if (tab.essayId == essayId)
-          // Keep navigation within the active tab. If the target essay is
+        if (tab.documentId == documentId)
+          // Keep navigation within the active tab. If the target document is
           // already open in another tab, remove that tab to avoid duplicate
-          // essay ids confusing active-tab history lookup.
-          ...const <EssayTabState>[]
-        else if (tab.essayId == activeEssayId)
-          _tabAfterInTabNavigation(tab, essayId)
+          // document ids confusing active-tab history lookup.
+          ...const <DocumentTabState>[]
+        else if (tab.documentId == activeDocumentId)
+          _tabAfterInTabNavigation(tab, documentId)
         else
           tab,
     ];
-    state = state.copyWith(openTabs: tabs, activeEssayId: essayId);
+    state = state.copyWith(openTabs: tabs, activeDocumentId: documentId);
   }
 
   void backInActiveTab() {
-    final activeEssayId = state.activeEssayId;
-    if (activeEssayId == null) return;
-    final tabs = <EssayTabState>[];
-    int? nextActiveEssayId;
+    final activeDocumentId = state.activeDocumentId;
+    if (activeDocumentId == null) return;
+    final tabs = <DocumentTabState>[];
+    int? nextActiveDocumentId;
     for (final tab in state.openTabs) {
-      if (tab.essayId != activeEssayId || tab.history.isEmpty) {
+      if (tab.documentId != activeDocumentId || tab.history.isEmpty) {
         tabs.add(tab);
         continue;
       }
       final history = [...tab.history];
-      nextActiveEssayId = history.removeLast();
-      tabs.add(tab.copyWith(essayId: nextActiveEssayId, history: history));
+      nextActiveDocumentId = history.removeLast();
+      tabs.add(
+        tab.copyWith(documentId: nextActiveDocumentId, history: history),
+      );
     }
-    if (nextActiveEssayId == null) return;
-    state = state.copyWith(openTabs: tabs, activeEssayId: nextActiveEssayId);
+    if (nextActiveDocumentId == null) return;
+    state = state.copyWith(
+      openTabs: tabs,
+      activeDocumentId: nextActiveDocumentId,
+    );
   }
 
-  void closeTab(int essayId) {
+  void closeTab(int documentId) {
     if (state.openTabs.length == 1) {
-      state = const DesktopWorkspaceState(openTabs: <EssayTabState>[]);
+      state = const DesktopWorkspaceState(openTabs: <DocumentTabState>[]);
       return;
     }
-    final index = state.openTabs.indexWhere((tab) => tab.essayId == essayId);
+    final index = state.openTabs.indexWhere(
+      (tab) => tab.documentId == documentId,
+    );
     if (index == -1) {
       return;
     }
-    final tabs = state.openTabs.where((tab) => tab.essayId != essayId).toList();
-    final nextActive = state.activeEssayId == essayId
-        ? tabs[index.clamp(0, tabs.length - 1)].essayId
-        : state.activeEssayId;
-    state = state.copyWith(openTabs: tabs, activeEssayId: nextActive);
+    final tabs = state.openTabs
+        .where((tab) => tab.documentId != documentId)
+        .toList();
+    final nextActive = state.activeDocumentId == documentId
+        ? tabs[index.clamp(0, tabs.length - 1)].documentId
+        : state.activeDocumentId;
+    state = state.copyWith(openTabs: tabs, activeDocumentId: nextActive);
   }
 
   void clearActiveContext() {
     final tabs = [
       for (final tab in state.openTabs)
-        if (tab.essayId == state.activeEssayId)
+        if (tab.documentId == state.activeDocumentId)
           tab.copyWith(clearContext: true)
         else
           tab,
@@ -241,8 +250,8 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
     state = state.copyWith(openTabs: tabs);
   }
 
-  List<int> _boundedHistoryForPush(List<int> history, int essayId) {
-    final next = <int>[...history, essayId];
+  List<int> _boundedHistoryForPush(List<int> history, int documentId) {
+    final next = <int>[...history, documentId];
     final maxHistory = _maxMountedEditorsPerTab - 1;
     if (next.length <= maxHistory) {
       return next;
@@ -250,18 +259,21 @@ class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
     return next.sublist(next.length - maxHistory);
   }
 
-  EssayTabState _tabAfterInTabNavigation(EssayTabState tab, int essayId) {
-    final existingIndex = tab.editorStack.indexOf(essayId);
+  DocumentTabState _tabAfterInTabNavigation(
+    DocumentTabState tab,
+    int documentId,
+  ) {
+    final existingIndex = tab.editorStack.indexOf(documentId);
     if (existingIndex != -1) {
       final stack = tab.editorStack.sublist(0, existingIndex + 1);
       return tab.copyWith(
-        essayId: essayId,
+        documentId: documentId,
         history: stack.sublist(0, stack.length - 1),
       );
     }
     return tab.copyWith(
-      essayId: essayId,
-      history: _boundedHistoryForPush(tab.history, tab.essayId),
+      documentId: documentId,
+      history: _boundedHistoryForPush(tab.history, tab.documentId),
     );
   }
 }
@@ -271,12 +283,12 @@ final desktopWorkspaceProvider =
       DesktopWorkspaceNotifier.new,
     );
 
-enum MobileSection { essays, tags, search }
+enum MobileSection { documents, books, tags, search }
 
 class MobileNotesState {
   const MobileNotesState({
-    this.section = MobileSection.essays,
-    this.activeEssayId,
+    this.section = MobileSection.documents,
+    this.activeDocumentId,
     this.resultContext,
     this.searchText = '',
     this.showResults = false,
@@ -284,29 +296,31 @@ class MobileNotesState {
   });
 
   final MobileSection section;
-  final int? activeEssayId;
-  final EssayResultContext? resultContext;
+  final int? activeDocumentId;
+  final DocumentResultContext? resultContext;
   final String searchText;
   final bool showResults;
   final List<int> history;
 
   MobileNotesState copyWith({
     MobileSection? section,
-    int? activeEssayId,
-    EssayResultContext? resultContext,
+    int? activeDocumentId,
+    DocumentResultContext? resultContext,
     String? searchText,
     bool? showResults,
     List<int>? history,
-    bool clearEssay = false,
+    bool clearDocument = false,
     bool clearContext = false,
   }) {
     return MobileNotesState(
       section: section ?? this.section,
-      activeEssayId: clearEssay ? null : activeEssayId ?? this.activeEssayId,
+      activeDocumentId: clearDocument
+          ? null
+          : activeDocumentId ?? this.activeDocumentId,
       resultContext: clearContext ? null : resultContext ?? this.resultContext,
       searchText: searchText ?? this.searchText,
       showResults: showResults ?? this.showResults,
-      history: clearEssay ? const <int>[] : history ?? this.history,
+      history: clearDocument ? const <int>[] : history ?? this.history,
     );
   }
 }
@@ -318,7 +332,7 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
   void setSection(MobileSection section) {
     state = state.copyWith(
       section: section,
-      clearEssay: true,
+      clearDocument: true,
       showResults: false,
     );
   }
@@ -331,42 +345,45 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
     );
   }
 
-  void showResults(EssayResultContext context) {
+  void showResults(DocumentResultContext context) {
     state = state.copyWith(
       resultContext: context,
       showResults: true,
-      clearEssay: true,
+      clearDocument: true,
     );
   }
 
-  void openEssay(int id, {EssayResultContext? context}) {
+  void openDocument(int id, {DocumentResultContext? context}) {
     state = state.copyWith(
-      activeEssayId: id,
+      activeDocumentId: id,
       resultContext: context ?? state.resultContext,
       showResults: false,
     );
   }
 
-  void openEssayFromLink(int id) {
-    final activeEssayId = state.activeEssayId;
-    if (activeEssayId == null || activeEssayId == id) return;
+  void openDocumentFromLink(int id) {
+    final activeDocumentId = state.activeDocumentId;
+    if (activeDocumentId == null || activeDocumentId == id) return;
     state = state.copyWith(
-      activeEssayId: id,
-      history: [...state.history, activeEssayId],
+      activeDocumentId: id,
+      history: [...state.history, activeDocumentId],
       showResults: false,
     );
   }
 
   void back() {
-    if (state.activeEssayId != null && state.history.isNotEmpty) {
+    if (state.activeDocumentId != null && state.history.isNotEmpty) {
       final history = [...state.history];
-      final previousEssayId = history.removeLast();
-      state = state.copyWith(activeEssayId: previousEssayId, history: history);
-    } else if (state.activeEssayId != null && state.resultContext != null) {
-      state = state.copyWith(clearEssay: true, showResults: true);
-    } else if (state.activeEssayId != null) {
+      final previousDocumentId = history.removeLast();
       state = state.copyWith(
-        clearEssay: true,
+        activeDocumentId: previousDocumentId,
+        history: history,
+      );
+    } else if (state.activeDocumentId != null && state.resultContext != null) {
+      state = state.copyWith(clearDocument: true, showResults: true);
+    } else if (state.activeDocumentId != null) {
+      state = state.copyWith(
+        clearDocument: true,
         clearContext: true,
         showResults: false,
       );

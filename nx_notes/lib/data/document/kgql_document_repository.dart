@@ -1,48 +1,51 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:nx_notes/data/essay/essay_attr_keys.dart';
-import 'package:nx_notes/data/essay/essay_mapper.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
-import 'package:nx_notes/domain/essay/essay_query.dart';
-import 'package:nx_notes/domain/essay/essay_repository.dart';
-import 'package:nx_notes/domain/essay/essay_snap.dart';
+import 'package:nx_notes/data/document/document_attr_keys.dart';
+import 'package:nx_notes/data/document/document_mapper.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/document/document_repository.dart';
+import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart' as domain_tags;
 
-class KgqlEssayRepository implements EssayRepository {
-  KgqlEssayRepository({
+class KgqlDocumentRepository implements DocumentRepository {
+  KgqlDocumentRepository({
     required GraphQLClient client,
-    required Future<ModelType> Function() loadEssaySchema,
-    required Future<ModelType> Function() loadEssaySnapSchema,
+    required Future<ModelType> Function() loadDocumentSchema,
+    required Future<ModelType> Function() loadDocumentSnapSchema,
   }) : _client = client,
-       _loadEssaySchema = loadEssaySchema,
-       _loadEssaySnapSchema = loadEssaySnapSchema;
+       _loadDocumentSchema = loadDocumentSchema,
+       _loadDocumentSnapSchema = loadDocumentSnapSchema;
 
   final GraphQLClient _client;
-  final Future<ModelType> Function() _loadEssaySchema;
-  final Future<ModelType> Function() _loadEssaySnapSchema;
+  final Future<ModelType> Function() _loadDocumentSchema;
+  final Future<ModelType> Function() _loadDocumentSnapSchema;
   @override
-  Future<Essay> create({String? title}) async {
+  Future<NxDocument> create({
+    String? title,
+    DocumentKind kind = DocumentKind.document,
+  }) async {
     final id = await setKgqlModel(
       _client,
-      setModelRequestForCreateEssay(title: title),
+      setModelRequestForCreateDocument(title: title, kind: kind),
     );
-    return essayForCreatedId(id, title: title);
+    return documentForCreatedId(id, title: title, kind: kind);
   }
 
   @override
-  Future<EssaySnap> createSnapshot(
-    int essayId, {
+  Future<DocumentSnap> createSnapshot(
+    int documentId, {
     required String source,
     String changeSummary = '',
   }) async {
-    await _loadEssaySnapSchema();
-    final essay = await getById(essayId);
-    if (essay == null) {
-      throw StateError('Essay $essayId not found');
+    await _loadDocumentSnapSchema();
+    final document = await getById(documentId);
+    if (document == null) {
+      throw StateError('Document $documentId not found');
     }
 
-    final existing = await listSnapshots(essayId);
+    final existing = await listSnapshots(documentId);
     final nextVersion = existing.isEmpty
         ? 1
         : existing
@@ -53,7 +56,7 @@ class KgqlEssayRepository implements EssayRepository {
     final snapId = await setKgqlModel(
       _client,
       setModelRequestForCreateSnapshot(
-        essay: essay,
+        document: document,
         versionNumber: nextVersion,
         source: source,
         name: changeSummary.trim().isEmpty ? source : changeSummary.trim(),
@@ -69,7 +72,10 @@ class KgqlEssayRepository implements EssayRepository {
         SetModelRequest(
           id: existing.first.id,
           relations: [
-            ModelRelation(modelType: kEssaySnapModelTypeName, link: [snapId]),
+            ModelRelation(
+              modelType: kDocumentSnapModelTypeName,
+              link: [snapId],
+            ),
           ],
         ),
       );
@@ -78,20 +84,20 @@ class KgqlEssayRepository implements EssayRepository {
     await setKgqlModel(
       _client,
       SetModelRequest(
-        id: essayId,
+        id: documentId,
         relations: [
-          ModelRelation(modelType: kEssaySnapModelTypeName, link: [snapId]),
+          ModelRelation(modelType: kDocumentSnapModelTypeName, link: [snapId]),
         ],
       ),
     );
 
-    return EssaySnap(
+    return DocumentSnap(
       id: snapId,
-      essayId: essayId,
+      documentId: documentId,
       name: changeSummary.trim().isEmpty ? source : changeSummary.trim(),
       versionNumber: nextVersion,
-      document: essay.document,
-      jsonDocument: essay.jsonDocument,
+      document: document.document,
+      jsonDocument: document.jsonDocument,
       source: source,
       changeSummary: changeSummary,
       createdAt: DateTime.now(),
@@ -99,27 +105,27 @@ class KgqlEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<Essay?> getById(int id) async {
-    final schema = await _loadEssaySchema();
+  Future<NxDocument?> getById(int id) async {
+    final schema = await _loadDocumentSchema();
     final model = await fetchKgqlModelById(
       _client,
-      modelTypeName: kEssayModelTypeName,
+      modelTypeName: kDocumentModelTypeName,
       id: id,
-      struct: essayFetchStruct(schema),
+      struct: documentFetchStruct(schema),
     );
     if (model == null) return null;
-    return essayFromModel(
+    return documentFromModel(
       model,
-      versionNumber: _latestVersionNumberFromEssayModel(model),
+      versionNumber: _latestVersionNumberFromDocumentModel(model),
     );
   }
 
   @override
-  Future<List<Essay>> listByTag(EssayTagFilter filter) async {
+  Future<List<NxDocument>> listByTag(DocumentTagFilter filter) async {
     final models = await fetchKgqlModels(
       _client,
       filter: {
-        'model_type': kEssayModelTypeName,
+        'model_type': kDocumentModelTypeName,
         'tag_filters': [
           {
             'system': filter.system,
@@ -128,24 +134,34 @@ class KgqlEssayRepository implements EssayRepository {
           },
         ],
       },
-      struct: essaySummaryFetchStruct(),
+      struct: documentSummaryFetchStruct(),
     );
-    return _sortedEssaySummaries(models);
+    return _sortedDocumentSummaries(models);
   }
 
   @override
-  Future<List<Essay>> listPinned({int limit = 20}) async {
+  Future<List<NxDocument>> listPinned({int limit = 20}) async {
     final models = await fetchKgqlModels(
       _client,
       filter: {
-        'model_type': kEssayModelTypeName,
+        'model_type': kDocumentModelTypeName,
         'filters': [
-          {'key': kEssayAttrPinned, 'op': '=', 'value': true},
+          {'key': kDocumentAttrPinned, 'op': '=', 'value': true},
         ],
       },
-      struct: essaySummaryFetchStruct(),
+      struct: documentSummaryFetchStruct(),
     );
-    return _sortedEssaySummaries(models).take(limit).toList();
+    return _sortedDocumentSummaries(models).take(limit).toList();
+  }
+
+  @override
+  Future<List<NxDocument>> listBooks({int limit = 50}) async {
+    final models = await fetchKgqlModels(
+      _client,
+      filter: {'model_type': kBookModelTypeName},
+      struct: documentSummaryFetchStruct(),
+    );
+    return _sortedDocumentSummaries(models).take(limit).toList();
   }
 
   @override
@@ -181,14 +197,14 @@ class KgqlEssayRepository implements EssayRepository {
 
   @override
   Future<void> attachLinkedModel({
-    required int essayId,
+    required int documentId,
     required LinkableModelType modelType,
     required int modelId,
   }) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
-        id: essayId,
+        id: documentId,
         relations: [
           ModelRelation(modelType: modelType.kgqlName, link: [modelId]),
         ],
@@ -197,48 +213,48 @@ class KgqlEssayRepository implements EssayRepository {
   }
 
   @override
-  Future<void> attachProject(int essayId, int projectId) async {
+  Future<void> attachProject(int documentId, int projectId) async {
     await attachLinkedModel(
-      essayId: essayId,
+      documentId: documentId,
       modelType: LinkableModelType.project,
       modelId: projectId,
     );
   }
 
   @override
-  Future<void> detachProject(int essayId, int relationId) async {
+  Future<void> detachProject(int documentId, int relationId) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
-        id: essayId,
+        id: documentId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
     );
   }
 
   @override
-  Future<List<Essay>> listRecent({int limit = 20}) async {
+  Future<List<NxDocument>> listRecent({int limit = 20}) async {
     final rows = await _listAll();
     return rows.take(limit).toList();
   }
 
   @override
-  Future<List<EssaySnap>> listSnapshots(int essayId) async {
-    final schema = await _loadEssaySchema();
+  Future<List<DocumentSnap>> listSnapshots(int documentId) async {
+    final schema = await _loadDocumentSchema();
     final model = await fetchKgqlModelById(
       _client,
-      modelTypeName: kEssayModelTypeName,
-      id: essayId,
-      struct: essayFetchStruct(schema),
+      modelTypeName: kDocumentModelTypeName,
+      id: documentId,
+      struct: documentFetchStruct(schema),
     );
-    if (model == null) return const <EssaySnap>[];
-    return essaySnapsFromEssayModel(model);
+    if (model == null) return const <DocumentSnap>[];
+    return documentSnapsFromDocumentModel(model);
   }
 
   @override
   Future<List<domain_tags.TagSystem>> listTagSystems() async {
-    final schema = await _loadEssaySchema();
-    final essays = await _listAllSummaries();
+    final schema = await _loadDocumentSchema();
+    final documents = await _listAllSummaries();
     return [
       for (final system in schema.tagSystems ?? const <TagSystem>[])
         domain_tags.TagSystem(
@@ -247,32 +263,35 @@ class KgqlEssayRepository implements EssayRepository {
           exclusive: system.selectionMode == 'exclusive',
           nodes: [
             for (final node in system.nodes)
-              _mapTagNode(node, system.name, essays),
+              _mapTagNode(node, system.name, documents),
           ],
         ),
     ];
   }
 
   @override
-  Future<List<Essay>> search(String query) async {
+  Future<List<NxDocument>> search(String query) async {
     final q = query.trim().toLowerCase();
-    if (q.isEmpty) return const <Essay>[];
+    if (q.isEmpty) return const <NxDocument>[];
     final rows = await _listAllSummaries();
-    return rows.where((essay) {
+    return rows.where((document) {
       return [
-        essay.title,
-        essay.document,
-        essay.excerpt,
-        essay.status,
-        ...essay.tagsBySystem.values.expand((tags) => tags),
+        document.title,
+        document.document,
+        document.excerpt,
+        document.status,
+        ...document.tagsBySystem.values.expand((tags) => tags),
       ].join(' ').toLowerCase().contains(q);
     }).toList();
   }
 
   @override
-  Future<Essay> updateDraft(Essay essay) async {
-    await setKgqlModel(_client, setModelRequestForUpdateEssay(essay));
-    return essay.copyWith(updatedAt: DateTime.now(), updatedLabel: 'just now');
+  Future<NxDocument> updateDraft(NxDocument document) async {
+    await setKgqlModel(_client, setModelRequestForUpdateDocument(document));
+    return document.copyWith(
+      updatedAt: DateTime.now(),
+      updatedLabel: 'just now',
+    );
   }
 
   @override
@@ -280,25 +299,25 @@ class KgqlEssayRepository implements EssayRepository {
     await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
   }
 
-  Future<List<Essay>> _listAll() async {
+  Future<List<NxDocument>> _listAll() async {
     final models = await fetchKgqlModels(
       _client,
-      filter: {'model_type': kEssayModelTypeName},
-      struct: essaySummaryFetchStruct(),
+      filter: {'model_type': kDocumentModelTypeName},
+      struct: documentSummaryFetchStruct(),
     );
-    return _sortedEssaySummaries(models);
+    return _sortedDocumentSummaries(models);
   }
 
-  Future<List<Essay>> _listAllSummaries() => _listAll();
+  Future<List<NxDocument>> _listAllSummaries() => _listAll();
 
-  List<Essay> _sortedEssaySummaries(List<Model> models) {
-    final rows = [for (final model in models) essaySummaryFromModel(model)]
+  List<NxDocument> _sortedDocumentSummaries(List<Model> models) {
+    final rows = [for (final model in models) documentSummaryFromModel(model)]
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return rows;
   }
 
-  int _latestVersionNumberFromEssayModel(Model model) {
-    final snaps = essaySnapsFromEssayModel(model);
+  int _latestVersionNumberFromDocumentModel(Model model) {
+    final snaps = documentSnapsFromDocumentModel(model);
     if (snaps.isEmpty) return 0;
     return snaps.first.versionNumber;
   }
@@ -306,14 +325,14 @@ class KgqlEssayRepository implements EssayRepository {
   domain_tags.TagNode _mapTagNode(
     TagNode node,
     String system,
-    List<Essay> essays,
+    List<NxDocument> documents,
   ) {
     final children = [
       for (final child in node.children ?? const <TagNode>[])
-        _mapTagNode(child, system, essays),
+        _mapTagNode(child, system, documents),
     ];
-    final count = essays
-        .where((essay) => _essayHasTag(essay, system, node.name))
+    final count = documents
+        .where((document) => _documentHasTag(document, system, node.name))
         .length;
     return domain_tags.TagNode(
       name: node.name,
@@ -322,10 +341,10 @@ class KgqlEssayRepository implements EssayRepository {
     );
   }
 
-  bool _essayHasTag(Essay essay, String system, String node) {
+  bool _documentHasTag(NxDocument document, String system, String node) {
     return switch (system) {
-      kEssayStatusTagSystem => essay.status == node,
-      _ => essay.tagsBySystem[system]?.contains(node) ?? false,
+      kDocumentStatusTagSystem => document.status == node,
+      _ => document.tagsBySystem[system]?.contains(node) ?? false,
     };
   }
 }

@@ -7,7 +7,7 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeEssayId = workspace.activeEssayId;
+    final activeDocumentId = workspace.activeDocumentId;
     final activeTab = workspace.activeTab;
     return Column(
       children: <Widget>[
@@ -27,7 +27,7 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
                     for (final tab in workspace.openTabs)
                       _EditorTab(
                         tab: tab,
-                        active: tab.essayId == workspace.activeEssayId,
+                        active: tab.documentId == workspace.activeDocumentId,
                       ),
                   ],
                 ),
@@ -35,10 +35,10 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
             ],
           ),
         ),
-        if (workspace.activeContext != null && activeEssayId != null)
+        if (workspace.activeContext != null && activeDocumentId != null)
           EditorContextBar(
             resultContext: workspace.activeContext!,
-            activeEssayId: activeEssayId,
+            activeDocumentId: activeDocumentId,
             onBack: () => ref
                 .read(desktopWorkspaceProvider.notifier)
                 .showOverlay(
@@ -52,8 +52,8 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
                 .clearActiveContext(),
           ),
         Expanded(
-          child: activeEssayId == null || activeTab == null
-              ? const _NoEssaySelected()
+          child: activeDocumentId == null || activeTab == null
+              ? const _NoDocumentSelected()
               : _MountedEditorStack(
                   tab: activeTab,
                   canNavigateBack: workspace.canNavigateActiveTabBack,
@@ -67,23 +67,23 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
 class _MountedEditorStack extends ConsumerWidget {
   const _MountedEditorStack({required this.tab, required this.canNavigateBack});
 
-  final EssayTabState tab;
+  final DocumentTabState tab;
   final bool canNavigateBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stack = tab.editorStack;
-    final rawActiveIndex = stack.indexOf(tab.essayId);
+    final rawActiveIndex = stack.indexOf(tab.documentId);
     final activeIndex = rawActiveIndex < 0 ? 0 : rawActiveIndex;
     return IndexedStack(
       index: activeIndex,
       sizing: StackFit.expand,
       children: <Widget>[
-        for (final essayId in stack)
+        for (final documentId in stack)
           _MountedEditorSession(
-            key: ValueKey<int>(essayId),
-            essayId: essayId,
-            active: essayId == tab.essayId,
+            key: ValueKey<int>(documentId),
+            documentId: documentId,
+            active: documentId == tab.documentId,
             canNavigateBack: canNavigateBack,
           ),
       ],
@@ -93,13 +93,13 @@ class _MountedEditorStack extends ConsumerWidget {
 
 class _MountedEditorSession extends ConsumerWidget {
   const _MountedEditorSession({
-    required this.essayId,
+    required this.documentId,
     required this.active,
     required this.canNavigateBack,
     super.key,
   });
 
-  final int essayId;
+  final int documentId;
   final bool active;
   final bool canNavigateBack;
 
@@ -109,12 +109,12 @@ class _MountedEditorSession extends ConsumerWidget {
       enabled: active,
       child: IgnorePointer(
         ignoring: !active,
-        child: EssayEditorView(
-          essayId: essayId,
+        child: DocumentEditorView(
+          documentId: documentId,
           active: active,
-          onOpenEssayLink: (linkedEssayId) => ref
+          onOpenDocumentLink: (linkedDocumentId) => ref
               .read(desktopWorkspaceProvider.notifier)
-              .openEssayInActiveTab(linkedEssayId),
+              .openDocumentInActiveTab(linkedDocumentId),
           canNavigateBack: active && canNavigateBack,
           onNavigateBack: active
               ? () => ref
@@ -127,25 +127,25 @@ class _MountedEditorSession extends ConsumerWidget {
   }
 }
 
-class _NoEssaySelected extends ConsumerWidget {
-  const _NoEssaySelected();
+class _NoDocumentSelected extends ConsumerWidget {
+  const _NoDocumentSelected();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recent = ref.watch(recentEssaysProvider);
+    final recent = ref.watch(recentDocumentsProvider);
     return recent.when(
       data: (rows) {
         if (rows.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref
                 .read(desktopWorkspaceProvider.notifier)
-                .openEssay(rows.first.id);
+                .openDocument(rows.first.id);
           });
           return const Center(child: CircularProgressIndicator());
         }
         return const Center(
           child: Text(
-            'Create an essay from the sidebar.',
+            'Create an document from the sidebar.',
             style: TextStyle(color: AppColors.muted),
           ),
         );
@@ -159,19 +159,20 @@ class _NoEssaySelected extends ConsumerWidget {
 class _EditorTab extends ConsumerWidget {
   const _EditorTab({required this.tab, required this.active});
 
-  final EssayTabState tab;
+  final DocumentTabState tab;
   final bool active;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final essay = ref.watch(essayByIdProvider(tab.essayId)).value;
+    final document = ref.watch(documentByIdProvider(tab.documentId)).value;
     return Material(
       color: active ? AppColors.panel : Colors.transparent,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
       child: InkWell(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-        onTap: () =>
-            ref.read(desktopWorkspaceProvider.notifier).openEssay(tab.essayId),
+        onTap: () => ref
+            .read(desktopWorkspaceProvider.notifier)
+            .openDocument(tab.documentId),
         child: Container(
           width: 178,
           padding: const EdgeInsets.fromLTRB(12, 0, 7, 0),
@@ -193,7 +194,7 @@ class _EditorTab extends ConsumerWidget {
               ],
               Expanded(
                 child: Text(
-                  essay?.title ?? 'Essay ${tab.essayId}',
+                  document?.title ?? 'Document ${tab.documentId}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -212,7 +213,7 @@ class _EditorTab extends ConsumerWidget {
                 ),
                 onPressed: () => ref
                     .read(desktopWorkspaceProvider.notifier)
-                    .closeTab(tab.essayId),
+                    .closeTab(tab.documentId),
                 icon: const Icon(Icons.close, size: 15, color: AppColors.faint),
               ),
             ],

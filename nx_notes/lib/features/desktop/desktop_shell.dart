@@ -1,16 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
-import 'package:nx_notes/domain/essay/essay_snap.dart';
+import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
-import 'package:nx_notes/features/essay/essay_actions.dart';
-import 'package:nx_notes/features/editor/essay_editor_view.dart';
-import 'package:nx_notes/features/navigator/essay_row.dart';
+import 'package:nx_notes/features/document/document_actions.dart';
+import 'package:nx_notes/features/editor/document_editor_view.dart';
+import 'package:nx_notes/features/navigator/document_row.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
 
 part 'desktop_sidebar.dart';
@@ -54,7 +57,9 @@ class DesktopShell extends ConsumerWidget {
               else
                 SizedBox(
                   width: _inspectorWidth,
-                  child: _DesktopInspector(essayId: workspace.activeEssayId),
+                  child: _DesktopInspector(
+                    documentId: workspace.activeDocumentId,
+                  ),
                 ),
             ],
           ),

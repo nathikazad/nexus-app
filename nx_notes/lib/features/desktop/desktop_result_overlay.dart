@@ -29,7 +29,7 @@ class _DesktopResultOverlay extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  '${rows.length} essays',
+                  '${rows.length} documents',
                   style: const TextStyle(fontSize: 14, color: AppColors.muted),
                 ),
                 const SizedBox(width: 16),
@@ -53,18 +53,18 @@ class _DesktopResultOverlay extends ConsumerWidget {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'Pick a row to open it in an essay tab. Press Esc to close.',
+                'Pick a row to open it in an document tab. Press Esc to close.',
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ),
             const Divider(height: 1),
             const SizedBox(height: 12),
-            for (final essay in rows)
+            for (final document in rows)
               _OverlayResultRow(
-                essay: essay,
+                document: document,
                 onTap: () => ref
                     .read(desktopWorkspaceProvider.notifier)
-                    .openEssay(essay.id, fromOverlay: true),
+                    .openDocument(document.id, fromOverlay: true),
               ),
           ],
         ),
@@ -74,9 +74,9 @@ class _DesktopResultOverlay extends ConsumerWidget {
 }
 
 class _OverlayResultRow extends StatelessWidget {
-  const _OverlayResultRow({required this.essay, required this.onTap});
+  const _OverlayResultRow({required this.document, required this.onTap});
 
-  final Essay essay;
+  final NxDocument document;
   final VoidCallback onTap;
 
   @override
@@ -94,11 +94,11 @@ class _OverlayResultRow extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  StatusDot(status: essay.status),
+                  StatusDot(status: document.status),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      essay.title,
+                      document.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -109,7 +109,7 @@ class _OverlayResultRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${essay.status} · edited ${essay.updatedLabel}',
+                    '${document.status} · edited ${document.updatedLabel}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.muted,
@@ -119,7 +119,7 @@ class _OverlayResultRow extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                essay.excerpt,
+                document.excerpt,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 13, color: AppColors.muted),

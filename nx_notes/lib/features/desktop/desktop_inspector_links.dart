@@ -1,16 +1,16 @@
 part of 'desktop_shell.dart';
 
 class _InspectorLinksEditor extends ConsumerWidget {
-  const _InspectorLinksEditor({required this.essay});
+  const _InspectorLinksEditor({required this.document});
 
-  final Essay essay;
+  final NxDocument document;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectLinks = essay.links
+    final projectLinks = document.links
         .where((link) => link.modelType == 'Project')
         .toList();
-    final otherLinks = essay.links
+    final otherLinks = document.links
         .where((link) => link.modelType != 'Project')
         .toList();
     return Column(
@@ -34,9 +34,10 @@ class _InspectorLinksEditor extends ConsumerWidget {
                 label: project.name,
                 onRemove: project.relationId == null
                     ? null
-                    : () => _detachProject(ref, essay.id, project.relationId!),
+                    : () =>
+                          _detachProject(ref, document.id, project.relationId!),
               ),
-            _AddProjectMenu(essay: essay, selectedProjects: projectLinks),
+            _AddProjectMenu(document: document, selectedProjects: projectLinks),
           ],
         ),
         const SizedBox(height: 18),
@@ -86,9 +87,12 @@ class _InspectorLinksEditor extends ConsumerWidget {
 }
 
 class _AddProjectMenu extends ConsumerWidget {
-  const _AddProjectMenu({required this.essay, required this.selectedProjects});
+  const _AddProjectMenu({
+    required this.document,
+    required this.selectedProjects,
+  });
 
-  final Essay essay;
+  final NxDocument document;
   final List<LinkedModel> selectedProjects;
 
   @override
@@ -104,7 +108,7 @@ class _AddProjectMenu extends ConsumerWidget {
       color: AppColors.panel,
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      onSelected: (projectId) => _attachProject(ref, essay.id, projectId),
+      onSelected: (projectId) => _attachProject(ref, document.id, projectId),
       itemBuilder: (context) => [
         for (final project in available)
           PopupMenuItem<int>(
@@ -132,14 +136,22 @@ class _AddProjectMenu extends ConsumerWidget {
   }
 }
 
-Future<void> _attachProject(WidgetRef ref, int essayId, int projectId) async {
+Future<void> _attachProject(
+  WidgetRef ref,
+  int documentId,
+  int projectId,
+) async {
   await ref
-      .read(essayMutationControllerProvider)
-      .attachProject(essayId, projectId);
+      .read(documentMutationControllerProvider)
+      .attachProject(documentId, projectId);
 }
 
-Future<void> _detachProject(WidgetRef ref, int essayId, int relationId) async {
+Future<void> _detachProject(
+  WidgetRef ref,
+  int documentId,
+  int relationId,
+) async {
   await ref
-      .read(essayMutationControllerProvider)
-      .detachProject(essayId, relationId);
+      .read(documentMutationControllerProvider)
+      .detachProject(documentId, relationId);
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
+import 'package:nx_notes/domain/document/document.dart';
 
-class EssayRow extends StatelessWidget {
-  const EssayRow({required this.essay, required this.onTap, super.key});
+class DocumentRow extends StatelessWidget {
+  const DocumentRow({required this.document, required this.onTap, super.key});
 
-  final Essay essay;
+  final NxDocument document;
   final VoidCallback onTap;
 
   @override
@@ -27,11 +27,11 @@ class EssayRow extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  StatusDot(status: essay.status),
+                  StatusDot(status: document.status),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      essay.title,
+                      document.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -41,7 +41,7 @@ class EssayRow extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                '${essay.status} · ${essay.topics.isEmpty ? 'Untagged' : essay.topics.first} · ${essay.updatedLabel}',
+                '${document.status} · ${document.topics.isEmpty ? 'Untagged' : document.topics.first} · ${document.updatedLabel}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(
@@ -50,7 +50,7 @@ class EssayRow extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                essay.excerpt,
+                document.excerpt,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(

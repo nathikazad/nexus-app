@@ -1,5 +1,5 @@
-class EssayTagFilter {
-  const EssayTagFilter({
+class DocumentTagFilter {
+  const DocumentTagFilter({
     required this.system,
     required this.node,
     this.includeDescendants = false,
@@ -10,14 +10,14 @@ class EssayTagFilter {
   final bool includeDescendants;
 }
 
-class EssayQuery {
-  const EssayQuery({
+class DocumentQuery {
+  const DocumentQuery({
     this.searchText = '',
-    this.tagFilters = const <EssayTagFilter>[],
+    this.tagFilters = const <DocumentTagFilter>[],
     this.pinnedOnly = false,
   });
 
   final String searchText;
-  final List<EssayTagFilter> tagFilters;
+  final List<DocumentTagFilter> tagFilters;
   final bool pinnedOnly;
 }

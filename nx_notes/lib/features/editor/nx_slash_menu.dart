@@ -6,7 +6,7 @@ CharacterShortcutEvent nxSlashCommand({
     required String query,
   })
   searchLinkableModels,
-  required Future<LinkedModel> Function(String title) createLinkedEssay,
+  required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
 }) {
@@ -31,7 +31,7 @@ CharacterShortcutEvent nxSlashCommand({
         context,
         editorState,
         searchLinkableModels: searchLinkableModels,
-        createLinkedEssay: createLinkedEssay,
+        createLinkedDocument: createLinkedDocument,
         onLinkableModelSelected: onLinkableModelSelected,
       );
       return true;
@@ -67,7 +67,7 @@ void _showNxSlashOverlay(
     required String query,
   })
   searchLinkableModels,
-  required Future<LinkedModel> Function(String title) createLinkedEssay,
+  required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
 }) {
@@ -89,7 +89,7 @@ void _showNxSlashOverlay(
           editorState: editorState,
           menuService: menuService,
           searchLinkableModels: searchLinkableModels,
-          createLinkedEssay: createLinkedEssay,
+          createLinkedDocument: createLinkedDocument,
           onLinkableModelSelected: onLinkableModelSelected,
           onDismiss: () {
             if (entry.mounted) {
@@ -108,7 +108,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
     required this.editorState,
     required this.menuService,
     required this.searchLinkableModels,
-    required this.createLinkedEssay,
+    required this.createLinkedDocument,
     required this.onLinkableModelSelected,
     required this.onDismiss,
     super.key,
@@ -121,7 +121,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
     required String query,
   })
   searchLinkableModels;
-  final Future<LinkedModel> Function(String title) createLinkedEssay;
+  final Future<LinkedModel> Function(String title) createLinkedDocument;
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
   final VoidCallback onDismiss;
@@ -212,12 +212,12 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     final selectedType = _selectedLinkableType;
     if (selectedType != null) {
       return <_NxSlashRow>[
-        if (selectedType == LinkableModelType.essay)
+        if (selectedType == LinkableModelType.document)
           _NxLinkableModelResultRow(
             icon: Icons.add,
             title: 'Create "$_linkableQueryTitle"',
-            subtitle: 'New essay',
-            onSelected: () => _createAndSelectEssay(_linkableQueryTitle),
+            subtitle: 'New document',
+            onSelected: () => _createAndSelectDocument(_linkableQueryTitle),
           ),
         for (final model in _linkableResults)
           _NxLinkableModelResultRow(
@@ -264,7 +264,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
 
   String get _linkableQueryTitle {
     final query = _linkableQuery.trim();
-    return query.isEmpty ? 'Untitled essay' : query;
+    return query.isEmpty ? 'Untitled document' : query;
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -400,11 +400,14 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     widget.onDismiss();
   }
 
-  Future<void> _createAndSelectEssay(String title) async {
-    final model = await widget.createLinkedEssay(title);
+  Future<void> _createAndSelectDocument(String title) async {
+    final model = await widget.createLinkedDocument(title);
     if (!mounted) return;
-    _deleteSlashKeywordAndInsertLinkableModel(LinkableModelType.essay, model);
-    await widget.onLinkableModelSelected(LinkableModelType.essay, model);
+    _deleteSlashKeywordAndInsertLinkableModel(
+      LinkableModelType.document,
+      model,
+    );
+    await widget.onLinkableModelSelected(LinkableModelType.document, model);
     widget.onDismiss();
   }
 
@@ -685,7 +688,7 @@ IconData _iconForModelTypeName(String modelType) {
     'Project' => Icons.folder_open_outlined,
     'Person' => Icons.person_outline,
     'Company' => Icons.business_outlined,
-    'Essay' => Icons.article_outlined,
+    'Document' => Icons.article_outlined,
     _ => Icons.link,
   };
 }

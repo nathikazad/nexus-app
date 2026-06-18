@@ -75,7 +75,7 @@ class _NotesLoginScreenState extends ConsumerState<NotesLoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Sign in to load essays from your personal domain.',
+                      'Sign in to load documents from your personal domain.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: AppColors.muted),
                     ),

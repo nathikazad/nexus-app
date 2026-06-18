@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
-import 'package:nx_notes/features/editor/nx_essay_link.dart';
+import 'package:nx_notes/features/editor/nx_document_link.dart';
 import 'package:provider/provider.dart';
 
 const String nxHighlightNoteIdAttribute = 'nx_note_id';
@@ -911,13 +911,13 @@ class _NxInlineLinkActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final essayId = nxEssayIdFromHref(href);
+    final documentId = nxDocumentIdFromHref(href);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          essayId == null ? href : 'Essay $essayId',
+          documentId == null ? href : 'Document $documentId',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(

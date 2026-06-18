@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
-import 'package:nx_notes/domain/essay/essay.dart';
-import 'package:nx_notes/domain/essay/essay_query.dart';
-import 'package:nx_notes/domain/essay/essay_result_context.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/document/document_result_context.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
-import 'package:nx_notes/features/editor/essay_editor_view.dart';
-import 'package:nx_notes/features/essay/essay_actions.dart';
-import 'package:nx_notes/features/navigator/essay_row.dart';
+import 'package:nx_notes/features/editor/document_editor_view.dart';
+import 'package:nx_notes/features/document/document_actions.dart';
+import 'package:nx_notes/features/navigator/document_row.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
 
 class MobileShell extends ConsumerWidget {
@@ -19,7 +19,7 @@ class MobileShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mobileNotesProvider);
-    if (state.activeEssayId != null) {
+    if (state.activeDocumentId != null) {
       return _MobileEditor(state: state);
     }
     if (state.showResults && state.resultContext != null) {
@@ -42,7 +42,8 @@ class MobileShell extends ConsumerWidget {
         ),
       ),
       body: switch (state.section) {
-        MobileSection.essays => const _MobileHome(),
+        MobileSection.documents => const _MobileHome(),
+        MobileSection.books => const _MobileBooks(),
         MobileSection.tags => const _MobileTags(),
         MobileSection.search => const _MobileSearch(),
       },
@@ -112,11 +113,19 @@ class _MobileBottomNav extends ConsumerWidget {
           children: <Widget>[
             _MobileNavItem(
               icon: Icons.description_outlined,
-              label: 'Essays',
-              active: section == MobileSection.essays,
+              label: 'Docs',
+              active: section == MobileSection.documents,
               onTap: () => ref
                   .read(mobileNotesProvider.notifier)
-                  .setSection(MobileSection.essays),
+                  .setSection(MobileSection.documents),
+            ),
+            _MobileNavItem(
+              icon: Icons.menu_book_outlined,
+              label: 'Books',
+              active: section == MobileSection.books,
+              onTap: () => ref
+                  .read(mobileNotesProvider.notifier)
+                  .setSection(MobileSection.books),
             ),
             _MobileNavItem(
               icon: Icons.sell_outlined,
@@ -188,15 +197,17 @@ class _MobileHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pinned = ref.watch(pinnedEssaysProvider).value ?? const <Essay>[];
-    final recent = ref.watch(recentEssaysProvider).value ?? const <Essay>[];
+    final pinned =
+        ref.watch(pinnedDocumentsProvider).value ?? const <NxDocument>[];
+    final recent =
+        ref.watch(recentDocumentsProvider).value ?? const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.all(14),
       children: <Widget>[
         TextField(
           style: const TextStyle(fontSize: 13),
           decoration: const InputDecoration(
-            hintText: 'Search essays...',
+            hintText: 'Search documents...',
             prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
             prefixIconConstraints: BoxConstraints(minWidth: 34),
           ),
@@ -216,7 +227,7 @@ class _MobileSection extends ConsumerWidget {
   const _MobileSection({required this.title, required this.rows});
 
   final String title;
-  final List<Essay> rows;
+  final List<NxDocument> rows;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -234,15 +245,29 @@ class _MobileSection extends ConsumerWidget {
             ),
           ),
         ),
-        for (final essay in rows) ...<Widget>[
-          EssayRow(
-            essay: essay,
-            onTap: () =>
-                ref.read(mobileNotesProvider.notifier).openEssay(essay.id),
+        for (final document in rows) ...<Widget>[
+          DocumentRow(
+            document: document,
+            onTap: () => ref
+                .read(mobileNotesProvider.notifier)
+                .openDocument(document.id),
           ),
           const SizedBox(height: 8),
         ],
       ],
+    );
+  }
+}
+
+class _MobileBooks extends ConsumerWidget {
+  const _MobileBooks();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final books = ref.watch(booksProvider).value ?? const <NxDocument>[];
+    return ListView(
+      padding: const EdgeInsets.all(14),
+      children: <Widget>[_MobileSection(title: 'Books', rows: books)],
     );
   }
 }
@@ -289,7 +314,7 @@ class _MobileTags extends ConsumerWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: () async {
             final result = await ref
-                .read(essayResultControllerProvider)
+                .read(documentResultControllerProvider)
                 .tag(
                   system: system,
                   node: node.name,
@@ -333,8 +358,8 @@ class _MobileSearch extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mobileNotesProvider);
     final rows =
-        ref.watch(essaySearchProvider(state.searchText)).value ??
-        const <Essay>[];
+        ref.watch(documentSearchProvider(state.searchText)).value ??
+        const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.all(14),
       children: <Widget>[
@@ -342,7 +367,7 @@ class _MobileSearch extends ConsumerWidget {
           autofocus: true,
           style: const TextStyle(fontSize: 13),
           decoration: const InputDecoration(
-            hintText: 'Search essays...',
+            hintText: 'Search documents...',
             prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
             prefixIconConstraints: BoxConstraints(minWidth: 34),
           ),
@@ -359,16 +384,16 @@ class _MobileSearch extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        for (final essay in rows) ...<Widget>[
-          EssayRow(
-            essay: essay,
+        for (final document in rows) ...<Widget>[
+          DocumentRow(
+            document: document,
             onTap: () => ref
                 .read(mobileNotesProvider.notifier)
-                .openEssay(
-                  essay.id,
-                  context: EssayResultContext(
+                .openDocument(
+                  document.id,
+                  context: DocumentResultContext(
                     title: 'Search: ${state.searchText}',
-                    query: EssayQuery(searchText: state.searchText),
+                    query: DocumentQuery(searchText: state.searchText),
                     resultIds: rows.map((row) => row.id).toList(),
                     results: rows,
                   ),
@@ -384,7 +409,7 @@ class _MobileSearch extends ConsumerWidget {
 class _MobileResults extends ConsumerWidget {
   const _MobileResults({required this.contextState});
 
-  final EssayResultContext contextState;
+  final DocumentResultContext contextState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -410,12 +435,12 @@ class _MobileResults extends ConsumerWidget {
         itemCount: rows.length,
         separatorBuilder: (context, index) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
-          final essay = rows[index];
-          return EssayRow(
-            essay: essay,
+          final document = rows[index];
+          return DocumentRow(
+            document: document,
             onTap: () => ref
                 .read(mobileNotesProvider.notifier)
-                .openEssay(essay.id, context: contextState),
+                .openDocument(document.id, context: contextState),
           );
         },
       ),
@@ -430,14 +455,14 @@ class _MobileEditor extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final essayId = state.activeEssayId!;
-    final essay = ref.watch(essayByIdProvider(essayId)).value;
+    final documentId = state.activeDocumentId!;
+    final document = ref.watch(documentByIdProvider(documentId)).value;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: _MobileTopChrome(
-          title: essay?.title ?? 'Editor',
+          title: document?.title ?? 'Editor',
           leading: IconButton(
             onPressed: () => ref.read(mobileNotesProvider.notifier).back(),
             icon: const Icon(
@@ -447,7 +472,7 @@ class _MobileEditor extends ConsumerWidget {
             ),
           ),
           trailing: IconButton(
-            onPressed: () => _showEssaySheet(context, ref, essayId),
+            onPressed: () => _showDocumentSheet(context, ref, documentId),
             icon: const Icon(
               Icons.more_horiz,
               size: 22,
@@ -456,16 +481,16 @@ class _MobileEditor extends ConsumerWidget {
           ),
         ),
       ),
-      body: EssayEditorView(
-        essayId: essayId,
-        onOpenEssayLink: (linkedEssayId) => ref
+      body: DocumentEditorView(
+        documentId: documentId,
+        onOpenDocumentLink: (linkedDocumentId) => ref
             .read(mobileNotesProvider.notifier)
-            .openEssayFromLink(linkedEssayId),
+            .openDocumentFromLink(linkedDocumentId),
         contextBar: state.resultContext == null
             ? null
             : EditorContextBar(
                 resultContext: state.resultContext!,
-                activeEssayId: essayId,
+                activeDocumentId: documentId,
                 onBack: () => ref.read(mobileNotesProvider.notifier).back(),
                 onClear: () {},
               ),
@@ -495,15 +520,15 @@ class _MobileEditor extends ConsumerWidget {
     );
   }
 
-  void _showEssaySheet(BuildContext context, WidgetRef ref, int essayId) {
+  void _showDocumentSheet(BuildContext context, WidgetRef ref, int documentId) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       backgroundColor: AppColors.panel,
       builder: (context) {
-        final essay = ref.watch(essayByIdProvider(essayId)).value;
+        final document = ref.watch(documentByIdProvider(documentId)).value;
         final snaps =
-            ref.watch(essaySnapshotsProvider(essayId)).value ?? const [];
+            ref.watch(documentSnapshotsProvider(documentId)).value ?? const [];
         return ListView(
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
           children: <Widget>[
@@ -512,16 +537,16 @@ class _MobileEditor extends ConsumerWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
-            if (essay != null) ...<Widget>[
-              _SheetPair(label: 'Status', value: essay.status),
+            if (document != null) ...<Widget>[
+              _SheetPair(label: 'Status', value: document.status),
               _SheetPair(
                 label: 'Tags',
-                value: [...essay.topics, ...essay.areaTags].join(', '),
+                value: [...document.topics, ...document.areaTags].join(', '),
               ),
               _SheetPair(
                 label: 'Document',
                 value:
-                    '${essay.wordCount} words · Version ${essay.versionNumber}',
+                    '${document.wordCount} words · Version ${document.versionNumber}',
               ),
               const Divider(height: 28),
               const Text(
@@ -533,7 +558,7 @@ class _MobileEditor extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              for (final link in essay.links)
+              for (final link in document.links)
                 _SheetPair(label: link.modelType, value: link.name),
               const Divider(height: 28),
               const Text(

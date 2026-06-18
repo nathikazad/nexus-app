@@ -11,8 +11,9 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
   @override
   Widget build(BuildContext context) {
     final workspace = ref.watch(desktopWorkspaceProvider);
-    final recent = ref.watch(recentEssaysProvider);
-    final pinned = ref.watch(pinnedEssaysProvider);
+    final recent = ref.watch(recentDocumentsProvider);
+    final pinned = ref.watch(pinnedDocumentsProvider);
+    final books = ref.watch(booksProvider);
     final tagSystems = ref.watch(tagSystemsProvider);
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -65,18 +66,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                           .toggleSidebar(),
                     ),
                     const SizedBox(width: 6),
-                    _IconSquareButton(
-                      icon: Icons.add,
-                      tooltip: 'New essay',
-                      onPressed: () async {
-                        final essay = await ref
-                            .read(essayMutationControllerProvider)
-                            .createEssay();
-                        ref
-                            .read(desktopWorkspaceProvider.notifier)
-                            .openEssay(essay.id);
-                      },
-                    ),
+                    const _NewDocumentMenuButton(),
                   ],
                 ),
               ),
@@ -87,7 +77,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
             child: _SearchField(
               onSubmitted: (value) async {
                 final result = await ref
-                    .read(essayResultControllerProvider)
+                    .read(documentResultControllerProvider)
                     .search(value);
                 ref
                     .read(desktopWorkspaceProvider.notifier)
@@ -105,11 +95,18 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
             child: Row(
               children: <Widget>[
                 _SidebarTabButton(
-                  label: 'Essays',
-                  active: workspace.sidebarTab == SidebarTab.essays,
+                  label: 'Docs',
+                  active: workspace.sidebarTab == SidebarTab.documents,
                   onTap: () => ref
                       .read(desktopWorkspaceProvider.notifier)
-                      .setSidebarTab(SidebarTab.essays),
+                      .setSidebarTab(SidebarTab.documents),
+                ),
+                _SidebarTabButton(
+                  label: 'Books',
+                  active: workspace.sidebarTab == SidebarTab.books,
+                  onTap: () => ref
+                      .read(desktopWorkspaceProvider.notifier)
+                      .setSidebarTab(SidebarTab.books),
                 ),
                 _SidebarTabButton(
                   label: 'Tags',
@@ -123,9 +120,14 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: workspace.sidebarTab == SidebarTab.essays
-                ? _SidebarEssays(recent: recent, pinned: pinned)
-                : _SidebarTags(tagSystems: tagSystems),
+            child: switch (workspace.sidebarTab) {
+              SidebarTab.documents => _SidebarDocuments(
+                recent: recent,
+                pinned: pinned,
+              ),
+              SidebarTab.books => _SidebarBooks(books: books),
+              SidebarTab.tags => _SidebarTags(tagSystems: tagSystems),
+            },
           ),
           const Divider(height: 1),
           Padding(
@@ -140,6 +142,238 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NewDocumentMenuButton extends ConsumerStatefulWidget {
+  const _NewDocumentMenuButton();
+
+  @override
+  ConsumerState<_NewDocumentMenuButton> createState() =>
+      _NewDocumentMenuButtonState();
+}
+
+class _NewDocumentMenuButtonState
+    extends ConsumerState<_NewDocumentMenuButton> {
+  final _buttonKey = GlobalKey();
+  OverlayEntry? _entry;
+  var _busy = false;
+
+  @override
+  void dispose() {
+    _hideMenu();
+    super.dispose();
+  }
+
+  void _toggleMenu() {
+    if (_entry == null) {
+      _showMenu();
+    } else {
+      _hideMenu();
+    }
+  }
+
+  void _showMenu() {
+    final buttonBox =
+        _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context, rootOverlay: true);
+    if (buttonBox == null) return;
+
+    final buttonOffset = buttonBox.localToGlobal(Offset.zero);
+    final screenSize = MediaQuery.sizeOf(context);
+    const width = 164.0;
+    const margin = 8.0;
+    final left = buttonOffset.dx.clamp(
+      margin,
+      screenSize.width - width - margin,
+    );
+    final top = (buttonOffset.dy + buttonBox.size.height + 7).clamp(
+      margin,
+      screenSize.height - 94,
+    );
+
+    _entry = OverlayEntry(
+      builder: (_) {
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _hideMenu,
+              ),
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              width: width,
+              child: _NewDocumentMenuSurface(
+                busy: _busy,
+                onCreateDocument: () =>
+                    unawaited(_createDocument(DocumentKind.document)),
+                onCreateBook: () =>
+                    unawaited(_createDocument(DocumentKind.book)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    overlay.insert(_entry!);
+  }
+
+  void _hideMenu() {
+    _entry?.remove();
+    _entry = null;
+  }
+
+  Future<void> _createDocument(DocumentKind kind) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    _entry?.markNeedsBuild();
+    try {
+      _hideMenu();
+      final document = await ref
+          .read(documentMutationControllerProvider)
+          .createDocument(kind: kind);
+      ref.read(desktopWorkspaceProvider.notifier).openDocument(document.id);
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'New',
+      preferBelow: false,
+      child: Material(
+        key: _buttonKey,
+        color: AppColors.panel,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: _busy ? null : _toggleMenu,
+          child: Container(
+            width: 26,
+            height: 24,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.line),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Icon(Icons.add, size: 16, color: AppColors.muted),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NewDocumentMenuSurface extends StatelessWidget {
+  const _NewDocumentMenuSurface({
+    required this.busy,
+    required this.onCreateDocument,
+    required this.onCreateBook,
+  });
+
+  final bool busy;
+  final VoidCallback onCreateDocument;
+  final VoidCallback onCreateBook;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.panel,
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x1a000000),
+              blurRadius: 16,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _NewDocumentMenuRow(
+                icon: Icons.description_outlined,
+                label: 'Document',
+                enabled: !busy,
+                onTap: onCreateDocument,
+              ),
+              _NewDocumentMenuRow(
+                icon: Icons.menu_book_outlined,
+                label: 'Book',
+                enabled: !busy,
+                onTap: onCreateBook,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NewDocumentMenuRow extends StatelessWidget {
+  const _NewDocumentMenuRow({
+    required this.icon,
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          child: SizedBox(
+            height: 32,
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.subtle,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Icon(icon, size: 15, color: AppColors.muted),
+                ),
+                const SizedBox(width: 9),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: enabled ? AppColors.text : AppColors.faint,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -308,7 +542,7 @@ class _SearchField extends StatelessWidget {
     return TextField(
       style: const TextStyle(fontSize: 13),
       decoration: const InputDecoration(
-        hintText: 'Search essays...',
+        hintText: 'Search documents...',
         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
         prefixIconConstraints: BoxConstraints(minWidth: 34),
       ),
@@ -358,11 +592,11 @@ class _SidebarTabButton extends StatelessWidget {
   }
 }
 
-class _SidebarEssays extends ConsumerWidget {
-  const _SidebarEssays({required this.recent, required this.pinned});
+class _SidebarDocuments extends ConsumerWidget {
+  const _SidebarDocuments({required this.recent, required this.pinned});
 
-  final AsyncValue<List<Essay>> recent;
-  final AsyncValue<List<Essay>> pinned;
+  final AsyncValue<List<NxDocument>> recent;
+  final AsyncValue<List<NxDocument>> pinned;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -373,7 +607,7 @@ class _SidebarEssays extends ConsumerWidget {
           title: 'Pinned',
           onTitleTap: () async {
             final result = await ref
-                .read(essayResultControllerProvider)
+                .read(documentResultControllerProvider)
                 .pinned();
             ref
                 .read(desktopWorkspaceProvider.notifier)
@@ -384,7 +618,7 @@ class _SidebarEssays extends ConsumerWidget {
                   results: result.results,
                 );
           },
-          rows: pinned.value?.take(5).toList() ?? const <Essay>[],
+          rows: pinned.value?.take(5).toList() ?? const <NxDocument>[],
           pinned: true,
         ),
         const SizedBox(height: 22),
@@ -392,7 +626,7 @@ class _SidebarEssays extends ConsumerWidget {
           title: 'Recent',
           onTitleTap: () async {
             final result = await ref
-                .read(essayResultControllerProvider)
+                .read(documentResultControllerProvider)
                 .recent();
             ref
                 .read(desktopWorkspaceProvider.notifier)
@@ -403,7 +637,27 @@ class _SidebarEssays extends ConsumerWidget {
                   results: result.results,
                 );
           },
-          rows: recent.value?.take(5).toList() ?? const <Essay>[],
+          rows: recent.value?.take(5).toList() ?? const <NxDocument>[],
+        ),
+      ],
+    );
+  }
+}
+
+class _SidebarBooks extends ConsumerWidget {
+  const _SidebarBooks({required this.books});
+
+  final AsyncValue<List<NxDocument>> books;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: <Widget>[
+        _SidebarSection(
+          title: 'Books',
+          onTitleTap: () {},
+          rows: books.value ?? const <NxDocument>[],
         ),
       ],
     );
@@ -419,7 +673,7 @@ class _SidebarSection extends ConsumerWidget {
   });
 
   final String title;
-  final List<Essay> rows;
+  final List<NxDocument> rows;
   final VoidCallback onTitleTap;
   final bool pinned;
 
@@ -442,26 +696,27 @@ class _SidebarSection extends ConsumerWidget {
             ),
           ),
         ),
-        for (final essay in rows)
-          _SidebarEssayLink(
-            essay: essay,
+        for (final document in rows)
+          _SidebarDocumentLink(
+            document: document,
             pinned: pinned,
-            onTap: () =>
-                ref.read(desktopWorkspaceProvider.notifier).openEssay(essay.id),
+            onTap: () => ref
+                .read(desktopWorkspaceProvider.notifier)
+                .openDocument(document.id),
           ),
       ],
     );
   }
 }
 
-class _SidebarEssayLink extends StatelessWidget {
-  const _SidebarEssayLink({
-    required this.essay,
+class _SidebarDocumentLink extends StatelessWidget {
+  const _SidebarDocumentLink({
+    required this.document,
     required this.onTap,
     this.pinned = false,
   });
 
-  final Essay essay;
+  final NxDocument document;
   final VoidCallback onTap;
   final bool pinned;
 
@@ -488,7 +743,7 @@ class _SidebarEssayLink extends StatelessWidget {
                 ),
               Expanded(
                 child: Text(
-                  essay.title,
+                  document.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -550,7 +805,7 @@ class _SidebarTags extends ConsumerWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: () async {
             final result = await ref
-                .read(essayResultControllerProvider)
+                .read(documentResultControllerProvider)
                 .tag(
                   system: system,
                   node: node.name,

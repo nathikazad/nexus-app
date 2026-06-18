@@ -20,6 +20,7 @@ Build with the `/notes/` base href:
 ```bash
 flutter analyze
 flutter build web --release --base-href /notes/
+chmod -R a+rX build/web
 ```
 
 Patch Flutter's stable asset URLs with a fresh cache-busting version. Flutter emits stable filenames like `main.dart.js`, so Cloudflare/browser caches can otherwise keep old code.
@@ -33,14 +34,14 @@ perl -0pi -e "s#\"mainJsPath\":\"main\\.dart\\.js\"#\"mainJsPath\":\"main.dart.j
 Sync the local static copy and the remote host checkout:
 
 ```bash
-rsync -az --delete build/web/ /Users/nathikazad/Projects/Nexus/servers/mcp/server/static/nx_notes/
-rsync -az --delete build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/server/static/nx_notes/
+rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r build/web/ /Users/nathikazad/Projects/Nexus/servers/mcp/server/static/nx_notes/
+rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/server/static/nx_notes/
 ```
 
 The public service is served by the `nexus-mcp` Docker container, not directly from the remote host checkout. Copy the static files into the container and restart it:
 
 ```bash
-ssh nathik@100.108.43.37 "set -e; docker cp ~/Nexus/nexus-server/mcp/server/static/nx_notes/. nexus-mcp:/app/server/static/nx_notes/; docker restart nexus-mcp"
+ssh nathik@100.108.43.37 "set -e; docker cp ~/Nexus/nexus-server/mcp/server/static/nx_notes/. nexus-mcp:/app/server/static/nx_notes/; docker exec -u root nexus-mcp sh -lc 'chown -R appuser:appuser /app/server/static/nx_notes && chmod -R a+rX /app/server/static/nx_notes'; docker restart nexus-mcp"
 ```
 
 Verify the origin before handing off:
@@ -50,6 +51,8 @@ curl -sS -D - http://100.108.43.37:8001/notes/ -o /tmp/notes.html | sed -n '1,20
 grep -o 'flutter_bootstrap.js?v=[0-9]*' /tmp/notes.html
 curl -sS "http://100.108.43.37:8001/notes/main.dart.js?v=$v" -o /tmp/main.dart.js
 shasum /tmp/main.dart.js
+curl -sS "http://100.108.43.37:8001/notes/assets/fonts/MaterialIcons-Regular.otf" -o /tmp/MaterialIcons-Regular.otf
+file /tmp/MaterialIcons-Regular.otf
 ```
 
 Open the public Cloudflare URL with the version query if needed:

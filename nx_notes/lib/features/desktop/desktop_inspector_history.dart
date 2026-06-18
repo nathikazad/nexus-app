@@ -1,10 +1,10 @@
 part of 'desktop_shell.dart';
 
 class _InspectorHistory extends ConsumerWidget {
-  const _InspectorHistory({required this.essay, required this.snaps});
+  const _InspectorHistory({required this.document, required this.snaps});
 
-  final Essay essay;
-  final List<EssaySnap> snaps;
+  final NxDocument document;
+  final List<DocumentSnap> snaps;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,7 +26,7 @@ class _InspectorHistory extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            onPressed: () => _showCreateSnapshotDialog(context, ref, essay),
+            onPressed: () => _showCreateSnapshotDialog(context, ref, document),
             icon: const Icon(Icons.add, size: 16),
             label: const Text('Create snapshot'),
           ),
@@ -34,7 +34,7 @@ class _InspectorHistory extends ConsumerWidget {
         const SizedBox(height: 14),
         const _TimelineItem(
           title: 'Auto-saved',
-          subtitle: 'Current live essay',
+          subtitle: 'Current live document',
           active: true,
         ),
         if (snaps.isEmpty)
@@ -50,7 +50,7 @@ class _InspectorHistory extends ConsumerWidget {
             _TimelineItem(
               title: _snapshotTitle(snap),
               subtitle: _snapshotSubtitle(snap),
-              onTap: () => _showSnapshotPreview(context, ref, essay, snap),
+              onTap: () => _showSnapshotPreview(context, ref, document, snap),
             ),
       ],
     );
@@ -60,7 +60,7 @@ class _InspectorHistory extends ConsumerWidget {
 Future<void> _showCreateSnapshotDialog(
   BuildContext context,
   WidgetRef ref,
-  Essay essay,
+  NxDocument document,
 ) async {
   final controller = TextEditingController();
   final message = await showDialog<String>(
@@ -96,15 +96,15 @@ Future<void> _showCreateSnapshotDialog(
   controller.dispose();
   if (message == null) return;
   await ref
-      .read(essayMutationControllerProvider)
-      .createSnapshot(essay.id, source: 'manual', changeSummary: message);
+      .read(documentMutationControllerProvider)
+      .createSnapshot(document.id, source: 'manual', changeSummary: message);
 }
 
 Future<void> _showSnapshotPreview(
   BuildContext context,
   WidgetRef ref,
-  Essay essay,
-  EssaySnap snap,
+  NxDocument document,
+  DocumentSnap snap,
 ) async {
   await showDialog<void>(
     context: context,
@@ -159,7 +159,7 @@ Future<void> _showSnapshotPreview(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      essay.title,
+                      document.title,
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
@@ -193,7 +193,7 @@ Future<void> _showSnapshotPreview(
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () async {
-                      await _restoreSnapshot(context, ref, essay, snap);
+                      await _restoreSnapshot(context, ref, document, snap);
                     },
                     child: const Text('Restore as current'),
                   ),
@@ -210,16 +210,18 @@ Future<void> _showSnapshotPreview(
 Future<void> _restoreSnapshot(
   BuildContext context,
   WidgetRef ref,
-  Essay essay,
-  EssaySnap snap,
+  NxDocument document,
+  DocumentSnap snap,
 ) async {
-  await ref.read(essayMutationControllerProvider).restoreSnapshot(essay, snap);
+  await ref
+      .read(documentMutationControllerProvider)
+      .restoreSnapshot(document, snap);
   if (context.mounted) {
     Navigator.of(context).pop();
   }
 }
 
-String _snapshotSubtitle(EssaySnap snap) {
+String _snapshotSubtitle(DocumentSnap snap) {
   final message = snap.changeSummary.trim().isEmpty
       ? ''
       : snap.changeSummary.trim();
@@ -229,7 +231,7 @@ String _snapshotSubtitle(EssaySnap snap) {
   return '$detail · ${_historyDateLabel(snap.createdAt)}';
 }
 
-String _snapshotTitle(EssaySnap snap) {
+String _snapshotTitle(DocumentSnap snap) {
   final name = snap.name.trim();
   if (name.isNotEmpty && name != snap.source) {
     return name;
