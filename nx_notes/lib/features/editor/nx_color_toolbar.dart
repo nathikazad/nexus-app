@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
@@ -172,27 +174,35 @@ void _showNxCompactColorMenu({
                 ? generateTextColorOptions()
                 : generateHighlightColorOptions()),
         onSelected: (colorHex) {
-          if (isTextColor) {
-            formatFontColor(
-              editorState,
-              selection,
-              colorHex,
-              withUpdateSelection: true,
-            );
-          } else {
-            formatHighlightColor(
-              editorState,
-              selection,
-              colorHex,
-              withUpdateSelection: true,
-            );
-          }
+          unawaited(
+            _applyColorAndDismissToolbar(
+              editorState: editorState,
+              selection: selection,
+              colorHex: colorHex,
+              isTextColor: isTextColor,
+            ),
+          );
           dismissOverlay();
         },
       );
     },
   ).build();
   Overlay.of(context, rootOverlay: true).insert(overlay!);
+}
+
+Future<void> _applyColorAndDismissToolbar({
+  required EditorState editorState,
+  required Selection selection,
+  required String? colorHex,
+  required bool isTextColor,
+}) async {
+  await editorState.formatDelta(selection, {
+    isTextColor
+            ? AppFlowyRichTextKeys.textColor
+            : AppFlowyRichTextKeys.backgroundColor:
+        colorHex,
+  }, withUpdateSelection: true);
+  await editorState.updateSelectionWithReason(null);
 }
 
 class _NxCompactColorToolbarButton extends StatelessWidget {

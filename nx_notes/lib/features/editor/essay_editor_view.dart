@@ -413,6 +413,9 @@ class NxAppFlowyEditor extends StatefulWidget {
 class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   static const _caretEditIdleDelay = Duration(seconds: 8);
   static const _caretScrollIdleDelay = Duration(seconds: 5);
+  static const _scrollAnchorSaveDelay = Duration(milliseconds: 450);
+  static const _scrollAnchorRestoreRetryDelay = Duration(milliseconds: 80);
+  static const _maxScrollAnchorRestoreAttempts = 16;
   static const _pasteShortcutKeys = <String>{
     'paste the content',
     'paste the content as plain text',
@@ -424,10 +427,16 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   Timer? _saveDebounce;
   Timer? _caretIdleTimer;
   Timer? _nextImmediateSaveTimer;
+  Timer? _scrollAnchorSaveDebounce;
   bool _activeHeadingPublishScheduled = false;
   bool _caretVisible = true;
+  bool _scrollAnchorSaveEnabled = false;
   bool _saveNextTransactionImmediately = false;
+  late Essay _editorEssay;
+  late int _editorEssayId;
   int? _handledHeadingScrollRequestSerial;
+  int _scrollAnchorRestoreAttempts = 0;
+  _EssayScrollAnchor? _lastSavedScrollAnchor;
 
   @override
   void initState() {
@@ -463,6 +472,10 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   void _createEditor() {
     registerNxHighlightNoteAttribute();
+    _editorEssay = widget.essay;
+    _editorEssayId = widget.essay.id;
+    _lastSavedScrollAnchor = null;
+    _scrollAnchorSaveEnabled = false;
     _caretVisible = true;
     _editorState = EditorState(document: _documentFromEssay(widget.essay));
     _scrollController = EditorScrollController(
@@ -470,7 +483,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       shrinkWrap: false,
     );
     _scrollController.itemPositionsListener.itemPositions.addListener(
-      _scheduleActiveHeadingPublish,
+      _handleVisibleItemPositionsChanged,
     );
     _scrollController.offsetNotifier.addListener(_handleEditorScrolled);
     _editorState.selectionNotifier.addListener(_handleEditorSelectionChanged);
@@ -487,6 +500,7 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     });
     _scheduleCaretHide(_caretEditIdleDelay);
     _scheduleActiveHeadingPublish();
+    _restoreScrollAnchor();
   }
 
   void _disposeEditor() {
@@ -494,9 +508,13 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _caretIdleTimer = null;
     _nextImmediateSaveTimer?.cancel();
     _nextImmediateSaveTimer = null;
+    _scrollAnchorSaveDebounce?.cancel();
+    _scrollAnchorSaveDebounce = null;
+    unawaited(_saveScrollAnchorNow());
+    _scrollAnchorSaveEnabled = false;
     _saveNextTransactionImmediately = false;
     _scrollController.itemPositionsListener.itemPositions.removeListener(
-      _scheduleActiveHeadingPublish,
+      _handleVisibleItemPositionsChanged,
     );
     _scrollController.offsetNotifier.removeListener(_handleEditorScrolled);
     _editorState.selectionNotifier.removeListener(
@@ -535,6 +553,12 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     if (_caretVisible && _caretIdleTimer == null) {
       _scheduleCaretHide(_caretScrollIdleDelay);
     }
+    _scheduleScrollAnchorSave();
+  }
+
+  void _handleVisibleItemPositionsChanged() {
+    _scheduleActiveHeadingPublish();
+    _scheduleScrollAnchorSave();
   }
 
   void _showCaretTemporarily() {
@@ -570,21 +594,34 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   void _saveCurrentDraft(DraftSavePolicy policy) {
+    unawaited(widget.onChanged(_currentDraftEssay(), policy));
+  }
+
+  Essay _currentDraftEssay({_EssayScrollAnchor? scrollAnchor}) {
     final plainText = _documentPlainText(_editorState.document).trimRight();
-    unawaited(
-      widget.onChanged(
-        widget.essay.copyWith(
-          document: plainText,
-          jsonDocument: <String, dynamic>{
-            ...widget.essay.jsonDocument,
-            'format': 'appflowy_document',
-            'document': _editorState.document.toJson()['document'],
-          },
-          wordCount: _countWords(plainText),
-          excerpt: _excerptFrom(plainText),
-        ),
-        policy,
-      ),
+    final baseEssay = widget.essay.id == _editorEssayId
+        ? widget.essay
+        : _editorEssay;
+    final nextScrollAnchor =
+        scrollAnchor ??
+        _lastSavedScrollAnchor ??
+        _scrollAnchorFromJsonDocument(baseEssay.jsonDocument);
+    final jsonDocument = <String, dynamic>{
+      ...baseEssay.jsonDocument,
+      'format': 'appflowy_document',
+      'document': _editorState.document.toJson()['document'],
+    };
+    if (nextScrollAnchor != null) {
+      jsonDocument['view_state'] = _jsonDocumentViewStateWithScrollAnchor(
+        baseEssay.jsonDocument,
+        nextScrollAnchor,
+      );
+    }
+    return baseEssay.copyWith(
+      document: plainText,
+      jsonDocument: jsonDocument,
+      wordCount: _countWords(plainText),
+      excerpt: _excerptFrom(plainText),
     );
   }
 
@@ -715,6 +752,141 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       _activeHeadingPublishScheduled = false;
       _publishActiveHeading();
     });
+  }
+
+  void _restoreScrollAnchor() {
+    final essayId = _editorEssayId;
+    _scrollAnchorSaveEnabled = false;
+    _scrollAnchorRestoreAttempts = 0;
+    final anchor = _scrollAnchorFromJsonDocument(widget.essay.jsonDocument);
+    if (!mounted || _editorEssayId != essayId) {
+      return;
+    }
+    if (anchor == null || anchor.essayId != essayId) {
+      _scrollAnchorSaveEnabled = true;
+      return;
+    }
+    _lastSavedScrollAnchor = anchor;
+    _attemptScrollAnchorRestore(anchor);
+  }
+
+  void _attemptScrollAnchorRestore(_EssayScrollAnchor anchor) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _editorEssayId != anchor.essayId) {
+        return;
+      }
+      final itemScrollController = _scrollController.itemScrollController;
+      if (!itemScrollController.isAttached) {
+        if (_scrollAnchorRestoreAttempts < _maxScrollAnchorRestoreAttempts) {
+          _scrollAnchorRestoreAttempts += 1;
+          Timer(
+            _scrollAnchorRestoreRetryDelay,
+            () => _attemptScrollAnchorRestore(anchor),
+          );
+        } else {
+          _scrollAnchorSaveEnabled = true;
+        }
+        return;
+      }
+
+      final blockIndex = _resolveScrollAnchorBlockIndex(anchor);
+      if (blockIndex != null) {
+        itemScrollController.jumpTo(
+          index: blockIndex,
+          alignment: anchor.alignment,
+        );
+        _scheduleActiveHeadingPublish();
+      }
+      _scrollAnchorSaveEnabled = true;
+    });
+  }
+
+  void _scheduleScrollAnchorSave() {
+    if (!_scrollAnchorSaveEnabled || !widget.active) {
+      return;
+    }
+    _scrollAnchorSaveDebounce?.cancel();
+    _scrollAnchorSaveDebounce = Timer(
+      _scrollAnchorSaveDelay,
+      () => unawaited(_saveScrollAnchorNow()),
+    );
+  }
+
+  Future<void> _saveScrollAnchorNow() async {
+    if (!mounted || !widget.active || !_scrollAnchorSaveEnabled) {
+      return;
+    }
+    final anchor = _currentScrollAnchor();
+    if (anchor == null) {
+      return;
+    }
+    if (anchor == _lastSavedScrollAnchor) {
+      return;
+    }
+    _lastSavedScrollAnchor = anchor;
+    await widget.onChanged(
+      _currentDraftEssay(scrollAnchor: anchor),
+      DraftSavePolicy.deferred,
+    );
+  }
+
+  _EssayScrollAnchor? _currentScrollAnchor() {
+    final children = _editorState.document.root.children;
+    if (children.isEmpty) {
+      return null;
+    }
+    final visible = _scrollController.itemPositionsListener.itemPositions.value
+        .where(
+          (position) =>
+              position.index >= 0 &&
+              position.index < children.length &&
+              position.itemTrailingEdge > 0 &&
+              position.itemLeadingEdge < 1,
+        )
+        .toList();
+    if (visible.isEmpty) {
+      return null;
+    }
+
+    double distanceToCenter(dynamic position) {
+      final center = (position.itemLeadingEdge + position.itemTrailingEdge) / 2;
+      return (center - 0.5).abs();
+    }
+
+    visible.sort((a, b) => distanceToCenter(a).compareTo(distanceToCenter(b)));
+    final position = visible.first;
+    final block = children[position.index];
+    return _EssayScrollAnchor(
+      essayId: _editorEssayId,
+      blockIndex: position.index,
+      blockKey: _scrollAnchorBlockKey(block),
+      alignment: position.itemLeadingEdge.clamp(-2.0, 2.0).toDouble(),
+    );
+  }
+
+  int? _resolveScrollAnchorBlockIndex(_EssayScrollAnchor anchor) {
+    final children = _editorState.document.root.children;
+    final matchingIndexes = <int>[];
+    for (var i = 0; i < children.length; i++) {
+      if (_scrollAnchorBlockKey(children[i]) == anchor.blockKey) {
+        matchingIndexes.add(i);
+      }
+    }
+    if (matchingIndexes.isNotEmpty) {
+      matchingIndexes.sort(
+        (a, b) => (a - anchor.blockIndex).abs().compareTo(
+          (b - anchor.blockIndex).abs(),
+        ),
+      );
+      return matchingIndexes.first;
+    }
+    if (anchor.blockIndex >= 0 && anchor.blockIndex < children.length) {
+      return anchor.blockIndex;
+    }
+    if (children.isEmpty) {
+      return null;
+    }
+    return children.length - 1;
   }
 
   void _handleHeadingScrollRequest() {
@@ -870,6 +1042,145 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       ),
     );
   }
+}
+
+class _EssayScrollAnchor {
+  const _EssayScrollAnchor({
+    required this.essayId,
+    required this.blockIndex,
+    required this.blockKey,
+    required this.alignment,
+  });
+
+  final int essayId;
+  final int blockIndex;
+  final String blockKey;
+  final double alignment;
+
+  Map<String, Object> toJson() {
+    return <String, Object>{
+      'version': 1,
+      'essayId': essayId,
+      'blockIndex': blockIndex,
+      'blockKey': blockKey,
+      'alignment': alignment,
+    };
+  }
+
+  static _EssayScrollAnchor? tryParse(Map<String, dynamic> json) {
+    final essayId = _intFromJson(json['essayId']);
+    final blockIndex = _intFromJson(json['blockIndex']);
+    final blockKey = json['blockKey'];
+    final alignment = _doubleFromJson(json['alignment']);
+    if (essayId == null ||
+        blockIndex == null ||
+        blockKey is! String ||
+        blockKey.isEmpty ||
+        alignment == null) {
+      return null;
+    }
+    return _EssayScrollAnchor(
+      essayId: essayId,
+      blockIndex: blockIndex,
+      blockKey: blockKey,
+      alignment: alignment.clamp(-2.0, 2.0).toDouble(),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is _EssayScrollAnchor &&
+        other.essayId == essayId &&
+        other.blockIndex == blockIndex &&
+        other.blockKey == blockKey &&
+        other.alignment == alignment;
+  }
+
+  @override
+  int get hashCode => Object.hash(essayId, blockIndex, blockKey, alignment);
+}
+
+_EssayScrollAnchor? _scrollAnchorFromJsonDocument(
+  Map<String, dynamic> jsonDocument,
+) {
+  final viewState = jsonDocument['view_state'];
+  if (viewState is! Map) {
+    return null;
+  }
+  final scrollAnchor = viewState['scroll_anchor'];
+  if (scrollAnchor is! Map) {
+    return null;
+  }
+  return _EssayScrollAnchor.tryParse(Map<String, dynamic>.from(scrollAnchor));
+}
+
+Map<String, dynamic> _jsonDocumentViewStateWithScrollAnchor(
+  Map<String, dynamic> jsonDocument,
+  _EssayScrollAnchor scrollAnchor,
+) {
+  final existing = jsonDocument['view_state'];
+  return <String, dynamic>{
+    if (existing is Map) ...Map<String, dynamic>.from(existing),
+    'scroll_anchor': <String, dynamic>{
+      ...scrollAnchor.toJson(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    },
+  };
+}
+
+String _scrollAnchorBlockKey(Node node) {
+  final text = _scrollAnchorNodeText(
+    node,
+  ).trim().replaceAll(RegExp(r'\s+'), ' ');
+  return '${node.type}:${_stableHash('$text|${node.type}')}';
+}
+
+String _scrollAnchorNodeText(Node node) {
+  final buffer = StringBuffer();
+
+  void visit(Node current) {
+    final text = current.delta?.toPlainText().isNotEmpty == true
+        ? current.delta?.toPlainText()
+        : nxPlainTextForCustomNode(current);
+    if (text != null && text.isNotEmpty) {
+      if (buffer.isNotEmpty) {
+        buffer.write('\n');
+      }
+      buffer.write(text);
+    }
+    for (final child in current.children) {
+      visit(child);
+    }
+  }
+
+  visit(node);
+  return buffer.toString();
+}
+
+String _stableHash(String value) {
+  var hash = 0x811c9dc5;
+  for (final unit in value.codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return hash.toRadixString(16).padLeft(8, '0');
+}
+
+int? _intFromJson(Object? value) {
+  return switch (value) {
+    final int number => number,
+    final num number => number.toInt(),
+    final String text => int.tryParse(text),
+    _ => null,
+  };
+}
+
+double? _doubleFromJson(Object? value) {
+  return switch (value) {
+    final num number => number.toDouble(),
+    final String text => double.tryParse(text),
+    _ => null,
+  };
 }
 
 class NxSelectionFormattingToolbar extends StatefulWidget {
