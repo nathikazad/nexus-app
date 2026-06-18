@@ -131,6 +131,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   late final TextEditingController _titleController;
   late final FocusNode _titleFocusNode;
   bool _editingTitle = false;
+  late _DocumentEditorMode _editorMode;
   final Object _linkHandlerOwner = Object();
 
   @override
@@ -138,6 +139,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     super.initState();
     _draftDocument = widget.document;
     _titleText = widget.document.title;
+    _editorMode = _editorModeFromJsonDocument(widget.document.jsonDocument);
     _titleController = TextEditingController(text: _titleText);
     _titleFocusNode = FocusNode()..addListener(_handleTitleFocusChange);
     _syncDocumentLinkHandler();
@@ -150,6 +152,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
       _titleSaveDebounce?.cancel();
       _draftDocument = widget.document;
       _replaceTitleText(widget.document.title);
+      _editorMode = _editorModeFromJsonDocument(widget.document.jsonDocument);
       _titleFocusNode.unfocus();
     } else if (!_titleFocusNode.hasFocus &&
         widget.document.title != _titleController.text) {
@@ -220,6 +223,17 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     });
   }
 
+  void _setEditorMode(_DocumentEditorMode mode) {
+    if (_editorMode == mode) {
+      return;
+    }
+    if (!mode.isEditable) {
+      _titleFocusNode.unfocus();
+      _editingTitle = false;
+    }
+    setState(() => _editorMode = mode);
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -239,24 +253,35 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                if (widget.canNavigateBack && widget.onNavigateBack != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: TextButton.icon(
-                      onPressed: widget.onNavigateBack,
-                      icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Back'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.muted,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 0,
-                          vertical: 6,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: <Widget>[
+                      if (widget.canNavigateBack &&
+                          widget.onNavigateBack != null)
+                        TextButton.icon(
+                          onPressed: widget.onNavigateBack,
+                          icon: const Icon(Icons.arrow_back, size: 16),
+                          label: const Text('Back'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.muted,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 0,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                         ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
+                      const Spacer(),
+                      if (widget.active)
+                        _ReadEditModeToggle(
+                          mode: _editorMode,
+                          onChanged: _setEditorMode,
+                        ),
+                    ],
                   ),
+                ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final fittedTitleSize = _fittedTitleFontSize(
@@ -304,10 +329,13 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                 key: ValueKey<String>(
                                   'title-display-${widget.document.id}',
                                 ),
-                                cursor: SystemMouseCursors.text,
+                                cursor: _editorMode.isEditable
+                                    ? SystemMouseCursors.text
+                                    : SystemMouseCursors.basic,
                                 child: GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () {
+                                    if (!_editorMode.isEditable) return;
                                     setState(() => _editingTitle = true);
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
@@ -342,8 +370,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                 ),
                 const SizedBox(height: 28),
                 Expanded(
-                  child: NxAppFlowyEditor(
+                  child: _NxAppFlowyEditor(
                     document: widget.document,
+                    editorMode: _editorMode,
                     active: widget.active,
                     searchLinkableModels:
                         ({required modelType, required query}) {
@@ -483,9 +512,10 @@ double _titleWidth({
   return painter.width;
 }
 
-class NxAppFlowyEditor extends StatefulWidget {
-  const NxAppFlowyEditor({
+class _NxAppFlowyEditor extends StatefulWidget {
+  const _NxAppFlowyEditor({
     required this.document,
+    required this.editorMode,
     required this.onChanged,
     required this.searchLinkableModels,
     required this.onLinkableModelSelected,
@@ -495,10 +525,10 @@ class NxAppFlowyEditor extends StatefulWidget {
     this.resolveDocumentImage,
     this.documentImageBaseUrl,
     this.active = true,
-    super.key,
   });
 
   final NxDocument document;
+  final _DocumentEditorMode editorMode;
   final bool active;
   final Future<void> Function(NxDocument document, DraftSavePolicy policy)
   onChanged;
@@ -516,12 +546,10 @@ class NxAppFlowyEditor extends StatefulWidget {
   final String? documentImageBaseUrl;
 
   @override
-  State<NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
+  State<_NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
 }
 
-class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
-  static const _caretEditIdleDelay = Duration(seconds: 8);
-  static const _caretScrollIdleDelay = Duration(seconds: 5);
+class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   static const _scrollAnchorSaveDelay = Duration(milliseconds: 450);
   static const _scrollAnchorRestoreRetryDelay = Duration(milliseconds: 80);
   static const _maxScrollAnchorRestoreAttempts = 16;
@@ -534,11 +562,9 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   late EditorScrollController _scrollController;
   StreamSubscription<EditorTransactionValue>? _transactionSubscription;
   Timer? _saveDebounce;
-  Timer? _caretIdleTimer;
   Timer? _nextImmediateSaveTimer;
   Timer? _scrollAnchorSaveDebounce;
   bool _activeHeadingPublishScheduled = false;
-  bool _caretVisible = true;
   bool _scrollAnchorSaveEnabled = false;
   bool _saveNextTransactionImmediately = false;
   late NxDocument _editorDocument;
@@ -554,12 +580,15 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
   }
 
   @override
-  void didUpdateWidget(covariant NxAppFlowyEditor oldWidget) {
+  void didUpdateWidget(covariant _NxAppFlowyEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id) {
       _disposeEditor();
       _createEditor();
       return;
+    }
+    if (oldWidget.editorMode != widget.editorMode) {
+      _handleEditorModeChanged();
     }
     if (oldWidget.active != widget.active) {
       if (widget.active) {
@@ -585,10 +614,10 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     _editorDocumentId = widget.document.id;
     _lastSavedScrollAnchor = null;
     _scrollAnchorSaveEnabled = false;
-    _caretVisible = true;
     _editorState = EditorState(
       document: _documentFromDocument(widget.document),
     );
+    _editorState.editable = widget.editorMode.isEditable;
     _scrollController = EditorScrollController(
       editorState: _editorState,
       shrinkWrap: false,
@@ -597,7 +626,6 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       _handleVisibleItemPositionsChanged,
     );
     _scrollController.offsetNotifier.addListener(_handleEditorScrolled);
-    _editorState.selectionNotifier.addListener(_handleEditorSelectionChanged);
     documentHeadingScrollRequestNotifier.addListener(
       _handleHeadingScrollRequest,
     );
@@ -606,19 +634,15 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       if (time == TransactionTime.after &&
           !options.inMemoryUpdate &&
           transaction.operations.isNotEmpty) {
-        _showCaretTemporarily();
         _scheduleSave(_savePolicyForTransaction(transaction));
         _scheduleActiveHeadingPublish();
       }
     });
-    _scheduleCaretHide(_caretEditIdleDelay);
     _scheduleActiveHeadingPublish();
     _restoreScrollAnchor();
   }
 
   void _disposeEditor() {
-    _caretIdleTimer?.cancel();
-    _caretIdleTimer = null;
     _nextImmediateSaveTimer?.cancel();
     _nextImmediateSaveTimer = null;
     _scrollAnchorSaveDebounce?.cancel();
@@ -630,9 +654,6 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       _handleVisibleItemPositionsChanged,
     );
     _scrollController.offsetNotifier.removeListener(_handleEditorScrolled);
-    _editorState.selectionNotifier.removeListener(
-      _handleEditorSelectionChanged,
-    );
     documentHeadingScrollRequestNotifier.removeListener(
       _handleHeadingScrollRequest,
     );
@@ -658,40 +679,13 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     return Document.blank(withInitialText: true);
   }
 
-  void _handleEditorSelectionChanged() {
-    _showCaretTemporarily();
-  }
-
   void _handleEditorScrolled() {
-    if (_caretVisible && _caretIdleTimer == null) {
-      _scheduleCaretHide(_caretScrollIdleDelay);
-    }
     _scheduleScrollAnchorSave();
   }
 
   void _handleVisibleItemPositionsChanged() {
     _scheduleActiveHeadingPublish();
     _scheduleScrollAnchorSave();
-  }
-
-  void _showCaretTemporarily() {
-    if (!mounted) return;
-    if (!_caretVisible) {
-      setState(() => _caretVisible = true);
-    }
-    _scheduleCaretHide(_caretEditIdleDelay);
-  }
-
-  void _scheduleCaretHide(Duration delay) {
-    _caretIdleTimer?.cancel();
-    _caretIdleTimer = Timer(delay, _hideCaret);
-  }
-
-  void _hideCaret() {
-    _caretIdleTimer?.cancel();
-    _caretIdleTimer = null;
-    if (!mounted || !_caretVisible) return;
-    setState(() => _caretVisible = false);
   }
 
   void _scheduleSave(DraftSavePolicy policy) {
@@ -723,13 +717,12 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
       ...baseDocument.jsonDocument,
       'format': 'appflowy_document',
       'document': _editorState.document.toJson()['document'],
-    };
-    if (nextScrollAnchor != null) {
-      jsonDocument['view_state'] = _jsonDocumentViewStateWithScrollAnchor(
+      'view_state': _jsonDocumentViewState(
         baseDocument.jsonDocument,
-        nextScrollAnchor,
-      );
-    }
+        editorMode: widget.editorMode,
+        scrollAnchor: nextScrollAnchor,
+      ),
+    };
     return baseDocument.copyWith(
       document: plainText,
       jsonDocument: jsonDocument,
@@ -943,6 +936,23 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
     );
   }
 
+  void _handleEditorModeChanged() {
+    _editorState.editable = widget.editorMode.isEditable;
+    if (!widget.editorMode.isEditable) {
+      unawaited(_editorState.updateSelectionWithReason(null));
+    }
+    final anchor = _currentScrollAnchor();
+    if (anchor != null) {
+      _lastSavedScrollAnchor = anchor;
+    }
+    unawaited(
+      widget.onChanged(
+        _currentDraftDocument(scrollAnchor: anchor),
+        DraftSavePolicy.immediate,
+      ),
+    );
+  }
+
   _DocumentScrollAnchor? _currentScrollAnchor() {
     final children = _editorState.document.root.children;
     if (children.isEmpty) {
@@ -1104,103 +1114,174 @@ class _NxAppFlowyEditorState extends State<NxAppFlowyEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditable = widget.editorMode.isEditable;
     final editorStyle = _editorStyle.copyWith(
-      cursorColor: _caretVisible ? AppColors.text : Colors.transparent,
+      cursorColor: isEditable ? AppColors.text : Colors.transparent,
     );
-    return Listener(
-      onPointerDown: (_) => _showCaretTemporarily(),
-      child: FloatingToolbar(
-        editorState: _editorState,
-        editorScrollController: _scrollController,
-        textDirection: Directionality.of(context),
-        items: [
-          paragraphItem,
-          ...headingItems,
-          ...markdownFormatItems,
-          quoteItem,
-          bulletedListItem,
-          numberedListItem,
-          linkItem,
-          buildNxTextColorItem(),
-          buildNxHighlightColorItem(),
-          nxHighlightNoteToolbarItem,
-          buildNxDocumentLinkToolbarItem(
-            searchLinkableModels: widget.searchLinkableModels,
-            createDocument: widget.createLinkedDocument,
-            onLinkableModelSelected: widget.onLinkableModelSelected,
+    final editor = Stack(
+      children: <Widget>[
+        AppFlowyEditor(
+          editable: isEditable,
+          editorState: _editorState,
+          editorScrollController: _scrollController,
+          editorStyle: editorStyle,
+          blockComponentBuilders: nxBlockComponentBuilders(
+            deleteDocumentImage: widget.deleteDocumentImage,
+            resolveDocumentImage: widget.resolveDocumentImage,
+            documentImageBaseUrl: widget.documentImageBaseUrl,
           ),
-          ...alignmentItems,
-        ],
-        tooltipBuilder: (context, _, message, child) {
-          return Tooltip(message: message, preferBelow: false, child: child);
-        },
-        child: Stack(
-          children: <Widget>[
-            AppFlowyEditor(
-              editorState: _editorState,
-              editorScrollController: _scrollController,
-              editorStyle: editorStyle,
-              blockComponentBuilders: nxBlockComponentBuilders(
-                deleteDocumentImage: widget.deleteDocumentImage,
-                resolveDocumentImage: widget.resolveDocumentImage,
-                documentImageBaseUrl: widget.documentImageBaseUrl,
-              ),
-              characterShortcutEvents: <CharacterShortcutEvent>[
-                ...standardCharacterShortcutEvents.where(
-                  (event) => event.key != 'show the slash menu',
+          characterShortcutEvents: <CharacterShortcutEvent>[
+            ...standardCharacterShortcutEvents.where(
+              (event) => event.key != 'show the slash menu',
+            ),
+            nxSlashCommand(
+              searchLinkableModels: widget.searchLinkableModels,
+              createLinkedDocument: widget.createLinkedDocument,
+              onLinkableModelSelected: widget.onLinkableModelSelected,
+              uploadDocumentImage: widget.uploadDocumentImage,
+            ),
+          ],
+          commandShortcutEvents: _commandShortcutEvents(),
+          footer: const SizedBox(height: 120),
+        ),
+      ],
+    );
+    if (!isEditable) {
+      return editor;
+    }
+    return FloatingToolbar(
+      editorState: _editorState,
+      editorScrollController: _scrollController,
+      textDirection: Directionality.of(context),
+      items: [
+        paragraphItem,
+        ...headingItems,
+        ...markdownFormatItems,
+        quoteItem,
+        bulletedListItem,
+        numberedListItem,
+        linkItem,
+        buildNxTextColorItem(),
+        buildNxHighlightColorItem(),
+        nxHighlightNoteToolbarItem,
+        buildNxDocumentLinkToolbarItem(
+          searchLinkableModels: widget.searchLinkableModels,
+          createDocument: widget.createLinkedDocument,
+          onLinkableModelSelected: widget.onLinkableModelSelected,
+        ),
+        ...alignmentItems,
+      ],
+      tooltipBuilder: (context, _, message, child) {
+        return Tooltip(message: message, preferBelow: false, child: child);
+      },
+      child: editor,
+    );
+  }
+}
+
+class _ReadEditModeToggle extends StatefulWidget {
+  const _ReadEditModeToggle({required this.mode, required this.onChanged});
+
+  final _DocumentEditorMode mode;
+  final ValueChanged<_DocumentEditorMode> onChanged;
+
+  @override
+  State<_ReadEditModeToggle> createState() => _ReadEditModeToggleState();
+}
+
+class _ReadEditModeToggleState extends State<_ReadEditModeToggle> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedOpacity(
+        opacity: _hovered ? 1 : 0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Material(
+          color: const Color(0x99ffffff),
+          elevation: 1,
+          shadowColor: const Color(0x1f000000),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0x99e4e4e7)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            padding: const EdgeInsets.all(2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _ReadEditModeButton(
+                  icon: Icons.menu_book_outlined,
+                  label: 'Read',
+                  selected: widget.mode == _DocumentEditorMode.read,
+                  onPressed: () => widget.onChanged(_DocumentEditorMode.read),
                 ),
-                nxSlashCommand(
-                  searchLinkableModels: widget.searchLinkableModels,
-                  createLinkedDocument: widget.createLinkedDocument,
-                  onLinkableModelSelected: widget.onLinkableModelSelected,
-                  uploadDocumentImage: widget.uploadDocumentImage,
+                const SizedBox(width: 2),
+                _ReadEditModeButton(
+                  icon: Icons.edit_outlined,
+                  label: 'Edit',
+                  selected: widget.mode == _DocumentEditorMode.edit,
+                  onPressed: () => widget.onChanged(_DocumentEditorMode.edit),
                 ),
               ],
-              commandShortcutEvents: _commandShortcutEvents(),
-              footer: const SizedBox(height: 120),
             ),
-            if (_caretVisible && widget.active)
-              Positioned(
-                top: 2,
-                right: 2,
-                child: _HideCaretButton(onPressed: _hideCaret),
-              ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _HideCaretButton extends StatelessWidget {
-  const _HideCaretButton({required this.onPressed});
+class _ReadEditModeButton extends StatelessWidget {
+  const _ReadEditModeButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
 
+  final IconData icon;
+  final String label;
+  final bool selected;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Hide cursor',
-      preferBelow: false,
-      child: Material(
-        color: const Color(0xf2ffffff),
-        elevation: 2,
-        shadowColor: const Color(0x1f000000),
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(6),
-          child: const SizedBox.square(
-            dimension: 30,
-            child: Icon(
-              Icons.edit_off_outlined,
-              size: 16,
-              color: AppColors.muted,
-            ),
-          ),
+    final foreground = selected ? Colors.white : AppColors.muted;
+    return InkWell(
+      onTap: selected ? null : onPressed,
+      borderRadius: BorderRadius.circular(4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xcc18181b) : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
         ),
+        child: Icon(icon, size: 16, color: foreground),
       ),
     );
+  }
+}
+
+enum _DocumentEditorMode {
+  read,
+  edit;
+
+  bool get isEditable => this == edit;
+
+  String get storageValue {
+    return switch (this) {
+      _DocumentEditorMode.read => 'read',
+      _DocumentEditorMode.edit => 'edit',
+    };
   }
 }
 
@@ -1276,17 +1357,34 @@ _DocumentScrollAnchor? _scrollAnchorFromJsonDocument(
   );
 }
 
-Map<String, dynamic> _jsonDocumentViewStateWithScrollAnchor(
+_DocumentEditorMode _editorModeFromJsonDocument(
   Map<String, dynamic> jsonDocument,
-  _DocumentScrollAnchor scrollAnchor,
 ) {
+  final viewState = jsonDocument['view_state'];
+  if (viewState is! Map) {
+    return _DocumentEditorMode.edit;
+  }
+  return switch (viewState['editor_mode']) {
+    'read' => _DocumentEditorMode.read,
+    'edit' => _DocumentEditorMode.edit,
+    _ => _DocumentEditorMode.edit,
+  };
+}
+
+Map<String, dynamic> _jsonDocumentViewState(
+  Map<String, dynamic> jsonDocument, {
+  required _DocumentEditorMode editorMode,
+  _DocumentScrollAnchor? scrollAnchor,
+}) {
   final existing = jsonDocument['view_state'];
   return <String, dynamic>{
     if (existing is Map) ...Map<String, dynamic>.from(existing),
-    'scroll_anchor': <String, dynamic>{
-      ...scrollAnchor.toJson(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    },
+    'editor_mode': editorMode.storageValue,
+    if (scrollAnchor != null)
+      'scroll_anchor': <String, dynamic>{
+        ...scrollAnchor.toJson(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
   };
 }
 
