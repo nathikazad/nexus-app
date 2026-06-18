@@ -8,7 +8,7 @@ import 'package:nx_notes/data/document/document_image_assets.dart';
 void main() {
   test('parses document image asset urls', () {
     final ref = DocumentImageAssetRef.tryParse(
-      'https://nexus.nathikazad.com/notes/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'https://nexus.nathikazad.com/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
 
     expect(ref, isNotNull);
@@ -17,7 +17,19 @@ void main() {
     expect(ref.name, 'abc.png');
     expect(
       ref.relativeUrl,
+      '/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+    );
+  });
+
+  test('parses legacy notes image urls as docs image refs', () {
+    final ref = DocumentImageAssetRef.tryParse(
       '/notes/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+    );
+
+    expect(ref, isNotNull);
+    expect(
+      ref!.relativeUrl,
+      '/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
   });
 
@@ -28,7 +40,7 @@ void main() {
     );
     expect(
       DocumentImageAssetRef.tryParse(
-        '/notes/assets/images/file?user_id=1&document_id=4209&name=../x.png',
+        '/docs/assets/images/file?user_id=1&document_id=4209&name=../x.png',
       ),
       isNull,
     );
@@ -77,7 +89,7 @@ void main() {
           jsonEncode(<String, Object?>{
             'ok': true,
             'url':
-                '/notes/assets/images/file?user_id=7&document_id=4209&name=abc.png',
+                '/docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
           }),
           200,
         );
@@ -91,13 +103,10 @@ void main() {
 
     expect(
       url,
-      '/notes/assets/images/file?user_id=7&document_id=4209&name=abc.png',
+      '/docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
     );
     expect(seen.method, 'POST');
-    expect(
-      seen.url.toString(),
-      'http://100.108.43.37:8001/notes/assets/images',
-    );
+    expect(seen.url.toString(), 'http://100.108.43.37:8001/docs/assets/images');
     expect(seen.headers['X-User-Id'], '7');
     final multipartBody = latin1.decode(seen.bodyBytes);
     expect(multipartBody, contains('name="document_id"'));
@@ -123,11 +132,11 @@ void main() {
 
     expect(
       tailscaleService.resolveImageUrl(storedUrl),
-      'http://100.108.43.37:8001/notes/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'http://100.108.43.37:8001/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
     expect(
       wanService.resolveImageUrl(storedUrl),
-      'https://nexus.nathikazad.com/notes/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'https://nexus.nathikazad.com/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
   });
 
@@ -152,7 +161,7 @@ void main() {
       expect(seen.method, 'DELETE');
       expect(
         seen.url.toString(),
-        'https://nexus.nathikazad.com/notes/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
+        'https://nexus.nathikazad.com/docs/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
       );
     },
   );

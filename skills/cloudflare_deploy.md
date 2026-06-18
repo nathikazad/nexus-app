@@ -15,11 +15,11 @@ Work from:
 cd /Users/nathikazad/Projects/Nexus/mobile/nx_notes
 ```
 
-Build with the `/notes/` base href:
+Build with the `/docs/` base href:
 
 ```bash
 flutter analyze
-flutter build web --release --base-href /notes/
+flutter build web --release --base-href /docs/
 chmod -R a+rX build/web
 ```
 
@@ -47,18 +47,18 @@ ssh nathik@100.108.43.37 "set -e; docker cp ~/Nexus/nexus-server/mcp/server/stat
 Verify the origin before handing off:
 
 ```bash
-curl -sS -D - http://100.108.43.37:8001/notes/ -o /tmp/notes.html | sed -n '1,20p'
-grep -o 'flutter_bootstrap.js?v=[0-9]*' /tmp/notes.html
-curl -sS "http://100.108.43.37:8001/notes/main.dart.js?v=$v" -o /tmp/main.dart.js
+curl -sS -D - http://100.108.43.37:8001/docs/ -o /tmp/docs.html | sed -n '1,20p'
+grep -o 'flutter_bootstrap.js?v=[0-9]*' /tmp/docs.html
+curl -sS "http://100.108.43.37:8001/docs/main.dart.js?v=$v" -o /tmp/main.dart.js
 shasum /tmp/main.dart.js
-curl -sS "http://100.108.43.37:8001/notes/assets/fonts/MaterialIcons-Regular.otf" -o /tmp/MaterialIcons-Regular.otf
+curl -sS "http://100.108.43.37:8001/docs/assets/fonts/MaterialIcons-Regular.otf" -o /tmp/MaterialIcons-Regular.otf
 file /tmp/MaterialIcons-Regular.otf
 ```
 
 Open the public Cloudflare URL with the version query if needed:
 
 ```text
-https://nexus.nathikazad.com/notes/?v=$v
+https://nexus.nathikazad.com/docs/?v=$v
 ```
 
 ## Notes

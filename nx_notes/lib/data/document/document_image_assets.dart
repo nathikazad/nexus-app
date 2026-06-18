@@ -32,7 +32,7 @@ class DocumentImageAssetService {
       return source;
     }
     final payload = await _imagePayloadFromSource(source);
-    final uploadUri = _baseUri.resolve('/notes/assets/images');
+    final uploadUri = _baseUri.resolve(_documentImageUploadPath);
     _debugDocumentImage(
       'upload start document_id=$documentId uri=$uploadUri '
       'filename=${payload.filename} bytes=${payload.bytes.length}',
@@ -119,7 +119,7 @@ class DocumentImageAssetRef {
 
   String get relativeUrl {
     return Uri(
-      path: '/notes/assets/images/file',
+      path: _documentImageFilePath,
       queryParameters: <String, String>{
         'user_id': '$userId',
         'document_id': '$documentId',
@@ -130,7 +130,9 @@ class DocumentImageAssetRef {
 
   static DocumentImageAssetRef? tryParse(String raw) {
     final uri = Uri.tryParse(raw);
-    if (uri == null || uri.path != '/notes/assets/images/file') {
+    if (uri == null ||
+        (uri.path != _documentImageFilePath &&
+            uri.path != _legacyDocumentImageFilePath)) {
       return null;
     }
     final userId = int.tryParse(uri.queryParameters['user_id'] ?? '');
@@ -159,6 +161,10 @@ class DocumentImageAssetRef {
     return tryParse(raw);
   }
 }
+
+const _documentImageUploadPath = '/docs/assets/images';
+const _documentImageFilePath = '/docs/assets/images/file';
+const _legacyDocumentImageFilePath = '/notes/assets/images/file';
 
 bool isNetworkImageUrl(String source) {
   final uri = Uri.tryParse(source);

@@ -6,6 +6,7 @@ import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/data/document/document_image_assets.dart';
 import 'package:nx_notes/data/document/document_schema_provider.dart';
 import 'package:nx_notes/data/document/kgql_document_repository.dart';
+import 'package:nx_notes/data/document/nx_docs_state.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/document/document_repository.dart';
@@ -37,6 +38,20 @@ final documentImageAssetServiceProvider = Provider<DocumentImageAssetService?>((
   ref.onDispose(client.close);
   return DocumentImageAssetService(
     baseUrl: imageBaseUrl,
+    userId: user.userId,
+    client: client,
+  );
+});
+
+final nxDocsStateServiceProvider = Provider<NxDocsStateService?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) {
+    return null;
+  }
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return NxDocsStateService(
+    baseUrl: resolve(user.preset).imageHttp,
     userId: user.userId,
     client: client,
   );

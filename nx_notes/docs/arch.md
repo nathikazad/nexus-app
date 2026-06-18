@@ -359,7 +359,7 @@ Follow the existing apps:
 - `router.dart`: `GoRouter` listening to `authProvider`
 - unauthenticated users go to `/login`
 
-Initial route should be `/notes`.
+Initial route should be `/docs`.
 
 ## Testing
 

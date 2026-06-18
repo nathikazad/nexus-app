@@ -17,13 +17,13 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Serve from Nexus HTTP server
 
-Build the Flutter web app with the `/notes/` base path and copy it into the MCP HTTP server static directory:
+Build the Flutter web app with the `/docs/` base path and copy it into the MCP HTTP server static directory:
 
 ```sh
-flutter build web --release --base-href /notes/
+flutter build web --release --base-href /docs/
 rsync -az --delete build/web/ ../../servers/mcp/server/static/nx_notes/
 
 rsync -az --delete build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/server/static/nx_notes/
 
-http://100.108.43.37:8001/notes/
+http://100.108.43.37:8001/docs/
 ```

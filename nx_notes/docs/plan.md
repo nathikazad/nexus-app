@@ -100,7 +100,7 @@ widgets.
 Acceptance checks:
 
 - App launches to login when unauthenticated.
-- App launches to `/notes` when authenticated.
+- App launches to `/docs` when authenticated.
 - `flutter analyze` passes.
 
 ## Phase 3: Layer skeleton and tests

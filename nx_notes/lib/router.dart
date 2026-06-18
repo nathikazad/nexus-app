@@ -20,17 +20,27 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     refreshListenable: refresh,
-    initialLocation: '/notes',
+    initialLocation: '/docs',
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final path = state.uri.path;
       if (auth.isLoading) {
-        return path == '/initializing' ? null : '/initializing';
+        if (path == '/initializing') return null;
+        return '/initializing?from=${Uri.encodeComponent(_routeDestination(state))}';
       }
       final loggedIn = auth.value != null;
-      if (path == '/initializing') return loggedIn ? '/notes' : '/login';
-      if (!loggedIn && path != '/login') return '/login';
-      if (loggedIn && path == '/login') return '/notes';
+      if (path == '/initializing') {
+        final from = _safeReturnPath(state);
+        return loggedIn
+            ? from ?? '/docs'
+            : '/login${from == null ? '' : '?from=${Uri.encodeComponent(from)}'}';
+      }
+      if (!loggedIn && path != '/login') {
+        return '/login?from=${Uri.encodeComponent(_routeDestination(state))}';
+      }
+      if (loggedIn && path == '/login') {
+        return _safeReturnPath(state) ?? '/docs';
+      }
       return null;
     },
     routes: <RouteBase>[
@@ -42,11 +52,40 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/initializing',
         builder: (context, state) => const NotesInitializingScreen(),
       ),
-      GoRoute(path: '/', redirect: (context, state) => '/notes'),
+      GoRoute(path: '/', redirect: (context, state) => '/docs'),
       GoRoute(
-        path: '/notes',
+        path: '/docs',
         builder: (context, state) => const NotesRootShell(),
+      ),
+      GoRoute(
+        path: '/docs/:documentId',
+        builder: (context, state) => NotesRootShell(
+          initialDocumentId: int.tryParse(
+            state.pathParameters['documentId'] ?? '',
+          ),
+        ),
       ),
     ],
   );
 });
+
+String _routeDestination(GoRouterState state) {
+  final path = state.uri.path;
+  if (path == '/login' || path == '/initializing') {
+    return _safeReturnPath(state) ?? '/docs';
+  }
+  return state.uri.toString();
+}
+
+String? _safeReturnPath(GoRouterState state) {
+  final from = state.uri.queryParameters['from'];
+  if (from == null ||
+      from.isEmpty ||
+      !from.startsWith('/') ||
+      from.startsWith('//') ||
+      from.startsWith('/login') ||
+      from.startsWith('/initializing')) {
+    return null;
+  }
+  return from;
+}
