@@ -1223,7 +1223,7 @@ class _ReadEditModeToggleState extends State<_ReadEditModeToggle> {
                 ),
                 const SizedBox(width: 2),
                 _ReadEditModeButton(
-                  icon: Icons.edit_outlined,
+                  icon: Icons.keyboard_alt_outlined,
                   label: 'Edit',
                   selected: widget.mode == _DocumentEditorMode.edit,
                   onPressed: () => widget.onChanged(_DocumentEditorMode.edit),
