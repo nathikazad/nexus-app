@@ -1216,7 +1216,7 @@ class _ReadEditModeToggleState extends State<_ReadEditModeToggle> {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 _ReadEditModeButton(
-                  icon: Icons.menu_book_outlined,
+                  icon: Icons.article_outlined,
                   label: 'Read',
                   selected: widget.mode == _DocumentEditorMode.read,
                   onPressed: () => widget.onChanged(_DocumentEditorMode.read),
