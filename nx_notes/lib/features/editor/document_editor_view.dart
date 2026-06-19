@@ -227,10 +227,6 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     if (_editorMode == mode) {
       return;
     }
-    if (!mode.isEditable) {
-      _titleFocusNode.unfocus();
-      _editingTitle = false;
-    }
     setState(() => _editorMode = mode);
   }
 
@@ -309,6 +305,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                 ),
                                 controller: _titleController,
                                 focusNode: _titleFocusNode,
+                                cursorColor: _editorMode.showsCaret
+                                    ? AppColors.text
+                                    : Colors.transparent,
                                 onChanged: _scheduleTitleSave,
                                 onSubmitted: (_) => _titleFocusNode.unfocus(),
                                 onTapOutside: (_) => _titleFocusNode.unfocus(),
@@ -329,13 +328,10 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                 key: ValueKey<String>(
                                   'title-display-${widget.document.id}',
                                 ),
-                                cursor: _editorMode.isEditable
-                                    ? SystemMouseCursors.text
-                                    : SystemMouseCursors.basic,
+                                cursor: SystemMouseCursors.text,
                                 child: GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () {
-                                    if (!_editorMode.isEditable) return;
                                     setState(() => _editingTitle = true);
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
@@ -617,7 +613,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     _editorState = EditorState(
       document: _documentFromDocument(widget.document),
     );
-    _editorState.editable = widget.editorMode.isEditable;
+    _editorState.editable = true;
     _scrollController = EditorScrollController(
       editorState: _editorState,
       shrinkWrap: false,
@@ -937,10 +933,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   void _handleEditorModeChanged() {
-    _editorState.editable = widget.editorMode.isEditable;
-    if (!widget.editorMode.isEditable) {
-      unawaited(_editorState.updateSelectionWithReason(null));
-    }
+    _editorState.editable = true;
     final anchor = _currentScrollAnchor();
     if (anchor != null) {
       _lastSavedScrollAnchor = anchor;
@@ -1114,14 +1107,14 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditable = widget.editorMode.isEditable;
+    final showsCaret = widget.editorMode.showsCaret;
     final editorStyle = _editorStyle().copyWith(
-      cursorColor: isEditable ? AppColors.text : Colors.transparent,
+      cursorColor: showsCaret ? AppColors.text : Colors.transparent,
     );
     final editor = Stack(
       children: <Widget>[
         AppFlowyEditor(
-          editable: isEditable,
+          editable: true,
           editorState: _editorState,
           editorScrollController: _scrollController,
           editorStyle: editorStyle,
@@ -1146,9 +1139,6 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         ),
       ],
     );
-    if (!isEditable) {
-      return editor;
-    }
     return FloatingToolbar(
       editorState: _editorState,
       editorScrollController: _scrollController,
@@ -1190,47 +1180,36 @@ class _ReadEditModeToggle extends StatefulWidget {
 }
 
 class _ReadEditModeToggleState extends State<_ReadEditModeToggle> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedOpacity(
-        opacity: _hovered ? 1 : 0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Material(
-          color: AppColors.panel.withValues(alpha: 0.72),
-          elevation: 1,
-          shadowColor: const Color(0x1f000000),
+    return Material(
+      color: AppColors.panel.withValues(alpha: 0.72),
+      elevation: 1,
+      shadowColor: const Color(0x1f000000),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.line.withValues(alpha: 0.72)),
           borderRadius: BorderRadius.circular(6),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.line.withValues(alpha: 0.72)),
-              borderRadius: BorderRadius.circular(6),
+        ),
+        padding: const EdgeInsets.all(2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _ReadEditModeButton(
+              icon: Icons.article_outlined,
+              label: 'Read',
+              selected: widget.mode == _DocumentEditorMode.read,
+              onPressed: () => widget.onChanged(_DocumentEditorMode.read),
             ),
-            padding: const EdgeInsets.all(2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _ReadEditModeButton(
-                  icon: Icons.article_outlined,
-                  label: 'Read',
-                  selected: widget.mode == _DocumentEditorMode.read,
-                  onPressed: () => widget.onChanged(_DocumentEditorMode.read),
-                ),
-                const SizedBox(width: 2),
-                _ReadEditModeButton(
-                  icon: Icons.keyboard_alt_outlined,
-                  label: 'Edit',
-                  selected: widget.mode == _DocumentEditorMode.edit,
-                  onPressed: () => widget.onChanged(_DocumentEditorMode.edit),
-                ),
-              ],
+            const SizedBox(width: 2),
+            _ReadEditModeButton(
+              icon: Icons.keyboard_alt_outlined,
+              label: 'Edit',
+              selected: widget.mode == _DocumentEditorMode.edit,
+              onPressed: () => widget.onChanged(_DocumentEditorMode.edit),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -1275,7 +1254,7 @@ enum _DocumentEditorMode {
   read,
   edit;
 
-  bool get isEditable => this == edit;
+  bool get showsCaret => this == edit;
 
   String get storageValue {
     return switch (this) {
