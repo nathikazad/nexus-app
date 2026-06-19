@@ -36,6 +36,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
       configuration: standardBlockComponentConfiguration.copyWith(
         placeholderText: (node) =>
             'Heading ${node.attributes[HeadingBlockKeys.level]}',
+        padding: _nxHeadingPadding,
       ),
       textStyleBuilder: _nxHeadingTextStyle,
     ),
@@ -65,15 +66,29 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
 }
 
 TextStyle _nxHeadingTextStyle(int level) {
-  final fontSizes = <double>[32, 28, 24, 18, 18, 18];
-  final fontSize = level >= 0 && level < fontSizes.length
-      ? fontSizes[level]
-      : 18.0;
+  final fontSize = _nxHeadingFontSize(level);
   return TextStyle(
     color: AppColors.text,
     fontSize: fontSize,
     fontWeight: FontWeight.bold,
   );
+}
+
+double _nxHeadingFontSize(int level) {
+  final fontSizes = <double>[32, 28, 24, 18, 18, 18];
+  return level >= 0 && level < fontSizes.length ? fontSizes[level] : 18.0;
+}
+
+EdgeInsets _nxHeadingPadding(Node node) {
+  final level = node.attributes[HeadingBlockKeys.level] as int? ?? 1;
+  final fontSize = _nxHeadingFontSize(level);
+  final topSpacingScale = switch (level) {
+    1 => 0.9,
+    2 => 0.7,
+    3 => 0.55,
+    _ => 0.4,
+  };
+  return EdgeInsets.only(top: fontSize * topSpacingScale, bottom: 4);
 }
 
 String nxPlainTextForCustomNode(Node node) {

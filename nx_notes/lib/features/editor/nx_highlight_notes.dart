@@ -12,6 +12,11 @@ import 'package:provider/provider.dart';
 const String nxHighlightNoteIdAttribute = 'nx_note_id';
 const String nxHighlightNotesDocumentAttribute = 'nx_highlight_notes';
 const String _defaultNoteHighlightColor = '0x4def4444';
+const Color _inlineHoverBackground = Color(0xffffffff);
+const Color _inlineHoverForeground = Color(0xff18181b);
+const Color _inlineHoverMuted = Color(0xff71717a);
+const Color _inlineHoverButtonBackground = Color(0xfff4f4f5);
+const Color _inlineHoverDivider = Color(0x1f18181b);
 
 void registerNxHighlightNoteAttribute() {
   if (!AppFlowyRichTextKeys.supportSliced.contains(
@@ -808,7 +813,8 @@ class _NxInlineHoverOverlay {
                   ),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: AppColors.text,
+                      color: _inlineHoverBackground,
+                      border: Border.all(color: AppColors.line),
                       borderRadius: BorderRadius.circular(6),
                       boxShadow: const <BoxShadow>[
                         BoxShadow(
@@ -835,7 +841,7 @@ class _NxInlineHoverOverlay {
                                     ? TextWidthBasis.longestLine
                                     : TextWidthBasis.parent,
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: _inlineHoverForeground,
                                   fontSize: 12,
                                   height: 1.4,
                                 ),
@@ -845,7 +851,7 @@ class _NxInlineHoverOverlay {
                                 padding: EdgeInsets.symmetric(vertical: 8),
                                 child: Divider(
                                   height: 1,
-                                  color: Color(0x33ffffff),
+                                  color: _inlineHoverDivider,
                                 ),
                               ),
                             if (href != null)
@@ -930,7 +936,7 @@ class _NxInlineLinkActions extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            color: Colors.white,
+            color: _inlineHoverForeground,
             fontSize: 12,
             fontWeight: FontWeight.w700,
             height: 1.3,
@@ -979,8 +985,8 @@ class _NxInlineHoverButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: const Color(0x1fffffff),
+        foregroundColor: _inlineHoverMuted,
+        backgroundColor: _inlineHoverButtonBackground,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,

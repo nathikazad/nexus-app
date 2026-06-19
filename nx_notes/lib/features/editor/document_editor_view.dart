@@ -1665,8 +1665,9 @@ EditorStyle _editorStyle() {
       underline: const TextStyle(decoration: TextDecoration.underline),
       strikethrough: const TextStyle(decoration: TextDecoration.lineThrough),
       href: TextStyle(
-        color: AppColors.blue,
+        foreground: Paint()..color = AppColors.blue,
         decoration: TextDecoration.underline,
+        decorationColor: AppColors.blue,
       ),
       code: TextStyle(
         color: AppColors.text,
