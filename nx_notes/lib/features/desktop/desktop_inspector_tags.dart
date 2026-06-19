@@ -9,7 +9,7 @@ class _InspectorTagsEditor extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (systems.isEmpty) {
-      return const Text(
+      return Text(
         'No editable tag systems',
         style: TextStyle(fontSize: 12, color: AppColors.faint),
       );
@@ -22,7 +22,7 @@ class _InspectorTagsEditor extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 7),
             child: Text(
               system.name,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.faint,
                 fontWeight: FontWeight.w700,
@@ -92,7 +92,7 @@ class _TagPill extends StatelessWidget {
           children: <Widget>[
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.muted,
                 fontWeight: FontWeight.w600,
@@ -103,7 +103,7 @@ class _TagPill extends StatelessWidget {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onRemove,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 17,
                   height: 17,
                   child: Icon(Icons.close, size: 13, color: AppColors.faint),
@@ -152,11 +152,11 @@ class _AddTagMenu extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.panel,
-          border: Border.all(color: const Color(0xffd4d4d8)),
+          border: Border.all(color: AppColors.line),
           borderRadius: BorderRadius.circular(5),
         ),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           child: Icon(Icons.add, size: 14, color: AppColors.muted),
         ),
       ),

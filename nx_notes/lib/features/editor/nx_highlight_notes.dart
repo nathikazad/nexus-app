@@ -504,7 +504,7 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: AppColors.line),
+        side: BorderSide(color: AppColors.line),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -514,14 +514,14 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Row(
+              Row(
                 children: <Widget>[
                   Icon(
                     Icons.sticky_note_2_outlined,
                     size: 17,
                     color: AppColors.faint,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'Highlight note',
                     style: TextStyle(
@@ -535,7 +535,7 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
               ),
               const SizedBox(height: 16),
               if (widget.quote.isNotEmpty) ...[
-                const Text(
+                Text(
                   'Selection',
                   style: TextStyle(
                     color: AppColors.faint,
@@ -560,7 +560,7 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
                     widget.quote,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       height: 1.45,
                       color: AppColors.muted,
@@ -569,7 +569,7 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
                 ),
                 const SizedBox(height: 14),
               ],
-              const Text(
+              Text(
                 'Note',
                 style: TextStyle(
                   color: AppColors.faint,
@@ -585,17 +585,14 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
                 minLines: 5,
                 maxLines: 9,
                 cursorColor: AppColors.text,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.text,
                   fontSize: 13,
                   height: 1.45,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Add a note...',
-                  hintStyle: const TextStyle(
-                    color: AppColors.faint,
-                    fontSize: 13,
-                  ),
+                  hintStyle: TextStyle(color: AppColors.faint, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.sidebar,
                   contentPadding: const EdgeInsets.symmetric(
@@ -604,7 +601,7 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
                   ),
                   border: _noteInputBorder(AppColors.line),
                   enabledBorder: _noteInputBorder(AppColors.line),
-                  focusedBorder: _noteInputBorder(const Color(0xffd4d4d8)),
+                  focusedBorder: _noteInputBorder(AppColors.hover),
                 ),
               ),
               const SizedBox(height: 16),
@@ -659,8 +656,8 @@ class _NxHighlightNoteDialogState extends State<_NxHighlightNoteDialog> {
                           }
                         : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.text,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.floating,
+                      foregroundColor: AppColors.onFloating,
                       disabledBackgroundColor: AppColors.hover,
                       disabledForegroundColor: AppColors.faint,
                       shape: RoundedRectangleBorder(

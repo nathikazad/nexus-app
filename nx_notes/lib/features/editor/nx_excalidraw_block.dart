@@ -280,7 +280,7 @@ class _ExcalidrawResizeHandle extends StatelessWidget {
                 border: Border.all(color: AppColors.line),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const SizedBox(
+              child: SizedBox(
                 width: 18,
                 height: 18,
                 child: Icon(
@@ -338,21 +338,21 @@ class _ExcalidrawDialogState extends State<_ExcalidrawDialog> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: <Widget>[
             Container(
               height: 48,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: AppColors.line)),
               ),
               child: Row(
                 children: <Widget>[
-                  const Icon(Icons.draw_outlined, size: 18),
+                  Icon(Icons.draw_outlined, size: 18, color: AppColors.muted),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Excalidraw',
                     style: TextStyle(
                       color: AppColors.text,
@@ -362,7 +362,7 @@ class _ExcalidrawDialogState extends State<_ExcalidrawDialog> {
                   ),
                   const SizedBox(width: 10),
                   if (_saved)
-                    const Text(
+                    Text(
                       'Saved',
                       style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
@@ -398,7 +398,7 @@ class _ExcalidrawDialogState extends State<_ExcalidrawDialog> {
                   IconButton(
                     tooltip: 'Done',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 20),
+                    icon: Icon(Icons.close, size: 20, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -509,8 +509,8 @@ class _JsonSceneEditor extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 420,
-      decoration: const BoxDecoration(
-        color: Color(0xfffbfbfb),
+      decoration: BoxDecoration(
+        color: AppColors.panel,
         border: Border(left: BorderSide(color: AppColors.line)),
       ),
       child: Column(
@@ -518,12 +518,12 @@ class _JsonSceneEditor extends StatelessWidget {
           Container(
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
             child: Row(
               children: <Widget>[
-                const Text(
+                Text(
                   'Scene JSON',
                   style: TextStyle(
                     color: AppColors.text,
@@ -540,8 +540,8 @@ class _JsonSceneEditor extends StatelessWidget {
                 FilledButton(
                   onPressed: dirty ? onApply : null,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.text,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.floating,
+                    foregroundColor: AppColors.onFloating,
                     disabledBackgroundColor: AppColors.line,
                     disabledForegroundColor: AppColors.faint,
                     minimumSize: const Size(70, 32),
@@ -563,7 +563,7 @@ class _JsonSceneEditor extends StatelessWidget {
                 maxLines: null,
                 minLines: null,
                 textAlignVertical: TextAlignVertical.top,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
                   height: 1.35,
@@ -571,19 +571,19 @@ class _JsonSceneEditor extends StatelessWidget {
                 ),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColors.sidebar,
                   contentPadding: const EdgeInsets.all(10),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(5),
-                    borderSide: const BorderSide(color: AppColors.line),
+                    borderSide: BorderSide(color: AppColors.line),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(5),
-                    borderSide: const BorderSide(color: AppColors.line),
+                    borderSide: BorderSide(color: AppColors.line),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(5),
-                    borderSide: const BorderSide(color: Color(0xffa1a1aa)),
+                    borderSide: BorderSide(color: AppColors.hover),
                   ),
                 ),
               ),
@@ -593,7 +593,7 @@ class _JsonSceneEditor extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.line)),
               ),
               child: Text(
@@ -623,7 +623,7 @@ class _ExcalidrawPreview extends StatelessWidget {
     final elements = _excalidrawVisibleElements(scene);
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xffe4e4e7)),
+        border: Border.all(color: AppColors.line),
         borderRadius: BorderRadius.circular(5),
       ),
       child: Stack(
@@ -637,14 +637,17 @@ class _ExcalidrawPreview extends StatelessWidget {
             child: const SizedBox.expand(),
           ),
           if (elements.isEmpty)
-            const Center(
+            Center(
               child: DecoratedBox(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Color(0xeefbfbfb),
                   borderRadius: BorderRadius.all(Radius.circular(5)),
                 ),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   child: Text(
                     'Click Open to draw',
                     style: TextStyle(
@@ -861,7 +864,7 @@ void _drawTextElement(Canvas canvas, Map<String, dynamic> element) {
   final y = _doubleAttribute(element, 'y');
   final width = _doubleAttribute(element, 'width', fallback: 220);
   final fontSize = _doubleAttribute(element, 'fontSize', fallback: 20);
-  final color = _elementColor(element['strokeColor'], AppColors.text);
+  final color = _elementColor(element['strokeColor'], _excalidrawStrokeColor);
   final painter = TextPainter(
     text: TextSpan(
       text: text,
@@ -884,7 +887,7 @@ Paint _strokePaint(Map<String, dynamic> element) {
   return Paint()
     ..color = _elementColor(
       element['strokeColor'],
-      AppColors.text,
+      _excalidrawStrokeColor,
     ).withValues(alpha: opacity.clamp(0, 1))
     ..style = PaintingStyle.stroke
     ..strokeWidth = _doubleAttribute(element, 'strokeWidth', fallback: 2);
@@ -997,6 +1000,8 @@ Color _excalidrawBackgroundColor(Map<String, dynamic> scene) {
   }
   return const Color(0xfffbfbfb);
 }
+
+const _excalidrawStrokeColor = Color(0xff1e1e1e);
 
 Color _elementColor(Object? value, Color fallback) {
   if (value is! String) {

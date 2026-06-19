@@ -10,7 +10,10 @@ class NexusNotesApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = ref.watch(appDarkModeProvider);
+    AppColors.isDark = isDark;
     return MaterialApp.router(
+      key: ValueKey<bool>(isDark),
       title: 'Nexus Notes',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),

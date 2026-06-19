@@ -17,7 +17,7 @@ class _InspectorHistory extends ConsumerWidget {
             style: OutlinedButton.styleFrom(
               alignment: Alignment.centerLeft,
               foregroundColor: AppColors.muted,
-              side: const BorderSide(color: AppColors.line),
+              side: BorderSide(color: AppColors.line),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -38,8 +38,8 @@ class _InspectorHistory extends ConsumerWidget {
           active: true,
         ),
         if (snaps.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(left: 22, bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 22, bottom: 8),
             child: Text(
               'No snapshots yet',
               style: TextStyle(fontSize: 12, color: AppColors.faint),
@@ -127,7 +127,7 @@ Future<void> _showSnapshotPreview(
                       children: <Widget>[
                         Text(
                           _snapshotTitle(snap),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
                             color: AppColors.text,
@@ -136,7 +136,7 @@ Future<void> _showSnapshotPreview(
                         const SizedBox(height: 5),
                         Text(
                           _snapshotSubtitle(snap),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: AppColors.muted,
                           ),
@@ -146,7 +146,7 @@ Future<void> _showSnapshotPreview(
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: AppColors.muted),
+                    icon: Icon(Icons.close, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -160,7 +160,7 @@ Future<void> _showSnapshotPreview(
                   children: <Widget>[
                     Text(
                       document.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
                         height: 1.15,
@@ -170,7 +170,7 @@ Future<void> _showSnapshotPreview(
                     const SizedBox(height: 28),
                     SelectableText(
                       snap.document.isEmpty ? 'Empty snapshot' : snap.document,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         height: 1.62,
                         color: AppColors.muted,
@@ -306,10 +306,7 @@ class _TimelineItem extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.faint,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.faint),
                   ),
                 ],
               ),

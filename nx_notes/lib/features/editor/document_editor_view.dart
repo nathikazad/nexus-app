@@ -1115,7 +1115,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   @override
   Widget build(BuildContext context) {
     final isEditable = widget.editorMode.isEditable;
-    final editorStyle = _editorStyle.copyWith(
+    final editorStyle = _editorStyle().copyWith(
       cursorColor: isEditable ? AppColors.text : Colors.transparent,
     );
     final editor = Stack(
@@ -1202,13 +1202,13 @@ class _ReadEditModeToggleState extends State<_ReadEditModeToggle> {
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
         child: Material(
-          color: const Color(0x99ffffff),
+          color: AppColors.panel.withValues(alpha: 0.72),
           elevation: 1,
           shadowColor: const Color(0x1f000000),
           borderRadius: BorderRadius.circular(6),
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0x99e4e4e7)),
+              border: Border.all(color: AppColors.line.withValues(alpha: 0.72)),
               borderRadius: BorderRadius.circular(6),
             ),
             padding: const EdgeInsets.all(2),
@@ -1252,7 +1252,7 @@ class _ReadEditModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? Colors.white : AppColors.muted;
+    final foreground = selected ? AppColors.onFloating : AppColors.muted;
     return InkWell(
       onTap: selected ? null : onPressed,
       borderRadius: BorderRadius.circular(4),
@@ -1262,7 +1262,7 @@ class _ReadEditModeButton extends StatelessWidget {
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xcc18181b) : Colors.transparent,
+          color: selected ? AppColors.floating : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Icon(icon, size: 16, color: foreground),
@@ -1582,7 +1582,7 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
       color: Colors.transparent,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.text,
+          color: AppColors.floating,
           borderRadius: BorderRadius.circular(6),
           boxShadow: const <BoxShadow>[
             BoxShadow(
@@ -1628,7 +1628,7 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.onFloating,
                 fontSize: wide ? 11 : 13,
                 fontWeight: fontWeight,
                 fontStyle: attribute == 'italic' ? FontStyle.italic : null,
@@ -1637,7 +1637,7 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
                     : attribute == 'strikethrough'
                     ? TextDecoration.lineThrough
                     : null,
-                decorationColor: Colors.white,
+                decorationColor: AppColors.onFloating,
               ),
             ),
           ),
@@ -1651,30 +1651,32 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
   }
 }
 
-const _editorStyle = EditorStyle.desktop(
-  cursorColor: AppColors.text,
-  selectionColor: Color(0x333B82F6),
-  padding: EdgeInsets.zero,
-  textSpanDecorator: nxHighlightNoteTextSpanDecorator,
-  textSpanOverlayBuilder: nxHighlightNoteOverlayBuilder,
-  textStyleConfiguration: TextStyleConfiguration(
-    text: TextStyle(color: Color(0xff3f3f46), fontSize: 16, height: 1.62),
-    bold: TextStyle(fontWeight: FontWeight.w700),
-    italic: TextStyle(fontStyle: FontStyle.italic),
-    underline: TextStyle(decoration: TextDecoration.underline),
-    strikethrough: TextStyle(decoration: TextDecoration.lineThrough),
-    href: TextStyle(
-      color: AppColors.blue,
-      decoration: TextDecoration.underline,
+EditorStyle _editorStyle() {
+  return EditorStyle.desktop(
+    cursorColor: AppColors.text,
+    selectionColor: const Color(0x333B82F6),
+    padding: EdgeInsets.zero,
+    textSpanDecorator: nxHighlightNoteTextSpanDecorator,
+    textSpanOverlayBuilder: nxHighlightNoteOverlayBuilder,
+    textStyleConfiguration: TextStyleConfiguration(
+      text: TextStyle(color: AppColors.editorText, fontSize: 16, height: 1.62),
+      bold: const TextStyle(fontWeight: FontWeight.w700),
+      italic: const TextStyle(fontStyle: FontStyle.italic),
+      underline: const TextStyle(decoration: TextDecoration.underline),
+      strikethrough: const TextStyle(decoration: TextDecoration.lineThrough),
+      href: TextStyle(
+        color: AppColors.blue,
+        decoration: TextDecoration.underline,
+      ),
+      code: TextStyle(
+        color: AppColors.text,
+        backgroundColor: AppColors.subtle,
+        fontFamily: 'monospace',
+      ),
+      lineHeight: 1.62,
     ),
-    code: TextStyle(
-      color: AppColors.text,
-      backgroundColor: AppColors.subtle,
-      fontFamily: 'monospace',
-    ),
-    lineHeight: 1.62,
-  ),
-);
+  );
+}
 
 class EditorContextBar extends StatelessWidget {
   const EditorContextBar({
@@ -1696,7 +1698,7 @@ class EditorContextBar extends StatelessWidget {
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.sidebar,
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
@@ -1718,13 +1720,13 @@ class EditorContextBar extends StatelessWidget {
           const Spacer(),
           Text(
             '${index + 1} of ${resultContext.resultIds.length}',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(width: 8),
           IconButton(
             visualDensity: VisualDensity.compact,
             onPressed: onClear,
-            icon: const Icon(Icons.close, size: 16, color: AppColors.muted),
+            icon: Icon(Icons.close, size: 16, color: AppColors.muted),
           ),
         ],
       ),

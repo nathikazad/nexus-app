@@ -20,7 +20,7 @@ class _DesktopResultOverlay extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     workspace.overlayTitle ?? 'Results',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       height: 1.15,
                       fontWeight: FontWeight.w600,
@@ -30,13 +30,13 @@ class _DesktopResultOverlay extends ConsumerWidget {
                 ),
                 Text(
                   '${rows.length} documents',
-                  style: const TextStyle(fontSize: 14, color: AppColors.muted),
+                  style: TextStyle(fontSize: 14, color: AppColors.muted),
                 ),
                 const SizedBox(width: 16),
                 IconButton(
                   onPressed: () =>
                       ref.read(desktopWorkspaceProvider.notifier).hideOverlay(),
-                  icon: const Icon(Icons.close, color: AppColors.muted),
+                  icon: Icon(Icons.close, color: AppColors.muted),
                 ),
               ],
             ),
@@ -50,8 +50,8 @@ class _DesktopResultOverlay extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             const Divider(height: 1),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 'Pick a row to open it in an document tab. Press Esc to close.',
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
@@ -101,7 +101,7 @@ class _OverlayResultRow extends StatelessWidget {
                       document.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: AppColors.text,
                         fontWeight: FontWeight.w700,
@@ -110,10 +110,7 @@ class _OverlayResultRow extends StatelessWidget {
                   ),
                   Text(
                     '${document.status} · edited ${document.updatedLabel}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -122,7 +119,7 @@ class _OverlayResultRow extends StatelessWidget {
                 document.excerpt,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ],
           ),

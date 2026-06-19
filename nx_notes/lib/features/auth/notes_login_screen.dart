@@ -50,13 +50,13 @@ class _NotesLoginScreenState extends ConsumerState<NotesLoginScreen> {
                         height: 56,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: AppColors.text,
+                          color: AppColors.floating,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
+                        child: Text(
                           'N',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.onFloating,
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                           ),
@@ -64,7 +64,7 @@ class _NotesLoginScreenState extends ConsumerState<NotesLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 22),
-                    const Text(
+                    Text(
                       'nx_notes',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -74,7 +74,7 @@ class _NotesLoginScreenState extends ConsumerState<NotesLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Sign in to load documents from your personal domain.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: AppColors.muted),
@@ -143,10 +143,7 @@ class _NotesLoginScreenState extends ConsumerState<NotesLoginScreen> {
                       Text(
                         'Error: ${auth.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.red,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: AppColors.red, fontSize: 13),
                       ),
                     ],
                   ],
@@ -169,7 +166,7 @@ class _LoginLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.faint,
         fontSize: 11,
         fontWeight: FontWeight.w700,

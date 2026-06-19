@@ -51,7 +51,7 @@ class _NxBlogLinkBlockComponentWidgetState
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.panel,
           border: Border.all(color: AppColors.line),
           borderRadius: BorderRadius.circular(6),
           boxShadow: const <BoxShadow>[
@@ -75,7 +75,7 @@ class _NxBlogLinkBlockComponentWidgetState
                   border: Border.all(color: AppColors.line),
                   borderRadius: BorderRadius.circular(5),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.article_outlined,
                   size: 16,
                   color: AppColors.muted,
@@ -88,7 +88,7 @@ class _NxBlogLinkBlockComponentWidgetState
                   children: <Widget>[
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.text,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -101,7 +101,7 @@ class _NxBlogLinkBlockComponentWidgetState
                         excerpt,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.muted,
                           fontSize: 12,
                           height: 1.45,
@@ -114,7 +114,7 @@ class _NxBlogLinkBlockComponentWidgetState
               const SizedBox(width: 10),
               Text(
                 status,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.muted,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,

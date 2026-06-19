@@ -185,7 +185,7 @@ class _NxImageUploadDialogState extends State<_NxImageUploadDialog> {
                   const SizedBox(height: 12),
                   Text(
                     _error!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.red,
                       fontSize: 12,
                       height: 1.35,
@@ -213,14 +213,10 @@ class _NxImageUploadDialogState extends State<_NxImageUploadDialog> {
             border: Border.all(color: AppColors.line),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: const Icon(
-            Icons.image_outlined,
-            size: 17,
-            color: AppColors.muted,
-          ),
+          child: Icon(Icons.image_outlined, size: 17, color: AppColors.muted),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Text(
             'Insert image',
             style: TextStyle(
@@ -236,7 +232,7 @@ class _NxImageUploadDialogState extends State<_NxImageUploadDialog> {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 30, height: 30),
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.close, size: 17, color: AppColors.muted),
+          icon: Icon(Icons.close, size: 17, color: AppColors.muted),
         ),
       ],
     );
@@ -304,14 +300,14 @@ class _NxImageUploadDialogState extends State<_NxImageUploadDialog> {
                         fileName ?? 'Choose JPG or PNG',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.text,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Click to select an image',
                         style: TextStyle(color: AppColors.muted, fontSize: 12),
                       ),
@@ -355,8 +351,8 @@ class _NxImageUploadDialogState extends State<_NxImageUploadDialog> {
         const SizedBox(width: 8),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.text,
-            foregroundColor: Colors.white,
+            backgroundColor: AppColors.floating,
+            foregroundColor: AppColors.onFloating,
             disabledBackgroundColor: AppColors.line,
             disabledForegroundColor: AppColors.faint,
             shape: RoundedRectangleBorder(
@@ -365,12 +361,12 @@ class _NxImageUploadDialogState extends State<_NxImageUploadDialog> {
           ),
           onPressed: _submitting ? null : _submit,
           child: _submitting
-              ? const SizedBox(
+              ? SizedBox(
                   width: 15,
                   height: 15,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.onFloating,
                   ),
                 )
               : const Text('Insert'),
@@ -632,7 +628,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
         color: Colors.transparent,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.panel,
             border: Border.all(color: AppColors.line),
             borderRadius: BorderRadius.circular(6),
             boxShadow: const <BoxShadow>[
@@ -1097,7 +1093,7 @@ class _NxSlashTile extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.text,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -1109,10 +1105,7 @@ class _NxSlashTile extends StatelessWidget {
                         subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: AppColors.muted, fontSize: 11),
                       ),
                     ],
                   ],
@@ -1135,10 +1128,7 @@ class _NxSlashMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Text(
-        text,
-        style: const TextStyle(color: AppColors.muted, fontSize: 13),
-      ),
+      child: Text(text, style: TextStyle(color: AppColors.muted, fontSize: 13)),
     );
   }
 }

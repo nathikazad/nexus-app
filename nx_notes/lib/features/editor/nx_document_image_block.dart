@@ -435,7 +435,7 @@ class _NxImageErrorBox extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: const TextStyle(color: AppColors.muted, fontSize: 13),
+        style: TextStyle(color: AppColors.muted, fontSize: 13),
       ),
     );
   }
@@ -450,7 +450,7 @@ class _NxImageDeleteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.text,
+      color: AppColors.floating,
       borderRadius: BorderRadius.circular(6),
       child: IconButton(
         tooltip: 'Delete image',
@@ -459,15 +459,15 @@ class _NxImageDeleteButton extends StatelessWidget {
         constraints: const BoxConstraints.tightFor(width: 30, height: 30),
         onPressed: deleting ? null : onPressed,
         icon: deleting
-            ? const SizedBox(
+            ? SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: AppColors.onFloating,
                 ),
               )
-            : const Icon(Icons.delete_outline, size: 16, color: Colors.white),
+            : Icon(Icons.delete_outline, size: 16, color: AppColors.onFloating),
       ),
     );
   }
@@ -507,7 +507,7 @@ class _NxImageResizeHandle extends StatelessWidget {
                 border: Border.all(color: AppColors.line),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const SizedBox(
+              child: SizedBox(
                 width: 18,
                 height: 18,
                 child: Icon(

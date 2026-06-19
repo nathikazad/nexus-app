@@ -31,13 +31,30 @@ class MobileShell extends ConsumerWidget {
         preferredSize: const Size.fromHeight(56),
         child: _MobileTopChrome(
           title: 'nx_notes',
-          trailing: IconButton(
-            tooltip: 'Log out',
-            onPressed: () async {
-              await ref.read(authProvider.notifier).logout();
-              if (context.mounted) context.go('/login');
-            },
-            icon: const Icon(Icons.logout, size: 20, color: AppColors.muted),
+          trailingWidth: 76,
+          trailing: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              IconButton(
+                tooltip: 'Log out',
+                onPressed: () async {
+                  await ref.read(authProvider.notifier).logout();
+                  if (context.mounted) context.go('/login');
+                },
+                style: IconButton.styleFrom(
+                  minimumSize: const Size.square(34),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: Icon(Icons.logout, size: 20, color: AppColors.muted),
+                splashRadius: 18,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 34,
+                  height: 34,
+                ),
+              ),
+              const AppThemeToggleButton(),
+            ],
           ),
         ),
       ),
@@ -53,11 +70,17 @@ class MobileShell extends ConsumerWidget {
 }
 
 class _MobileTopChrome extends StatelessWidget {
-  const _MobileTopChrome({required this.title, this.leading, this.trailing});
+  const _MobileTopChrome({
+    required this.title,
+    this.leading,
+    this.trailing,
+    this.trailingWidth = 38,
+  });
 
   final String title;
   final Widget? leading;
   final Widget? trailing;
+  final double trailingWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +89,7 @@ class _MobileTopChrome extends StatelessWidget {
       child: Container(
         height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.panel,
           border: Border(bottom: BorderSide(color: AppColors.line)),
         ),
@@ -79,14 +102,14 @@ class _MobileTopChrome extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.text,
                 ),
               ),
             ),
-            SizedBox(width: 38, child: trailing),
+            SizedBox(width: trailingWidth, child: trailing),
           ],
         ),
       ),
@@ -105,7 +128,7 @@ class _MobileBottomNav extends ConsumerWidget {
       top: false,
       child: Container(
         height: 56,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.panel,
           border: Border(top: BorderSide(color: AppColors.line)),
         ),
@@ -206,10 +229,10 @@ class _MobileHome extends ConsumerWidget {
       children: <Widget>[
         TextField(
           style: const TextStyle(fontSize: 13),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Search documents...',
             prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
-            prefixIconConstraints: BoxConstraints(minWidth: 34),
+            prefixIconConstraints: const BoxConstraints(minWidth: 34),
           ),
           onChanged: (value) =>
               ref.read(mobileNotesProvider.notifier).setSearchText(value),
@@ -238,7 +261,7 @@ class _MobileSection extends ConsumerWidget {
           padding: const EdgeInsets.only(left: 2, bottom: 8),
           child: Text(
             title.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppColors.faint,
@@ -286,7 +309,7 @@ class _MobileTags extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 2, bottom: 8),
             child: Text(
               system.name.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: AppColors.faint,
@@ -329,7 +352,7 @@ class _MobileTags extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     node.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: AppColors.muted,
                       fontWeight: FontWeight.w500,
@@ -338,7 +361,7 @@ class _MobileTags extends ConsumerWidget {
                 ),
                 Text(
                   '${node.count}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.faint),
+                  style: TextStyle(fontSize: 12, color: AppColors.faint),
                 ),
               ],
             ),
@@ -366,10 +389,10 @@ class _MobileSearch extends ConsumerWidget {
         TextField(
           autofocus: true,
           style: const TextStyle(fontSize: 13),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Search documents...',
             prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
-            prefixIconConstraints: BoxConstraints(minWidth: 34),
+            prefixIconConstraints: const BoxConstraints(minWidth: 34),
           ),
           onChanged: (value) =>
               ref.read(mobileNotesProvider.notifier).setSearchText(value),
@@ -377,7 +400,7 @@ class _MobileSearch extends ConsumerWidget {
         const SizedBox(height: 22),
         Text(
           state.searchText.isEmpty ? 'TYPE TO SEARCH' : 'RESULTS',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: AppColors.faint,
@@ -422,11 +445,7 @@ class _MobileResults extends ConsumerWidget {
           title: contextState.title,
           leading: IconButton(
             onPressed: () => ref.read(mobileNotesProvider.notifier).back(),
-            icon: const Icon(
-              Icons.arrow_back,
-              size: 20,
-              color: AppColors.muted,
-            ),
+            icon: Icon(Icons.arrow_back, size: 20, color: AppColors.muted),
           ),
         ),
       ),
@@ -465,19 +484,11 @@ class _MobileEditor extends ConsumerWidget {
           title: document?.title ?? 'Editor',
           leading: IconButton(
             onPressed: () => ref.read(mobileNotesProvider.notifier).back(),
-            icon: const Icon(
-              Icons.arrow_back,
-              size: 20,
-              color: AppColors.muted,
-            ),
+            icon: Icon(Icons.arrow_back, size: 20, color: AppColors.muted),
           ),
           trailing: IconButton(
             onPressed: () => _showDocumentSheet(context, ref, documentId),
-            icon: const Icon(
-              Icons.more_horiz,
-              size: 22,
-              color: AppColors.muted,
-            ),
+            icon: Icon(Icons.more_horiz, size: 22, color: AppColors.muted),
           ),
         ),
       ),
@@ -500,7 +511,7 @@ class _MobileEditor extends ConsumerWidget {
         child: Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.panel,
             border: Border(top: BorderSide(color: AppColors.line)),
           ),
@@ -549,7 +560,7 @@ class _MobileEditor extends ConsumerWidget {
                     '${document.wordCount} words · Version ${document.versionNumber}',
               ),
               const Divider(height: 28),
-              const Text(
+              Text(
                 'Links',
                 style: TextStyle(
                   fontSize: 12,
@@ -561,7 +572,7 @@ class _MobileEditor extends ConsumerWidget {
               for (final link in document.links)
                 _SheetPair(label: link.modelType, value: link.name),
               const Divider(height: 28),
-              const Text(
+              Text(
                 'History',
                 style: TextStyle(
                   fontSize: 12,
@@ -621,12 +632,12 @@ class _MetadataButton extends StatelessWidget {
         color: AppColors.subtle,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         child: Row(
           children: <Widget>[
             Icon(Icons.info_outline, size: 14, color: AppColors.muted),
-            SizedBox(width: 5),
+            const SizedBox(width: 5),
             Text(
               'Metadata',
               style: TextStyle(
@@ -659,13 +670,13 @@ class _SheetPair extends StatelessWidget {
             width: 86,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 12, color: AppColors.text),
+              style: TextStyle(fontSize: 12, color: AppColors.text),
             ),
           ),
         ],

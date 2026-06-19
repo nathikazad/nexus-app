@@ -135,7 +135,7 @@ class _NxToggleBlockComponentWidgetState
                             'title',
                             'Toggle heading',
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.text,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -156,7 +156,7 @@ class _NxToggleBlockComponentWidgetState
                           placeholderText: 'Toggle heading',
                           textSpanDecorator: (textSpan) =>
                               textSpan.updateTextStyle(
-                                const TextStyle(
+                                TextStyle(
                                   color: AppColors.text,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -165,7 +165,7 @@ class _NxToggleBlockComponentWidgetState
                               ),
                           placeholderTextSpanDecorator: (textSpan) =>
                               textSpan.updateTextStyle(
-                                const TextStyle(
+                                TextStyle(
                                   color: AppColors.faint,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -178,7 +178,7 @@ class _NxToggleBlockComponentWidgetState
                   visualDensity: VisualDensity.compact,
                   tooltip: 'Add nested block',
                   onPressed: _addNestedParagraph,
-                  icon: const Icon(Icons.add, size: 16, color: AppColors.faint),
+                  icon: Icon(Icons.add, size: 16, color: AppColors.faint),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
                     minWidth: 28,
@@ -193,7 +193,7 @@ class _NxToggleBlockComponentWidgetState
                 padding: const EdgeInsets.only(left: 22),
                 child: Text(
                   '${widget.node.children.length} nested block${widget.node.children.length == 1 ? '' : 's'} hidden',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.faint,
                     fontSize: 12,
                     height: 1.35,
@@ -209,7 +209,7 @@ class _NxToggleBlockComponentWidgetState
                 padding: const EdgeInsets.only(left: 22),
                 child: Text(
                   _stringAttribute(widget.node, 'body', ''),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.muted,
                     fontSize: 14,
                     height: 1.5,

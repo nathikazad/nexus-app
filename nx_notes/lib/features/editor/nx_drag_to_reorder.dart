@@ -93,7 +93,7 @@ class _NxDragToReorderActionState extends State<NxDragToReorderAction> {
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: _selectBlock,
-          child: const MouseRegion(
+          child: MouseRegion(
             cursor: SystemMouseCursors.grab,
             child: Icon(
               Icons.drag_indicator_rounded,

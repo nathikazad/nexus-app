@@ -13,7 +13,7 @@ class _DesktopEditorWorkspace extends ConsumerWidget {
       children: <Widget>[
         Container(
           height: 40,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.sidebar,
             border: Border(bottom: BorderSide(color: AppColors.line)),
           ),
@@ -143,7 +143,7 @@ class _NoDocumentSelected extends ConsumerWidget {
           });
           return const Center(child: CircularProgressIndicator());
         }
-        return const Center(
+        return Center(
           child: Text(
             'Create an document from the sidebar.',
             style: TextStyle(color: AppColors.muted),
@@ -178,7 +178,7 @@ class _EditorTab extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(12, 0, 7, 0),
           decoration: BoxDecoration(
             border: active
-                ? const Border(
+                ? Border(
                     top: BorderSide(color: AppColors.line),
                     left: BorderSide(color: AppColors.line),
                     right: BorderSide(color: AppColors.line),
@@ -188,9 +188,9 @@ class _EditorTab extends ConsumerWidget {
           ),
           child: Row(
             children: <Widget>[
-              if (tab.dirty) ...const <Widget>[
+              if (tab.dirty) ...<Widget>[
                 Icon(Icons.circle, size: 7, color: AppColors.amber),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
               ],
               Expanded(
                 child: Text(
@@ -214,7 +214,7 @@ class _EditorTab extends ConsumerWidget {
                 onPressed: () => ref
                     .read(desktopWorkspaceProvider.notifier)
                     .closeTab(tab.documentId),
-                icon: const Icon(Icons.close, size: 15, color: AppColors.faint),
+                icon: Icon(Icons.close, size: 15, color: AppColors.faint),
               ),
             ],
           ),

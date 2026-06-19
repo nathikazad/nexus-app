@@ -29,7 +29,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
         .where((system) => system.name != 'Status')
         .toList();
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.panel,
         border: Border(left: BorderSide(color: AppColors.line)),
       ),
@@ -39,13 +39,13 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
           Container(
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.sidebar,
               border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
             child: Row(
               children: <Widget>[
-                const Text(
+                Text(
                   'INSPECTOR',
                   style: TextStyle(
                     fontSize: 11,
@@ -65,7 +65,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                   onPressed: () => ref
                       .read(desktopWorkspaceProvider.notifier)
                       .toggleInspector(),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.chevron_right,
                     size: 17,
                     color: AppColors.faint,
@@ -187,14 +187,16 @@ class _InspectorTabButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: active
-            ? const BoxDecoration(
+            ? BoxDecoration(
                 color: AppColors.panel,
                 border: Border(
                   top: BorderSide(color: AppColors.line),
                   left: BorderSide(color: AppColors.line),
                   right: BorderSide(color: AppColors.line),
                 ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
               )
             : null,
         child: Text(
@@ -262,8 +264,8 @@ class _InspectorContentsState extends State<_InspectorContents> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               if (headings.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(6, 6, 6, 0),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
                   child: Text(
                     'No headings',
                     style: TextStyle(fontSize: 12, color: AppColors.faint),
@@ -438,7 +440,7 @@ class _InspectorPinnedSwitchState
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: <Widget>[
-          const Text(
+          Text(
             'Pinned',
             style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
@@ -504,8 +506,8 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
                 alignment: Alignment.centerLeft,
-                backgroundColor: AppColors.text,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.floating,
+                foregroundColor: AppColors.onFloating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -516,12 +518,12 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
               ),
               onPressed: _saving || _deleting ? null : _saveNow,
               icon: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.onFloating,
                       ),
                     )
                   : const Icon(Icons.save_outlined, size: 16),
@@ -535,7 +537,7 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
               style: OutlinedButton.styleFrom(
                 alignment: Alignment.centerLeft,
                 foregroundColor: AppColors.red,
-                side: const BorderSide(color: AppColors.red),
+                side: BorderSide(color: AppColors.red),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -628,7 +630,7 @@ class _DeleteDocumentDialog extends StatelessWidget {
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: AppColors.line),
+        side: BorderSide(color: AppColors.line),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
@@ -638,10 +640,10 @@ class _DeleteDocumentDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Row(
+              Row(
                 children: <Widget>[
                   Icon(Icons.delete_outline, size: 17, color: AppColors.red),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'Delete document?',
                     style: TextStyle(
@@ -654,7 +656,7 @@ class _DeleteDocumentDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'This permanently removes the document and closes its open tab.',
                 style: TextStyle(
                   color: AppColors.muted,
@@ -678,7 +680,7 @@ class _DeleteDocumentDialog extends StatelessWidget {
                   title.trim().isEmpty ? 'Untitled document' : title.trim(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.text,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -742,7 +744,7 @@ class _CollapsedInspector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.sidebar,
         border: Border(left: BorderSide(color: AppColors.line)),
       ),
@@ -758,14 +760,10 @@ class _CollapsedInspector extends ConsumerWidget {
               constraints: const BoxConstraints.tightFor(width: 32, height: 32),
               onPressed: () =>
                   ref.read(desktopWorkspaceProvider.notifier).toggleInspector(),
-              icon: const Icon(
-                Icons.chevron_left,
-                size: 18,
-                color: AppColors.faint,
-              ),
+              icon: Icon(Icons.chevron_left, size: 18, color: AppColors.faint),
             ),
             const SizedBox(height: 8),
-            const RotatedBox(
+            RotatedBox(
               quarterTurns: 1,
               child: Text(
                 'INSPECTOR',
@@ -808,7 +806,7 @@ class _InspectorSection extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 title.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: AppColors.text,
@@ -836,15 +834,9 @@ class _InspectorPair extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: AppColors.muted)),
           const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 12, color: AppColors.text),
-          ),
+          Text(value, style: TextStyle(fontSize: 12, color: AppColors.text)),
         ],
       ),
     );
@@ -866,7 +858,7 @@ class _InspectorStatusPair extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: <Widget>[
-          const Text(
+          Text(
             'Status',
             style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
@@ -883,12 +875,12 @@ class _InspectorStatusPair extends ConsumerWidget {
                 child: DropdownButton<String>(
                   value: document.status,
                   isDense: true,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.keyboard_arrow_down,
                     size: 15,
                     color: AppColors.muted,
                   ),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.muted,
                     fontWeight: FontWeight.w600,

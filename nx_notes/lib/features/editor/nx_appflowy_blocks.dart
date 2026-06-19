@@ -32,6 +32,13 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
 }) {
   final builders = <String, BlockComponentBuilder>{
     ...standardBlockComponentBuilderMap,
+    HeadingBlockKeys.type: HeadingBlockComponentBuilder(
+      configuration: standardBlockComponentConfiguration.copyWith(
+        placeholderText: (node) =>
+            'Heading ${node.attributes[HeadingBlockKeys.level]}',
+      ),
+      textStyleBuilder: _nxHeadingTextStyle,
+    ),
     ImageBlockKeys.type: NxDocumentImageBlockComponentBuilder(
       deleteDocumentImage: deleteDocumentImage,
       resolveDocumentImage: resolveDocumentImage,
@@ -55,6 +62,18 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
     };
   }
   return builders;
+}
+
+TextStyle _nxHeadingTextStyle(int level) {
+  final fontSizes = <double>[32, 28, 24, 18, 18, 18];
+  final fontSize = level >= 0 && level < fontSizes.length
+      ? fontSizes[level]
+      : 18.0;
+  return TextStyle(
+    color: AppColors.text,
+    fontSize: fontSize,
+    fontWeight: FontWeight.bold,
+  );
 }
 
 String nxPlainTextForCustomNode(Node node) {

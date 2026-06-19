@@ -16,7 +16,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
     final books = ref.watch(booksProvider);
     final tagSystems = ref.watch(tagSystemsProvider);
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.sidebar,
         border: Border(right: BorderSide(color: AppColors.line)),
       ),
@@ -25,7 +25,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
           SizedBox(
             height: 48,
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: AppColors.line)),
               ),
               child: Padding(
@@ -37,13 +37,13 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                       height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.text,
+                        color: AppColors.floating,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
+                      child: Text(
                         'N',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.onFloating,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                         ),
@@ -132,13 +132,21 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: _SidebarFooterButton(
-              icon: Icons.logout,
-              label: 'Log out',
-              onTap: () async {
-                await ref.read(authProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
-              },
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: _SidebarFooterButton(
+                    icon: Icons.logout,
+                    label: 'Log out',
+                    onTap: () async {
+                      await ref.read(authProvider.notifier).logout();
+                      if (context.mounted) context.go('/login');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const AppThemeToggleButton(),
+              ],
             ),
           ),
         ],
@@ -264,7 +272,7 @@ class _NewDocumentMenuButtonState
               border: Border.all(color: AppColors.line),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Icon(Icons.add, size: 16, color: AppColors.muted),
+            child: Icon(Icons.add, size: 16, color: AppColors.muted),
           ),
         ),
       ),
@@ -385,7 +393,7 @@ class _CollapsedSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.sidebar,
         border: Border(right: BorderSide(color: AppColors.line)),
       ),
@@ -401,7 +409,7 @@ class _CollapsedSidebar extends ConsumerWidget {
                   ref.read(desktopWorkspaceProvider.notifier).toggleSidebar(),
             ),
             const SizedBox(height: 8),
-            const RotatedBox(
+            RotatedBox(
               quarterTurns: 1,
               child: Text(
                 'nx_notes',
@@ -481,7 +489,7 @@ class _SidebarFooterButton extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   color: AppColors.muted,
                   fontWeight: FontWeight.w600,
@@ -541,10 +549,10 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       style: const TextStyle(fontSize: 13),
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         hintText: 'Search documents...',
         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
-        prefixIconConstraints: BoxConstraints(minWidth: 34),
+        prefixIconConstraints: const BoxConstraints(minWidth: 34),
       ),
       onSubmitted: onSubmitted,
     );
@@ -569,14 +577,16 @@ class _SidebarTabButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: active
-            ? const BoxDecoration(
+            ? BoxDecoration(
                 color: AppColors.panel,
                 border: Border(
                   top: BorderSide(color: AppColors.line),
                   left: BorderSide(color: AppColors.line),
                   right: BorderSide(color: AppColors.line),
                 ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
               )
             : null,
         child: Text(
@@ -688,7 +698,7 @@ class _SidebarSection extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
             child: Text(
               title.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 color: AppColors.faint,
                 fontWeight: FontWeight.w700,
@@ -733,8 +743,8 @@ class _SidebarDocumentLink extends StatelessWidget {
           child: Row(
             children: <Widget>[
               if (pinned)
-                const Padding(
-                  padding: EdgeInsets.only(right: 8),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
                   child: Icon(
                     Icons.push_pin_outlined,
                     size: 15,
@@ -746,7 +756,7 @@ class _SidebarDocumentLink extends StatelessWidget {
                   document.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppColors.muted,
                     fontWeight: FontWeight.w500,
@@ -777,7 +787,7 @@ class _SidebarTags extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
             child: Text(
               system.name.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 color: AppColors.faint,
                 fontWeight: FontWeight.w700,
@@ -825,8 +835,8 @@ class _SidebarTags extends ConsumerWidget {
             child: Row(
               children: <Widget>[
                 if (depth == 0 && node.children.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
                     child: Icon(
                       Icons.keyboard_arrow_down,
                       size: 16,
@@ -838,7 +848,7 @@ class _SidebarTags extends ConsumerWidget {
                     node.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppColors.muted,
                       fontWeight: FontWeight.w500,
@@ -847,7 +857,7 @@ class _SidebarTags extends ConsumerWidget {
                 ),
                 Text(
                   '${node.count}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.faint),
+                  style: TextStyle(fontSize: 12, color: AppColors.faint),
                 ),
               ],
             ),

@@ -16,7 +16,7 @@ class _InspectorLinksEditor extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
+        Text(
           'Project',
           style: TextStyle(
             fontSize: 12,
@@ -41,7 +41,7 @@ class _InspectorLinksEditor extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 18),
-        const Text(
+        Text(
           'Other links',
           style: TextStyle(
             fontSize: 12,
@@ -51,7 +51,7 @@ class _InspectorLinksEditor extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         if (otherLinks.isEmpty)
-          const Text(
+          Text(
             'No other links',
             style: TextStyle(fontSize: 12, color: AppColors.faint),
           )
@@ -62,7 +62,7 @@ class _InspectorLinksEditor extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(
+                  Icon(
                     Icons.description_outlined,
                     size: 15,
                     color: AppColors.faint,
@@ -71,7 +71,7 @@ class _InspectorLinksEditor extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       link.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.muted,
                         height: 1.35,
@@ -124,11 +124,11 @@ class _AddProjectMenu extends ConsumerWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.panel,
-          border: Border.all(color: const Color(0xffd4d4d8)),
+          border: Border.all(color: AppColors.line),
           borderRadius: BorderRadius.circular(5),
         ),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           child: Icon(Icons.add, size: 14, color: AppColors.muted),
         ),
       ),

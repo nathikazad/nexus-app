@@ -327,18 +327,15 @@ class _NxDocumentLinkPickerState extends State<NxDocumentLinkPicker> {
                   focusNode: _focusNode,
                   enabled: !_busy,
                   cursorColor: AppColors.text,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.text,
                     fontSize: 13,
                     height: 1.35,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Search documents...',
-                    hintStyle: const TextStyle(
-                      color: AppColors.faint,
-                      fontSize: 13,
-                    ),
-                    prefixIcon: const Icon(
+                    hintStyle: TextStyle(color: AppColors.faint, fontSize: 13),
+                    prefixIcon: Icon(
                       Icons.search,
                       color: AppColors.faint,
                       size: 17,
@@ -358,14 +355,14 @@ class _NxDocumentLinkPickerState extends State<NxDocumentLinkPicker> {
                     ),
                     border: _inputBorder(AppColors.line),
                     enabledBorder: _inputBorder(AppColors.line),
-                    focusedBorder: _inputBorder(const Color(0xffd4d4d8)),
+                    focusedBorder: _inputBorder(AppColors.hover),
                   ),
                   onSubmitted: (_) {
                     unawaited(_create());
                   },
                 ),
               ),
-              const Divider(height: 1, color: AppColors.line),
+              Divider(height: 1, color: AppColors.line),
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
@@ -454,7 +451,7 @@ class _DocumentPickerTile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.text,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -466,7 +463,7 @@ class _DocumentPickerTile extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.muted,
                       fontSize: 11,
                       height: 1.25,
@@ -493,11 +490,7 @@ class _DocumentPickerMessage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Text(
         text,
-        style: const TextStyle(
-          color: AppColors.muted,
-          fontSize: 12,
-          height: 1.35,
-        ),
+        style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.35),
       ),
     );
   }
