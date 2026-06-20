@@ -721,28 +721,32 @@ class _SidebarDocuments extends ConsumerWidget {
         ],
       );
     }
+    final pinnedRows = pinned.value?.take(5).toList() ?? const <NxDocument>[];
+    final recentRows = recent.value?.take(15).toList() ?? const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.all(12),
       children: <Widget>[
-        _SidebarSection(
-          title: 'Pinned',
-          onTitleTap: () async {
-            final result = await ref
-                .read(documentResultControllerProvider)
-                .pinned();
-            ref
-                .read(desktopWorkspaceProvider.notifier)
-                .showOverlay(
-                  title: result.title,
-                  query: result.query,
-                  resultIds: result.resultIds,
-                  results: result.results,
-                );
-          },
-          rows: pinned.value?.take(5).toList() ?? const <NxDocument>[],
-          pinned: true,
-        ),
-        const SizedBox(height: 22),
+        if (pinnedRows.isNotEmpty) ...<Widget>[
+          _SidebarSection(
+            title: 'Pinned',
+            onTitleTap: () async {
+              final result = await ref
+                  .read(documentResultControllerProvider)
+                  .pinned();
+              ref
+                  .read(desktopWorkspaceProvider.notifier)
+                  .showOverlay(
+                    title: result.title,
+                    query: result.query,
+                    resultIds: result.resultIds,
+                    results: result.results,
+                  );
+            },
+            rows: pinnedRows,
+            pinned: true,
+          ),
+          const SizedBox(height: 22),
+        ],
         _SidebarSection(
           title: 'Recent',
           onTitleTap: () async {
@@ -758,7 +762,7 @@ class _SidebarDocuments extends ConsumerWidget {
                   results: result.results,
                 );
           },
-          rows: recent.value?.take(5).toList() ?? const <NxDocument>[],
+          rows: recentRows,
         ),
       ],
     );
