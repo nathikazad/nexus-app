@@ -25,6 +25,8 @@ class NxBook {
     required this.tags,
     required this.readingState,
     required this.rank,
+    required this.totalChapters,
+    required this.currentChapter,
     required this.wordCount,
     required this.updatedAt,
     required this.updatedLabel,
@@ -36,9 +38,24 @@ class NxBook {
   final List<String> tags;
   final BookReadingState readingState;
   final int? rank;
+  final int? totalChapters;
+  final int? currentChapter;
   final int wordCount;
   final DateTime updatedAt;
   final String updatedLabel;
+
+  double? get progressFraction {
+    final total = totalChapters;
+    final current = currentChapter;
+    if (total == null || current == null || total <= 0) return null;
+    return current.clamp(0, total) / total;
+  }
+
+  int? get progressPercent {
+    final fraction = progressFraction;
+    if (fraction == null) return null;
+    return (fraction * 100).round();
+  }
 
   NxBook copyWith({
     String? title,
@@ -47,6 +64,10 @@ class NxBook {
     BookReadingState? readingState,
     int? rank,
     bool clearRank = false,
+    int? totalChapters,
+    bool clearTotalChapters = false,
+    int? currentChapter,
+    bool clearCurrentChapter = false,
     int? wordCount,
     DateTime? updatedAt,
     String? updatedLabel,
@@ -58,6 +79,12 @@ class NxBook {
       tags: tags ?? this.tags,
       readingState: readingState ?? this.readingState,
       rank: clearRank ? null : rank ?? this.rank,
+      totalChapters: clearTotalChapters
+          ? null
+          : totalChapters ?? this.totalChapters,
+      currentChapter: clearCurrentChapter
+          ? null
+          : currentChapter ?? this.currentChapter,
       wordCount: wordCount ?? this.wordCount,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedLabel: updatedLabel ?? this.updatedLabel,

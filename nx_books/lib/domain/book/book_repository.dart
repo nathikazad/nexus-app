@@ -14,4 +14,9 @@ abstract class BookRepository {
     required int id,
     required List<String> tags,
   });
+  Future<void> updateBookChapterProgress({
+    required int id,
+    required int? totalChapters,
+    required int? currentChapter,
+  });
 }

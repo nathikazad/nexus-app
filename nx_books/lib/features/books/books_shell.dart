@@ -467,12 +467,15 @@ class _BookCard extends ConsumerWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      if (book.tags.isNotEmpty) ...[
+                      if (book.tags.isNotEmpty ||
+                          book.progressPercent != null) ...[
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 4,
                           runSpacing: 4,
                           children: [
+                            if (book.progressPercent != null)
+                              _Pill('${book.progressPercent}%'),
                             for (final tag in book.tags.take(6)) _Pill(tag),
                           ],
                         ),
@@ -584,6 +587,9 @@ class _BookDetail extends ConsumerWidget {
                       const _FieldLabel('Rank'),
                       _RankControl(book: row),
                       const SizedBox(height: 18),
+                      const _FieldLabel('Chapters'),
+                      _ChapterProgressEditor(book: row),
+                      const SizedBox(height: 18),
                       const _FieldLabel('Topic'),
                       _TopicTagsEditor(book: row),
                       const SizedBox(height: 18),
@@ -591,6 +597,12 @@ class _BookDetail extends ConsumerWidget {
                       _MetaRow(label: 'Model', value: 'Book #${row.id}'),
                       _MetaRow(label: 'State', value: row.readingState.label),
                       _MetaRow(label: 'Rank', value: '${row.rank ?? '-'}'),
+                      _MetaRow(
+                        label: 'Progress',
+                        value: row.progressPercent == null
+                            ? '-'
+                            : '${row.progressPercent}%',
+                      ),
                       _MetaRow(label: 'Updated', value: row.updatedLabel),
                       _MetaRow(label: 'Words', value: '${row.wordCount}'),
                     ],
@@ -717,6 +729,170 @@ class _RankControl extends ConsumerWidget {
           onPressed: () =>
               ref.read(bookMutationControllerProvider).moveWithinLane(book, 1),
         ),
+      ],
+    );
+  }
+}
+
+class _ChapterProgressEditor extends ConsumerStatefulWidget {
+  const _ChapterProgressEditor({required this.book});
+
+  final NxBook book;
+
+  @override
+  ConsumerState<_ChapterProgressEditor> createState() =>
+      _ChapterProgressEditorState();
+}
+
+class _ChapterProgressEditorState
+    extends ConsumerState<_ChapterProgressEditor> {
+  late final TextEditingController _totalController;
+  late final FocusNode _totalFocusNode;
+  double _currentValue = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalController = TextEditingController();
+    _totalFocusNode = FocusNode();
+    _syncFromBook();
+    _totalFocusNode.addListener(_handleTotalFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChapterProgressEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.book.id != widget.book.id ||
+        oldWidget.book.totalChapters != widget.book.totalChapters ||
+        oldWidget.book.currentChapter != widget.book.currentChapter) {
+      _syncFromBook();
+    }
+  }
+
+  @override
+  void dispose() {
+    _totalFocusNode.removeListener(_handleTotalFocusChange);
+    _totalFocusNode.dispose();
+    _totalController.dispose();
+    super.dispose();
+  }
+
+  void _syncFromBook() {
+    final total = widget.book.totalChapters;
+    final current = widget.book.currentChapter ?? 0;
+    final text = total == null ? '' : '$total';
+    if (_totalController.text != text) {
+      _totalController.text = text;
+    }
+    _currentValue = total == null ? 0 : current.clamp(0, total).toDouble();
+  }
+
+  void _handleTotalFocusChange() {
+    if (!_totalFocusNode.hasFocus) {
+      _saveTotal(_totalController.text);
+    }
+  }
+
+  Future<void> _saveTotal(String value) async {
+    final trimmed = value.trim();
+    final parsed = int.tryParse(trimmed);
+    final total = parsed == null || parsed <= 0 ? null : parsed;
+    final current = total == null
+        ? null
+        : (widget.book.currentChapter ?? _currentValue.round())
+              .clamp(0, total)
+              .toInt();
+    await ref
+        .read(bookMutationControllerProvider)
+        .updateChapterProgress(
+          widget.book,
+          totalChapters: total,
+          currentChapter: current,
+        );
+  }
+
+  Future<void> _saveCurrent(double value) async {
+    final total = widget.book.totalChapters;
+    if (total == null || total <= 0) return;
+    final current = value.round().clamp(0, total).toInt();
+    setState(() => _currentValue = current.toDouble());
+    await ref
+        .read(bookMutationControllerProvider)
+        .updateChapterProgress(
+          widget.book,
+          totalChapters: total,
+          currentChapter: current,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.book.totalChapters;
+    final current = total == null
+        ? null
+        : _currentValue.round().clamp(0, total).toInt();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: ValueKey('book-total-chapters-${widget.book.id}'),
+          controller: _totalController,
+          focusNode: _totalFocusNode,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Total chapters',
+            suffixIcon: _totalController.text.isNotEmpty
+                ? IconButton(
+                    tooltip: 'Clear chapters',
+                    icon: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: AppColors.faint,
+                    ),
+                    onPressed: () {
+                      _totalController.clear();
+                      _saveTotal('');
+                    },
+                  )
+                : null,
+          ),
+          onChanged: (_) => setState(() {}),
+          onSubmitted: _saveTotal,
+        ),
+        if (total != null && total > 0) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                'Chapter ${current ?? 0} of $total',
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${((current ?? 0) / total * 100).round()}%',
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: (current ?? 0).toDouble(),
+            min: 0,
+            max: total.toDouble(),
+            divisions: total,
+            label: '${current ?? 0}',
+            onChanged: (value) => setState(() => _currentValue = value),
+            onChangeEnd: _saveCurrent,
+          ),
+        ],
       ],
     );
   }
