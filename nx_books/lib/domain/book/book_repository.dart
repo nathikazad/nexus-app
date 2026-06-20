@@ -19,4 +19,5 @@ abstract class BookRepository {
     required int? totalChapters,
     required int? currentChapter,
   });
+  Future<void> deleteBook(int id);
 }

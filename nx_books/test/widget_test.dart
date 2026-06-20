@@ -188,6 +188,55 @@ void main() {
     expect(row.totalChapters, isNull);
     expect(row.currentChapter, isNull);
   });
+
+  test('deleting a book removes it and clears selection', () async {
+    final repo = _FakeBookRepository([
+      _book(1, 'One', BookReadingState.reading, rank: 0),
+      _book(2, 'Two', BookReadingState.reading, rank: 1),
+    ]);
+    final container = ProviderContainer(
+      overrides: [bookRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(container.dispose);
+
+    container.read(selectedBookIdProvider.notifier).select(1);
+    await container.read(booksProvider.future);
+    await container
+        .read(bookMutationControllerProvider)
+        .deleteBook(repo.rows.first);
+
+    expect(repo.rows.map((book) => book.id), [2]);
+    expect(container.read(selectedBookIdProvider), isNull);
+  });
+
+  testWidgets('detail panel delete button confirms before deleting', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repo = _FakeBookRepository([
+      _book(1, 'Delete me', BookReadingState.reading, rank: 0),
+      _book(2, 'Keep me', BookReadingState.reading, rank: 1),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete me'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('delete-book-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete book?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repo.rows.map((book) => book.title), ['Keep me']);
+    expect(find.text('Delete me'), findsNothing);
+    expect(find.text('Keep me'), findsWidgets);
+  });
 }
 
 Widget _testApp(BookRepository repo) {
@@ -244,6 +293,11 @@ class _FakeBookRepository implements BookRepository {
     );
     rows.add(book);
     return book;
+  }
+
+  @override
+  Future<void> deleteBook(int id) async {
+    rows.removeWhere((book) => book.id == id);
   }
 
   @override

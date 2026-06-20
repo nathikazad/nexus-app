@@ -115,6 +115,15 @@ class BookMutationController {
     _ref.invalidate(booksProvider);
   }
 
+  Future<void> deleteBook(NxBook book) async {
+    await _ref.read(bookRepositoryProvider).deleteBook(book.id);
+    final selected = _ref.read(selectedBookIdProvider);
+    if (selected == book.id) {
+      _ref.read(selectedBookIdProvider.notifier).select(null);
+    }
+    _ref.invalidate(booksProvider);
+  }
+
   int _nextRank(List<NxBook> books, BookReadingState state) {
     final ranks = [
       for (final book in books)

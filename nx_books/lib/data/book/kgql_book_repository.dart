@@ -164,6 +164,11 @@ class KgqlBookRepository implements BookRepository {
     );
   }
 
+  @override
+  Future<void> deleteBook(int id) async {
+    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+  }
+
   static const Map<String, dynamic> bookSummaryFetchStruct = {
     'id': true,
     'name': true,

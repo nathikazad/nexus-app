@@ -610,15 +610,75 @@ class _BookDetail extends ConsumerWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: FilledButton.icon(
-                    onPressed: () => onOpenInNotes(row),
-                    icon: const Icon(Icons.open_in_new, size: 17),
-                    label: const Text('Open in Notes'),
+                  child: Row(
+                    children: [
+                      Expanded(child: _DeleteBookButton(book: row)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => onOpenInNotes(row),
+                          icon: const Icon(Icons.open_in_new, size: 17),
+                          label: const Text('Open in Notes'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
     );
+  }
+}
+
+class _DeleteBookButton extends ConsumerWidget {
+  const _DeleteBookButton({required this.book});
+
+  final NxBook book;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return OutlinedButton.icon(
+      key: ValueKey('delete-book-${book.id}'),
+      onPressed: () => _confirmDelete(context, ref),
+      icon: const Icon(Icons.delete_outline, size: 17),
+      label: const Text('Delete'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.red,
+        side: const BorderSide(color: AppColors.line),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete book?'),
+          content: Text(
+            'Delete "${book.title}" from nx_books and notes. This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await ref.read(bookMutationControllerProvider).deleteBook(book);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Deleted ${book.title}')));
   }
 }
 
