@@ -8,6 +8,57 @@ class _DesktopSidebar extends ConsumerStatefulWidget {
 }
 
 class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
+  Timer? _searchDebounce;
+  final _searchController = TextEditingController();
+  String _searchText = '';
+  String _liveSearchText = '';
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _searchText = value);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      setState(() => _liveSearchText = _searchText.trim());
+    });
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _searchText = '';
+      _liveSearchText = '';
+    });
+  }
+
+  Future<void> _submitSearch(String value) async {
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    setState(() {
+      _searchText = value;
+      _liveSearchText = query;
+    });
+    final result = await ref
+        .read(documentResultControllerProvider)
+        .search(query);
+    if (!mounted) return;
+    ref
+        .read(desktopWorkspaceProvider.notifier)
+        .showOverlay(
+          title: result.title,
+          query: result.query,
+          resultIds: result.resultIds,
+          results: result.results,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final workspace = ref.watch(desktopWorkspaceProvider);
@@ -15,6 +66,11 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
     final pinned = ref.watch(pinnedDocumentsProvider);
     final books = ref.watch(booksProvider);
     final tagSystems = ref.watch(tagSystemsProvider);
+    final liveQuery = _liveSearchText;
+    final liveDocuments =
+        liveQuery.isNotEmpty && workspace.sidebarTab == SidebarTab.documents
+        ? ref.watch(documentSearchProvider(liveQuery))
+        : const AsyncData<List<NxDocument>>(<NxDocument>[]);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.sidebar,
@@ -75,19 +131,11 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
             child: _SearchField(
-              onSubmitted: (value) async {
-                final result = await ref
-                    .read(documentResultControllerProvider)
-                    .search(value);
-                ref
-                    .read(desktopWorkspaceProvider.notifier)
-                    .showOverlay(
-                      title: result.title,
-                      query: result.query,
-                      resultIds: result.resultIds,
-                      results: result.results,
-                    );
-              },
+              controller: _searchController,
+              hasText: _searchText.isNotEmpty,
+              onChanged: _onSearchChanged,
+              onClear: _clearSearch,
+              onSubmitted: (value) => unawaited(_submitSearch(value)),
             ),
           ),
           Padding(
@@ -124,10 +172,13 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
               SidebarTab.documents => _SidebarDocuments(
                 recent: recent,
                 pinned: pinned,
+                liveQuery: liveQuery,
+                liveResults: liveDocuments,
               ),
               SidebarTab.books => _SidebarBooks(
                 books: books,
                 tagSystems: tagSystems,
+                liveQuery: liveQuery,
               ),
               SidebarTab.tags => _SidebarTags(tagSystems: tagSystems),
             },
@@ -544,19 +595,43 @@ class _IconSquareButton extends StatelessWidget {
 }
 
 class _SearchField extends StatelessWidget {
-  const _SearchField({required this.onSubmitted});
+  const _SearchField({
+    required this.controller,
+    required this.hasText,
+    required this.onChanged,
+    required this.onClear,
+    required this.onSubmitted,
+  });
 
+  final TextEditingController controller;
+  final bool hasText;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
   final ValueChanged<String> onSubmitted;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(
         hintText: 'Search documents...',
         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
         prefixIconConstraints: const BoxConstraints(minWidth: 34),
+        suffixIcon: hasText
+            ? IconButton(
+                tooltip: 'Clear search',
+                icon: Icon(Icons.close, size: 16, color: AppColors.faint),
+                splashRadius: 16,
+                onPressed: onClear,
+              )
+            : null,
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 34,
+          minHeight: 32,
+        ),
       ),
+      onChanged: onChanged,
       onSubmitted: onSubmitted,
     );
   }
@@ -606,13 +681,46 @@ class _SidebarTabButton extends StatelessWidget {
 }
 
 class _SidebarDocuments extends ConsumerWidget {
-  const _SidebarDocuments({required this.recent, required this.pinned});
+  const _SidebarDocuments({
+    required this.recent,
+    required this.pinned,
+    required this.liveQuery,
+    required this.liveResults,
+  });
 
   final AsyncValue<List<NxDocument>> recent;
   final AsyncValue<List<NxDocument>> pinned;
+  final String liveQuery;
+  final AsyncValue<List<NxDocument>> liveResults;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (liveQuery.isNotEmpty) {
+      final rows = liveResults.value ?? const <NxDocument>[];
+      return ListView(
+        padding: const EdgeInsets.all(12),
+        children: <Widget>[
+          _SidebarLiveSearchHeader(count: rows.length),
+          for (final document in rows)
+            _SidebarDocumentLink(
+              document: document,
+              onTap: () => ref
+                  .read(desktopWorkspaceProvider.notifier)
+                  .openDocument(document.id),
+            ),
+          if (liveResults.isLoading)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(8, 10, 8, 0),
+              child: _SidebarMutedText('Searching...'),
+            )
+          else if (rows.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(8, 10, 8, 0),
+              child: _SidebarMutedText('No documents match'),
+            ),
+        ],
+      );
+    }
     return ListView(
       padding: const EdgeInsets.all(12),
       children: <Widget>[
@@ -657,11 +765,58 @@ class _SidebarDocuments extends ConsumerWidget {
   }
 }
 
+class _SidebarLiveSearchHeader extends StatelessWidget {
+  const _SidebarLiveSearchHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              'SEARCH',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.faint,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            '$count',
+            style: TextStyle(fontSize: 11, color: AppColors.faint),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarMutedText extends StatelessWidget {
+  const _SidebarMutedText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: TextStyle(fontSize: 12, color: AppColors.faint));
+  }
+}
+
 class _SidebarBooks extends ConsumerStatefulWidget {
-  const _SidebarBooks({required this.books, required this.tagSystems});
+  const _SidebarBooks({
+    required this.books,
+    required this.tagSystems,
+    required this.liveQuery,
+  });
 
   final AsyncValue<List<NxDocument>> books;
   final AsyncValue<List<TagSystem>> tagSystems;
+  final String liveQuery;
 
   @override
   ConsumerState<_SidebarBooks> createState() => _SidebarBooksState();
@@ -683,6 +838,7 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
       children: <Widget>[
         _SidebarBooksHeader(
           hasFilters: _selectedTopics.isNotEmpty || _selectedStates.isNotEmpty,
+          searchActive: widget.liveQuery.isNotEmpty,
           topics: topics,
           selectedTopics: _selectedTopics,
           selectedStates: _selectedStates,
@@ -717,10 +873,22 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
   }
 
   List<NxDocument> _filteredRows(List<NxDocument> rows) {
+    final query = widget.liveQuery.trim().toLowerCase();
     return [
       for (final row in rows)
-        if (_matchesFilters(row)) row,
+        if (query.isEmpty ? _matchesFilters(row) : _matchesSearch(row, query))
+          row,
     ]..sort(_compareBooks);
+  }
+
+  bool _matchesSearch(NxDocument document, String query) {
+    return [
+      document.title,
+      document.excerpt,
+      document.status,
+      document.readingState,
+      ...document.tagsBySystem.values.expand((tags) => tags),
+    ].join(' ').toLowerCase().contains(query);
   }
 
   bool _matchesFilters(NxDocument document) {
@@ -777,6 +945,7 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
 class _SidebarBooksHeader extends StatelessWidget {
   const _SidebarBooksHeader({
     required this.hasFilters,
+    required this.searchActive,
     required this.topics,
     required this.selectedTopics,
     required this.selectedStates,
@@ -786,6 +955,7 @@ class _SidebarBooksHeader extends StatelessWidget {
   });
 
   final bool hasFilters;
+  final bool searchActive;
   final List<String> topics;
   final Set<String> selectedTopics;
   final Set<String> selectedStates;
@@ -800,13 +970,26 @@ class _SidebarBooksHeader extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Text(
-              'BOOKS',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.faint,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'BOOKS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.faint,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (searchActive && hasFilters)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      'Filters paused while searching',
+                      style: TextStyle(fontSize: 10, color: AppColors.faint),
+                    ),
+                  ),
+              ],
             ),
           ),
           PopupMenuButton<_BookFilterAction>(
