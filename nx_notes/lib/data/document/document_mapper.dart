@@ -38,6 +38,8 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
     versionNumber: versionNumber,
     excerpt: _excerptFrom(document),
     links: _linksFromModel(model),
+    readingState: model.attrString(kBookAttrReadingState) ?? '',
+    bookRank: model.attrInt(kBookAttrRank),
   );
 }
 
@@ -71,6 +73,8 @@ NxDocument documentSummaryFromModel(Model model) {
     versionNumber: 0,
     excerpt: excerpt,
     links: const <LinkedModel>[],
+    readingState: model.attrString(kBookAttrReadingState) ?? '',
+    bookRank: model.attrInt(kBookAttrRank),
   );
 }
 
@@ -145,6 +149,7 @@ NxDocument documentForCreatedId(
     versionNumber: 0,
     excerpt: _excerptFrom(document),
     links: const <LinkedModel>[],
+    readingState: kind == DocumentKind.book ? 'to_read' : '',
   );
 }
 
@@ -281,6 +286,8 @@ Map<String, dynamic> documentSummaryFetchStruct() {
     'updated_at': true,
     kDocumentAttrPinned: true,
     kDocumentAttrWordCount: true,
+    kBookAttrReadingState: true,
+    kBookAttrRank: true,
     'tags': true,
     'model_type': {'id': true, 'name': true},
   };

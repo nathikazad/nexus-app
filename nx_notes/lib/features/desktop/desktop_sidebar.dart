@@ -125,7 +125,10 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                 recent: recent,
                 pinned: pinned,
               ),
-              SidebarTab.books => _SidebarBooks(books: books),
+              SidebarTab.books => _SidebarBooks(
+                books: books,
+                tagSystems: tagSystems,
+              ),
               SidebarTab.tags => _SidebarTags(tagSystems: tagSystems),
             },
           ),
@@ -654,24 +657,268 @@ class _SidebarDocuments extends ConsumerWidget {
   }
 }
 
-class _SidebarBooks extends ConsumerWidget {
-  const _SidebarBooks({required this.books});
+class _SidebarBooks extends ConsumerStatefulWidget {
+  const _SidebarBooks({required this.books, required this.tagSystems});
 
   final AsyncValue<List<NxDocument>> books;
+  final AsyncValue<List<TagSystem>> tagSystems;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SidebarBooks> createState() => _SidebarBooksState();
+}
+
+class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
+  final Set<String> _selectedTopics = <String>{};
+  final Set<String> _selectedStates = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _filteredRows(widget.books.value ?? const <NxDocument>[]);
+    final topics = _topicOptions(
+      widget.tagSystems.value ?? const <TagSystem>[],
+      widget.books.value ?? const <NxDocument>[],
+    );
     return ListView(
       padding: const EdgeInsets.all(12),
       children: <Widget>[
-        _SidebarSection(
-          title: 'Books',
-          onTitleTap: () {},
-          rows: books.value ?? const <NxDocument>[],
+        _SidebarBooksHeader(
+          hasFilters: _selectedTopics.isNotEmpty || _selectedStates.isNotEmpty,
+          topics: topics,
+          selectedTopics: _selectedTopics,
+          selectedStates: _selectedStates,
+          onToggleTopic: (topic) => setState(() {
+            _toggle(_selectedTopics, topic);
+          }),
+          onToggleState: (state) => setState(() {
+            _toggle(_selectedStates, state);
+          }),
+          onClear: () => setState(() {
+            _selectedTopics.clear();
+            _selectedStates.clear();
+          }),
         ),
+        for (final document in rows)
+          _SidebarDocumentLink(
+            document: document,
+            onTap: () => ref
+                .read(desktopWorkspaceProvider.notifier)
+                .openDocument(document.id),
+          ),
+        if (rows.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
+            child: Text(
+              'No books match',
+              style: TextStyle(fontSize: 12, color: AppColors.faint),
+            ),
+          ),
       ],
     );
   }
+
+  List<NxDocument> _filteredRows(List<NxDocument> rows) {
+    return [
+      for (final row in rows)
+        if (_matchesFilters(row)) row,
+    ]..sort(_compareBooks);
+  }
+
+  bool _matchesFilters(NxDocument document) {
+    if (_selectedStates.isNotEmpty &&
+        !_selectedStates.contains(_bookReadingState(document))) {
+      return false;
+    }
+    if (_selectedTopics.isNotEmpty &&
+        !document.topics.any(_selectedTopics.contains)) {
+      return false;
+    }
+    return true;
+  }
+
+  int _compareBooks(NxDocument a, NxDocument b) {
+    final state = _stateSort(a).compareTo(_stateSort(b));
+    if (state != 0) return state;
+    final rank = (a.bookRank ?? 1 << 30).compareTo(b.bookRank ?? 1 << 30);
+    if (rank != 0) return rank;
+    return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+  }
+
+  int _stateSort(NxDocument document) {
+    return switch (_bookReadingState(document)) {
+      'reading' => 0,
+      'read' => 1,
+      'to_read' => 2,
+      _ => 3,
+    };
+  }
+
+  String _bookReadingState(NxDocument document) {
+    final value = document.readingState.trim();
+    return value.isEmpty ? 'to_read' : value;
+  }
+
+  List<String> _topicOptions(List<TagSystem> systems, List<NxDocument> books) {
+    final topicSystem = systems.where((system) => system.name == 'Topic');
+    final options = <String>{
+      for (final system in topicSystem)
+        for (final node in system.nodes) ..._flattenTagNodeNames(node),
+      for (final book in books) ...book.topics,
+    }.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return options;
+  }
+
+  void _toggle(Set<String> set, String value) {
+    if (!set.add(value)) {
+      set.remove(value);
+    }
+  }
+}
+
+class _SidebarBooksHeader extends StatelessWidget {
+  const _SidebarBooksHeader({
+    required this.hasFilters,
+    required this.topics,
+    required this.selectedTopics,
+    required this.selectedStates,
+    required this.onToggleTopic,
+    required this.onToggleState,
+    required this.onClear,
+  });
+
+  final bool hasFilters;
+  final List<String> topics;
+  final Set<String> selectedTopics;
+  final Set<String> selectedStates;
+  final ValueChanged<String> onToggleTopic;
+  final ValueChanged<String> onToggleState;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              'BOOKS',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.faint,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          PopupMenuButton<_BookFilterAction>(
+            tooltip: 'Filter books',
+            color: AppColors.panel,
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            onSelected: (action) {
+              switch (action.kind) {
+                case _BookFilterKind.topic:
+                  onToggleTopic(action.value);
+                case _BookFilterKind.state:
+                  onToggleState(action.value);
+                case _BookFilterKind.clear:
+                  onClear();
+              }
+            },
+            itemBuilder: (context) => <PopupMenuEntry<_BookFilterAction>>[
+              PopupMenuItem<_BookFilterAction>(
+                enabled: false,
+                height: 28,
+                child: Text(
+                  'Read status',
+                  style: TextStyle(fontSize: 11, color: AppColors.faint),
+                ),
+              ),
+              for (final state in _bookReadingStateOptions)
+                CheckedPopupMenuItem<_BookFilterAction>(
+                  value: _BookFilterAction(_BookFilterKind.state, state.value),
+                  checked: selectedStates.contains(state.value),
+                  height: 34,
+                  child: Text(
+                    state.label,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              const PopupMenuDivider(height: 8),
+              PopupMenuItem<_BookFilterAction>(
+                enabled: false,
+                height: 28,
+                child: Text(
+                  'Topic',
+                  style: TextStyle(fontSize: 11, color: AppColors.faint),
+                ),
+              ),
+              for (final topic in topics)
+                CheckedPopupMenuItem<_BookFilterAction>(
+                  value: _BookFilterAction(_BookFilterKind.topic, topic),
+                  checked: selectedTopics.contains(topic),
+                  height: 34,
+                  child: Text(topic, style: const TextStyle(fontSize: 13)),
+                ),
+              if (hasFilters) ...<PopupMenuEntry<_BookFilterAction>>[
+                const PopupMenuDivider(height: 8),
+                const PopupMenuItem<_BookFilterAction>(
+                  value: _BookFilterAction(_BookFilterKind.clear, ''),
+                  height: 34,
+                  child: Text('Clear filters', style: TextStyle(fontSize: 13)),
+                ),
+              ],
+            ],
+            child: Container(
+              width: 24,
+              height: 22,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: hasFilters ? AppColors.subtle : AppColors.panel,
+                border: Border.all(color: AppColors.line),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Icon(
+                Icons.filter_list,
+                size: 14,
+                color: hasFilters ? AppColors.text : AppColors.muted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _BookFilterKind { topic, state, clear }
+
+class _BookFilterAction {
+  const _BookFilterAction(this.kind, this.value);
+
+  final _BookFilterKind kind;
+  final String value;
+}
+
+class _BookReadingStateOption {
+  const _BookReadingStateOption(this.value, this.label);
+
+  final String value;
+  final String label;
+}
+
+const _bookReadingStateOptions = <_BookReadingStateOption>[
+  _BookReadingStateOption('reading', 'Reading'),
+  _BookReadingStateOption('read', 'Read'),
+  _BookReadingStateOption('to_read', 'To Read'),
+];
+
+List<String> _flattenTagNodeNames(TagNode node) {
+  return <String>[
+    node.name,
+    for (final child in node.children) ..._flattenTagNodeNames(child),
+  ];
 }
 
 class _SidebarSection extends ConsumerWidget {

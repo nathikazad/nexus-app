@@ -18,6 +18,8 @@ class NxDocument {
     required this.versionNumber,
     required this.excerpt,
     required this.links,
+    this.readingState = '',
+    this.bookRank,
   });
 
   final int id;
@@ -36,6 +38,8 @@ class NxDocument {
   final int versionNumber;
   final String excerpt;
   final List<LinkedModel> links;
+  final String readingState;
+  final int? bookRank;
 
   bool get hasFullDocument =>
       document.isNotEmpty ||
@@ -60,6 +64,9 @@ class NxDocument {
     int? versionNumber,
     String? excerpt,
     List<LinkedModel>? links,
+    String? readingState,
+    int? bookRank,
+    bool clearBookRank = false,
   }) {
     return NxDocument(
       id: id,
@@ -78,6 +85,8 @@ class NxDocument {
       versionNumber: versionNumber ?? this.versionNumber,
       excerpt: excerpt ?? this.excerpt,
       links: links ?? this.links,
+      readingState: readingState ?? this.readingState,
+      bookRank: clearBookRank ? null : bookRank ?? this.bookRank,
     );
   }
 }

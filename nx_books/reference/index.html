@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nx_books Reference</title>
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --panel: #fbfaf7;
+      --surface: #ffffff;
+      --line: #dedbd2;
+      --line-strong: #c9c5ba;
+      --text: #25231f;
+      --muted: #736f66;
+      --faint: #9a958b;
+      --accent: #276b61;
+      --accent-soft: #e3efec;
+      --blue: #365f91;
+      --blue-soft: #e8eef7;
+      --amber: #8b6518;
+      --amber-soft: #f4ead3;
+      --red: #a3443f;
+      --red-soft: #f4e0df;
+      --shadow: 0 1px 2px rgba(33, 30, 24, 0.06);
+      --shadow-pop: 0 18px 44px rgba(33, 30, 24, 0.14);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 276px minmax(540px, 1fr) 316px;
+      height: 100vh;
+      min-width: 1080px;
+    }
+
+    .sidebar,
+    .detail {
+      background: var(--panel);
+      min-height: 0;
+    }
+
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto auto auto 1fr auto;
+      border-right: 1px solid var(--line);
+    }
+
+    .detail {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border-left: 1px solid var(--line);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 54px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--text);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 780;
+    }
+
+    .workspace {
+      min-width: 0;
+    }
+
+    .workspace-title {
+      font-size: 14px;
+      font-weight: 760;
+      line-height: 1.1;
+    }
+
+    .workspace-subtitle {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      color: var(--muted);
+    }
+
+    .icon-button:hover {
+      background: #eeeae2;
+      color: var(--text);
+    }
+
+    .grow {
+      flex: 1;
+    }
+
+    .search-wrap {
+      padding: 12px 12px 10px;
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .search svg {
+      color: var(--faint);
+      flex: none;
+    }
+
+    .search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      margin: 0 12px 12px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #eeece6;
+    }
+
+    .tab {
+      height: 29px;
+      border-radius: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .filter-block {
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .filter-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 25px;
+      max-width: 100%;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 630;
+    }
+
+    .chip.active {
+      border-color: #bdd8d3;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: currentColor;
+    }
+
+    .queue-summary {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .section-label {
+      margin: 14px 0 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .section-label:first-child {
+      margin-top: 0;
+    }
+
+    .mini-row {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      min-height: 38px;
+      padding: 0 8px;
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mini-row.active,
+    .mini-row:hover {
+      background: #efede7;
+      color: var(--text);
+    }
+
+    .mini-rank {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 780;
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .mini-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 650;
+    }
+
+    .mini-count {
+      color: var(--faint);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-foot {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .primary-button,
+    .secondary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .primary-button {
+      background: var(--text);
+      color: #fff;
+    }
+
+    .secondary-button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .main-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 64px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(246, 245, 241, 0.88);
+      backdrop-filter: blur(12px);
+    }
+
+    .main-title {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .main-meta {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .main-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .select {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 13px;
+      box-shadow: var(--shadow);
+    }
+
+    .lanes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(230px, 1fr));
+      gap: 14px;
+      min-height: 0;
+      overflow: auto;
+      padding: 16px 20px 20px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(251, 250, 247, 0.72);
+      box-shadow: var(--shadow);
+    }
+
+    .lane-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lane-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 780;
+    }
+
+    .state-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--accent);
+    }
+
+    .state-dot.to-read {
+      background: var(--blue);
+    }
+
+    .state-dot.read {
+      background: var(--amber);
+    }
+
+    .lane-subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .lane-count {
+      display: grid;
+      place-items: center;
+      min-width: 25px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 730;
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .book-list {
+      min-height: 0;
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .book-card {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+      margin-bottom: 9px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .book-card.selected {
+      border-color: #abcfc8;
+      background: linear-gradient(180deg, #ffffff 0%, #f4fbf9 100%);
+      box-shadow: 0 0 0 2px rgba(39, 107, 97, 0.08), var(--shadow);
+    }
+
+    .drag {
+      display: grid;
+      grid-template-rows: repeat(3, 3px);
+      gap: 3px;
+      justify-items: center;
+      align-content: center;
+      width: 12px;
+      height: 26px;
+      margin: 1px auto 0;
+      color: var(--faint);
+    }
+
+    .drag span {
+      width: 3px;
+      height: 3px;
+      border-radius: 99px;
+      background: currentColor;
+      box-shadow: 6px 0 0 currentColor;
+    }
+
+    .rank {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rank.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .rank.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .book-main {
+      min-width: 0;
+    }
+
+    .book-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 760;
+      line-height: 1.25;
+    }
+
+    .book-author {
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .book-footer {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: #f1efe9;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .progress {
+      position: relative;
+      height: 5px;
+      margin-top: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #ebe7df;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+    }
+
+    .detail-head {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cover {
+      display: grid;
+      place-items: end start;
+      width: 96px;
+      height: 138px;
+      padding: 10px;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
+        #273d56;
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(33, 30, 24, 0.18);
+      font-size: 13px;
+      font-weight: 760;
+      line-height: 1.1;
+    }
+
+    .detail-title {
+      margin-top: 14px;
+      font-size: 18px;
+      font-weight: 790;
+      line-height: 1.2;
+    }
+
+    .detail-author {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .detail-body {
+      min-height: 0;
+      overflow: auto;
+      padding: 14px 16px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field-label {
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #eeece6;
+    }
+
+    .segmented button {
+      height: 30px;
+      border-radius: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .segmented button.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .rank-control {
+      display: grid;
+      grid-template-columns: 34px 1fr 34px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stepper {
+      display: grid;
+      place-items: center;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .rank-value {
+      display: grid;
+      place-items: center;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      font-size: 13px;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metadata {
+      display: grid;
+      gap: 8px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 30px;
+      padding: 0 0 8px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .meta-row strong {
+      color: var(--text);
+      font-weight: 680;
+      text-align: right;
+    }
+
+    .detail-foot {
+      display: grid;
+      gap: 8px;
+      padding: 12px 16px 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .mobile-shell {
+      display: none;
+    }
+
+    @media (max-width: 1079px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        display: none;
+      }
+
+      .mobile-shell {
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        min-height: 100vh;
+        background: var(--bg);
+      }
+
+      .mobile-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 56px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .mobile-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .mobile-tab {
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .mobile-tab.active {
+        border-color: #bdd8d3;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .mobile-list {
+        padding: 12px;
+      }
+
+      .mobile-card {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 9px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .mobile-card .book-title {
+        white-space: normal;
+      }
+
+      .mobile-card .book-author {
+        white-space: normal;
+      }
+
+      .mobile-actions {
+        display: grid;
+        grid-template-columns: 1fr 44px;
+        gap: 8px;
+        padding: 10px 12px 14px;
+        border-top: 1px solid var(--line);
+        background: var(--panel);
+        position: sticky;
+        bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <header class="topbar">
+        <div class="mark">B</div>
+        <div class="workspace">
+          <div class="workspace-title">Nexus Books</div>
+          <div class="workspace-subtitle">Reading queue</div>
+        </div>
+        <div class="grow"></div>
+        <button class="icon-button" aria-label="Add book">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="search-wrap">
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m20 20-3.5-3.5"/>
+          </svg>
+          <input value="" placeholder="Search books">
+        </label>
+      </div>
+
+      <nav class="tabs" aria-label="Book state">
+        <button class="tab active">All</button>
+        <button class="tab">Active</button>
+        <button class="tab">Archive</button>
+      </nav>
+
+      <section class="filter-block">
+        <div class="filter-title">
+          <span>Focus</span>
+          <span>18</span>
+        </div>
+        <div class="chips">
+          <button class="chip active"><span class="dot"></span> Product</button>
+          <button class="chip">Strategy</button>
+          <button class="chip">Writing</button>
+          <button class="chip">Founder</button>
+        </div>
+      </section>
+
+      <section class="queue-summary">
+        <div class="section-label">Next in line</div>
+        <button class="mini-row active">
+          <span class="mini-rank">0</span>
+          <span class="mini-title">Four Steps to the Epiphany</span>
+          <span class="mini-count">12</span>
+        </button>
+        <button class="mini-row">
+          <span class="mini-rank">1</span>
+          <span class="mini-title">Working Backwards</span>
+          <span class="mini-count">8</span>
+        </button>
+        <button class="mini-row">
+          <span class="mini-rank">2</span>
+          <span class="mini-title">The Cold Start Problem</span>
+          <span class="mini-count">4</span>
+        </button>
+
+        <div class="section-label">Reading now</div>
+        <button class="mini-row">
+          <span class="mini-rank">0</span>
+          <span class="mini-title">Competing Against Luck</span>
+          <span class="mini-count">42%</span>
+        </button>
+        <button class="mini-row">
+          <span class="mini-rank">1</span>
+          <span class="mini-title">The Mom Test</span>
+          <span class="mini-count">64%</span>
+        </button>
+      </section>
+
+      <footer class="sidebar-foot">
+        <button class="primary-button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Add Book
+        </button>
+      </footer>
+    </aside>
+
+    <main class="main">
+      <header class="main-head">
+        <div class="main-title">
+          <h1>Bookshelf</h1>
+          <div class="main-meta">Organize books by reading state and rank. Rank 0 is next.</div>
+        </div>
+        <div class="main-actions">
+          <button class="select">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M7 12h10M10 18h4"/>
+            </svg>
+            Rank
+          </button>
+          <button class="secondary-button">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            Compact
+          </button>
+        </div>
+      </header>
+
+      <section class="lanes" aria-label="Book lanes">
+        <article class="lane">
+          <div class="lane-head">
+            <div>
+              <div class="lane-title"><span class="state-dot"></span> Reading</div>
+              <div class="lane-subtitle">Books currently in motion</div>
+            </div>
+            <div class="lane-count">2</div>
+          </div>
+          <div class="book-list">
+            <button class="book-card selected">
+              <span>
+                <span class="rank">0</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">Competing Against Luck</span>
+                <span class="book-author">Clayton M. Christensen</span>
+                <span class="progress"><span style="width: 42%"></span></span>
+                <span class="book-footer">
+                  <span class="pill">42%</span>
+                  <span class="pill">22 notes</span>
+                  <span class="pill">Product</span>
+                </span>
+              </span>
+            </button>
+            <button class="book-card">
+              <span>
+                <span class="rank">1</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">The Mom Test</span>
+                <span class="book-author">Rob Fitzpatrick</span>
+                <span class="progress"><span style="width: 64%"></span></span>
+                <span class="book-footer">
+                  <span class="pill">64%</span>
+                  <span class="pill">14 notes</span>
+                  <span class="pill">Customer</span>
+                </span>
+              </span>
+            </button>
+          </div>
+        </article>
+
+        <article class="lane">
+          <div class="lane-head">
+            <div>
+              <div class="lane-title"><span class="state-dot to-read"></span> To Read</div>
+              <div class="lane-subtitle">Ordered queue</div>
+            </div>
+            <div class="lane-count">4</div>
+          </div>
+          <div class="book-list">
+            <button class="book-card">
+              <span>
+                <span class="rank blue">0</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">Four Steps to the Epiphany</span>
+                <span class="book-author">Steve Blank</span>
+                <span class="book-footer">
+                  <span class="pill">Next</span>
+                  <span class="pill">Startup</span>
+                  <span class="pill">4293</span>
+                </span>
+              </span>
+            </button>
+            <button class="book-card">
+              <span>
+                <span class="rank blue">1</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">Working Backwards</span>
+                <span class="book-author">Colin Bryar, Bill Carr</span>
+                <span class="book-footer">
+                  <span class="pill">Ops</span>
+                  <span class="pill">Leadership</span>
+                </span>
+              </span>
+            </button>
+            <button class="book-card">
+              <span>
+                <span class="rank blue">2</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">The Cold Start Problem</span>
+                <span class="book-author">Andrew Chen</span>
+                <span class="book-footer">
+                  <span class="pill">Network</span>
+                  <span class="pill">Growth</span>
+                </span>
+              </span>
+            </button>
+          </div>
+        </article>
+
+        <article class="lane">
+          <div class="lane-head">
+            <div>
+              <div class="lane-title"><span class="state-dot read"></span> Read</div>
+              <div class="lane-subtitle">Finished books</div>
+            </div>
+            <div class="lane-count">12</div>
+          </div>
+          <div class="book-list">
+            <button class="book-card">
+              <span>
+                <span class="rank amber">0</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">The Design of Everyday Things</span>
+                <span class="book-author">Don Norman</span>
+                <span class="book-footer">
+                  <span class="pill">Finished</span>
+                  <span class="pill">31 notes</span>
+                </span>
+              </span>
+            </button>
+            <button class="book-card">
+              <span>
+                <span class="rank amber">1</span>
+                <span class="drag"><span></span><span></span><span></span></span>
+              </span>
+              <span class="book-main">
+                <span class="book-title">Inspired</span>
+                <span class="book-author">Marty Cagan</span>
+                <span class="book-footer">
+                  <span class="pill">Finished</span>
+                  <span class="pill">Product</span>
+                </span>
+              </span>
+            </button>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <aside class="detail">
+      <header class="detail-head">
+        <div class="cover">Competing Against Luck</div>
+        <div class="detail-title">Competing Against Luck</div>
+        <div class="detail-author">Clayton M. Christensen</div>
+      </header>
+      <section class="detail-body">
+        <div class="field">
+          <div class="field-label">State</div>
+          <div class="segmented">
+            <button class="active">Reading</button>
+            <button>To Read</button>
+            <button>Read</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Rank</div>
+          <div class="rank-control">
+            <button class="stepper">−</button>
+            <div class="rank-value">0</div>
+            <button class="stepper">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Metadata</div>
+          <div class="metadata">
+            <div class="meta-row"><span>Notes</span><strong>22</strong></div>
+            <div class="meta-row"><span>Progress</span><strong>42%</strong></div>
+            <div class="meta-row"><span>Updated</span><strong>Today</strong></div>
+            <div class="meta-row"><span>Model</span><strong>Book</strong></div>
+          </div>
+        </div>
+      </section>
+      <footer class="detail-foot">
+        <button class="primary-button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M7 7h10v10M7 17 17 7"/>
+          </svg>
+          Open in Notes
+        </button>
+        <button class="secondary-button">Edit book fields</button>
+      </footer>
+    </aside>
+  </div>
+
+  <div class="mobile-shell">
+    <header class="mobile-head">
+      <div class="mark">B</div>
+      <div class="workspace">
+        <div class="workspace-title">Nexus Books</div>
+        <div class="workspace-subtitle">Reading queue</div>
+      </div>
+      <div class="grow"></div>
+      <button class="icon-button" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m20 20-3.5-3.5"/>
+        </svg>
+      </button>
+    </header>
+    <nav class="mobile-tabs">
+      <button class="mobile-tab active">Reading</button>
+      <button class="mobile-tab">To Read</button>
+      <button class="mobile-tab">Read</button>
+    </nav>
+    <main class="mobile-list">
+      <button class="mobile-card">
+        <span class="rank">0</span>
+        <span>
+          <span class="book-title">Competing Against Luck</span>
+          <span class="book-author">Clayton M. Christensen</span>
+        </span>
+        <span class="pill">42%</span>
+      </button>
+      <button class="mobile-card">
+        <span class="rank">1</span>
+        <span>
+          <span class="book-title">The Mom Test</span>
+          <span class="book-author">Rob Fitzpatrick</span>
+        </span>
+        <span class="pill">64%</span>
+      </button>
+    </main>
+    <footer class="mobile-actions">
+      <button class="primary-button">Open in Notes</button>
+      <button class="secondary-button" aria-label="Add book">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      </button>
+    </footer>
+  </div>
+</body>
+</html>

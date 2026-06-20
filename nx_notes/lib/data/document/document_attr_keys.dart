@@ -7,6 +7,8 @@ const kDocumentAttrJsonDocument = 'json_document';
 const kDocumentAttrPinned = 'pinned';
 const kDocumentAttrShareToWeb = 'share_to_web';
 const kDocumentAttrWordCount = 'word_count';
+const kBookAttrReadingState = 'reading_state';
+const kBookAttrRank = 'rank';
 
 const kDocumentSnapAttrVersionNumber = 'version_number';
 const kDocumentSnapAttrChangeSummary = 'change_summary';
