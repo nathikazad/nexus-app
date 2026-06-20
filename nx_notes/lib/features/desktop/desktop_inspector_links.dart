@@ -57,33 +57,71 @@ class _InspectorLinksEditor extends ConsumerWidget {
           )
         else
           for (final link in otherLinks)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Icon(
-                    Icons.description_outlined,
-                    size: 15,
-                    color: AppColors.faint,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      link.name,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            _OtherLinkRow(
+              link: link,
+              onTap: _isDocumentLink(link)
+                  ? () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .openDocument(link.id)
+                  : null,
             ),
       ],
     );
   }
+}
+
+class _OtherLinkRow extends StatelessWidget {
+  const _OtherLinkRow({required this.link, required this.onTap});
+
+  final LinkedModel link;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final clickable = onTap != null;
+    final color = clickable ? AppColors.text : AppColors.muted;
+    final row = Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            Icons.description_outlined,
+            size: 15,
+            color: clickable ? AppColors.muted : AppColors.faint,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              link.name,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                height: 1.35,
+                decoration: clickable ? TextDecoration.underline : null,
+                decorationColor: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!clickable) {
+      return row;
+    }
+    return Tooltip(
+      message: 'Open ${link.modelType}',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: row,
+      ),
+    );
+  }
+}
+
+bool _isDocumentLink(LinkedModel link) {
+  return link.modelType == 'Document' || link.modelType == 'Book';
 }
 
 class _AddProjectMenu extends ConsumerWidget {

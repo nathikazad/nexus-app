@@ -4,6 +4,7 @@ import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
@@ -90,6 +91,17 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
 
 typedef _LaunchUrlHandler = Future<bool> Function(String? href);
 
+class EditorFindRequest {
+  const EditorFindRequest({required this.documentId, required this.serial});
+
+  final int documentId;
+  final int serial;
+}
+
+final editorFindRequestNotifier = ValueNotifier<EditorFindRequest>(
+  const EditorFindRequest(documentId: -1, serial: 0),
+);
+
 class _DocumentLinkLaunchDispatcher {
   static final Map<Object, _LaunchUrlHandler> _handlers =
       <Object, _LaunchUrlHandler>{};
@@ -132,6 +144,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   late final FocusNode _titleFocusNode;
   bool _editingTitle = false;
   late _DocumentEditorMode _editorMode;
+  _EditorFindBarPresentation? _findBarPresentation;
   final Object _linkHandlerOwner = Object();
 
   @override
@@ -153,6 +166,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
       _draftDocument = widget.document;
       _replaceTitleText(widget.document.title);
       _editorMode = _editorModeFromJsonDocument(widget.document.jsonDocument);
+      _findBarPresentation = null;
       _titleFocusNode.unfocus();
     } else if (!_titleFocusNode.hasFocus &&
         widget.document.title != _titleController.text) {
@@ -161,6 +175,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     if (oldWidget.active != widget.active ||
         oldWidget.onOpenDocumentLink != widget.onOpenDocumentLink) {
       _syncDocumentLinkHandler();
+    }
+    if (oldWidget.active && !widget.active) {
+      _findBarPresentation = null;
     }
   }
 
@@ -230,208 +247,256 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     setState(() => _editorMode = mode);
   }
 
+  void _setFindBarPresentation(_EditorFindBarPresentation? presentation) {
+    if (!mounted) return;
+    if (_findBarPresentation == presentation) return;
+    setState(() => _findBarPresentation = presentation);
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final titleSize = width < 700 ? 30.0 : 38.0;
     final imageAssetService = ref.watch(documentImageAssetServiceProvider);
-    return Column(
-      children: <Widget>[
-        if (widget.contextBar != null) widget.contextBar!,
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              widget.horizontalPadding,
-              54,
-              widget.horizontalPadding,
-              0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: <Widget>[
-                      if (widget.canNavigateBack &&
-                          widget.onNavigateBack != null)
-                        TextButton.icon(
-                          onPressed: widget.onNavigateBack,
-                          icon: const Icon(Icons.arrow_back, size: 16),
-                          label: const Text('Back'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.muted,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 0,
-                              vertical: 6,
+    return Focus(
+      onKeyEvent: _handleShellKeyEvent,
+      child: Column(
+        children: <Widget>[
+          if (widget.contextBar != null) widget.contextBar!,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                widget.horizontalPadding,
+                54,
+                widget.horizontalPadding,
+                0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: <Widget>[
+                        if (widget.canNavigateBack &&
+                            widget.onNavigateBack != null)
+                          TextButton.icon(
+                            onPressed: widget.onNavigateBack,
+                            icon: const Icon(Icons.arrow_back, size: 16),
+                            label: const Text('Back'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.muted,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 0,
+                                vertical: 6,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                        ),
-                      const Spacer(),
-                      if (widget.active)
-                        _ReadEditModeToggle(
-                          mode: _editorMode,
-                          onChanged: _setEditorMode,
-                        ),
-                    ],
+                        const Spacer(),
+                        if (widget.active)
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 120),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            child: _findBarPresentation == null
+                                ? _ReadEditModeToggle(
+                                    key: const ValueKey<String>('mode-toggle'),
+                                    mode: _editorMode,
+                                    onChanged: _setEditorMode,
+                                  )
+                                : _EditorFindBar(
+                                    key: ValueKey<int>(
+                                      _findBarPresentation!.serial,
+                                    ),
+                                    searchService:
+                                        _findBarPresentation!.searchService,
+                                    onClose: _findBarPresentation!.onClose,
+                                  ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final fittedTitleSize = _fittedTitleFontSize(
-                      context: context,
-                      text: _titleText,
-                      maxWidth: constraints.maxWidth - 4,
-                      baseSize: titleSize,
-                    );
-                    final titleStyle = TextStyle(
-                      color: AppColors.text,
-                      fontSize: titleSize,
-                      fontWeight: FontWeight.w600,
-                      height: 1.16,
-                      letterSpacing: 0,
-                    );
-                    return SizedBox(
-                      width: constraints.maxWidth,
-                      height: titleSize * 1.26,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 90),
-                        child: _editingTitle
-                            ? TextField(
-                                key: ValueKey<String>(
-                                  'title-editor-${widget.document.id}',
-                                ),
-                                controller: _titleController,
-                                focusNode: _titleFocusNode,
-                                cursorColor: _editorMode.showsCaret
-                                    ? AppColors.text
-                                    : Colors.transparent,
-                                onChanged: _scheduleTitleSave,
-                                onSubmitted: (_) => _titleFocusNode.unfocus(),
-                                onTapOutside: (_) => _titleFocusNode.unfocus(),
-                                maxLines: 1,
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                style: titleStyle.copyWith(
-                                  fontSize: fittedTitleSize,
-                                ),
-                              )
-                            : MouseRegion(
-                                key: ValueKey<String>(
-                                  'title-display-${widget.document.id}',
-                                ),
-                                cursor: SystemMouseCursors.text,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    setState(() => _editingTitle = true);
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                          if (!mounted) return;
-                                          _titleFocusNode.requestFocus();
-                                          _titleController.selection =
-                                              TextSelection.collapsed(
-                                                offset: _titleController
-                                                    .text
-                                                    .length,
-                                              );
-                                        });
-                                  },
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: AutoSizeText(
-                                      _titleText.trim().isEmpty
-                                          ? 'Untitled document'
-                                          : _titleText.trim(),
-                                      maxLines: 1,
-                                      minFontSize: 8,
-                                      stepGranularity: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: titleStyle,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final fittedTitleSize = _fittedTitleFontSize(
+                        context: context,
+                        text: _titleText,
+                        maxWidth: constraints.maxWidth - 4,
+                        baseSize: titleSize,
+                      );
+                      final titleStyle = TextStyle(
+                        color: AppColors.text,
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w600,
+                        height: 1.16,
+                        letterSpacing: 0,
+                      );
+                      return SizedBox(
+                        width: constraints.maxWidth,
+                        height: titleSize * 1.26,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 90),
+                          child: _editingTitle
+                              ? TextField(
+                                  key: ValueKey<String>(
+                                    'title-editor-${widget.document.id}',
+                                  ),
+                                  controller: _titleController,
+                                  focusNode: _titleFocusNode,
+                                  cursorColor: _editorMode.showsCaret
+                                      ? AppColors.text
+                                      : Colors.transparent,
+                                  onChanged: _scheduleTitleSave,
+                                  onSubmitted: (_) => _titleFocusNode.unfocus(),
+                                  onTapOutside: (_) =>
+                                      _titleFocusNode.unfocus(),
+                                  maxLines: 1,
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    filled: false,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  style: titleStyle.copyWith(
+                                    fontSize: fittedTitleSize,
+                                  ),
+                                )
+                              : MouseRegion(
+                                  key: ValueKey<String>(
+                                    'title-display-${widget.document.id}',
+                                  ),
+                                  cursor: SystemMouseCursors.text,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      setState(() => _editingTitle = true);
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) {
+                                            if (!mounted) return;
+                                            _titleFocusNode.requestFocus();
+                                            _titleController.selection =
+                                                TextSelection.collapsed(
+                                                  offset: _titleController
+                                                      .text
+                                                      .length,
+                                                );
+                                          });
+                                    },
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: AutoSizeText(
+                                        _titleText.trim().isEmpty
+                                            ? 'Untitled document'
+                                            : _titleText.trim(),
+                                        maxLines: 1,
+                                        minFontSize: 8,
+                                        stepGranularity: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: titleStyle,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 28),
-                Expanded(
-                  child: _NxAppFlowyEditor(
-                    document: widget.document,
-                    editorMode: _editorMode,
-                    active: widget.active,
-                    searchLinkableModels:
-                        ({required modelType, required query}) {
-                          return ref
-                              .read(documentRepositoryProvider)
-                              .searchLinkableModels(
-                                modelType: modelType,
-                                query: query,
-                              );
-                        },
-                    onLinkableModelSelected: (modelType, model) async {
-                      await ref
-                          .read(documentMutationControllerProvider)
-                          .attachLinkedModel(
-                            documentId: widget.document.id,
-                            modelType: modelType,
-                            modelId: model.id,
-                            model: model,
-                          );
-                    },
-                    createLinkedDocument: (title) async {
-                      final document = await ref
-                          .read(documentMutationControllerProvider)
-                          .createDocument(title: title);
-                      return LinkedModel(
-                        id: document.id,
-                        name: document.title,
-                        modelType: LinkableModelType.document.kgqlName,
+                        ),
                       );
-                    },
-                    uploadDocumentImage: imageAssetService == null
-                        ? null
-                        : (source) {
-                            return imageAssetService.storeImageSource(
-                              documentId: widget.document.id,
-                              source: source,
-                            );
-                          },
-                    deleteDocumentImage: imageAssetService == null
-                        ? null
-                        : (url) async {
-                            await imageAssetService.deleteImageUrl(url);
-                          },
-                    resolveDocumentImage: imageAssetService?.resolveImageUrl,
-                    documentImageBaseUrl: imageAssetService?.imageBaseUrl,
-                    onChanged: (updated, policy) async {
-                      _draftDocument = _draftDocument.copyWith(
-                        document: updated.document,
-                        jsonDocument: updated.jsonDocument,
-                        wordCount: updated.wordCount,
-                        excerpt: updated.excerpt,
-                      );
-                      await ref
-                          .read(documentMutationControllerProvider)
-                          .saveDraft(_draftDocument, policy: policy);
                     },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 28),
+                  Expanded(
+                    child: _NxAppFlowyEditor(
+                      document: widget.document,
+                      editorMode: _editorMode,
+                      active: widget.active,
+                      searchLinkableModels:
+                          ({required modelType, required query}) {
+                            return ref
+                                .read(documentRepositoryProvider)
+                                .searchLinkableModels(
+                                  modelType: modelType,
+                                  query: query,
+                                );
+                          },
+                      onLinkableModelSelected: (modelType, model) async {
+                        await ref
+                            .read(documentMutationControllerProvider)
+                            .attachLinkedModel(
+                              documentId: widget.document.id,
+                              modelType: modelType,
+                              modelId: model.id,
+                              model: model,
+                            );
+                      },
+                      createLinkedDocument: (title) async {
+                        final document = await ref
+                            .read(documentMutationControllerProvider)
+                            .createDocument(title: title);
+                        return LinkedModel(
+                          id: document.id,
+                          name: document.title,
+                          modelType: LinkableModelType.document.kgqlName,
+                        );
+                      },
+                      uploadDocumentImage: imageAssetService == null
+                          ? null
+                          : (source) {
+                              return imageAssetService.storeImageSource(
+                                documentId: widget.document.id,
+                                source: source,
+                              );
+                            },
+                      deleteDocumentImage: imageAssetService == null
+                          ? null
+                          : (url) async {
+                              await imageAssetService.deleteImageUrl(url);
+                            },
+                      resolveDocumentImage: imageAssetService?.resolveImageUrl,
+                      documentImageBaseUrl: imageAssetService?.imageBaseUrl,
+                      onFindBarChanged: _setFindBarPresentation,
+                      onChanged: (updated, policy) async {
+                        _draftDocument = _draftDocument.copyWith(
+                          document: updated.document,
+                          jsonDocument: updated.jsonDocument,
+                          wordCount: updated.wordCount,
+                          excerpt: updated.excerpt,
+                        );
+                        await ref
+                            .read(documentMutationControllerProvider)
+                            .saveDraft(_draftDocument, policy: policy);
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  KeyEventResult _handleShellKeyEvent(FocusNode node, KeyEvent event) {
+    if (!widget.active || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final isFind =
+        event.logicalKey == LogicalKeyboardKey.keyF &&
+        (HardwareKeyboard.instance.isMetaPressed ||
+            HardwareKeyboard.instance.isControlPressed);
+    if (!isFind) {
+      return KeyEventResult.ignored;
+    }
+    _openEditorFind();
+    return KeyEventResult.handled;
+  }
+
+  void _openEditorFind() {
+    editorFindRequestNotifier.value = EditorFindRequest(
+      documentId: widget.document.id,
+      serial: editorFindRequestNotifier.value.serial + 1,
     );
   }
 }
@@ -513,6 +578,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
     required this.document,
     required this.editorMode,
     required this.onChanged,
+    required this.onFindBarChanged,
     required this.searchLinkableModels,
     required this.onLinkableModelSelected,
     required this.createLinkedDocument,
@@ -528,6 +594,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
   final bool active;
   final Future<void> Function(NxDocument document, DraftSavePolicy policy)
   onChanged;
+  final ValueChanged<_EditorFindBarPresentation?> onFindBarChanged;
   final Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
     required String query,
@@ -545,6 +612,18 @@ class _NxAppFlowyEditor extends StatefulWidget {
   State<_NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
 }
 
+class _EditorFindBarPresentation {
+  const _EditorFindBarPresentation({
+    required this.searchService,
+    required this.onClose,
+    required this.serial,
+  });
+
+  final SearchServiceV3 searchService;
+  final VoidCallback onClose;
+  final int serial;
+}
+
 class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   static const _scrollAnchorSaveDelay = Duration(milliseconds: 450);
   static const _scrollAnchorRestoreRetryDelay = Duration(milliseconds: 80);
@@ -560,12 +639,16 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   Timer? _saveDebounce;
   Timer? _nextImmediateSaveTimer;
   Timer? _scrollAnchorSaveDebounce;
+  SearchServiceV3? _findSearchService;
   bool _activeHeadingPublishScheduled = false;
   bool _scrollAnchorSaveEnabled = false;
   bool _saveNextTransactionImmediately = false;
+  bool _showFindBar = false;
   late NxDocument _editorDocument;
   late int _editorDocumentId;
   int? _handledHeadingScrollRequestSerial;
+  int _handledFindRequestSerial = 0;
+  int _findBarOpenSerial = 0;
   int _scrollAnchorRestoreAttempts = 0;
   _DocumentScrollAnchor? _lastSavedScrollAnchor;
 
@@ -591,6 +674,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         _scheduleActiveHeadingPublish();
       } else {
         _clearActiveHeading();
+        _closeFindBar();
       }
     }
   }
@@ -610,6 +694,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     _editorDocumentId = widget.document.id;
     _lastSavedScrollAnchor = null;
     _scrollAnchorSaveEnabled = false;
+    _showFindBar = false;
     _editorState = EditorState(
       document: _documentFromDocument(widget.document),
     );
@@ -618,6 +703,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       editorState: _editorState,
       shrinkWrap: false,
     );
+    _findSearchService = SearchServiceV3(editorState: _editorState);
     _scrollController.itemPositionsListener.itemPositions.addListener(
       _handleVisibleItemPositionsChanged,
     );
@@ -625,6 +711,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     documentHeadingScrollRequestNotifier.addListener(
       _handleHeadingScrollRequest,
     );
+    editorFindRequestNotifier.addListener(_handleFindRequest);
     _transactionSubscription = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
@@ -653,7 +740,12 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     documentHeadingScrollRequestNotifier.removeListener(
       _handleHeadingScrollRequest,
     );
+    editorFindRequestNotifier.removeListener(_handleFindRequest);
+    widget.onFindBarChanged(null);
     _transactionSubscription?.cancel();
+    _findSearchService?.findAndHighlight('');
+    _findSearchService?.dispose();
+    _findSearchService = null;
     _scrollController.dispose();
     _editorState.dispose();
   }
@@ -790,6 +882,16 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
 
   List<CommandShortcutEvent> _commandShortcutEvents() {
     return <CommandShortcutEvent>[
+      CommandShortcutEvent(
+        key: 'nx open editor find',
+        getDescription: () => 'Find in document',
+        command: 'ctrl+f',
+        macOSCommand: 'cmd+f',
+        handler: (editorState) {
+          _openFindBar();
+          return KeyEventResult.handled;
+        },
+      ),
       for (final event in standardCommandShortcutEvents)
         if (_pasteShortcutKeys.contains(event.key))
           event.copyWith(
@@ -1031,6 +1133,42 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     });
   }
 
+  void _handleFindRequest() {
+    final request = editorFindRequestNotifier.value;
+    if (!mounted ||
+        !widget.active ||
+        request.documentId != widget.document.id ||
+        request.serial == _handledFindRequestSerial) {
+      return;
+    }
+    _handledFindRequestSerial = request.serial;
+    _openFindBar();
+  }
+
+  void _openFindBar() {
+    if (!mounted || !widget.active || _findSearchService == null) {
+      return;
+    }
+    setState(() {
+      _showFindBar = true;
+      _findBarOpenSerial += 1;
+    });
+    widget.onFindBarChanged(
+      _EditorFindBarPresentation(
+        searchService: _findSearchService!,
+        onClose: _closeFindBar,
+        serial: _findBarOpenSerial,
+      ),
+    );
+  }
+
+  void _closeFindBar() {
+    _findSearchService?.findAndHighlight('');
+    widget.onFindBarChanged(null);
+    if (!mounted || !_showFindBar) return;
+    setState(() => _showFindBar = false);
+  }
+
   void _publishActiveHeading() {
     if (!mounted || !widget.active) return;
     final children = _editorState.document.root.children;
@@ -1111,33 +1249,29 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     final editorStyle = _editorStyle().copyWith(
       cursorColor: showsCaret ? AppColors.text : Colors.transparent,
     );
-    final editor = Stack(
-      children: <Widget>[
-        AppFlowyEditor(
-          editable: true,
-          editorState: _editorState,
-          editorScrollController: _scrollController,
-          editorStyle: editorStyle,
-          blockComponentBuilders: nxBlockComponentBuilders(
-            deleteDocumentImage: widget.deleteDocumentImage,
-            resolveDocumentImage: widget.resolveDocumentImage,
-            documentImageBaseUrl: widget.documentImageBaseUrl,
-          ),
-          characterShortcutEvents: <CharacterShortcutEvent>[
-            ...standardCharacterShortcutEvents.where(
-              (event) => event.key != 'show the slash menu',
-            ),
-            nxSlashCommand(
-              searchLinkableModels: widget.searchLinkableModels,
-              createLinkedDocument: widget.createLinkedDocument,
-              onLinkableModelSelected: widget.onLinkableModelSelected,
-              uploadDocumentImage: widget.uploadDocumentImage,
-            ),
-          ],
-          commandShortcutEvents: _commandShortcutEvents(),
-          footer: const SizedBox(height: 120),
+    final editor = AppFlowyEditor(
+      editable: true,
+      editorState: _editorState,
+      editorScrollController: _scrollController,
+      editorStyle: editorStyle,
+      blockComponentBuilders: nxBlockComponentBuilders(
+        deleteDocumentImage: widget.deleteDocumentImage,
+        resolveDocumentImage: widget.resolveDocumentImage,
+        documentImageBaseUrl: widget.documentImageBaseUrl,
+      ),
+      characterShortcutEvents: <CharacterShortcutEvent>[
+        ...standardCharacterShortcutEvents.where(
+          (event) => event.key != 'show the slash menu',
+        ),
+        nxSlashCommand(
+          searchLinkableModels: widget.searchLinkableModels,
+          createLinkedDocument: widget.createLinkedDocument,
+          onLinkableModelSelected: widget.onLinkableModelSelected,
+          uploadDocumentImage: widget.uploadDocumentImage,
         ),
       ],
+      commandShortcutEvents: _commandShortcutEvents(),
+      footer: const SizedBox(height: 120),
     );
     return FloatingToolbar(
       editorState: _editorState,
@@ -1169,8 +1303,226 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 }
 
+class _EditorFindBar extends StatefulWidget {
+  const _EditorFindBar({
+    required this.searchService,
+    required this.onClose,
+    super.key,
+  });
+
+  final SearchServiceV3 searchService;
+  final VoidCallback onClose;
+
+  @override
+  State<_EditorFindBar> createState() => _EditorFindBarState();
+}
+
+class _EditorFindBarState extends State<_EditorFindBar> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController()..addListener(_handleQueryChanged);
+    _focusNode = FocusNode(debugLabel: 'nx_editor_find');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focusNode.requestFocus();
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_handleQueryChanged)
+      ..dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleQueryChanged() {
+    setState(() {
+      _error = widget.searchService.findAndHighlight(_controller.text);
+    });
+  }
+
+  void _navigate({required bool previous}) {
+    if (widget.searchService.matchWrappers.value.isEmpty) {
+      return;
+    }
+    widget.searchService.navigateToMatch(moveUp: previous);
+    Future.delayed(const Duration(milliseconds: 20), () {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      widget.onClose();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      _navigate(previous: HardwareKeyboard.instance.isShiftPressed);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _navigate(previous: false);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _navigate(previous: true);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.panel,
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(7),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x1a000000),
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              SizedBox(
+                width: 180,
+                height: 30,
+                child: Focus(
+                  onKeyEvent: _handleKeyEvent,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    style: TextStyle(fontSize: 13, color: AppColors.text),
+                    decoration: InputDecoration(
+                      hintText: 'Find in document',
+                      hintStyle: TextStyle(color: AppColors.faint),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              AnimatedBuilder(
+                animation: Listenable.merge(<Listenable>[
+                  widget.searchService.matchWrappers,
+                  widget.searchService.currentSelectedIndex,
+                ]),
+                builder: (context, _) {
+                  return SizedBox(
+                    width: 54,
+                    child: Text(
+                      _countLabel(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                  );
+                },
+              ),
+              _FindIconButton(
+                icon: Icons.keyboard_arrow_up,
+                tooltip: 'Previous match',
+                onPressed: () => _navigate(previous: true),
+              ),
+              _FindIconButton(
+                icon: Icons.keyboard_arrow_down,
+                tooltip: 'Next match',
+                onPressed: () => _navigate(previous: false),
+              ),
+              _FindIconButton(
+                icon: Icons.close,
+                tooltip: 'Close find',
+                onPressed: widget.onClose,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _countLabel() {
+    final query = _controller.text;
+    if (query.isEmpty) {
+      return '';
+    }
+    if (_error == 'Regex') {
+      return 'Regex';
+    }
+    final count = widget.searchService.matchWrappers.value.length;
+    if (count == 0) {
+      return '0/0';
+    }
+    return '${widget.searchService.selectedIndex + 1}/$count';
+  }
+}
+
+class _FindIconButton extends StatelessWidget {
+  const _FindIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: Icon(icon, size: 18, color: AppColors.muted),
+        ),
+      ),
+    );
+  }
+}
+
 class _ReadEditModeToggle extends StatefulWidget {
-  const _ReadEditModeToggle({required this.mode, required this.onChanged});
+  const _ReadEditModeToggle({
+    required this.mode,
+    required this.onChanged,
+    super.key,
+  });
 
   final _DocumentEditorMode mode;
   final ValueChanged<_DocumentEditorMode> onChanged;
