@@ -636,31 +636,43 @@ class _BookDetail extends ConsumerWidget {
                       ),
                       _MetaRow(label: 'Updated', value: row.updatedLabel),
                       _MetaRow(label: 'Words', value: '${row.wordCount}'),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(child: _DeleteBookButton(book: row)),
-                      const SizedBox(width: 10),
-                      if (row.link.isNotEmpty) ...[
-                        Expanded(child: _BookLinkButton(book: row)),
-                        const SizedBox(width: 10),
-                      ],
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () => onOpenInNotes(row),
-                          icon: const Icon(Icons.open_in_new, size: 17),
-                          label: const Text('Open in Notes'),
-                        ),
+                      const SizedBox(height: 10),
+                      _BookDetailActions(
+                        book: row,
+                        onOpenInNotes: onOpenInNotes,
                       ),
                     ],
                   ),
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _BookDetailActions extends StatelessWidget {
+  const _BookDetailActions({required this.book, required this.onOpenInNotes});
+
+  final NxBook book;
+  final Future<void> Function(NxBook book) onOpenInNotes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: () => onOpenInNotes(book),
+          icon: const Icon(Icons.open_in_new, size: 17),
+          label: const Text('Open in Notes'),
+        ),
+        if (book.link.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _BookLinkButton(book: book),
+        ],
+        const SizedBox(height: 8),
+        _DeleteBookButton(book: book),
+      ],
     );
   }
 }

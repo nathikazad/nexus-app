@@ -101,6 +101,7 @@ void main() {
     expect(find.text('startup'), findsWidgets);
     expect(find.text('strategy'), findsWidgets);
     expect(find.text('Example Author'), findsWidgets);
+    await _scrollDetailDown(tester);
     expect(find.text('Amazon'), findsOneWidget);
     expect(find.text('25%'), findsWidgets);
 
@@ -230,6 +231,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete me'), findsWidgets);
+    await _scrollDetailDown(tester);
     await tester.tap(find.byKey(const ValueKey('delete-book-1')));
     await tester.pumpAndSettle();
 
@@ -241,6 +243,12 @@ void main() {
     expect(find.text('Delete me'), findsNothing);
     expect(find.text('Keep me'), findsWidgets);
   });
+}
+
+Future<void> _scrollDetailDown(WidgetTester tester) async {
+  final detailList = find.byType(ListView).last;
+  await tester.drag(detailList, const Offset(0, -520));
+  await tester.pumpAndSettle();
 }
 
 Widget _testApp(BookRepository repo) {
