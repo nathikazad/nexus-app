@@ -80,6 +80,8 @@ void main() {
         'Reading rank zero',
         BookReadingState.reading,
         rank: 0,
+        author: 'Example Author',
+        link: 'https://www.amazon.com/example/dp/1234567890',
         tags: const ['startup', 'strategy'],
         totalChapters: 20,
         currentChapter: 5,
@@ -98,6 +100,8 @@ void main() {
     expect(find.text('Finished book'), findsOneWidget);
     expect(find.text('startup'), findsWidgets);
     expect(find.text('strategy'), findsWidgets);
+    expect(find.text('Example Author'), findsWidgets);
+    expect(find.text('Amazon'), findsOneWidget);
     expect(find.text('25%'), findsWidgets);
 
     final first = tester.getTopLeft(find.byKey(const ValueKey('book-card-2')));
@@ -254,12 +258,16 @@ NxBook _book(
   List<String> tags = const [],
   int? totalChapters,
   int? currentChapter,
+  String author = '',
+  String link = '',
 }) {
   final now = DateTime(2026, 6, 19, 12, 0).subtract(Duration(minutes: id));
   return NxBook(
     id: id,
     title: title,
     description: '',
+    author: author,
+    link: link,
     tags: tags,
     readingState: state,
     rank: rank,

@@ -8,6 +8,8 @@ const kBookAttrReadingState = 'reading_state';
 const kBookAttrRank = 'rank';
 const kBookAttrTotalChapters = 'total_chapters';
 const kBookAttrCurrentChapter = 'current_chapter';
+const kBookAttrAuthor = 'author';
+const kBookAttrLink = 'link';
 const kBookAttrWordCount = 'word_count';
 const kBookAttrDocument = 'document';
 const kBookAttrJsonDocument = 'json_document';
@@ -74,6 +76,8 @@ class KgqlBookRepository implements BookRepository {
       id: id,
       title: name,
       description: '',
+      author: '',
+      link: '',
       tags: const [],
       readingState: BookReadingState.toRead,
       rank: rank,
@@ -180,6 +184,8 @@ class KgqlBookRepository implements BookRepository {
     kBookAttrRank: true,
     kBookAttrTotalChapters: true,
     kBookAttrCurrentChapter: true,
+    kBookAttrAuthor: true,
+    kBookAttrLink: true,
     'tags': true,
   };
 }
@@ -212,6 +218,8 @@ NxBook _bookFromModel(Model model) {
     id: model.id,
     title: model.name,
     description: model.description?.trim() ?? '',
+    author: model.attrString(kBookAttrAuthor)?.trim() ?? '',
+    link: model.attrString(kBookAttrLink)?.trim() ?? '',
     tags: _flattenTags(model.tags),
     readingState: BookReadingState.fromKgql(
       model.attrString(kBookAttrReadingState),

@@ -22,6 +22,8 @@ class NxBook {
     required this.id,
     required this.title,
     required this.description,
+    required this.author,
+    required this.link,
     required this.tags,
     required this.readingState,
     required this.rank,
@@ -35,6 +37,8 @@ class NxBook {
   final int id;
   final String title;
   final String description;
+  final String author;
+  final String link;
   final List<String> tags;
   final BookReadingState readingState;
   final int? rank;
@@ -60,6 +64,8 @@ class NxBook {
   NxBook copyWith({
     String? title,
     String? description,
+    String? author,
+    String? link,
     List<String>? tags,
     BookReadingState? readingState,
     int? rank,
@@ -76,6 +82,8 @@ class NxBook {
       id: id,
       title: title ?? this.title,
       description: description ?? this.description,
+      author: author ?? this.author,
+      link: link ?? this.link,
       tags: tags ?? this.tags,
       readingState: readingState ?? this.readingState,
       rank: clearRank ? null : rank ?? this.rank,

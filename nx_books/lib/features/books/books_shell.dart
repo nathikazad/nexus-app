@@ -87,7 +87,7 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
     if (normalized.isEmpty) return books;
     return [
       for (final book in books)
-        if ('${book.title} ${book.description} ${book.readingState.label} ${book.tags.join(' ')}'
+        if ('${book.title} ${book.author} ${book.description} ${book.readingState.label} ${book.tags.join(' ')}'
             .toLowerCase()
             .contains(normalized))
           book,
@@ -467,6 +467,19 @@ class _BookCard extends ConsumerWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
+                      if (book.author.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          book.author,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
                       if (book.tags.isNotEmpty ||
                           book.progressPercent != null) ...[
                         const SizedBox(height: 8),
@@ -573,6 +586,20 @@ class _BookDetail extends ConsumerWidget {
                           height: 1.3,
                         ),
                       ),
+                      if (row.author.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          row.author,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -595,6 +622,10 @@ class _BookDetail extends ConsumerWidget {
                       const SizedBox(height: 18),
                       const _FieldLabel('Metadata'),
                       _MetaRow(label: 'Model', value: 'Book #${row.id}'),
+                      if (row.author.isNotEmpty)
+                        _MetaRow(label: 'Author', value: row.author),
+                      if (row.link.isNotEmpty)
+                        _MetaRow(label: 'Link', value: _compactUrl(row.link)),
                       _MetaRow(label: 'State', value: row.readingState.label),
                       _MetaRow(label: 'Rank', value: '${row.rank ?? '-'}'),
                       _MetaRow(
@@ -614,6 +645,10 @@ class _BookDetail extends ConsumerWidget {
                     children: [
                       Expanded(child: _DeleteBookButton(book: row)),
                       const SizedBox(width: 10),
+                      if (row.link.isNotEmpty) ...[
+                        Expanded(child: _BookLinkButton(book: row)),
+                        const SizedBox(width: 10),
+                      ],
                       Expanded(
                         child: FilledButton.icon(
                           onPressed: () => onOpenInNotes(row),
@@ -627,6 +662,31 @@ class _BookDetail extends ConsumerWidget {
               ],
             ),
     );
+  }
+}
+
+class _BookLinkButton extends StatelessWidget {
+  const _BookLinkButton({required this.book});
+
+  final NxBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () => _openLink(context),
+      icon: const Icon(Icons.shopping_bag_outlined, size: 17),
+      label: const Text('Amazon'),
+    );
+  }
+
+  Future<void> _openLink(BuildContext context) async {
+    final uri = Uri.tryParse(book.link);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, webOnlyWindowName: '_blank');
+    if (ok || !context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Could not open ${uri.toString()}')));
   }
 }
 
@@ -705,13 +765,19 @@ class _MobileDetail extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                book.readingState.label,
+                book.author.isEmpty
+                    ? book.readingState.label
+                    : '${book.author} · ${book.readingState.label}',
                 style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
             ],
           ),
         ),
         const SizedBox(width: 8),
+        if (book.link.isNotEmpty) ...[
+          _BookLinkButton(book: book),
+          const SizedBox(width: 8),
+        ],
         FilledButton.icon(
           onPressed: () => onOpenInNotes(book),
           icon: const Icon(Icons.open_in_new, size: 16),
@@ -1176,15 +1242,29 @@ class _MetaRow extends StatelessWidget {
               style: const TextStyle(color: AppColors.muted, fontSize: 13),
             ),
           ),
-          Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+String _compactUrl(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null || uri.host.isEmpty) {
+    return value;
+  }
+  final path = uri.pathSegments.take(2).join('/');
+  return path.isEmpty ? uri.host : '${uri.host}/$path';
 }
 
 class _FieldLabel extends StatelessWidget {
