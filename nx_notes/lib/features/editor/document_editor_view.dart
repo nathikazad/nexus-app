@@ -258,218 +258,240 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     final width = MediaQuery.sizeOf(context).width;
     final titleSize = width < 700 ? 30.0 : 38.0;
     final imageAssetService = ref.watch(documentImageAssetServiceProvider);
+    final readMode = _editorMode == _DocumentEditorMode.read;
     return Focus(
       onKeyEvent: _handleShellKeyEvent,
       child: Column(
         children: <Widget>[
           if (widget.contextBar != null) widget.contextBar!,
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                widget.horizontalPadding,
-                54,
-                widget.horizontalPadding,
-                0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
+            child: ColoredBox(
+              color: readMode ? _readModeBackgroundColor() : Colors.transparent,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  widget.horizontalPadding,
+                  54,
+                  widget.horizontalPadding,
+                  0,
+                ),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: readMode ? 720 : double.infinity,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        if (widget.canNavigateBack &&
-                            widget.onNavigateBack != null)
-                          TextButton.icon(
-                            onPressed: widget.onNavigateBack,
-                            icon: const Icon(Icons.arrow_back, size: 16),
-                            label: const Text('Back'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.muted,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 0,
-                                vertical: 6,
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                        const Spacer(),
-                        if (widget.active)
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 120),
-                            switchInCurve: Curves.easeOut,
-                            switchOutCurve: Curves.easeIn,
-                            child: _findBarPresentation == null
-                                ? _ReadEditModeToggle(
-                                    key: const ValueKey<String>('mode-toggle'),
-                                    mode: _editorMode,
-                                    onChanged: _setEditorMode,
-                                  )
-                                : _EditorFindBar(
-                                    key: ValueKey<int>(
-                                      _findBarPresentation!.serial,
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: <Widget>[
+                              if (widget.canNavigateBack &&
+                                  widget.onNavigateBack != null)
+                                TextButton.icon(
+                                  onPressed: widget.onNavigateBack,
+                                  icon: const Icon(Icons.arrow_back, size: 16),
+                                  label: const Text('Back'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.muted,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 0,
+                                      vertical: 6,
                                     ),
-                                    searchService:
-                                        _findBarPresentation!.searchService,
-                                    onClose: _findBarPresentation!.onClose,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
+                                ),
+                              const Spacer(),
+                              if (widget.active)
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 120),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
+                                  child: _findBarPresentation == null
+                                      ? _ReadEditModeToggle(
+                                          key: const ValueKey<String>(
+                                            'mode-toggle',
+                                          ),
+                                          mode: _editorMode,
+                                          onChanged: _setEditorMode,
+                                        )
+                                      : _EditorFindBar(
+                                          key: ValueKey<int>(
+                                            _findBarPresentation!.serial,
+                                          ),
+                                          searchService: _findBarPresentation!
+                                              .searchService,
+                                          onClose:
+                                              _findBarPresentation!.onClose,
+                                        ),
+                                ),
+                            ],
                           ),
+                        ),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final fittedTitleSize = _fittedTitleFontSize(
+                              context: context,
+                              text: _titleText,
+                              maxWidth: constraints.maxWidth - 4,
+                              baseSize: titleSize,
+                            );
+                            final titleStyle = TextStyle(
+                              color: AppColors.text,
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w600,
+                              height: 1.16,
+                              letterSpacing: 0,
+                            );
+                            return SizedBox(
+                              width: constraints.maxWidth,
+                              height: titleSize * 1.26,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 90),
+                                child: _editingTitle
+                                    ? TextField(
+                                        key: ValueKey<String>(
+                                          'title-editor-${widget.document.id}',
+                                        ),
+                                        controller: _titleController,
+                                        focusNode: _titleFocusNode,
+                                        cursorColor: _editorMode.showsCaret
+                                            ? AppColors.text
+                                            : Colors.transparent,
+                                        onChanged: _scheduleTitleSave,
+                                        onSubmitted: (_) =>
+                                            _titleFocusNode.unfocus(),
+                                        onTapOutside: (_) =>
+                                            _titleFocusNode.unfocus(),
+                                        maxLines: 1,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          filled: false,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        style: titleStyle.copyWith(
+                                          fontSize: fittedTitleSize,
+                                        ),
+                                      )
+                                    : MouseRegion(
+                                        key: ValueKey<String>(
+                                          'title-display-${widget.document.id}',
+                                        ),
+                                        cursor: SystemMouseCursors.text,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            setState(
+                                              () => _editingTitle = true,
+                                            );
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  if (!mounted) return;
+                                                  _titleFocusNode
+                                                      .requestFocus();
+                                                  _titleController.selection =
+                                                      TextSelection.collapsed(
+                                                        offset: _titleController
+                                                            .text
+                                                            .length,
+                                                      );
+                                                });
+                                          },
+                                          child: Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: AutoSizeText(
+                                              _titleText.trim().isEmpty
+                                                  ? 'Untitled document'
+                                                  : _titleText.trim(),
+                                              maxLines: 1,
+                                              minFontSize: 8,
+                                              stepGranularity: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: titleStyle,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 28),
+                        Expanded(
+                          child: _NxAppFlowyEditor(
+                            document: widget.document,
+                            editorMode: _editorMode,
+                            active: widget.active,
+                            searchLinkableModels:
+                                ({required modelType, required query}) {
+                                  return ref
+                                      .read(documentRepositoryProvider)
+                                      .searchLinkableModels(
+                                        modelType: modelType,
+                                        query: query,
+                                      );
+                                },
+                            onLinkableModelSelected: (modelType, model) async {
+                              await ref
+                                  .read(documentMutationControllerProvider)
+                                  .attachLinkedModel(
+                                    documentId: widget.document.id,
+                                    modelType: modelType,
+                                    modelId: model.id,
+                                    model: model,
+                                  );
+                            },
+                            createLinkedDocument: (title) async {
+                              final document = await ref
+                                  .read(documentMutationControllerProvider)
+                                  .createDocument(title: title);
+                              return LinkedModel(
+                                id: document.id,
+                                name: document.title,
+                                modelType: LinkableModelType.document.kgqlName,
+                              );
+                            },
+                            uploadDocumentImage: imageAssetService == null
+                                ? null
+                                : (source) {
+                                    return imageAssetService.storeImageSource(
+                                      documentId: widget.document.id,
+                                      source: source,
+                                    );
+                                  },
+                            deleteDocumentImage: imageAssetService == null
+                                ? null
+                                : (url) async {
+                                    await imageAssetService.deleteImageUrl(url);
+                                  },
+                            resolveDocumentImage:
+                                imageAssetService?.resolveImageUrl,
+                            documentImageBaseUrl:
+                                imageAssetService?.imageBaseUrl,
+                            onFindBarChanged: _setFindBarPresentation,
+                            onChanged: (updated, policy) async {
+                              _draftDocument = _draftDocument.copyWith(
+                                document: updated.document,
+                                jsonDocument: updated.jsonDocument,
+                                wordCount: updated.wordCount,
+                                excerpt: updated.excerpt,
+                              );
+                              await ref
+                                  .read(documentMutationControllerProvider)
+                                  .saveDraft(_draftDocument, policy: policy);
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final fittedTitleSize = _fittedTitleFontSize(
-                        context: context,
-                        text: _titleText,
-                        maxWidth: constraints.maxWidth - 4,
-                        baseSize: titleSize,
-                      );
-                      final titleStyle = TextStyle(
-                        color: AppColors.text,
-                        fontSize: titleSize,
-                        fontWeight: FontWeight.w600,
-                        height: 1.16,
-                        letterSpacing: 0,
-                      );
-                      return SizedBox(
-                        width: constraints.maxWidth,
-                        height: titleSize * 1.26,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 90),
-                          child: _editingTitle
-                              ? TextField(
-                                  key: ValueKey<String>(
-                                    'title-editor-${widget.document.id}',
-                                  ),
-                                  controller: _titleController,
-                                  focusNode: _titleFocusNode,
-                                  cursorColor: _editorMode.showsCaret
-                                      ? AppColors.text
-                                      : Colors.transparent,
-                                  onChanged: _scheduleTitleSave,
-                                  onSubmitted: (_) => _titleFocusNode.unfocus(),
-                                  onTapOutside: (_) =>
-                                      _titleFocusNode.unfocus(),
-                                  maxLines: 1,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    filled: false,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: titleStyle.copyWith(
-                                    fontSize: fittedTitleSize,
-                                  ),
-                                )
-                              : MouseRegion(
-                                  key: ValueKey<String>(
-                                    'title-display-${widget.document.id}',
-                                  ),
-                                  cursor: SystemMouseCursors.text,
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () {
-                                      setState(() => _editingTitle = true);
-                                      WidgetsBinding.instance
-                                          .addPostFrameCallback((_) {
-                                            if (!mounted) return;
-                                            _titleFocusNode.requestFocus();
-                                            _titleController.selection =
-                                                TextSelection.collapsed(
-                                                  offset: _titleController
-                                                      .text
-                                                      .length,
-                                                );
-                                          });
-                                    },
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: AutoSizeText(
-                                        _titleText.trim().isEmpty
-                                            ? 'Untitled document'
-                                            : _titleText.trim(),
-                                        maxLines: 1,
-                                        minFontSize: 8,
-                                        stepGranularity: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: titleStyle,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 28),
-                  Expanded(
-                    child: _NxAppFlowyEditor(
-                      document: widget.document,
-                      editorMode: _editorMode,
-                      active: widget.active,
-                      searchLinkableModels:
-                          ({required modelType, required query}) {
-                            return ref
-                                .read(documentRepositoryProvider)
-                                .searchLinkableModels(
-                                  modelType: modelType,
-                                  query: query,
-                                );
-                          },
-                      onLinkableModelSelected: (modelType, model) async {
-                        await ref
-                            .read(documentMutationControllerProvider)
-                            .attachLinkedModel(
-                              documentId: widget.document.id,
-                              modelType: modelType,
-                              modelId: model.id,
-                              model: model,
-                            );
-                      },
-                      createLinkedDocument: (title) async {
-                        final document = await ref
-                            .read(documentMutationControllerProvider)
-                            .createDocument(title: title);
-                        return LinkedModel(
-                          id: document.id,
-                          name: document.title,
-                          modelType: LinkableModelType.document.kgqlName,
-                        );
-                      },
-                      uploadDocumentImage: imageAssetService == null
-                          ? null
-                          : (source) {
-                              return imageAssetService.storeImageSource(
-                                documentId: widget.document.id,
-                                source: source,
-                              );
-                            },
-                      deleteDocumentImage: imageAssetService == null
-                          ? null
-                          : (url) async {
-                              await imageAssetService.deleteImageUrl(url);
-                            },
-                      resolveDocumentImage: imageAssetService?.resolveImageUrl,
-                      documentImageBaseUrl: imageAssetService?.imageBaseUrl,
-                      onFindBarChanged: _setFindBarPresentation,
-                      onChanged: (updated, policy) async {
-                        _draftDocument = _draftDocument.copyWith(
-                          document: updated.document,
-                          jsonDocument: updated.jsonDocument,
-                          wordCount: updated.wordCount,
-                          excerpt: updated.excerpt,
-                        );
-                        await ref
-                            .read(documentMutationControllerProvider)
-                            .saveDraft(_draftDocument, policy: policy);
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -1246,9 +1268,9 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   @override
   Widget build(BuildContext context) {
     final showsCaret = widget.editorMode.showsCaret;
-    final editorStyle = _editorStyle().copyWith(
-      cursorColor: showsCaret ? AppColors.text : Colors.transparent,
-    );
+    final editorStyle = _editorStyle(
+      widget.editorMode,
+    ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
     final editor = AppFlowyEditor(
       editable: true,
       editorState: _editorState,
@@ -1982,7 +2004,17 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
   }
 }
 
-EditorStyle _editorStyle() {
+EditorStyle _editorStyle(_DocumentEditorMode mode) {
+  final readMode = mode == _DocumentEditorMode.read;
+  final bodyStyle = readMode
+      ? TextStyle(
+          color: _readModeTextColor(),
+          fontFamily: 'Georgia',
+          fontSize: 17,
+          height: 1.5,
+        )
+      : TextStyle(color: AppColors.editorText, fontSize: 16, height: 1.62);
+  final lineHeight = readMode ? 1.5 : 1.62;
   return EditorStyle.desktop(
     cursorColor: AppColors.text,
     selectionColor: const Color(0x333B82F6),
@@ -1990,7 +2022,7 @@ EditorStyle _editorStyle() {
     textSpanDecorator: nxHighlightNoteTextSpanDecorator,
     textSpanOverlayBuilder: nxHighlightNoteOverlayBuilder,
     textStyleConfiguration: TextStyleConfiguration(
-      text: TextStyle(color: AppColors.editorText, fontSize: 16, height: 1.62),
+      text: bodyStyle,
       bold: const TextStyle(fontWeight: FontWeight.w700),
       italic: const TextStyle(fontStyle: FontStyle.italic),
       underline: const TextStyle(decoration: TextDecoration.underline),
@@ -2005,9 +2037,17 @@ EditorStyle _editorStyle() {
         backgroundColor: AppColors.subtle,
         fontFamily: 'monospace',
       ),
-      lineHeight: 1.62,
+      lineHeight: lineHeight,
     ),
   );
+}
+
+Color _readModeBackgroundColor() {
+  return AppColors.isDark ? const Color(0xff171512) : const Color(0xfff6f5f1);
+}
+
+Color _readModeTextColor() {
+  return AppColors.isDark ? const Color(0xffe8e1d5) : const Color(0xff25231f);
 }
 
 class EditorContextBar extends StatelessWidget {
