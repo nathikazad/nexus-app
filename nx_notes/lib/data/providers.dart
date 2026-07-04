@@ -5,6 +5,7 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/data/document/document_image_assets.dart';
 import 'package:nx_notes/data/document/document_schema_provider.dart';
+import 'package:nx_notes/data/document/mirror_publish_trigger.dart';
 import 'package:nx_notes/data/document/kgql_document_repository.dart';
 import 'package:nx_notes/data/document/nx_docs_state.dart';
 import 'package:nx_notes/domain/document/document.dart';
@@ -51,6 +52,20 @@ final nxDocsStateServiceProvider = Provider<NxDocsStateService?>((ref) {
   final client = http.Client();
   ref.onDispose(client.close);
   return NxDocsStateService(
+    baseUrl: resolve(user.preset).imageHttp,
+    userId: user.userId,
+    client: client,
+  );
+});
+
+final mirrorPublishTriggerProvider = Provider<MirrorPublishTrigger?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) {
+    return null;
+  }
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return MirrorPublishTriggerService(
     baseUrl: resolve(user.preset).imageHttp,
     userId: user.userId,
     client: client,

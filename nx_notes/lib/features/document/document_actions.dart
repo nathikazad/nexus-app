@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_notes/data/document/mirror_publish_trigger.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
@@ -130,6 +131,13 @@ class DocumentMutationController {
     );
     _cacheDocument(updated);
     await _ref.read(documentRepositoryProvider).updateDraft(updated);
+    unawaited(
+      _triggerMirrorPublish(
+        reason: 'publish_click',
+        documentId: updated.id,
+        immediate: true,
+      ),
+    );
     _logDbSync(
       'set_publish',
       documentId: document.id,
@@ -282,6 +290,15 @@ class DocumentMutationController {
     _pendingDraft = null;
     try {
       await _ref.read(documentRepositoryProvider).updateDraft(draft);
+      if (draft.publish.enabled) {
+        unawaited(
+          _triggerMirrorPublish(
+            reason: 'edit',
+            documentId: draft.id,
+            immediate: false,
+          ),
+        );
+      }
       _logDbSync(
         'update_draft',
         documentId: draft.id,
@@ -302,6 +319,29 @@ class DocumentMutationController {
     debugPrint(
       '[nx_notes db sync] $timestamp action=$action$documentPart$detailPart',
     );
+  }
+
+  Future<void> _triggerMirrorPublish({
+    required String reason,
+    required int documentId,
+    required bool immediate,
+  }) async {
+    final trigger = _ref.read(mirrorPublishTriggerProvider);
+    if (trigger == null) return;
+    try {
+      await trigger.trigger(
+        reason: reason,
+        documentId: documentId,
+        immediate: immediate,
+      );
+      debugMirrorPublish(
+        'triggered reason=$reason document=$documentId immediate=$immediate',
+      );
+    } catch (error) {
+      debugMirrorPublish(
+        'trigger failed reason=$reason document=$documentId error=$error',
+      );
+    }
   }
 }
 
