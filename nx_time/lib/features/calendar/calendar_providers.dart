@@ -59,10 +59,19 @@ final actionGoalsWeekProvider = FutureProvider.autoDispose
       return repo.getActionGoalsWeek(weekStart: m0);
     });
 
+/// Daily hit/total heatmap scores for the visible month on the Goals tab.
+final actionGoalsMonthScoreProvider = FutureProvider.autoDispose
+    .family<ActionGoalsMonthScore, DateTime>((ref, monthStart) async {
+      final m0 = DateTime(monthStart.year, monthStart.month);
+      final repo = ref.watch(goalRepositoryProvider);
+      return repo.getActionGoalsMonthScore(monthStart: m0);
+    });
+
 /// After any local action create/update/delete, invalidates the week-action and
 /// week-goal [FutureProvider] families. Refetches any **mounted** family instances
 /// (e.g. Today's week, the calendar's selected week) — typically one or two weeks.
 void invalidateActionsAfterMutation(WidgetRef ref) {
   ref.invalidate(weekActionsProvider);
   ref.invalidate(actionGoalsWeekProvider);
+  ref.invalidate(actionGoalsMonthScoreProvider);
 }

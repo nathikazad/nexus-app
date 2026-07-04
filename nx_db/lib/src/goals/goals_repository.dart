@@ -3,10 +3,12 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../core/json/payload_unwrap.dart';
 import 'documents/get_action_goals_month.graphql.dart';
+import 'documents/get_action_goals_month_score.graphql.dart';
 import 'documents/get_action_goals_trend.graphql.dart';
 import 'documents/get_action_goals_week.graphql.dart';
 import 'documents/get_expense_goals_month.graphql.dart';
 import 'models/action_goal_month.dart';
+import 'models/action_goal_month_score.dart';
 import 'models/action_goal_trend.dart';
 import 'models/action_goal_week.dart';
 import 'models/expense_goal_month.dart';
@@ -40,6 +42,18 @@ ActionGoalMonthResponse parseGetActionGoalsMonthResult(
     return ActionGoalMonthResponse.emptyForMonth(monthStart);
   }
   return ActionGoalMonthResponse.fromJson(map);
+}
+
+@visibleForTesting
+ActionGoalMonthScoreResponse parseGetActionGoalsMonthScoreResult(
+  dynamic raw, {
+  required DateTime monthStart,
+}) {
+  final map = unwrapJsonMap(raw);
+  if (map == null) {
+    return ActionGoalMonthScoreResponse.emptyForMonth(monthStart);
+  }
+  return ActionGoalMonthScoreResponse.fromJson(map);
 }
 
 @visibleForTesting
@@ -113,6 +127,33 @@ Future<ActionGoalMonthResponse> fetchActionGoalsMonth(
 
   return parseGetActionGoalsMonthResult(
     result.data?['getActionGoalsMonth'],
+    monthStart: monthStart,
+  );
+}
+
+/// Calls [getActionGoalsMonthScore] via GraphQL.
+Future<ActionGoalMonthScoreResponse> fetchActionGoalsMonthScore(
+  GraphQLClient client, {
+  required DateTime monthStart,
+  int? goalId,
+}) async {
+  final result = await client.query(
+    QueryOptions(
+      document: gql(getActionGoalsMonthScoreQuery),
+      variables: {
+        'monthStart': formatGraphqlDate(monthStart),
+        'goalId': goalId,
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) {
+    throw result.exception!;
+  }
+
+  return parseGetActionGoalsMonthScoreResult(
+    result.data?['getActionGoalsMonthScore'],
     monthStart: monthStart,
   );
 }

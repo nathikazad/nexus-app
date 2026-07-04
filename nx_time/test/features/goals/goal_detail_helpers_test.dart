@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
+import 'package:nx_time/domain/goals/action_goal.dart';
 import 'package:nx_time/domain/goals/goal_day_state.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_helpers.dart';
 
@@ -73,6 +75,58 @@ void main() {
       expect(score.hits, 0);
       expect(score.denominator, 0);
       expect(score.percent, isNull);
+    });
+
+    test('goalMonthHeatmapColor shades scored days and neutral days', () {
+      final date = DateTime(2026, 4);
+      expect(
+        goalMonthHeatmapColor(
+          ActionGoalMonthScoreDay(
+            date: date,
+            hit: 0,
+            total: 2,
+            ratio: 0,
+            future: false,
+          ),
+        ),
+        AppColors.dotMiss,
+      );
+      expect(
+        goalMonthHeatmapColor(
+          ActionGoalMonthScoreDay(
+            date: date,
+            hit: 2,
+            total: 2,
+            ratio: 1,
+            future: false,
+          ),
+        ),
+        AppColors.dotOk,
+      );
+      expect(
+        goalMonthHeatmapColor(
+          ActionGoalMonthScoreDay(
+            date: date,
+            hit: 0,
+            total: 0,
+            ratio: null,
+            future: false,
+          ),
+        ),
+        AppColors.slate100,
+      );
+      expect(
+        goalMonthHeatmapColor(
+          ActionGoalMonthScoreDay(
+            date: date,
+            hit: 0,
+            total: 2,
+            ratio: 0,
+            future: true,
+          ),
+        ),
+        AppColors.slate100,
+      );
     });
   });
 }

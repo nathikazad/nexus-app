@@ -1,4 +1,7 @@
+import 'package:flutter/material.dart';
+
 import 'package:nx_time/core/time/wall_clock_time.dart';
+import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/domain/goals/action_goal.dart';
 import 'package:nx_time/domain/goals/goal_cadence.dart';
 import 'package:nx_time/domain/goals/goal_day_state.dart';
@@ -131,6 +134,17 @@ GoalMonthConsistencyScore goalMonthConsistencyScore(
         !date.isAfter(endInclusive);
   }).length;
   return GoalMonthConsistencyScore(hits: hits, denominator: denominator);
+}
+
+Color goalMonthHeatmapColor(ActionGoalMonthScoreDay day) {
+  if (day.future || day.total <= 0 || day.ratio == null) {
+    return AppColors.slate100;
+  }
+  return Color.lerp(
+    AppColors.dotMiss,
+    AppColors.dotOk,
+    day.ratio!.clamp(0, 1),
+  )!;
 }
 
 DateTime get todayDate {

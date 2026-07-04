@@ -55,6 +55,29 @@ class ActionGoalsMonth {
   final List<ActionGoalWeekItem> items;
 }
 
+class ActionGoalMonthScoreDay {
+  const ActionGoalMonthScoreDay({
+    required this.date,
+    required this.hit,
+    required this.total,
+    required this.ratio,
+    required this.future,
+  });
+
+  final DateTime date;
+  final int hit;
+  final int total;
+  final double? ratio;
+  final bool future;
+}
+
+class ActionGoalsMonthScore {
+  const ActionGoalsMonthScore({required this.monthStart, required this.days});
+
+  final DateTime monthStart;
+  final List<ActionGoalMonthScoreDay> days;
+}
+
 class ActionGoalTrendBucket {
   const ActionGoalTrendBucket({
     required this.periodStart,

@@ -15,6 +15,7 @@ export 'src/kgql/documents/set_kgql_model_type.graphql.dart';
 export 'src/kgql/documents/get_kgql_aggregate.graphql.dart';
 export 'src/goals/documents/get_action_goals_week.graphql.dart';
 export 'src/goals/documents/get_action_goals_month.graphql.dart';
+export 'src/goals/documents/get_action_goals_month_score.graphql.dart';
 export 'src/goals/documents/get_action_goals_trend.graphql.dart';
 export 'src/goals/documents/get_expense_goals_month.graphql.dart';
 export 'src/kgql/documents/get_current_transcript.graphql.dart';

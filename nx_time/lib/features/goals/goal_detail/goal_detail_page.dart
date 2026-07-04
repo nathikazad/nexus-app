@@ -102,21 +102,18 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
         throw StateError('Goal not found');
       }
       final item = week.items.first;
-      final month = await repo.getActionGoalsMonth(
-        monthStart: _visibleMonth,
-        goalId: id,
-      );
       if (!mounted) {
         return;
       }
       setState(() {
         _item = item;
-        _month = month;
+        _month = null;
         _weekStart = asStoredLocalWallClock(week.weekStart);
         _loading = false;
-        _monthLoading = false;
+        _monthLoading = true;
         _monthError = null;
       });
+      unawaited(_loadMonth(_visibleMonth));
     } catch (e) {
       if (!mounted) {
         return;
@@ -132,6 +129,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
     final normalized = monthStartOf(monthStart);
     setState(() {
       _visibleMonth = normalized;
+      _month = null;
       _monthLoading = true;
       _monthError = null;
     });
@@ -192,7 +190,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           ),
         ),
       );
-    } else if (_item != null && _month != null && _weekStart != null) {
+    } else if (_item != null && _weekStart != null) {
       final item = _item!;
       final ws = _weekStart!;
       final eff = goalDetailVariantFor(item);
@@ -201,7 +199,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           item: item,
           weekStart: ws,
           visibleMonth: _visibleMonth,
-          month: _month!,
+          month: _month,
           monthLoading: _monthLoading,
           monthError: _monthError,
           onPreviousMonth: () => _changeMonth(-1),
@@ -211,7 +209,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           item: item,
           weekStart: ws,
           visibleMonth: _visibleMonth,
-          month: _month!,
+          month: _month,
           monthLoading: _monthLoading,
           monthError: _monthError,
           onPreviousMonth: () => _changeMonth(-1),
@@ -221,7 +219,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           item: item,
           weekStart: ws,
           visibleMonth: _visibleMonth,
-          month: _month!,
+          month: _month,
           monthLoading: _monthLoading,
           monthError: _monthError,
           onPreviousMonth: () => _changeMonth(-1),
@@ -394,7 +392,7 @@ class _WakeBodyData extends ConsumerWidget {
   final ActionGoalWeekItem item;
   final DateTime weekStart;
   final DateTime visibleMonth;
-  final ActionGoalsMonth month;
+  final ActionGoalsMonth? month;
   final bool monthLoading;
   final Object? monthError;
   final VoidCallback onPreviousMonth;
@@ -690,7 +688,7 @@ class _GoalMonthCalendarSection extends StatelessWidget {
   });
 
   final DateTime visibleMonth;
-  final ActionGoalsMonth month;
+  final ActionGoalsMonth? month;
   final bool monthLoading;
   final Object? monthError;
   final VoidCallback onPreviousMonth;
@@ -698,7 +696,9 @@ class _GoalMonthCalendarSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final item = month.items.isEmpty ? null : month.items.first;
+    final item = month == null || month!.items.isEmpty
+        ? null
+        : month!.items.first;
     final daily = item?.dailyState ?? const <GoalDailyState>[];
     final score = goalMonthConsistencyScore(daily, visibleMonth);
     final cells = buildGoalMonthCalendarCells(daily, visibleMonth);
@@ -788,26 +788,37 @@ class _GoalMonthCalendarSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        Column(
-          children: List.generate((cells.length / 7).ceil(), (row) {
-            final start = row * 7;
-            final rowCells = cells.sublist(start, start + 7);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  for (final cell in rowCells)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: _GoalMonthCellView(cell: cell),
-                      ),
-                    ),
-                ],
+        if (month == null && monthLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(
+              child: Text(
+                'Loading month...',
+                style: TextStyle(fontSize: 12, color: AppColors.slate500),
               ),
-            );
-          }),
-        ),
+            ),
+          )
+        else
+          Column(
+            children: List.generate((cells.length / 7).ceil(), (row) {
+              final start = row * 7;
+              final rowCells = cells.sublist(start, start + 7);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    for (final cell in rowCells)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          child: _GoalMonthCellView(cell: cell),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ),
       ],
     );
   }
@@ -1002,7 +1013,7 @@ class _SleepBodyData extends ConsumerWidget {
   final ActionGoalWeekItem item;
   final DateTime weekStart;
   final DateTime visibleMonth;
-  final ActionGoalsMonth month;
+  final ActionGoalsMonth? month;
   final bool monthLoading;
   final Object? monthError;
   final VoidCallback onPreviousMonth;
@@ -1217,7 +1228,7 @@ class _GymBodyData extends ConsumerWidget {
   final ActionGoalWeekItem item;
   final DateTime weekStart;
   final DateTime visibleMonth;
-  final ActionGoalsMonth month;
+  final ActionGoalsMonth? month;
   final bool monthLoading;
   final Object? monthError;
   final VoidCallback onPreviousMonth;

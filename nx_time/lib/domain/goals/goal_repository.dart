@@ -14,6 +14,11 @@ abstract class GoalRepository {
     int? goalId,
   });
 
+  Future<ActionGoalsMonthScore> getActionGoalsMonthScore({
+    required DateTime monthStart,
+    int? goalId,
+  });
+
   Future<ActionGoalsTrend> getActionGoalsTrend({
     required int goalId,
     required int weeks,

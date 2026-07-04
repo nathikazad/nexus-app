@@ -77,6 +77,29 @@ void main() {
     expect(cap.variables['goalId'], 101);
   });
 
+  test('fetchActionGoalsMonthScore passes ISO monthStart and goalId', () async {
+    final mock = MockGraphQLClient();
+    when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
+          'getActionGoalsMonthScore': {
+            'month_start': '2026-04-01',
+            'days': <dynamic>[],
+          },
+        }));
+
+    final r = await fetchActionGoalsMonthScore(
+      mock,
+      monthStart: DateTime.parse('2026-04-01'),
+      goalId: 101,
+    );
+    expect(r.days, isEmpty);
+
+    final cap =
+        verify(() => mock.query(captureAny())).captured.single as QueryOptions;
+    expect(cap.variables['monthStart'], '2026-04-01');
+    expect(cap.variables.containsKey('domainId'), isFalse);
+    expect(cap.variables['goalId'], 101);
+  });
+
   test('fetchExpenseGoalsMonth passes monthStart and null goalId', () async {
     final mock = MockGraphQLClient();
     when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({

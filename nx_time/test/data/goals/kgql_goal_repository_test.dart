@@ -88,6 +88,27 @@ void main() {
     expect(m.items, isEmpty);
   });
 
+  test('KgqlGoalRepository getActionGoalsMonthScore', () async {
+    final mock = MockGraphQLClient();
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getActionGoalsMonthScore': json.decode(
+          r'{ "month_start": "2026-04-01", "days": [{ "date": "2026-04-01", "hit": 1, "total": 2, "ratio": 0.5, "future": false }] }',
+        ),
+      }),
+    );
+    final repo = KgqlGoalRepository(
+      client: mock,
+      loadGoalSchema: () => throw UnimplementedError(),
+    );
+    final m = await repo.getActionGoalsMonthScore(
+      monthStart: DateTime(2026, 4),
+    );
+    expect(m.monthStart, DateTime(2026, 4));
+    expect(m.days.single.hit, 1);
+    expect(m.days.single.ratio, 0.5);
+  });
+
   test('getById maps getKgqlModels row to Goal', () async {
     final mock = MockGraphQLClient();
     when(() => mock.query(any())).thenAnswer(

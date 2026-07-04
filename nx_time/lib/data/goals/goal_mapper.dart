@@ -103,6 +103,25 @@ ActionGoalsMonth actionGoalsMonthFromWire(nx.ActionGoalMonthResponse w) {
   );
 }
 
+ActionGoalsMonthScore actionGoalsMonthScoreFromWire(
+  nx.ActionGoalMonthScoreResponse w,
+) {
+  return ActionGoalsMonthScore(
+    monthStart: asStoredLocalWallClock(w.monthStart),
+    days: w.days
+        .map(
+          (d) => ActionGoalMonthScoreDay(
+            date: asStoredLocalWallClock(d.date),
+            hit: d.hit,
+            total: d.total,
+            ratio: d.ratio?.toDouble(),
+            future: d.future,
+          ),
+        )
+        .toList(),
+  );
+}
+
 /// When PostGraphile returns the partial `{ "buckets": [] }` shape (goal missing).
 ActionGoalsTrend actionGoalsTrendFromWire(
   nx.ActionGoalTrendResponse w, {
