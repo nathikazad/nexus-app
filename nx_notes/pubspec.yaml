@@ -10,6 +10,7 @@ dependencies:
   auto_size_text: ^3.0.0
   appflowy_editor:
     path: ../appflowy-editor
+  crypto: ^3.0.6
   flutter:
     sdk: flutter
   flutter_localizations:

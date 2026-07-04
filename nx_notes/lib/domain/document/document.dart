@@ -1,4 +1,5 @@
 import 'package:nx_notes/domain/links/linked_model.dart';
+import 'package:nx_notes/domain/document/document_publish.dart';
 
 class NxDocument {
   const NxDocument({
@@ -18,6 +19,7 @@ class NxDocument {
     required this.versionNumber,
     required this.excerpt,
     required this.links,
+    this.publish = const DocumentPublishState(enabled: false, dirty: false),
     this.readingState = '',
     this.bookRank,
   });
@@ -38,6 +40,7 @@ class NxDocument {
   final int versionNumber;
   final String excerpt;
   final List<LinkedModel> links;
+  final DocumentPublishState publish;
   final String readingState;
   final int? bookRank;
 
@@ -64,6 +67,7 @@ class NxDocument {
     int? versionNumber,
     String? excerpt,
     List<LinkedModel>? links,
+    DocumentPublishState? publish,
     String? readingState,
     int? bookRank,
     bool clearBookRank = false,
@@ -85,6 +89,7 @@ class NxDocument {
       versionNumber: versionNumber ?? this.versionNumber,
       excerpt: excerpt ?? this.excerpt,
       links: links ?? this.links,
+      publish: publish ?? this.publish,
       readingState: readingState ?? this.readingState,
       bookRank: clearBookRank ? null : bookRank ?? this.bookRank,
     );

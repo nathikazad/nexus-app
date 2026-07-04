@@ -54,7 +54,9 @@ class DocumentMutationController {
     NxDocument document, {
     DraftSavePolicy policy = DraftSavePolicy.deferred,
   }) async {
+    final publish = document.publish.withCurrentContent(document.jsonDocument);
     _pendingDraft = document.copyWith(
+      publish: publish,
       updatedAt: DateTime.now(),
       updatedLabel: 'just now',
     );
@@ -105,6 +107,34 @@ class DocumentMutationController {
     _ref.invalidate(recentDocumentsProvider);
     _ref.invalidate(pinnedDocumentsProvider);
     _ref.invalidate(booksProvider);
+  }
+
+  Future<void> setPublishEnabled(NxDocument document, bool enabled) async {
+    await saveNow(document);
+    final current =
+        _ref.read(documentLocalCacheProvider)[document.id] ?? document;
+    final now = DateTime.now();
+    final nowIso = now.toUtc().toIso8601String();
+    final publish = enabled
+        ? current.publish.enable(
+            jsonDocument: current.jsonDocument,
+            publishedAt: nowIso,
+            title: current.title,
+            slug: _slugForTitle(current.title, current.id),
+          )
+        : current.publish.disable();
+    final updated = current.copyWith(
+      publish: publish,
+      updatedAt: now,
+      updatedLabel: 'just now',
+    );
+    _cacheDocument(updated);
+    await _ref.read(documentRepositoryProvider).updateDraft(updated);
+    _logDbSync(
+      'set_publish',
+      documentId: document.id,
+      detail: 'enabled=$enabled trigger=immediate',
+    );
   }
 
   Future<void> attachLinkedModel({
@@ -273,6 +303,15 @@ class DocumentMutationController {
       '[nx_notes db sync] $timestamp action=$action$documentPart$detailPart',
     );
   }
+}
+
+String _slugForTitle(String title, int id) {
+  final slug = title
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return slug.isEmpty ? 'document-$id' : slug;
 }
 
 class DocumentResultController {

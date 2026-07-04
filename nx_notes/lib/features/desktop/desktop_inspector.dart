@@ -493,6 +493,7 @@ class _InspectorActions extends ConsumerStatefulWidget {
 
 class _InspectorActionsState extends ConsumerState<_InspectorActions> {
   bool _saving = false;
+  bool _publishing = false;
   bool _deleting = false;
 
   @override
@@ -528,6 +529,55 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
                     )
                   : const Icon(Icons.save_outlined, size: 16),
               label: Text(_saving ? 'Saving...' : 'Save now'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                backgroundColor: widget.document.publish.enabled
+                    ? AppColors.panel
+                    : AppColors.floating,
+                foregroundColor: widget.document.publish.enabled
+                    ? AppColors.text
+                    : AppColors.onFloating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: _saving || _publishing || _deleting
+                  ? null
+                  : _togglePublish,
+              icon: _publishing
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: widget.document.publish.enabled
+                            ? AppColors.text
+                            : AppColors.onFloating,
+                      ),
+                    )
+                  : Icon(
+                      widget.document.publish.enabled
+                          ? Icons.public_off_outlined
+                          : Icons.public_outlined,
+                      size: 16,
+                    ),
+              label: Text(
+                _publishing
+                    ? 'Updating publish...'
+                    : widget.document.publish.enabled
+                    ? 'Unpublish'
+                    : 'Publish',
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -580,6 +630,35 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
     } finally {
       if (mounted) {
         setState(() => _saving = false);
+      }
+    }
+  }
+
+  Future<void> _togglePublish() async {
+    final nextEnabled = !widget.document.publish.enabled;
+    setState(() => _publishing = true);
+    try {
+      await ref
+          .read(documentMutationControllerProvider)
+          .setPublishEnabled(widget.document, nextEnabled);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nextEnabled
+                ? 'Document queued for publishing'
+                : 'Document queued for unpublishing',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update publishing: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _publishing = false);
       }
     }
   }

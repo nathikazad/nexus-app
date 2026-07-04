@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_notes/data/document/document_attr_keys.dart';
 import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_publish.dart';
 import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
@@ -10,6 +11,9 @@ import 'package:nx_notes/domain/links/linked_model.dart';
 NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
   final document = model.attrString(kDocumentAttrDocument) ?? '';
   final jsonDocument = _jsonMap(model.attributes?[kDocumentAttrJsonDocument]);
+  final publish = DocumentPublishState.fromJson(
+    model.attributes?[kDocumentAttrPublish],
+  );
   final updatedAt =
       DateTime.tryParse(model.updatedAt ?? '') ??
       DateTime.tryParse(model.createdAt ?? '') ??
@@ -38,6 +42,7 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
     versionNumber: versionNumber,
     excerpt: _excerptFrom(document),
     links: _linksFromModel(model),
+    publish: publish,
     readingState: model.attrString(kBookAttrReadingState) ?? '',
     bookRank: model.attrInt(kBookAttrRank),
   );
@@ -73,6 +78,9 @@ NxDocument documentSummaryFromModel(Model model) {
     versionNumber: 0,
     excerpt: excerpt,
     links: const <LinkedModel>[],
+    publish: DocumentPublishState.fromJson(
+      model.attributes?[kDocumentAttrPublish],
+    ),
     readingState: model.attrString(kBookAttrReadingState) ?? '',
     bookRank: model.attrInt(kBookAttrRank),
   );
@@ -113,7 +121,12 @@ SetModelRequest setModelRequestForCreateDocument({
         value: _blankDocumentJson(document),
       ),
       SetModelAttribute(key: kDocumentAttrPinned, value: false),
-      SetModelAttribute(key: kDocumentAttrShareToWeb, value: false),
+      SetModelAttribute(
+        key: kDocumentAttrPublish,
+        value: DocumentPublishState.disabled()
+            .withCurrentContent(_blankDocumentJson(document))
+            .toJson(),
+      ),
     ],
     tags: [
       SetModelTag(system: kDocumentStatusTagSystem, nodes: const ['Draft']),
@@ -149,6 +162,9 @@ NxDocument documentForCreatedId(
     versionNumber: 0,
     excerpt: _excerptFrom(document),
     links: const <LinkedModel>[],
+    publish: DocumentPublishState.disabled().withCurrentContent(
+      _blankDocumentJson(document),
+    ),
     readingState: kind == DocumentKind.book ? 'to_read' : '',
   );
 }
@@ -162,6 +178,7 @@ SetModelRequest setModelRequestForUpdateDocument(
   NxDocument document, {
   Set<String> availableTagSystems = const <String>{},
 }) {
+  final publish = document.publish.withCurrentContent(document.jsonDocument);
   return SetModelRequest(
     id: document.id,
     name: document.title,
@@ -173,6 +190,7 @@ SetModelRequest setModelRequestForUpdateDocument(
         value: document.jsonDocument,
       ),
       SetModelAttribute(key: kDocumentAttrPinned, value: document.pinned),
+      SetModelAttribute(key: kDocumentAttrPublish, value: publish.toJson()),
     ],
     tags: _setModelTagsForDocument(document, availableTagSystems),
   );
@@ -255,6 +273,7 @@ Map<String, dynamic> documentFetchStruct(ModelType schema) {
     kDocumentAttrDocument: true,
     kDocumentAttrJsonDocument: true,
     kDocumentAttrPinned: true,
+    kDocumentAttrPublish: true,
     'tags': true,
     'relations': {
       'relation_id': true,
@@ -285,6 +304,7 @@ Map<String, dynamic> documentSummaryFetchStruct() {
     'created_at': true,
     'updated_at': true,
     kDocumentAttrPinned: true,
+    kDocumentAttrPublish: true,
     kDocumentAttrWordCount: true,
     kBookAttrReadingState: true,
     kBookAttrRank: true,
