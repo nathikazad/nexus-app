@@ -11,11 +11,15 @@ class ActionEditViewModel {
     required bool isCreate,
     ActionCategoryOption? categoryCreate,
   }) {
-    if (nameTrimmed.isEmpty) return 'Enter a name';
+    if (!isCreate && nameTrimmed.isEmpty) return 'Enter a name';
     if (isCreate && categoryCreate == null) {
       return 'Choose a type, start, and end';
     }
     return null;
+  }
+
+  static DateTime defaultEndForStart(DateTime start) {
+    return start.add(const Duration(minutes: 30));
   }
 
   /// Ensures end is after start: same instant → +1 min; otherwise if end is not

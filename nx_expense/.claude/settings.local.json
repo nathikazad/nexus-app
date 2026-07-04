@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(python3 -c ':*)",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}

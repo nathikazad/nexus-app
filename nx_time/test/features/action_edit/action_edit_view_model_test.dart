@@ -7,7 +7,22 @@ import 'package:nx_time/features/action_edit/action_edit_view_model.dart';
 void main() {
   test('snackbarErrorForSave', () {
     expect(
-      ActionEditViewModel.snackbarErrorForSave(nameTrimmed: '', isCreate: true),
+      ActionEditViewModel.snackbarErrorForSave(
+        nameTrimmed: '',
+        isCreate: true,
+        categoryCreate: const ActionCategoryOption(
+          modelTypeId: 1,
+          name: 'Meet',
+          dotColor: Color(0xFF000000),
+        ),
+      ),
+      isNull,
+    );
+    expect(
+      ActionEditViewModel.snackbarErrorForSave(
+        nameTrimmed: '',
+        isCreate: false,
+      ),
       isNotNull,
     );
     expect(
@@ -38,6 +53,14 @@ void main() {
     final n = ActionEditViewModel.normalizeEndAfterStart(start, end);
     expect(n.day, 19);
     expect(n.isAfter(start), isTrue);
+  });
+
+  test('defaultEndForStart adds 30 minutes', () {
+    final start = DateTime(2026, 4, 18, 8, 15);
+    expect(
+      ActionEditViewModel.defaultEndForStart(start),
+      DateTime(2026, 4, 18, 8, 45),
+    );
   });
 
   test('normalizeEndAfterStart nudges identical start/end by one minute', () {

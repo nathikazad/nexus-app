@@ -115,9 +115,9 @@ SetModelRequest setModelRequestForCreate(Action action, String modelTypeName) {
     );
   }
 
-  return setKgqlCreate(
+  return SetModelRequest(
     modelType: modelTypeName,
-    name: action.name,
+    name: action.name.trim().isEmpty ? null : action.name,
     description: action.description,
     attributes: [
       SetModelAttribute(

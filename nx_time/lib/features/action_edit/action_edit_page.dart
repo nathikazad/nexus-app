@@ -51,6 +51,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
   late ActionCategoryOption _categoryEdit;
   late DateTime _start;
   late DateTime _end;
+  bool _endExplicit = false;
   bool _saving = false;
 
   /// Create mode: task ids to [TaskRepository.linkActivity] after the action row exists.
@@ -70,13 +71,9 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       final n = DateTime.now();
       final ps = widget.prefillStart;
       final pe = widget.prefillEnd;
-      if (ps != null && pe != null) {
-        _start = ps;
-        _end = pe;
-      } else {
-        _start = n;
-        _end = n;
-      }
+      _start = ps ?? n;
+      _end = pe ?? ActionEditViewModel.defaultEndForStart(_start);
+      _endExplicit = pe != null;
       if (widget.prefillCategory != null) {
         _categoryCreate = widget.prefillCategory;
       }
@@ -87,6 +84,7 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       _categoryEdit = ActionCategoryOption.fromAction(a);
       _start = a.startTime ?? DateTime.now();
       _end = a.endTime ?? _start.add(const Duration(hours: 1));
+      _endExplicit = true;
     }
     if (!_isCreate) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -193,7 +191,12 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       title: 'Start (date & time)',
     );
     if (t != null && mounted) {
-      setState(() => _start = t);
+      setState(() {
+        _start = t;
+        if (_isCreate && !_endExplicit) {
+          _end = ActionEditViewModel.defaultEndForStart(t);
+        }
+      });
     }
   }
 
@@ -204,7 +207,10 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
       title: 'End (date & time)',
     );
     if (t != null && mounted) {
-      setState(() => _end = t);
+      setState(() {
+        _end = t;
+        _endExplicit = true;
+      });
     }
   }
 

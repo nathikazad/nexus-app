@@ -99,6 +99,8 @@ class AgentPipelineRun {
     required this.toolErrors,
     required this.tokenUsage,
     required this.changeOperationIds,
+    required this.correction,
+    required this.correctionTarget,
     required this.firstMs,
     required this.lastMs,
     required this.durationMs,
@@ -118,9 +120,35 @@ class AgentPipelineRun {
   final int toolErrors;
   final TokenUsage tokenUsage;
   final List<String> changeOperationIds;
+  final AgentRunCorrection? correction;
+  final AgentRunCorrectionTarget correctionTarget;
   final int firstMs;
   final int lastMs;
   final int durationMs;
+}
+
+class AgentRunCorrection {
+  const AgentRunCorrection({
+    required this.note,
+    required this.incorrect,
+    required this.resolved,
+  });
+
+  final String note;
+  final bool incorrect;
+  final bool resolved;
+}
+
+class AgentRunCorrectionTarget {
+  const AgentRunCorrectionTarget({
+    required this.time,
+    required this.id,
+    required this.payload,
+  });
+
+  final DateTime? time;
+  final String id;
+  final Map<String, dynamic> payload;
 }
 
 class TokenUsage {

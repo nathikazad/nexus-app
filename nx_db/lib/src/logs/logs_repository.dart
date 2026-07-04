@@ -60,6 +60,64 @@ Future<List<DbChangeOperation>> fetchChangeOperationsForDay(
       .toList();
 }
 
+Future<DbChangeOperation?> fetchChangeOperation(
+  GraphQLClient client, {
+  required String operationId,
+}) async {
+  final result = await client.query(
+    QueryOptions(
+      document: gql(changeOperationQuery),
+      variables: {'id': operationId},
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) throw result.exception!;
+
+  final nodes = nodeList(result.data?['allChangeOperations']);
+  if (nodes.isEmpty) return null;
+  return DbChangeOperation.fromJson(nodes.first);
+}
+
+Future<NexusLogRow?> fetchLogById(
+  GraphQLClient client, {
+  required String id,
+}) async {
+  final result = await client.query(
+    QueryOptions(
+      document: gql(logByIdQuery),
+      variables: {'id': id},
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) throw result.exception!;
+
+  final nodes = nodeList(result.data?['allLogs']);
+  if (nodes.isEmpty) return null;
+  return NexusLogRow.fromJson(nodes.first);
+}
+
+Future<void> updateLogPayload(
+  GraphQLClient client, {
+  required DateTime time,
+  required String id,
+  required Map<String, dynamic> payload,
+}) async {
+  final result = await client.mutate(
+    MutationOptions(
+      document: gql(updateLogPayloadMutation),
+      variables: {
+        'time': time.toUtc().toIso8601String(),
+        'id': id,
+        'payload': payload,
+      },
+    ),
+  );
+
+  if (result.hasException) throw result.exception!;
+}
+
 Future<List<DbChangeEvent>> fetchChangeEvents(
   GraphQLClient client, {
   required String operationId,

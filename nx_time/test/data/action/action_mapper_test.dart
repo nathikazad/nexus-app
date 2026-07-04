@@ -185,6 +185,22 @@ void main() {
       final keys = req.attributes!.map((a) => a.key).toSet();
       expect(keys, containsAll([kActionAttrStartTime, kActionAttrEndTime]));
     });
+
+    test('omits blank action name', () {
+      final start = DateTime(2026, 4, 18, 8, 0);
+      final end = DateTime(2026, 4, 18, 9, 0);
+      final req = setModelRequestForCreate(
+        Action(
+          id: 0,
+          name: '   ',
+          modelTypeId: 1,
+          startTime: start,
+          endTime: end,
+        ),
+        'Meet',
+      );
+      expect(req.toJson().containsKey('name'), isFalse);
+    });
   });
 
   group('setModelRequestForCreateWithParent', () {

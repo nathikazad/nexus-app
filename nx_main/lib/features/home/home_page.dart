@@ -11,7 +11,6 @@ import 'package:nexus_voice_assistant/features/schema_navigator/models_page.dart
 import 'package:nexus_voice_assistant/features/voice/ai_chat_page.dart';
 import 'package:nexus_voice_assistant/features/voice/voice_listening_overlay.dart';
 import 'package:nexus_voice_assistant/features/voice/voice_socket_controller.dart';
-import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -287,7 +286,7 @@ class _AiSlot extends StatelessWidget {
                   width: 60,
                   height: 60,
                   child: Icon(
-                    SolarBoldIcons.bolt,
+                    Icons.bolt,
                     color: Colors.white,
                     size: 28,
                   ),

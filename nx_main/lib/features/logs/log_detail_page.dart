@@ -193,14 +193,14 @@ class _AudioTurnDetail extends ConsumerWidget {
   }
 }
 
-class _AgentRunDetail extends StatelessWidget {
+class _AgentRunDetail extends ConsumerWidget {
   const _AgentRunDetail({required this.date, required this.run});
 
   final DateTime date;
   final AgentPipelineRun run;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -210,6 +210,7 @@ class _AgentRunDetail extends StatelessWidget {
           subtitle:
               '${run.agentName.isEmpty ? run.agentId : run.agentName} / ${run.logs.length} rows / ${_formatDuration(run.durationMs)}',
         ),
+        _AgentCorrectionSection(date: date, run: run),
         _TextSection(title: 'User Statement', text: run.userText),
         _TextSection(title: 'Final Response', text: run.response),
         _Section(
@@ -231,6 +232,169 @@ class _AgentRunDetail extends StatelessWidget {
           linksForRow: (row) => _agentRowLinks(row, date),
         ),
       ],
+    );
+  }
+}
+
+class _AgentCorrectionSection extends ConsumerWidget {
+  const _AgentCorrectionSection({required this.date, required this.run});
+
+  final DateTime date;
+  final AgentPipelineRun run;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final correction = run.correction;
+    return _Section(
+      title: 'Correction',
+      child: correction == null
+          ? Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _CorrectionChip(
+                  icon: Icons.add_comment_rounded,
+                  label: 'Add correction',
+                  color: _LogDetailUi.blue,
+                  onTap: () => _editCorrection(context, ref),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    const _CorrectionChip(
+                      icon: Icons.report_problem_rounded,
+                      label: 'Marked incorrect',
+                      color: _LogDetailUi.orange,
+                    ),
+                    _CorrectionChip(
+                      icon: Icons.edit_rounded,
+                      label: 'Edit',
+                      color: _LogDetailUi.blue,
+                      onTap: () => _editCorrection(context, ref),
+                    ),
+                    _CorrectionChip(
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Clear',
+                      color: _LogDetailUi.gray600,
+                      onTap: () => _clearCorrection(context, ref),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  correction.note,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: _LogDetailUi.gray700,
+                        height: 1.45,
+                      ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Future<void> _editCorrection(BuildContext context, WidgetRef ref) async {
+    final note = await _showAgentCorrectionSheet(
+      context,
+      initialNote: run.correction?.note ?? '',
+    );
+    if (note == null) return;
+    try {
+      await saveAgentRunCorrection(
+        ref,
+        date: date,
+        run: run,
+        note: note,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Correction saved.')),
+      );
+    } catch (error, stackTrace) {
+      _logCorrectionActionError('save', error, stackTrace);
+      if (!context.mounted) return;
+      _showActionError(context, error);
+    }
+  }
+
+  Future<void> _clearCorrection(BuildContext context, WidgetRef ref) async {
+    try {
+      await clearAgentRunCorrection(ref, date: date, run: run);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Correction cleared.')),
+      );
+    } catch (error, stackTrace) {
+      _logCorrectionActionError('clear', error, stackTrace);
+      if (!context.mounted) return;
+      _showActionError(context, error);
+    }
+  }
+}
+
+class _CorrectionChip extends StatelessWidget {
+  const _CorrectionChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Ink(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(icon, color: color, size: 14),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: _LogDetailUi.gray950,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: onTap == null
+          ? content
+          : InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onTap,
+              child: content,
+            ),
     );
   }
 }
@@ -965,6 +1129,138 @@ class _ErrorText extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<String?> _showAgentCorrectionSheet(
+  BuildContext context, {
+  required String initialNote,
+}) async {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) => _AgentCorrectionSheet(initialNote: initialNote),
+  );
+}
+
+class _AgentCorrectionSheet extends StatefulWidget {
+  const _AgentCorrectionSheet({required this.initialNote});
+
+  final String initialNote;
+
+  @override
+  State<_AgentCorrectionSheet> createState() => _AgentCorrectionSheetState();
+}
+
+class _AgentCorrectionSheetState extends State<_AgentCorrectionSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialNote);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Correction',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _LogDetailUi.gray950,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 5,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: 'Note',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _controller,
+                builder: (context, value, child) {
+                  final note = value.text.trim();
+                  return FilledButton.icon(
+                    onPressed: note.isEmpty
+                        ? null
+                        : () => Navigator.of(context).pop(note),
+                    icon: const Icon(Icons.save_rounded),
+                    label: const Text('Save'),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+void _showActionError(BuildContext context, Object error) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Save failed: $error')),
+  );
+}
+
+void _logCorrectionActionError(
+  String action,
+  Object error,
+  StackTrace stackTrace,
+) {
+  debugPrint('[Agent correction] $action failed: $error');
+  debugPrintStack(
+    label: '[Agent correction] $action stack',
+    stackTrace: stackTrace,
+  );
 }
 
 String _formatTime(DateTime value) {

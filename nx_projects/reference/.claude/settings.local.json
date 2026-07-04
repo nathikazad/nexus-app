@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/<\\\\/style>/{print NR; exit}' /Users/nathikazad/Projects/Nexus/mobile/nx_projects/reference/desktop/partials/view-task.html)"
+    ]
+  }
+}

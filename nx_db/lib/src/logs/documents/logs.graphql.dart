@@ -10,6 +10,56 @@ query ChangeOperationsForDay($start: Datetime!, $end: Datetime!, $first: Int!) {
 }
 ''';
 
+const changeOperationQuery = r'''
+query ChangeOperation($id: UUID!) {
+  allChangeOperations(first: 1, condition: { id: $id }) {
+    nodes {
+      id
+      createdAt
+      txid
+      userId
+      domainId
+      sourceKind
+      sourceId
+      sourceLabel
+      reversalOfOperationId
+      reversedAt
+      reversedByOperationId
+    }
+  }
+}
+''';
+
+const logByIdQuery = r'''
+query LogById($id: BigInt!) {
+  allLogs(first: 1, condition: { id: $id }) {
+    nodes {
+      time
+      id
+      payload
+    }
+  }
+}
+''';
+
+const updateLogPayloadMutation = r'''
+mutation UpdateLogPayload($time: Datetime!, $id: BigInt!, $payload: JSON!) {
+  updateLogByTimeAndId(
+    input: {
+      time: $time
+      id: $id
+      logPatch: { payload: $payload }
+    }
+  ) {
+    log {
+      time
+      id
+      payload
+    }
+  }
+}
+''';
+
 const changeEventsQuery = r'''
 query ChangeEvents($operationId: UUID!) {
   allChangeEvents(

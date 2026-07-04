@@ -76,6 +76,89 @@ final agentPipelineRunsProvider =
   return buildAgentRuns(rows);
 }, name: 'agentPipelineRunsProvider');
 
+Map<String, dynamic> agentRunPayloadWithCorrection(
+  AgentPipelineRun run,
+  String note,
+) {
+  final trimmedNote = note.trim();
+  if (trimmedNote.isEmpty) {
+    throw ArgumentError.value(
+        note, 'note', 'Correction note must not be empty');
+  }
+  return {
+    ...run.correctionTarget.payload,
+    'correction': {
+      'note': trimmedNote,
+      'incorrect': true,
+      'resolved': false,
+    },
+  };
+}
+
+Map<String, dynamic> agentRunPayloadWithoutCorrection(AgentPipelineRun run) {
+  return {...run.correctionTarget.payload}..remove('correction');
+}
+
+Future<void> saveAgentRunCorrection(
+  WidgetRef ref, {
+  required DateTime date,
+  required AgentPipelineRun run,
+  required String note,
+}) async {
+  await _updateAgentRunPayload(
+    ref,
+    date: date,
+    run: run,
+    payload: agentRunPayloadWithCorrection(run, note),
+  );
+}
+
+Future<void> clearAgentRunCorrection(
+  WidgetRef ref, {
+  required DateTime date,
+  required AgentPipelineRun run,
+}) async {
+  await _updateAgentRunPayload(
+    ref,
+    date: date,
+    run: run,
+    payload: agentRunPayloadWithoutCorrection(run),
+  );
+}
+
+Future<void> _updateAgentRunPayload(
+  WidgetRef ref, {
+  required DateTime date,
+  required AgentPipelineRun run,
+  required Map<String, dynamic> payload,
+}) async {
+  final target = run.correctionTarget;
+  if (target.id.isEmpty) {
+    throw StateError('Agent run ${run.runId} has no correction target id.');
+  }
+
+  final client = ref.read(graphqlClientProvider);
+  final exactTarget = await fetchLogById(client, id: target.id);
+  if (exactTarget == null) {
+    throw StateError('Log row ${target.id} not found for ${run.runId}.');
+  }
+  final exactTime = exactTarget.time;
+  if (exactTime == null) {
+    throw StateError('Log row ${target.id} has no exact update time.');
+  }
+
+  await updateLogPayload(
+    client,
+    time: exactTime,
+    id: exactTarget.id,
+    payload: payload,
+  );
+
+  final normalizedDate = normalizeLogDate(date);
+  ref.invalidate(logsForDayProvider(normalizedDate));
+  ref.invalidate(agentPipelineRunsProvider(normalizedDate));
+}
+
 final dbChangeOperationsProvider =
     FutureProvider.family<List<DbChangeOperation>, DateTime>((ref, date) async {
   final client = ref.watch(graphqlClientProvider);
@@ -141,17 +224,33 @@ final dbChangeDetailProvider =
     FutureProvider.family<DbChangeDetail, DbChangeDetailKey>((ref, key) async {
   final operations =
       await ref.watch(dbChangeOperationsProvider(key.date).future);
-  final operation = operations.firstWhere(
-    (item) => item.id == key.operationId,
-    orElse: () =>
-        throw StateError('Change operation ${key.operationId} not found'),
-  );
+  var operation = _findChangeOperation(operations, key.operationId);
+  if (operation == null) {
+    final client = ref.watch(graphqlClientProvider);
+    operation = await fetchChangeOperation(
+      client,
+      operationId: key.operationId,
+    );
+  }
+  if (operation == null) {
+    throw StateError('Change operation ${key.operationId} not found');
+  }
   final events =
       await ref.watch(dbChangeEventsProvider(key.operationId).future);
   final metadata = await ref.watch(dbChangeMetadataProvider.future);
   return DbChangeDetail(
       operation: operation, events: events, metadata: metadata);
 }, name: 'dbChangeDetailProvider');
+
+DbChangeOperation? _findChangeOperation(
+  List<DbChangeOperation> operations,
+  String operationId,
+) {
+  for (final operation in operations) {
+    if (operation.id == operationId) return operation;
+  }
+  return null;
+}
 
 class DbChangeDetailKey {
   const DbChangeDetailKey({required this.date, required this.operationId});

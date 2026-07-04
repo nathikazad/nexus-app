@@ -414,6 +414,7 @@ AgentPipelineRun _analyzeAgentRun(String runId, List<NexusLogRow> logs) {
   if (status != 'failed') status = hasRunEnd ? 'complete' : 'incomplete';
   final firstMs = _rowMs(sorted.firstOrNull);
   final lastMs = _rowMs(sorted.lastOrNull);
+  final correctionTargetRow = _agentRunCorrectionTargetRow(sorted);
 
   return AgentPipelineRun(
     runId: runId,
@@ -430,10 +431,38 @@ AgentPipelineRun _analyzeAgentRun(String runId, List<NexusLogRow> logs) {
     toolErrors: toolErrors,
     tokenUsage: tokenUsage,
     changeOperationIds: changeOperationIds.toList(),
+    correction: _agentRunCorrection(sorted),
+    correctionTarget: AgentRunCorrectionTarget(
+      time: correctionTargetRow.time,
+      id: correctionTargetRow.id,
+      payload: Map<String, dynamic>.from(correctionTargetRow.payload),
+    ),
     firstMs: firstMs,
     lastMs: lastMs,
     durationMs: (lastMs - firstMs).clamp(0, 1 << 62),
   );
+}
+
+NexusLogRow _agentRunCorrectionTargetRow(List<NexusLogRow> sorted) {
+  final runEndRows =
+      sorted.where((row) => eventName(row) == 'agent_run_end').toList();
+  if (runEndRows.isNotEmpty) return runEndRows.last;
+  return sorted.last;
+}
+
+AgentRunCorrection? _agentRunCorrection(List<NexusLogRow> sorted) {
+  for (final row in sorted.reversed) {
+    final correction = normalizedPayload(row)['correction'];
+    if (correction is! Map) continue;
+    final note = (correction['note'] ?? '').toString().trim();
+    if (note.isEmpty) continue;
+    return AgentRunCorrection(
+      note: note,
+      incorrect: correction['incorrect'] == true,
+      resolved: correction['resolved'] == true,
+    );
+  }
+  return null;
 }
 
 _AgentIdentity _agentIdentityForRow(NexusLogRow row) {
