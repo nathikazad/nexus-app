@@ -51,6 +51,13 @@ class NxDocument {
 
   bool get isBook => modelTypeName == 'Book';
 
+  Map<String, List<String>> get publishTagsBySystem {
+    return <String, List<String>>{
+      ...tagsBySystem,
+      kPublicDocumentTopicTagSystem: topics,
+    };
+  }
+
   NxDocument copyWith({
     String? title,
     String? modelTypeName,

@@ -55,7 +55,10 @@ class DocumentMutationController {
     NxDocument document, {
     DraftSavePolicy policy = DraftSavePolicy.deferred,
   }) async {
-    final publish = document.publish.withCurrentContent(document.jsonDocument);
+    final publish = document.publish.withCurrentContent(
+      document.jsonDocument,
+      tagsBySystem: document.publishTagsBySystem,
+    );
     _pendingDraft = document.copyWith(
       publish: publish,
       updatedAt: DateTime.now(),
@@ -120,6 +123,7 @@ class DocumentMutationController {
         ? current.publish.enable(
             jsonDocument: current.jsonDocument,
             publishedAt: nowIso,
+            tagsBySystem: current.publishTagsBySystem,
             title: current.title,
             slug: _slugForTitle(current.title, current.id),
           )

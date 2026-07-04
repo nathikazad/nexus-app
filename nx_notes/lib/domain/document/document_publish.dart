@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 const kDefaultDocumentPublishStatus = 'draft';
+const kPublicDocumentTopicTagSystem = 'Topic';
 
 class DocumentPublishState {
   const DocumentPublishState({
@@ -97,8 +98,11 @@ class DocumentPublishState {
     );
   }
 
-  DocumentPublishState withCurrentContent(Map<String, dynamic> jsonDocument) {
-    final hash = appFlowyContentHash(jsonDocument);
+  DocumentPublishState withCurrentContent(
+    Map<String, dynamic> jsonDocument, {
+    Map<String, List<String>> tagsBySystem = const <String, List<String>>{},
+  }) {
+    final hash = appFlowyContentHash(jsonDocument, tagsBySystem: tagsBySystem);
     if (!enabled) {
       return copyWith(
         contentHash: hash,
@@ -117,10 +121,11 @@ class DocumentPublishState {
   DocumentPublishState enable({
     required Map<String, dynamic> jsonDocument,
     required String publishedAt,
+    Map<String, List<String>> tagsBySystem = const <String, List<String>>{},
     String? title,
     String? slug,
   }) {
-    final hash = appFlowyContentHash(jsonDocument);
+    final hash = appFlowyContentHash(jsonDocument, tagsBySystem: tagsBySystem);
     return copyWith(
       enabled: true,
       dirty: true,
@@ -167,13 +172,32 @@ class DocumentPublishState {
   }
 }
 
-String appFlowyContentHash(Map<String, dynamic> jsonDocument) {
+String appFlowyContentHash(
+  Map<String, dynamic> jsonDocument, {
+  Map<String, List<String>> tagsBySystem = const <String, List<String>>{},
+}) {
   final contentEnvelope = <String, dynamic>{
     'format': jsonDocument['format'],
     'document': jsonDocument['document'],
+    'tags': publicDocumentTags(tagsBySystem),
   };
   final canonicalJson = json.encode(_canonicalize(contentEnvelope));
   return 'sha256:${sha256.convert(utf8.encode(canonicalJson))}';
+}
+
+Map<String, List<String>> publicDocumentTags(
+  Map<String, List<String>> tagsBySystem,
+) {
+  final topicTags = tagsBySystem[kPublicDocumentTopicTagSystem];
+  if (topicTags == null) return const <String, List<String>>{};
+  final normalized = topicTags
+      .map((tag) => tag.trim())
+      .where((tag) => tag.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+  if (normalized.isEmpty) return const <String, List<String>>{};
+  return <String, List<String>>{kPublicDocumentTopicTagSystem: normalized};
 }
 
 Object? _canonicalize(Object? value) {

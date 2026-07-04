@@ -57,6 +57,41 @@ void main() {
     },
   );
 
+  test('document update marks published Topic tag changes dirty', () {
+    final oldHash = appFlowyContentHash(
+      const <String, dynamic>{
+        'format': 'appflowy_document',
+        'document': <String, dynamic>{'type': 'page', 'children': []},
+      },
+      tagsBySystem: const <String, List<String>>{
+        kDocumentTopicTagSystem: <String>['Old'],
+      },
+    );
+
+    final request = setModelRequestForUpdateDocument(
+      _document(
+        modelTypeName: 'Document',
+        publish: DocumentPublishState(
+          enabled: true,
+          dirty: false,
+          contentHash: oldHash,
+          lastPublishedHash: oldHash,
+          status: 'published',
+        ),
+      ),
+    );
+
+    final attributes = request.toJson()['attributes'] as List<dynamic>;
+    final publish =
+        attributes.cast<Map<String, dynamic>>().firstWhere(
+              (attr) => attr['key'] == kDocumentAttrPublish,
+            )['value']
+            as Map<String, dynamic>;
+
+    expect(publish['dirty'], true);
+    expect(publish['content_hash'], isNot(oldHash));
+  });
+
   test('document update does not mark unpublished edits dirty', () {
     final request = setModelRequestForUpdateDocument(
       _document(modelTypeName: 'Document'),

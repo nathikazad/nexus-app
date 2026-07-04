@@ -178,7 +178,10 @@ SetModelRequest setModelRequestForUpdateDocument(
   NxDocument document, {
   Set<String> availableTagSystems = const <String>{},
 }) {
-  final publish = document.publish.withCurrentContent(document.jsonDocument);
+  final publish = document.publish.withCurrentContent(
+    document.jsonDocument,
+    tagsBySystem: document.publishTagsBySystem,
+  );
   return SetModelRequest(
     id: document.id,
     name: document.title,
