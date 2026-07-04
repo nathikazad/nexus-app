@@ -114,7 +114,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         NxTabHeader(
-          title: 'Calendar',
+          title: 'Weekly',
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -238,7 +238,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Could not load calendar: $e')),
+            error: (e, _) => Center(child: Text('Could not load weekly: $e')),
           ),
         ),
       ],

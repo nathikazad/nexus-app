@@ -65,7 +65,9 @@ class FakeActionRepository implements ActionRepository {
 
   @override
   Future<List<Action>> listForCalendarDay(DateTime dayLocal) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     final dayStart = DateTime(dayLocal.year, dayLocal.month, dayLocal.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
     return _all.where((a) {
@@ -80,7 +82,9 @@ class FakeActionRepository implements ActionRepository {
 
   @override
   Future<List<Action>> listForWeek(DateTime mondayLocal) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     final weekStart = DateTime(
       mondayLocal.year,
       mondayLocal.month,
@@ -102,7 +106,9 @@ class FakeActionRepository implements ActionRepository {
     required int id,
     required String modelTypeName,
   }) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     final raw = _byId[id];
     return raw == null ? null : _withGraph(raw);
   }
@@ -113,7 +119,9 @@ class FakeActionRepository implements ActionRepository {
     String modelTypeName, {
     int? parentActionId,
   }) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     final id = _nextId++;
     var saved = Action(
       id: id,
@@ -139,7 +147,9 @@ class FakeActionRepository implements ActionRepository {
 
   @override
   Future<int> update(Action action, {String? modelTypeNameIfChanged}) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     _byId[action.id] = Action(
       id: action.id,
       name: action.name,
@@ -154,7 +164,9 @@ class FakeActionRepository implements ActionRepository {
 
   @override
   Future<void> delete(int id) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     _byId.remove(id);
     _edges.removeWhere((e) => e.parentId == id || e.childId == id);
   }
@@ -164,7 +176,9 @@ class FakeActionRepository implements ActionRepository {
     required int parentId,
     required int childId,
   }) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     if (!_byId.containsKey(parentId) || !_byId.containsKey(childId)) {
       throw StateError('linkChildAction: unknown parent or child');
     }
@@ -179,7 +193,9 @@ class FakeActionRepository implements ActionRepository {
     required int parentId,
     required int relationId,
   }) async {
-    await Future<void>.delayed(delay);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     _edges.removeWhere(
       (e) => e.parentId == parentId && e.relationId == relationId,
     );

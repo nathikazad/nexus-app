@@ -16,6 +16,7 @@ import 'package:nx_time/features/goals/goal_detail/goal_detail_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
+import 'package:nx_time/features/today/day_actions_page.dart';
 
 class GoalsPage extends ConsumerStatefulWidget {
   const GoalsPage({super.key});
@@ -53,6 +54,19 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
     });
   }
 
+  void _changeWeek(DateTime monday, int delta) {
+    final m0 = DateTime(monday.year, monday.month, monday.day);
+    ref
+        .read(currentWeekProvider.notifier)
+        .setLocalWeekMonday(m0.add(Duration(days: 7 * delta)));
+  }
+
+  void _openDay(DateTime day) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => DayActionsPage(date: day)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final m = ref.watch(currentWeekProvider);
@@ -66,60 +80,70 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
       children: [
         const NxTabHeader(title: 'Goals'),
         Expanded(
-          child: weekAsync.when(
-            data: (week) {
-              final ws = asStoredLocalWallClock(week.weekStart);
-              final daily = week.items
-                  .where((e) => e.cadence == GoalCadence.daily)
-                  .toList();
-              final weekly = week.items
-                  .where((e) => e.cadence == GoalCadence.weekly)
-                  .toList();
-              final wa = weekActions.maybeWhen(
-                data: (d) => d,
-                orElse: () => null,
-              );
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-                children: [
-                  const SizedBox(height: 10),
-                  const _SectionLabel(text: 'Daily goals'),
-                  ...daily.map((item) => _buildDailyRow(context, item, ws, wa)),
-                  const SizedBox(height: 14),
-                  const _SectionLabel(text: 'Weekly goals'),
-                  ...weekly.map(
-                    (item) => _buildWeeklyRow(context, item, ws, wa),
-                  ),
-                  _AddGoalRow(onTap: () => GoalsPage.openCreate(context)),
-                  const SizedBox(height: 18),
-                  _GoalsMonthHeatmap(
-                    visibleMonth: _visibleMonth,
-                    score: monthScore,
-                    onPreviousMonth: () => _changeMonth(-1),
-                    onNextMonth: () => _changeMonth(1),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
+            children: [
+              _GoalsMonthHeatmap(
+                visibleMonth: _visibleMonth,
+                score: monthScore,
+                onPreviousMonth: () => _changeMonth(-1),
+                onNextMonth: () => _changeMonth(1),
+                onDayTap: _openDay,
+              ),
+              const SizedBox(height: 22),
+              _GoalsWeekNavigator(
+                weekStart: monday,
+                onPreviousWeek: () => _changeWeek(monday, -1),
+                onNextWeek: () => _changeWeek(monday, 1),
+              ),
+              const SizedBox(height: 12),
+              ...weekAsync.when<List<Widget>>(
+                data: (week) {
+                  final ws = asStoredLocalWallClock(week.weekStart);
+                  final daily = week.items
+                      .where((e) => e.cadence == GoalCadence.daily)
+                      .toList();
+                  final weekly = week.items
+                      .where((e) => e.cadence == GoalCadence.weekly)
+                      .toList();
+                  final wa = weekActions.maybeWhen(
+                    data: (d) => d,
+                    orElse: () => null,
+                  );
+                  return [
+                    const _SectionLabel(text: 'Daily goals'),
+                    ...daily.map(
+                      (item) => _buildDailyRow(context, item, ws, wa),
+                    ),
+                    const SizedBox(height: 14),
+                    const _SectionLabel(text: 'Weekly goals'),
+                    ...weekly.map(
+                      (item) => _buildWeeklyRow(context, item, ws, wa),
+                    ),
+                    _AddGoalRow(onTap: () => GoalsPage.openCreate(context)),
+                  ];
+                },
+                loading: () => const [
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 36),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
                 ],
-              );
-            },
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(48),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Could not load goals: $e',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.slate500,
-                    fontSize: 13,
+                error: (e, _) => [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'Could not load goals: $e',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.slate500,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ),
+            ],
           ),
         ),
       ],
@@ -423,18 +447,63 @@ Widget _buildWeeklyRow(
   );
 }
 
+class _GoalsWeekNavigator extends StatelessWidget {
+  const _GoalsWeekNavigator({
+    required this.weekStart,
+    required this.onPreviousWeek,
+    required this.onNextWeek,
+  });
+
+  final DateTime weekStart;
+  final VoidCallback onPreviousWeek;
+  final VoidCallback onNextWeek;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: _SectionLabel(text: 'Week')),
+        _MonthIconButton(
+          icon: SolarLinearIcons.altArrowLeft,
+          onTap: onPreviousWeek,
+          tooltip: 'Previous week',
+        ),
+        SizedBox(
+          width: 132,
+          child: Text(
+            _weekRangeLabel(weekStart),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.slate700,
+            ),
+          ),
+        ),
+        _MonthIconButton(
+          icon: SolarLinearIcons.altArrowRight,
+          onTap: onNextWeek,
+          tooltip: 'Next week',
+        ),
+      ],
+    );
+  }
+}
+
 class _GoalsMonthHeatmap extends StatelessWidget {
   const _GoalsMonthHeatmap({
     required this.visibleMonth,
     required this.score,
     required this.onPreviousMonth,
     required this.onNextMonth,
+    required this.onDayTap,
   });
 
   final DateTime visibleMonth;
   final AsyncValue<ActionGoalsMonthScore> score;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
+  final ValueChanged<DateTime> onDayTap;
 
   @override
   Widget build(BuildContext context) {
@@ -453,6 +522,7 @@ class _GoalsMonthHeatmap extends StatelessWidget {
             _MonthIconButton(
               icon: SolarLinearIcons.altArrowLeft,
               onTap: onPreviousMonth,
+              tooltip: 'Previous month',
             ),
             SizedBox(
               width: 116,
@@ -469,6 +539,7 @@ class _GoalsMonthHeatmap extends StatelessWidget {
             _MonthIconButton(
               icon: SolarLinearIcons.altArrowRight,
               onTap: onNextMonth,
+              tooltip: 'Next month',
             ),
           ],
         ),
@@ -476,8 +547,11 @@ class _GoalsMonthHeatmap extends StatelessWidget {
         const _WeekdayHeader(),
         const SizedBox(height: 4),
         score.when(
-          data: (data) =>
-              _MonthScoreGrid(monthStart: visibleMonth, days: data.days),
+          data: (data) => _MonthScoreGrid(
+            monthStart: visibleMonth,
+            days: data.days,
+            onDayTap: onDayTap,
+          ),
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(
@@ -539,15 +613,20 @@ class _ConsistencyScoreLabel extends StatelessWidget {
 }
 
 class _MonthIconButton extends StatelessWidget {
-  const _MonthIconButton({required this.icon, required this.onTap});
+  const _MonthIconButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Change month',
+      message: tooltip,
       child: IconButton(
         onPressed: onTap,
         icon: Icon(icon, size: 18),
@@ -587,10 +666,15 @@ class _WeekdayHeader extends StatelessWidget {
 }
 
 class _MonthScoreGrid extends StatelessWidget {
-  const _MonthScoreGrid({required this.monthStart, required this.days});
+  const _MonthScoreGrid({
+    required this.monthStart,
+    required this.days,
+    required this.onDayTap,
+  });
 
   final DateTime monthStart;
   final List<ActionGoalMonthScoreDay> days;
+  final ValueChanged<DateTime> onDayTap;
 
   @override
   Widget build(BuildContext context) {
@@ -610,56 +694,64 @@ class _MonthScoreGrid extends StatelessWidget {
         if (day == null) {
           return const SizedBox.shrink();
         }
-        return _MonthScoreCell(day: day);
+        return _MonthScoreCell(day: day, onTap: () => onDayTap(day.date));
       },
     );
   }
 }
 
 class _MonthScoreCell extends StatelessWidget {
-  const _MonthScoreCell({required this.day});
+  const _MonthScoreCell({required this.day, required this.onTap});
 
   final ActionGoalMonthScoreDay day;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = goalMonthHeatmapColor(day);
     final active = !day.future && day.total > 0 && day.ratio != null;
     final textColor = active ? Colors.white : AppColors.slate500;
-    return Container(
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: color,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: active ? color : AppColors.slate200,
-          width: 0.5,
-        ),
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${day.date.day}',
-              style: TextStyle(
-                fontSize: 11,
-                height: 1.1,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-              ),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: active ? color : AppColors.slate200,
+              width: 0.5,
             ),
-            Text(
-              '${day.hit}/${day.total}',
-              style: TextStyle(
-                fontSize: 9,
-                height: 1.1,
-                fontWeight: FontWeight.w600,
-                color: textColor.withValues(alpha: active ? 0.9 : 0.75),
-              ),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${day.date.day}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.1,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  '${day.hit}/${day.total}',
+                  style: TextStyle(
+                    fontSize: 9,
+                    height: 1.1,
+                    fontWeight: FontWeight.w600,
+                    color: textColor.withValues(alpha: active ? 0.9 : 0.75),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -714,6 +806,30 @@ String _monthLabel(DateTime monthStart) {
   ];
   final m = monthStartOf(monthStart);
   return '${names[m.month - 1]} ${m.year}';
+}
+
+String _weekRangeLabel(DateTime weekStart) {
+  final m0 = DateTime(weekStart.year, weekStart.month, weekStart.day);
+  final sun = m0.add(const Duration(days: 6));
+  return '${_shortDateLabel(m0)} - ${_shortDateLabel(sun)}';
+}
+
+String _shortDateLabel(DateTime date) {
+  const names = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${names[date.month - 1]} ${date.day}';
 }
 
 class _AddGoalRow extends StatelessWidget {

@@ -18,10 +18,12 @@ class TimeMapBar extends StatelessWidget {
     super.key,
     required this.segments,
     required this.currentMarkerFraction,
+    this.showCurrentMarker = true,
   });
 
   final List<TimeMapSegment> segments;
   final double currentMarkerFraction;
+  final bool showCurrentMarker;
 
   bool get _useFlexLayout =>
       segments.isNotEmpty && segments.every((s) => s.flex != null);
@@ -77,24 +79,26 @@ class TimeMapBar extends StatelessWidget {
                             ),
                       ],
                     ),
-                  Positioned(
-                    left: barWidth * currentMarkerFraction.clamp(0.0, 1.0) - 1,
-                    top: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 2,
-                      decoration: const BoxDecoration(
-                        color: AppColors.slate900,
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
-                            color: Color(0x33000000),
-                          ),
-                        ],
+                  if (showCurrentMarker)
+                    Positioned(
+                      left:
+                          barWidth * currentMarkerFraction.clamp(0.0, 1.0) - 1,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 2,
+                        decoration: const BoxDecoration(
+                          color: AppColors.slate900,
+                          boxShadow: [
+                            BoxShadow(
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                              color: Color(0x33000000),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             );

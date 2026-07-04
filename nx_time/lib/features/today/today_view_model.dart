@@ -136,6 +136,18 @@ final todaySnapshotProvider = Provider<AsyncValue<TodaySnapshot>>((ref) {
   );
 });
 
+final dayActionsSnapshotProvider = FutureProvider.autoDispose
+    .family<TodaySnapshot, DateTime>((ref, dayLocal) async {
+      await ref.watch(authenticatedUserProvider.future);
+      final d0 = DateTime(dayLocal.year, dayLocal.month, dayLocal.day);
+      final repo = ref.watch(actionRepositoryProvider);
+      final colors = modelTypeColorsOrFallback(
+        ref.watch(modelTypeColorsProvider),
+      );
+      final actions = await repo.listForCalendarDay(d0);
+      return buildTodaySnapshot(actions, d0, colors: colors);
+    });
+
 TodayActivity _activityFromAction(
   Action m,
   DateFormat timeFmt,

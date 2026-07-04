@@ -344,7 +344,7 @@ class _BottomNav extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
-                    label: 'Calendar',
+                    label: 'Weekly',
                     icon: SolarLinearIcons.calendarMark,
                     selected: currentIndex == 3,
                     onTap: () => onChanged(3),

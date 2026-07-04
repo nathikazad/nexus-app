@@ -41,6 +41,7 @@ class FakeGoalRepository implements GoalRepository {
   /// Set by [update] for widget / integration tests.
   Goal? lastUpdated;
 
+  final List<DateTime> requestedWeekStarts = [];
   final List<DateTime> requestedMonthStarts = [];
 
   @override
@@ -48,6 +49,7 @@ class FakeGoalRepository implements GoalRepository {
     required DateTime weekStart,
     int? goalId,
   }) async {
+    requestedWeekStarts.add(weekStart);
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
