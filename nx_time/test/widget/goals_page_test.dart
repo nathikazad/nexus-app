@@ -53,6 +53,11 @@ void main() {
     repo.completeScore(
       ActionGoalsMonthScore(
         monthStart: month,
+        consistency: const ActionGoalMonthConsistency(
+          hit: 1,
+          total: 2,
+          ratio: 0.5,
+        ),
         days: [
           ActionGoalMonthScoreDay(
             date: month,
@@ -65,6 +70,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Consistency'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
     expect(find.text('1/2'), findsOneWidget);
   });
 }

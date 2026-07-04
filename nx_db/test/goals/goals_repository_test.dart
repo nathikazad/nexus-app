@@ -82,6 +82,7 @@ void main() {
     when(() => mock.query(any())).thenAnswer((_) async => okQueryResult({
           'getActionGoalsMonthScore': {
             'month_start': '2026-04-01',
+            'consistency': {'hit': 0, 'total': 0, 'ratio': null},
             'days': <dynamic>[],
           },
         }));

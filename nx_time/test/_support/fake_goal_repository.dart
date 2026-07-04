@@ -18,7 +18,15 @@ class FakeGoalRepository implements GoalRepository {
            ActionGoalsMonth(monthStart: DateTime(2000), items: const []),
        actionMonthScore =
            actionMonthScore ??
-           ActionGoalsMonthScore(monthStart: DateTime(2000), days: const []);
+           ActionGoalsMonthScore(
+             monthStart: DateTime(2000),
+             consistency: const ActionGoalMonthConsistency(
+               hit: 0,
+               total: 0,
+               ratio: null,
+             ),
+             days: const [],
+           );
 
   final Duration delay;
   ActionGoalsWeek actionWeek;

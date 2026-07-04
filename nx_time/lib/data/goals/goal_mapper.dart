@@ -108,6 +108,11 @@ ActionGoalsMonthScore actionGoalsMonthScoreFromWire(
 ) {
   return ActionGoalsMonthScore(
     monthStart: asStoredLocalWallClock(w.monthStart),
+    consistency: ActionGoalMonthConsistency(
+      hit: w.consistency.hit,
+      total: w.consistency.total,
+      ratio: w.consistency.ratio?.toDouble(),
+    ),
     days: w.days
         .map(
           (d) => ActionGoalMonthScoreDay(

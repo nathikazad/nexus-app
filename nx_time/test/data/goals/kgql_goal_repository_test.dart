@@ -93,7 +93,7 @@ void main() {
     when(() => mock.query(any())).thenAnswer(
       (_) async => okQueryResult({
         'getActionGoalsMonthScore': json.decode(
-          r'{ "month_start": "2026-04-01", "days": [{ "date": "2026-04-01", "hit": 1, "total": 2, "ratio": 0.5, "future": false }] }',
+          r'{ "month_start": "2026-04-01", "consistency": { "hit": 1, "total": 2, "ratio": 0.5 }, "days": [{ "date": "2026-04-01", "hit": 1, "total": 2, "ratio": 0.5, "future": false }] }',
         ),
       }),
     );
@@ -105,6 +105,7 @@ void main() {
       monthStart: DateTime(2026, 4),
     );
     expect(m.monthStart, DateTime(2026, 4));
+    expect(m.consistency.ratio, 0.5);
     expect(m.days.single.hit, 1);
     expect(m.days.single.ratio, 0.5);
   });

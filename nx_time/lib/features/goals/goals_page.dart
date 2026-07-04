@@ -443,7 +443,13 @@ class _GoalsMonthHeatmap extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Expanded(child: _SectionLabel(text: 'Month')),
+            Expanded(
+              child: score.maybeWhen(
+                data: (data) =>
+                    _ConsistencyScoreLabel(consistency: data.consistency),
+                orElse: () => const _SectionLabel(text: 'Month'),
+              ),
+            ),
             _MonthIconButton(
               icon: SolarLinearIcons.altArrowLeft,
               onTap: onPreviousMonth,
@@ -488,6 +494,43 @@ class _GoalsMonthHeatmap extends StatelessWidget {
               'Could not load month: $e',
               style: const TextStyle(fontSize: 12, color: AppColors.slate500),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConsistencyScoreLabel extends StatelessWidget {
+  const _ConsistencyScoreLabel({required this.consistency});
+
+  final ActionGoalMonthConsistency consistency;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = consistency.ratio == null
+        ? '--'
+        : '${(consistency.ratio!.clamp(0, 1) * 100).round()}%';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Consistency',
+          style: TextStyle(
+            fontSize: 10,
+            height: 1.1,
+            fontWeight: FontWeight.w600,
+            color: AppColors.slate400,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            height: 1.05,
+            fontWeight: FontWeight.w800,
+            color: AppColors.slate700,
           ),
         ),
       ],

@@ -9,6 +9,7 @@ import 'package:nx_db/goals.dart';
 const _scoreResponse = '''
 {
   "month_start": "2026-04-01",
+  "consistency": { "hit": 3, "total": 6, "ratio": 0.5 },
   "days": [
     { "date": "2026-04-01", "hit": 0, "total": 2, "ratio": 0, "future": false },
     { "date": "2026-04-02", "hit": 1, "total": 2, "ratio": 0.5, "future": false },
@@ -23,6 +24,9 @@ void main() {
     final m = json.decode(_scoreResponse) as Map<String, dynamic>;
     final r = ActionGoalMonthScoreResponse.fromJson(m);
     expect(r.monthStart, DateTime.parse('2026-04-01'));
+    expect(r.consistency.hit, 3);
+    expect(r.consistency.total, 6);
+    expect(r.consistency.ratio, 0.5);
     expect(r.days.length, 4);
     expect(r.days[1].hit, 1);
     expect(r.days[1].total, 2);
@@ -36,6 +40,17 @@ void main() {
       _scoreResponse,
       monthStart: DateTime.parse('2026-04-01'),
     );
+    expect(r.consistency.ratio, 0.5);
     expect(r.days[2].ratio, 1);
+  });
+
+  test('ActionGoalMonthScoreResponse defaults missing consistency', () {
+    final r = ActionGoalMonthScoreResponse.fromJson({
+      'month_start': '2026-04-01',
+      'days': <dynamic>[],
+    });
+    expect(r.consistency.hit, 0);
+    expect(r.consistency.total, 0);
+    expect(r.consistency.ratio, isNull);
   });
 }

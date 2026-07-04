@@ -71,10 +71,27 @@ class ActionGoalMonthScoreDay {
   final bool future;
 }
 
+class ActionGoalMonthConsistency {
+  const ActionGoalMonthConsistency({
+    required this.hit,
+    required this.total,
+    required this.ratio,
+  });
+
+  final int hit;
+  final int total;
+  final double? ratio;
+}
+
 class ActionGoalsMonthScore {
-  const ActionGoalsMonthScore({required this.monthStart, required this.days});
+  const ActionGoalsMonthScore({
+    required this.monthStart,
+    required this.consistency,
+    required this.days,
+  });
 
   final DateTime monthStart;
+  final ActionGoalMonthConsistency consistency;
   final List<ActionGoalMonthScoreDay> days;
 }
 
