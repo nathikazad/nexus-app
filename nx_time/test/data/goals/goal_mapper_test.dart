@@ -88,6 +88,45 @@ void main() {
     expect(d.buckets.first.hit, isFalse);
   });
 
+  test('action month maps', () {
+    const raw = r'''
+    {
+      "month_start": "2026-04-01",
+      "items": [
+        {
+          "id": 1,
+          "label": "L",
+          "cadence": "daily",
+          "model_type": "Sleep",
+          "filter": null,
+          "selected_attribute": "end_time",
+          "aggregation": "count",
+          "metric": null,
+          "target": { "op": ">=", "value": 1 },
+          "daily_state": [
+            { "date": "2026-04-01", "state": "hit" },
+            { "date": "2026-04-02", "state": "miss" }
+          ],
+          "streak": {
+            "is_active": true,
+            "current_period_hit": true,
+            "current": { "streak_count": 1, "first_period": "2026-04-01", "last_period": "2026-04-01" },
+            "max": { "streak_count": 1, "first_period": "2026-04-01", "last_period": "2026-04-01" }
+          },
+          "meta": null
+        }
+      ]
+    }
+    ''';
+    final w = nx.ActionGoalMonthResponse.fromJson(
+      json.decode(raw) as Map<String, dynamic>,
+    );
+    final d = actionGoalsMonthFromWire(w);
+    expect(d.monthStart, DateTime(2026, 4));
+    expect(d.items.first.dailyState.length, 2);
+    expect(d.items.first.cadence, GoalCadence.daily);
+  });
+
   test('expense month maps', () {
     const raw = r'''
     {

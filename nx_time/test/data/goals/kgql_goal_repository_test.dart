@@ -67,6 +67,27 @@ void main() {
     expect(t.cadence, GoalCadence.daily);
   });
 
+  test('KgqlGoalRepository getActionGoalsMonth', () async {
+    final mock = MockGraphQLClient();
+    when(() => mock.query(any())).thenAnswer(
+      (_) async => okQueryResult({
+        'getActionGoalsMonth': json.decode(
+          r'{ "month_start": "2026-04-01", "items": [] }',
+        ),
+      }),
+    );
+    final repo = KgqlGoalRepository(
+      client: mock,
+      loadGoalSchema: () => throw UnimplementedError(),
+    );
+    final m = await repo.getActionGoalsMonth(
+      monthStart: DateTime(2026, 4),
+      goalId: 1,
+    );
+    expect(m.monthStart, DateTime(2026, 4));
+    expect(m.items, isEmpty);
+  });
+
   test('getById maps getKgqlModels row to Goal', () async {
     final mock = MockGraphQLClient();
     when(() => mock.query(any())).thenAnswer(

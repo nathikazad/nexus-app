@@ -48,6 +48,13 @@ class ActionGoalsWeek {
   final List<ActionGoalWeekItem> items;
 }
 
+class ActionGoalsMonth {
+  const ActionGoalsMonth({required this.monthStart, required this.items});
+
+  final DateTime monthStart;
+  final List<ActionGoalWeekItem> items;
+}
+
 class ActionGoalTrendBucket {
   const ActionGoalTrendBucket({
     required this.periodStart,

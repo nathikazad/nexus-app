@@ -1,0 +1,12 @@
+name: flutter_sound
+description: Simulator-safe stub for nx_time builds.
+publish_to: "none"
+version: 9.30.0
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter

@@ -24,7 +24,8 @@ dependencies:
     path: ../nx_views
   flutter_riverpod: ^3.2.0
   graphql_flutter: ^5.1.2
-  solar_icon_pack: ^0.2.1
+  solar_icon_pack:
+    path: packages/solar_icon_pack
 
 dev_dependencies:
   flutter_test:
@@ -42,6 +43,10 @@ dev_dependencies:
 # Pin 6.1.5 until Xcode is upgraded or the plugin guards compile-time availability.
 dependency_overrides:
   connectivity_plus: 6.1.5
+  flutter_sound:
+    path: packages/flutter_sound_stub
+  opus_flutter:
+    path: packages/opus_flutter_stub
 
 flutter:
   uses-material-design: true

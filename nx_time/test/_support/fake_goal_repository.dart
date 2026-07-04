@@ -5,13 +5,20 @@ import 'package:nx_time/domain/goals/goal_repository.dart';
 
 /// In-memory [GoalRepository] for tests.
 class FakeGoalRepository implements GoalRepository {
-  FakeGoalRepository({this.delay = Duration.zero, ActionGoalsWeek? actionWeek})
-    : actionWeek =
-          actionWeek ??
-          ActionGoalsWeek(weekStart: DateTime(2000, 1, 3), items: const []);
+  FakeGoalRepository({
+    this.delay = Duration.zero,
+    ActionGoalsWeek? actionWeek,
+    ActionGoalsMonth? actionMonth,
+  }) : actionWeek =
+           actionWeek ??
+           ActionGoalsWeek(weekStart: DateTime(2000, 1, 3), items: const []),
+       actionMonth =
+           actionMonth ??
+           ActionGoalsMonth(monthStart: DateTime(2000), items: const []);
 
   final Duration delay;
   ActionGoalsWeek actionWeek;
+  ActionGoalsMonth actionMonth;
   int nextId = 1;
   final Map<int, Goal> _goals = {};
 
@@ -20,6 +27,8 @@ class FakeGoalRepository implements GoalRepository {
 
   /// Set by [update] for widget / integration tests.
   Goal? lastUpdated;
+
+  final List<DateTime> requestedMonthStarts = [];
 
   @override
   Future<ActionGoalsWeek> getActionGoalsWeek({
@@ -30,6 +39,18 @@ class FakeGoalRepository implements GoalRepository {
       await Future<void>.delayed(delay);
     }
     return actionWeek;
+  }
+
+  @override
+  Future<ActionGoalsMonth> getActionGoalsMonth({
+    required DateTime monthStart,
+    int? goalId,
+  }) async {
+    requestedMonthStarts.add(monthStart);
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+    return actionMonth;
   }
 
   @override

@@ -16,6 +16,14 @@ void main() {
       expect(getActionGoalsWeekQuery, contains('Date!'));
     });
 
+    test('getActionGoalsMonth', () {
+      gql(getActionGoalsMonthQuery);
+      expect(getActionGoalsMonthQuery, contains(r'$monthStart'));
+      expect(getActionGoalsMonthQuery, contains(r'GetActionGoalsMonth'));
+      expect(getActionGoalsMonthQuery, contains('getActionGoalsMonth'));
+      expect(getActionGoalsMonthQuery, contains('Date!'));
+    });
+
     test('getActionGoalsTrend', () {
       gql(getActionGoalsTrendQuery);
       expect(getActionGoalsTrendQuery, contains(r'$goalId'));

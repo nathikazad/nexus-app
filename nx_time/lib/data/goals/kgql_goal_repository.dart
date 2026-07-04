@@ -36,6 +36,19 @@ class KgqlGoalRepository implements GoalRepository {
   }
 
   @override
+  Future<ActionGoalsMonth> getActionGoalsMonth({
+    required DateTime monthStart,
+    int? goalId,
+  }) async {
+    final w = await nx.fetchActionGoalsMonth(
+      _client,
+      monthStart: monthStart,
+      goalId: goalId,
+    );
+    return actionGoalsMonthFromWire(w);
+  }
+
+  @override
   Future<ActionGoalsTrend> getActionGoalsTrend({
     required int goalId,
     required int weeks,

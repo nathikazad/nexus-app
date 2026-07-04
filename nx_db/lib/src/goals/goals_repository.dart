@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../core/json/payload_unwrap.dart';
+import 'documents/get_action_goals_month.graphql.dart';
 import 'documents/get_action_goals_trend.graphql.dart';
 import 'documents/get_action_goals_week.graphql.dart';
 import 'documents/get_expense_goals_month.graphql.dart';
+import 'models/action_goal_month.dart';
 import 'models/action_goal_trend.dart';
 import 'models/action_goal_week.dart';
 import 'models/expense_goal_month.dart';
@@ -26,6 +28,18 @@ ActionGoalWeekResponse parseGetActionGoalsWeekResult(
     return ActionGoalWeekResponse.emptyForWeek(weekStart);
   }
   return ActionGoalWeekResponse.fromJson(map);
+}
+
+@visibleForTesting
+ActionGoalMonthResponse parseGetActionGoalsMonthResult(
+  dynamic raw, {
+  required DateTime monthStart,
+}) {
+  final map = unwrapJsonMap(raw);
+  if (map == null) {
+    return ActionGoalMonthResponse.emptyForMonth(monthStart);
+  }
+  return ActionGoalMonthResponse.fromJson(map);
 }
 
 @visibleForTesting
@@ -73,6 +87,33 @@ Future<ActionGoalWeekResponse> fetchActionGoalsWeek(
   return parseGetActionGoalsWeekResult(
     result.data?['getActionGoalsWeek'],
     weekStart: weekStart,
+  );
+}
+
+/// Calls [getActionGoalsMonth] via GraphQL (PostGraphile `app.get_action_goals_month`).
+Future<ActionGoalMonthResponse> fetchActionGoalsMonth(
+  GraphQLClient client, {
+  required DateTime monthStart,
+  int? goalId,
+}) async {
+  final result = await client.query(
+    QueryOptions(
+      document: gql(getActionGoalsMonthQuery),
+      variables: {
+        'monthStart': formatGraphqlDate(monthStart),
+        'goalId': goalId,
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+
+  if (result.hasException) {
+    throw result.exception!;
+  }
+
+  return parseGetActionGoalsMonthResult(
+    result.data?['getActionGoalsMonth'],
+    monthStart: monthStart,
   );
 }
 

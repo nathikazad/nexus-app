@@ -1,0 +1,21 @@
+name: solar_icon_pack
+description: Local compatibility shim for Solar icons used by nx_time.
+publish_to: "none"
+version: 0.2.1
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  fonts:
+    - family: SolarBoldIcons
+      fonts:
+        - asset: assets/fonts/solar_bold_icons.ttf
+    - family: SolarLinearIcons
+      fonts:
+        - asset: assets/fonts/solar_linear_icons.ttf

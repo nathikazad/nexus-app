@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/time/wall_clock_time.dart';
@@ -18,7 +19,7 @@ import 'package:nx_time/features/goals/goal_detail/goal_detail_variant.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
 
-/// Goal detail: loads this goal's week + trend from [goalRepositoryProvider].
+/// Goal detail: loads this goal's current week + visible month from [goalRepositoryProvider].
 class GoalDetailPage extends ConsumerStatefulWidget {
   const GoalDetailPage({super.key, required this.goalId});
 
@@ -30,16 +31,30 @@ class GoalDetailPage extends ConsumerStatefulWidget {
 
 class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
   bool _loading = false;
+  bool _monthLoading = false;
   Object? _error;
+  Object? _monthError;
   ActionGoalWeekItem? _item;
-  ActionGoalsTrend? _trend;
+  ActionGoalsMonth? _month;
   DateTime? _weekStart;
+  late DateTime _visibleMonth;
 
   @override
   void initState() {
     super.initState();
+    _visibleMonth = monthStartOf(DateTime.now());
     // ignore: discarded_futures
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant GoalDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.goalId != widget.goalId) {
+      _visibleMonth = monthStartOf(DateTime.now());
+      // ignore: discarded_futures
+      _load();
+    }
   }
 
   Future<void> _openEdit() async {
@@ -87,17 +102,20 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
         throw StateError('Goal not found');
       }
       final item = week.items.first;
-      final v = goalDetailVariantFor(item);
-      final tw = v == GoalDetailVariant.gym ? 12 : 8;
-      final trend = await repo.getActionGoalsTrend(goalId: id, weeks: tw);
+      final month = await repo.getActionGoalsMonth(
+        monthStart: _visibleMonth,
+        goalId: id,
+      );
       if (!mounted) {
         return;
       }
       setState(() {
         _item = item;
-        _trend = trend;
+        _month = month;
         _weekStart = asStoredLocalWallClock(week.weekStart);
         _loading = false;
+        _monthLoading = false;
+        _monthError = null;
       });
     } catch (e) {
       if (!mounted) {
@@ -108,6 +126,37 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadMonth(DateTime monthStart) async {
+    final normalized = monthStartOf(monthStart);
+    setState(() {
+      _visibleMonth = normalized;
+      _monthLoading = true;
+      _monthError = null;
+    });
+    try {
+      final repo = ref.read(goalRepositoryProvider);
+      final month = await repo.getActionGoalsMonth(
+        monthStart: normalized,
+        goalId: widget.goalId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _month = month;
+        _monthLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _monthError = e;
+        _monthLoading = false;
+      });
+    }
+  }
+
+  void _changeMonth(int delta) {
+    unawaited(_loadMonth(addCalendarMonths(_visibleMonth, delta)));
   }
 
   @override
@@ -143,26 +192,40 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           ),
         ),
       );
-    } else if (_item != null && _trend != null && _weekStart != null) {
+    } else if (_item != null && _month != null && _weekStart != null) {
       final item = _item!;
-      final trend = _trend!;
       final ws = _weekStart!;
       final eff = goalDetailVariantFor(item);
       content = switch (eff) {
         GoalDetailVariant.wake => _WakeBodyData(
           item: item,
-          trend: trend,
           weekStart: ws,
+          visibleMonth: _visibleMonth,
+          month: _month!,
+          monthLoading: _monthLoading,
+          monthError: _monthError,
+          onPreviousMonth: () => _changeMonth(-1),
+          onNextMonth: () => _changeMonth(1),
         ),
         GoalDetailVariant.sleep => _SleepBodyData(
           item: item,
-          trend: trend,
           weekStart: ws,
+          visibleMonth: _visibleMonth,
+          month: _month!,
+          monthLoading: _monthLoading,
+          monthError: _monthError,
+          onPreviousMonth: () => _changeMonth(-1),
+          onNextMonth: () => _changeMonth(1),
         ),
         GoalDetailVariant.gym => _GymBodyData(
           item: item,
-          trend: trend,
           weekStart: ws,
+          visibleMonth: _visibleMonth,
+          month: _month!,
+          monthLoading: _monthLoading,
+          monthError: _monthError,
+          onPreviousMonth: () => _changeMonth(-1),
+          onNextMonth: () => _changeMonth(1),
         ),
       };
     } else {
@@ -319,13 +382,23 @@ class _StreakPill extends StatelessWidget {
 class _WakeBodyData extends ConsumerWidget {
   const _WakeBodyData({
     required this.item,
-    required this.trend,
     required this.weekStart,
+    required this.visibleMonth,
+    required this.month,
+    required this.monthLoading,
+    required this.monthError,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
   });
 
   final ActionGoalWeekItem item;
-  final ActionGoalsTrend trend;
   final DateTime weekStart;
+  final DateTime visibleMonth;
+  final ActionGoalsMonth month;
+  final bool monthLoading;
+  final Object? monthError;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -345,9 +418,6 @@ class _WakeBodyData extends ConsumerWidget {
     final hits = countHits(days);
     final sc = item.streak.current.streakCount;
     final thresholdLabel = thresholdWallClockFromFilter(item) ?? '7 AM';
-    final tw = trend.weeks ?? 8;
-    final trendKicker = '$tw-WEEK TREND';
-    final barLeft = '${tw}w ago';
 
     final thX = thresholdTrackPosition(item) ?? 0.75;
     DateTime? todayWake;
@@ -592,11 +662,13 @@ class _WakeBodyData extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 28),
-        _TrendFromBuckets(
-          trend: trend,
-          takeLast: 8,
-          kicker: trendKicker,
-          barLabelLeft: barLeft,
+        _GoalMonthCalendarSection(
+          visibleMonth: visibleMonth,
+          month: month,
+          monthLoading: monthLoading,
+          monthError: monthError,
+          onPreviousMonth: onPreviousMonth,
+          onNextMonth: onNextMonth,
         ),
         const SizedBox(height: 24),
         _HowMeasuredPanel(rows: howMeasuredRowsFor(item)),
@@ -607,102 +679,211 @@ class _WakeBodyData extends ConsumerWidget {
   }
 }
 
-class _TrendFromBuckets extends StatelessWidget {
-  const _TrendFromBuckets({
-    required this.trend,
-    required this.takeLast,
-    required this.kicker,
-    this.barLabelLeft = '8w ago',
+class _GoalMonthCalendarSection extends StatelessWidget {
+  const _GoalMonthCalendarSection({
+    required this.visibleMonth,
+    required this.month,
+    required this.monthLoading,
+    required this.monthError,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
   });
 
-  final ActionGoalsTrend trend;
-  final int takeLast;
-  final String kicker;
-  final String barLabelLeft;
+  final DateTime visibleMonth;
+  final ActionGoalsMonth month;
+  final bool monthLoading;
+  final Object? monthError;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
 
   @override
   Widget build(BuildContext context) {
-    var buckets = trend.buckets;
-    if (buckets.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    if (buckets.length > takeLast) {
-      buckets = buckets.sublist(buckets.length - takeLast);
-    }
-    final last = buckets.last;
-    const height = 80.0;
+    final item = month.items.isEmpty ? null : month.items.first;
+    final daily = item?.dailyState ?? const <GoalDailyState>[];
+    final score = goalMonthConsistencyScore(daily, visibleMonth);
+    final cells = buildGoalMonthCalendarCells(daily, visibleMonth);
+    final monthLabel = DateFormat('MMMM yyyy').format(visibleMonth);
+    final percent = score.percent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _Kicker(kicker),
+            const _Kicker('MONTH'),
             Text.rich(
               TextSpan(
                 style: const TextStyle(fontSize: 11, color: AppColors.slate500),
                 children: [
-                  const TextSpan(text: 'this wk '),
+                  const TextSpan(text: 'consistency '),
                   TextSpan(
-                    text: '${last.successes} / ${last.expected}',
+                    text: percent == null ? '--' : '$percent%',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: AppColors.slate700,
                     ),
                   ),
+                  if (score.denominator > 0)
+                    TextSpan(text: ' (${score.hits}/${score.denominator})'),
                 ],
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: height,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(buckets.length, (i) {
-              final b = buckets[i];
-              final h = trendBarHeight(
-                successes: b.successes,
-                expected: b.expected,
-              );
-              final accent = i == buckets.length - 1;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Container(
-                    height: height * h,
-                    decoration: BoxDecoration(
-                      color: accent ? AppColors.accent : AppColors.slate200,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(4),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-        const SizedBox(height: 6),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              barLabelLeft,
-              style: const TextStyle(fontSize: 10, color: AppColors.slate400),
+            _MonthNavButton(
+              icon: Icons.chevron_left,
+              onPressed: monthLoading ? null : onPreviousMonth,
             ),
-            const Text(
-              'this wk',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: AppColors.accent,
+            Expanded(
+              child: Text(
+                monthLabel,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate900,
+                ),
               ),
+            ),
+            _MonthNavButton(
+              icon: Icons.chevron_right,
+              onPressed: monthLoading ? null : onNextMonth,
             ),
           ],
         ),
+        if (monthLoading) ...[
+          const SizedBox(height: 6),
+          const LinearProgressIndicator(
+            minHeight: 2,
+            backgroundColor: AppColors.slate100,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+          ),
+        ],
+        if (monthError != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Could not load month: $monthError',
+            style: const TextStyle(fontSize: 11, color: AppColors.goalMissed),
+          ),
+        ],
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (final label in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+              Expanded(
+                child: Center(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate400,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Column(
+          children: List.generate((cells.length / 7).ceil(), (row) {
+            final start = row * 7;
+            final rowCells = cells.sublist(start, start + 7);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  for (final cell in rowCells)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: _GoalMonthCellView(cell: cell),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+        ),
       ],
+    );
+  }
+}
+
+class _MonthNavButton extends StatelessWidget {
+  const _MonthNavButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      color: AppColors.slate600,
+      disabledColor: AppColors.slate300,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      tooltip: icon == Icons.chevron_left ? 'Previous month' : 'Next month',
+    );
+  }
+}
+
+class _GoalMonthCellView extends StatelessWidget {
+  const _GoalMonthCellView({required this.cell});
+
+  final GoalMonthCalendarCell cell;
+
+  @override
+  Widget build(BuildContext context) {
+    final isToday = isSameCalendarDate(cell.date, todayDate);
+    final state = cell.state;
+    final Color background;
+    final Color foreground;
+    Border? border;
+    if (!cell.inMonth) {
+      background = Colors.transparent;
+      foreground = AppColors.slate300;
+    } else {
+      switch (state) {
+        case GoalDayState.hit:
+          background = AppColors.dotOk;
+          foreground = Colors.white;
+        case GoalDayState.miss:
+          background = AppColors.dotMiss;
+          foreground = Colors.white;
+        case GoalDayState.pending:
+        case null:
+          background = AppColors.slate100;
+          foreground = AppColors.slate400;
+      }
+    }
+    if (isToday && cell.inMonth) {
+      border = Border.all(color: AppColors.accent, width: 1.5);
+    }
+    return AspectRatio(
+      aspectRatio: 1,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(8),
+          border: border,
+        ),
+        child: Center(
+          child: Text(
+            '${cell.date.day}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
+              color: foreground,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -809,13 +990,23 @@ Widget _wakeSwimRow(
 class _SleepBodyData extends ConsumerWidget {
   const _SleepBodyData({
     required this.item,
-    required this.trend,
     required this.weekStart,
+    required this.visibleMonth,
+    required this.month,
+    required this.monthLoading,
+    required this.monthError,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
   });
 
   final ActionGoalWeekItem item;
-  final ActionGoalsTrend trend;
   final DateTime weekStart;
+  final DateTime visibleMonth;
+  final ActionGoalsMonth month;
+  final bool monthLoading;
+  final Object? monthError;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -835,9 +1026,6 @@ class _SleepBodyData extends ConsumerWidget {
     final sc = item.streak.current.streakCount;
     final targetStr = formatTargetValue(item);
     final targetSec = item.target.value.toInt();
-    final tw = trend.weeks ?? 8;
-    final trendKicker = '$tw-WEEK TREND';
-    final barLeft = '${tw}w ago';
     final isDur = item.metric == 'duration';
 
     Duration? todayDur;
@@ -993,11 +1181,13 @@ class _SleepBodyData extends ConsumerWidget {
           );
         }),
         const SizedBox(height: 20),
-        _TrendFromBuckets(
-          trend: trend,
-          takeLast: 8,
-          kicker: trendKicker,
-          barLabelLeft: barLeft,
+        _GoalMonthCalendarSection(
+          visibleMonth: visibleMonth,
+          month: month,
+          monthLoading: monthLoading,
+          monthError: monthError,
+          onPreviousMonth: onPreviousMonth,
+          onNextMonth: onNextMonth,
         ),
         const SizedBox(height: 24),
         _HowMeasuredPanel(rows: howMeasuredRowsFor(item)),
@@ -1015,13 +1205,23 @@ class _SleepBodyData extends ConsumerWidget {
 class _GymBodyData extends ConsumerWidget {
   const _GymBodyData({
     required this.item,
-    required this.trend,
     required this.weekStart,
+    required this.visibleMonth,
+    required this.month,
+    required this.monthLoading,
+    required this.monthError,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
   });
 
   final ActionGoalWeekItem item;
-  final ActionGoalsTrend trend;
   final DateTime weekStart;
+  final DateTime visibleMonth;
+  final ActionGoalsMonth month;
+  final bool monthLoading;
+  final Object? monthError;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1044,8 +1244,6 @@ class _GymBodyData extends ConsumerWidget {
     final dl = daysLeftInMonSunWeek();
     final slots = item.meta?.preferredSlots;
     final targetStr = formatTargetValue(item);
-    final twG = trend.weeks ?? 12;
-    final gymTrendKicker = '$twG-WEEK TREND';
     final thisWeekRight = isCount
         ? '$hits sessions logged'
         : (item.aggregation == 'sum' && item.metric == 'duration'
@@ -1271,33 +1469,14 @@ class _GymBodyData extends ConsumerWidget {
           style: TextStyle(fontSize: 10, color: AppColors.slate400),
         ),
         const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _Kicker(gymTrendKicker),
-            Text.rich(
-              TextSpan(
-                style: const TextStyle(fontSize: 11),
-                children: [
-                  TextSpan(
-                    text:
-                        '${trendWeeksHitCount(trend.buckets)} / ${trend.buckets.length}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.slate700,
-                    ),
-                  ),
-                  const TextSpan(
-                    text: ' weeks hit',
-                    style: TextStyle(color: AppColors.slate500),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        _GoalMonthCalendarSection(
+          visibleMonth: visibleMonth,
+          month: month,
+          monthLoading: monthLoading,
+          monthError: monthError,
+          onPreviousMonth: onPreviousMonth,
+          onNextMonth: onNextMonth,
         ),
-        const SizedBox(height: 8),
-        _gym12GridFromTrend(trend),
         const SizedBox(height: 24),
         _HowMeasuredPanel(rows: howMeasuredRowsFor(item)),
         const SizedBox(height: 20),
@@ -1381,38 +1560,6 @@ class _GymWeekStripData extends StatelessWidget {
       }),
     );
   }
-}
-
-Widget _gym12GridFromTrend(ActionGoalsTrend trend) {
-  final b = trend.buckets;
-  if (b.isEmpty) {
-    return const SizedBox.shrink();
-  }
-  return SizedBox(
-    height: 40,
-    child: Row(
-      children: List.generate(b.length, (i) {
-        final hit = b[i].hit;
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: AspectRatio(
-              aspectRatio: 2 / 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: hit ? AppColors.dotOk : AppColors.slate100,
-                  borderRadius: BorderRadius.circular(2),
-                  border: i == b.length - 1
-                      ? Border.all(color: AppColors.accent)
-                      : null,
-                ),
-              ),
-            ),
-          ),
-        );
-      }),
-    ),
-  );
 }
 
 class _GymSlotCard extends StatelessWidget {

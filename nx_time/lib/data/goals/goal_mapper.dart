@@ -96,6 +96,13 @@ ActionGoalsWeek actionGoalsWeekFromWire(nx.ActionGoalWeekResponse w) {
   );
 }
 
+ActionGoalsMonth actionGoalsMonthFromWire(nx.ActionGoalMonthResponse w) {
+  return ActionGoalsMonth(
+    monthStart: asStoredLocalWallClock(w.monthStart),
+    items: w.items.map(_weekItemFromWire).toList(),
+  );
+}
+
 /// When PostGraphile returns the partial `{ "buckets": [] }` shape (goal missing).
 ActionGoalsTrend actionGoalsTrendFromWire(
   nx.ActionGoalTrendResponse w, {

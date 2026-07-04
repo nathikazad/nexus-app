@@ -36,6 +36,103 @@ int countHits(List<GoalDailyState> daily) {
   return daily.where((d) => d.state == GoalDayState.hit).length;
 }
 
+class GoalMonthCalendarCell {
+  const GoalMonthCalendarCell({
+    required this.date,
+    required this.inMonth,
+    this.state,
+  });
+
+  final DateTime date;
+  final bool inMonth;
+  final GoalDayState? state;
+}
+
+class GoalMonthConsistencyScore {
+  const GoalMonthConsistencyScore({
+    required this.hits,
+    required this.denominator,
+  });
+
+  final int hits;
+  final int denominator;
+
+  double? get ratio => denominator == 0 ? null : hits / denominator;
+
+  int? get percent => ratio == null ? null : (ratio! * 100).round();
+}
+
+DateTime monthStartOf(DateTime date) {
+  return DateTime(date.year, date.month);
+}
+
+DateTime addCalendarMonths(DateTime monthStart, int delta) {
+  return DateTime(monthStart.year, monthStart.month + delta);
+}
+
+int daysInCalendarMonth(DateTime monthStart) {
+  final start = monthStartOf(monthStart);
+  return DateTime(start.year, start.month + 1).difference(start).inDays;
+}
+
+List<GoalMonthCalendarCell> buildGoalMonthCalendarCells(
+  List<GoalDailyState> daily,
+  DateTime monthStart,
+) {
+  final start = monthStartOf(monthStart);
+  final daysInMonth = daysInCalendarMonth(start);
+  final firstGridDay = start.subtract(Duration(days: start.weekday - 1));
+  final lastMonthDay = start.add(Duration(days: daysInMonth - 1));
+  final lastGridDay = lastMonthDay.add(
+    Duration(days: 7 - lastMonthDay.weekday),
+  );
+  final totalDays = lastGridDay.difference(firstGridDay).inDays + 1;
+  final byKey = <int, GoalDailyState>{};
+  for (final state in daily) {
+    byKey[dayKey(state.date)] = state;
+  }
+  return List.generate(totalDays, (i) {
+    final date = firstGridDay.add(Duration(days: i));
+    final inMonth = date.year == start.year && date.month == start.month;
+    return GoalMonthCalendarCell(
+      date: date,
+      inMonth: inMonth,
+      state: inMonth ? byKey[dayKey(date)]?.state : null,
+    );
+  });
+}
+
+GoalMonthConsistencyScore goalMonthConsistencyScore(
+  List<GoalDailyState> daily,
+  DateTime monthStart, {
+  DateTime? now,
+}) {
+  final start = monthStartOf(monthStart);
+  final today = monthStartOf(now ?? DateTime.now());
+  final todayDateOnly = DateTime(
+    (now ?? DateTime.now()).year,
+    (now ?? DateTime.now()).month,
+    (now ?? DateTime.now()).day,
+  );
+  final monthDays = daysInCalendarMonth(start);
+  final denominator = start.isAfter(today)
+      ? 0
+      : (start.year == today.year && start.month == today.month
+            ? todayDateOnly.day
+            : monthDays);
+  final endInclusive = denominator == 0
+      ? start.subtract(const Duration(days: 1))
+      : start.add(Duration(days: denominator - 1));
+  final hits = daily.where((d) {
+    final date = DateTime(d.date.year, d.date.month, d.date.day);
+    return d.state == GoalDayState.hit &&
+        date.year == start.year &&
+        date.month == start.month &&
+        !date.isAfter(endInclusive);
+  }).length;
+  return GoalMonthConsistencyScore(hits: hits, denominator: denominator);
+}
+
 DateTime get todayDate {
   final n = DateTime.now();
   return DateTime(n.year, n.month, n.day);
@@ -232,22 +329,4 @@ String editSubForModel(String modelType) {
     default:
       return 'Change threshold time or filter';
   }
-}
-
-double trendBarHeight({required num successes, required num expected}) {
-  if (expected == 0) {
-    return 0;
-  }
-  return (successes / expected).clamp(0, 1).toDouble();
-}
-
-ActionGoalTrendBucket? latestBucket(List<ActionGoalTrendBucket> buckets) {
-  if (buckets.isEmpty) {
-    return null;
-  }
-  return buckets.last;
-}
-
-int trendWeeksHitCount(List<ActionGoalTrendBucket> buckets) {
-  return buckets.where((b) => b.hit).length;
 }
