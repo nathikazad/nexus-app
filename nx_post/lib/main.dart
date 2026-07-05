@@ -276,6 +276,13 @@ String normalizeEndpoint(String value) {
   return value.trim().replaceFirst(RegExp(r'/+$'), '');
 }
 
+void logNxPost(String message) {
+  final line = '[nx_post] $message';
+  debugPrint(line);
+  // ignore: avoid_print
+  print(line);
+}
+
 class FeedPage extends StatefulWidget {
   const FeedPage({
     required this.session,
@@ -296,6 +303,8 @@ class _FeedPageState extends State<FeedPage> {
   late Future<List<FeedItem>> _feedFuture;
   String _selectedTopic = 'All Topics';
   final Set<String> _deletedItemIds = {};
+  bool _syncing = false;
+  String _syncLabel = '';
 
   @override
   void initState() {
@@ -339,12 +348,21 @@ class _FeedPageState extends State<FeedPage> {
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 672),
-                          child: FeedHeader(
-                            topics: topics,
-                            selectedTopic: _selectedTopic,
-                            onTopicChanged: (topic) {
-                              setState(() => _selectedTopic = topic);
-                            },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FeedHeader(
+                                topics: topics,
+                                selectedTopic: _selectedTopic,
+                                onTopicChanged: (topic) {
+                                  setState(() => _selectedTopic = topic);
+                                },
+                              ),
+                              SyncStatusBanner(
+                                visible: _syncing,
+                                label: _syncLabel,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -456,19 +474,143 @@ class _FeedPageState extends State<FeedPage> {
     if (confirmed != true) return;
 
     try {
+      setState(() {
+        _syncing = true;
+        _syncLabel = 'Deleting and syncing mirror...';
+      });
       await widget.postRepository.deleteMicroblog(modelId);
       if (!mounted) return;
-      setState(() => _deletedItemIds.add(item.id));
+      setState(() {
+        _deletedItemIds.add(item.id);
+        _syncing = false;
+        _syncLabel = '';
+      });
       _reload();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microblog deleted. Publishing queued.')),
+        const SnackBar(content: Text('Microblog deleted and synced.')),
       );
     } catch (error) {
       if (!mounted) return;
+      logNxPost('delete microblog failed id=$modelId error=$error');
+      setState(() {
+        _syncing = false;
+        _syncLabel = '';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not delete microblog: $error')),
       );
     }
+  }
+}
+
+class SyncStatusBanner extends StatefulWidget {
+  const SyncStatusBanner({
+    required this.visible,
+    required this.label,
+    super.key,
+  });
+
+  final bool visible;
+  final String label;
+
+  @override
+  State<SyncStatusBanner> createState() => _SyncStatusBannerState();
+}
+
+class _SyncStatusBannerState extends State<SyncStatusBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    if (widget.visible) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SyncStatusBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible && !_controller.isAnimating) {
+      _controller.repeat();
+    } else if (!widget.visible && _controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: widget.visible
+          ? Padding(
+              key: const ValueKey('syncing'),
+              padding: const EdgeInsets.only(top: 12),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xfff4f4f5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xffe4e4e7)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: const Color(0xff18181b),
+                          value: null,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          widget.label,
+                          style: const TextStyle(
+                            color: Color(0xff3f3f46),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) {
+                          final step = (_controller.value * 4).floor();
+                          return Text(
+                            '.'.padRight(step.clamp(1, 3), '.'),
+                            style: const TextStyle(
+                              color: Color(0xff71717a),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(key: ValueKey('not-syncing')),
+    );
   }
 }
 
@@ -898,6 +1040,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
   String? _topic;
   bool _publishEnabled = true;
   bool _saving = false;
+  String _savingLabel = 'Saving...';
 
   @override
   void dispose() {
@@ -995,16 +1138,52 @@ class _ComposeSheetState extends State<ComposeSheet> {
               ),
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(_savingLabel),
+                      ],
                     )
                   : const Text('Save microblog'),
             ),
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: _saving && _publishEnabled
+                ? const Padding(
+                    key: ValueKey('compose-syncing'),
+                    padding: EdgeInsets.only(top: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            minHeight: 3,
+                            color: Color(0xff18181b),
+                            backgroundColor: Color(0xffe4e4e7),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Waiting for mirror',
+                          style: TextStyle(
+                            color: Color(0xff71717a),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('compose-idle')),
           ),
         ],
       ),
@@ -1019,7 +1198,10 @@ class _ComposeSheetState extends State<ComposeSheet> {
       ).showSnackBar(const SnackBar(content: Text('Write something first.')));
       return;
     }
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _savingLabel = _publishEnabled ? 'Syncing...' : 'Saving...';
+    });
     try {
       await widget.repository.createMicroblog(
         text: text,
@@ -1030,10 +1212,17 @@ class _ComposeSheetState extends State<ComposeSheet> {
       if (!mounted) return;
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microblog saved. Publishing queued.')),
+        SnackBar(
+          content: Text(
+            _publishEnabled
+                ? 'Microblog saved and synced.'
+                : 'Microblog saved as draft.',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
+      logNxPost('create microblog failed error=$error');
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not save microblog: $error')),
@@ -1088,6 +1277,7 @@ class MicroblogPostRepository {
     required String mediaUrl,
     required bool publishEnabled,
   }) async {
+    logNxPost('creating microblog publish=$publishEnabled');
     final cleanText = text.trim();
     final cleanTopic = topic?.trim();
     final media = mediaUrl.isEmpty
@@ -1136,28 +1326,104 @@ class MicroblogPostRepository {
 
     if (publishEnabled) {
       await triggerPublish(reason: 'microblog_post');
+      await waitForPublishSync();
     }
+    logNxPost('create microblog complete publish=$publishEnabled');
   }
 
   Future<void> deleteMicroblog(int id) async {
-    await setKgqlModel(
-      _graphqlClient,
-      SetModelRequest(id: id, delete: true),
-      domainId: await _domainId(),
-      auditSourceKind: 'nx_post',
-    );
+    logNxPost('deleting microblog id=$id');
+    try {
+      await setKgqlModel(
+        _graphqlClient,
+        SetModelRequest(id: id, delete: true),
+        domainId: await _domainId(),
+        auditSourceKind: 'nx_post',
+      );
+    } catch (error) {
+      if (!_isMissingOrDeniedDelete(error)) {
+        rethrow;
+      }
+      // The mirror can still contain a stale item after a previous successful
+      // KGQL delete if the publish trigger failed. Treat this as idempotent and
+      // let the full-manifest sync remove it by absence.
+    }
     await triggerPublish(reason: 'microblog_delete');
+    await waitForPublishSync();
+    logNxPost('delete microblog complete id=$id');
   }
 
   Future<void> triggerPublish({required String reason}) async {
+    logNxPost('triggering mirror publish reason=$reason');
     final response = await _client.post(
-      Uri.parse('$baseUrl/mirror/publish/trigger'),
-      headers: {'content-type': 'application/json'},
+      Uri.parse('$normalizedBaseUrl/mirror/publish/trigger'),
+      headers: httpHeaders(contentTypeJson: true),
       body: jsonEncode({'reason': reason, 'immediate': true}),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      logNxPost(
+        'trigger publish failed status=${response.statusCode} '
+        'body=${response.body}',
+      );
       throw StateError(_httpErrorMessage(response));
     }
+    logNxPost('trigger publish accepted body=${response.body}');
+  }
+
+  Future<void> waitForPublishSync({
+    Duration timeout = const Duration(seconds: 45),
+    Duration interval = const Duration(milliseconds: 900),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    MirrorPublishStatus? lastStatus;
+
+    while (DateTime.now().isBefore(deadline)) {
+      final status = await fetchPublishStatus();
+      lastStatus = status;
+      logNxPost(
+        'mirror publish status=${status.status} '
+        'running=${status.running} pending=${status.pendingReason}',
+      );
+
+      if (status.running || status.pendingReason != null) {
+        await Future<void>.delayed(interval);
+        continue;
+      }
+      if (status.status == 'succeeded') {
+        return;
+      }
+      if (status.status == 'failed') {
+        logNxPost('mirror publish failed error=${status.lastError}');
+        throw StateError(status.lastError ?? 'Mirror publish failed');
+      }
+
+      await Future<void>.delayed(interval);
+    }
+
+    throw StateError(
+      lastStatus?.running == true
+          ? 'Mirror publish is still running'
+          : 'Timed out waiting for mirror publish',
+    );
+  }
+
+  Future<MirrorPublishStatus> fetchPublishStatus() async {
+    final response = await _client.get(
+      Uri.parse('$normalizedBaseUrl/mirror/publish/status'),
+      headers: httpHeaders(),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      logNxPost(
+        'fetch publish status failed status=${response.statusCode} '
+        'body=${response.body}',
+      );
+      throw StateError(_httpErrorMessage(response));
+    }
+    final payload = jsonDecode(response.body);
+    if (payload is! Map<String, dynamic>) {
+      throw StateError('Invalid mirror status response');
+    }
+    return MirrorPublishStatus.fromJson(payload);
   }
 
   Future<int> _domainId() async {
@@ -1189,6 +1455,29 @@ class MicroblogPostRepository {
       // Keep the HTTP status fallback.
     }
     return message;
+  }
+
+  bool _isMissingOrDeniedDelete(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('not found') ||
+        message.contains('permission denied');
+  }
+
+  String get normalizedBaseUrl {
+    var value = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+    if (CfAccess.endpointNeedsCfAccess(value) && value.startsWith('http://')) {
+      value = value.replaceFirst('http://', 'https://');
+    }
+    return value;
+  }
+
+  Map<String, String> httpHeaders({bool contentTypeJson = false}) {
+    final base = normalizedBaseUrl;
+    return {
+      if (contentTypeJson) 'content-type': 'application/json',
+      'x-user-id': userId,
+      if (CfAccess.shouldAttachHeaders(base)) ...CfAccess.headers,
+    };
   }
 
   Map<String, dynamic> _mediaFromUrl(String url) {
@@ -1223,6 +1512,29 @@ class MicroblogPostRepository {
         .join(' ');
     if (clean.isEmpty) return 'Microblog';
     return clean.length > 80 ? clean.substring(0, 80) : clean;
+  }
+}
+
+class MirrorPublishStatus {
+  const MirrorPublishStatus({
+    required this.status,
+    required this.running,
+    required this.pendingReason,
+    required this.lastError,
+  });
+
+  final String status;
+  final bool running;
+  final String? pendingReason;
+  final String? lastError;
+
+  factory MirrorPublishStatus.fromJson(Map<String, dynamic> json) {
+    return MirrorPublishStatus(
+      status: json['status']?.toString() ?? 'unknown',
+      running: json['running'] == true,
+      pendingReason: json['pending_reason']?.toString(),
+      lastError: json['last_error']?.toString(),
+    );
   }
 }
 
