@@ -1,14 +1,12 @@
 import 'package:nx_time/domain/goals/goal_cadence.dart';
 import 'package:nx_time/domain/goals/goal_day_state.dart';
-import 'package:nx_time/domain/goals/goal_preferred_slot.dart';
 import 'package:nx_time/domain/goals/goal_streak.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
 class ActionGoalMeta {
-  const ActionGoalMeta({this.preferredSlots, this.autoGenerateTasks});
+  const ActionGoalMeta({this.dueDays});
 
-  final List<GoalPreferredSlot>? preferredSlots;
-  final bool? autoGenerateTasks;
+  final List<String>? dueDays;
 }
 
 class ActionGoalWeekItem {

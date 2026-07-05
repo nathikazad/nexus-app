@@ -1,4 +1,4 @@
-enum GoalDayState { hit, miss, pending }
+enum GoalDayState { hit, miss, pending, notDue }
 
 GoalDayState goalDayStateFromKgql(String? raw) {
   switch (raw) {
@@ -8,6 +8,8 @@ GoalDayState goalDayStateFromKgql(String? raw) {
       return GoalDayState.miss;
     case 'pending':
       return GoalDayState.pending;
+    case 'not_due':
+      return GoalDayState.notDue;
     default:
       throw FormatException('Unknown goal day state: $raw');
   }
@@ -21,6 +23,8 @@ String goalDayStateToKgql(GoalDayState s) {
       return 'miss';
     case GoalDayState.pending:
       return 'pending';
+    case GoalDayState.notDue:
+      return 'not_due';
   }
 }
 

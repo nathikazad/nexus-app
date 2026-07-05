@@ -4,6 +4,7 @@ enum GoalDayState {
   hit,
   miss,
   pending,
+  notDue,
 }
 
 GoalDayState goalDayStateFromString(String? s) {
@@ -14,6 +15,8 @@ GoalDayState goalDayStateFromString(String? s) {
       return GoalDayState.miss;
     case 'pending':
       return GoalDayState.pending;
+    case 'not_due':
+      return GoalDayState.notDue;
     default:
       throw FormatException('Unknown goal day state: $s');
   }
@@ -27,6 +30,8 @@ String goalDayStateToString(GoalDayState s) {
       return 'miss';
     case GoalDayState.pending:
       return 'pending';
+    case GoalDayState.notDue:
+      return 'not_due';
   }
 }
 

@@ -39,6 +39,10 @@ int countHits(List<GoalDailyState> daily) {
   return daily.where((d) => d.state == GoalDayState.hit).length;
 }
 
+int countDueDays(List<GoalDailyState> daily) {
+  return daily.where((d) => d.state != GoalDayState.notDue).length;
+}
+
 class GoalMonthCalendarCell {
   const GoalMonthCalendarCell({
     required this.date,
@@ -118,14 +122,24 @@ GoalMonthConsistencyScore goalMonthConsistencyScore(
     (now ?? DateTime.now()).day,
   );
   final monthDays = daysInCalendarMonth(start);
-  final denominator = start.isAfter(today)
+  final dayLimit = start.isAfter(today)
       ? 0
       : (start.year == today.year && start.month == today.month
             ? todayDateOnly.day
             : monthDays);
-  final endInclusive = denominator == 0
+  final endInclusive = dayLimit == 0
       ? start.subtract(const Duration(days: 1))
-      : start.add(Duration(days: denominator - 1));
+      : start.add(Duration(days: dayLimit - 1));
+  final hasExplicitOffDays = daily.any((d) => d.state == GoalDayState.notDue);
+  final denominator = hasExplicitOffDays
+      ? daily.where((d) {
+          final date = DateTime(d.date.year, d.date.month, d.date.day);
+          return d.state != GoalDayState.notDue &&
+              date.year == start.year &&
+              date.month == start.month &&
+              !date.isAfter(endInclusive);
+        }).length
+      : dayLimit;
   final hits = daily.where((d) {
     final date = DateTime(d.date.year, d.date.month, d.date.day);
     return d.state == GoalDayState.hit &&
@@ -234,9 +248,48 @@ String? thresholdWallClockFromFilter(ActionGoalWeekItem item) {
   return (hit: hit, total: total, daysLeft: daysLeft);
 }
 
+const List<String> goalDowNames = <String>[
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
+];
+
+List<int> dueDayIndexes(ActionGoalWeekItem item) {
+  final due = item.meta?.dueDays;
+  if (due == null || due.isEmpty) {
+    return List<int>.generate(7, (i) => i);
+  }
+  final out = <int>[];
+  for (final raw in due) {
+    final i = goalDowNames.indexWhere(
+      (d) => d.toLowerCase() == raw.toLowerCase(),
+    );
+    if (i >= 0 && !out.contains(i)) {
+      out.add(i);
+    }
+  }
+  out.sort();
+  return out.isEmpty ? List<int>.generate(7, (i) => i) : out;
+}
+
+String formatDueDays(ActionGoalWeekItem item) {
+  final due = dueDayIndexes(item);
+  if (due.length == 7) {
+    return 'Every day';
+  }
+  if (due.length == 6 && !due.contains(6)) {
+    return 'Mon-Sat';
+  }
+  return due.map((i) => goalDowNames[i]).join(', ');
+}
+
 String formatGoalSubline(ActionGoalWeekItem item) {
   if (item.cadence == GoalCadence.daily) {
-    final b = StringBuffer('Every day');
+    final b = StringBuffer(formatDueDays(item));
     b.write(' · ');
     if (item.filter != null) {
       final f = item.filter!;
@@ -312,10 +365,8 @@ List<(String, String)> howMeasuredRowsFor(ActionGoalWeekItem item) {
     ('Day attribution', item.selectedAttribute),
     ('Cadence', item.cadence.name),
   ];
-  final slots = item.meta?.preferredSlots;
-  if (slots != null && slots.isNotEmpty) {
-    final joined = slots.map((s) => '${s.dow} ${s.startTime}').join(', ');
-    rows.add(('Slot tasks', joined));
+  if (item.cadence == GoalCadence.daily) {
+    rows.add(('Due days', formatDueDays(item)));
   }
   return rows;
 }
@@ -339,7 +390,7 @@ String deleteBlurbForModel(String modelType) {
 String editSubForModel(String modelType) {
   switch (modelType) {
     case 'Gym':
-      return 'Change target, slots, or tag filter';
+      return 'Change target or tag filter';
     default:
       return 'Change threshold time or filter';
   }

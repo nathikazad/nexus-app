@@ -18,7 +18,7 @@ const _kActionGoalLabels = <String>[
   'Sleep 8 hours',
   'Yoga every day',
   'Reading 1hr / day',
-  'Gym 3x/week',
+  'Exercise 3x/week',
   'Language learning 3hrs / week',
   'Dancing 3hrs / week',
 ];
@@ -32,7 +32,7 @@ const _kDailyActionLabels = <String>{
 };
 
 const _kWeeklyActionLabels = <String>{
-  'Gym 3x/week',
+  'Exercise 3x/week',
   'Language learning 3hrs / week',
   'Dancing 3hrs / week',
 };
@@ -108,7 +108,7 @@ void main() {
     );
 
     test(
-      'getActionGoalsWeek(goalId: gym): meta preferred_slots + auto_generate_tasks',
+      'getActionGoalsWeek(goalId: exercise): weekly goal has no due-day meta',
       () async {
         final container = ProviderContainer(
           overrides: timeIntegrationOverrides,
@@ -120,27 +120,18 @@ void main() {
         final monday = _mondayOfLocalWeek(DateTime.now());
 
         final all = await repo.getActionGoalsWeek(weekStart: monday);
-        final gymItem = all.items.firstWhere((i) => i.label == 'Gym 3x/week');
+        final exerciseItem = all.items.firstWhere(
+          (i) => i.label == 'Exercise 3x/week',
+        );
 
         final one = await repo.getActionGoalsWeek(
           weekStart: monday,
-          goalId: gymItem.id,
+          goalId: exerciseItem.id,
         );
         expect(one.items.length, 1);
         final g = one.items.first;
-        expect(g.label, 'Gym 3x/week');
-        final meta = g.meta;
-        expect(meta, isNotNull);
-        final slots = meta!.preferredSlots;
-        expect(slots, isNotNull);
-        expect(slots!.length, 3);
-        final dows = slots.map((s) => s.dow).toSet();
-        expect(dows, {'Mon', 'Wed', 'Fri'});
-        for (final s in slots) {
-          expect(s.startTime, '12:30');
-          expect(s.durationMin, 60);
-        }
-        expect(meta.autoGenerateTasks, isTrue);
+        expect(g.label, 'Exercise 3x/week');
+        expect(g.meta, isNull);
       },
       tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,

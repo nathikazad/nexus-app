@@ -21,19 +21,13 @@ void main() {
     );
   });
 
-  test('showPreferredSlots only for weekly+count', () {
+  test('showDueDays only for daily goals', () {
     expect(
-      GoalEditViewModel.showPreferredSlots(
-        cadence: GoalCadence.weekly,
-        attr: GoalSelectedAttribute.count,
-      ),
+      GoalEditViewModel.showDueDays(cadence: GoalCadence.daily),
       isTrue,
     );
     expect(
-      GoalEditViewModel.showPreferredSlots(
-        cadence: GoalCadence.daily,
-        attr: GoalSelectedAttribute.count,
-      ),
+      GoalEditViewModel.showDueDays(cadence: GoalCadence.weekly),
       isFalse,
     );
   });

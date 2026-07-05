@@ -63,21 +63,15 @@ void main() {
     expect(w.items.first.label, 'Wake up before 7am');
   });
 
-  test('ActionGoalMeta preferred_slots with hit', () {
+  test('ActionGoalMeta due_days', () {
     const metaJson = '''
     {
-      "preferred_slots": [
-        { "dow": "Mon", "start_time": "12:30", "duration_min": 60, "hit": true  },
-        { "dow": "Wed", "start_time": "12:30", "duration_min": 60, "hit": false }
-      ],
-      "auto_generate_tasks": true
+      "due_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     }
     ''';
     final meta = ActionGoalMeta.fromJson(
       json.decode(metaJson) as Map<String, dynamic>,
     );
-    expect(meta.preferredSlots?.length, 2);
-    expect(meta.preferredSlots![0].hit, isTrue);
-    expect(meta.preferredSlots![1].hit, isFalse);
+    expect(meta.dueDays, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   });
 }

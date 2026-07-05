@@ -174,8 +174,7 @@ void main() {
         selectedAttribute: GoalSelectedAttribute.count,
         op: GoalThresholdOp.gte,
         thresholdValue: 1,
-        preferredDays: const [],
-        autoGenerateTasks: false,
+        dueDays: const [0, 1, 2, 3, 4, 5, 6],
       ),
     );
     expect(id, 55);
@@ -211,8 +210,7 @@ void main() {
         selectedAttribute: GoalSelectedAttribute.duration,
         op: GoalThresholdOp.gte,
         thresholdValue: 7,
-        preferredDays: const [],
-        autoGenerateTasks: false,
+        dueDays: const [0, 1, 2, 3, 4, 5, 6],
       ),
     );
     expect(id, 2);

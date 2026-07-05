@@ -40,9 +40,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
   final TextEditingController _countCtl = TextEditingController(text: '3');
   TimeOfDay _timeOfDay = const TimeOfDay(hour: 7, minute: 0);
 
-  final Set<int> _preferredDays = <int>{};
-  TimeOfDay? _slotTime;
-  bool _auto = false;
+  final Set<int> _dueDays = <int>{0, 1, 2, 3, 4, 5, 6};
 
   @override
   void initState() {
@@ -79,22 +77,9 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
         g.selectedAttribute == GoalSelectedAttribute.endTime) {
       _timeOfDay = TimeOfDay(hour: m ~/ 60, minute: m % 60);
     }
-    _preferredDays
+    _dueDays
       ..clear()
-      ..addAll(g.preferredDays);
-    _slotTime = (g.preferredTime != null && g.preferredTime!.isNotEmpty)
-        ? _parseSlot(g.preferredTime!)
-        : null;
-    _auto = g.autoGenerateTasks;
-  }
-
-  TimeOfDay? _parseSlot(String s) {
-    final p = s.split(':');
-    if (p.length < 2) return null;
-    final h = int.tryParse(p[0].trim());
-    final m = int.tryParse(p[1].trim());
-    if (h == null || m == null) return null;
-    return TimeOfDay(hour: h, minute: m);
+      ..addAll(g.dueDays);
   }
 
   String? _formatSlot(TimeOfDay? t) {
@@ -111,8 +96,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     super.dispose();
   }
 
-  bool get _showPreferred =>
-      GoalEditViewModel.showPreferredSlots(cadence: _cadence, attr: _attr);
+  bool get _showDueDays => GoalEditViewModel.showDueDays(cadence: _cadence);
 
   bool get _isEdit => widget.mode == GoalEditMode.edit;
 
@@ -132,9 +116,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       durationHours: durationH,
       count: countI,
       timeOfDay: _timeOfDay,
-      preferredDays: _preferredDays,
-      preferredTimeHHmm: _formatSlot(_slotTime),
-      autoGenerate: _auto,
+      dueDays: _dueDays,
     );
   }
 
@@ -148,8 +130,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       count: countI,
       timeOfDay: _timeOfDay,
       cadence: _cadence,
-      autoCreate: _auto,
-      preferredDays: _preferredDays,
+      dueDays: _dueDays,
     );
     if (err != null) {
       if (!mounted) return;
@@ -316,11 +297,11 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
                       color: AppColors.slate400,
                     ),
                   ),
-                  if (_showPreferred) ...[
+                  if (_showDueDays) ...[
                     const SizedBox(height: 16),
                     const Divider(color: AppColors.slate100, height: 1),
                     const SizedBox(height: 16),
-                    _preferredSection(),
+                    _dueDaysSection(),
                   ],
                   if (_isEdit) ...[
                     const SizedBox(height: 24),
@@ -823,20 +804,20 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     );
   }
 
-  Widget _preferredSection() {
+  Widget _dueDaysSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _section('Preferred days', optional: true),
+        _section('Due days'),
         const SizedBox(height: 6),
         const Text(
-          'Days you plan to do this. We won\u2019t require sessions only on these days.',
+          'Only these days count toward this daily goal.',
           style: TextStyle(fontSize: 11, color: AppColors.slate500),
         ),
         const SizedBox(height: 12),
         Row(
           children: List.generate(7, (i) {
-            final on = _preferredDays.contains(i);
+            final on = _dueDays.contains(i);
             return Padding(
               padding: EdgeInsets.only(right: i == 6 ? 0 : 6),
               child: GestureDetector(
@@ -845,9 +826,9 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
                     : () {
                         setState(() {
                           if (on) {
-                            _preferredDays.remove(i);
+                            _dueDays.remove(i);
                           } else {
-                            _preferredDays.add(i);
+                            _dueDays.add(i);
                           }
                         });
                       },
@@ -876,154 +857,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
             );
           }),
         ),
-        const SizedBox(height: 14),
-        _slotTimeTile(),
-        const SizedBox(height: 6),
-        const Text(
-          'Optional \u2014 applies to every preferred day. Leave empty for no specific time.',
-          style: TextStyle(fontSize: 11, color: AppColors.slate400),
-        ),
-        const SizedBox(height: 8),
-        _autoToggleRow(),
       ],
-    );
-  }
-
-  Widget _slotTimeTile() {
-    return GestureDetector(
-      onTap: _saving
-          ? null
-          : () async {
-              final t = await showTimePicker(
-                context: context,
-                initialTime: _slotTime ?? const TimeOfDay(hour: 12, minute: 30),
-              );
-              if (t != null) setState(() => _slotTime = t);
-            },
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 44,
-        decoration: _fieldDecoration,
-        padding: const EdgeInsets.only(left: 14, right: 6),
-        child: Row(
-          children: [
-            const Icon(
-              SolarLinearIcons.clockCircle,
-              size: 16,
-              color: AppColors.slate400,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Time',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.slate500,
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text(
-                  _slotTime == null ? '' : _formatSlot(_slotTime) ?? '',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate900,
-                  ),
-                ),
-              ),
-            ),
-            if (_slotTime != null)
-              GestureDetector(
-                onTap: _saving ? null : () => setState(() => _slotTime = null),
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    SolarLinearIcons.closeCircle,
-                    size: 16,
-                    color: AppColors.slate300,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _autoToggleRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Auto-create slot tasks',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate900,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Drop a task on each day so it shows in Tasks',
-                  style: TextStyle(fontSize: 11, color: AppColors.slate500),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: _saving ? null : () => setState(() => _auto = !_auto),
-            behavior: HitTestBehavior.opaque,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 40,
-              height: 24,
-              decoration: BoxDecoration(
-                color: _auto ? AppColors.accent : AppColors.slate200,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Stack(
-                children: [
-                  AnimatedAlign(
-                    duration: const Duration(milliseconds: 150),
-                    alignment: _auto
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x14000000),
-                              blurRadius: 2,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

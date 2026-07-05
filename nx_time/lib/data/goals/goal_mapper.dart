@@ -7,7 +7,6 @@ import 'package:nx_time/domain/goals/expense_goal.dart';
 import 'package:nx_time/domain/goals/goal.dart';
 import 'package:nx_time/domain/goals/goal_cadence.dart';
 import 'package:nx_time/domain/goals/goal_day_state.dart';
-import 'package:nx_time/domain/goals/goal_preferred_slot.dart';
 import 'package:nx_time/domain/goals/goal_selected_attribute.dart';
 import 'package:nx_time/domain/goals/goal_streak.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
@@ -45,23 +44,15 @@ GoalDayState _dayStateFromWire(nx.GoalDayState s) {
       return GoalDayState.miss;
     case nx.GoalDayState.pending:
       return GoalDayState.pending;
+    case nx.GoalDayState.notDue:
+      return GoalDayState.notDue;
   }
 }
 
 ActionGoalMeta? _metaFromWire(nx.ActionGoalMeta? m) {
   if (m == null) return null;
   return ActionGoalMeta(
-    preferredSlots: m.preferredSlots
-        ?.map(
-          (s) => GoalPreferredSlot(
-            dow: s.dow,
-            startTime: s.startTime,
-            durationMin: s.durationMin,
-            hit: s.hit,
-          ),
-        )
-        .toList(),
-    autoGenerateTasks: m.autoGenerateTasks,
+    dueDays: m.dueDays,
   );
 }
 
@@ -320,19 +311,13 @@ _KBundle _encodeBundle(Goal g) {
 }
 
 Map<String, dynamic>? _buildMeta(Goal g) {
-  if (g.cadence != GoalCadence.weekly ||
-      g.selectedAttribute != GoalSelectedAttribute.count) {
+  if (g.cadence != GoalCadence.daily) {
     return null;
   }
-  final slots = <Map<String, dynamic>>[];
-  for (final d in g.preferredDays) {
-    slots.add({
-      'dow': _dowNameFromIndex(d),
-      'start_time': g.preferredTime ?? '',
-      'duration_min': 0,
-    });
-  }
-  return {'preferred_slots': slots, 'auto_generate_tasks': g.autoGenerateTasks};
+  final days = (g.dueDays.isEmpty ? List<int>.generate(7, (i) => i) : g.dueDays)
+      .map(_dowNameFromIndex)
+      .toList();
+  return {'due_days': days};
 }
 
 List<SetModelAttribute> _goalToAttributes(Goal g) {
@@ -456,30 +441,18 @@ Goal goalFromModel(Model m) {
     threshold = tVal;
   }
 
-  var preferredDays = <int>[];
-  String? preferredTime;
-  var auto = false;
+  var dueDays = <int>[0, 1, 2, 3, 4, 5, 6];
   if (meta != null) {
-    auto = meta['auto_generate_tasks'] as bool? ?? false;
-    final ps = meta['preferred_slots'] as List<dynamic>?;
-    if (ps != null) {
-      final tSet = <String>{};
-      for (final s in ps) {
-        if (s is! Map) continue;
-        final m2 = Map<String, dynamic>.from(s);
-        final i = _dowIndexFromName(m2['dow']?.toString());
-        if (i != null) {
-          preferredDays.add(i);
-        }
-        final st = m2['start_time'] as String?;
-        if (st != null && st.isNotEmpty) {
-          tSet.add(st);
+    final rawDueDays = meta['due_days'] as List<dynamic>?;
+    if (rawDueDays != null && rawDueDays.isNotEmpty) {
+      dueDays = <int>[];
+      for (final d in rawDueDays) {
+        final i = _dowIndexFromName(d?.toString());
+        if (i != null && !dueDays.contains(i)) {
+          dueDays.add(i);
         }
       }
-      preferredDays = preferredDays..sort();
-      if (tSet.length == 1) {
-        preferredTime = tSet.first;
-      }
+      dueDays.sort();
     }
   }
 
@@ -501,9 +474,7 @@ Goal goalFromModel(Model m) {
             sel == GoalSelectedAttribute.endTime)
         ? null
         : filter,
-    preferredDays: preferredDays,
-    preferredTime: preferredTime,
-    autoGenerateTasks: auto,
+    dueDays: dueDays,
   );
 }
 

@@ -414,6 +414,7 @@ class _WakeBodyData extends ConsumerWidget {
   Widget _wakeColumn(WeekActions? wa) {
     final days = normalizeDailyStates(item.dailyState, weekStart);
     final hits = countHits(days);
+    final due = countDueDays(days);
     final sc = item.streak.current.streakCount;
     final thresholdLabel = thresholdWallClockFromFilter(item) ?? '7 AM';
 
@@ -625,7 +626,7 @@ class _WakeBodyData extends ConsumerWidget {
                       color: AppColors.slate700,
                     ),
                   ),
-                  const TextSpan(text: ' of 7 hit'),
+                  TextSpan(text: ' of $due hit'),
                 ],
               ),
             ),
@@ -643,6 +644,7 @@ class _WakeBodyData extends ConsumerWidget {
             days[i].state == GoalDayState.miss,
             isSameCalendarDate(days[i].date, todayDate),
             days[i].state == GoalDayState.pending,
+            days[i].state == GoalDayState.notDue,
           );
         }),
         const SizedBox(height: 8),
@@ -868,6 +870,7 @@ class _GoalMonthCellView extends StatelessWidget {
           background = AppColors.dotMiss;
           foreground = Colors.white;
         case GoalDayState.pending:
+        case GoalDayState.notDue:
         case null:
           background = AppColors.slate100;
           foreground = AppColors.slate400;
@@ -906,10 +909,12 @@ Widget _wakeSwimRow(
   bool miss,
   bool today,
   bool pending,
+  bool off,
 ) {
-  final dotColor = pending
+  final dotColor = pending || off
       ? Colors.transparent
       : (miss ? AppColors.dotMiss : AppColors.dotOk);
+  final timeLabel = off ? '-' : time;
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
@@ -923,7 +928,7 @@ Widget _wakeSwimRow(
               fontWeight: today ? FontWeight.w600 : FontWeight.w500,
               color: today
                   ? AppColors.accent
-                  : (pending ? AppColors.slate300 : AppColors.slate400),
+                  : ((pending || off) ? AppColors.slate300 : AppColors.slate400),
             ),
           ),
         ),
@@ -949,7 +954,18 @@ Widget _wakeSwimRow(
                     Center(
                       child: Container(height: 1, color: AppColors.slate100),
                     ),
-                    if (!pending)
+                    if (off)
+                      Center(
+                        child: Container(
+                          width: 10,
+                          height: 2,
+                          decoration: BoxDecoration(
+                            color: AppColors.slate300,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      )
+                    else if (!pending)
                       Positioned(
                         left: trackW * pos - 5,
                         top: 1,
@@ -978,12 +994,12 @@ Widget _wakeSwimRow(
         SizedBox(
           width: 44,
           child: Text(
-            time,
+            timeLabel,
             textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: 10,
               fontWeight: today ? FontWeight.w600 : FontWeight.w500,
-              color: pending
+              color: pending || off
                   ? AppColors.slate300
                   : (miss ? AppColors.goalMissed : AppColors.slate700),
             ),
@@ -1034,6 +1050,7 @@ class _SleepBodyData extends ConsumerWidget {
   Widget _column(WeekActions? wa) {
     final days = normalizeDailyStates(item.dailyState, weekStart);
     final hits = countHits(days);
+    final due = countDueDays(days);
     final sc = item.streak.current.streakCount;
     final targetStr = formatTargetValue(item);
     final targetSec = item.target.value.toInt();
@@ -1135,7 +1152,7 @@ class _SleepBodyData extends ConsumerWidget {
                       color: AppColors.slate700,
                     ),
                   ),
-                  const TextSpan(text: ' of 7 hit'),
+                  TextSpan(text: ' of $due hit'),
                 ],
               ),
             ),
@@ -1156,7 +1173,10 @@ class _SleepBodyData extends ConsumerWidget {
             );
           }
           final isToday = isSameCalendarDate(st.date, todayDate);
-          final line = (wa == null)
+          final off = st.state == GoalDayState.notDue;
+          final line = off
+              ? '-'
+              : (wa == null)
               ? '—'
               : formatDurationShort(dur, useDashForZero: false);
           return Padding(
@@ -1181,7 +1201,9 @@ class _SleepBodyData extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
-                      color: st.state == GoalDayState.miss
+                      color: off
+                          ? AppColors.slate300
+                          : st.state == GoalDayState.miss
                           ? AppColors.goalMissed
                           : AppColors.slate700,
                     ),
@@ -1253,7 +1275,6 @@ class _GymBodyData extends ConsumerWidget {
     final isCount = item.aggregation == 'count';
     final tv = item.target.value.toDouble();
     final dl = daysLeftInMonSunWeek();
-    final slots = item.meta?.preferredSlots;
     final targetStr = formatTargetValue(item);
     final thisWeekRight = isCount
         ? '$hits sessions logged'
@@ -1391,77 +1412,6 @@ class _GymBodyData extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
-        if (slots != null && slots.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const _Kicker('PREFERRED SLOTS'),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'edit',
-                  style: TextStyle(fontSize: 11, color: AppColors.slate400),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: List.generate(slots.length > 3 ? 3 : slots.length, (i) {
-              final s = slots[i];
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: i < (slots.length > 3 ? 3 : slots.length) - 1
-                        ? 8
-                        : 0,
-                  ),
-                  child: _GymSlotCard(
-                    day: s.dow,
-                    done: s.hit == true,
-                    missed: s.hit == false,
-                    time: s.startTime,
-                    sub: s.hit == true
-                        ? '${s.durationMin} min'
-                        : (s.hit == false
-                              ? 'missed'
-                              : '${s.startTime} scheduled'),
-                  ),
-                ),
-              );
-            }),
-          ),
-          if (item.meta?.autoGenerateTasks != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text.rich(
-                TextSpan(
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.slate500,
-                  ),
-                  children: [
-                    const TextSpan(
-                      text: 'Auto-create tasks for these slots — ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: item.meta!.autoGenerateTasks! ? 'on' : 'off',
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-        ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1476,7 +1426,7 @@ class _GymBodyData extends ConsumerWidget {
         _GymWeekStripData(days: days),
         const SizedBox(height: 8),
         const Text(
-          '● scheduled slot   ● completed   ● missed',
+          '● completed   ● missed',
           style: TextStyle(fontSize: 10, color: AppColors.slate400),
         ),
         const SizedBox(height: 20),
@@ -1519,6 +1469,8 @@ class _GymWeekStripData extends StatelessWidget {
           fill = AppColors.dotOk;
         } else if (s.state == GoalDayState.miss) {
           fill = AppColors.dotMiss;
+        } else if (s.state == GoalDayState.notDue) {
+          fill = null;
         } else if (isToday) {
           fill = null;
         } else if (isFuture) {
@@ -1538,10 +1490,12 @@ class _GymWeekStripData extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  labels[i],
+                  s.state == GoalDayState.notDue ? '-' : labels[i],
                   style: TextStyle(
                     fontSize: 10,
-                    color: isToday
+                    color: s.state == GoalDayState.notDue
+                        ? AppColors.slate300
+                        : isToday
                         ? AppColors.accent
                         : (isFuture ? AppColors.slate300 : AppColors.slate400),
                     fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
@@ -1550,11 +1504,18 @@ class _GymWeekStripData extends StatelessWidget {
                 const SizedBox(height: 4),
                 Container(
                   width: 10,
-                  height: 10,
+                  height: s.state == GoalDayState.notDue ? 2 : 10,
                   decoration: BoxDecoration(
-                    color: fill,
-                    shape: BoxShape.circle,
-                    border: fill == null
+                    color: s.state == GoalDayState.notDue
+                        ? AppColors.slate300
+                        : fill,
+                    shape: s.state == GoalDayState.notDue
+                        ? BoxShape.rectangle
+                        : BoxShape.circle,
+                    borderRadius: s.state == GoalDayState.notDue
+                        ? BorderRadius.circular(999)
+                        : null,
+                    border: fill == null && s.state != GoalDayState.notDue
                         ? (isToday
                               ? Border.all(color: AppColors.slate300)
                               : (isFuture
@@ -1569,97 +1530,6 @@ class _GymWeekStripData extends StatelessWidget {
           ),
         );
       }),
-    );
-  }
-}
-
-class _GymSlotCard extends StatelessWidget {
-  const _GymSlotCard({
-    required this.day,
-    this.done = false,
-    this.missed = false,
-    required this.time,
-    required this.sub,
-  });
-
-  final String day;
-  final bool done;
-  final bool missed;
-  final String time;
-  final String sub;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: missed ? const Color(0xFFFFF1F2) : Colors.white,
-        border: Border.all(
-          color: missed ? const Color(0xFFFECACA) : AppColors.slate100,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                day,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.slate700,
-                ),
-              ),
-              if (done)
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
-                    color: AppColors.dotOk,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    SolarLinearIcons.checkRead,
-                    size: 8,
-                    color: Colors.white,
-                  ),
-                )
-              else if (missed)
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFCA5A5),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            time,
-            style: TextStyle(
-              fontSize: 10,
-              color: missed ? AppColors.slate400 : AppColors.slate500,
-            ),
-          ),
-          Text(
-            sub,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: missed ? FontWeight.w600 : FontWeight.w500,
-              color: missed ? AppColors.dotMiss : AppColors.slate700,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

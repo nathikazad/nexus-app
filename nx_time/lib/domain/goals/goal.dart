@@ -15,9 +15,7 @@ class Goal {
     required this.op,
     required this.thresholdValue,
     this.filter,
-    this.preferredDays = const <int>[],
-    this.preferredTime,
-    this.autoGenerateTasks = false,
+    this.dueDays = const <int>[0, 1, 2, 3, 4, 5, 6],
   });
 
   /// `null` on create, set after insert or when editing.
@@ -45,13 +43,8 @@ class Goal {
   /// Optional additional filters (e.g. tag filters) — pass-through to KGQL.
   final Map<String, dynamic>? filter;
 
-  /// Preferred days `0=Mon` … `6=Sun` (weekly + count in UI only).
-  final List<int> preferredDays;
-
-  /// `HH:mm` local time, shared for all [preferredDays]; `null` = no time.
-  final String? preferredTime;
-
-  final bool autoGenerateTasks;
+  /// Due days `0=Mon` … `6=Sun` for daily goals.
+  final List<int> dueDays;
 
   factory Goal.draft() {
     return const Goal(
@@ -63,9 +56,7 @@ class Goal {
       op: GoalThresholdOp.gte,
       thresholdValue: 8,
       filter: null,
-      preferredDays: <int>[],
-      preferredTime: null,
-      autoGenerateTasks: false,
+      dueDays: <int>[0, 1, 2, 3, 4, 5, 6],
     );
   }
 
@@ -80,10 +71,7 @@ class Goal {
     num? thresholdValue,
     Map<String, dynamic>? filter,
     bool clearFilter = false,
-    List<int>? preferredDays,
-    String? preferredTime,
-    bool clearPreferredTime = false,
-    bool? autoGenerateTasks,
+    List<int>? dueDays,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -95,11 +83,7 @@ class Goal {
       op: op ?? this.op,
       thresholdValue: thresholdValue ?? this.thresholdValue,
       filter: clearFilter ? null : (filter ?? this.filter),
-      preferredDays: preferredDays ?? this.preferredDays,
-      preferredTime: clearPreferredTime
-          ? null
-          : (preferredTime ?? this.preferredTime),
-      autoGenerateTasks: autoGenerateTasks ?? this.autoGenerateTasks,
+      dueDays: dueDays ?? this.dueDays,
     );
   }
 }

@@ -25,12 +25,8 @@ class GoalEditViewModel {
     return a;
   }
 
-  /// `true` if weekly count UI should show preferred days + time + auto.
-  static bool showPreferredSlots({
-    required GoalCadence cadence,
-    required GoalSelectedAttribute attr,
-  }) {
-    return cadence == GoalCadence.weekly && attr == GoalSelectedAttribute.count;
+  static bool showDueDays({required GoalCadence cadence}) {
+    return cadence == GoalCadence.daily;
   }
 
   static String? snackbarErrorForSave({
@@ -40,8 +36,7 @@ class GoalEditViewModel {
     required int count,
     required TimeOfDay timeOfDay,
     required GoalCadence cadence,
-    required bool autoCreate,
-    required Set<int> preferredDays,
+    required Set<int> dueDays,
   }) {
     final t = label.trim();
     if (t.isEmpty) {
@@ -58,10 +53,8 @@ class GoalEditViewModel {
     } else {
       // time — always valid 0-1439
     }
-    if (showPreferredSlots(cadence: cadence, attr: attr) &&
-        autoCreate &&
-        preferredDays.isEmpty) {
-      return 'Choose at least one preferred day to auto-create tasks, or turn auto-create off';
+    if (showDueDays(cadence: cadence) && dueDays.isEmpty) {
+      return 'Choose at least one due day';
     }
     return null;
   }
@@ -77,9 +70,7 @@ class GoalEditViewModel {
     required double durationHours,
     required int count,
     required TimeOfDay timeOfDay,
-    required Set<int> preferredDays,
-    required String? preferredTimeHHmm,
-    required bool autoGenerate,
+    required Set<int> dueDays,
   }) {
     final timeMinutes = timeOfDay.hour * 60 + timeOfDay.minute;
     num value;
@@ -100,13 +91,7 @@ class GoalEditViewModel {
       op: op,
       thresholdValue: value,
       filter: null,
-      preferredDays: preferredDays.isEmpty
-          ? <int>[]
-          : (preferredDays.toList()..sort()),
-      preferredTime: (preferredTimeHHmm == null || preferredTimeHHmm.isEmpty)
-          ? null
-          : preferredTimeHHmm,
-      autoGenerateTasks: autoGenerate,
+      dueDays: dueDays.isEmpty ? <int>[] : (dueDays.toList()..sort()),
     );
   }
 }

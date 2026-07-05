@@ -165,6 +165,10 @@ String _rightStatusText(
   DateTime weekStart,
   WeekActions? wa,
 ) {
+  final today = _todayInWeek(item, weekStart);
+  if (today?.state == GoalDayState.notDue) {
+    return 'not due';
+  }
   if (item.cadence == GoalCadence.weekly) {
     if (item.aggregation == 'count') {
       final days = normalizeDailyStates(item.dailyState, weekStart);
@@ -233,6 +237,7 @@ String _rightStatusText(
     GoalDayState.hit => 'on track',
     GoalDayState.miss => 'missed',
     GoalDayState.pending => 'pending',
+    GoalDayState.notDue => 'not due',
   };
 }
 
@@ -297,6 +302,7 @@ Color _colorForDayState(GoalDailyState? day) {
     GoalDayState.hit => AppColors.goalOnTrack,
     GoalDayState.miss => AppColors.goalMissed,
     GoalDayState.pending => AppColors.goalAtRisk,
+    GoalDayState.notDue => AppColors.slate400,
   };
 }
 
@@ -309,6 +315,9 @@ List<_Dot> _dotsFor(ActionGoalWeekItem item, DateTime weekStart) {
     }
     if (d.state == GoalDayState.miss) {
       return isToday ? _Dot.todayMiss : _Dot.miss;
+    }
+    if (d.state == GoalDayState.notDue) {
+      return isToday ? _Dot.todayOff : _Dot.off;
     }
     return isToday ? _Dot.todayProg : _Dot.pend;
   }).toList();
@@ -890,7 +899,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-enum _Dot { ok, miss, pend, todayOk, todayMiss, todayProg }
+enum _Dot { ok, miss, pend, off, todayOk, todayMiss, todayProg, todayOff }
 
 class _GoalRow extends StatelessWidget {
   const _GoalRow({
@@ -1070,6 +1079,17 @@ class _GoalDot extends StatelessWidget {
             border: Border.all(color: AppColors.slate200, width: 1.5),
           ),
         );
+      case _Dot.off:
+        return Center(
+          child: Container(
+            width: 8,
+            height: 2,
+            decoration: BoxDecoration(
+              color: AppColors.slate300,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        );
       case _Dot.todayOk:
         return Container(
           width: size,
@@ -1098,6 +1118,24 @@ class _GoalDot extends StatelessWidget {
             color: AppColors.dotTodayProg,
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.slate900, width: 2),
+          ),
+        );
+      case _Dot.todayOff:
+        return Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.slate900, width: 1.5),
+          ),
+          child: Container(
+            width: 6,
+            height: 2,
+            decoration: BoxDecoration(
+              color: AppColors.slate300,
+              borderRadius: BorderRadius.circular(999),
+            ),
           ),
         );
     }

@@ -15,6 +15,5 @@ export 'src/goals/models/action_goal_trend.dart';
 export 'src/goals/models/action_goal_week.dart';
 export 'src/goals/models/expense_goal_month.dart';
 export 'src/goals/models/goal_daily_state.dart';
-export 'src/goals/models/goal_preferred_slot.dart';
 export 'src/goals/models/goal_streak.dart';
 export 'src/goals/models/goal_target.dart';

@@ -1,40 +1,26 @@
-import 'goal_preferred_slot.dart';
-
 class ActionGoalMeta {
   const ActionGoalMeta({
-    this.preferredSlots,
-    this.autoGenerateTasks,
+    this.dueDays,
   });
 
-  final List<GoalPreferredSlot>? preferredSlots;
-  final bool? autoGenerateTasks;
+  final List<String>? dueDays;
 
   factory ActionGoalMeta.fromJson(Map<String, dynamic> json) {
-    List<GoalPreferredSlot>? slots;
-    final raw = json['preferred_slots'];
+    List<String>? dueDays;
+    final raw = json['due_days'];
     if (raw is List) {
-      slots = raw
-          .map((e) {
-            if (e is Map<String, dynamic>) {
-              return GoalPreferredSlot.fromJson(e);
-            }
-            if (e is Map) {
-              return GoalPreferredSlot.fromJson(Map<String, dynamic>.from(e));
-            }
-            return null;
-          })
-          .whereType<GoalPreferredSlot>()
+      dueDays = raw
+          .map((e) => e?.toString())
+          .whereType<String>()
+          .where((e) => e.isNotEmpty)
           .toList();
     }
     return ActionGoalMeta(
-      preferredSlots: slots,
-      autoGenerateTasks: json['auto_generate_tasks'] as bool?,
+      dueDays: dueDays,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        if (preferredSlots != null)
-          'preferred_slots': preferredSlots!.map((e) => e.toJson()).toList(),
-        if (autoGenerateTasks != null) 'auto_generate_tasks': autoGenerateTasks,
+        if (dueDays != null) 'due_days': dueDays,
       };
 }

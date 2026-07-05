@@ -155,28 +155,24 @@ void main() {
     expect(d.items.first.target.op, GoalThresholdOp.lte);
   });
 
-  test('setModelRequestForCreateGoal: count weekly sets meta slots', () {
+  test('setModelRequestForCreateGoal: daily sets due days meta', () {
     final g = Goal(
       label: 'G',
-      cadence: GoalCadence.weekly,
-      actionModelTypeName: 'Gym',
+      cadence: GoalCadence.daily,
+      actionModelTypeName: 'Yoga',
       selectedAttribute: GoalSelectedAttribute.count,
       op: GoalThresholdOp.gte,
-      thresholdValue: 3,
-      preferredDays: [0, 2, 4],
-      preferredTime: '12:30',
-      autoGenerateTasks: true,
+      thresholdValue: 1,
+      dueDays: const [0, 1, 2, 3, 4, 5],
     );
     final req = setModelRequestForCreateGoal(g);
     expect(req.modelType, 'Goal');
     final attrs = req.attributes;
     expect(attrs, isNotNull);
     final map = {for (final a in attrs!) a.key: a.value};
-    expect(map[kGoalAttrThresholdValue], 3);
+    expect(map[kGoalAttrThresholdValue], 1);
     final meta = map[kGoalAttrMeta] as Map<String, dynamic>?;
-    expect(meta!['auto_generate_tasks'], isTrue);
-    final slots = meta['preferred_slots'] as List<dynamic>?;
-    expect(slots?.length, 3);
+    expect(meta!['due_days'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   });
 
   test('goalFromModel round-trip for duration', () {
