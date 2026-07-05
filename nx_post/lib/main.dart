@@ -467,6 +467,7 @@ class _FeedPageState extends State<FeedPage> {
 
   bool _matchesFilters(FeedItem item) {
     if (!_selectedKinds.contains(item.kind)) return false;
+    if (item.kind == FeedItemKind.microblog) return true;
     final selectedTags = _hasCustomTagSelection ? _selectedTags : null;
     if (selectedTags == null) return true;
     if (selectedTags.isEmpty) return false;
@@ -1220,6 +1221,10 @@ class _FeedMediaCarouselState extends State<FeedMediaCarousel> {
   @override
   Widget build(BuildContext context) {
     final hasMultiple = widget.media.length > 1;
+    if (!hasMultiple) {
+      return FeedSingleMediaFrame(media: widget.media.first);
+    }
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 450),
       child: ClipRRect(
@@ -1238,59 +1243,59 @@ class _FeedMediaCarouselState extends State<FeedMediaCarousel> {
                   controller: _controller,
                   itemCount: widget.media.length,
                   onPageChanged: (index) => setState(() => _index = index),
-                  itemBuilder: (context, index) =>
-                      FeedMediaPreview(media: widget.media[index]),
+                  itemBuilder: (context, index) => FeedMediaPreview(
+                    media: widget.media[index],
+                    fit: BoxFit.contain,
+                  ),
                 ),
-                if (hasMultiple) ...[
-                  _CarouselButton(
-                    alignment: Alignment.centerLeft,
-                    icon: Icons.chevron_left_rounded,
-                    onPressed: () => _goTo(_index - 1),
-                  ),
-                  _CarouselButton(
-                    alignment: Alignment.centerRight,
-                    icon: Icons.chevron_right_rounded,
-                    onPressed: () => _goTo(_index + 1),
-                  ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.30),
-                          borderRadius: BorderRadius.circular(999),
+                _CarouselButton(
+                  alignment: Alignment.centerLeft,
+                  icon: Icons.chevron_left_rounded,
+                  onPressed: () => _goTo(_index - 1),
+                ),
+                _CarouselButton(
+                  alignment: Alignment.centerRight,
+                  icon: Icons.chevron_right_rounded,
+                  onPressed: () => _goTo(_index + 1),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.30),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (var i = 0; i < widget.media.length; i++)
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  width: 6,
-                                  height: 6,
-                                  margin: EdgeInsets.only(
-                                    right: i == widget.media.length - 1 ? 0 : 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(
-                                      alpha: i == _index ? 1 : 0.42,
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (var i = 0; i < widget.media.length; i++)
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                width: 6,
+                                height: 6,
+                                margin: EdgeInsets.only(
+                                  right: i == widget.media.length - 1 ? 0 : 6,
                                 ),
-                            ],
-                          ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(
+                                    alpha: i == _index ? 1 : 0.42,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),
@@ -1309,6 +1314,43 @@ class _FeedMediaCarouselState extends State<FeedMediaCarousel> {
       next,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
+    );
+  }
+}
+
+class FeedSingleMediaFrame extends StatelessWidget {
+  const FeedSingleMediaFrame({required this.media, super.key});
+
+  final FeedMedia media;
+
+  @override
+  Widget build(BuildContext context) {
+    final aspectRatio = media.layout == MediaLayout.portrait
+        ? 9 / 16
+        : media.layout == MediaLayout.square
+        ? 1.0
+        : 16 / 9;
+    final maxWidth = media.layout == MediaLayout.portrait
+        ? 320.0
+        : media.layout == MediaLayout.square
+        ? 400.0
+        : double.infinity;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xffe4e4e7)),
+            color: const Color(0xfff4f4f5),
+          ),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: FeedMediaPreview(media: media, fit: BoxFit.cover),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1352,9 +1394,10 @@ class _CarouselButton extends StatelessWidget {
 }
 
 class FeedMediaPreview extends StatelessWidget {
-  const FeedMediaPreview({required this.media, super.key});
+  const FeedMediaPreview({required this.media, required this.fit, super.key});
 
   final FeedMedia media;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
@@ -1364,7 +1407,7 @@ class FeedMediaPreview extends StatelessWidget {
         if (media.previewUrl != null)
           Image.network(
             media.previewUrl!,
-            fit: BoxFit.contain,
+            fit: fit,
             errorBuilder: (context, error, stackTrace) =>
                 const Icon(Icons.image_not_supported_outlined),
           )
