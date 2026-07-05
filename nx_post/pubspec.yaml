@@ -9,6 +9,7 @@ environment:
 dependencies:
   cupertino_icons: ^1.0.8
   crypto: ^3.0.6
+  file_picker: ^10.3.10
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.3.2

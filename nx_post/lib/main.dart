@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1050,6 +1052,7 @@ class ComposeSheet extends StatefulWidget {
 class _ComposeSheetState extends State<ComposeSheet> {
   final _textController = TextEditingController();
   final _mediaController = TextEditingController();
+  final List<SelectedPostImage> _selectedImages = [];
   DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
   bool _saving = false;
@@ -1137,6 +1140,43 @@ class _ComposeSheetState extends State<ComposeSheet> {
               controller: _mediaController,
               decoration: inputDecoration('Image, YouTube, or Instagram URL'),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xff18181b),
+                side: const BorderSide(color: Color(0xffd4d4d8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _saving ? null : _pickImages,
+              icon: const Icon(Icons.add_photo_alternate_outlined, size: 20),
+              label: Text(
+                _selectedImages.isEmpty
+                    ? 'Add images'
+                    : 'Add more images (${_selectedImages.length})',
+              ),
+            ),
+            if (_selectedImages.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (var i = 0; i < _selectedImages.length; i++)
+                    SelectedImageChip(
+                      image: _selectedImages[i],
+                      onRemove: _saving
+                          ? null
+                          : () => setState(() => _selectedImages.removeAt(i)),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
@@ -1231,6 +1271,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
         text: text,
         postedAt: _postedAt,
         mediaUrl: _mediaController.text.trim(),
+        images: _selectedImages,
         publishEnabled: _publishEnabled,
       );
       if (!mounted) return;
@@ -1300,6 +1341,101 @@ class _ComposeSheetState extends State<ComposeSheet> {
       setState(() => _postedAt = picked);
     }
   }
+
+  Future<void> _pickImages() async {
+    try {
+      final result = await file_picker.FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: file_picker.FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png'],
+        withData: kIsWeb,
+      );
+      if (!mounted || result == null || result.files.isEmpty) {
+        return;
+      }
+      final images = result.files.map(SelectedPostImage.fromPickedFile);
+      setState(() => _selectedImages.addAll(images));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not choose images: $error')),
+      );
+    }
+  }
+}
+
+class SelectedPostImage {
+  const SelectedPostImage({required this.name, this.path, this.bytes});
+
+  final String name;
+  final String? path;
+  final Uint8List? bytes;
+
+  factory SelectedPostImage.fromPickedFile(file_picker.PlatformFile file) {
+    if (!kIsWeb && file.path != null && file.path!.isNotEmpty) {
+      return SelectedPostImage(name: file.name, path: file.path);
+    }
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      throw StateError('Could not read selected image bytes');
+    }
+    return SelectedPostImage(name: file.name, bytes: bytes);
+  }
+
+  String get mimeType {
+    final lower = name.toLowerCase();
+    return lower.endsWith('.png') ? 'image/png' : 'image/jpeg';
+  }
+}
+
+class SelectedImageChip extends StatelessWidget {
+  const SelectedImageChip({
+    required this.image,
+    required this.onRemove,
+    super.key,
+  });
+
+  final SelectedPostImage image;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 240),
+      decoration: BoxDecoration(
+        color: const Color(0xfff4f4f5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xffe4e4e7)),
+      ),
+      padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.image_outlined, size: 16, color: Color(0xff71717a)),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              image.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xff3f3f46),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+            padding: EdgeInsets.zero,
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, size: 16),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 InputDecoration inputDecoration(String hint) {
@@ -1346,21 +1482,22 @@ class MicroblogPostRepository {
     required String text,
     required DateTime postedAt,
     required String mediaUrl,
+    required List<SelectedPostImage> images,
     required bool publishEnabled,
   }) async {
     logNxPost('creating microblog publish=$publishEnabled');
     final cleanText = text.trim();
-    final media = mediaUrl.isEmpty
+    final linkMedia = mediaUrl.isEmpty
         ? <Map<String, dynamic>>[]
         : [_mediaFromUrl(mediaUrl)];
     final timestamp = postedAt.toUtc().toIso8601String();
-    final contentHash = microblogContentHash(
+    final draftHash = microblogContentHash(
       text: cleanText,
-      media: media,
+      media: const [],
       topic: null,
     );
 
-    await setKgqlModel(
+    final microblogId = await setKgqlModel(
       _graphqlClient,
       SetModelRequest(
         modelType: 'Microblog',
@@ -1369,17 +1506,20 @@ class MicroblogPostRepository {
           SetModelAttribute(key: 'text', value: cleanText),
           SetModelAttribute(key: 'created_at', value: timestamp),
           SetModelAttribute(key: 'updated_at', value: timestamp),
-          SetModelAttribute(key: 'media', value: media),
+          SetModelAttribute(
+            key: 'media',
+            value: const <Map<String, dynamic>>[],
+          ),
           SetModelAttribute(
             key: 'publish',
             value: {
-              'enabled': publishEnabled,
-              'dirty': publishEnabled,
-              'content_hash': contentHash,
+              'enabled': false,
+              'dirty': false,
+              'content_hash': draftHash,
               'last_published_hash': null,
               'first_published_at': null,
               'last_published_at': null,
-              'status': publishEnabled ? 'queued' : 'draft',
+              'status': 'draft',
               'last_error': null,
             },
           ),
@@ -1389,11 +1529,109 @@ class MicroblogPostRepository {
       auditSourceKind: 'nx_post',
     );
 
+    try {
+      final uploadedMedia = <Map<String, dynamic>>[];
+      for (final image in images) {
+        uploadedMedia.add(await uploadMicroblogImage(microblogId, image));
+      }
+      final media = [...uploadedMedia, ...linkMedia];
+      final contentHash = microblogContentHash(
+        text: cleanText,
+        media: media,
+        topic: null,
+      );
+
+      await setKgqlModel(
+        _graphqlClient,
+        SetModelRequest(
+          id: microblogId,
+          name: _nameFromText(cleanText),
+          attributes: [
+            SetModelAttribute(key: 'text', value: cleanText),
+            SetModelAttribute(key: 'updated_at', value: timestamp),
+            SetModelAttribute(key: 'media', value: media),
+            SetModelAttribute(
+              key: 'publish',
+              value: {
+                'enabled': publishEnabled,
+                'dirty': publishEnabled,
+                'content_hash': contentHash,
+                'last_published_hash': null,
+                'first_published_at': null,
+                'last_published_at': null,
+                'status': publishEnabled ? 'queued' : 'draft',
+                'last_error': null,
+              },
+            ),
+          ],
+        ),
+        domainId: await _domainId(),
+        auditSourceKind: 'nx_post',
+      );
+    } catch (error) {
+      logNxPost(
+        'create microblog media step failed id=$microblogId error=$error',
+      );
+      await _bestEffortDeleteMicroblog(microblogId);
+      rethrow;
+    }
+
     if (publishEnabled) {
       await triggerPublish(reason: 'microblog_post');
       await waitForPublishSync();
     }
     logNxPost('create microblog complete publish=$publishEnabled');
+  }
+
+  Future<Map<String, dynamic>> uploadMicroblogImage(
+    int microblogId,
+    SelectedPostImage image,
+  ) async {
+    logNxPost('uploading microblog image id=$microblogId name=${image.name}');
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('$normalizedBaseUrl/microblogs/assets/images'),
+          )
+          ..headers.addAll(httpHeaders())
+          ..fields['microblog_id'] = '$microblogId';
+
+    final path = image.path;
+    if (path != null && path.isNotEmpty) {
+      request.files.add(
+        await http.MultipartFile.fromPath('file', path, filename: image.name),
+      );
+    } else {
+      final bytes = image.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        throw StateError('Could not read selected image bytes');
+      }
+      request.files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: image.name),
+      );
+    }
+
+    final response = await http.Response.fromStream(
+      await _client.send(request),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      logNxPost(
+        'microblog image upload failed status=${response.statusCode} '
+        'body=${response.body}',
+      );
+      throw StateError(_httpErrorMessage(response));
+    }
+    final payload = jsonDecode(response.body);
+    if (payload is! Map || payload['url'] is! String) {
+      throw StateError('Invalid microblog image upload response');
+    }
+    return {
+      'type': 'image',
+      'source': 'local',
+      'url': payload['url'] as String,
+      'mime_type': image.mimeType,
+      'alt': image.name,
+    };
   }
 
   Future<void> deleteMicroblog(int id) async {
@@ -1416,6 +1654,19 @@ class MicroblogPostRepository {
     await triggerPublish(reason: 'microblog_delete');
     await waitForPublishSync();
     logNxPost('delete microblog complete id=$id');
+  }
+
+  Future<void> _bestEffortDeleteMicroblog(int id) async {
+    try {
+      await setKgqlModel(
+        _graphqlClient,
+        SetModelRequest(id: id, delete: true),
+        domainId: await _domainId(),
+        auditSourceKind: 'nx_post',
+      );
+    } catch (error) {
+      logNxPost('best-effort delete failed id=$id error=$error');
+    }
   }
 
   Future<void> triggerPublish({required String reason}) async {
