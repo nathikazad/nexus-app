@@ -1,9 +1,0 @@
-name: opus_flutter
-description: Simulator-safe stub for nx_time builds.
-publish_to: "none"
-version: 3.0.3
-
-environment:
-  sdk: ^3.9.2
-
-dependencies: {}

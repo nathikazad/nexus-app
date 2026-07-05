@@ -607,14 +607,30 @@ class _ConsistencyScoreLabel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.05,
-            fontWeight: FontWeight.w800,
-            color: AppColors.slate700,
-          ),
+        Row(
+          children: [
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                height: 1.05,
+                fontWeight: FontWeight.w800,
+                color: AppColors.slate700,
+              ),
+            ),
+            if (consistency.total > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '(${consistency.hit}/${consistency.total})',
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.05,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate500,
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );

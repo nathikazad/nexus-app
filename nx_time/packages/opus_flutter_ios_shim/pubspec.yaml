@@ -1,0 +1,20 @@
+name: opus_flutter_ios
+description: Local iOS implementation for opus_flutter using CocoaPods libopus.
+publish_to: "none"
+version: 3.0.1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  opus_flutter_platform_interface: ^3.0.0
+
+flutter:
+  plugin:
+    implements: opus_flutter
+    platforms:
+      ios:
+        pluginClass: OpusFlutterIosPlugin

@@ -45,8 +45,8 @@ dependency_overrides:
   connectivity_plus: 6.1.5
   flutter_sound:
     path: packages/flutter_sound_stub
-  opus_flutter:
-    path: packages/opus_flutter_stub
+  opus_flutter_ios:
+    path: packages/opus_flutter_ios_shim
 
 flutter:
   uses-material-design: true

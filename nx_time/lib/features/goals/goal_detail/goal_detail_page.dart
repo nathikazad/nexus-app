@@ -717,7 +717,7 @@ class _GoalMonthCalendarSection extends StatelessWidget {
               TextSpan(
                 style: const TextStyle(fontSize: 11, color: AppColors.slate500),
                 children: [
-                  const TextSpan(text: 'consistency '),
+                  const TextSpan(text: 'Consistency '),
                   TextSpan(
                     text: percent == null ? '--' : '$percent%',
                     style: const TextStyle(

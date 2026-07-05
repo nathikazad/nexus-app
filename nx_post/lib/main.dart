@@ -424,6 +424,7 @@ class _FeedPageState extends State<FeedPage> {
                               constraints: const BoxConstraints(maxWidth: 672),
                               child: FeedItemView(
                                 item: visibleItems[index],
+                                onEditMicroblog: _editMicroblog,
                                 onDeleteMicroblog: _deleteMicroblog,
                               ),
                             ),
@@ -488,6 +489,17 @@ class _FeedPageState extends State<FeedPage> {
         ..addAll(selectedKinds);
       _hasCustomTagSelection = hasCustomTagSelection;
     });
+  }
+
+  Future<void> _editMicroblog(FeedItem item) async {
+    final edited = await showComposeSheet(
+      context,
+      repository: widget.postRepository,
+      item: item,
+    );
+    if (edited == true && mounted) {
+      _reload();
+    }
   }
 
   Future<void> _deleteMicroblog(FeedItem item) async {
@@ -998,18 +1010,24 @@ class TopicMenuOption extends StatelessWidget {
 class FeedItemView extends StatelessWidget {
   const FeedItemView({
     required this.item,
+    required this.onEditMicroblog,
     required this.onDeleteMicroblog,
     super.key,
   });
 
   final FeedItem item;
+  final ValueChanged<FeedItem> onEditMicroblog;
   final ValueChanged<FeedItem> onDeleteMicroblog;
 
   @override
   Widget build(BuildContext context) {
     return item.kind == FeedItemKind.document
         ? DocumentFeedItem(item: item)
-        : MicroblogFeedItem(item: item, onDelete: onDeleteMicroblog);
+        : MicroblogFeedItem(
+            item: item,
+            onEdit: onEditMicroblog,
+            onDelete: onDeleteMicroblog,
+          );
   }
 }
 
@@ -1063,11 +1081,13 @@ class DocumentFeedItem extends StatelessWidget {
 class MicroblogFeedItem extends StatelessWidget {
   const MicroblogFeedItem({
     required this.item,
+    required this.onEdit,
     required this.onDelete,
     super.key,
   });
 
   final FeedItem item;
+  final ValueChanged<FeedItem> onEdit;
   final ValueChanged<FeedItem> onDelete;
 
   @override
@@ -1083,6 +1103,18 @@ class MicroblogFeedItem extends StatelessWidget {
                 date: item.date,
                 topic: item.topics.firstOrNull,
                 includeTime: true,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Edit post',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+              padding: EdgeInsets.zero,
+              onPressed: () => onEdit(item),
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xffa1a1aa),
+                size: 19,
               ),
             ),
             IconButton(
@@ -1488,6 +1520,7 @@ class FeedMessage extends StatelessWidget {
 Future<bool?> showComposeSheet(
   BuildContext context, {
   required MicroblogPostRepository repository,
+  FeedItem? item,
 }) {
   return showModalBottomSheet<bool>(
     context: context,
@@ -1497,14 +1530,15 @@ Future<bool?> showComposeSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (context) => ComposeSheet(repository: repository),
+    builder: (context) => ComposeSheet(repository: repository, item: item),
   );
 }
 
 class ComposeSheet extends StatefulWidget {
-  const ComposeSheet({required this.repository, super.key});
+  const ComposeSheet({required this.repository, this.item, super.key});
 
   final MicroblogPostRepository repository;
+  final FeedItem? item;
 
   @override
   State<ComposeSheet> createState() => _ComposeSheetState();
@@ -1515,10 +1549,25 @@ class _ComposeSheetState extends State<ComposeSheet> {
   final _mediaController = TextEditingController();
   final _imagePicker = image_picker.ImagePicker();
   final List<SelectedPostImage> _selectedImages = [];
+  final List<ExistingPostMedia> _existingMedia = [];
   DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
   bool _saving = false;
   String _savingLabel = 'Saving...';
+
+  bool get _isEditing => widget.item?.modelId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final item = widget.item;
+    if (item == null) return;
+    _textController.text = item.text;
+    _postedAt = item.date ?? DateTime.now();
+    _existingMedia.addAll(
+      item.media.map((media) => ExistingPostMedia.fromFeedMedia(media)),
+    );
+  }
 
   @override
   void dispose() {
@@ -1541,9 +1590,9 @@ class _ComposeSheetState extends State<ComposeSheet> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'New microblog',
+                    _isEditing ? 'Edit microblog' : 'New microblog',
                     style: TextStyle(
                       color: Color(0xff18181b),
                       fontSize: 20,
@@ -1618,19 +1667,28 @@ class _ComposeSheetState extends State<ComposeSheet> {
               onPressed: _saving ? null : _pickImages,
               icon: const Icon(Icons.add_photo_alternate_outlined, size: 20),
               label: Text(
-                _selectedImages.isEmpty
+                _selectedImages.isEmpty && _existingMedia.isEmpty
                     ? 'Add images'
                     : 'Add more images (${_selectedImages.length})',
               ),
             ),
-            if (_selectedImages.isNotEmpty) ...[
+            if (_existingMedia.isNotEmpty || _selectedImages.isNotEmpty) ...[
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  for (var i = 0; i < _existingMedia.length; i++)
+                    ComposeMediaPreviewTile(
+                      label: _existingMedia[i].label,
+                      previewUrl: _existingMedia[i].previewUrl,
+                      isVideo: _existingMedia[i].isVideo,
+                      onRemove: _saving
+                          ? null
+                          : () => setState(() => _existingMedia.removeAt(i)),
+                    ),
                   for (var i = 0; i < _selectedImages.length; i++)
-                    SelectedImageChip(
+                    ComposeMediaPreviewTile(
                       image: _selectedImages[i],
                       onRemove: _saving
                           ? null
@@ -1678,7 +1736,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
                           Text(_savingLabel),
                         ],
                       )
-                    : const Text('Save microblog'),
+                    : Text(_isEditing ? 'Update microblog' : 'Save microblog'),
               ),
             ),
             AnimatedSwitcher(
@@ -1729,13 +1787,26 @@ class _ComposeSheetState extends State<ComposeSheet> {
       _savingLabel = _publishEnabled ? 'Syncing...' : 'Saving...';
     });
     try {
-      await widget.repository.createMicroblog(
-        text: text,
-        postedAt: _postedAt,
-        mediaUrl: _mediaController.text.trim(),
-        images: _selectedImages,
-        publishEnabled: _publishEnabled,
-      );
+      final modelId = widget.item?.modelId;
+      if (modelId == null) {
+        await widget.repository.createMicroblog(
+          text: text,
+          postedAt: _postedAt,
+          mediaUrl: _mediaController.text.trim(),
+          images: _selectedImages,
+          publishEnabled: _publishEnabled,
+        );
+      } else {
+        await widget.repository.updateMicroblog(
+          id: modelId,
+          text: text,
+          postedAt: _postedAt,
+          mediaUrl: _mediaController.text.trim(),
+          existingMedia: _existingMedia.map((media) => media.raw).toList(),
+          images: _selectedImages,
+          publishEnabled: _publishEnabled,
+        );
+      }
       if (!mounted) return;
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1749,7 +1820,9 @@ class _ComposeSheetState extends State<ComposeSheet> {
       );
     } catch (error) {
       if (!mounted) return;
-      logNxPost('create microblog failed error=$error');
+      logNxPost(
+        '${_isEditing ? 'edit' : 'create'} microblog failed error=$error',
+      );
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not save microblog: $error')),
@@ -1893,7 +1966,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
         allowMultiple: true,
         type: file_picker.FileType.custom,
         allowedExtensions: const ['jpg', 'jpeg', 'png'],
-        withData: kIsWeb,
+        withData: true,
       );
       if (!mounted || result == null || result.files.isEmpty) {
         return;
@@ -1922,22 +1995,23 @@ class SelectedPostImage {
   final Uint8List? bytes;
 
   factory SelectedPostImage.fromPickedFile(file_picker.PlatformFile file) {
-    if (!kIsWeb && file.path != null && file.path!.isNotEmpty) {
-      return SelectedPostImage(name: file.name, path: file.path);
-    }
     final bytes = file.bytes;
-    if (bytes == null || bytes.isEmpty) {
+    final path = !kIsWeb && file.path != null && file.path!.isNotEmpty
+        ? file.path
+        : null;
+    if ((bytes == null || bytes.isEmpty) && path == null) {
       throw StateError('Could not read selected image bytes');
     }
-    return SelectedPostImage(name: file.name, bytes: bytes);
+    return SelectedPostImage(name: file.name, path: path, bytes: bytes);
   }
 
   static Future<SelectedPostImage> fromXFile(image_picker.XFile file) async {
-    if (!kIsWeb) {
-      return SelectedPostImage(name: file.name, path: file.path);
-    }
     final bytes = await file.readAsBytes();
-    return SelectedPostImage(name: file.name, bytes: bytes);
+    return SelectedPostImage(
+      name: file.name,
+      path: kIsWeb ? null : file.path,
+      bytes: bytes,
+    );
   }
 
   String get mimeType {
@@ -1946,51 +2020,139 @@ class SelectedPostImage {
   }
 }
 
-class SelectedImageChip extends StatelessWidget {
-  const SelectedImageChip({
-    required this.image,
+class ExistingPostMedia {
+  const ExistingPostMedia({
+    required this.raw,
+    required this.label,
+    required this.previewUrl,
+    required this.isVideo,
+  });
+
+  final Map<String, dynamic> raw;
+  final String label;
+  final String? previewUrl;
+  final bool isVideo;
+
+  factory ExistingPostMedia.fromFeedMedia(FeedMedia media) {
+    final urlLabel = firstNonEmpty([
+      media.raw['alt']?.toString(),
+      media.raw['provider']?.toString(),
+      media.raw['url']?.toString(),
+    ]);
+    final previewUrl = media.previewUrl;
+    return ExistingPostMedia(
+      raw: Map<String, dynamic>.from(media.raw),
+      label: urlLabel == null || urlLabel.isEmpty ? 'Media' : urlLabel,
+      previewUrl: previewUrl,
+      isVideo: media.type == FeedMediaType.video,
+    );
+  }
+}
+
+class ComposeMediaPreviewTile extends StatelessWidget {
+  const ComposeMediaPreviewTile({
     required this.onRemove,
+    this.image,
+    this.label,
+    this.previewUrl,
+    this.isVideo = false,
     super.key,
   });
 
-  final SelectedPostImage image;
+  final SelectedPostImage? image;
+  final String? label;
+  final String? previewUrl;
+  final bool isVideo;
   final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 240),
-      decoration: BoxDecoration(
-        color: const Color(0xfff4f4f5),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xffe4e4e7)),
-      ),
-      padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
-      child: Row(
+    final selectedImage = image;
+    final tileLabel = label ?? selectedImage?.name ?? 'Media';
+    return SizedBox(
+      width: 68,
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.image_outlined, size: 16, color: Color(0xff71717a)),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              image.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xff3f3f46),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xfff4f4f5),
+                    border: Border.all(color: const Color(0xffe4e4e7)),
+                  ),
+                  child: SizedBox(
+                    width: 58,
+                    height: 58,
+                    child: _preview(selectedImage),
+                  ),
+                ),
               ),
+              Positioned(
+                right: -6,
+                top: -6,
+                child: Material(
+                  color: const Color(0xff18181b),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onRemove,
+                    child: const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            tileLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xff71717a),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-            padding: EdgeInsets.zero,
-            onPressed: onRemove,
-            icon: const Icon(Icons.close_rounded, size: 16),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _preview(SelectedPostImage? selectedImage) {
+    final bytes = selectedImage?.bytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return Image.memory(bytes, fit: BoxFit.cover);
+    }
+    final url = previewUrl;
+    if (url != null && url.isNotEmpty && !isVideo) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _placeholder(),
+      );
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
+    return Center(
+      child: Icon(
+        isVideo ? Icons.play_circle_outline_rounded : Icons.image_outlined,
+        color: const Color(0xff71717a),
+        size: 24,
       ),
     );
   }
@@ -2062,8 +2224,7 @@ class MicroblogPostRepository {
         name: _nameFromText(cleanText),
         attributes: [
           SetModelAttribute(key: 'text', value: cleanText),
-          SetModelAttribute(key: 'created_at', value: timestamp),
-          SetModelAttribute(key: 'updated_at', value: timestamp),
+          SetModelAttribute(key: 'posted_at', value: timestamp),
           SetModelAttribute(
             key: 'media',
             value: const <Map<String, dynamic>>[],
@@ -2106,7 +2267,7 @@ class MicroblogPostRepository {
           name: _nameFromText(cleanText),
           attributes: [
             SetModelAttribute(key: 'text', value: cleanText),
-            SetModelAttribute(key: 'updated_at', value: timestamp),
+            SetModelAttribute(key: 'posted_at', value: timestamp),
             SetModelAttribute(key: 'media', value: media),
             SetModelAttribute(
               key: 'publish',
@@ -2139,6 +2300,67 @@ class MicroblogPostRepository {
       await waitForPublishSync();
     }
     logNxPost('create microblog complete publish=$publishEnabled');
+  }
+
+  Future<void> updateMicroblog({
+    required int id,
+    required String text,
+    required DateTime postedAt,
+    required String mediaUrl,
+    required List<Map<String, dynamic>> existingMedia,
+    required List<SelectedPostImage> images,
+    required bool publishEnabled,
+  }) async {
+    logNxPost('updating microblog id=$id publish=$publishEnabled');
+    final cleanText = text.trim();
+    final linkMedia = mediaUrl.isEmpty
+        ? <Map<String, dynamic>>[]
+        : [_mediaFromUrl(mediaUrl)];
+    final timestamp = postedAt.toUtc().toIso8601String();
+    final uploadedMedia = <Map<String, dynamic>>[];
+    for (final image in images) {
+      uploadedMedia.add(await uploadMicroblogImage(id, image));
+    }
+    final media = [...existingMedia, ...uploadedMedia, ...linkMedia];
+    final contentHash = microblogContentHash(
+      text: cleanText,
+      media: media,
+      topic: null,
+    );
+
+    await setKgqlModel(
+      _graphqlClient,
+      SetModelRequest(
+        id: id,
+        name: _nameFromText(cleanText),
+        attributes: [
+          SetModelAttribute(key: 'text', value: cleanText),
+          SetModelAttribute(key: 'posted_at', value: timestamp),
+          SetModelAttribute(key: 'media', value: media),
+          SetModelAttribute(
+            key: 'publish',
+            value: {
+              'enabled': publishEnabled,
+              'dirty': publishEnabled,
+              'content_hash': contentHash,
+              'last_published_hash': null,
+              'first_published_at': null,
+              'last_published_at': null,
+              'status': publishEnabled ? 'queued' : 'draft',
+              'last_error': null,
+            },
+          ),
+        ],
+      ),
+      domainId: await _domainId(),
+      auditSourceKind: 'nx_post',
+    );
+
+    if (publishEnabled) {
+      await triggerPublish(reason: 'microblog_edit');
+      await waitForPublishSync();
+    }
+    logNxPost('update microblog complete id=$id publish=$publishEnabled');
   }
 
   Future<Map<String, dynamic>> uploadMicroblogImage(
@@ -2486,9 +2708,7 @@ class MirrorFeedRepository {
       kind: FeedItemKind.microblog,
       title: '',
       text: microblog['text']?.toString() ?? '',
-      date:
-          parseDate(microblog['updated_at']) ??
-          parseDate(microblog['created_at']),
+      date: parseDate(microblog['posted_at']),
       topics: topicTags(microblog['tags']),
       media: media ?? const [],
     );
@@ -2511,6 +2731,7 @@ class MirrorFeedRepository {
           ? '$baseUrl/public/blobs/${Uri.encodeComponent(url)}'
           : url,
       layout: MediaLayout.wide,
+      raw: Map<String, dynamic>.from(media),
     );
   }
 }
@@ -2548,11 +2769,13 @@ class FeedMedia {
     required this.type,
     required this.previewUrl,
     required this.layout,
+    required this.raw,
   });
 
   final FeedMediaType type;
   final String? previewUrl;
   final MediaLayout layout;
+  final Map<String, dynamic> raw;
 }
 
 List<String> topicTags(Object? tags) {
@@ -2590,6 +2813,14 @@ String shorten(String value) {
       .trim();
   if (clean.isEmpty) return 'A published document from the mirror.';
   return clean.length > 220 ? '${clean.substring(0, 220).trim()}...' : clean;
+}
+
+String? firstNonEmpty(Iterable<String?> values) {
+  for (final value in values) {
+    final clean = value?.trim();
+    if (clean != null && clean.isNotEmpty) return clean;
+  }
+  return null;
 }
 
 String microblogContentHash({
