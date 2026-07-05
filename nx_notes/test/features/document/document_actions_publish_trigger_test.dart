@@ -12,31 +12,34 @@ import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
 
 void main() {
-  test('publish click saves publish json and triggers immediate publish', () async {
-    final repository = _FakeDocumentRepository();
-    final trigger = _FakeMirrorPublishTrigger();
-    final container = ProviderContainer(
-      overrides: [
-        documentRepositoryProvider.overrideWithValue(repository),
-        mirrorPublishTriggerProvider.overrideWithValue(trigger),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'publish click saves publish json and triggers immediate publish',
+    () async {
+      final repository = _FakeDocumentRepository();
+      final trigger = _FakeMirrorPublishTrigger();
+      final container = ProviderContainer(
+        overrides: [
+          documentRepositoryProvider.overrideWithValue(repository),
+          mirrorPublishTriggerProvider.overrideWithValue(trigger),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final document = _document(publish: DocumentPublishState.disabled());
-    repository.nextUpdate = document;
+      final document = _document(publish: DocumentPublishState.disabled());
+      repository.nextUpdate = document;
 
-    await container
-        .read(documentMutationControllerProvider)
-        .setPublishEnabled(document, true);
-    await Future<void>.delayed(Duration.zero);
+      await container
+          .read(documentMutationControllerProvider)
+          .setPublishEnabled(document, true);
+      await Future<void>.delayed(Duration.zero);
 
-    expect(repository.updated, hasLength(2));
-    expect(repository.updated.last.publish.enabled, true);
-    expect(trigger.calls, [
-      const _TriggerCall('publish_click', 3245, true),
-    ]);
-  });
+      expect(repository.updated, hasLength(2));
+      expect(repository.updated.last.publish.enabled, true);
+      expect(trigger.calls, [
+        const _TriggerCall('publish_click', 3245, true, true),
+      ]);
+    },
+  );
 
   test('published draft save triggers debounced edit publish', () async {
     final repository = _FakeDocumentRepository();
@@ -64,9 +67,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(repository.updated, hasLength(1));
-    expect(trigger.calls, [
-      const _TriggerCall('edit', 3245, false),
-    ]);
+    expect(trigger.calls, [const _TriggerCall('edit', 3245, false, false)]);
   });
 
   test('private draft save does not trigger publishing', () async {
@@ -80,17 +81,47 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(documentMutationControllerProvider).saveDraft(
-      _document(publish: DocumentPublishState.disabled()),
-      policy: DraftSavePolicy.immediate,
-    );
+    await container
+        .read(documentMutationControllerProvider)
+        .saveDraft(
+          _document(publish: DocumentPublishState.disabled()),
+          policy: DraftSavePolicy.immediate,
+        );
     await Future<void>.delayed(Duration.zero);
 
     expect(repository.updated, hasLength(1));
     expect(trigger.calls, isEmpty);
   });
 
-  test('trigger failure does not fail document save', () async {
+  test(
+    'publish click trigger failure fails after saving publish json',
+    () async {
+      final repository = _FakeDocumentRepository();
+      final trigger = _FakeMirrorPublishTrigger(throwsOnTrigger: true);
+      final container = ProviderContainer(
+        overrides: [
+          documentRepositoryProvider.overrideWithValue(repository),
+          mirrorPublishTriggerProvider.overrideWithValue(trigger),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container
+            .read(documentMutationControllerProvider)
+            .setPublishEnabled(_document(), true),
+        throwsStateError,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.updated, hasLength(2));
+      expect(trigger.calls, [
+        const _TriggerCall('publish_click', 3245, true, true),
+      ]);
+    },
+  );
+
+  test('edit trigger failure does not fail document save', () async {
     final repository = _FakeDocumentRepository();
     final trigger = _FakeMirrorPublishTrigger(throwsOnTrigger: true);
     final container = ProviderContainer(
@@ -101,15 +132,22 @@ void main() {
     );
     addTearDown(container.dispose);
 
+    final document = _document(
+      publish: DocumentPublishState.disabled().enable(
+        jsonDocument: _jsonDocument('hello'),
+        publishedAt: '2026-07-04T00:00:00Z',
+        title: 'Doc',
+        slug: 'doc',
+      ),
+    );
+
     await container
         .read(documentMutationControllerProvider)
-        .setPublishEnabled(_document(), true);
+        .saveDraft(document, policy: DraftSavePolicy.immediate);
     await Future<void>.delayed(Duration.zero);
 
-    expect(repository.updated, hasLength(2));
-    expect(trigger.calls, [
-      const _TriggerCall('publish_click', 3245, true),
-    ]);
+    expect(repository.updated, hasLength(1));
+    expect(trigger.calls, [const _TriggerCall('edit', 3245, false, false)]);
   });
 }
 
@@ -165,8 +203,9 @@ class _FakeMirrorPublishTrigger implements MirrorPublishTrigger {
     required String reason,
     required int documentId,
     required bool immediate,
+    bool waitForCompletion = false,
   }) async {
-    calls.add(_TriggerCall(reason, documentId, immediate));
+    calls.add(_TriggerCall(reason, documentId, immediate, waitForCompletion));
     if (throwsOnTrigger) {
       throw StateError('boom');
     }
@@ -174,26 +213,34 @@ class _FakeMirrorPublishTrigger implements MirrorPublishTrigger {
 }
 
 class _TriggerCall {
-  const _TriggerCall(this.reason, this.documentId, this.immediate);
+  const _TriggerCall(
+    this.reason,
+    this.documentId,
+    this.immediate,
+    this.waitForCompletion,
+  );
 
   final String reason;
   final int documentId;
   final bool immediate;
+  final bool waitForCompletion;
 
   @override
   bool operator ==(Object other) {
     return other is _TriggerCall &&
         other.reason == reason &&
         other.documentId == documentId &&
-        other.immediate == immediate;
+        other.immediate == immediate &&
+        other.waitForCompletion == waitForCompletion;
   }
 
   @override
-  int get hashCode => Object.hash(reason, documentId, immediate);
+  int get hashCode =>
+      Object.hash(reason, documentId, immediate, waitForCompletion);
 
   @override
   String toString() {
-    return '_TriggerCall($reason, $documentId, $immediate)';
+    return '_TriggerCall($reason, $documentId, $immediate, $waitForCompletion)';
   }
 }
 

@@ -135,12 +135,11 @@ class DocumentMutationController {
     );
     _cacheDocument(updated);
     await _ref.read(documentRepositoryProvider).updateDraft(updated);
-    unawaited(
-      _triggerMirrorPublish(
-        reason: 'publish_click',
-        documentId: updated.id,
-        immediate: true,
-      ),
+    await _triggerMirrorPublish(
+      reason: 'publish_click',
+      documentId: updated.id,
+      immediate: true,
+      waitForCompletion: true,
     );
     _logDbSync(
       'set_publish',
@@ -329,6 +328,7 @@ class DocumentMutationController {
     required String reason,
     required int documentId,
     required bool immediate,
+    bool waitForCompletion = false,
   }) async {
     final trigger = _ref.read(mirrorPublishTriggerProvider);
     if (trigger == null) return;
@@ -337,6 +337,7 @@ class DocumentMutationController {
         reason: reason,
         documentId: documentId,
         immediate: immediate,
+        waitForCompletion: waitForCompletion,
       );
       debugMirrorPublish(
         'triggered reason=$reason document=$documentId immediate=$immediate',
@@ -345,6 +346,9 @@ class DocumentMutationController {
       debugMirrorPublish(
         'trigger failed reason=$reason document=$documentId error=$error',
       );
+      if (waitForCompletion) {
+        rethrow;
+      }
     }
   }
 }
