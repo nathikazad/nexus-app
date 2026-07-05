@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart' as image_picker;
 import 'package:intl/intl.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
@@ -316,8 +317,13 @@ class FeedPage extends StatefulWidget {
 
 class _FeedPageState extends State<FeedPage> {
   late Future<List<FeedItem>> _feedFuture;
-  String _selectedTopic = 'All Topics';
+  final Set<String> _selectedTags = {};
+  final Set<FeedItemKind> _selectedKinds = {
+    FeedItemKind.document,
+    FeedItemKind.microblog,
+  };
   final Set<String> _deletedItemIds = {};
+  bool _hasCustomTagSelection = false;
   bool _syncing = false;
   String _syncLabel = '';
 
@@ -345,14 +351,10 @@ class _FeedPageState extends State<FeedPage> {
             builder: (context, snapshot) {
               final items = snapshot.data ?? const <FeedItem>[];
               final topics = _topicsFor(items);
-              final visibleItems =
-                  (_selectedTopic == 'All Topics'
-                          ? items
-                          : items.where(
-                              (item) => item.topics.contains(_selectedTopic),
-                            ))
-                      .where((item) => !_deletedItemIds.contains(item.id))
-                      .toList(growable: false);
+              final visibleItems = items
+                  .where(_matchesFilters)
+                  .where((item) => !_deletedItemIds.contains(item.id))
+                  .toList(growable: false);
 
               return CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -368,10 +370,10 @@ class _FeedPageState extends State<FeedPage> {
                             children: [
                               FeedHeader(
                                 topics: topics,
-                                selectedTopic: _selectedTopic,
-                                onTopicChanged: (topic) {
-                                  setState(() => _selectedTopic = topic);
-                                },
+                                selectedTags: _selectedTags,
+                                selectedKinds: _selectedKinds,
+                                hasCustomTagSelection: _hasCustomTagSelection,
+                                onFiltersChanged: _setFilters,
                               ),
                               SyncStatusBanner(
                                 visible: _syncing,
@@ -415,7 +417,7 @@ class _FeedPageState extends State<FeedPage> {
                       padding: const EdgeInsets.fromLTRB(20, 40, 20, 96),
                       sliver: SliverList.separated(
                         itemCount: visibleItems.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 52),
+                        separatorBuilder: (_, _) => const SizedBox(height: 56),
                         itemBuilder: (context, index) {
                           return Center(
                             child: ConstrainedBox(
@@ -457,9 +459,34 @@ class _FeedPageState extends State<FeedPage> {
   List<String> _topicsFor(List<FeedItem> items) {
     final topics = <String>{};
     for (final item in items) {
+      if (item.kind != FeedItemKind.document) continue;
       topics.addAll(item.topics);
     }
-    return ['All Topics', ...topics.toList()..sort()];
+    return [...topics.toList()..sort()];
+  }
+
+  bool _matchesFilters(FeedItem item) {
+    if (!_selectedKinds.contains(item.kind)) return false;
+    final selectedTags = _hasCustomTagSelection ? _selectedTags : null;
+    if (selectedTags == null) return true;
+    if (selectedTags.isEmpty) return false;
+    return item.topics.any(selectedTags.contains);
+  }
+
+  void _setFilters({
+    required Set<String> selectedTags,
+    required Set<FeedItemKind> selectedKinds,
+    required bool hasCustomTagSelection,
+  }) {
+    setState(() {
+      _selectedTags
+        ..clear()
+        ..addAll(selectedTags);
+      _selectedKinds
+        ..clear()
+        ..addAll(selectedKinds);
+      _hasCustomTagSelection = hasCustomTagSelection;
+    });
   }
 
   Future<void> _deleteMicroblog(FeedItem item) async {
@@ -632,79 +659,335 @@ class _SyncStatusBannerState extends State<SyncStatusBanner>
 class FeedHeader extends StatelessWidget {
   const FeedHeader({
     required this.topics,
-    required this.selectedTopic,
-    required this.onTopicChanged,
+    required this.selectedTags,
+    required this.selectedKinds,
+    required this.hasCustomTagSelection,
+    required this.onFiltersChanged,
     super.key,
   });
 
   final List<String> topics;
-  final String selectedTopic;
-  final ValueChanged<String> onTopicChanged;
+  final Set<String> selectedTags;
+  final Set<FeedItemKind> selectedKinds;
+  final bool hasCustomTagSelection;
+  final void Function({
+    required Set<String> selectedTags,
+    required Set<FeedItemKind> selectedKinds,
+    required bool hasCustomTagSelection,
+  })
+  onFiltersChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xffe4e4e7))),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Feed',
+                style: TextStyle(
+                  color: Color(0xffa1a1aa),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.6,
+                ),
+              ),
+            ),
+            TopicFilterMenu(
+              topics: topics,
+              selectedTags: selectedTags,
+              selectedKinds: selectedKinds,
+              hasCustomTagSelection: hasCustomTagSelection,
+              onFiltersChanged: onFiltersChanged,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TopicFilterMenu extends StatelessWidget {
+  const TopicFilterMenu({
+    required this.topics,
+    required this.selectedTags,
+    required this.selectedKinds,
+    required this.hasCustomTagSelection,
+    required this.onFiltersChanged,
+    super.key,
+  });
+
+  final List<String> topics;
+  final Set<String> selectedTags;
+  final Set<FeedItemKind> selectedKinds;
+  final bool hasCustomTagSelection;
+  final void Function({
+    required Set<String> selectedTags,
+    required Set<FeedItemKind> selectedKinds,
+    required bool hasCustomTagSelection,
+  })
+  onFiltersChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 640;
+    return PopupMenuButton<void>(
+      tooltip: 'Filter by topic',
+      position: PopupMenuPosition.under,
+      color: Colors.white,
+      elevation: 12,
+      surfaceTintColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: Color(0xffe4e4e7)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      constraints: const BoxConstraints(minWidth: 192),
+      itemBuilder: (context) => [
+        PopupMenuItem<void>(
+          enabled: false,
+          padding: const EdgeInsets.all(6),
+          child: FilterMenuPanel(
+            topics: topics,
+            selectedTags: selectedTags,
+            selectedKinds: selectedKinds,
+            hasCustomTagSelection: hasCustomTagSelection,
+            onFiltersChanged: onFiltersChanged,
+          ),
+        ),
+      ],
+      child: Container(
+        constraints: BoxConstraints(
+          minWidth: compact ? 36 : 140,
+          minHeight: 36,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xfff4f4f5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_list_rounded,
+              size: compact ? 18 : 16,
+              color: const Color(0xff71717a),
+            ),
+            if (!compact) ...[
+              const SizedBox(width: 8),
+              const Flexible(
+                child: Text(
+                  'Filters',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Color(0xff3f3f46),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: Color(0xff71717a),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FilterMenuPanel extends StatefulWidget {
+  const FilterMenuPanel({
+    required this.topics,
+    required this.selectedTags,
+    required this.selectedKinds,
+    required this.hasCustomTagSelection,
+    required this.onFiltersChanged,
+    super.key,
+  });
+
+  final List<String> topics;
+  final Set<String> selectedTags;
+  final Set<FeedItemKind> selectedKinds;
+  final bool hasCustomTagSelection;
+  final void Function({
+    required Set<String> selectedTags,
+    required Set<FeedItemKind> selectedKinds,
+    required bool hasCustomTagSelection,
+  })
+  onFiltersChanged;
+
+  @override
+  State<FilterMenuPanel> createState() => _FilterMenuPanelState();
+}
+
+class _FilterMenuPanelState extends State<FilterMenuPanel> {
+  late Set<String> _selectedTags;
+  late Set<FeedItemKind> _selectedKinds;
+  late bool _hasCustomTagSelection;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTags = widget.hasCustomTagSelection
+        ? {...widget.selectedTags}
+        : {...widget.topics};
+    _selectedKinds = {...widget.selectedKinds};
+    _hasCustomTagSelection = widget.hasCustomTagSelection;
+  }
+
+  void _emit() {
+    widget.onFiltersChanged(
+      selectedTags: _selectedTags,
+      selectedKinds: _selectedKinds,
+      hasCustomTagSelection: _hasCustomTagSelection,
+    );
+  }
+
+  void _toggleTag(String topic) {
+    setState(() {
+      _hasCustomTagSelection = true;
+      if (!_selectedTags.remove(topic)) {
+        _selectedTags.add(topic);
+      }
+    });
+    _emit();
+  }
+
+  void _toggleKind(FeedItemKind kind) {
+    setState(() {
+      if (!_selectedKinds.remove(kind)) {
+        _selectedKinds.add(kind);
+      }
+    });
+    _emit();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.topics.isNotEmpty) ...[
+            const FilterMenuTitle('Tags'),
+            for (final topic in widget.topics)
+              TopicMenuOption(
+                label: topic,
+                selected: _selectedTags.contains(topic),
+                onTap: () => _toggleTag(topic),
+              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Divider(height: 1, color: Color(0xfff4f4f5)),
+            ),
+          ],
+          const FilterMenuTitle('Type'),
+          TopicMenuOption(
+            label: 'Essays',
+            selected: _selectedKinds.contains(FeedItemKind.document),
+            onTap: () => _toggleKind(FeedItemKind.document),
+          ),
+          TopicMenuOption(
+            label: 'Microblogs',
+            selected: _selectedKinds.contains(FeedItemKind.microblog),
+            onTap: () => _toggleKind(FeedItemKind.microblog),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FilterMenuTitle extends StatelessWidget {
+  const FilterMenuTitle(this.label, {super.key});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xffe4e4e7))),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+      child: Text(
+        label.toUpperCase(),
+        style: const TextStyle(
+          color: Color(0xffa1a1aa),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.3,
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Feed',
-                  style: TextStyle(
-                    color: Color(0xffa1a1aa),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.6,
-                  ),
+      ),
+    );
+  }
+}
+
+class TopicMenuOption extends StatelessWidget {
+  const TopicMenuOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xff18181b) : Colors.white,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xff18181b)
+                      : const Color(0xffd4d4d8),
                 ),
               ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xfff4f4f5),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 14, right: 8),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: topics.contains(selectedTopic)
-                          ? selectedTopic
-                          : 'All Topics',
-                      borderRadius: BorderRadius.circular(12),
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 18,
-                        color: Color(0xff71717a),
-                      ),
-                      dropdownColor: Colors.white,
-                      style: const TextStyle(
-                        color: Color(0xff3f3f46),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      items: topics
-                          .map(
-                            (topic) => DropdownMenuItem(
-                              value: topic,
-                              child: Text(topic),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) onTopicChanged(value);
-                      },
-                    ),
-                  ),
+              child: selected
+                  ? const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 11,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xff3f3f46),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -740,7 +1023,7 @@ class DocumentFeedItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         FeedMeta(date: item.date, topic: item.topics.firstOrNull),
-        const SizedBox(height: 10),
+        const SizedBox(height: 9),
         Text(
           item.title,
           style: const TextStyle(
@@ -792,7 +1075,7 @@ class MicroblogFeedItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: FeedMeta(
@@ -804,6 +1087,8 @@ class MicroblogFeedItem extends StatelessWidget {
             IconButton(
               tooltip: 'Delete post',
               visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+              padding: EdgeInsets.zero,
               onPressed: () => onDelete(item),
               icon: const Icon(
                 Icons.delete_outline_rounded,
@@ -813,7 +1098,7 @@ class MicroblogFeedItem extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           item.text,
           style: const TextStyle(
@@ -822,9 +1107,9 @@ class MicroblogFeedItem extends StatelessWidget {
             height: 1.7,
           ),
         ),
-        if (item.media != null) ...[
+        if (item.media.isNotEmpty) ...[
           const SizedBox(height: 16),
-          FeedMediaPreview(media: item.media!),
+          FeedMediaCarousel(media: item.media),
         ],
       ],
     );
@@ -907,26 +1192,36 @@ class TopicPill extends StatelessWidget {
   }
 }
 
-class FeedMediaPreview extends StatelessWidget {
-  const FeedMediaPreview({required this.media, super.key});
+class FeedMediaCarousel extends StatefulWidget {
+  const FeedMediaCarousel({required this.media, super.key});
 
-  final FeedMedia media;
+  final List<FeedMedia> media;
+
+  @override
+  State<FeedMediaCarousel> createState() => _FeedMediaCarouselState();
+}
+
+class _FeedMediaCarouselState extends State<FeedMediaCarousel> {
+  late final PageController _controller;
+  var _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final aspectRatio = media.layout == MediaLayout.portrait
-        ? 9 / 16
-        : media.layout == MediaLayout.square
-        ? 1.0
-        : 16 / 9;
-    final maxWidth = media.layout == MediaLayout.portrait
-        ? 320.0
-        : media.layout == MediaLayout.square
-        ? 400.0
-        : double.infinity;
-
+    final hasMultiple = widget.media.length > 1;
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
+      constraints: const BoxConstraints(maxWidth: 450),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: DecoratedBox(
@@ -934,41 +1229,64 @@ class FeedMediaPreview extends StatelessWidget {
             border: Border.all(color: const Color(0xffe4e4e7)),
             color: const Color(0xfff4f4f5),
           ),
-          child: AspectRatio(
-            aspectRatio: aspectRatio,
+          child: SizedBox(
+            height: 400,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (media.previewUrl != null)
-                  Image.network(
-                    media.previewUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.image_not_supported_outlined),
-                  )
-                else
-                  const Icon(Icons.image_outlined, color: Color(0xffa1a1aa)),
-                if (media.type == FeedMediaType.video) ...[
-                  ColoredBox(color: Colors.black.withValues(alpha: 0.07)),
-                  Center(
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        shape: BoxShape.circle,
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x2418181b),
-                            blurRadius: 24,
-                            offset: Offset(0, 10),
+                PageView.builder(
+                  controller: _controller,
+                  itemCount: widget.media.length,
+                  onPageChanged: (index) => setState(() => _index = index),
+                  itemBuilder: (context, index) =>
+                      FeedMediaPreview(media: widget.media[index]),
+                ),
+                if (hasMultiple) ...[
+                  _CarouselButton(
+                    alignment: Alignment.centerLeft,
+                    icon: Icons.chevron_left_rounded,
+                    onPressed: () => _goTo(_index - 1),
+                  ),
+                  _CarouselButton(
+                    alignment: Alignment.centerRight,
+                    icon: Icons.chevron_right_rounded,
+                    onPressed: () => _goTo(_index + 1),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.30),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Color(0xff18181b),
-                        size: 30,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (var i = 0; i < widget.media.length; i++)
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  width: 6,
+                                  height: 6,
+                                  margin: EdgeInsets.only(
+                                    right: i == widget.media.length - 1 ? 0 : 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(
+                                      alpha: i == _index ? 1 : 0.42,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -978,6 +1296,106 @@ class FeedMediaPreview extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _goTo(int index) {
+    final next = index < 0
+        ? widget.media.length - 1
+        : index >= widget.media.length
+        ? 0
+        : index;
+    _controller.animateToPage(
+      next,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+}
+
+class _CarouselButton extends StatelessWidget {
+  const _CarouselButton({
+    required this.alignment,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final Alignment alignment;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: alignment,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.92),
+          shape: const CircleBorder(),
+          elevation: 2,
+          shadowColor: const Color(0x2418181b),
+          child: IconButton(
+            tooltip: icon == Icons.chevron_left_rounded
+                ? 'Previous image'
+                : 'Next image',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+            padding: EdgeInsets.zero,
+            onPressed: onPressed,
+            icon: Icon(icon, color: const Color(0xff3f3f46), size: 22),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FeedMediaPreview extends StatelessWidget {
+  const FeedMediaPreview({required this.media, super.key});
+
+  final FeedMedia media;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (media.previewUrl != null)
+          Image.network(
+            media.previewUrl!,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.image_not_supported_outlined),
+          )
+        else
+          const Icon(Icons.image_outlined, color: Color(0xffa1a1aa)),
+        if (media.type == FeedMediaType.video) ...[
+          ColoredBox(color: Colors.black.withValues(alpha: 0.07)),
+          Center(
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x2418181b),
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: Color(0xff18181b),
+                size: 30,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -1052,6 +1470,7 @@ class ComposeSheet extends StatefulWidget {
 class _ComposeSheetState extends State<ComposeSheet> {
   final _textController = TextEditingController();
   final _mediaController = TextEditingController();
+  final _imagePicker = image_picker.ImagePicker();
   final List<SelectedPostImage> _selectedImages = [];
   DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
@@ -1343,6 +1762,89 @@ class _ComposeSheetState extends State<ComposeSheet> {
   }
 
   Future<void> _pickImages() async {
+    final source = await _showImageSourceSheet();
+    if (source == null || !mounted) return;
+    switch (source) {
+      case PostImageSource.camera:
+        await _pickCameraImage();
+      case PostImageSource.photos:
+        await _pickPhotoImages();
+      case PostImageSource.files:
+        await _pickImageFiles();
+    }
+  }
+
+  Future<PostImageSource?> _showImageSourceSheet() {
+    return showCupertinoModalPopup<PostImageSource>(
+      context: context,
+      builder: (context) {
+        return CupertinoActionSheet(
+          title: const Text('Add image'),
+          actions: [
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context, PostImageSource.camera),
+              child: const Text('Camera'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context, PostImageSource.photos),
+              child: const Text('Photos'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context, PostImageSource.files),
+              child: const Text('Files'),
+            ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickCameraImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: image_picker.ImageSource.camera,
+        imageQuality: 90,
+      );
+      if (!mounted || image == null) {
+        return;
+      }
+      final selected = await SelectedPostImage.fromXFile(image);
+      if (!mounted) return;
+      setState(() => _selectedImages.add(selected));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open camera: $error')));
+    }
+  }
+
+  Future<void> _pickPhotoImages() async {
+    try {
+      final images = await _imagePicker.pickMultiImage(imageQuality: 90);
+      if (!mounted || images.isEmpty) {
+        return;
+      }
+      final selected = <SelectedPostImage>[];
+      for (final image in images) {
+        selected.add(await SelectedPostImage.fromXFile(image));
+      }
+      if (!mounted) return;
+      setState(() => _selectedImages.addAll(selected));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not choose photos: $error')),
+      );
+    }
+  }
+
+  Future<void> _pickImageFiles() async {
     try {
       final result = await file_picker.FilePicker.platform.pickFiles(
         allowMultiple: true,
@@ -1353,16 +1855,21 @@ class _ComposeSheetState extends State<ComposeSheet> {
       if (!mounted || result == null || result.files.isEmpty) {
         return;
       }
-      final images = result.files.map(SelectedPostImage.fromPickedFile);
-      setState(() => _selectedImages.addAll(images));
+      setState(
+        () => _selectedImages.addAll(
+          result.files.map(SelectedPostImage.fromPickedFile),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not choose images: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not choose files: $error')));
     }
   }
 }
+
+enum PostImageSource { camera, photos, files }
 
 class SelectedPostImage {
   const SelectedPostImage({required this.name, this.path, this.bytes});
@@ -1379,6 +1886,14 @@ class SelectedPostImage {
     if (bytes == null || bytes.isEmpty) {
       throw StateError('Could not read selected image bytes');
     }
+    return SelectedPostImage(name: file.name, bytes: bytes);
+  }
+
+  static Future<SelectedPostImage> fromXFile(image_picker.XFile file) async {
+    if (!kIsWeb) {
+      return SelectedPostImage(name: file.name, path: file.path);
+    }
+    final bytes = await file.readAsBytes();
     return SelectedPostImage(name: file.name, bytes: bytes);
   }
 
@@ -1921,7 +2436,7 @@ class MirrorFeedRepository {
         ?.whereType<Map<String, dynamic>>()
         .map(_feedMedia)
         .whereType<FeedMedia>()
-        .firstOrNull;
+        .toList(growable: false);
     return FeedItem(
       id: 'microblog-${microblog['id']}',
       modelId: int.tryParse(microblog['id']?.toString() ?? ''),
@@ -1932,7 +2447,7 @@ class MirrorFeedRepository {
           parseDate(microblog['updated_at']) ??
           parseDate(microblog['created_at']),
       topics: topicTags(microblog['tags']),
-      media: media,
+      media: media ?? const [],
     );
   }
 
@@ -1968,7 +2483,7 @@ class FeedItem {
     required this.text,
     required this.date,
     required this.topics,
-    this.media,
+    this.media = const [],
   });
 
   final String id;
@@ -1978,7 +2493,7 @@ class FeedItem {
   final String text;
   final DateTime? date;
   final List<String> topics;
-  final FeedMedia? media;
+  final List<FeedMedia> media;
 }
 
 enum FeedMediaType { image, video }

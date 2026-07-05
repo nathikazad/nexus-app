@@ -18,6 +18,10 @@
 	<string>nx_post</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Use the camera to attach photos to microblogs.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos to attach to microblogs.</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
