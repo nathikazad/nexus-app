@@ -646,8 +646,8 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
         SnackBar(
           content: Text(
             nextEnabled
-                ? 'Document queued for publishing'
-                : 'Document queued for unpublishing',
+                ? 'Document published and synced'
+                : 'Document unpublished and synced',
           ),
         ),
       );
