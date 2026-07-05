@@ -32,7 +32,7 @@ enum BackendPreset {
     return null;
   }
 
-  static const BackendPreset defaultPreset = piTailscale;
+  static const BackendPreset defaultPreset = piWan;
 }
 
 class BackendUrls {

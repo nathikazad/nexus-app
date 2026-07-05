@@ -2,19 +2,28 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_db/riverpod.dart';
 
 const mirrorPublicUrl = String.fromEnvironment(
   'MIRROR_PUBLIC_URL',
   defaultValue: 'http://188.245.46.13:8787',
 );
 void main() {
-  runApp(const NexusPostApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    ProviderScope(
+      overrides: [dbAuditSourceKindProvider.overrideWithValue('nx_post')],
+      child: const NexusPostApp(),
+    ),
+  );
 }
 
 class NexusPostApp extends StatelessWidget {
@@ -40,24 +49,22 @@ class NexusPostApp extends StatelessWidget {
   }
 }
 
-class PostAppShell extends StatefulWidget {
+class PostAppShell extends ConsumerWidget {
   const PostAppShell({super.key});
 
   @override
-  State<PostAppShell> createState() => _PostAppShellState();
-}
-
-class _PostAppShellState extends State<PostAppShell> {
-  PostSession? _session;
-
-  @override
-  Widget build(BuildContext context) {
-    final session = _session;
-    if (session == null) {
-      return PostLoginScreen(
-        onLogin: (value) => setState(() => _session = value),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    if (auth.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
+    final user = auth.value;
+    if (user == null) {
+      return const PostLoginScreen();
+    }
+    final session = PostSession.fromUser(user);
     return FeedPage(
       session: session,
       repository: MirrorFeedRepository(session.mirrorUrl),
@@ -82,18 +89,26 @@ class PostSession {
   final String mcpUrl;
   final String graphqlUrl;
   final String mirrorUrl;
+
+  factory PostSession.fromUser(User user) {
+    final urls = resolve(user.preset);
+    return PostSession(
+      userId: user.userId,
+      mcpUrl: normalizeEndpoint(urls.imageHttp),
+      graphqlUrl: urls.graphqlHttp,
+      mirrorUrl: mirrorPublicUrl,
+    );
+  }
 }
 
-class PostLoginScreen extends StatefulWidget {
-  const PostLoginScreen({required this.onLogin, super.key});
-
-  final ValueChanged<PostSession> onLogin;
+class PostLoginScreen extends ConsumerStatefulWidget {
+  const PostLoginScreen({super.key});
 
   @override
-  State<PostLoginScreen> createState() => _PostLoginScreenState();
+  ConsumerState<PostLoginScreen> createState() => _PostLoginScreenState();
 }
 
-class _PostLoginScreenState extends State<PostLoginScreen> {
+class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
@@ -222,16 +237,14 @@ class _PostLoginScreenState extends State<PostLoginScreen> {
     );
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    final urls = resolve(_selectedPreset);
-    widget.onLogin(
-      PostSession(
-        userId: _selectedProfile.userId,
-        mcpUrl: normalizeEndpoint(urls.imageHttp),
-        graphqlUrl: urls.graphqlHttp,
-        mirrorUrl: mirrorPublicUrl,
-      ),
+    final error = await ref
+        .read(authProvider.notifier)
+        .login(_selectedProfile.userId, _selectedPreset);
+    if (error == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error), backgroundColor: const Color(0xffef4444)),
     );
   }
 }
@@ -1037,7 +1050,7 @@ class ComposeSheet extends StatefulWidget {
 class _ComposeSheetState extends State<ComposeSheet> {
   final _textController = TextEditingController();
   final _mediaController = TextEditingController();
-  String? _topic;
+  DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
   bool _saving = false;
   String _savingLabel = 'Saving...';
@@ -1052,140 +1065,151 @@ class _ComposeSheetState extends State<ComposeSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'New microblog',
-                  style: TextStyle(
-                    color: Color(0xff18181b),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.92;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'New microblog',
+                    style: TextStyle(
+                      color: Color(0xff18181b),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _textController,
-            minLines: 5,
-            maxLines: 8,
-            autofocus: true,
-            decoration: inputDecoration('What do you want to post?'),
-          ),
-          const SizedBox(height: 14),
-          DropdownButtonFormField<String?>(
-            initialValue: _topic,
-            decoration: inputDecoration('Topic (optional)'),
-            items: const [
-              DropdownMenuItem<String?>(value: null, child: Text('No topic')),
-              DropdownMenuItem<String?>(
-                value: 'Spiritual',
-                child: Text('Spiritual'),
-              ),
-              DropdownMenuItem<String?>(
-                value: 'Architecture',
-                child: Text('Architecture'),
-              ),
-              DropdownMenuItem<String?>(
-                value: 'Personal',
-                child: Text('Personal'),
-              ),
-              DropdownMenuItem<String?>(
-                value: 'Economics',
-                child: Text('Economics'),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() => _topic = value);
-            },
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _mediaController,
-            decoration: inputDecoration('Image, YouTube, or Instagram URL'),
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            value: _publishEnabled,
-            activeThumbColor: const Color(0xff18181b),
-            title: const Text('Publish to mirror'),
-            subtitle: const Text('Triggers the mirror publisher after saving.'),
-            onChanged: _saving
-                ? null
-                : (value) => setState(() => _publishEnabled = value),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xff18181b),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(_savingLabel),
-                      ],
-                    )
-                  : const Text('Save microblog'),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
             ),
-          ),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: _saving && _publishEnabled
-                ? const Padding(
-                    key: ValueKey('compose-syncing'),
-                    padding: EdgeInsets.only(top: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: LinearProgressIndicator(
-                            minHeight: 3,
-                            color: Color(0xff18181b),
-                            backgroundColor: Color(0xffe4e4e7),
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          'Waiting for mirror',
-                          style: TextStyle(
-                            color: Color(0xff71717a),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+            const SizedBox(height: 14),
+            TextField(
+              controller: _textController,
+              minLines: 5,
+              maxLines: 8,
+              autofocus: true,
+              decoration: inputDecoration('What do you want to post?'),
+            ),
+            const SizedBox(height: 14),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: _saving ? null : _pickPostedAt,
+              child: InputDecorator(
+                decoration: inputDecoration('Date and time'),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.event_outlined,
+                      color: Color(0xff71717a),
+                      size: 20,
                     ),
-                  )
-                : const SizedBox.shrink(key: ValueKey('compose-idle')),
-          ),
-        ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        formatDateTime(_postedAt),
+                        style: const TextStyle(
+                          color: Color(0xff18181b),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Color(0xff71717a),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _mediaController,
+              decoration: inputDecoration('Image, YouTube, or Instagram URL'),
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _publishEnabled,
+              activeThumbColor: const Color(0xff18181b),
+              title: const Text('Publish to mirror'),
+              subtitle: const Text(
+                'Triggers the mirror publisher after saving.',
+              ),
+              onChanged: _saving
+                  ? null
+                  : (value) => setState(() => _publishEnabled = value),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xff18181b),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(_savingLabel),
+                        ],
+                      )
+                    : const Text('Save microblog'),
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: _saving && _publishEnabled
+                  ? const Padding(
+                      key: ValueKey('compose-syncing'),
+                      padding: EdgeInsets.only(top: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: LinearProgressIndicator(
+                              minHeight: 3,
+                              color: Color(0xff18181b),
+                              backgroundColor: Color(0xffe4e4e7),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Waiting for mirror',
+                            style: TextStyle(
+                              color: Color(0xff71717a),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('compose-idle')),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1205,7 +1229,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
     try {
       await widget.repository.createMicroblog(
         text: text,
-        topic: _topic,
+        postedAt: _postedAt,
         mediaUrl: _mediaController.text.trim(),
         publishEnabled: _publishEnabled,
       );
@@ -1227,6 +1251,53 @@ class _ComposeSheetState extends State<ComposeSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not save microblog: $error')),
       );
+    }
+  }
+
+  Future<void> _pickPostedAt() async {
+    var draft = _postedAt;
+    final picked = await showCupertinoModalPopup<DateTime>(
+      context: context,
+      builder: (context) {
+        return Container(
+          height: 320,
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 48,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      onPressed: () => Navigator.pop(context, draft),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.dateAndTime,
+                  initialDateTime: _postedAt,
+                  maximumDate: DateTime.now().add(const Duration(minutes: 1)),
+                  use24hFormat: false,
+                  onDateTimeChanged: (value) => draft = value,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() => _postedAt = picked);
     }
   }
 }
@@ -1273,21 +1344,20 @@ class MicroblogPostRepository {
 
   Future<void> createMicroblog({
     required String text,
-    required String? topic,
+    required DateTime postedAt,
     required String mediaUrl,
     required bool publishEnabled,
   }) async {
     logNxPost('creating microblog publish=$publishEnabled');
     final cleanText = text.trim();
-    final cleanTopic = topic?.trim();
     final media = mediaUrl.isEmpty
         ? <Map<String, dynamic>>[]
         : [_mediaFromUrl(mediaUrl)];
-    final now = DateTime.now().toUtc().toIso8601String();
+    final timestamp = postedAt.toUtc().toIso8601String();
     final contentHash = microblogContentHash(
       text: cleanText,
       media: media,
-      topic: cleanTopic == null || cleanTopic.isEmpty ? null : cleanTopic,
+      topic: null,
     );
 
     await setKgqlModel(
@@ -1297,8 +1367,8 @@ class MicroblogPostRepository {
         name: _nameFromText(cleanText),
         attributes: [
           SetModelAttribute(key: 'text', value: cleanText),
-          SetModelAttribute(key: 'created_at', value: now),
-          SetModelAttribute(key: 'updated_at', value: now),
+          SetModelAttribute(key: 'created_at', value: timestamp),
+          SetModelAttribute(key: 'updated_at', value: timestamp),
           SetModelAttribute(key: 'media', value: media),
           SetModelAttribute(
             key: 'publish',
@@ -1314,11 +1384,6 @@ class MicroblogPostRepository {
             },
           ),
         ],
-        tags: cleanTopic == null || cleanTopic.isEmpty
-            ? null
-            : [
-                SetModelTag(system: 'Topic', nodes: [cleanTopic]),
-              ],
       ),
       domainId: await _domainId(),
       auditSourceKind: 'nx_post',
@@ -1703,6 +1768,10 @@ String formatDate(DateTime? date, {bool includeTime = false}) {
   return includeTime
       ? DateFormat('MMM d, y · h:mm a').format(local)
       : DateFormat('MMM d, y').format(local);
+}
+
+String formatDateTime(DateTime date) {
+  return DateFormat('MMM d, y · h:mm a').format(date.toLocal());
 }
 
 String shorten(String value) {

@@ -19,7 +19,7 @@ class CookingLoginScreen extends ConsumerStatefulWidget {
 class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   AuthLoginProfile _selectedProfile = authLoginProfiles.first;
-  BackendPreset _selectedPreset = BackendPreset.localhost;
+  BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
