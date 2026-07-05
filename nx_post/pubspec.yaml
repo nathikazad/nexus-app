@@ -1,0 +1,26 @@
+name: nx_post
+description: Personal microblog publisher and public mirror feed preview.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  cupertino_icons: ^1.0.8
+  crypto: ^3.0.6
+  flutter:
+    sdk: flutter
+  google_fonts: ^8.0.2
+  http: ^1.6.0
+  intl: ^0.20.2
+  nx_db:
+    path: ../nx_db
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
