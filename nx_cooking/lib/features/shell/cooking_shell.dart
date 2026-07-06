@@ -260,7 +260,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
         .setFilter(nextFilter.isEmpty ? null : nextFilter);
   }
 
-  void _mergeIngredientFilter(CookingItemSearchHit hit) {
+  void _mergeIngredientFilter(IngredientSearchHit hit) {
     final current = ref.read(recipeListFilterProvider);
     final rows = <Map<String, dynamic>>[
       if (current?.ingredientFilters != null) ...current!.ingredientFilters!,
@@ -281,7 +281,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
   Future<void> _openFilterSheet() async {
     try {
       final schema = await ref.read(recipeSchemaViewProvider.future);
-      final ingredients = await ref.read(cookingItemsProvider.future);
+      final ingredients = await ref.read(ingredientItemsProvider.future);
       if (!mounted) return;
       await showModalBottomSheet<void>(
         context: context,
@@ -441,7 +441,7 @@ class _RecipesSubBarState extends ConsumerState<_RecipesSubBar> {
                                         context.push('/recipe/$id');
                                       },
                                     );
-                                  case CookingItemSearchHit hit:
+                                  case IngredientSearchHit hit:
                                     return ListTile(
                                       dense: true,
                                       title: Text(

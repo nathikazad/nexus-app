@@ -1,8 +1,8 @@
-/// Planned cooking task: recipe + ingredients, instructions, optional task [notes].
-final class CookingTaskDetail {
-  const CookingTaskDetail({
-    required this.taskId,
-    required this.taskRelationId,
+/// Planned cooking session: recipe, ingredients, instructions, optional notes.
+final class CookingPlanDetail {
+  const CookingPlanDetail({
+    required this.planId,
+    required this.planRecipeRelationId,
     required this.recipeId,
     required this.recipeName,
     required this.plannedDate,
@@ -15,8 +15,8 @@ final class CookingTaskDetail {
     required this.instructionLines,
   });
 
-  final int taskId;
-  final int taskRelationId;
+  final int planId;
+  final int planRecipeRelationId;
   final int recipeId;
   final String recipeName;
   final DateTime plannedDate;
@@ -25,12 +25,12 @@ final class CookingTaskDetail {
   final int? prepTimeMinutes;
   final int? servings;
   final String? notes;
-  final List<TaskIngredient> ingredients;
+  final List<CookingPlanIngredient> ingredients;
   final List<String> instructionLines;
 }
 
-final class TaskIngredient {
-  const TaskIngredient({
+final class CookingPlanIngredient {
+  const CookingPlanIngredient({
     required this.itemId,
     required this.name,
     required this.amount,

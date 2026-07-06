@@ -8,4 +8,11 @@ void main() {
     expect(u.name, 'B');
     expect(u.id, 1);
   });
+
+  test('SchemaModelType exposes mixins with legacy alias', () {
+    const mixin = SchemaModelType(id: 2, name: 'Plannable');
+    const t = SchemaModelType(id: 1, name: 'Meet', mixins: [mixin]);
+    expect(t.mixins, [mixin]);
+    expect(t.traits, t.mixins);
+  });
 }

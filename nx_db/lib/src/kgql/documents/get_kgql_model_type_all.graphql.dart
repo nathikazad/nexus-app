@@ -10,6 +10,7 @@ query GetAllModelTypes {
       description: true
       parent: true
       children: true
+      mixins: true
     }
   })
 }

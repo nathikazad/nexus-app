@@ -17,11 +17,11 @@ List<RecipeSearchResult> searchResultsFromJson(dynamic raw) {
         if (id != null) {
           out.add(RecipeSearchHit(id: id, name: name));
         }
-      case 'CookingItem':
+      case 'item':
         final id = _asInt(m['id']);
         final name = m['name']?.toString() ?? '';
         if (id != null) {
-          out.add(CookingItemSearchHit(id: id, name: name));
+          out.add(IngredientSearchHit(id: id, name: name));
         }
       case 'tag':
         final tagNodeId = _asInt(m['tag_node_id']);

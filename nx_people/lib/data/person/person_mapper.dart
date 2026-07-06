@@ -2,6 +2,11 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_people/data/person/person_attr_keys.dart';
 import 'package:nx_people/domain/person/person.dart';
 
+const String _meetStartTimeAttr = 'start_time';
+const String _meetActualStartTimeAttr = 'actual_start_time';
+const String _meetScheduledStartTimeAttr = 'scheduled_start_time';
+const String _meetPlanningStatusAttr = 'planning_status';
+
 Person personFromModel(Model model) {
   final tags = model.tags ?? const <String, List<String>>{};
   final tagValues = [
@@ -42,8 +47,8 @@ Person personFromModel(Model model) {
     email: model.attrString(kPersonAttrEmail) ?? '',
     phone: model.attrString(kPersonAttrPhone) ?? '',
     tags: tagValues.toSet().toList()..sort(),
-    meetings: _uniqueRelatedNames(model, const ['Meeting', 'Meet']),
-    planned: _uniqueRelatedNames(model, const ['Planned', 'PlannedMeeting']),
+    meetings: _actualMeetingNames(model),
+    planned: _plannedMeetingNames(model),
     summary: summary,
     currentThreads: _threadsFromRaw(
       model.attributes?[kPersonAttrCurrentThreads],
@@ -76,9 +81,15 @@ Map<String, dynamic> personFetchStruct(ModelType schema) {
     },
     'Company': {'id': true, 'name': true, 'description': true},
     'Meeting': {'id': true, 'name': true, 'description': true},
-    'Meet': {'id': true, 'name': true, 'description': true},
-    'Planned': {'id': true, 'name': true, 'description': true},
-    'PlannedMeeting': {'id': true, 'name': true, 'description': true},
+    'Meet': {
+      'id': true,
+      'name': true,
+      'description': true,
+      _meetStartTimeAttr: true,
+      _meetActualStartTimeAttr: true,
+      _meetScheduledStartTimeAttr: true,
+      _meetPlanningStatusAttr: true,
+    },
     'Place': {'id': true, 'name': true, 'description': true},
     'Person': {'id': true, 'name': true, 'description': true},
   };
@@ -115,9 +126,43 @@ List<String> _relatedNames(Model model, String type) {
     ..sort();
 }
 
-List<String> _uniqueRelatedNames(Model model, List<String> types) {
-  return {for (final type in types) ..._relatedNames(model, type)}.toList()
-    ..sort();
+List<String> _actualMeetingNames(Model model) {
+  final legacy = _relatedNames(model, 'Meeting');
+  final meetRows = model.relations?['Meet'] ?? const <Model>[];
+  final meetNames = [
+    for (final meet in meetRows)
+      if (_hasActualMeetingTime(meet) && !_hasInactivePlanningStatus(meet))
+        meet.name,
+  ].where((name) => name.isNotEmpty);
+  return {...legacy, ...meetNames}.toList()..sort();
+}
+
+List<String> _plannedMeetingNames(Model model) {
+  final meetRows = model.relations?['Meet'] ?? const <Model>[];
+  return {
+    for (final meet in meetRows)
+      if (_isPlannedMeet(meet) && meet.name.isNotEmpty) meet.name,
+  }.toList()..sort();
+}
+
+bool _hasActualMeetingTime(Model meet) {
+  return meet.attrDateTime(_meetStartTimeAttr) != null ||
+      meet.attrDateTime(_meetActualStartTimeAttr) != null;
+}
+
+bool _isPlannedMeet(Model meet) {
+  return meet.attrDateTime(_meetScheduledStartTimeAttr) != null &&
+      !_hasActualMeetingTime(meet) &&
+      _planningStatus(meet) == 'planned';
+}
+
+bool _hasInactivePlanningStatus(Model model) {
+  final status = _planningStatus(model);
+  return status == 'skipped' || status == 'cancelled';
+}
+
+String _planningStatus(Model model) {
+  return model.attrString(_meetPlanningStatusAttr)?.toLowerCase() ?? 'attended';
 }
 
 List<int> _relatedPeople(Model model) {

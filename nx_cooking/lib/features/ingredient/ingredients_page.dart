@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
 
-/// Lists all [Item] models with the CookingItem trait (searchable).
+/// Lists all [Item] models in the ingredient catalog.
 class IngredientsPage extends ConsumerStatefulWidget {
   const IngredientsPage({super.key});
 
@@ -24,7 +24,7 @@ class _IngredientsPageState extends ConsumerState<IngredientsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(cookingItemsProvider);
+    final async = ref.watch(ingredientItemsProvider);
     final q = _searchController.text.trim().toLowerCase();
 
     return async.when(

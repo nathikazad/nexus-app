@@ -1,6 +1,6 @@
-/// An [Item] with the CookingItem trait (ingredient catalog entry).
-class CookingItemEntry {
-  const CookingItemEntry({required this.id, required this.name});
+/// An [Item] in the ingredient catalog.
+class IngredientEntry {
+  const IngredientEntry({required this.id, required this.name});
 
   final int id;
   final String name;
@@ -18,8 +18,8 @@ final class RecipeSearchHit extends RecipeSearchResult {
   final String name;
 }
 
-final class CookingItemSearchHit extends RecipeSearchResult {
-  const CookingItemSearchHit({required this.id, required this.name});
+final class IngredientSearchHit extends RecipeSearchResult {
+  const IngredientSearchHit({required this.id, required this.name});
 
   final int id;
   final String name;

@@ -30,7 +30,7 @@ final modelTypeNameToIdProvider = Provider<Map<String, int>>((ref) {
       {};
 });
 
-/// Maps model type id → display name (roots, children, and traits).
+/// Maps model type id → display name (roots, children, and mixins).
 final modelTypeIdToNameProvider = Provider<Map<int, String>>((ref) {
   final async = ref.watch(modelTypesProvider);
   return async.whenOrNull(
@@ -40,7 +40,7 @@ final modelTypeIdToNameProvider = Provider<Map<int, String>>((ref) {
             for (final t in list) {
               map[t.id] = t.name;
               if (t.children != null) walk(t.children!);
-              if (t.traits != null) walk(t.traits!);
+              if (t.mixins != null) walk(t.mixins!);
             }
           }
 

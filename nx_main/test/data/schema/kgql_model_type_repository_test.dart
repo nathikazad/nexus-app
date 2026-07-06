@@ -80,7 +80,7 @@ void main() {
       final id = await repo.setModelType(
         id: 5,
         name: 'X',
-        typeKind: 'trait',
+        typeKind: 'mixin',
         attributeDefinitions: const [
           AttributeDefinitionDraft(key: 'a', valueType: 'string'),
         ],

@@ -97,7 +97,7 @@ SchemaModelType schemaModelTypeFromNx(nx.ModelType m) {
     userId: m.userId,
     parent: m.parent != null ? schemaModelTypeFromNx(m.parent!) : null,
     children: m.children?.map(schemaModelTypeFromNx).toList(),
-    traits: m.traits?.map(schemaModelTypeFromNx).toList(),
+    mixins: m.mixins?.map(schemaModelTypeFromNx).toList(),
     attributes: m.attributes?.map(attributeDraftFromNx).toList(),
     relations: m.relations?.map(relationDraftFromNx).toList(),
     tagSystems: m.tagSystems?.map(tagSystemFromNx).toList(),

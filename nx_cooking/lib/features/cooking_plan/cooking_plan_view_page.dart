@@ -5,34 +5,34 @@ import 'package:intl/intl.dart';
 import 'package:nx_cooking/core/dates/week_calendar.dart';
 import 'package:nx_cooking/core/theme/app_theme.dart';
 import 'package:nx_cooking/data/providers.dart';
-import 'package:nx_cooking/domain/cooking_task_detail.dart';
+import 'package:nx_cooking/domain/cooking_plan_detail.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 /// Planned meal: recipe, planned date, ingredient checks (persisted), instructions, reschedule / delete.
-class CookingTaskViewPage extends ConsumerWidget {
-  const CookingTaskViewPage({super.key, required this.taskId});
+class CookingPlanViewPage extends ConsumerWidget {
+  const CookingPlanViewPage({super.key, required this.planId});
 
-  final int taskId;
+  final int planId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _CookingTaskBody(taskId: taskId);
+    return _CookingPlanBody(planId: planId);
   }
 }
 
-class _CookingTaskBody extends ConsumerWidget {
-  const _CookingTaskBody({required this.taskId});
+class _CookingPlanBody extends ConsumerWidget {
+  const _CookingPlanBody({required this.planId});
 
-  final int taskId;
+  final int planId;
 
   Future<void> _toggleIngredient(
     BuildContext context,
     WidgetRef ref,
     int index,
     bool value,
-    CookingTaskDetail d,
+    CookingPlanDetail d,
   ) async {
-    if (d.taskRelationId == 0) {
+    if (d.planRecipeRelationId == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not update (missing link data).')),
       );
@@ -47,8 +47,8 @@ class _CookingTaskBody extends ConsumerWidget {
     try {
       await ref
           .read(cookingPlanRepositoryProvider)
-          .updateIngredientChecks(d.taskId, d.taskRelationId, m);
-      ref.invalidate(cookingTaskDetailProvider(taskId));
+          .updateIngredientChecks(d.planId, d.planRecipeRelationId, m);
+      ref.invalidate(cookingPlanDetailProvider(planId));
       ref.invalidate(weekSectionsProvider);
       ref.invalidate(shoppingSnapshotProvider);
     } catch (e) {
@@ -64,7 +64,7 @@ class _CookingTaskBody extends ConsumerWidget {
   Future<void> _pickDate(
     BuildContext context,
     WidgetRef ref,
-    CookingTaskDetail d,
+    CookingPlanDetail d,
   ) async {
     final picked = await showDatePicker(
       context: context,
@@ -91,9 +91,9 @@ class _CookingTaskBody extends ConsumerWidget {
     try {
       await ref
           .read(cookingPlanRepositoryProvider)
-          .updateTaskDate(d.taskId, picked);
+          .updatePlanDate(d.planId, picked);
       ref.read(selectedWeekStartProvider.notifier).setToContaining(picked);
-      ref.invalidate(cookingTaskDetailProvider(taskId));
+      ref.invalidate(cookingPlanDetailProvider(planId));
       ref.invalidate(weekSectionsProvider);
       ref.invalidate(shoppingSnapshotProvider);
       if (!context.mounted) {
@@ -117,14 +117,14 @@ class _CookingTaskBody extends ConsumerWidget {
   Future<void> _confirmDelete(
     BuildContext context,
     WidgetRef ref,
-    CookingTaskDetail d,
+    CookingPlanDetail d,
   ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remove from plan?'),
         content: const Text(
-          'This removes the planned cooking task. The recipe is not deleted.',
+          'This removes the planned cooking session. The recipe is not deleted.',
         ),
         actions: [
           TextButton(
@@ -143,7 +143,7 @@ class _CookingTaskBody extends ConsumerWidget {
       return;
     }
     try {
-      await ref.read(cookingPlanRepositoryProvider).deleteTask(d.taskId);
+      await ref.read(cookingPlanRepositoryProvider).deletePlan(d.planId);
       ref.invalidate(weekSectionsProvider);
       ref.invalidate(shoppingSnapshotProvider);
       if (!context.mounted) {
@@ -162,7 +162,7 @@ class _CookingTaskBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncD = ref.watch(cookingTaskDetailProvider(taskId));
+    final asyncD = ref.watch(cookingPlanDetailProvider(planId));
     return asyncD.when(
       data: (d) {
         if (d == null) {
@@ -201,8 +201,8 @@ class _CookingTaskBody extends ConsumerWidget {
                           const SizedBox(height: 28),
                           _InstructionsBlock(lines: d.instructionLines),
                           const SizedBox(height: 28),
-                          _TaskNotesSection(
-                            taskId: d.taskId,
+                          _PlanNotesSection(
+                            planId: d.planId,
                             initialNotes: d.notes,
                           ),
                         ]),
@@ -299,7 +299,7 @@ class _TopBar extends StatelessWidget {
 class _Header extends StatelessWidget {
   const _Header({required this.detail});
 
-  final CookingTaskDetail detail;
+  final CookingPlanDetail detail;
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +319,7 @@ class _Header extends StatelessWidget {
               _DateChip(
                 text: DateFormat('EEE, MMM d').format(detail.plannedDate),
               ),
-              if (detail.status == 'cooking' || detail.status == 'done')
+              if (detail.status == 'attended')
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 7,
@@ -330,7 +330,7 @@ class _Header extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    detail.status,
+                    'cooked',
                     style: const TextStyle(
                       fontSize: 9.6,
                       fontWeight: FontWeight.w600,
@@ -417,7 +417,7 @@ class _DateChip extends StatelessWidget {
 class _Meta extends StatelessWidget {
   const _Meta({required this.detail});
 
-  final CookingTaskDetail detail;
+  final CookingPlanDetail detail;
 
   @override
   Widget build(BuildContext context) {
@@ -474,7 +474,7 @@ class _MetaItem extends StatelessWidget {
 class _IngredientsChecklist extends StatelessWidget {
   const _IngredientsChecklist({required this.detail, required this.onToggle});
 
-  final CookingTaskDetail detail;
+  final CookingPlanDetail detail;
   final void Function(int index, bool value) onToggle;
 
   @override
@@ -685,17 +685,17 @@ class _InstructionsBlock extends StatelessWidget {
   }
 }
 
-class _TaskNotesSection extends ConsumerStatefulWidget {
-  const _TaskNotesSection({required this.taskId, required this.initialNotes});
+class _PlanNotesSection extends ConsumerStatefulWidget {
+  const _PlanNotesSection({required this.planId, required this.initialNotes});
 
-  final int taskId;
+  final int planId;
   final String? initialNotes;
 
   @override
-  ConsumerState<_TaskNotesSection> createState() => _TaskNotesSectionState();
+  ConsumerState<_PlanNotesSection> createState() => _PlanNotesSectionState();
 }
 
-class _TaskNotesSectionState extends ConsumerState<_TaskNotesSection> {
+class _PlanNotesSectionState extends ConsumerState<_PlanNotesSection> {
   late final TextEditingController _controller;
   bool _dirty = false;
 
@@ -706,7 +706,7 @@ class _TaskNotesSectionState extends ConsumerState<_TaskNotesSection> {
   }
 
   @override
-  void didUpdateWidget(covariant _TaskNotesSection oldWidget) {
+  void didUpdateWidget(covariant _PlanNotesSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_dirty && oldWidget.initialNotes != widget.initialNotes) {
       _controller.text = widget.initialNotes ?? '';
@@ -724,11 +724,11 @@ class _TaskNotesSectionState extends ConsumerState<_TaskNotesSection> {
     try {
       await ref
           .read(cookingPlanRepositoryProvider)
-          .updateTaskNotes(widget.taskId, trimmed.isEmpty ? null : trimmed);
+          .updatePlanNotes(widget.planId, trimmed.isEmpty ? null : trimmed);
       if (!mounted) {
         return;
       }
-      ref.invalidate(cookingTaskDetailProvider(widget.taskId));
+      ref.invalidate(cookingPlanDetailProvider(widget.planId));
       setState(() => _dirty = false);
     } catch (e) {
       if (!mounted) {

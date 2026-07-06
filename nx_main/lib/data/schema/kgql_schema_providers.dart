@@ -47,7 +47,7 @@ final schemaModelTypeIdToNameProvider = Provider<Map<int, String>>((ref) {
             for (final t in list) {
               map[t.id] = t.name;
               if (t.children != null) walk(t.children!);
-              if (t.traits != null) walk(t.traits!);
+              if (t.mixins != null) walk(t.mixins!);
             }
           }
 

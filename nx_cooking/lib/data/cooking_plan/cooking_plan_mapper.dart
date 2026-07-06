@@ -3,18 +3,18 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_cooking/core/dates/week_calendar.dart';
-import 'package:nx_cooking/data/cooking_task/cooking_task_attr_keys.dart';
+import 'package:nx_cooking/data/cooking_plan/cooking_plan_attr_keys.dart';
 import 'package:nx_cooking/data/recipe/ingredient_from_relation.dart';
 import 'package:nx_cooking/data/recipe/instruction_lines.dart';
 import 'package:nx_cooking/data/recipe/recipe_attr_keys.dart';
-import 'package:nx_cooking/domain/cooking_task_detail.dart';
+import 'package:nx_cooking/domain/cooking_plan_detail.dart';
 import 'package:nx_cooking/domain/meal_status.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:nx_cooking/domain/week_section.dart';
 
-/// `for_recipe` edge to the recipe (for relation id + `ingredient_checks` JSON).
-Relation? _forRecipeRelationFromTask(Model task) {
-  final list = task.relationsList;
+/// `cooks_recipe` edge to the recipe (for relation id + `ingredient_checks` JSON).
+Relation? _recipeRelationFromPlan(Model plan) {
+  final list = plan.relationsList;
   if (list == null) {
     return null;
   }
@@ -26,9 +26,10 @@ Relation? _forRecipeRelationFromTask(Model task) {
   return null;
 }
 
-Map<String, bool>? _ingredientChecksFromTask(Model task) {
-  final rel = _forRecipeRelationFromTask(task);
-  final raw = rel?.relationAttributes?[kForRecipeRelationAttrIngredientChecks];
+Map<String, bool>? _ingredientChecksFromPlan(Model plan) {
+  final rel = _recipeRelationFromPlan(plan);
+  final raw =
+      rel?.relationAttributes?[kCooksRecipeRelationAttrIngredientChecks];
   if (raw == null) {
     return null;
   }
@@ -110,30 +111,39 @@ List<String> _tagListFromModel(Model m) {
   return (c, items.length);
 }
 
-WeekMealCard? weekMealCardFromTask(Model task) {
-  final recipe = task.relations?[kRecipeModelTypeName]?.firstOrNull;
+String planningStatus(Model plan) {
+  return plan.attrString(kCookingAttrPlanningStatus)?.toLowerCase() ??
+      kCookingPlanningStatusAttended;
+}
+
+bool _isInactivePlan(Model plan) {
+  final status = planningStatus(plan);
+  return status == kCookingPlanningStatusSkipped ||
+      status == kCookingPlanningStatusCancelled;
+}
+
+WeekMealCard? weekMealCardFromPlan(Model plan) {
+  final recipe = plan.relations?[kRecipeModelTypeName]?.firstOrNull;
   if (recipe == null) {
     return null;
   }
-  final status = task.attrString(kCookingTaskAttrStatus)?.toLowerCase() ?? '';
-  if (status == 'skipped') {
+  final status = planningStatus(plan);
+  if (_isInactivePlan(plan)) {
     return null;
   }
 
   final items = recipe.relations?[kItemModelTypeName] ?? const <Model>[];
-  final checks = _ingredientChecksFromTask(task);
+  final checks = _ingredientChecksFromPlan(plan);
   final (got, need) = _checkCounts(items, checks);
 
   final kind = switch (status) {
-    'cooking' => MealCardKind.cookingInProgress,
-    'done' => MealCardKind.done,
+    kCookingPlanningStatusAttended => MealCardKind.done,
     _ => MealCardKind.planned,
   };
 
   final badge = need == 0 ? '' : '$got/$need items';
   final subtitle = switch (status) {
-    'cooking' => 'Cooking in progress',
-    'done' => 'Cooked',
+    kCookingPlanningStatusAttended => 'Cooked',
     _ =>
       need == 0
           ? 'Planned'
@@ -141,28 +151,26 @@ WeekMealCard? weekMealCardFromTask(Model task) {
   };
 
   return WeekMealCard(
-    taskId: task.id,
+    planId: plan.id,
     recipeId: recipe.id,
     title: recipe.name,
     kind: kind,
     badge: badge,
     subtitle: subtitle,
-    showPing: status == 'cooking',
   );
 }
 
 List<WeekDaySection> buildWeekSections({
   required DateTime weekStartMondayLocal,
-  required List<Model> tasks,
+  required List<Model> plans,
 }) {
   final weekStart = dateOnly(weekStartMondayLocal);
   final byDay = <DateTime, Model>{};
-  for (final t in tasks) {
-    final status = t.attrString(kCookingTaskAttrStatus)?.toLowerCase() ?? '';
-    if (status == 'skipped') {
+  for (final plan in plans) {
+    if (_isInactivePlan(plan)) {
       continue;
     }
-    final d = t.attrDateTime(kTaskAttrDate);
+    final d = plan.attrDateTime(kCookingAttrScheduledStartTime);
     if (d == null) {
       continue;
     }
@@ -171,7 +179,7 @@ List<WeekDaySection> buildWeekSections({
         day.isAfter(weekStart.add(const Duration(days: 6)))) {
       continue;
     }
-    byDay.putIfAbsent(day, () => t);
+    byDay.putIfAbsent(day, () => plan);
   }
 
   final today = dateOnly(DateTime.now());
@@ -179,8 +187,8 @@ List<WeekDaySection> buildWeekSections({
 
   return List.generate(7, (i) {
     final day = weekStart.add(Duration(days: i));
-    final task = byDay[day];
-    final meal = task == null ? null : weekMealCardFromTask(task);
+    final plan = byDay[day];
+    final meal = plan == null ? null : weekMealCardFromPlan(plan);
     return WeekDaySection(
       date: day,
       dayLabel: dayTitle.format(day),
@@ -192,15 +200,15 @@ List<WeekDaySection> buildWeekSections({
 
 ShoppingListSnapshot buildShoppingSnapshot({
   required DateTime weekStartMondayLocal,
-  required List<Model> tasks,
+  required List<Model> plans,
 }) {
   final weekStart = dateOnly(weekStartMondayLocal);
   final groups = <ShoppingMealGroup>[];
 
-  final sorted = [...tasks]
+  final sorted = [...plans]
     ..sort((a, b) {
-      final da = a.attrDateTime(kTaskAttrDate);
-      final db = b.attrDateTime(kTaskAttrDate);
+      final da = a.attrDateTime(kCookingAttrScheduledStartTime);
+      final db = b.attrDateTime(kCookingAttrScheduledStartTime);
       if (da == null && db == null) {
         return a.id.compareTo(b.id);
       }
@@ -217,12 +225,11 @@ ShoppingListSnapshot buildShoppingSnapshot({
       return a.id.compareTo(b.id);
     });
 
-  for (final t in sorted) {
-    final status = t.attrString(kCookingTaskAttrStatus)?.toLowerCase() ?? '';
-    if (status == 'skipped') {
+  for (final plan in sorted) {
+    if (_isInactivePlan(plan)) {
       continue;
     }
-    final d = t.attrDateTime(kTaskAttrDate);
+    final d = plan.attrDateTime(kCookingAttrScheduledStartTime);
     if (d == null) {
       continue;
     }
@@ -231,7 +238,7 @@ ShoppingListSnapshot buildShoppingSnapshot({
         day.isAfter(weekStart.add(const Duration(days: 6)))) {
       continue;
     }
-    final recipe = t.relations?[kRecipeModelTypeName]?.firstOrNull;
+    final recipe = plan.relations?[kRecipeModelTypeName]?.firstOrNull;
     if (recipe == null) {
       continue;
     }
@@ -240,9 +247,9 @@ ShoppingListSnapshot buildShoppingSnapshot({
       continue;
     }
     final recipeRelList = recipe.relationsList ?? const <Relation>[];
-    final checks = _ingredientChecksFromTask(t);
-    final forRecipe = _forRecipeRelationFromTask(t);
-    final taskRelId = forRecipe?.relationId ?? 0;
+    final checks = _ingredientChecksFromPlan(plan);
+    final cooksRecipe = _recipeRelationFromPlan(plan);
+    final planRecipeRelationId = cooksRecipe?.relationId ?? 0;
     final header = '${DateFormat('EEE d').format(day)} · ${recipe.name}';
     final shopItems = <ShoppingItem>[];
     for (final it in items) {
@@ -251,8 +258,8 @@ ShoppingListSnapshot buildShoppingSnapshot({
       final edge = relationForItemModel(recipeRelList, it.id);
       shopItems.add(
         ShoppingItem(
-          taskId: t.id,
-          taskRelationId: taskRelId,
+          planId: plan.id,
+          planRecipeRelationId: planRecipeRelationId,
           itemId: it.id,
           name: it.name,
           amount: ingredientAmountDisplay(edge, it.description),
@@ -265,8 +272,8 @@ ShoppingListSnapshot buildShoppingSnapshot({
     groups.add(
       ShoppingMealGroup(
         header: header,
-        taskId: t.id,
-        taskRelationId: taskRelId,
+        planId: plan.id,
+        planRecipeRelationId: planRecipeRelationId,
         items: shopItems,
       ),
     );
@@ -290,27 +297,27 @@ ShoppingListSnapshot buildShoppingSnapshot({
   );
 }
 
-/// Full task + recipe for [CookingTaskViewPage]. Returns null if task has no recipe link.
-CookingTaskDetail? cookingTaskDetailFromModel(Model task) {
-  final recipe = task.relations?[kRecipeModelTypeName]?.firstOrNull;
-  final forRecipe = _forRecipeRelationFromTask(task);
-  if (recipe == null || forRecipe == null) {
+/// Full planned cooking row + recipe. Returns null if the row has no recipe link.
+CookingPlanDetail? cookingPlanDetailFromModel(Model plan) {
+  final recipe = plan.relations?[kRecipeModelTypeName]?.firstOrNull;
+  final cooksRecipe = _recipeRelationFromPlan(plan);
+  if (recipe == null || cooksRecipe == null) {
     return null;
   }
-  final planned = task.attrDateTime(kTaskAttrDate);
+  final planned = plan.attrDateTime(kCookingAttrScheduledStartTime);
   if (planned == null) {
     return null;
   }
-  final status = task.attrString(kCookingTaskAttrStatus) ?? 'planned';
-  final checks = _ingredientChecksFromTask(task) ?? <String, bool>{};
+  final status = planningStatus(plan);
+  final checks = _ingredientChecksFromPlan(plan) ?? <String, bool>{};
   final itemModels = recipe.relations?[kItemModelTypeName] ?? const <Model>[];
   final relList = recipe.relationsList ?? const <Relation>[];
-  final ingredients = <TaskIngredient>[];
+  final ingredients = <CookingPlanIngredient>[];
   for (final it in itemModels) {
     final idStr = '${it.id}';
     final edge = relationForItemModel(relList, it.id);
     ingredients.add(
-      TaskIngredient(
+      CookingPlanIngredient(
         itemId: it.id,
         name: it.name,
         amount: ingredientAmountDisplay(edge, it.description),
@@ -320,9 +327,9 @@ CookingTaskDetail? cookingTaskDetailFromModel(Model task) {
       ),
     );
   }
-  return CookingTaskDetail(
-    taskId: task.id,
-    taskRelationId: forRecipe.relationId,
+  return CookingPlanDetail(
+    planId: plan.id,
+    planRecipeRelationId: cooksRecipe.relationId,
     recipeId: recipe.id,
     recipeName: recipe.name,
     plannedDate: planned,
@@ -330,7 +337,7 @@ CookingTaskDetail? cookingTaskDetailFromModel(Model task) {
     tags: _tagListFromModel(recipe),
     prepTimeMinutes: _intAttr(recipe, kRecipeAttrPrepTime),
     servings: _intAttr(recipe, kRecipeAttrServings),
-    notes: task.attrString(kCookingTaskAttrNotes),
+    notes: plan.description,
     ingredients: ingredients,
     instructionLines: instructionLinesFromRaw(
       recipe.attrString(kRecipeAttrInstructions),

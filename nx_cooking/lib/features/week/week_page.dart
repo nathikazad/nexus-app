@@ -148,7 +148,7 @@ class _MealCardTile extends StatelessWidget {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: () => context.push('/task/${meal.taskId}'),
+        onTap: () => context.push('/plan/${meal.planId}'),
         borderRadius: BorderRadius.circular(14),
         child: Ink(
           decoration: _cardDecoration(),

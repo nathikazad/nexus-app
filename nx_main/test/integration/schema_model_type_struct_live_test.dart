@@ -354,7 +354,7 @@ void main() {
             '   Parent: ${personById.parent!.name} (id: ${personById.parent!.id})');
       }
       print('   Children: ${personById.children?.length ?? 0}');
-      print('   Traits: ${personById.traits?.length ?? 0}\n');
+      print('   Mixins: ${personById.mixins?.length ?? 0}\n');
 
       // Verify the results match
       print(

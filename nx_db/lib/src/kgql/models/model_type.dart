@@ -4,7 +4,7 @@ import 'relation.dart';
 import 'tag_system.dart';
 
 /// Model class representing a ModelType from the GraphQL API
-/// Supports nested structure from get_kgql_model_type (parent, children, traits)
+/// Supports nested structure from get_kgql_model_type (parent, children, mixins)
 class ModelType {
   final int id;
   final String name;
@@ -16,6 +16,9 @@ class ModelType {
 
   final ModelType? parent;
   final List<ModelType>? children;
+  final List<ModelType>? mixins;
+
+  /// Legacy alias kept while older apps migrate from traits to type-level mixins.
   final List<ModelType>? traits;
 
   final List<AttributeDefinition>? attributes;
@@ -34,11 +37,13 @@ class ModelType {
     this.userId,
     this.parent,
     this.children,
-    this.traits,
+    List<ModelType>? mixins,
+    List<ModelType>? traits,
     this.attributes,
     this.relations,
     this.tagSystems,
-  });
+  })  : mixins = mixins ?? traits,
+        traits = traits ?? mixins;
 
   /// Creates a ModelType from a JSON map (typically from GraphQL response)
   factory ModelType.fromJson(Map<String, dynamic> json,
@@ -69,12 +74,13 @@ class ModelType {
       }).toList();
     }
 
-    List<ModelType>? traits;
-    if (json['traits'] != null) {
-      final traitsJson = json['traits'] as List<dynamic>;
-      traits = traitsJson.map((traitJson) {
+    List<ModelType>? mixins;
+    final mixinsJson = json['mixins'] ?? json['traits'];
+    if (mixinsJson != null) {
+      final mixinRows = mixinsJson as List<dynamic>;
+      mixins = mixinRows.map((mixinJson) {
         final traitMap =
-            Map<String, dynamic>.from(traitJson as Map<String, dynamic>);
+            Map<String, dynamic>.from(mixinJson as Map<String, dynamic>);
         if (currentId != null && !traitMap.containsKey('parentId')) {
           traitMap['parentId'] = currentId;
         }
@@ -159,7 +165,8 @@ class ModelType {
       userId: json['userId'] as int?,
       parent: parent,
       children: children,
-      traits: traits,
+      mixins: mixins,
+      traits: mixins,
       attributes: attributes,
       relations: relations,
       tagSystems: tagSystems,
@@ -179,7 +186,7 @@ class ModelType {
       if (parent != null) 'parent': parent!.toJson(),
       if (children != null)
         'children': children!.map((c) => c.toJson()).toList(),
-      if (traits != null) 'traits': traits!.map((t) => t.toJson()).toList(),
+      if (mixins != null) 'mixins': mixins!.map((t) => t.toJson()).toList(),
       if (attributes != null)
         'attributes': attributes!.map((a) => a.toJson()).toList(),
       if (relations != null)
@@ -191,7 +198,7 @@ class ModelType {
 
   @override
   String toString() {
-    return 'ModelType(id: $id, name: $name, typeKind: $typeKind, description: $description, agentInstructions: $agentInstructions, parentId: $parentId, userId: $userId, children: ${children?.length ?? 0}, traits: ${traits?.length ?? 0})';
+    return 'ModelType(id: $id, name: $name, typeKind: $typeKind, description: $description, agentInstructions: $agentInstructions, parentId: $parentId, userId: $userId, children: ${children?.length ?? 0}, mixins: ${mixins?.length ?? 0})';
   }
 
   @override

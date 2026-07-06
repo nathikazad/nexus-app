@@ -93,7 +93,7 @@ class ModelTypeBasicFields extends StatelessWidget {
           items: const [
             DropdownMenuItem(value: 'abstract', child: Text('Abstract')),
             DropdownMenuItem(value: 'base', child: Text('Base')),
-            DropdownMenuItem(value: 'trait', child: Text('Trait')),
+            DropdownMenuItem(value: 'mixin', child: Text('Mixin')),
           ],
           onChanged: (value) {
             if (value != null) {

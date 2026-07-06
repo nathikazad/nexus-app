@@ -16,7 +16,7 @@ class RecipeTagFilterSheet extends StatefulWidget {
   });
 
   final ModelTypeView schema;
-  final List<CookingItemEntry> ingredients;
+  final List<IngredientEntry> ingredients;
   final RecipeFilter? initial;
   final void Function(RecipeFilter?) onApply;
 

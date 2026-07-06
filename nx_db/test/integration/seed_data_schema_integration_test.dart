@@ -12,9 +12,9 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_db/internal.dart';
 import 'package:nx_db/kgql.dart';
 
-/// Same as [getAllModelTypesQuery] plus `traits` so trait types (e.g. Employee) appear.
-const _getAllModelTypesWithTraitsQuery = '''
-query GetAllModelTypesWithTraits {
+/// Same as [getAllModelTypesQuery] plus `mixins` so mixin types appear.
+const _getAllModelTypesWithMixinsQuery = '''
+query GetAllModelTypesWithMixins {
   getKgqlModelType(input: {
     model_types: []
     struct: {
@@ -24,7 +24,7 @@ query GetAllModelTypesWithTraits {
       description: true
       parent: true
       children: true
-      traits: true
+      mixins: true
     }
   })
 }
@@ -35,7 +35,7 @@ query GetAllModelTypesWithTraits {
 // (setup_model_types + setup_tag_systems for Expense)
 // ---------------------------------------------------------------------------
 
-/// Abstract / base / trait / action types from seed `setup_model_types`.
+/// Abstract / base / mixin / action types from seed `setup_model_types`.
 const _kSeedModelTypeNames = <String>{
   'Real Nouns',
   'Digital Nouns',
@@ -49,7 +49,7 @@ const _kSeedModelTypeNames = <String>{
   'Transcript',
   'Recipe',
   'Essay',
-  'Employee',
+  'Plannable',
   'Meet',
   'Goto',
   'Prayer',
@@ -82,7 +82,7 @@ void _collectModelTypeNames(ModelType mt, Set<String> out) {
   for (final c in mt.children ?? const <ModelType>[]) {
     _collectModelTypeNames(c, out);
   }
-  for (final t in mt.traits ?? const <ModelType>[]) {
+  for (final t in mt.mixins ?? const <ModelType>[]) {
     _collectModelTypeNames(t, out);
   }
 }
@@ -93,7 +93,7 @@ ModelType? _findModelTypeByName(ModelType mt, String name) {
     final found = _findModelTypeByName(c, name);
     if (found != null) return found;
   }
-  for (final t in mt.traits ?? const <ModelType>[]) {
+  for (final t in mt.mixins ?? const <ModelType>[]) {
     final found = _findModelTypeByName(t, name);
     if (found != null) return found;
   }
@@ -118,7 +118,7 @@ void _collectTagNodeNames(TagNode n, Set<String> out) {
 Future<List<ModelType>> _fetchModelTypeRoots(GraphQLClient client) async {
   final result = await client.query(
     QueryOptions(
-      document: gql(_getAllModelTypesWithTraitsQuery),
+      document: gql(_getAllModelTypesWithMixinsQuery),
       fetchPolicy: FetchPolicy.networkOnly,
     ),
   );
@@ -147,7 +147,7 @@ Future<ModelType?> _fetchModelTypeById(GraphQLClient client, int id) async {
             'description': true,
             'parent': true,
             'children': true,
-            'traits': true,
+            'mixins': true,
             'attributes': true,
             'relations': true,
             // Same shape as [modelTypeProvider] — server fills nested tag nodes.

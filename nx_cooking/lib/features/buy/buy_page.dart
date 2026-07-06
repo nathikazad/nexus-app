@@ -78,7 +78,7 @@ class _BuyListBodyState extends ConsumerState<_BuyListBody> {
   Future<void> _onToggleGroupItem(int g, int i, bool v) async {
     final snap = widget.snap;
     final group = snap.groups[g];
-    if (group.taskRelationId == 0) {
+    if (group.planRecipeRelationId == 0) {
       if (!context.mounted) {
         return;
       }
@@ -98,13 +98,13 @@ class _BuyListBodyState extends ConsumerState<_BuyListBody> {
     try {
       await ref
           .read(cookingPlanRepositoryProvider)
-          .updateIngredientChecks(group.taskId, group.taskRelationId, m);
+          .updateIngredientChecks(group.planId, group.planRecipeRelationId, m);
       if (!context.mounted) {
         return;
       }
       ref.invalidate(weekSectionsProvider);
       ref.invalidate(shoppingSnapshotProvider);
-      ref.invalidate(cookingTaskDetailProvider(group.taskId));
+      ref.invalidate(cookingPlanDetailProvider(group.planId));
     } catch (e) {
       if (!mounted) {
         return;

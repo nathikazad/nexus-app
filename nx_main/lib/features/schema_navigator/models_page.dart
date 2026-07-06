@@ -24,7 +24,7 @@ SchemaModelType _modelTypeWithChildren(
     userId: n.userId,
     parent: n.parent,
     children: children,
-    traits: n.traits,
+    mixins: n.mixins,
     attributes: n.attributes,
     relations: n.relations,
     tagSystems: n.tagSystems,

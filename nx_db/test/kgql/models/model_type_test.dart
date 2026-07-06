@@ -17,9 +17,9 @@ void main() {
 
     test('MT2.2 snake and camel type_kind', () {
       final a = ModelType.fromJson({'id': 1, 'name': 'X', 'type_kind': 'base'});
-      final b = ModelType.fromJson({'id': 1, 'name': 'X', 'typeKind': 'trait'});
+      final b = ModelType.fromJson({'id': 1, 'name': 'X', 'typeKind': 'mixin'});
       expect(a.typeKind, 'base');
-      expect(b.typeKind, 'trait');
+      expect(b.typeKind, 'mixin');
     });
 
     test('MT2.3 parent node', () {
@@ -46,16 +46,30 @@ void main() {
       expect(mt.children!.first.name, 'C1');
     });
 
-    test('MT2.5 traits', () {
+    test('MT2.5 mixins', () {
+      final mt = ModelType.fromJson({
+        'id': 1,
+        'name': 'Base',
+        'mixins': [
+          {'id': 20, 'name': 'Plannable'},
+        ],
+      }, recursive: true);
+      expect(mt.mixins?.length, 1);
+      expect(mt.mixins!.first.parentId, 1);
+      expect(mt.traits, mt.mixins);
+    });
+
+    test('MT2.5b legacy traits alias parses as mixins', () {
       final mt = ModelType.fromJson({
         'id': 1,
         'name': 'Base',
         'traits': [
-          {'id': 20, 'name': 'T1'},
+          {'id': 20, 'name': 'Legacy'},
         ],
       }, recursive: true);
-      expect(mt.traits?.length, 1);
-      expect(mt.traits!.first.parentId, 1);
+      expect(mt.mixins?.length, 1);
+      expect(mt.mixins!.first.name, 'Legacy');
+      expect(mt.traits, mt.mixins);
     });
 
     test('MT2.6 attributes', () {

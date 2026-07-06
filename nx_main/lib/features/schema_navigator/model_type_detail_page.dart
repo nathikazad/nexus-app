@@ -154,11 +154,11 @@ class ModelTypeDetailPage extends ConsumerWidget {
               const SizedBox(height: 8),
               _agentInstructionsCard(modelType),
             ],
-            if (modelType.traits != null && modelType.traits!.isNotEmpty) ...[
+            if (modelType.mixins != null && modelType.mixins!.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _sectionTitle('Traits'),
+              _sectionTitle('Mixins'),
               const SizedBox(height: 8),
-              ...modelType.traits!.map((t) => _traitTile(context, t)),
+              ...modelType.mixins!.map((t) => _mixinTile(context, t)),
             ],
             if (modelType.attributes != null &&
                 modelType.attributes!.isNotEmpty) ...[
@@ -294,7 +294,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _traitTile(BuildContext context, SchemaModelType trait) {
+  Widget _mixinTile(BuildContext context, SchemaModelType mixin) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -302,7 +302,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => context.push('/model-type/${trait.id}'),
+          onTap: () => context.push('/model-type/${mixin.id}'),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -315,7 +315,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    trait.name,
+                    mixin.name,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -633,7 +633,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
 }
 
 bool _canViewInstances(SchemaModelType modelType) {
-  if (modelType.typeKind == 'trait') return false;
+  if (modelType.typeKind == 'mixin') return false;
   return modelType.typeKind == 'base' ||
       (modelType.children != null && modelType.children!.isNotEmpty);
 }

@@ -13,6 +13,7 @@ class SchemaModelType {
   final int? userId;
   final SchemaModelType? parent;
   final List<SchemaModelType>? children;
+  final List<SchemaModelType>? mixins;
   final List<SchemaModelType>? traits;
   final List<AttributeDefinitionDraft>? attributes;
   final List<RelationDefinitionDraft>? relations;
@@ -28,11 +29,13 @@ class SchemaModelType {
     this.userId,
     this.parent,
     this.children,
-    this.traits,
+    List<SchemaModelType>? mixins,
+    List<SchemaModelType>? traits,
     this.attributes,
     this.relations,
     this.tagSystems,
-  });
+  })  : mixins = mixins ?? traits,
+        traits = traits ?? mixins;
 
   SchemaModelType copyWith({
     int? id,
@@ -44,6 +47,7 @@ class SchemaModelType {
     int? userId,
     SchemaModelType? parent,
     List<SchemaModelType>? children,
+    List<SchemaModelType>? mixins,
     List<SchemaModelType>? traits,
     List<AttributeDefinitionDraft>? attributes,
     List<RelationDefinitionDraft>? relations,
@@ -59,7 +63,8 @@ class SchemaModelType {
       userId: userId ?? this.userId,
       parent: parent ?? this.parent,
       children: children ?? this.children,
-      traits: traits ?? this.traits,
+      mixins: mixins ?? traits ?? this.mixins,
+      traits: mixins ?? traits ?? this.mixins,
       attributes: attributes ?? this.attributes,
       relations: relations ?? this.relations,
       tagSystems: tagSystems ?? this.tagSystems,

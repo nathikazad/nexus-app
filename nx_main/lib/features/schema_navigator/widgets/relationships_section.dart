@@ -27,8 +27,8 @@ class RelationshipsSection extends ConsumerWidget {
           final found = findInList(type.children!);
           if (found != null) return found;
         }
-        if (type.traits != null) {
-          final found = findInList(type.traits!);
+        if (type.mixins != null) {
+          final found = findInList(type.mixins!);
           if (found != null) return found;
         }
       }

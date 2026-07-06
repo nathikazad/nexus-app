@@ -4,15 +4,15 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_cooking/core/dates/week_calendar.dart';
-import 'package:nx_cooking/data/cooking_task/cooking_task_schema_provider.dart';
-import 'package:nx_cooking/data/cooking_task/kgql_cooking_plan_repository.dart';
+import 'package:nx_cooking/data/cooking_plan/cooking_schema_provider.dart';
+import 'package:nx_cooking/data/cooking_plan/kgql_cooking_plan_repository.dart';
 import 'package:nx_cooking/data/fake_cooking_repository.dart';
 import 'package:nx_cooking/data/recipe/kgql_recipe_repository.dart';
 import 'package:nx_cooking/data/recipe/recipe_schema_provider.dart';
 import 'package:nx_cooking/data/schema/model_type_view_mapper.dart';
 import 'package:nx_cooking/domain/cooking_plan_repository.dart';
 import 'package:nx_cooking/domain/cooking_repository.dart';
-import 'package:nx_cooking/domain/cooking_task_detail.dart';
+import 'package:nx_cooking/domain/cooking_plan_detail.dart';
 import 'package:nx_cooking/domain/recipe.dart';
 import 'package:nx_cooking/domain/recipe_detail.dart';
 import 'package:nx_cooking/domain/recipe_filter.dart';
@@ -22,7 +22,7 @@ import 'package:nx_cooking/domain/search_result.dart';
 import 'package:nx_cooking/domain/shopping.dart';
 import 'package:nx_cooking/domain/week_section.dart';
 
-export 'package:nx_cooking/data/cooking_task/cooking_task_schema_provider.dart';
+export 'package:nx_cooking/data/cooking_plan/cooking_schema_provider.dart';
 export 'package:nx_cooking/data/recipe/recipe_schema_provider.dart';
 
 /// Recipe [ModelType] mapped for tag UI (filter sheet, tag admin).
@@ -31,24 +31,19 @@ final recipeSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
   return modelTypeViewFromKgql(m);
 });
 
-/// All [Item] models with the CookingItem trait (ingredient catalog).
-final cookingItemsProvider = FutureProvider<List<CookingItemEntry>>((
+/// All [Item] models in the ingredient catalog.
+final ingredientItemsProvider = FutureProvider<List<IngredientEntry>>((
   ref,
 ) async {
   await ref.watch(authenticatedUserProvider.future);
   final client = ref.watch(graphqlClientProvider);
   final models = await fetchKgqlModels(
     client,
-    filter: <String, dynamic>{
-      'model_type': 'Item',
-      'relation_filters': <Map<String, dynamic>>[
-        <String, dynamic>{'model_type': 'CookingItem'},
-      ],
-    },
+    filter: <String, dynamic>{'model_type': 'Item'},
     struct: <String, dynamic>{'id': true, 'name': true},
   );
   final list =
-      models.map((m) => CookingItemEntry(id: m.id, name: m.name)).toList()
+      models.map((m) => IngredientEntry(id: m.id, name: m.name)).toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   return list;
 });
@@ -134,7 +129,7 @@ final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {
 final cookingPlanRepositoryProvider = Provider<CookingPlanRepository>((ref) {
   return KgqlCookingPlanRepository(
     client: ref.watch(graphqlClientProvider),
-    loadCookingTaskSchema: () => ref.read(cookingTaskSchemaProvider.future),
+    loadCookingSchema: () => ref.read(cookingSchemaProvider.future),
   );
 });
 
@@ -177,14 +172,14 @@ final recipeDetailProvider = FutureProvider.family<RecipeDetail?, int>((
   return ref.watch(recipeRepositoryProvider).fetchRecipeDetail(id);
 });
 
-/// One planned [CookingTask] for [CookingTaskViewPage] (by task id).
-final cookingTaskDetailProvider =
-    FutureProvider.family<CookingTaskDetail?, int>((ref, taskId) async {
+/// One planned [Cooking] for [CookingPlanViewPage] (by plan id).
+final cookingPlanDetailProvider =
+    FutureProvider.family<CookingPlanDetail?, int>((ref, planId) async {
       await ref.watch(authenticatedUserProvider.future);
-      return ref.watch(cookingPlanRepositoryProvider).fetchTaskDetail(taskId);
+      return ref.watch(cookingPlanRepositoryProvider).fetchPlanDetail(planId);
     });
 
-/// Week tab: seven day rows from `CookingTask` in PGDB.
+/// Week tab: seven day rows from planned `Cooking` in PGDB.
 final weekSectionsProvider = FutureProvider<List<WeekDaySection>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
   final start = ref.watch(selectedWeekStartProvider);

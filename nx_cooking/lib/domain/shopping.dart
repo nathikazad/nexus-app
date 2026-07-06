@@ -1,7 +1,7 @@
 final class ShoppingItem {
   const ShoppingItem({
-    required this.taskId,
-    required this.taskRelationId,
+    required this.planId,
+    required this.planRecipeRelationId,
     required this.itemId,
     required this.name,
     required this.amount,
@@ -10,8 +10,8 @@ final class ShoppingItem {
     this.preparation,
   });
 
-  final int taskId;
-  final int taskRelationId;
+  final int planId;
+  final int planRecipeRelationId;
   final int itemId;
   final String name;
   final String amount;
@@ -28,14 +28,14 @@ final class ShoppingMealGroup {
   const ShoppingMealGroup({
     required this.header,
     required this.items,
-    required this.taskId,
-    required this.taskRelationId,
+    required this.planId,
+    required this.planRecipeRelationId,
   });
 
   final String header;
   final List<ShoppingItem> items;
-  final int taskId;
-  final int taskRelationId;
+  final int planId;
+  final int planRecipeRelationId;
 }
 
 final class ShoppingListSnapshot {

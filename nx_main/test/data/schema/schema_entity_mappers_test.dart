@@ -86,6 +86,18 @@ void main() {
       expect(s.tagSystems?.length, 1);
       expect(s.tagSystems!.first.name, 'labels');
     });
+
+    test('maps mixins', () {
+      final mt = nx.ModelType(
+        id: 1,
+        name: 'Meet',
+        mixins: [nx.ModelType(id: 20, name: 'Plannable')],
+      );
+      final s = schemaModelTypeFromNx(mt);
+      expect(s.mixins?.length, 1);
+      expect(s.mixins!.first.name, 'Plannable');
+      expect(s.traits, s.mixins);
+    });
   });
 
   group('schemaModelFromNx', () {
