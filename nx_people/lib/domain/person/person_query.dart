@@ -20,6 +20,8 @@ abstract class PersonRepository {
   Future<List<Person>> listFollowUp({int limit = 20});
   Future<List<Person>> search(String query);
   Future<Person?> getById(int id);
+  Future<int> createPerson(PersonDraft draft);
+  Future<void> updatePerson(int id, PersonDraft draft);
   Future<List<PeopleTagSystem>> listTagSystems();
   Future<PeopleResultContext> context(String type, String label);
   Future<List<Person>> peopleFor(PeopleResultContext context);
@@ -27,6 +29,18 @@ abstract class PersonRepository {
   Future<List<String>> listCompanies();
   Future<List<String>> listMeetings();
   Future<List<String>> listPlanned();
+}
+
+class PersonDraft {
+  const PersonDraft({
+    required this.name,
+    required this.company,
+    required this.summary,
+  });
+
+  final String name;
+  final String company;
+  final String summary;
 }
 
 class PeopleTagSystem {

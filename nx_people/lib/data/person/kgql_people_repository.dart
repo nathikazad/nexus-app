@@ -55,6 +55,33 @@ class KgqlPeopleRepository implements PersonRepository {
   }
 
   @override
+  Future<int> createPerson(PersonDraft draft) async {
+    return setKgqlModel(
+      _client,
+      setKgqlCreate(
+        modelType: kPersonModelTypeName,
+        name: draft.name.trim(),
+        description: draft.summary.trim(),
+        attributes: _draftAttributes(draft),
+      ),
+    );
+  }
+
+  @override
+  Future<void> updatePerson(int id, PersonDraft draft) async {
+    await setKgqlModel(
+      _client,
+      setKgqlUpdate(
+        id: id,
+        modelType: kPersonModelTypeName,
+        name: draft.name.trim(),
+        description: draft.summary.trim(),
+        attributes: _draftAttributes(draft),
+      ),
+    );
+  }
+
+  @override
   Future<PeopleResultContext> context(String type, String label) async {
     final rows = await _filter(type, label);
     return PeopleResultContext(
@@ -160,5 +187,12 @@ class KgqlPeopleRepository implements PersonRepository {
         .toSet()
         .toList()
       ..sort();
+  }
+
+  List<SetModelAttribute> _draftAttributes(PersonDraft draft) {
+    return [
+      SetModelAttribute(key: kPersonAttrCompany, value: draft.company.trim()),
+      SetModelAttribute(key: kPersonAttrSummary, value: draft.summary.trim()),
+    ];
   }
 }

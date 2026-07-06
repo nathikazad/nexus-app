@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_people/app.dart';
 import 'package:nx_people/data/auth/people_auth_controller.dart';
@@ -8,8 +8,8 @@ import 'package:nx_people/data/fake_people_repository.dart';
 import 'package:nx_people/data/providers.dart';
 
 void main() {
-  Future<void> pumpDesktop(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1200, 800);
+  Future<void> pumpApp(WidgetTester tester, Size size) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -26,9 +26,7 @@ void main() {
               skipBackendPing: true,
             ),
           ),
-          peopleRepositoryProvider.overrideWithValue(
-            const FakePeopleRepository(),
-          ),
+          peopleRepositoryProvider.overrideWithValue(FakePeopleRepository()),
         ],
         child: const NexusPeopleApp(),
       ),
@@ -36,22 +34,28 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('people app renders the desktop navigator and profile', (
+  testWidgets('desktop renders four section nav, people list, and profile', (
     tester,
   ) async {
-    await pumpDesktop(tester);
+    await pumpApp(tester, const Size(1200, 800));
 
     expect(find.text('nx_people'), findsOneWidget);
-    expect(find.text('People'), findsOneWidget);
-    expect(find.text('Tags'), findsOneWidget);
+    expect(find.text('People'), findsWidgets);
+    expect(find.text('Meetings'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Funnels'), findsOneWidget);
     expect(find.text('Sarah Chen'), findsWidgets);
-    expect(find.text('INSPECTOR'), findsOneWidget);
+    expect(find.text('NEXT ACTION'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('TIMELINE AND MEETINGS'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('TIMELINE AND MEETINGS'), findsOneWidget);
   });
 
-  testWidgets('sidebar search opens results and preserves context after open', (
-    tester,
-  ) async {
-    await pumpDesktop(tester);
+  testWidgets('people search filters across the repository', (tester) async {
+    await pumpApp(tester, const Size(1200, 800));
 
     await tester.enterText(
       find.byKey(const ValueKey('people-search-field')),
@@ -59,34 +63,140 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Search: atlas'), findsOneWidget);
-    expect(find.text('2 people'), findsOneWidget);
-    expect(find.text('Daniel Brooks'), findsOneWidget);
-
-    await tester.tap(find.text('Daniel Brooks').last);
-    await tester.pumpAndSettle();
-
+    expect(find.text('Marcus Rivera'), findsWidgets);
     expect(find.text('Daniel Brooks'), findsWidgets);
-    expect(find.text('Back to Search: atlas'), findsOneWidget);
-    expect(find.text('2 of 2'), findsOneWidget);
+    expect(find.text('Sarah Chen'), findsNothing);
   });
 
-  testWidgets('tags tab shows tag groups and opens matching result overlay', (
+  testWidgets('mobile people tab shows corrected filter pills', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    expect(find.text('Pinned'), findsOneWidget);
+    expect(find.text('Recent'), findsOneWidget);
+    expect(find.text('Follow up'), findsWidgets);
+    expect(find.text('Company'), findsNothing);
+    expect(find.text('RECENTLY CONTACTED'), findsNothing);
+    expect(find.text('Active'), findsNothing);
+    expect(find.byKey(const ValueKey('person-pending-dot-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('person-pending-dot-4')), findsNothing);
+    expect(find.text('Unknown'), findsNothing);
+    expect(find.text('2026-07-05'), findsOneWidget);
+  });
+
+  testWidgets('mobile people filter button opens bottom sheet', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.byKey(const ValueKey('people-filter-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filter & Sort'), findsOneWidget);
+    expect(find.text('Sort By'), findsOneWidget);
+    expect(find.text('Company'), findsOneWidget);
+    expect(find.text('Role'), findsOneWidget);
+    expect(find.text('Tags'), findsOneWidget);
+    expect(find.text('Reset'), findsOneWidget);
+    expect(find.text('Apply'), findsOneWidget);
+  });
+
+  testWidgets('mobile adds a person from people tab', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.byKey(const ValueKey('people-add-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Person'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('person-name-field')),
+      'Jane Doe',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('person-company-field')),
+      'Quiet Ventures',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('person-summary-field')),
+      'Met through the people app redesign.',
+    );
+    await tester.tap(find.byKey(const ValueKey('person-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Person'), findsNothing);
+    expect(find.text('Jane Doe'), findsOneWidget);
+    expect(find.text('Quiet Ventures'), findsOneWidget);
+  });
+
+  testWidgets('mobile edits a person from profile detail', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.text('Sarah Chen').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Person'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('person-name-field')),
+      'Sarah Chen Updated',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('person-company-field')),
+      'Northstar Labs Updated',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('person-summary-field')),
+      'Updated relationship notes.',
+    );
+    await tester.tap(find.byKey(const ValueKey('person-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Person'), findsNothing);
+    expect(find.text('Sarah Chen Updated'), findsOneWidget);
+    expect(find.text('Northstar Labs Updated'), findsOneWidget);
+    expect(find.text('Updated relationship notes.'), findsOneWidget);
+  });
+
+  testWidgets('meetings tab shows date agenda and opens person detail', (
     tester,
   ) async {
-    await pumpDesktop(tester);
+    await pumpApp(tester, const Size(1200, 800));
 
-    await tester.tap(find.text('Tags'));
+    await tester.tap(find.text('Meetings'));
     await tester.pumpAndSettle();
 
-    expect(find.text('RELATIONSHIP'), findsOneWidget);
-    expect(find.text('Investor'), findsWidgets);
+    expect(find.text('Today'), findsWidgets);
+    expect(find.text('Meetings'), findsWidgets);
+    expect(find.text('People touched'), findsOneWidget);
+    expect(find.text('Weekly Planning'), findsWidgets);
 
-    await tester.tap(find.text('Investor').first);
+    await tester.tap(find.text('Weekly Planning').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Relationship: Investor'), findsOneWidget);
-    expect(find.text('2 people'), findsOneWidget);
-    expect(find.text('Marcus Rivera'), findsWidgets);
+    expect(find.text('Maya Ioseliani'), findsWidgets);
+    expect(find.text('NEXT ACTION'), findsOneWidget);
+  });
+
+  testWidgets('mobile uses bottom tabs and pushes profile detail', (
+    tester,
+  ) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    expect(find.text('People'), findsWidgets);
+    expect(find.text('Meetings'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Funnels'), findsOneWidget);
+
+    await tester.tap(find.text('Sarah Chen').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('PROFILE'), findsOneWidget);
+    expect(find.text('NEXT ACTION'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('TIMELINE AND MEETINGS'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('TIMELINE AND MEETINGS'), findsOneWidget);
   });
 }

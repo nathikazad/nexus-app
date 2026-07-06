@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const Color bg = Color(0xffffffff);
+  static const Color bg = Color(0xfffdfcf8);
   static const Color panel = Color(0xffffffff);
-  static const Color sidebar = Color(0xfffafafa);
-  static const Color subtle = Color(0xfff4f4f5);
-  static const Color hover = Color(0xffe4e4e7);
-  static const Color line = Color(0xffe4e4e7);
-  static const Color lineStrong = Color(0xffd4d4d8);
-  static const Color text = Color(0xff18181b);
-  static const Color muted = Color(0xff71717a);
-  static const Color faint = Color(0xffa1a1aa);
+  static const Color sidebar = Color(0xfffdfcf8);
+  static const Color subtle = Color(0xfff5f2eb);
+  static const Color hover = Color(0xffeae6db);
+  static const Color line = Color(0xffeae6db);
+  static const Color lineStrong = Color(0xffd5d1c5);
+  static const Color text = Color(0xff2c2b29);
+  static const Color muted = Color(0xff5a5854);
+  static const Color faint = Color(0xff8b8881);
   static const Color blue = Color(0xff3f6ca8);
   static const Color amber = Color(0xff9a6a18);
   static const Color green = Color(0xff3d7c72);
@@ -62,6 +62,13 @@ ThemeData buildAppTheme() {
     navigationBarTheme: const NavigationBarThemeData(
       backgroundColor: AppColors.panel,
       indicatorColor: AppColors.subtle,
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.text,
+        foregroundColor: AppColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     ),
   );
 }

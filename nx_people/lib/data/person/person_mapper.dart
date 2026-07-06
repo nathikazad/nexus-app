@@ -36,6 +36,7 @@ Person personFromModel(Model model) {
     status: status,
     statusColor: _statusColor(status),
     lastContact: model.attrString(kPersonAttrLastContact) ?? 'Unknown',
+    updatedAt: model.updatedAt ?? '',
     nextFollowUp: model.attrString(kPersonAttrNextFollowUp) ?? 'None',
     pinned: model.attrBool(kPersonAttrPinned) ?? false,
     email: model.attrString(kPersonAttrEmail) ?? '',

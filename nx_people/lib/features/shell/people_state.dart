@@ -1,135 +1,57 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_people/domain/person/person_query.dart';
+
+enum PeopleAppSection { people, meetings, pending, funnels }
 
 class PeopleWorkspaceState {
   const PeopleWorkspaceState({
+    this.section = PeopleAppSection.people,
     this.activePersonId,
-    this.sidebarTab = PeopleSidebarTab.people,
-    this.activeContext,
-    this.overlayContext,
-    this.createMenuOpen = false,
+    this.searchText = '',
+    this.selectedDayOffset = 0,
   });
 
+  final PeopleAppSection section;
   final int? activePersonId;
-  final PeopleSidebarTab sidebarTab;
-  final PeopleResultContext? activeContext;
-  final PeopleResultContext? overlayContext;
-  final bool createMenuOpen;
-
-  bool get hasOverlay => overlayContext != null;
+  final String searchText;
+  final int selectedDayOffset;
 
   PeopleWorkspaceState copyWith({
+    PeopleAppSection? section,
     int? activePersonId,
-    PeopleSidebarTab? sidebarTab,
-    PeopleResultContext? activeContext,
-    PeopleResultContext? overlayContext,
-    bool? createMenuOpen,
-    bool clearActiveContext = false,
-    bool clearOverlay = false,
-    bool clearActivePerson = false,
+    String? searchText,
+    int? selectedDayOffset,
   }) {
     return PeopleWorkspaceState(
-      activePersonId: clearActivePerson
-          ? null
-          : activePersonId ?? this.activePersonId,
-      sidebarTab: sidebarTab ?? this.sidebarTab,
-      activeContext: clearActiveContext
-          ? null
-          : activeContext ?? this.activeContext,
-      overlayContext: clearOverlay
-          ? null
-          : overlayContext ?? this.overlayContext,
-      createMenuOpen: createMenuOpen ?? this.createMenuOpen,
+      section: section ?? this.section,
+      activePersonId: activePersonId ?? this.activePersonId,
+      searchText: searchText ?? this.searchText,
+      selectedDayOffset: selectedDayOffset ?? this.selectedDayOffset,
     );
   }
 }
-
-enum PeopleSidebarTab { people, tags }
 
 class PeopleWorkspaceNotifier extends Notifier<PeopleWorkspaceState> {
   @override
   PeopleWorkspaceState build() => const PeopleWorkspaceState();
 
-  void setSidebarTab(PeopleSidebarTab tab) {
-    state = state.copyWith(sidebarTab: tab);
+  void setSection(PeopleAppSection section) {
+    state = state.copyWith(section: section);
   }
 
-  void toggleCreateMenu() {
-    state = state.copyWith(createMenuOpen: !state.createMenuOpen);
+  void openPerson(int personId) {
+    state = state.copyWith(activePersonId: personId);
   }
 
-  void showOverlay(PeopleResultContext context) {
-    state = state.copyWith(overlayContext: context, createMenuOpen: false);
+  void setSearchText(String value) {
+    state = state.copyWith(searchText: value);
   }
 
-  void hideOverlay() {
-    state = state.copyWith(clearOverlay: true);
-  }
-
-  void openPerson(int personId, {PeopleResultContext? context}) {
-    state = state.copyWith(
-      activePersonId: personId,
-      activeContext: context,
-      clearOverlay: true,
-      createMenuOpen: false,
-    );
-  }
-
-  void returnToActiveContext() {
-    final context = state.activeContext;
-    if (context == null) return;
-    state = state.copyWith(overlayContext: context);
-  }
-
-  void clearActiveContext() {
-    state = state.copyWith(clearActiveContext: true);
+  void setSelectedDayOffset(int offset) {
+    state = state.copyWith(selectedDayOffset: offset);
   }
 }
 
 final peopleWorkspaceProvider =
     NotifierProvider<PeopleWorkspaceNotifier, PeopleWorkspaceState>(
       PeopleWorkspaceNotifier.new,
-    );
-
-enum MobilePeopleSection { people, tags, search }
-
-class MobilePeopleState {
-  const MobilePeopleState({
-    this.section = MobilePeopleSection.people,
-    this.searchText = '',
-  });
-
-  final MobilePeopleSection section;
-  final String searchText;
-
-  MobilePeopleState copyWith({
-    MobilePeopleSection? section,
-    String? searchText,
-  }) {
-    return MobilePeopleState(
-      section: section ?? this.section,
-      searchText: searchText ?? this.searchText,
-    );
-  }
-}
-
-class MobilePeopleNotifier extends Notifier<MobilePeopleState> {
-  @override
-  MobilePeopleState build() => const MobilePeopleState();
-
-  void setSection(MobilePeopleSection section) {
-    state = state.copyWith(section: section);
-  }
-
-  void setSearchText(String value) {
-    state = state.copyWith(
-      section: MobilePeopleSection.search,
-      searchText: value,
-    );
-  }
-}
-
-final mobilePeopleProvider =
-    NotifierProvider<MobilePeopleNotifier, MobilePeopleState>(
-      MobilePeopleNotifier.new,
     );

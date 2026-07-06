@@ -9,6 +9,7 @@ class Person {
     required this.status,
     required this.statusColor,
     required this.lastContact,
+    required this.updatedAt,
     required this.nextFollowUp,
     required this.pinned,
     required this.email,
@@ -31,6 +32,7 @@ class Person {
   final String status;
   final PersonStatusColor statusColor;
   final String lastContact;
+  final String updatedAt;
   final String nextFollowUp;
   final bool pinned;
   final String email;

@@ -37,15 +37,16 @@ const fakeTagSystems = <PeopleTagSystem>[
 ];
 
 class FakePeopleRepository implements PersonRepository {
-  const FakePeopleRepository([this.people = _people]);
+  FakePeopleRepository([List<Person>? people])
+    : _people = List<Person>.of(people ?? _samplePeople);
 
-  final List<Person> people;
+  final List<Person> _people;
 
-  Person _byId(int id) => people.firstWhere((person) => person.id == id);
+  List<Person> get people => List<Person>.unmodifiable(_people);
 
   @override
   Future<Person?> getById(int id) async {
-    for (final person in people) {
+    for (final person in _people) {
       if (person.id == id) return person;
     }
     return null;
@@ -53,23 +54,17 @@ class FakePeopleRepository implements PersonRepository {
 
   @override
   Future<List<Person>> listPinned({int limit = 20}) async {
-    return people.where((person) => person.pinned).take(limit).toList();
+    return _people.where((person) => person.pinned).take(limit).toList();
   }
 
   @override
   Future<List<Person>> listRecent({int limit = 20}) async {
-    return <Person>[
-      _byId(4),
-      _byId(1),
-      _byId(2),
-      _byId(6),
-      _byId(3),
-    ].take(limit).toList();
+    return _people.take(limit).toList();
   }
 
   @override
   Future<List<Person>> listFollowUp({int limit = 20}) async {
-    return people
+    return _people
         .where((person) => person.status == 'Follow up')
         .take(limit)
         .toList();
@@ -79,7 +74,24 @@ class FakePeopleRepository implements PersonRepository {
   Future<List<Person>> search(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const <Person>[];
-    return people.where((person) => person.matches(trimmed)).toList();
+    return _people.where((person) => person.matches(trimmed)).toList();
+  }
+
+  @override
+  Future<int> createPerson(PersonDraft draft) async {
+    final nextId = _people.isEmpty
+        ? 1
+        : _people.map((person) => person.id).reduce((a, b) => a > b ? a : b) +
+              1;
+    _people.insert(0, _personFromDraft(nextId, draft));
+    return nextId;
+  }
+
+  @override
+  Future<void> updatePerson(int id, PersonDraft draft) async {
+    final index = _people.indexWhere((person) => person.id == id);
+    if (index == -1) return;
+    _people[index] = _personFromDraft(id, draft, existing: _people[index]);
   }
 
   @override
@@ -122,25 +134,64 @@ class FakePeopleRepository implements PersonRepository {
       'Search' => search(label),
       'Recent' => Future<List<Person>>.value(people),
       'Company' => Future<List<Person>>.value(
-        people.where((person) => person.company == label).toList(),
+        _people.where((person) => person.company == label).toList(),
       ),
       'Meeting' => Future<List<Person>>.value(
-        people.where((person) => person.meetings.contains(label)).toList(),
+        _people.where((person) => person.meetings.contains(label)).toList(),
       ),
       'Planned' => Future<List<Person>>.value(
-        people.where((person) => person.planned.contains(label)).toList(),
+        _people.where((person) => person.planned.contains(label)).toList(),
       ),
       'Status' => Future<List<Person>>.value(
-        people.where((person) => person.status == label).toList(),
+        _people.where((person) => person.status == label).toList(),
       ),
       _ => Future<List<Person>>.value(
-        people.where((person) => person.tags.contains(label)).toList(),
+        _people.where((person) => person.tags.contains(label)).toList(),
       ),
     };
   }
+
+  Person _personFromDraft(int id, PersonDraft draft, {Person? existing}) {
+    final now = DateTime.now().toUtc().toIso8601String();
+    return Person(
+      id: id,
+      name: draft.name.trim(),
+      initials: _initials(draft.name),
+      company: draft.company.trim(),
+      role: existing?.role ?? '',
+      location: existing?.location ?? '',
+      status: existing?.status ?? 'Active',
+      statusColor: existing?.statusColor ?? PersonStatusColor.green,
+      lastContact: existing?.lastContact ?? 'Unknown',
+      updatedAt: now,
+      nextFollowUp: existing?.nextFollowUp ?? 'None',
+      pinned: existing?.pinned ?? false,
+      email: existing?.email ?? '',
+      phone: existing?.phone ?? '',
+      tags: existing?.tags ?? const <String>[],
+      meetings: existing?.meetings ?? const <String>[],
+      planned: existing?.planned ?? const <String>[],
+      summary: draft.summary.trim().isEmpty
+          ? 'No summary yet.'
+          : draft.summary.trim(),
+      currentThreads: existing?.currentThreads ?? const <PersonThread>[],
+      logs: existing?.logs ?? const <PersonLog>[],
+      relatedIds: existing?.relatedIds ?? const <int>[],
+    );
+  }
 }
 
-const _people = <Person>[
+String _initials(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  return parts.take(2).map((part) => part[0].toUpperCase()).join();
+}
+
+const _samplePeople = <Person>[
   Person(
     id: 1,
     name: 'Sarah Chen',
@@ -151,6 +202,7 @@ const _people = <Person>[
     status: 'Follow up',
     statusColor: PersonStatusColor.amber,
     lastContact: '3d ago',
+    updatedAt: '2026-07-02T09:30:00Z',
     nextFollowUp: 'Tomorrow',
     pinned: true,
     email: 'sarah@northstar.example',
@@ -201,6 +253,7 @@ const _people = <Person>[
     status: 'Active',
     statusColor: PersonStatusColor.green,
     lastContact: 'Yesterday',
+    updatedAt: '2026-07-04T16:20:00Z',
     nextFollowUp: 'Friday',
     pinned: true,
     email: 'marcus@atlas.example',
@@ -236,6 +289,7 @@ const _people = <Person>[
     status: 'Active',
     statusColor: PersonStatusColor.green,
     lastContact: '1w ago',
+    updatedAt: '2026-07-01T11:45:00Z',
     nextFollowUp: 'None',
     pinned: false,
     email: 'anika@quiet.example',
@@ -269,7 +323,8 @@ const _people = <Person>[
     location: 'Tbilisi',
     status: 'Active',
     statusColor: PersonStatusColor.green,
-    lastContact: 'Today',
+    lastContact: 'Unknown',
+    updatedAt: '2026-07-05T12:45:00Z',
     nextFollowUp: 'Today',
     pinned: true,
     email: 'maya@nexus.example',
@@ -308,6 +363,7 @@ const _people = <Person>[
     status: 'Dormant',
     statusColor: PersonStatusColor.blue,
     lastContact: '2mo ago',
+    updatedAt: '2026-05-03T08:00:00Z',
     nextFollowUp: 'None',
     pinned: false,
     email: 'daniel@atlas.example',
@@ -338,6 +394,7 @@ const _people = <Person>[
     status: 'Follow up',
     statusColor: PersonStatusColor.amber,
     lastContact: '5d ago',
+    updatedAt: '2026-06-30T14:10:00Z',
     nextFollowUp: 'Monday',
     pinned: false,
     email: 'elena@northstar.example',

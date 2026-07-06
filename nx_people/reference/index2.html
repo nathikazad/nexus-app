@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>nx_people</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+      body {
+          font-family: 'Inter', sans-serif;
+          background-color: #FDFCF8;
+          color: #2C2B29;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .no-scrollbar::-webkit-scrollbar {
+          display: none;
+      }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+      }
+
+      iconify-icon {
+          stroke-width: 1.5;
+      }
+    </style>
+  </head>
+  <body
+    class="h-screen w-full flex flex-col md:flex-row overflow-hidden selection:bg-[#EAE6DB] selection:text-[#2C2B29]"
+  >
+    <!-- Desktop/Tablet Sidebar -->
+    <aside
+      class="hidden md:flex flex-col w-56 lg:w-64 border-r border-[#EAE6DB] bg-[#FDFCF8] z-20 shrink-0 h-full"
+    >
+      <div class="h-14 flex items-center px-6 border-b border-transparent">
+        <span class="tracking-tighter font-medium text-base text-[#2C2B29]">
+          nx_people
+        </span>
+      </div>
+
+      <nav
+        class="flex-1 flex flex-col gap-1 px-3 py-4 overflow-y-auto no-scrollbar"
+      >
+        <!-- Active Tab -->
+        <a
+          href="#"
+          class="flex items-center gap-3 px-3 py-2 rounded-md bg-[#F5F2EB] text-[#2C2B29] group"
+        >
+          <iconify-icon
+            icon="solar:users-group-rounded-linear"
+            class="text-lg"
+          ></iconify-icon>
+          <span class="text-sm font-medium">People</span>
+        </a>
+        <a
+          href="#"
+          class="flex items-center gap-3 px-3 py-2 rounded-md text-[#8B8881] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] transition-colors group"
+        >
+          <iconify-icon
+            icon="solar:calendar-linear"
+            class="text-lg"
+          ></iconify-icon>
+          <span class="text-sm font-medium">Meetings</span>
+        </a>
+        <a
+          href="#"
+          class="flex items-center gap-3 px-3 py-2 rounded-md text-[#8B8881] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] transition-colors group justify-between"
+        >
+          <div class="flex items-center gap-3">
+            <iconify-icon
+              icon="solar:inbox-in-linear"
+              class="text-lg"
+            ></iconify-icon>
+            <span class="text-sm font-medium">Pending</span>
+          </div>
+          <span
+            class="bg-[#EAE6DB] text-[#5A5854] text-xs px-1.5 py-0.5 rounded-sm"
+          >
+            3
+          </span>
+        </a>
+        <a
+          href="#"
+          class="flex items-center gap-3 px-3 py-2 rounded-md text-[#8B8881] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] transition-colors group"
+        >
+          <iconify-icon
+            icon="solar:sort-from-bottom-to-top-linear"
+            class="text-lg"
+          ></iconify-icon>
+          <span class="text-sm font-medium">Funnels</span>
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-[#EAE6DB]">
+        <div class="flex items-center gap-3 px-2">
+          <div
+            class="w-7 h-7 rounded-full bg-[#EAE6DB] flex items-center justify-center text-xs font-medium text-[#5A5854]"
+          >
+            ME
+          </div>
+          <div class="flex flex-col">
+            <span class="text-xs font-medium text-[#2C2B29]">My Profile</span>
+            <span class="text-xs text-[#8B8881]">Settings</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main
+      class="flex-1 flex flex-col lg:flex-row h-full overflow-hidden relative bg-[#FDFCF8]"
+    >
+      <!-- Tab 1: People List Column -->
+      <section
+        class="w-full lg:w-[380px] xl:w-[420px] flex flex-col border-r border-[#EAE6DB] h-full z-10 bg-[#FDFCF8] shrink-0"
+      >
+        <!-- Header & Search -->
+        <header
+          class="px-5 pt-6 pb-4 border-b border-[#EAE6DB]/60 flex flex-col gap-5 sticky top-0 bg-[#FDFCF8]/80 backdrop-blur-xl z-20"
+        >
+          <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-semibold tracking-tight text-[#2C2B29]">
+              People
+            </h1>
+            <button
+              class="w-9 h-9 flex items-center justify-center rounded-xl bg-[#2C2B29] text-[#FDFCF8] hover:bg-[#1A1A19] transition-colors shadow-md"
+              id="add-person-btn"
+            >
+              <iconify-icon icon="lucide:plus" class="text-xl"></iconify-icon>
+            </button>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1">
+              <iconify-icon
+                icon="solar:magnifer-linear"
+                class="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B8881] text-lg"
+              ></iconify-icon>
+              <input
+                type="text"
+                placeholder="Search everyone..."
+                class="w-full bg-[#F5F2EB]/60 text-[#2C2B29] placeholder-[#8B8881] text-sm rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EAE6DB] transition-all border border-transparent focus:bg-[#FDFCF8] shadow-sm"
+              />
+            </div>
+            <button
+              class="w-[44px] h-[44px] flex items-center justify-center rounded-xl bg-[#FDFCF8] text-[#5A5854] border border-[#EAE6DB] hover:bg-[#F5F2EB] transition-all shadow-sm shrink-0"
+              id="people-filter-btn"
+            >
+              <iconify-icon
+                icon="solar:tuning-linear"
+                class="text-lg"
+              ></iconify-icon>
+            </button>
+          </div>
+        </header>
+
+        <!-- List -->
+        <div
+          class="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-6 px-4 pt-4"
+        >
+          <div class="flex flex-col gap-3">
+            <!-- Active Item -->
+            <div
+              class="flex items-center gap-4 p-4 rounded-2xl lg:bg-white lg:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)] lg:ring-1 lg:ring-[#EAE6DB] border border-transparent cursor-pointer relative transition-all"
+            >
+              <div
+                class="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1.5 rounded-r-full bg-[#2C2B29]"
+              ></div>
+              <div
+                class="w-12 h-12 rounded-full bg-gradient-to-br from-[#EAE6DB] to-[#D8D4CA] flex items-center justify-center shrink-0 shadow-inner"
+              >
+                <span class="text-base font-semibold text-[#5A5854]">ES</span>
+              </div>
+              <div class="flex flex-col flex-1 min-w-0">
+                <span class="text-base font-semibold text-[#2C2B29] truncate">
+                  Elena Sokolov
+                </span>
+                <span class="text-sm text-[#5A5854] truncate">
+                  VP Engineering at Stripe
+                </span>
+              </div>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <span class="text-xs font-medium text-[#8B8881]">2d ago</span>
+                <div
+                  class="w-2.5 h-2.5 rounded-full bg-[#D97757] shadow-[0_0_0_3px_#FDFCF8]"
+                ></div>
+                <!-- Pending indicator -->
+              </div>
+            </div>
+
+            <!-- Inactive Items -->
+            <div
+              class="flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:bg-[#F5F2EB]/50 hover:border-[#EAE6DB]/50 cursor-pointer transition-all"
+            >
+              <div
+                class="w-12 h-12 rounded-full bg-gradient-to-br from-[#F5F2EB] to-[#EAE6DB] flex items-center justify-center shrink-0"
+              >
+                <span class="text-base font-medium text-[#5A5854]">MR</span>
+              </div>
+              <div class="flex flex-col flex-1 min-w-0">
+                <span class="text-base font-semibold text-[#2C2B29] truncate">
+                  Marcus Rodriguez
+                </span>
+                <span class="text-sm text-[#8B8881] truncate">
+                  Partner at Sequoia
+                </span>
+              </div>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <span class="text-xs font-medium text-[#8B8881]">1w ago</span>
+              </div>
+            </div>
+
+            <div
+              class="flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:bg-[#F5F2EB]/50 hover:border-[#EAE6DB]/50 cursor-pointer transition-all"
+            >
+              <div
+                class="w-12 h-12 rounded-full bg-gradient-to-br from-[#F5F2EB] to-[#EAE6DB] flex items-center justify-center shrink-0"
+              >
+                <span class="text-base font-medium text-[#5A5854]">AK</span>
+              </div>
+              <div class="flex flex-col flex-1 min-w-0">
+                <span class="text-base font-semibold text-[#2C2B29] truncate">
+                  Alex Kim
+                </span>
+                <span class="text-sm text-[#8B8881] truncate">
+                  Founder at Nexus
+                </span>
+              </div>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <span class="text-xs font-medium text-[#8B8881]">Oct 12</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Detail View (Right Column / Full Mobile Overlay) -->
+      <!-- On a real mobile app, this would slide over. Here it's visible on lg screens and visually structured to act as the main view if isolated. -->
+      <section
+        class="hidden lg:flex flex-1 flex-col h-full bg-[#FDFCF8] overflow-y-auto no-scrollbar"
+      >
+        <!-- Detail Top Bar -->
+        <header
+          class="h-14 px-4 md:px-8 shrink-0 border-b border-[#EAE6DB] flex items-center justify-between sticky top-0 bg-[#FDFCF8]/90 backdrop-blur-sm z-10"
+        >
+          <div class="flex items-center gap-2 text-[#8B8881]">
+            <button
+              class="lg:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#F5F2EB]"
+            >
+              <iconify-icon
+                icon="solar:arrow-left-linear"
+                class="text-lg"
+              ></iconify-icon>
+            </button>
+            <span class="text-xs font-medium uppercase tracking-widest">
+              Profile
+            </span>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              class="text-sm font-medium text-[#5A5854] hover:text-[#2C2B29] transition-colors"
+              id="edit-person-btn"
+            >
+              Edit
+            </button>
+            <button
+              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#F5F2EB] text-[#5A5854]"
+            >
+              <iconify-icon
+                icon="solar:menu-dots-linear"
+                class="text-lg"
+              ></iconify-icon>
+            </button>
+          </div>
+        </header>
+
+        <div class="p-8 max-w-3xl mx-auto w-full flex flex-col gap-10">
+          <!-- Profile Header -->
+          <div class="flex flex-col md:flex-row gap-6 md:items-start">
+            <div
+              class="w-20 h-20 rounded-full bg-gradient-to-br from-[#EAE6DB] to-[#C9C5BA] flex items-center justify-center shrink-0 shadow-sm"
+            >
+              <span class="text-2xl font-medium text-[#5A5854]">ES</span>
+            </div>
+            <div class="flex flex-col flex-1 gap-1.5">
+              <h2 class="text-2xl font-medium tracking-tight text-[#2C2B29]">
+                Elena Sokolov
+              </h2>
+              <div
+                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#5A5854]"
+              >
+                <span>VP Engineering</span>
+                <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
+                <span class="font-medium text-[#2C2B29]">Stripe</span>
+                <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
+                <span class="flex items-center gap-1">
+                  <iconify-icon icon="solar:map-point-linear"></iconify-icon>
+                  San Francisco
+                </span>
+              </div>
+              <p class="text-sm text-[#8B8881] mt-2 leading-relaxed max-w-xl">
+                Met at SaaStr 2023. Strong background in scaling distributed
+                systems. Potential candidate for our next platform team lead.
+                Very responsive on LinkedIn.
+              </p>
+            </div>
+          </div>
+
+          <!-- Tags & Contact Row -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-[#EAE6DB]"
+          >
+            <div class="flex flex-wrap gap-2">
+              <span
+                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+              >
+                Engineering
+              </span>
+              <span
+                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+              >
+                SF Bay Area
+              </span>
+              <span
+                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+              >
+                Top Tier
+              </span>
+              <button
+                class="bg-transparent text-[#8B8881] px-2 py-1 rounded-md text-xs border border-dashed border-[#D5D1C5] hover:border-[#8B8881] hover:text-[#5A5854] transition-colors flex items-center gap-1"
+              >
+                <iconify-icon icon="solar:add-square-linear"></iconify-icon>
+                Add tag
+              </button>
+            </div>
+            <div class="flex items-center gap-3">
+              <a
+                href="#"
+                class="w-8 h-8 rounded-md bg-[#F5F2EB] flex items-center justify-center text-[#5A5854] hover:bg-[#EAE6DB] transition-colors"
+                title="elena@example.com"
+              >
+                <iconify-icon
+                  icon="solar:letter-linear"
+                  class="text-base"
+                ></iconify-icon>
+              </a>
+              <a
+                href="#"
+                class="w-8 h-8 rounded-md bg-[#F5F2EB] flex items-center justify-center text-[#5A5854] hover:bg-[#EAE6DB] transition-colors"
+              >
+                <iconify-icon
+                  icon="solar:phone-linear"
+                  class="text-base"
+                ></iconify-icon>
+              </a>
+              <a
+                href="#"
+                class="w-8 h-8 rounded-md bg-[#F5F2EB] flex items-center justify-center text-[#5A5854] hover:bg-[#EAE6DB] transition-colors"
+              >
+                <iconify-icon
+                  icon="solar:link-linear"
+                  class="text-base"
+                ></iconify-icon>
+              </a>
+            </div>
+          </div>
+
+          <!-- Pending (Next Action) & Funnels Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Pending Section -->
+            <div class="flex flex-col gap-3">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+              >
+                <iconify-icon icon="solar:inbox-in-linear"></iconify-icon>
+                Next Action
+              </h3>
+              <div
+                class="border border-[#D97757]/30 bg-[#FDFCF8] rounded-lg p-4 shadow-[0_2px_8px_-4px_rgba(217,119,87,0.15)] flex flex-col gap-3 relative overflow-hidden"
+              >
+                <div
+                  class="absolute top-0 left-0 w-1 h-full bg-[#D97757]"
+                ></div>
+                <div class="flex justify-between items-start gap-4">
+                  <span class="text-sm font-medium text-[#2C2B29]">
+                    Send updated platform architecture deck
+                  </span>
+                  <span
+                    class="text-xs font-medium text-[#D97757] bg-[#D97757]/10 px-1.5 py-0.5 rounded"
+                  >
+                    Overdue
+                  </span>
+                </div>
+                <div class="flex items-center justify-between mt-1">
+                  <span class="text-xs text-[#8B8881]">Due: Yesterday</span>
+                  <div class="flex gap-2">
+                    <button
+                      class="text-xs font-medium text-[#5A5854] hover:text-[#2C2B29]"
+                    >
+                      Snooze
+                    </button>
+                    <button
+                      class="text-xs font-medium bg-[#2C2B29] text-[#FDFCF8] px-2.5 py-1 rounded shadow-sm hover:bg-[#1A1A19]"
+                    >
+                      Mark Done
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Funnels Section -->
+            <div class="flex flex-col gap-3">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+              >
+                <iconify-icon
+                  icon="solar:sort-from-bottom-to-top-linear"
+                ></iconify-icon>
+                Active Funnels
+              </h3>
+              <div
+                class="border border-[#EAE6DB] bg-[#F5F2EB]/30 rounded-lg p-4 flex flex-col gap-3"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#738269]"></div>
+                    <span class="text-sm font-medium text-[#2C2B29]">
+                      Engineer Hire
+                    </span>
+                  </div>
+                  <button class="text-[#8B8881] hover:text-[#2C2B29]">
+                    <iconify-icon
+                      icon="solar:alt-arrow-right-linear"
+                    ></iconify-icon>
+                  </button>
+                </div>
+
+                <!-- Custom stage progress bar -->
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex justify-between text-xs text-[#5A5854]">
+                    <span>
+                      Stage:
+                      <span class="font-medium text-[#2C2B29]">
+                        Active Conversation
+                      </span>
+                    </span>
+                  </div>
+                  <div class="flex gap-1 h-1.5 w-full">
+                    <div
+                      class="h-full flex-1 bg-[#738269] rounded-l-full"
+                    ></div>
+                    <div class="h-full flex-1 bg-[#738269]"></div>
+                    <div class="h-full flex-1 bg-[#738269]"></div>
+                    <div class="h-full flex-1 bg-[#EAE6DB]"></div>
+                    <div
+                      class="h-full flex-1 bg-[#EAE6DB] rounded-r-full"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline / Meetings -->
+          <div class="flex flex-col gap-4 mt-4">
+            <div class="flex items-center justify-between">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+              >
+                <iconify-icon icon="solar:history-linear"></iconify-icon>
+                Timeline &amp; Meetings
+              </h3>
+              <button
+                class="text-xs text-[#5A5854] hover:text-[#2C2B29] font-medium flex items-center gap-1"
+              >
+                <iconify-icon icon="solar:add-circle-linear"></iconify-icon>
+                Log interaction
+              </button>
+            </div>
+
+            <div
+              class="relative pl-3 border-l border-[#EAE6DB] flex flex-col gap-6 ml-2 mt-2"
+            >
+              <!-- Future Meeting -->
+              <div class="relative">
+                <div
+                  class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#EAE6DB]"
+                ></div>
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-xs font-medium text-[#8B8881]">
+                    Nov 15 • Planned Check-in
+                  </span>
+                  <div
+                    class="border border-[#EAE6DB] bg-[#FDFCF8] rounded-md p-3 flex justify-between items-center group cursor-pointer hover:border-[#D5D1C5] transition-colors"
+                  >
+                    <div class="flex flex-col">
+                      <span class="text-sm font-medium text-[#2C2B29]">
+                        Coffee catch-up in SoMa
+                      </span>
+                      <span class="text-xs text-[#5A5854]">
+                        Discuss team expansion plans
+                      </span>
+                    </div>
+                    <iconify-icon
+                      icon="solar:calendar-linear"
+                      class="text-[#8B8881] group-hover:text-[#2C2B29]"
+                    ></iconify-icon>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Past Note -->
+              <div class="relative">
+                <div
+                  class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#D5D1C5]"
+                ></div>
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-xs font-medium text-[#8B8881]">
+                    Oct 28 • Note
+                  </span>
+                  <div
+                    class="bg-[#F5F2EB]/50 rounded-md p-3 text-sm text-[#5A5854]"
+                  >
+                    Followed up on the architecture doc. She mentioned they are
+                    currently evaluating new messaging queues. Might be a good
+                    hook for our next chat.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Past Meeting -->
+              <div class="relative">
+                <div
+                  class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#D5D1C5]"
+                ></div>
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-xs font-medium text-[#8B8881]">
+                    Oct 15 • Completed Meeting
+                  </span>
+                  <div
+                    class="border border-[#EAE6DB] bg-[#FDFCF8] rounded-md p-3 flex justify-between items-center opacity-70"
+                  >
+                    <div class="flex flex-col">
+                      <span class="text-sm font-medium text-[#2C2B29]">
+                        Intro Call (Zoom)
+                      </span>
+                      <span class="text-xs text-[#5A5854]">30 mins</span>
+                    </div>
+                    <iconify-icon
+                      icon="solar:check-circle-linear"
+                      class="text-[#738269]"
+                    ></iconify-icon>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section
+        id="tab-meetings"
+        class="hidden w-full h-full flex-col lg:flex-row bg-[#FDFCF8] overflow-hidden z-10"
+      >
+        <div
+          id="meetings-list"
+          class="w-full lg:w-[380px] xl:w-[420px] flex flex-col border-r border-[#EAE6DB] h-full z-10 bg-[#FDFCF8] shrink-0"
+        >
+          <div
+            class="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-6 px-4 pt-4 md:px-5 md:pt-6"
+          >
+            <header class="flex flex-col gap-4 mb-6">
+              <div class="flex items-center justify-between">
+                <h1
+                  class="text-2xl font-semibold tracking-tight text-[#2C2B29]"
+                >
+                  Meetings
+                </h1>
+                <button
+                  class="w-9 h-9 flex items-center justify-center rounded-xl bg-[#2C2B29] text-[#FDFCF8] hover:bg-[#1A1A19] transition-colors shadow-md"
+                  id="add-meeting-btn"
+                >
+                  <iconify-icon
+                    icon="lucide:plus"
+                    class="text-xl"
+                  ></iconify-icon>
+                </button>
+              </div>
+              <div
+                class="flex items-center justify-between bg-[#F5F2EB]/50 rounded-2xl p-4 border border-[#EAE6DB]"
+              >
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#EAE6DB] text-[#5A5854]"
+                >
+                  <iconify-icon
+                    icon="solar:alt-arrow-left-linear"
+                    class="text-lg"
+                  ></iconify-icon>
+                </button>
+                <div class="flex flex-col items-center">
+                  <span class="text-base font-semibold text-[#2C2B29]">
+                    Today, Oct 15
+                  </span>
+                  <span class="text-xs font-medium text-[#8B8881]">
+                    3 Meetings • 2 Follow-ups
+                  </span>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#EAE6DB] text-[#5A5854]"
+                  >
+                    <iconify-icon
+                      icon="solar:calendar-linear"
+                      class="text-lg"
+                    ></iconify-icon>
+                  </button>
+                  <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#EAE6DB] text-[#5A5854]"
+                  >
+                    <iconify-icon
+                      icon="solar:alt-arrow-right-linear"
+                      class="text-lg"
+                    ></iconify-icon>
+                  </button>
+                </div>
+              </div>
+            </header>
+            <div class="flex flex-col gap-3" id="meetings-list-container">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2 mb-1"
+              >
+                <iconify-icon icon="solar:calendar-linear"></iconify-icon>
+                Today's Agenda
+              </h3>
+              <div
+                class="meeting-item flex flex-col gap-3 p-4 rounded-2xl border border-transparent lg:bg-white lg:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)] lg:ring-1 lg:ring-[#EAE6DB] cursor-pointer relative transition-all"
+              >
+                <div
+                  class="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1.5 rounded-r-full bg-[#2C2B29] meeting-indicator"
+                ></div>
+                <div class="flex items-center justify-between">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-[#2C2B29]">
+                      10:00 AM
+                    </span>
+                    <span class="text-xs text-[#8B8881]">30 mins</span>
+                  </div>
+                  <span
+                    class="text-xs font-medium bg-[#738269]/10 text-[#738269] px-2 py-1 rounded-md"
+                  >
+                    Upcoming
+                  </span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span
+                    class="text-base font-semibold text-[#2C2B29] meeting-title"
+                  >
+                    Platform Architecture Sync
+                  </span>
+                  <span class="text-sm text-[#5A5854]">
+                    Elena Sokolov, Marcus Rodriguez
+                  </span>
+                </div>
+              </div>
+              <div
+                class="meeting-item flex flex-col gap-3 p-4 rounded-2xl border border-transparent hover:bg-[#F5F2EB]/50 hover:border-[#EAE6DB]/50 cursor-pointer transition-all"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-[#2C2B29]">
+                      2:00 PM
+                    </span>
+                    <span class="text-xs text-[#8B8881]">45 mins</span>
+                  </div>
+                  <span
+                    class="text-xs font-medium bg-[#EAE6DB] text-[#5A5854] px-2 py-1 rounded-md"
+                  >
+                    Planned
+                  </span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span
+                    class="text-base font-semibold text-[#2C2B29] meeting-title"
+                  >
+                    Intro Call
+                  </span>
+                  <span class="text-sm text-[#5A5854]">Alex Kim</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          id="meetings-detail"
+          class="hidden lg:flex flex-1 flex-col h-full bg-[#FDFCF8] overflow-y-auto no-scrollbar"
+        >
+          <header
+            class="h-14 px-4 md:px-8 shrink-0 border-b border-[#EAE6DB] flex items-center justify-between sticky top-0 bg-[#FDFCF8]/90 backdrop-blur-sm z-10"
+          >
+            <div class="flex items-center gap-2 text-[#8B8881]">
+              <button
+                class="lg:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#F5F2EB]"
+                id="meetings-back-btn"
+              >
+                <iconify-icon
+                  icon="solar:arrow-left-linear"
+                  class="text-lg"
+                ></iconify-icon>
+              </button>
+              <span class="text-xs font-medium uppercase tracking-widest">
+                Meeting Details
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button
+                class="text-sm font-medium text-[#5A5854] hover:text-[#2C2B29] transition-colors"
+                id="edit-meeting-btn"
+              >
+                Edit
+              </button>
+              <button
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#F5F2EB] text-[#5A5854]"
+              >
+                <iconify-icon
+                  icon="solar:menu-dots-linear"
+                  class="text-lg"
+                ></iconify-icon>
+              </button>
+            </div>
+          </header>
+          <div class="p-8 max-w-3xl mx-auto w-full flex flex-col gap-8">
+            <div class="flex flex-col gap-2">
+              <h2
+                id="meeting-detail-title"
+                class="text-2xl font-medium tracking-tight text-[#2C2B29]"
+              >
+                Platform Architecture Sync
+              </h2>
+              <div
+                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#5A5854]"
+              >
+                <span>Today, 10:00 AM - 10:30 AM</span>
+                <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
+                <span class="flex items-center gap-1">
+                  <iconify-icon
+                    icon="solar:videocamera-record-linear"
+                  ></iconify-icon>
+                  Zoom
+                </span>
+              </div>
+            </div>
+            <div class="flex flex-col gap-4">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest"
+              >
+                Attendees
+              </h3>
+              <div class="flex flex-wrap gap-4">
+                <div
+                  class="flex items-center gap-3 p-3 rounded-xl border border-[#EAE6DB] bg-white w-48"
+                >
+                  <div
+                    class="w-8 h-8 rounded-full bg-[#EAE6DB] flex items-center justify-center text-xs font-medium text-[#5A5854]"
+                  >
+                    ES
+                  </div>
+                  <span class="text-sm font-medium text-[#2C2B29]">
+                    Elena Sokolov
+                  </span>
+                </div>
+                <div
+                  class="flex items-center gap-3 p-3 rounded-xl border border-[#EAE6DB] bg-white w-48"
+                >
+                  <div
+                    class="w-8 h-8 rounded-full bg-[#D8D4CA] flex items-center justify-center text-xs font-medium text-[#5A5854]"
+                  >
+                    MR
+                  </div>
+                  <span class="text-sm font-medium text-[#2C2B29]">
+                    Marcus R.
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-col gap-4">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest"
+              >
+                Agenda / Notes
+              </h3>
+              <div
+                class="p-4 rounded-xl bg-[#F5F2EB]/50 border border-[#EAE6DB] text-sm text-[#5A5854] min-h-[150px]"
+              >
+                Discussing the new messaging queue architecture.
+                <br />
+                <br />
+                - Review current bottlenecks
+                <br />
+                - Propose Kafka vs RabbitMQ
+                <br />
+                - Next steps for implementation
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section
+        id="tab-pending"
+        class="hidden w-full h-full flex-col bg-[#FDFCF8] overflow-y-auto z-10 p-6 lg:p-8"
+      >
+        <div class="max-w-4xl mx-auto w-full flex flex-col gap-8 pb-24 md:pb-6">
+          <header class="flex flex-col gap-5">
+            <div class="flex items-center justify-between">
+              <h1 class="text-2xl font-semibold tracking-tight text-[#2C2B29]">
+                Pending Actions
+              </h1>
+              <button
+                class="w-[44px] h-[44px] flex items-center justify-center rounded-xl bg-[#FDFCF8] text-[#5A5854] border border-[#EAE6DB] hover:bg-[#F5F2EB] transition-all shadow-sm shrink-0"
+              >
+                <iconify-icon
+                  icon="solar:tuning-linear"
+                  class="text-lg"
+                ></iconify-icon>
+              </button>
+            </div>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              <button
+                class="px-4 py-2 rounded-xl bg-[#2C2B29] text-white text-sm font-medium whitespace-nowrap shadow-sm"
+              >
+                All (5)
+              </button>
+              <button
+                class="px-4 py-2 rounded-xl bg-[#F5F2EB] text-[#5A5854] text-sm font-medium hover:bg-[#EAE6DB] whitespace-nowrap transition-colors"
+              >
+                Overdue (1)
+              </button>
+              <button
+                class="px-4 py-2 rounded-xl bg-[#F5F2EB] text-[#5A5854] text-sm font-medium hover:bg-[#EAE6DB] whitespace-nowrap transition-colors"
+              >
+                Today (2)
+              </button>
+              <button
+                class="px-4 py-2 rounded-xl bg-[#F5F2EB] text-[#5A5854] text-sm font-medium hover:bg-[#EAE6DB] whitespace-nowrap transition-colors"
+              >
+                This Week (2)
+              </button>
+            </div>
+          </header>
+          <div class="flex flex-col gap-6">
+            <div class="flex flex-col gap-3">
+              <h3
+                class="text-xs font-medium text-[#D97757] uppercase tracking-widest flex items-center gap-2"
+              >
+                <iconify-icon icon="solar:danger-circle-linear"></iconify-icon>
+                Overdue
+              </h3>
+              <div
+                class="flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-[#D97757]/30 bg-white shadow-[0_2px_8px_-4px_rgba(217,119,87,0.15)] relative overflow-hidden"
+              >
+                <div
+                  class="absolute left-0 top-0 w-1 h-full bg-[#D97757]"
+                ></div>
+                <div class="flex items-start gap-4 flex-1 pl-2">
+                  <div
+                    class="w-10 h-10 rounded-full bg-[#EAE6DB] flex items-center justify-center shrink-0 shadow-inner"
+                  >
+                    <span class="text-sm font-semibold text-[#5A5854]">ES</span>
+                  </div>
+                  <div class="flex flex-col flex-1 gap-1">
+                    <span class="text-sm font-medium text-[#8B8881]">
+                      Elena Sokolov
+                    </span>
+                    <span class="text-base font-semibold text-[#2C2B29]">
+                      Send updated platform architecture deck
+                    </span>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span
+                        class="text-xs font-medium text-[#D97757] bg-[#D97757]/10 px-2 py-0.5 rounded-md"
+                      >
+                        Due Yesterday
+                      </span>
+                      <span
+                        class="text-xs text-[#8B8881] flex items-center gap-1"
+                      >
+                        <iconify-icon
+                          icon="solar:tag-horizontal-linear"
+                        ></iconify-icon>
+                        Follow-up
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="flex md:flex-col gap-2 shrink-0 items-end justify-center mt-3 md:mt-0"
+                >
+                  <button
+                    class="text-sm font-medium bg-[#2C2B29] text-[#FDFCF8] px-3 py-1.5 rounded-lg hover:bg-[#1A1A19] shadow-sm transition-colors"
+                  >
+                    Mark Done
+                  </button>
+                  <button
+                    class="text-sm font-medium text-[#5A5854] hover:text-[#2C2B29] px-3 py-1.5 bg-[#F5F2EB] rounded-lg transition-colors"
+                  >
+                    Snooze
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-col gap-3 mt-2">
+              <h3
+                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+              >
+                <iconify-icon icon="solar:sun-linear"></iconify-icon>
+                Today
+              </h3>
+              <div
+                class="flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-[#EAE6DB] bg-white relative overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+              >
+                <div
+                  class="absolute left-0 top-0 w-1 h-full bg-[#EAE6DB]"
+                ></div>
+                <div class="flex items-start gap-4 flex-1 pl-2">
+                  <div
+                    class="w-10 h-10 rounded-full bg-[#F5F2EB] flex items-center justify-center shrink-0 shadow-inner"
+                  >
+                    <span class="text-sm font-semibold text-[#5A5854]">MR</span>
+                  </div>
+                  <div class="flex flex-col flex-1 gap-1">
+                    <span class="text-sm font-medium text-[#8B8881]">
+                      Marcus Rodriguez
+                    </span>
+                    <span class="text-base font-semibold text-[#2C2B29]">
+                      Review term sheet draft
+                    </span>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span
+                        class="text-xs text-[#8B8881] flex items-center gap-1"
+                      >
+                        <iconify-icon
+                          icon="solar:tag-horizontal-linear"
+                        ></iconify-icon>
+                        Promised Item
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="flex md:flex-col gap-2 shrink-0 items-end justify-center mt-3 md:mt-0"
+                >
+                  <button
+                    class="text-sm font-medium border border-[#EAE6DB] text-[#5A5854] px-3 py-1.5 rounded-lg hover:bg-[#F5F2EB] hover:text-[#2C2B29] transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section
+        id="tab-funnels"
+        class="hidden w-full h-full flex-col bg-[#FDFCF8] overflow-hidden z-10"
+      >
+        <div class="flex flex-col h-full">
+          <header
+            class="px-6 py-6 border-b border-[#EAE6DB] flex flex-col gap-5 shrink-0 bg-[#FDFCF8]/90 backdrop-blur-sm z-20"
+          >
+            <div class="flex items-center justify-between">
+              <h1 class="text-2xl font-semibold tracking-tight text-[#2C2B29]">
+                Active Funnels
+              </h1>
+              <button
+                class="w-9 h-9 flex items-center justify-center rounded-xl bg-[#2C2B29] text-[#FDFCF8] hover:bg-[#1A1A19] transition-colors shadow-md"
+              >
+                <iconify-icon icon="lucide:plus" class="text-xl"></iconify-icon>
+              </button>
+            </div>
+            <div
+              class="flex gap-5 border-b border-[#EAE6DB]/60 overflow-x-auto no-scrollbar"
+            >
+              <button
+                class="pb-3 border-b-2 border-[#2C2B29] text-sm font-semibold text-[#2C2B29] whitespace-nowrap"
+              >
+                Engineer Hire
+                <span class="ml-1 text-[#8B8881] font-medium">(12)</span>
+              </button>
+              <button
+                class="pb-3 border-b-2 border-transparent text-sm font-medium text-[#8B8881] hover:text-[#5A5854] hover:border-[#D5D1C5] whitespace-nowrap transition-colors"
+              >
+                Investor
+                <span class="ml-1 opacity-70">(5)</span>
+              </button>
+              <button
+                class="pb-3 border-b-2 border-transparent text-sm font-medium text-[#8B8881] hover:text-[#5A5854] hover:border-[#D5D1C5] whitespace-nowrap transition-colors"
+              >
+                Customer
+                <span class="ml-1 opacity-70">(24)</span>
+              </button>
+            </div>
+          </header>
+          <div class="flex-1 overflow-x-auto overflow-y-auto no-scrollbar p-6">
+            <div class="flex flex-col lg:flex-row gap-6 lg:h-full pb-20">
+              <div
+                class="flex flex-col gap-4 min-w-[280px] w-full lg:w-72 shrink-0"
+              >
+                <div class="flex items-center justify-between px-1">
+                  <h3
+                    class="text-sm font-semibold text-[#5A5854] uppercase tracking-wide"
+                  >
+                    Prospects
+                  </h3>
+                  <span
+                    class="text-xs font-semibold text-[#8B8881] bg-[#EAE6DB]/50 px-2 py-0.5 rounded-md"
+                  >
+                    8
+                  </span>
+                </div>
+                <div class="flex flex-col gap-3">
+                  <div
+                    class="bg-white p-4 rounded-xl border border-[#EAE6DB] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.08)] transition-all cursor-pointer flex flex-col gap-3 group"
+                  >
+                    <div class="flex justify-between items-start">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-10 h-10 rounded-full bg-gradient-to-br from-[#F5F2EB] to-[#EAE6DB] flex items-center justify-center text-sm font-semibold text-[#5A5854]"
+                        >
+                          AK
+                        </div>
+                        <div class="flex flex-col">
+                          <span
+                            class="text-sm font-semibold text-[#2C2B29] group-hover:text-black transition-colors"
+                          >
+                            Alex Kim
+                          </span>
+                          <span class="text-xs font-medium text-[#8B8881]">
+                            Founder at Nexus
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="pt-2 border-t border-[#F5F2EB] flex flex-col gap-1.5"
+                    >
+                      <span
+                        class="text-xs text-[#5A5854] flex items-center gap-1.5"
+                      >
+                        <iconify-icon
+                          icon="solar:history-linear"
+                          class="text-[#8B8881]"
+                        ></iconify-icon>
+                        Contacted Oct 12
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex flex-col gap-4 min-w-[280px] w-full lg:w-72 shrink-0"
+              >
+                <div class="flex items-center justify-between px-1">
+                  <h3
+                    class="text-sm font-semibold text-[#5A5854] uppercase tracking-wide"
+                  >
+                    Active Convo
+                  </h3>
+                  <span
+                    class="text-xs font-semibold text-[#8B8881] bg-[#EAE6DB]/50 px-2 py-0.5 rounded-md"
+                  >
+                    3
+                  </span>
+                </div>
+                <div class="flex flex-col gap-3">
+                  <div
+                    class="bg-white p-4 rounded-xl border border-[#D97757]/40 shadow-[0_2px_10px_-4px_rgba(217,119,87,0.1)] hover:shadow-[0_4px_12px_-4px_rgba(217,119,87,0.15)] transition-all cursor-pointer flex flex-col gap-3 relative overflow-hidden group"
+                  >
+                    <div
+                      class="absolute top-0 left-0 w-1 h-full bg-[#D97757]"
+                    ></div>
+                    <div class="flex justify-between items-start pl-1">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-10 h-10 rounded-full bg-gradient-to-br from-[#EAE6DB] to-[#C9C5BA] flex items-center justify-center text-sm font-semibold text-[#5A5854]"
+                        >
+                          ES
+                        </div>
+                        <div class="flex flex-col">
+                          <span
+                            class="text-sm font-semibold text-[#2C2B29] group-hover:text-black transition-colors"
+                          >
+                            Elena Sokolov
+                          </span>
+                          <span class="text-xs font-medium text-[#8B8881]">
+                            VP Eng at Stripe
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="pt-2 border-t border-[#F5F2EB] flex flex-col gap-1.5 pl-1"
+                    >
+                      <span
+                        class="text-xs font-semibold text-[#D97757] flex items-center gap-1.5"
+                      >
+                        <iconify-icon
+                          icon="solar:danger-circle-linear"
+                        ></iconify-icon>
+                        Send arch deck
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex flex-col gap-4 min-w-[280px] w-full lg:w-72 shrink-0"
+              >
+                <div class="flex items-center justify-between px-1">
+                  <h3
+                    class="text-sm font-semibold text-[#5A5854] uppercase tracking-wide"
+                  >
+                    Waiting
+                  </h3>
+                  <span
+                    class="text-xs font-semibold text-[#8B8881] bg-[#EAE6DB]/50 px-2 py-0.5 rounded-md"
+                  >
+                    1
+                  </span>
+                </div>
+                <div class="flex flex-col gap-3">
+                  <div
+                    class="bg-white p-4 rounded-xl border border-[#EAE6DB] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.08)] transition-all cursor-pointer flex flex-col gap-3 group"
+                  >
+                    <div class="flex justify-between items-start">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-10 h-10 rounded-full bg-gradient-to-br from-[#F5F2EB] to-[#EAE6DB] flex items-center justify-center text-sm font-semibold text-[#5A5854]"
+                        >
+                          MR
+                        </div>
+                        <div class="flex flex-col">
+                          <span
+                            class="text-sm font-semibold text-[#2C2B29] group-hover:text-black transition-colors"
+                          >
+                            Marcus Rodriguez
+                          </span>
+                          <span class="text-xs font-medium text-[#8B8881]">
+                            Partner at Sequoia
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="pt-2 border-t border-[#F5F2EB] flex flex-col gap-1.5"
+                    >
+                      <span
+                        class="text-xs text-[#5A5854] flex items-center gap-1.5"
+                      >
+                        <iconify-icon
+                          icon="solar:history-linear"
+                          class="text-[#8B8881]"
+                        ></iconify-icon>
+                        Sent terms 1w ago
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav
+      class="md:hidden flex flex-row justify-around items-center border-t border-[#EAE6DB]/40 bg-[#FDFCF8]/85 backdrop-blur-xl pb-safe pt-3 px-4 shrink-0 z-30 h-20 shadow-[0_-8px_30px_-5px_rgba(0,0,0,0.05)] rounded-t-3xl"
+    >
+      <a
+        href="#"
+        class="flex flex-col items-center gap-1.5 text-[#2C2B29] w-16"
+      >
+        <iconify-icon
+          icon="solar:users-group-rounded-linear"
+          class="text-2xl"
+        ></iconify-icon>
+        <span class="text-[11px] font-semibold tracking-wide">People</span>
+      </a>
+      <a
+        href="#"
+        class="flex flex-col items-center gap-1.5 text-[#8B8881] hover:text-[#2C2B29] transition-colors w-16"
+      >
+        <iconify-icon
+          icon="solar:calendar-linear"
+          class="text-2xl"
+          width="24"
+          height="24"
+          style="color: rgb(45, 44, 42)"
+        ></iconify-icon>
+        <span class="text-[11px] font-medium tracking-wide">Meetings</span>
+      </a>
+      <a
+        href="#"
+        class="flex flex-col items-center gap-1.5 text-[#8B8881] hover:text-[#2C2B29] transition-colors w-16 relative"
+      >
+        <div class="relative">
+          <iconify-icon
+            icon="solar:inbox-in-linear"
+            class="text-2xl"
+          ></iconify-icon>
+          <div
+            class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#D97757] shadow-[0_0_0_2px_#FDFCF8]"
+          ></div>
+        </div>
+        <span class="text-[11px] font-medium tracking-wide">Pending</span>
+      </a>
+      <a
+        href="#"
+        class="flex flex-col items-center gap-1.5 text-[#8B8881] hover:text-[#2C2B29] transition-colors w-16"
+      >
+        <iconify-icon
+          icon="solar:sort-from-bottom-to-top-linear"
+          class="text-2xl"
+        ></iconify-icon>
+        <span class="text-[11px] font-medium tracking-wide">Funnels</span>
+      </a>
+    </nav>
+
+    <div
+      id="filter-modal"
+      class="hidden fixed inset-0 z-[100] flex items-end md:items-center justify-center"
+    >
+      <div
+        id="filter-backdrop"
+        class="absolute inset-0 bg-[#2C2B29]/40 backdrop-blur-sm opacity-0 transition-opacity duration-300"
+      ></div>
+      <div
+        id="filter-panel"
+        class="relative w-full md:w-[420px] bg-[#FDFCF8] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] transform translate-y-full md:translate-y-4 md:opacity-0 md:scale-95 transition-all duration-300 ease-out"
+      >
+        <div
+          class="flex items-center justify-between p-6 border-b border-[#EAE6DB]"
+        >
+          <h2 class="text-lg font-semibold text-[#2C2B29]">
+            Filter &amp; Sort
+          </h2>
+          <button
+            id="close-filter-btn"
+            class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F5F2EB] text-[#5A5854] transition-colors border border-transparent hover:border-[#EAE6DB]"
+          >
+            <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
+          </button>
+        </div>
+
+        <div
+          class="p-6 flex-1 overflow-y-auto no-scrollbar flex flex-col gap-8"
+        >
+          <div class="flex flex-col gap-3">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Sort By
+            </label>
+            <div
+              class="flex gap-2 p-1 rounded-xl bg-[#F5F2EB]/80 border border-[#EAE6DB]"
+            >
+              <button
+                class="flex-1 py-1.5 px-3 rounded-lg bg-white text-[#2C2B29] text-sm font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all"
+              >
+                Name
+              </button>
+              <button
+                class="flex-1 py-1.5 px-3 rounded-lg text-[#5A5854] hover:text-[#2C2B29] text-sm font-medium transition-all"
+              >
+                Last Meeting
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3 group relative">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Company
+            </label>
+            <div class="relative">
+              <iconify-icon
+                icon="solar:buildings-2-linear"
+                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B8881] text-lg"
+              ></iconify-icon>
+              <input
+                type="text"
+                placeholder="Search company..."
+                value="Stripe"
+                class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              />
+
+              <div
+                class="absolute top-full left-0 right-0 mt-2 bg-white border border-[#EAE6DB] rounded-xl shadow-[0_8px_30px_-6px_rgba(0,0,0,0.12)] z-10 overflow-hidden opacity-0 invisible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 translate-y-1 group-focus-within:translate-y-0"
+              >
+                <div
+                  class="flex flex-col max-h-48 overflow-y-auto no-scrollbar p-1.5"
+                >
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#2C2B29] bg-[#F5F2EB] rounded-lg flex items-center justify-between font-semibold"
+                  >
+                    Stripe
+                    <iconify-icon
+                      icon="solar:check-circle-bold"
+                      class="text-[#738269] text-base"
+                    ></iconify-icon>
+                  </button>
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Sequoia
+                  </button>
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Nexus
+                  </button>
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Vercel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3 group relative">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Role
+            </label>
+            <div class="relative">
+              <iconify-icon
+                icon="solar:user-id-linear"
+                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B8881] text-lg"
+              ></iconify-icon>
+              <input
+                type="text"
+                placeholder="Search role..."
+                class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] placeholder-[#8B8881] text-sm font-medium rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              />
+
+              <div
+                class="absolute top-full left-0 right-0 mt-2 bg-white border border-[#EAE6DB] rounded-xl shadow-[0_8px_30px_-6px_rgba(0,0,0,0.12)] z-10 overflow-hidden opacity-0 invisible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 translate-y-1 group-focus-within:translate-y-0"
+              >
+                <div
+                  class="flex flex-col max-h-48 overflow-y-auto no-scrollbar p-1.5"
+                >
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Founder
+                  </button>
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Engineering Manager
+                  </button>
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Partner
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3 group relative">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Tags
+            </label>
+            <div class="relative">
+              <iconify-icon
+                icon="solar:tag-linear"
+                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B8881] text-lg"
+              ></iconify-icon>
+              <input
+                type="text"
+                placeholder="Search tags..."
+                class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] placeholder-[#8B8881] text-sm font-medium rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              />
+
+              <div
+                class="absolute top-full left-0 right-0 mt-2 bg-white border border-[#EAE6DB] rounded-xl shadow-[0_8px_30px_-6px_rgba(0,0,0,0.12)] z-10 overflow-hidden opacity-0 invisible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 translate-y-1 group-focus-within:translate-y-0"
+              >
+                <div
+                  class="flex flex-col max-h-48 overflow-y-auto no-scrollbar p-1.5"
+                >
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    Top Tier
+                  </button>
+                  <button
+                    class="text-left px-3 py-2 text-sm text-[#5A5854] hover:bg-[#F5F2EB]/50 hover:text-[#2C2B29] rounded-lg transition-colors font-medium"
+                  >
+                    SF Bay Area
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-1">
+              <span
+                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-[#EAE6DB] flex items-center gap-1.5 shadow-sm"
+              >
+                Engineering
+                <button
+                  class="text-[#8B8881] hover:text-[#2C2B29] flex items-center justify-center bg-white rounded-full w-4 h-4 shadow-sm"
+                >
+                  <iconify-icon
+                    icon="lucide:x"
+                    class="text-[10px]"
+                  ></iconify-icon>
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="p-6 border-t border-[#EAE6DB] flex gap-3 bg-[#FDFCF8] rounded-b-3xl md:rounded-b-2xl pb-8 md:pb-6"
+        >
+          <button
+            id="reset-filter-btn"
+            class="flex-1 py-3 px-4 rounded-xl border border-[#EAE6DB] bg-white text-[#5A5854] hover:bg-[#F5F2EB] text-sm font-semibold transition-colors shadow-sm"
+          >
+            Reset
+          </button>
+          <button
+            id="apply-filter-btn"
+            class="flex-1 py-3 px-4 rounded-xl border border-[#2C2B29] bg-[#2C2B29] text-[#FDFCF8] hover:bg-[#1A1A19] text-sm font-semibold transition-colors shadow-sm"
+          >
+            Show Results
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Person Form Modal -->
+    <div
+      id="person-form-modal"
+      class="hidden fixed inset-0 z-[100] flex items-end md:items-center justify-center"
+    >
+      <div
+        class="absolute inset-0 bg-[#2C2B29]/40 backdrop-blur-sm opacity-0 transition-opacity duration-300 backdrop"
+      ></div>
+      <div
+        class="relative w-full md:w-[420px] bg-[#FDFCF8] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] transform translate-y-full md:translate-y-4 md:opacity-0 md:scale-95 transition-all duration-300 ease-out panel"
+      >
+        <div
+          class="flex items-center justify-between p-6 border-b border-[#EAE6DB] shrink-0"
+        >
+          <h2
+            id="person-form-title"
+            class="text-lg font-semibold text-[#2C2B29]"
+          >
+            Add Person
+          </h2>
+          <button
+            class="close-btn w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F5F2EB] text-[#5A5854] transition-colors border border-transparent hover:border-[#EAE6DB]"
+          >
+            <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
+          </button>
+        </div>
+        <div
+          class="p-6 flex-1 overflow-y-auto no-scrollbar flex flex-col gap-5"
+        >
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Name
+            </label>
+            <input
+              type="text"
+              class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              placeholder="e.g. Jane Doe"
+              id="person-name-input"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Role &amp; Company
+            </label>
+            <input
+              type="text"
+              class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              placeholder="e.g. Founder at Stripe"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Notes
+            </label>
+            <textarea
+              class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm min-h-[100px]"
+              placeholder="Add notes..."
+            ></textarea>
+          </div>
+        </div>
+        <div
+          class="p-6 border-t border-[#EAE6DB] flex gap-3 bg-[#FDFCF8] rounded-b-3xl md:rounded-b-2xl pb-8 md:pb-6 shrink-0"
+        >
+          <button
+            class="close-btn flex-1 py-3 px-4 rounded-xl border border-[#EAE6DB] bg-white text-[#5A5854] hover:bg-[#F5F2EB] text-sm font-semibold transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
+          <button
+            class="save-btn flex-1 py-3 px-4 rounded-xl border border-[#2C2B29] bg-[#2C2B29] text-[#FDFCF8] hover:bg-[#1A1A19] text-sm font-semibold transition-colors shadow-sm"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meeting Form Modal -->
+    <div
+      id="meeting-form-modal"
+      class="hidden fixed inset-0 z-[100] flex items-end md:items-center justify-center"
+    >
+      <div
+        class="absolute inset-0 bg-[#2C2B29]/40 backdrop-blur-sm opacity-0 transition-opacity duration-300 backdrop"
+      ></div>
+      <div
+        class="relative w-full md:w-[420px] bg-[#FDFCF8] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] transform translate-y-full md:translate-y-4 md:opacity-0 md:scale-95 transition-all duration-300 ease-out panel"
+      >
+        <div
+          class="flex items-center justify-between p-6 border-b border-[#EAE6DB] shrink-0"
+        >
+          <h2
+            id="meeting-form-title"
+            class="text-lg font-semibold text-[#2C2B29]"
+          >
+            Add Meeting
+          </h2>
+          <button
+            class="close-btn w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F5F2EB] text-[#5A5854] transition-colors border border-transparent hover:border-[#EAE6DB]"
+          >
+            <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
+          </button>
+        </div>
+        <div
+          class="p-6 flex-1 overflow-y-auto no-scrollbar flex flex-col gap-5"
+        >
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Title
+            </label>
+            <input
+              type="text"
+              class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              placeholder="e.g. Catch up"
+              id="meeting-title-input"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Time
+            </label>
+            <div class="flex gap-2">
+              <input
+                type="time"
+                class="flex-1 bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              />
+              <input
+                type="time"
+                class="flex-1 bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm"
+              />
+            </div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold text-[#8B8881] uppercase tracking-widest"
+            >
+              Agenda / Notes
+            </label>
+            <textarea
+              class="w-full bg-white border border-[#EAE6DB] text-[#2C2B29] text-sm font-medium rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D5D1C5] focus:border-transparent transition-all shadow-sm min-h-[100px]"
+              placeholder="Add agenda..."
+            ></textarea>
+          </div>
+        </div>
+        <div
+          class="p-6 border-t border-[#EAE6DB] flex gap-3 bg-[#FDFCF8] rounded-b-3xl md:rounded-b-2xl pb-8 md:pb-6 shrink-0"
+        >
+          <button
+            class="close-btn flex-1 py-3 px-4 rounded-xl border border-[#EAE6DB] bg-white text-[#5A5854] hover:bg-[#F5F2EB] text-sm font-semibold transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
+          <button
+            class="save-btn flex-1 py-3 px-4 rounded-xl border border-[#2C2B29] bg-[#2C2B29] text-[#FDFCF8] hover:bg-[#1A1A19] text-sm font-semibold transition-colors shadow-sm"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const sidebarTabs = document.querySelectorAll('aside nav a');
+        const bottomTabs = document.querySelectorAll('nav.md\\:hidden a');
+
+        const listView = document.querySelector('main > section:nth-of-type(1)');
+        const detailView = document.querySelector('main > section:nth-of-type(2)');
+        const tabMeetings = document.getElementById('tab-meetings');
+        const tabPending = document.getElementById('tab-pending');
+        const tabFunnels = document.getElementById('tab-funnels');
+
+        let activeTab = 'People';
+        let mobileDetailOpen = false;
+        let meetingsMobileDetailOpen = false;
+
+        function updateView() {
+          [tabMeetings, tabPending, tabFunnels].forEach(el => {
+            if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+          });
+
+          if (activeTab === 'People') {
+            if (window.innerWidth < 1024) {
+              if (mobileDetailOpen) {
+                if(listView) { listView.classList.remove('flex'); listView.classList.add('hidden'); }
+                if(detailView) { detailView.classList.remove('hidden', 'lg:flex'); detailView.classList.add('flex'); }
+              } else {
+                if(listView) { listView.classList.remove('hidden'); listView.classList.add('flex'); }
+                if(detailView) { detailView.classList.remove('flex', 'lg:flex'); detailView.classList.add('hidden'); }
+              }
+            } else {
+              if(listView) { listView.classList.remove('hidden'); listView.classList.add('flex'); }
+              if(detailView) { detailView.classList.remove('flex'); detailView.classList.add('hidden', 'lg:flex'); }
+            }
+          } else {
+            if(listView) { listView.classList.add('hidden'); listView.classList.remove('flex'); }
+            if(detailView) { detailView.classList.add('hidden'); detailView.classList.remove('flex', 'lg:flex'); }
+
+            const activeEl = activeTab === 'Meetings' ? tabMeetings : activeTab === 'Pending' ? tabPending : activeTab === 'Funnels' ? tabFunnels : null;
+            if(activeEl) {
+              activeEl.classList.remove('hidden');
+              activeEl.classList.add('flex');
+
+              if (activeTab === 'Meetings') {
+                const mListView = document.getElementById('meetings-list');
+                const mDetailView = document.getElementById('meetings-detail');
+                if (window.innerWidth < 1024) {
+                  if (meetingsMobileDetailOpen) {
+                    if(mListView) { mListView.classList.remove('flex'); mListView.classList.add('hidden'); }
+                    if(mDetailView) { mDetailView.classList.remove('hidden', 'lg:flex'); mDetailView.classList.add('flex'); }
+                  } else {
+                    if(mListView) { mListView.classList.remove('hidden'); mListView.classList.add('flex'); }
+                    if(mDetailView) { mDetailView.classList.remove('flex', 'lg:flex'); mDetailView.classList.add('hidden'); }
+                  }
+                } else {
+                  if(mListView) { mListView.classList.remove('hidden'); mListView.classList.add('flex'); }
+                  if(mDetailView) { mDetailView.classList.remove('flex'); mDetailView.classList.add('hidden', 'lg:flex'); }
+                }
+              }
+            }
+          }
+        }
+
+        window.addEventListener('resize', updateView);
+
+        function switchTab(tabName) {
+          activeTab = tabName;
+          updateView();
+        }
+
+        sidebarTabs.forEach(tab => {
+          tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            sidebarTabs.forEach(t => {
+              t.classList.remove('bg-[#F5F2EB]', 'text-[#2C2B29]');
+              t.classList.add('text-[#8B8881]');
+            });
+            tab.classList.remove('text-[#8B8881]');
+            tab.classList.add('bg-[#F5F2EB]', 'text-[#2C2B29]');
+
+            const tabName = tab.querySelector('span:last-child').textContent.trim();
+
+            bottomTabs.forEach(t => {
+              t.classList.remove('text-[#2C2B29]');
+              t.classList.add('text-[#8B8881]');
+              const span = t.querySelector('span:last-child');
+              if(span) {
+                span.classList.remove('font-semibold');
+                span.classList.add('font-medium');
+                if (span.textContent.trim() === tabName) {
+                   t.classList.remove('text-[#8B8881]');
+                   t.classList.add('text-[#2C2B29]');
+                   span.classList.remove('font-medium');
+                   span.classList.add('font-semibold');
+                }
+              }
+            });
+
+            switchTab(tabName);
+          });
+        });
+
+        bottomTabs.forEach(tab => {
+          tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            bottomTabs.forEach(t => {
+              t.classList.remove('text-[#2C2B29]');
+              t.classList.add('text-[#8B8881]');
+              const span = t.querySelector('span:last-child');
+              if(span) {
+                span.classList.remove('font-semibold');
+                span.classList.add('font-medium');
+              }
+            });
+            tab.classList.remove('text-[#8B8881]');
+            tab.classList.add('text-[#2C2B29]');
+            const span = tab.querySelector('span:last-child');
+
+            if(span) {
+              span.classList.remove('font-medium');
+              span.classList.add('font-semibold');
+              const tabName = span.textContent.trim();
+
+              sidebarTabs.forEach(t => {
+                t.classList.remove('bg-[#F5F2EB]', 'text-[#2C2B29]');
+                t.classList.add('text-[#8B8881]');
+                const sSpan = t.querySelector('span:last-child');
+                if(sSpan && sSpan.textContent.trim() === tabName) {
+                  t.classList.remove('text-[#8B8881]');
+                  t.classList.add('bg-[#F5F2EB]', 'text-[#2C2B29]');
+                }
+              });
+
+              switchTab(tabName);
+            }
+          });
+        });
+
+        const peopleList = listView ? listView.querySelectorAll('.flex-col.gap-3 > div.cursor-pointer') : [];
+        const backBtn = detailView ? detailView.querySelector('header button.lg\\:hidden') : null;
+
+        const detailName = detailView ? detailView.querySelector('h2') : null;
+        const detailInitials = detailView ? detailView.querySelector('.w-20.h-20 span') : null;
+        const detailRole = detailView ? detailView.querySelector('.gap-x-2 span:first-child') : null;
+        const detailCompany = detailView ? detailView.querySelector('.gap-x-2 span.font-medium') : null;
+
+        peopleList.forEach(person => {
+          person.addEventListener('click', () => {
+            peopleList.forEach(p => {
+              p.classList.remove('lg:bg-white', 'lg:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)]', 'lg:ring-1', 'lg:ring-[#EAE6DB]');
+              p.classList.add('border-transparent');
+              const indicator = p.querySelector('.absolute.left-0');
+              if (indicator) indicator.remove();
+            });
+
+            person.classList.remove('border-transparent');
+            person.classList.add('lg:bg-white', 'lg:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)]', 'lg:ring-1', 'lg:ring-[#EAE6DB]');
+
+            const indicator = document.createElement('div');
+            indicator.className = 'hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1.5 rounded-r-full bg-[#2C2B29]';
+            person.appendChild(indicator);
+
+            const nameEl = person.querySelector('span.text-base.font-semibold');
+            const initialsEl = person.querySelector('.rounded-full span');
+            const roleEl = person.querySelectorAll('span.truncate')[1];
+
+            if (nameEl && detailName) detailName.textContent = nameEl.textContent.trim();
+            if (initialsEl && detailInitials) detailInitials.textContent = initialsEl.textContent.trim();
+            if (roleEl && detailRole) {
+                const fullRole = roleEl.textContent.trim();
+                const parts = fullRole.split(' at ');
+                detailRole.textContent = parts[0] || '';
+                if (detailCompany && parts[1]) {
+                    detailCompany.textContent = parts[1];
+                }
+            }
+
+            mobileDetailOpen = true;
+            updateView();
+          });
+        });
+
+        if (backBtn) {
+          backBtn.addEventListener('click', () => {
+            mobileDetailOpen = false;
+            updateView();
+          });
+        }
+
+        const setupMeetingsEvents = () => {
+          const meetingsListItems = tabMeetings ? tabMeetings.querySelectorAll('.meeting-item') : [];
+          const mDetailTitle = document.getElementById('meeting-detail-title');
+          const mBackBtn = document.getElementById('meetings-back-btn');
+
+          meetingsListItems.forEach(meeting => {
+            meeting.addEventListener('click', () => {
+              meetingsListItems.forEach(m => {
+                m.classList.remove('lg:bg-white', 'lg:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)]', 'lg:ring-1', 'lg:ring-[#EAE6DB]');
+                m.classList.add('border-transparent');
+                const indicator = m.querySelector('.meeting-indicator');
+                if (indicator) indicator.remove();
+              });
+
+              meeting.classList.remove('border-transparent');
+              meeting.classList.add('lg:bg-white', 'lg:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)]', 'lg:ring-1', 'lg:ring-[#EAE6DB]');
+
+              const indicator = document.createElement('div');
+              indicator.className = 'hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1.5 rounded-r-full bg-[#2C2B29] meeting-indicator';
+              meeting.appendChild(indicator);
+
+              const titleEl = meeting.querySelector('.meeting-title');
+              if (titleEl && mDetailTitle) {
+                mDetailTitle.textContent = titleEl.textContent.trim();
+              }
+
+              meetingsMobileDetailOpen = true;
+              updateView();
+            });
+          });
+
+          if (mBackBtn) {
+            mBackBtn.addEventListener('click', () => {
+              meetingsMobileDetailOpen = false;
+              updateView();
+            });
+          }
+        };
+
+        setupMeetingsEvents();
+        updateView();
+
+        // FILTER MODAL LOGIC
+        const filterBtn = document.getElementById('people-filter-btn');
+        const filterModal = document.getElementById('filter-modal');
+        const filterBackdrop = document.getElementById('filter-backdrop');
+        const filterPanel = document.getElementById('filter-panel');
+        const closeFilterBtn = document.getElementById('close-filter-btn');
+        const applyFilterBtn = document.getElementById('apply-filter-btn');
+        const resetFilterBtn = document.getElementById('reset-filter-btn');
+
+        function openFilter() {
+          if(!filterModal) return;
+          filterModal.classList.remove('hidden');
+          void filterModal.offsetWidth;
+          filterBackdrop.classList.remove('opacity-0');
+          filterBackdrop.classList.add('opacity-100');
+          filterPanel.classList.remove('translate-y-full', 'md:translate-y-4', 'md:opacity-0', 'md:scale-95');
+          filterPanel.classList.add('translate-y-0', 'md:translate-y-0', 'md:opacity-100', 'md:scale-100');
+        }
+
+        function closeFilter() {
+          if(!filterModal) return;
+          filterBackdrop.classList.remove('opacity-100');
+          filterBackdrop.classList.add('opacity-0');
+          filterPanel.classList.remove('translate-y-0', 'md:translate-y-0', 'md:opacity-100', 'md:scale-100');
+          filterPanel.classList.add('translate-y-full', 'md:translate-y-4', 'md:opacity-0', 'md:scale-95');
+          setTimeout(() => {
+            filterModal.classList.add('hidden');
+          }, 300);
+        }
+
+        if (filterBtn) filterBtn.addEventListener('click', openFilter);
+        if (closeFilterBtn) closeFilterBtn.addEventListener('click', closeFilter);
+        if (filterBackdrop) filterBackdrop.addEventListener('click', closeFilter);
+        if (applyFilterBtn) applyFilterBtn.addEventListener('click', closeFilter);
+        if (resetFilterBtn) resetFilterBtn.addEventListener('click', closeFilter);
+
+        // FORM MODALS LOGIC
+        function setupFormModal(modalId, addBtnId, editBtnId, titleTextAdd, titleTextEdit) {
+          const modal = document.getElementById(modalId);
+          if(!modal) return;
+          const backdrop = modal.querySelector('.backdrop');
+          const panel = modal.querySelector('.panel');
+          const closeBtns = modal.querySelectorAll('.close-btn, .save-btn');
+          const title = modal.querySelector('h2');
+
+          const addBtn = document.getElementById(addBtnId);
+          const editBtn = document.getElementById(editBtnId);
+
+          function openModal(isEdit) {
+            if(title) title.textContent = isEdit ? titleTextEdit : titleTextAdd;
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+            panel.classList.remove('translate-y-full', 'md:translate-y-4', 'md:opacity-0', 'md:scale-95');
+            panel.classList.add('translate-y-0', 'md:translate-y-0', 'md:opacity-100', 'md:scale-100');
+          }
+
+          function closeModal() {
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0');
+            panel.classList.remove('translate-y-0', 'md:translate-y-0', 'md:opacity-100', 'md:scale-100');
+            panel.classList.add('translate-y-full', 'md:translate-y-4', 'md:opacity-0', 'md:scale-95');
+            setTimeout(() => {
+              modal.classList.add('hidden');
+            }, 300);
+          }
+
+          if(addBtn) addBtn.addEventListener('click', () => openModal(false));
+          if(editBtn) editBtn.addEventListener('click', () => openModal(true));
+          if(backdrop) backdrop.addEventListener('click', closeModal);
+          closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
+        }
+
+        setupFormModal('person-form-modal', 'add-person-btn', 'edit-person-btn', 'Add Person', 'Edit Person');
+        setupFormModal('meeting-form-modal', 'add-meeting-btn', 'edit-meeting-btn', 'Add Meeting', 'Edit Meeting');
+      });
+    </script>
+  </body>
+</html>

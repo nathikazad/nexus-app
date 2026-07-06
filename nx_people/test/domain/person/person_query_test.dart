@@ -3,7 +3,7 @@ import 'package:nx_people/data/fake_people_repository.dart';
 
 void main() {
   test('people repository filters search and context rows', () async {
-    const repository = FakePeopleRepository();
+    final repository = FakePeopleRepository();
 
     expect((await repository.search('atlas')).map((person) => person.name), [
       'Marcus Rivera',

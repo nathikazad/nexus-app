@@ -17,7 +17,7 @@ import 'package:nx_db/riverpod.dart';
 
 const mirrorPublicUrl = String.fromEnvironment(
   'MIRROR_PUBLIC_URL',
-  defaultValue: 'http://188.245.46.13:8787',
+  defaultValue: 'https://nathikazad.com',
 );
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -226,7 +226,7 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Public mirror: http://188.245.46.13:8787',
+                      'Public mirror: https://nathikazad.com',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xffa1a1aa), fontSize: 12),
                     ),
