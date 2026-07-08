@@ -19,6 +19,11 @@ const mirrorPublicUrl = String.fromEnvironment(
   'MIRROR_PUBLIC_URL',
   defaultValue: 'https://nathikazad.com',
 );
+
+const kDocumentTopicTagSystem = 'Topic';
+const kMicroblogCategoryTagSystem = 'Category';
+const kUncategorizedFilterTag = 'Uncategorized';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
@@ -350,7 +355,7 @@ class _FeedPageState extends State<FeedPage> {
             future: _feedFuture,
             builder: (context, snapshot) {
               final items = snapshot.data ?? const <FeedItem>[];
-              final topics = _topicsFor(items);
+              final tags = _filterTagsFor(items);
               final visibleItems = items
                   .where(_matchesFilters)
                   .where((item) => !_deletedItemIds.contains(item.id))
@@ -369,7 +374,7 @@ class _FeedPageState extends State<FeedPage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               FeedHeader(
-                                topics: topics,
+                                tags: tags,
                                 selectedTags: _selectedTags,
                                 selectedKinds: _selectedKinds,
                                 hasCustomTagSelection: _hasCustomTagSelection,
@@ -409,7 +414,7 @@ class _FeedPageState extends State<FeedPage> {
                       hasScrollBody: false,
                       child: FeedMessage(
                         title: 'No posts here yet',
-                        body: 'Try another topic or pull to refresh.',
+                        body: 'Try another filter or pull to refresh.',
                       ),
                     )
                   else
@@ -457,22 +462,31 @@ class _FeedPageState extends State<FeedPage> {
     );
   }
 
-  List<String> _topicsFor(List<FeedItem> items) {
-    final topics = <String>{};
+  List<String> _filterTagsFor(List<FeedItem> items) {
+    final tags = <String>{};
+    var hasUntagged = false;
     for (final item in items) {
-      if (item.kind != FeedItemKind.document) continue;
-      topics.addAll(item.topics);
+      if (item.tags.isEmpty) {
+        hasUntagged = true;
+      } else {
+        tags.addAll(item.tags);
+      }
     }
-    return [...topics.toList()..sort()];
+    final sorted = tags.toList()..sort();
+    if (hasUntagged) {
+      sorted.add(kUncategorizedFilterTag);
+    }
+    return sorted;
   }
 
   bool _matchesFilters(FeedItem item) {
     if (!_selectedKinds.contains(item.kind)) return false;
-    if (item.kind == FeedItemKind.microblog) return true;
-    final selectedTags = _hasCustomTagSelection ? _selectedTags : null;
-    if (selectedTags == null) return true;
-    if (selectedTags.isEmpty) return false;
-    return item.topics.any(selectedTags.contains);
+    if (!_hasCustomTagSelection) return true;
+    if (_selectedTags.isEmpty) return false;
+    if (item.tags.isEmpty) {
+      return _selectedTags.contains(kUncategorizedFilterTag);
+    }
+    return item.tags.any(_selectedTags.contains);
   }
 
   void _setFilters({
@@ -671,7 +685,7 @@ class _SyncStatusBannerState extends State<SyncStatusBanner>
 
 class FeedHeader extends StatelessWidget {
   const FeedHeader({
-    required this.topics,
+    required this.tags,
     required this.selectedTags,
     required this.selectedKinds,
     required this.hasCustomTagSelection,
@@ -679,7 +693,7 @@ class FeedHeader extends StatelessWidget {
     super.key,
   });
 
-  final List<String> topics;
+  final List<String> tags;
   final Set<String> selectedTags;
   final Set<FeedItemKind> selectedKinds;
   final bool hasCustomTagSelection;
@@ -712,7 +726,7 @@ class FeedHeader extends StatelessWidget {
               ),
             ),
             TopicFilterMenu(
-              topics: topics,
+              tags: tags,
               selectedTags: selectedTags,
               selectedKinds: selectedKinds,
               hasCustomTagSelection: hasCustomTagSelection,
@@ -727,7 +741,7 @@ class FeedHeader extends StatelessWidget {
 
 class TopicFilterMenu extends StatelessWidget {
   const TopicFilterMenu({
-    required this.topics,
+    required this.tags,
     required this.selectedTags,
     required this.selectedKinds,
     required this.hasCustomTagSelection,
@@ -735,7 +749,7 @@ class TopicFilterMenu extends StatelessWidget {
     super.key,
   });
 
-  final List<String> topics;
+  final List<String> tags;
   final Set<String> selectedTags;
   final Set<FeedItemKind> selectedKinds;
   final bool hasCustomTagSelection;
@@ -765,7 +779,7 @@ class TopicFilterMenu extends StatelessWidget {
           enabled: false,
           padding: const EdgeInsets.all(6),
           child: FilterMenuPanel(
-            topics: topics,
+            tags: tags,
             selectedTags: selectedTags,
             selectedKinds: selectedKinds,
             hasCustomTagSelection: hasCustomTagSelection,
@@ -821,7 +835,7 @@ class TopicFilterMenu extends StatelessWidget {
 
 class FilterMenuPanel extends StatefulWidget {
   const FilterMenuPanel({
-    required this.topics,
+    required this.tags,
     required this.selectedTags,
     required this.selectedKinds,
     required this.hasCustomTagSelection,
@@ -829,7 +843,7 @@ class FilterMenuPanel extends StatefulWidget {
     super.key,
   });
 
-  final List<String> topics;
+  final List<String> tags;
   final Set<String> selectedTags;
   final Set<FeedItemKind> selectedKinds;
   final bool hasCustomTagSelection;
@@ -854,7 +868,7 @@ class _FilterMenuPanelState extends State<FilterMenuPanel> {
     super.initState();
     _selectedTags = widget.hasCustomTagSelection
         ? {...widget.selectedTags}
-        : {...widget.topics};
+        : {...widget.tags};
     _selectedKinds = {...widget.selectedKinds};
     _hasCustomTagSelection = widget.hasCustomTagSelection;
   }
@@ -867,11 +881,11 @@ class _FilterMenuPanelState extends State<FilterMenuPanel> {
     );
   }
 
-  void _toggleTag(String topic) {
+  void _toggleTag(String tag) {
     setState(() {
       _hasCustomTagSelection = true;
-      if (!_selectedTags.remove(topic)) {
-        _selectedTags.add(topic);
+      if (!_selectedTags.remove(tag)) {
+        _selectedTags.add(tag);
       }
     });
     _emit();
@@ -894,13 +908,13 @@ class _FilterMenuPanelState extends State<FilterMenuPanel> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.topics.isNotEmpty) ...[
+          if (widget.tags.isNotEmpty) ...[
             const FilterMenuTitle('Tags'),
-            for (final topic in widget.topics)
+            for (final tag in widget.tags)
               TopicMenuOption(
-                label: topic,
-                selected: _selectedTags.contains(topic),
-                onTap: () => _toggleTag(topic),
+                label: tag,
+                selected: _selectedTags.contains(tag),
+                onTap: () => _toggleTag(tag),
               ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -1041,7 +1055,7 @@ class DocumentFeedItem extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FeedMeta(date: item.date, topic: item.topics.firstOrNull),
+        FeedMeta(date: item.date, topic: item.tags.firstOrNull),
         const SizedBox(height: 9),
         Text(
           item.title,
@@ -1101,7 +1115,7 @@ class MicroblogFeedItem extends StatelessWidget {
             Expanded(
               child: FeedMeta(
                 date: item.date,
-                topic: item.topics.firstOrNull,
+                topic: item.tags.firstOrNull,
                 includeTime: true,
               ),
             ),
@@ -1550,6 +1564,8 @@ class _ComposeSheetState extends State<ComposeSheet> {
   final _imagePicker = image_picker.ImagePicker();
   final List<SelectedPostImage> _selectedImages = [];
   final List<ExistingPostMedia> _existingMedia = [];
+  late Future<List<String>> _categoryOptionsFuture;
+  final Set<String> _selectedCategories = {};
   DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
   bool _saving = false;
@@ -1560,10 +1576,12 @@ class _ComposeSheetState extends State<ComposeSheet> {
   @override
   void initState() {
     super.initState();
+    _categoryOptionsFuture = widget.repository.fetchMicroblogCategories();
     final item = widget.item;
     if (item == null) return;
     _textController.text = item.text;
     _postedAt = item.date ?? DateTime.now();
+    _selectedCategories.addAll(item.tags);
     _existingMedia.addAll(
       item.media.map((media) => ExistingPostMedia.fromFeedMedia(media)),
     );
@@ -1645,6 +1663,14 @@ class _ComposeSheetState extends State<ComposeSheet> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 14),
+            CategoryTagPicker(
+              categoriesFuture: _categoryOptionsFuture,
+              selected: _selectedCategories,
+              enabled: !_saving,
+              onToggle: _toggleCategory,
+              onRetry: _reloadCategories,
             ),
             const SizedBox(height: 14),
             TextField(
@@ -1794,6 +1820,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
           postedAt: _postedAt,
           mediaUrl: _mediaController.text.trim(),
           images: _selectedImages,
+          categories: normalizedTags(_selectedCategories),
           publishEnabled: _publishEnabled,
         );
       } else {
@@ -1804,6 +1831,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
           mediaUrl: _mediaController.text.trim(),
           existingMedia: _existingMedia.map((media) => media.raw).toList(),
           images: _selectedImages,
+          categories: normalizedTags(_selectedCategories),
           publishEnabled: _publishEnabled,
         );
       }
@@ -1875,6 +1903,20 @@ class _ComposeSheetState extends State<ComposeSheet> {
     if (picked != null && mounted) {
       setState(() => _postedAt = picked);
     }
+  }
+
+  void _toggleCategory(String category) {
+    setState(() {
+      if (!_selectedCategories.remove(category)) {
+        _selectedCategories.add(category);
+      }
+    });
+  }
+
+  void _reloadCategories() {
+    setState(() {
+      _categoryOptionsFuture = widget.repository.fetchMicroblogCategories();
+    });
   }
 
   Future<void> _pickImages() async {
@@ -1985,7 +2027,145 @@ class _ComposeSheetState extends State<ComposeSheet> {
   }
 }
 
+class CategoryTagPicker extends StatelessWidget {
+  const CategoryTagPicker({
+    required this.categoriesFuture,
+    required this.selected,
+    required this.enabled,
+    required this.onToggle,
+    required this.onRetry,
+    super.key,
+  });
+
+  final Future<List<String>> categoriesFuture;
+  final Set<String> selected;
+  final bool enabled;
+  final ValueChanged<String> onToggle;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<String>>(
+      future: categoriesFuture,
+      builder: (context, snapshot) {
+        final categories = <String>{...?snapshot.data, ...selected}.toList()
+          ..sort();
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final error = snapshot.error;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Category',
+                    style: TextStyle(
+                      color: Color(0xff3f3f46),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (error != null)
+                  IconButton(
+                    tooltip: 'Retry categories',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 30,
+                      height: 30,
+                    ),
+                    padding: EdgeInsets.zero,
+                    onPressed: enabled ? onRetry : null,
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: Color(0xff71717a),
+                      size: 18,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (isLoading && categories.isEmpty)
+              const Text(
+                'Loading categories...',
+                style: TextStyle(color: Color(0xff71717a), fontSize: 13),
+              )
+            else if (error != null && categories.isEmpty)
+              Text(
+                'Could not load categories: $error',
+                style: const TextStyle(color: Color(0xffa1a1aa), fontSize: 13),
+              )
+            else if (categories.isEmpty)
+              const Text(
+                'No categories available.',
+                style: TextStyle(color: Color(0xffa1a1aa), fontSize: 13),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final category in categories)
+                    FilterChip(
+                      label: Text(category),
+                      selected: selected.contains(category),
+                      onSelected: enabled ? (_) => onToggle(category) : null,
+                      showCheckmark: false,
+                      selectedColor: const Color(0xff18181b),
+                      backgroundColor: const Color(0xfff4f4f5),
+                      side: BorderSide(
+                        color: selected.contains(category)
+                            ? const Color(0xff18181b)
+                            : const Color(0xffe4e4e7),
+                      ),
+                      labelStyle: TextStyle(
+                        color: selected.contains(category)
+                            ? Colors.white
+                            : const Color(0xff3f3f46),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 enum PostImageSource { camera, photos, files }
+
+List<String> normalizedTags(Iterable<String> tags) {
+  return tags
+      .map((tag) => tag.trim())
+      .where((tag) => tag.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+}
+
+List<String> flattenTagNodes(List<TagNode> nodes) {
+  final names = <String>{};
+
+  void visit(TagNode node) {
+    final name = node.name.trim();
+    if (name.isNotEmpty) {
+      names.add(name);
+    }
+    for (final child in node.children ?? const <TagNode>[]) {
+      visit(child);
+    }
+  }
+
+  for (final node in nodes) {
+    visit(node);
+  }
+  return names.toList()..sort();
+}
 
 class SelectedPostImage {
   const SelectedPostImage({required this.name, this.path, this.bytes});
@@ -2198,15 +2378,40 @@ class MicroblogPostRepository {
   final dynamic _graphqlClient;
   int? _microblogDomainId;
 
+  Future<List<String>> fetchMicroblogCategories() async {
+    final schema = await fetchKgqlModelTypeByName(
+      _graphqlClient,
+      'Microblog',
+      struct: const {'id': true, 'name': true, 'tag_systems': true},
+    );
+    final categorySystem = schema.tagSystems
+        ?.where((system) => system.name == kMicroblogCategoryTagSystem)
+        .firstOrNull;
+    if (categorySystem == null) return const [];
+    return flattenTagNodes(categorySystem.nodes);
+  }
+
+  List<SetModelTag> _microblogCategoryTags(List<String> categories) {
+    return [
+      SetModelTag(
+        system: kMicroblogCategoryTagSystem,
+        nodes: categories,
+        clear: true,
+      ),
+    ];
+  }
+
   Future<void> createMicroblog({
     required String text,
     required DateTime postedAt,
     required String mediaUrl,
     required List<SelectedPostImage> images,
+    required List<String> categories,
     required bool publishEnabled,
   }) async {
     logNxPost('creating microblog publish=$publishEnabled');
     final cleanText = text.trim();
+    final cleanCategories = normalizedTags(categories);
     final linkMedia = mediaUrl.isEmpty
         ? <Map<String, dynamic>>[]
         : [_mediaFromUrl(mediaUrl)];
@@ -2214,7 +2419,7 @@ class MicroblogPostRepository {
     final draftHash = microblogContentHash(
       text: cleanText,
       media: const [],
-      topic: null,
+      categories: cleanCategories,
     );
 
     final microblogId = await setKgqlModel(
@@ -2243,6 +2448,7 @@ class MicroblogPostRepository {
             },
           ),
         ],
+        tags: _microblogCategoryTags(cleanCategories),
       ),
       domainId: await _domainId(),
       auditSourceKind: 'nx_post',
@@ -2257,7 +2463,7 @@ class MicroblogPostRepository {
       final contentHash = microblogContentHash(
         text: cleanText,
         media: media,
-        topic: null,
+        categories: cleanCategories,
       );
 
       await setKgqlModel(
@@ -2283,6 +2489,7 @@ class MicroblogPostRepository {
               },
             ),
           ],
+          tags: _microblogCategoryTags(cleanCategories),
         ),
         domainId: await _domainId(),
         auditSourceKind: 'nx_post',
@@ -2309,10 +2516,12 @@ class MicroblogPostRepository {
     required String mediaUrl,
     required List<Map<String, dynamic>> existingMedia,
     required List<SelectedPostImage> images,
+    required List<String> categories,
     required bool publishEnabled,
   }) async {
     logNxPost('updating microblog id=$id publish=$publishEnabled');
     final cleanText = text.trim();
+    final cleanCategories = normalizedTags(categories);
     final linkMedia = mediaUrl.isEmpty
         ? <Map<String, dynamic>>[]
         : [_mediaFromUrl(mediaUrl)];
@@ -2325,7 +2534,7 @@ class MicroblogPostRepository {
     final contentHash = microblogContentHash(
       text: cleanText,
       media: media,
-      topic: null,
+      categories: cleanCategories,
     );
 
     await setKgqlModel(
@@ -2351,6 +2560,7 @@ class MicroblogPostRepository {
             },
           ),
         ],
+        tags: _microblogCategoryTags(cleanCategories),
       ),
       domainId: await _domainId(),
       auditSourceKind: 'nx_post',
@@ -2692,7 +2902,7 @@ class MirrorFeedRepository {
       title: document['title']?.toString() ?? 'Untitled',
       text: shorten(body.isEmpty ? document['title']?.toString() ?? '' : body),
       date: parseDate(document['updated_at']),
-      topics: topicTags(document['tags']),
+      tags: tagsForSystem(document['tags'], kDocumentTopicTagSystem),
     );
   }
 
@@ -2709,7 +2919,7 @@ class MirrorFeedRepository {
       title: '',
       text: microblog['text']?.toString() ?? '',
       date: parseDate(microblog['posted_at']),
-      topics: topicTags(microblog['tags']),
+      tags: tagsForSystem(microblog['tags'], kMicroblogCategoryTagSystem),
       media: media ?? const [],
     );
   }
@@ -2746,7 +2956,7 @@ class FeedItem {
     required this.title,
     required this.text,
     required this.date,
-    required this.topics,
+    required this.tags,
     this.media = const [],
   });
 
@@ -2756,7 +2966,7 @@ class FeedItem {
   final String title;
   final String text;
   final DateTime? date;
-  final List<String> topics;
+  final List<String> tags;
   final List<FeedMedia> media;
 }
 
@@ -2778,13 +2988,15 @@ class FeedMedia {
   final Map<String, dynamic> raw;
 }
 
-List<String> topicTags(Object? tags) {
+List<String> tagsForSystem(Object? tags, String system) {
   if (tags is! Map<String, dynamic>) return const [];
-  final topic = tags['Topic'];
-  if (topic is! List) return const [];
-  return topic
+  final systemTags = tags[system];
+  if (systemTags is! List) return const [];
+  return systemTags
       .map((item) => item.toString())
+      .map((item) => item.trim())
       .where((item) => item.isNotEmpty)
+      .toSet()
       .toList()
     ..sort();
 }
@@ -2826,14 +3038,13 @@ String? firstNonEmpty(Iterable<String?> values) {
 String microblogContentHash({
   required String text,
   required List<Map<String, dynamic>> media,
-  required String? topic,
+  required List<String> categories,
 }) {
+  final cleanCategories = normalizedTags(categories);
   final envelope = {
     'format': 'nexus_microblog',
     'media': media,
-    'tags': {
-      'Topic': topic == null || topic.isEmpty ? <String>[] : [topic],
-    },
+    'tags': {kMicroblogCategoryTagSystem: cleanCategories},
     'text': text,
   };
   final encoded = canonicalJson(envelope);

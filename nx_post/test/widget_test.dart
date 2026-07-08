@@ -7,6 +7,45 @@ import 'package:nx_post/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('reads only tags from the requested public system', () {
+    expect(
+      tagsForSystem({
+        'Topic': ['Business', 'Spiritual', 'Business'],
+        'Category': ['Activity'],
+      }, kDocumentTopicTagSystem),
+      ['Business', 'Spiritual'],
+    );
+
+    expect(
+      tagsForSystem({
+        'Topic': ['Ignored'],
+        'Category': ['Activity', 'Quotes', 'Activity'],
+      }, kMicroblogCategoryTagSystem),
+      ['Activity', 'Quotes'],
+    );
+  });
+
+  test('microblog content hash normalizes Category tags', () {
+    final first = microblogContentHash(
+      text: 'hello',
+      media: const [],
+      categories: const ['Quotes', 'Activity', 'Activity'],
+    );
+    final second = microblogContentHash(
+      text: 'hello',
+      media: const [],
+      categories: const ['Activity', 'Quotes'],
+    );
+    final untagged = microblogContentHash(
+      text: 'hello',
+      media: const [],
+      categories: const [],
+    );
+
+    expect(first, second);
+    expect(first, isNot(untagged));
+  });
+
   testWidgets('renders feed shell and opens compose sheet', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(

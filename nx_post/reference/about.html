@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nathik Azad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+          font-family: 'Inter', sans-serif;
+          background-color: #FAFAFA;
+      }
+      /* Custom scrollbar for a cleaner look */
+      ::-webkit-scrollbar {
+          width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+          background: #e4e4e7;
+          border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+          background: #d4d4d8;
+      }
+    </style>
+  </head>
+  <body
+    class="text-zinc-800 antialiased selection:bg-zinc-200 selection:text-zinc-900 flex flex-col min-h-screen"
+  >
+    <!-- Main Container -->
+    <main
+      class="w-full max-w-2xl mx-auto px-5 sm:px-8 py-12 sm:py-20 flex-grow flex flex-col"
+    >
+      <!-- Header / Identity -->
+      <header class="mb-16 flex items-center justify-between">
+        <a
+          href="#"
+          onclick="closeReader()"
+          class="text-base font-semibold tracking-tighter text-zinc-900 hover:opacity-70 transition-opacity"
+        >
+          NA.
+        </a>
+        <div class="flex gap-4 items-center">
+          <a
+            href="#"
+            class="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          >
+            About
+          </a>
+          <a
+            href="#"
+            class="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          >
+            Subscribe
+          </a>
+        </div>
+      </header>
+
+      <!-- View Controllers -->
+      <div id="about-view" class="block w-full">
+        <div
+          class="flex flex-wrap items-center gap-6 mb-10 pb-4 border-b border-zinc-150"
+        >
+          <button
+            onclick="switchAboutTab('engineer')"
+            id="tab-engineer"
+            class="text-sm font-medium text-zinc-900 border-b-2 border-zinc-900 pb-1"
+          >
+            Engineer
+          </button>
+          <button
+            onclick="switchAboutTab('founder')"
+            id="tab-founder"
+            class="text-sm font-medium text-zinc-400 hover:text-zinc-900 border-b-2 border-transparent pb-1 transition-colors"
+          >
+            Founder
+          </button>
+          <button
+            onclick="switchAboutTab('theology')"
+            id="tab-theology"
+            class="text-sm font-medium text-zinc-400 hover:text-zinc-900 border-b-2 border-transparent pb-1 transition-colors"
+          >
+            Theology
+          </button>
+          <button
+            onclick="switchAboutTab('psychology')"
+            id="tab-psychology"
+            class="text-sm font-medium text-zinc-400 hover:text-zinc-900 border-b-2 border-transparent pb-1 transition-colors"
+          >
+            Psychology
+          </button>
+          <button
+            onclick="switchAboutTab('economy')"
+            id="tab-economy"
+            class="text-sm font-medium text-zinc-400 hover:text-zinc-900 border-b-2 border-transparent pb-1 transition-colors"
+          >
+            Economy
+          </button>
+        </div>
+
+        <div id="content-engineer" class="about-section block animate-fade-in">
+          <section class="mb-12">
+            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 mb-6">
+              Education
+            </h2>
+            <div class="flex flex-col gap-6">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="text-base font-semibold text-zinc-900">
+                    Master of Science in Electrical Engineering
+                  </h3>
+                  <p class="text-sm text-zinc-500 mt-1">
+                    California Polytechnic State University (CalPoly)
+                  </p>
+                </div>
+                <span
+                  class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md"
+                >
+                  2014 - 2016
+                </span>
+              </div>
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="text-base font-semibold text-zinc-900">
+                    Bachelor of Science in Computer Engineering
+                  </h3>
+                  <p class="text-sm text-zinc-500 mt-1">
+                    California Polytechnic State University (CalPoly)
+                  </p>
+                </div>
+                <span
+                  class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md"
+                >
+                  2010 - 2014
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 mb-6">
+              Experience
+            </h2>
+            <div
+              class="flex flex-col gap-8 relative before:absolute before:inset-y-0 before:left-[7px] before:w-[2px] before:bg-zinc-100"
+            >
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Chief Engineer
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Bondu</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    May 2026 – Present
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Serve as the technical lead across firmware, electrical
+                    engineering, backend services, databases, AI systems, and
+                    mobile applications.
+                  </p>
+                  <p>
+                    Brought in to assume ownership of a four-person
+                    multidisciplinary engineering function while maintaining
+                    delivery across all active workstreams. Added staged
+                    rollouts, reduced boot time, improved battery life, and
+                    resolved critical reliability issues including choppy audio
+                    and device provisioning failures.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Software Architect
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Cannatrols</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Feb 2025 – Present
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Architected and developed the connected software platform
+                    for Cannatrols' smart cannabis-curing refrigerators, taking
+                    responsibility for the full path from embedded firmware to
+                    cloud services, data storage, device messaging, and user
+                    applications.
+                  </p>
+                  <p>
+                    Built the ESP32 firmware in ESP-IDF for a multithreaded
+                    runtime that handled Bluetooth provisioning, Wi-Fi setup,
+                    OTA updates, mTLS-secured connectivity, and MQTT-based IoT
+                    communication. The firmware served as the bridge between
+                    the appliance hardware and the cloud platform.
+                  </p>
+                  <p>
+                    Implemented the backend on Supabase Edge Functions and
+                    Supabase Postgres, with EMQX handling MQTT communication
+                    between devices, servers, and Flutter applications. Built
+                    the mobile app workflows that allowed users to provision
+                    devices, monitor curing conditions, and send or receive
+                    real-time device commands.
+                  </p>
+                  <p>
+                    Integrated the ESP32 with STM32-based control systems over
+                    CAN bus to coordinate sensor arrays, heating elements, and
+                    appliance control logic. Also integrated Bridgetek display
+                    hardware with ESP32 controllers for local device interfaces.
+                  </p>
+                  <p>
+                    Extended the platform into manufacturing and operations by
+                    building Raspberry Pi flashing stations for production in
+                    China and a dedicated supply-chain tracking app for U.S.
+                    warehouse teams receiving, preparing, and shipping devices
+                    to customers worldwide.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Software Architect
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Nexus</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Aug 2024 – Present
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Architected Nexus as a complete personal AI platform
+                    spanning mobile apps, backend infrastructure, embedded
+                    firmware, and custom hardware. Built the system end to end:
+                    a suite of Flutter apps, a knowledge-graph backend,
+                    real-time AI/voice services, and a wearable device designed
+                    to capture, process, and sync audio, images, and personal
+                    context.
+                  </p>
+                  <p>
+                    Built the backend around PostgreSQL, GraphQL, Dockerized
+                    services, and a Python MCP server that powered real-time
+                    voice, AI routing, telemetry, publishing, app logs, backups,
+                    and device communication. Designed the infrastructure to run
+                    locally and on Raspberry Pi deployments while supporting
+                    multiple Nexus apps from a shared data and service layer.
+                  </p>
+                  <p>
+                    Created KGQL, a custom knowledge-graph programming layer
+                    that made Nexus apps dramatically faster to build. Instead
+                    of hand-writing separate schemas, APIs, and data flows for
+                    every feature, KGQL modeled information as typed entities,
+                    attributes, relations, and tags, giving both apps and AI
+                    agents a consistent way to query, create, update, and link
+                    user data.
+                  </p>
+                  <p>
+                    Developed the embedded firmware for the Nexus wearable
+                    across ESP32 and nRF53, including BLE, high-speed SPI
+                    chip-to-chip communication, Opus audio streaming, voice
+                    recording, camera capture, SD-card storage, telemetry, and
+                    reliable file transfer. Tuned the system for low-power
+                    operation around 5 mA while preserving fast wake, capture,
+                    and sync behavior.
+                  </p>
+                  <p>
+                    Designed the custom six-layer Nexus PCB with multiple
+                    antennas, microphone, speaker, camera, RTC, haptic engine,
+                    battery charging, fuel gauge, capacitive touch, USB-C, and
+                    supporting power circuitry. Owned the rare full-stack path
+                    from product concept to app, backend, firmware, and
+                    manufacturable electronics.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Software Architect
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Mezcalmos</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Nov 2020 – Oct 2023
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Architected the technical foundation for Mezcalmos, a
+                    platform that connected taxi and delivery services across
+                    rural villages through a unified marketplace experience.
+                  </p>
+                  <p>
+                    Directed a team of 10 contractors in building a stack based
+                    on Flutter for cross-platform mobile applications,
+                    TypeScript for server-side services, GraphQL for typed and
+                    reliable data access, and Firebase Database for real-time
+                    data storage and synchronization.
+                  </p>
+                  <p>
+                    Enabled restaurants to partner with local delivery providers
+                    and customers to book local taxi services through a single
+                    app. The platform supported more than 25,000 taxi and
+                    delivery orders, representing over 2 million pesos in
+                    transaction volume.
+                  </p>
+                  <p>
+                    Launched six mobile applications serving taxi drivers,
+                    restaurant owners, delivery drivers, end customers, and
+                    system administrators. Integrated Stripe marketplace
+                    payments for fund movement, Agora VoIP for system-wide
+                    calling, Firebase notifications for app messaging, and
+                    Twilio SMS for customer communication.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Software Architect
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">
+                      ClawCrazy · Detroit, Michigan
+                    </p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Sept 2018 – Oct 2022
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Led the design and implementation of ClawCrazy, a platform
+                    that enabled users around the world to remotely play more
+                    than 100 physical arcade games located in Detroit.
+                  </p>
+                  <p>
+                    Interfaced arcade machines with Raspberry Pi controllers
+                    and connected them to Firebase-backed web and mobile clients
+                    for real-time gameplay.
+                  </p>
+                  <p>
+                    Owned the full software architecture, achieving sub-70 ms
+                    command response times and sub-100 ms video streaming
+                    latency for a fluid remote arcade experience.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Systems Engineer
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">
+                      Centauri Aircraft
+                    </p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Feb 2018 – Oct 2018
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Developed an aircraft monitoring system for engine and fuel
+                    parameters using a Raspberry Pi with a pilot-facing display.
+                  </p>
+                  <p>
+                    Established a 4G-connected telemetry path that allowed
+                    ground station engineers to wirelessly access real-time
+                    engine data.
+                  </p>
+                  <p>
+                    Architected the system end to end, including low-level
+                    hardware drivers for engineering interfaces, Python and Node
+                    servers for data ingestion, and browser-based visualization
+                    tools.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Software Engineer
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Zoox</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Jan 2017 – Nov 2017
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Developed ROS drivers to ensure reliable communication
+                    between the mainframe AI computer and vehicle sensors and
+                    actuators, converting messages to Protobuf for an STM32
+                    controller running ChibiOS.
+                  </p>
+                  <p>
+                    Built CAN network communication drivers for actuator
+                    control, rigorously anticipating and documenting error
+                    conditions to reduce vehicle failure modes.
+                  </p>
+                  <p>
+                    Created drivers to display vehicle status to safety drivers
+                    and synchronized lidar capture with camera shutter events to
+                    improve sensor alignment and reduce downstream processing.
+                  </p>
+                </div>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-200"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Software Intern
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">NWRA</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    Jul 2015 – Sept 2015
+                  </span>
+                </div>
+                <div class="space-y-2 text-sm text-zinc-600 leading-relaxed">
+                  <p>
+                    Developed a mechanism for tracking underwater ocean currents
+                    by engineering a network of ocean bots.
+                  </p>
+                  <p>
+                    Built four surface water bots with acoustic receivers and a
+                    submersible bot with an acoustic pinger to approximate GPS
+                    behavior underwater. Assembled the hardware, designed the
+                    PCB, and programmed the microcontroller within eight weeks,
+                    integrating GPS receivers, Iridium satellite transponders,
+                    and acoustic pingers.
+                  </p>
+                  <p>
+                    Designed a high-speed automatic coil-gun recovery mechanism
+                    using several hundred volts to puncture an air canister,
+                    inflate a vest, and return submerged bots to the surface.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div id="content-founder" class="about-section hidden animate-fade-in">
+          <div
+            class="prose prose-zinc prose-p:text-zinc-600 prose-p:leading-relaxed max-w-none mb-12"
+          >
+            <p class="mb-6">
+              Building things from zero to one has always been my passion.
+              Throughout my career, I've had the privilege of founding two
+              companies, learning invaluable lessons about product-market fit,
+              team building, and sustainable growth.
+            </p>
+            <p>
+              The journey of a founder is rarely linear, but the process of
+              turning an abstract idea into a tangible product that brings value
+              to users is deeply fulfilling. Here's a look at the ventures I've
+              started.
+            </p>
+          </div>
+
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 mb-6">
+              Ventures
+            </h2>
+            <div
+              class="flex flex-col gap-8 relative before:absolute before:inset-y-0 before:left-[7px] before:w-[2px] before:bg-zinc-100"
+            >
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-900"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Founder &amp; CEO
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Nexus AI</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    2021 - Present
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-600 leading-relaxed">
+                  Bootstrapped an AI-driven analytics platform for small
+                  businesses. Reached profitability within the first year and
+                  scaled to over 10,000 active users.
+                </p>
+              </div>
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-zinc-900"
+                ></div>
+                <div
+                  class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"
+                >
+                  <div>
+                    <h3 class="text-base font-semibold text-zinc-900">
+                      Co-Founder &amp; CTO
+                    </h3>
+                    <p class="text-sm text-zinc-500 mt-0.5">Lumina Health</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md whitespace-nowrap"
+                  >
+                    2018 - 2021
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-600 leading-relaxed">
+                  Built a telemedicine platform connecting rural patients with
+                  specialists. Successfully raised a Series A and eventually
+                  acquired by a major healthcare provider.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div id="content-theology" class="about-section hidden animate-fade-in">
+          <div
+            class="prose prose-zinc prose-p:text-zinc-600 prose-p:leading-relaxed max-w-none mb-12"
+          >
+            <p class="mb-6">
+              My spiritual journey has been shaped by a diverse array of
+              philosophies and texts. I believe in the underlying unity of
+              different spiritual traditions and the profound insights they
+              offer into human consciousness and our place in the universe.
+            </p>
+            <p>
+              The search for meaning is a deeply personal endeavor, yet it is
+              illuminated by the wisdom of those who have walked the path before
+              us. The following books are central to my understanding of
+              theology and existence.
+            </p>
+          </div>
+
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-zinc-900 mb-6">
+              Central Texts
+            </h2>
+            <div class="flex flex-col gap-6">
+              <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-start">
+                  <h3
+                    class="text-base font-semibold text-zinc-900 leading-tight"
+                  >
+                    Be Here Now
+                  </h3>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md"
+                  >
+                    2011
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-600 leading-relaxed">
+                  Ram Dass's seminal work introduced me to the concept of
+                  radical presence. It remains a daily reminder to anchor myself
+                  in the current moment.
+                </p>
+              </div>
+              <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-start">
+                  <h3
+                    class="text-base font-semibold text-zinc-900 leading-tight"
+                  >
+                    Tao Te Ching
+                  </h3>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md"
+                  >
+                    2011
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-600 leading-relaxed">
+                  Lao Tzu's teachings on flow, simplicity, and naturalness have
+                  profoundly influenced my approach to life's challenges and the
+                  concept of effortless action.
+                </p>
+              </div>
+              <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-start">
+                  <h3
+                    class="text-base font-semibold text-zinc-900 leading-tight"
+                  >
+                    Bhagavad Gita
+                  </h3>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md"
+                  >
+                    2014
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-600 leading-relaxed">
+                  This epic conversation about duty, action, and devotion
+                  provides a robust framework for navigating moral dilemmas and
+                  understanding purposeful work.
+                </p>
+              </div>
+              <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-start">
+                  <h3
+                    class="text-base font-semibold text-zinc-900 leading-tight"
+                  >
+                    Justice and Remembrance
+                  </h3>
+                  <span
+                    class="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-1 rounded-md"
+                  >
+                    2021
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-600 leading-relaxed">
+                  A deep dive into the spiritual dimensions of justice. It
+                  challenged my perspectives and integrated social consciousness
+                  with internal practices.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div
+          id="content-psychology"
+          class="about-section hidden animate-fade-in"
+        >
+          <div
+            class="prose prose-zinc prose-p:text-zinc-600 prose-p:leading-relaxed max-w-none"
+          >
+            <p class="mb-6">
+              Understanding the human mind is crucial not just for personal
+              development, but for designing better systems and organizations.
+              My interest in psychology stems from a desire to comprehend the
+              cognitive biases, heuristics, and emotional drivers that influence
+              our decision-making.
+            </p>
+            <p class="mb-6">
+              I frequently explore topics related to behavioral psychology,
+              neuroplasticity, and flow states. I believe that by cultivating
+              self-awareness, we can rewire our habitual responses and unlock
+              greater creative and intellectual potential.
+            </p>
+            <p>
+              Whether it's optimizing team dynamics in a startup or designing
+              user interfaces that feel intuitive, a solid grounding in
+              psychological principles is an indispensable tool in my
+              repertoire.
+            </p>
+          </div>
+        </div>
+
+        <div id="content-economy" class="about-section hidden animate-fade-in">
+          <div
+            class="prose prose-zinc prose-p:text-zinc-600 prose-p:leading-relaxed max-w-none"
+          >
+            <p class="mb-6">
+              Economics is the study of how people interact with value, and in
+              our increasingly digital world, the definition of value is rapidly
+              evolving. I am particularly fascinated by the attention economy,
+              decentralized finance, and the systemic impacts of emerging
+              technologies.
+            </p>
+            <p class="mb-6">
+              By analyzing macroeconomic trends and microeconomic behaviors, we
+              can better anticipate the shifts that will define the next decade.
+              My focus is often on the intersection of technology and
+              economics—how software is eating the world and restructuring
+              traditional market dynamics.
+            </p>
+            <p>
+              I write and think about how we can build more resilient economic
+              systems that align incentives with long-term human flourishing
+              rather than short-term extraction.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Document Reader View (Hidden by default) -->
+      <div id="reader-view" class="hidden w-full animate-fade-in">
+        <button
+          onclick="closeReader()"
+          class="group flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors mb-10"
+        >
+          <iconify-icon
+            icon="solar:arrow-left-linear"
+            class="text-base group-hover:-translate-x-1 transition-transform"
+          ></iconify-icon>
+          Back to feed
+        </button>
+
+        <article class="w-full">
+          <!-- Reader Header -->
+          <header class="mb-10 pb-10 border-b border-zinc-200">
+            <h1
+              class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 mb-6 leading-tight"
+            >
+              The Attention Economy and its Discontents
+            </h1>
+            <div
+              class="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm font-medium text-zinc-500"
+            >
+              <div class="flex items-center gap-1.5">
+                <iconify-icon icon="solar:calendar-linear"></iconify-icon>
+                Oct 24, 2023
+              </div>
+              <span class="w-1 h-1 rounded-full bg-zinc-300"></span>
+              <div class="flex items-center gap-1.5">
+                <iconify-icon icon="solar:clock-circle-linear"></iconify-icon>
+                6 min read
+              </div>
+              <span class="w-1 h-1 rounded-full bg-zinc-300"></span>
+              <div class="flex gap-2">
+                <span
+                  class="bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded text-xs"
+                >
+                  Economics
+                </span>
+                <span
+                  class="bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded text-xs"
+                >
+                  Personal
+                </span>
+              </div>
+            </div>
+          </header>
+
+          <!-- Reader Body (MD Style simulated) -->
+          <div
+            class="prose prose-zinc prose-p:text-zinc-700 prose-p:leading-loose prose-p:text-base sm:prose-p:text-lg max-w-none"
+          >
+            <p class="mb-6">
+              In an age where information is abundant, attention becomes the
+              scarce resource. We explore how modern systems are designed to
+              harvest this resource and the subtle ways it shifts our cognitive
+              priorities away from deep work.
+            </p>
+            <p class="mb-6">
+              The transition from an industrial economy to an information
+              economy didn't just change what we produce; it fundamentally
+              altered what is extracted. It is no longer coal or oil, but human
+              focus. When a product is free, as the old adage goes, you are the
+              product. But more accurately, your immediate, unfragmented
+              attention is the product.
+            </p>
+            <h2
+              class="text-xl font-semibold tracking-tight text-zinc-900 mt-10 mb-4"
+            >
+              The Architecture of Distraction
+            </h2>
+            <p class="mb-6">
+              Consider the physical spaces we build for productivity versus the
+              digital spaces. A well-designed office or library limits
+              peripheral distraction. It uses walls, muted acoustics, and
+              structured layouts to channel focus.
+            </p>
+            <p class="mb-6">
+              Digital interfaces, however, are architected precisely for the
+              opposite. They employ intermittent variable rewards—a concept
+              borrowed directly from slot machine design. The little red
+              notification dot is a masterclass in psychological manipulation.
+              It offers just enough promise of social connection or urgent
+              information to break concentration.
+            </p>
+            <blockquote
+              class="border-l-4 border-zinc-300 pl-4 py-1 italic text-zinc-600 my-8"
+            >
+              "We are substituting the difficult and rewarding work of
+              meaning-making for the easy and shallow work of data consumption."
+            </blockquote>
+            <p class="mb-6">
+              Reclaiming this attention isn't simply a matter of turning off
+              notifications. It requires a deliberate restructuring of how we
+              value our own cognitive time. It means treating a two-hour block
+              of uninterrupted thought as an asset to be guarded, rather than a
+              gap to be filled.
+            </p>
+          </div>
+
+          <div
+            class="mt-16 pt-8 border-t border-zinc-200 flex justify-between items-center"
+          >
+            <button
+              class="flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+            >
+              <iconify-icon
+                icon="solar:share-linear"
+                class="text-lg"
+              ></iconify-icon>
+              Share
+            </button>
+            <button
+              onclick="closeReader()"
+              class="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+            >
+              Return home
+            </button>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <footer class="w-full border-t border-zinc-100 py-8 mt-auto">
+      <div
+        class="max-w-2xl mx-auto px-5 sm:px-8 flex items-center justify-between"
+      >
+        <span class="text-xs font-medium text-zinc-400">
+          © 2023 Nathik Azad. All rights reserved.
+        </span>
+        <div class="flex gap-4">
+          <a
+            href="#"
+            class="text-zinc-400 hover:text-zinc-900 transition-colors"
+          >
+            <iconify-icon
+              icon="solar:letter-linear"
+              class="text-lg"
+            ></iconify-icon>
+          </a>
+          <a
+            href="#"
+            class="text-zinc-400 hover:text-zinc-900 transition-colors"
+          >
+            <iconify-icon
+              icon="solar:link-linear"
+              class="text-lg"
+            ></iconify-icon>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      function openReader() {
+          document.getElementById('feed-view').classList.add('hidden');
+          document.getElementById('reader-view').classList.remove('hidden');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function closeReader() {
+          document.getElementById('reader-view').classList.add('hidden');
+          document.getElementById('feed-view').classList.remove('hidden');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    </script>
+
+    <button
+      onclick="document.getElementById('compose-dialog').classList.remove('hidden')"
+      class="fixed bottom-8 right-8 w-14 h-14 bg-zinc-900 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 hover:bg-zinc-800 transition-all z-40"
+    >
+      <iconify-icon
+        icon="solar:pen-new-square-linear"
+        class="text-2xl"
+      ></iconify-icon>
+    </button>
+    <div
+      id="compose-dialog"
+      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+        onclick="document.getElementById('compose-dialog').classList.add('hidden')"
+      ></div>
+      <div
+        class="relative bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div
+          class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between"
+        >
+          <h3 class="text-base font-semibold text-zinc-900 tracking-tight">
+            New Post
+          </h3>
+          <button
+            onclick="document.getElementById('compose-dialog').classList.add('hidden')"
+            class="text-zinc-400 hover:text-zinc-900 transition-colors p-1"
+          >
+            <iconify-icon
+              icon="solar:close-circle-linear"
+              class="text-xl"
+            ></iconify-icon>
+          </button>
+        </div>
+        <div class="p-5 flex flex-col gap-5">
+          <textarea
+            placeholder="What's on your mind?"
+            class="w-full bg-transparent resize-none outline-none text-zinc-800 placeholder:text-zinc-400 min-h-[120px] text-base leading-relaxed"
+          ></textarea>
+          <div class="flex flex-col gap-3">
+            <div
+              class="flex items-center gap-3 bg-zinc-50 px-3 py-2.5 rounded-lg border border-zinc-200 focus-within:border-zinc-300 focus-within:bg-white transition-colors"
+            >
+              <iconify-icon
+                icon="solar:gallery-linear"
+                class="text-zinc-400 text-lg"
+              ></iconify-icon>
+              <input
+                type="text"
+                placeholder="Add image URL..."
+                class="w-full bg-transparent outline-none text-sm text-zinc-800 placeholder:text-zinc-400"
+              />
+            </div>
+            <div
+              class="flex items-center gap-3 bg-zinc-50 px-3 py-2.5 rounded-lg border border-zinc-200 focus-within:border-zinc-300 focus-within:bg-white transition-colors"
+            >
+              <iconify-icon
+                icon="solar:video-frame-linear"
+                class="text-zinc-400 text-lg"
+              ></iconify-icon>
+              <input
+                type="text"
+                placeholder="Add video link..."
+                class="w-full bg-transparent outline-none text-sm text-zinc-800 placeholder:text-zinc-400"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="px-5 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end"
+        >
+          <button
+            onclick="document.getElementById('compose-dialog').classList.add('hidden')"
+            class="bg-zinc-900 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors"
+          >
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function switchAboutTab(tab) {
+        const tabs = ['engineer', 'founder', 'theology', 'psychology', 'economy'];
+        tabs.forEach(t => {
+          const content = document.getElementById('content-' + t);
+          const btn = document.getElementById('tab-' + t);
+          if (t === tab) {
+            content.classList.remove('hidden');
+            content.classList.add('block');
+            btn.className = 'text-sm font-medium text-zinc-900 border-b-2 border-zinc-900 pb-1';
+          } else {
+            content.classList.add('hidden');
+            content.classList.remove('block');
+            btn.className = 'text-sm font-medium text-zinc-400 hover:text-zinc-900 border-b-2 border-transparent pb-1 transition-colors';
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
