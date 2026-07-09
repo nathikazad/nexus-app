@@ -1558,6 +1558,15 @@ class ComposeSheet extends StatefulWidget {
   State<ComposeSheet> createState() => _ComposeSheetState();
 }
 
+class XSyncException implements Exception {
+  const XSyncException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class _ComposeSheetState extends State<ComposeSheet> {
   final _textController = TextEditingController();
   final _mediaController = TextEditingController();
@@ -1568,6 +1577,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
   final Set<String> _selectedCategories = {};
   DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
+  bool _xSyncEnabled = true;
   bool _saving = false;
   String _savingLabel = 'Saving...';
 
@@ -1736,6 +1746,19 @@ class _ComposeSheetState extends State<ComposeSheet> {
                   ? null
                   : (value) => setState(() => _publishEnabled = value),
             ),
+            if (!_isEditing)
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _xSyncEnabled,
+                activeThumbColor: const Color(0xff18181b),
+                title: const Text('Post to X'),
+                subtitle: const Text(
+                  'Uses the private Pi Firefox session after saving.',
+                ),
+                onChanged: _saving
+                    ? null
+                    : (value) => setState(() => _xSyncEnabled = value),
+              ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -1822,6 +1845,7 @@ class _ComposeSheetState extends State<ComposeSheet> {
           images: _selectedImages,
           categories: normalizedTags(_selectedCategories),
           publishEnabled: _publishEnabled,
+          xSyncEnabled: _xSyncEnabled,
         );
       } else {
         await widget.repository.updateMicroblog(
@@ -1848,6 +1872,13 @@ class _ComposeSheetState extends State<ComposeSheet> {
       );
     } catch (error) {
       if (!mounted) return;
+      if (error is XSyncException) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Microblog saved, but X sync failed: $error')),
+        );
+        return;
+      }
       logNxPost(
         '${_isEditing ? 'edit' : 'create'} microblog failed error=$error',
       );
@@ -2376,7 +2407,6 @@ class MicroblogPostRepository {
   final String userId;
   final http.Client _client;
   final dynamic _graphqlClient;
-  int? _microblogDomainId;
 
   Future<List<String>> fetchMicroblogCategories() async {
     final schema = await fetchKgqlModelTypeByName(
@@ -2391,16 +2421,6 @@ class MicroblogPostRepository {
     return flattenTagNodes(categorySystem.nodes);
   }
 
-  List<SetModelTag> _microblogCategoryTags(List<String> categories) {
-    return [
-      SetModelTag(
-        system: kMicroblogCategoryTagSystem,
-        nodes: categories,
-        clear: true,
-      ),
-    ];
-  }
-
   Future<void> createMicroblog({
     required String text,
     required DateTime postedAt,
@@ -2408,105 +2428,23 @@ class MicroblogPostRepository {
     required List<SelectedPostImage> images,
     required List<String> categories,
     required bool publishEnabled,
+    required bool xSyncEnabled,
   }) async {
-    logNxPost('creating microblog publish=$publishEnabled');
+    logNxPost('creating microblog publish=$publishEnabled xSync=$xSyncEnabled');
     final cleanText = text.trim();
     final cleanCategories = normalizedTags(categories);
-    final linkMedia = mediaUrl.isEmpty
-        ? <Map<String, dynamic>>[]
-        : [_mediaFromUrl(mediaUrl)];
-    final timestamp = postedAt.toUtc().toIso8601String();
-    final draftHash = microblogContentHash(
+    final payload = await submitMicroblogMultipart(
+      method: 'POST',
+      path: '/microblogs',
       text: cleanText,
-      media: const [],
+      postedAt: postedAt,
+      mediaUrl: mediaUrl,
+      images: images,
       categories: cleanCategories,
+      publishEnabled: publishEnabled,
+      xSyncEnabled: xSyncEnabled,
     );
-
-    final microblogId = await setKgqlModel(
-      _graphqlClient,
-      SetModelRequest(
-        modelType: 'Microblog',
-        name: _nameFromText(cleanText),
-        attributes: [
-          SetModelAttribute(key: 'text', value: cleanText),
-          SetModelAttribute(key: 'posted_at', value: timestamp),
-          SetModelAttribute(
-            key: 'media',
-            value: const <Map<String, dynamic>>[],
-          ),
-          SetModelAttribute(
-            key: 'publish',
-            value: {
-              'enabled': false,
-              'dirty': false,
-              'content_hash': draftHash,
-              'last_published_hash': null,
-              'first_published_at': null,
-              'last_published_at': null,
-              'status': 'draft',
-              'last_error': null,
-            },
-          ),
-        ],
-        tags: _microblogCategoryTags(cleanCategories),
-      ),
-      domainId: await _domainId(),
-      auditSourceKind: 'nx_post',
-    );
-
-    try {
-      final uploadedMedia = <Map<String, dynamic>>[];
-      for (final image in images) {
-        uploadedMedia.add(await uploadMicroblogImage(microblogId, image));
-      }
-      final media = [...uploadedMedia, ...linkMedia];
-      final contentHash = microblogContentHash(
-        text: cleanText,
-        media: media,
-        categories: cleanCategories,
-      );
-
-      await setKgqlModel(
-        _graphqlClient,
-        SetModelRequest(
-          id: microblogId,
-          name: _nameFromText(cleanText),
-          attributes: [
-            SetModelAttribute(key: 'text', value: cleanText),
-            SetModelAttribute(key: 'posted_at', value: timestamp),
-            SetModelAttribute(key: 'media', value: media),
-            SetModelAttribute(
-              key: 'publish',
-              value: {
-                'enabled': publishEnabled,
-                'dirty': publishEnabled,
-                'content_hash': contentHash,
-                'last_published_hash': null,
-                'first_published_at': null,
-                'last_published_at': null,
-                'status': publishEnabled ? 'queued' : 'draft',
-                'last_error': null,
-              },
-            ),
-          ],
-          tags: _microblogCategoryTags(cleanCategories),
-        ),
-        domainId: await _domainId(),
-        auditSourceKind: 'nx_post',
-      );
-    } catch (error) {
-      logNxPost(
-        'create microblog media step failed id=$microblogId error=$error',
-      );
-      await _bestEffortDeleteMicroblog(microblogId);
-      rethrow;
-    }
-
-    if (publishEnabled) {
-      await triggerPublish(reason: 'microblog_post');
-      await waitForPublishSync();
-    }
-    logNxPost('create microblog complete publish=$publishEnabled');
+    logNxPost('create microblog complete body=${jsonEncode(payload)}');
   }
 
   Future<void> updateMicroblog({
@@ -2522,83 +2460,46 @@ class MicroblogPostRepository {
     logNxPost('updating microblog id=$id publish=$publishEnabled');
     final cleanText = text.trim();
     final cleanCategories = normalizedTags(categories);
-    final linkMedia = mediaUrl.isEmpty
-        ? <Map<String, dynamic>>[]
-        : [_mediaFromUrl(mediaUrl)];
-    final timestamp = postedAt.toUtc().toIso8601String();
-    final uploadedMedia = <Map<String, dynamic>>[];
-    for (final image in images) {
-      uploadedMedia.add(await uploadMicroblogImage(id, image));
-    }
-    final media = [...existingMedia, ...uploadedMedia, ...linkMedia];
-    final contentHash = microblogContentHash(
+    final payload = await submitMicroblogMultipart(
+      method: 'PUT',
+      path: '/microblogs/$id',
       text: cleanText,
-      media: media,
+      postedAt: postedAt,
+      mediaUrl: mediaUrl,
+      images: images,
       categories: cleanCategories,
+      publishEnabled: publishEnabled,
+      existingMedia: existingMedia,
     );
-
-    await setKgqlModel(
-      _graphqlClient,
-      SetModelRequest(
-        id: id,
-        name: _nameFromText(cleanText),
-        attributes: [
-          SetModelAttribute(key: 'text', value: cleanText),
-          SetModelAttribute(key: 'posted_at', value: timestamp),
-          SetModelAttribute(key: 'media', value: media),
-          SetModelAttribute(
-            key: 'publish',
-            value: {
-              'enabled': publishEnabled,
-              'dirty': publishEnabled,
-              'content_hash': contentHash,
-              'last_published_hash': null,
-              'first_published_at': null,
-              'last_published_at': null,
-              'status': publishEnabled ? 'queued' : 'draft',
-              'last_error': null,
-            },
-          ),
-        ],
-        tags: _microblogCategoryTags(cleanCategories),
-      ),
-      domainId: await _domainId(),
-      auditSourceKind: 'nx_post',
-    );
-
-    if (publishEnabled) {
-      await triggerPublish(reason: 'microblog_edit');
-      await waitForPublishSync();
-    }
-    logNxPost('update microblog complete id=$id publish=$publishEnabled');
+    logNxPost('update microblog complete id=$id body=${jsonEncode(payload)}');
   }
 
-  Future<Map<String, dynamic>> uploadMicroblogImage(
-    int microblogId,
-    SelectedPostImage image,
-  ) async {
-    logNxPost('uploading microblog image id=$microblogId name=${image.name}');
+  Future<Map<String, dynamic>> submitMicroblogMultipart({
+    required String method,
+    required String path,
+    required String text,
+    required DateTime postedAt,
+    required String mediaUrl,
+    required List<SelectedPostImage> images,
+    required List<String> categories,
+    required bool publishEnabled,
+    bool xSyncEnabled = false,
+    List<Map<String, dynamic>> existingMedia = const [],
+  }) async {
     final request =
-        http.MultipartRequest(
-            'POST',
-            Uri.parse('$normalizedBaseUrl/microblogs/assets/images'),
-          )
+        http.MultipartRequest(method, Uri.parse('$normalizedBaseUrl$path'))
           ..headers.addAll(httpHeaders())
-          ..fields['microblog_id'] = '$microblogId';
-
-    final path = image.path;
-    if (path != null && path.isNotEmpty) {
-      request.files.add(
-        await http.MultipartFile.fromPath('file', path, filename: image.name),
-      );
-    } else {
-      final bytes = image.bytes;
-      if (bytes == null || bytes.isEmpty) {
-        throw StateError('Could not read selected image bytes');
-      }
-      request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: image.name),
-      );
+          ..fields['text'] = text
+          ..fields['posted_at'] = postedAt.toUtc().toIso8601String()
+          ..fields['publish_enabled'] = '$publishEnabled'
+          ..fields['x_sync_enabled'] = '$xSyncEnabled'
+          ..fields['categories'] = jsonEncode(normalizedTags(categories))
+          ..fields['media_url'] = mediaUrl.trim();
+    if (existingMedia.isNotEmpty) {
+      request.fields['existing_media'] = jsonEncode(existingMedia);
+    }
+    for (final image in images) {
+      request.files.add(await _multipartImage(image));
     }
 
     final response = await http.Response.fromStream(
@@ -2606,148 +2507,58 @@ class MicroblogPostRepository {
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       logNxPost(
-        'microblog image upload failed status=${response.statusCode} '
+        'microblog submit failed status=${response.statusCode} '
         'body=${response.body}',
       );
       throw StateError(_httpErrorMessage(response));
     }
     final payload = jsonDecode(response.body);
-    if (payload is! Map || payload['url'] is! String) {
-      throw StateError('Invalid microblog image upload response');
+    if (payload is! Map<String, dynamic> || payload['ok'] != true) {
+      throw StateError('Invalid microblog response');
     }
-    return {
-      'type': 'image',
-      'source': 'local',
-      'url': payload['url'] as String,
-      'mime_type': image.mimeType,
-      'alt': image.name,
-    };
+    final warnings = payload['warnings'];
+    if (warnings is List && warnings.isNotEmpty) {
+      logNxPost('microblog completed with warnings=${jsonEncode(warnings)}');
+    }
+    return payload;
+  }
+
+  Future<http.MultipartFile> _multipartImage(SelectedPostImage image) async {
+    final path = image.path;
+    if (path != null && path.isNotEmpty) {
+      return http.MultipartFile.fromPath('images', path, filename: image.name);
+    }
+    final bytes = image.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      throw StateError('Could not read selected image bytes');
+    }
+    return http.MultipartFile.fromBytes('images', bytes, filename: image.name);
   }
 
   Future<void> deleteMicroblog(int id) async {
     logNxPost('deleting microblog id=$id');
-    try {
-      await setKgqlModel(
-        _graphqlClient,
-        SetModelRequest(id: id, delete: true),
-        domainId: await _domainId(),
-        auditSourceKind: 'nx_post',
-      );
-    } catch (error) {
-      if (!_isMissingOrDeniedDelete(error)) {
-        rethrow;
-      }
-      // The mirror can still contain a stale item after a previous successful
-      // KGQL delete if the publish trigger failed. Treat this as idempotent and
-      // let the full-manifest sync remove it by absence.
-    }
-    await triggerPublish(reason: 'microblog_delete');
-    await waitForPublishSync();
-    logNxPost('delete microblog complete id=$id');
-  }
-
-  Future<void> _bestEffortDeleteMicroblog(int id) async {
-    try {
-      await setKgqlModel(
-        _graphqlClient,
-        SetModelRequest(id: id, delete: true),
-        domainId: await _domainId(),
-        auditSourceKind: 'nx_post',
-      );
-    } catch (error) {
-      logNxPost('best-effort delete failed id=$id error=$error');
-    }
-  }
-
-  Future<void> triggerPublish({required String reason}) async {
-    logNxPost('triggering mirror publish reason=$reason');
-    final response = await _client.post(
-      Uri.parse('$normalizedBaseUrl/mirror/publish/trigger'),
-      headers: httpHeaders(contentTypeJson: true),
-      body: jsonEncode({'reason': reason, 'immediate': true}),
-    );
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      logNxPost(
-        'trigger publish failed status=${response.statusCode} '
-        'body=${response.body}',
-      );
-      throw StateError(_httpErrorMessage(response));
-    }
-    logNxPost('trigger publish accepted body=${response.body}');
-  }
-
-  Future<void> waitForPublishSync({
-    Duration timeout = const Duration(seconds: 45),
-    Duration interval = const Duration(milliseconds: 900),
-  }) async {
-    final deadline = DateTime.now().add(timeout);
-    MirrorPublishStatus? lastStatus;
-
-    while (DateTime.now().isBefore(deadline)) {
-      final status = await fetchPublishStatus();
-      lastStatus = status;
-      logNxPost(
-        'mirror publish status=${status.status} '
-        'running=${status.running} pending=${status.pendingReason}',
-      );
-
-      if (status.running || status.pendingReason != null) {
-        await Future<void>.delayed(interval);
-        continue;
-      }
-      if (status.status == 'succeeded') {
-        return;
-      }
-      if (status.status == 'failed') {
-        logNxPost('mirror publish failed error=${status.lastError}');
-        throw StateError(status.lastError ?? 'Mirror publish failed');
-      }
-
-      await Future<void>.delayed(interval);
-    }
-
-    throw StateError(
-      lastStatus?.running == true
-          ? 'Mirror publish is still running'
-          : 'Timed out waiting for mirror publish',
-    );
-  }
-
-  Future<MirrorPublishStatus> fetchPublishStatus() async {
-    final response = await _client.get(
-      Uri.parse('$normalizedBaseUrl/mirror/publish/status'),
+    final response = await _client.delete(
+      Uri.parse('$normalizedBaseUrl/microblogs/$id'),
       headers: httpHeaders(),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       logNxPost(
-        'fetch publish status failed status=${response.statusCode} '
+        'delete microblog failed status=${response.statusCode} '
         'body=${response.body}',
       );
       throw StateError(_httpErrorMessage(response));
     }
     final payload = jsonDecode(response.body);
-    if (payload is! Map<String, dynamic>) {
-      throw StateError('Invalid mirror status response');
+    if (payload is! Map<String, dynamic> || payload['ok'] != true) {
+      throw StateError('Invalid delete microblog response');
     }
-    return MirrorPublishStatus.fromJson(payload);
-  }
-
-  Future<int> _domainId() async {
-    final cached = _microblogDomainId;
-    if (cached != null) return cached;
-    final options = await fetchModelTypeDomainOptions(
-      _graphqlClient,
-      modelTypeName: 'Microblog',
-    );
-    final domain = options.domains
-        .where((domain) => domain.source == 'personal_default')
-        .firstOrNull;
-    final fallback = domain ?? options.domains.firstOrNull;
-    if (fallback == null) {
-      throw StateError('No Microblog domain available');
+    final warnings = payload['warnings'];
+    if (warnings is List && warnings.isNotEmpty) {
+      logNxPost(
+        'delete microblog completed with warnings=${jsonEncode(warnings)}',
+      );
     }
-    _microblogDomainId = fallback.id;
-    return fallback.id;
+    logNxPost('delete microblog complete id=$id body=${response.body}');
   }
 
   String _httpErrorMessage(http.Response response) {
@@ -2756,17 +2567,14 @@ class MicroblogPostRepository {
       final payload = jsonDecode(response.body);
       if (payload is Map && payload['error'] != null) {
         message = payload['error'].toString();
+        if (payload['message'] != null) {
+          message = '$message: ${payload['message']}';
+        }
       }
     } catch (_) {
       // Keep the HTTP status fallback.
     }
     return message;
-  }
-
-  bool _isMissingOrDeniedDelete(Object error) {
-    final message = error.toString().toLowerCase();
-    return message.contains('not found') ||
-        message.contains('permission denied');
   }
 
   String get normalizedBaseUrl {
@@ -2784,63 +2592,6 @@ class MicroblogPostRepository {
       'x-user-id': userId,
       if (CfAccess.shouldAttachHeaders(base)) ...CfAccess.headers,
     };
-  }
-
-  Map<String, dynamic> _mediaFromUrl(String url) {
-    final uri = Uri.tryParse(url);
-    final host = uri?.host.toLowerCase() ?? '';
-    if (host.contains('youtube.com') || host.contains('youtu.be')) {
-      final videoId = _youtubeId(uri);
-      final media = {'type': 'youtube', 'url': url};
-      if (videoId != null) {
-        media['video_id'] = videoId;
-      }
-      return media;
-    }
-    if (host.contains('instagram.com')) {
-      return {'type': 'embed', 'provider': 'instagram', 'url': url};
-    }
-    return {'type': 'image', 'source': 'external', 'url': url};
-  }
-
-  String? _youtubeId(Uri? uri) {
-    if (uri == null) return null;
-    if (uri.host.toLowerCase().contains('youtu.be')) {
-      return uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
-    }
-    return uri.queryParameters['v'];
-  }
-
-  String _nameFromText(String text) {
-    final clean = text
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .join(' ');
-    if (clean.isEmpty) return 'Microblog';
-    return clean.length > 80 ? clean.substring(0, 80) : clean;
-  }
-}
-
-class MirrorPublishStatus {
-  const MirrorPublishStatus({
-    required this.status,
-    required this.running,
-    required this.pendingReason,
-    required this.lastError,
-  });
-
-  final String status;
-  final bool running;
-  final String? pendingReason;
-  final String? lastError;
-
-  factory MirrorPublishStatus.fromJson(Map<String, dynamic> json) {
-    return MirrorPublishStatus(
-      status: json['status']?.toString() ?? 'unknown',
-      running: json['running'] == true,
-      pendingReason: json['pending_reason']?.toString(),
-      lastError: json['last_error']?.toString(),
-    );
   }
 }
 
