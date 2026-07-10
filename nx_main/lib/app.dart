@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
@@ -45,12 +48,15 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
       if (!next.hasValue) return;
 
       final service = ref.read(bleBackgroundServiceProvider);
+      final watchRelay =
+          !kIsWeb && Platform.isIOS ? ref.read(watchVoiceRelayProvider) : null;
       final user = next.value;
       if (user == null) {
         if (_activeSocketSessionKey != null) {
           _activeSocketSessionKey = null;
           service.disconnectSocket();
         }
+        watchRelay?.configure(socketUrl: null, userId: null);
         return;
       }
 
@@ -65,6 +71,9 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
         service.disconnectSocket();
       }
       _activeSocketSessionKey = sessionKey;
+      watchRelay
+        ?..configure(socketUrl: urls.sockWs, userId: user.userId)
+        ..start();
       service.connectSocket(
         url: urls.sockWs,
         telemetryHttpBaseUrl: urls.imageHttp,

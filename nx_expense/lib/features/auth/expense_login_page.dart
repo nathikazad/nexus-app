@@ -151,7 +151,12 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                       .map(
                         (profile) => DropdownMenuItem<AuthLoginProfile>(
                           value: profile,
-                          child: Text(profile.label),
+                          child: Text(
+                            profile.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
                         ),
                       )
                       .toList(),
@@ -170,6 +175,7 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<BackendPreset>(
+                  isExpanded: true,
                   initialValue: _selectedPreset,
                   decoration: fieldDeco(
                     'Select backend',
@@ -190,7 +196,12 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                       .map(
                         (p) => DropdownMenuItem<BackendPreset>(
                           value: p,
-                          child: Text(p.label),
+                          child: Text(
+                            p.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
                         ),
                       )
                       .toList(),

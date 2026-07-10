@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nexus_voice_assistant/data/voice/voice_socket_session.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_utils/nx_utils.dart';
 
@@ -116,19 +117,17 @@ final voiceSocketControllerProvider =
 );
 
 class VoiceSocketController extends Notifier<VoiceSocketState> {
-  NxVoiceSocketClient? _socket;
+  VoiceSocketSession? _voiceSession;
   NxMicrophoneOpusStreamer? _mic;
   NxWavAudioPlayer? _player;
   NxAppLogUploader? _appLogUploader;
-  String? _sessionKey;
   int _streamIndex = 0;
-  int _packetIndex = 0;
   int _sentPacketsThisTurn = 0;
   int _sentBytesThisTurn = 0;
   int _receivedPacketsThisTurn = 0;
   int _receivedBytesThisTurn = 0;
-  NxVoiceAudioTurn? _activeTurn;
-  NxVoiceAudioTurn? _lastTurn;
+  VoiceSocketTurn? _activeTurn;
+  VoiceSocketTurn? _lastTurn;
   bool _stopInFlight = false;
   bool _showOverlayForCurrentTurn = true;
   Timer? _textIdleTimer;
@@ -139,7 +138,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       _textIdleTimer?.cancel();
       unawaited(_mic?.dispose());
       unawaited(_player?.dispose());
-      unawaited(_socket?.disconnect());
+      unawaited(_voiceSession?.disconnect());
     });
     return const VoiceSocketState.idle();
   }
@@ -170,16 +169,18 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       overlayVisible: true,
     );
     try {
-      final socket = await _ensureSocket(socketUrl: socketUrl, userId: userId);
+      final session = await _ensureVoiceSession(
+        socketUrl: socketUrl,
+        userId: userId,
+      );
       final mic = _mic ??= NxMicrophoneOpusStreamer();
-      _streamIndex++;
-      _packetIndex = 0;
       _sentPacketsThisTurn = 0;
       _sentBytesThisTurn = 0;
       _receivedPacketsThisTurn = 0;
       _receivedBytesThisTurn = 0;
-      _activeTurn = NxVoiceAudioTurn.create(streamIndex: _streamIndex);
+      _activeTurn = session.beginAudioTurn();
       _lastTurn = _activeTurn;
+      _streamIndex = _activeTurn!.streamIndex;
       _stopInFlight = false;
       _showOverlayForCurrentTurn = true;
       _textIdleTimer?.cancel();
@@ -188,13 +189,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         onOpusPacket: (opus) {
           _sentPacketsThisTurn++;
           _sentBytesThisTurn += opus.length;
-          socket.sendAudioChunk(
-            opus,
-            streamIndex: _streamIndex,
-            packetIndex: _packetIndex,
-            meta: _activeTurn?.metaForPacket(_packetIndex),
-          );
-          _packetIndex++;
+          session.sendAudioPacket(opus);
         },
         onError: (error) {
           state = state.copyWith(
@@ -247,10 +242,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     );
 
     try {
-      final socket = _socket;
+      final session = _voiceSession;
       final mic = _mic;
       final turn = _activeTurn;
-      if (socket == null || mic == null) {
+      if (session == null || mic == null) {
         state = state.copyWith(phase: VoiceSocketPhase.idle);
         return;
       }
@@ -259,18 +254,9 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       for (final opus in remaining) {
         _sentPacketsThisTurn++;
         _sentBytesThisTurn += opus.length;
-        socket.sendAudioChunk(
-          opus,
-          streamIndex: _streamIndex,
-          packetIndex: _packetIndex,
-          meta: turn?.metaForPacket(_packetIndex),
-        );
-        _packetIndex++;
+        session.sendAudioPacket(opus);
       }
-      socket.sendAudioEof(
-        streamIndex: _streamIndex,
-        meta: turn?.metaForPacket(_packetIndex),
-      );
+      session.endAudioTurn();
       _uploadAppLog(
         eventName: 'socket_audio_sent_summary',
         category: 'audio',
@@ -328,8 +314,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     state =
         state.copyWith(phase: VoiceSocketPhase.connecting, clearError: true);
     try {
-      final socket = await _ensureSocket(socketUrl: socketUrl, userId: userId);
-      _streamIndex++;
+      final session = await _ensureVoiceSession(
+        socketUrl: socketUrl,
+        userId: userId,
+      );
       _receivedPacketsThisTurn = 0;
       _receivedBytesThisTurn = 0;
       _showOverlayForCurrentTurn = false;
@@ -341,7 +329,8 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         turnkey: null,
         showOverlay: false,
       );
-      socket.sendTextTurn(text, streamIndex: _streamIndex);
+      session.sendTextTurn(text);
+      _streamIndex = session.streamIndex;
       _uploadAppLog(
         eventName: 'socket_text_sent',
         category: 'audio',
@@ -362,23 +351,28 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     }
   }
 
-  Future<NxVoiceSocketClient> _ensureSocket({
+  Future<VoiceSocketSession> _ensureVoiceSession({
     required String socketUrl,
     required String userId,
   }) async {
-    final key = '$socketUrl|$userId';
     final httpBaseUrl =
         ref.read(imageBaseUrlProvider) ?? httpBaseFromSocketUrl(socketUrl);
-    final existing = _socket;
-    if (existing != null && existing.isConnected && _sessionKey == key) {
-      _configureAppLogUploader(httpBaseUrl: httpBaseUrl, userId: userId);
+    _configureAppLogUploader(httpBaseUrl: httpBaseUrl, userId: userId);
+    final existing = _voiceSession;
+    if (existing != null) {
+      await existing.connect(
+        VoiceSocketSessionConfig(
+          socketUrl: socketUrl,
+          userId: userId,
+          clientApp: 'nx_main',
+          agentId: 'nx_main',
+        ),
+      );
       return existing;
     }
 
-    await existing?.disconnect();
-    _configureAppLogUploader(httpBaseUrl: httpBaseUrl, userId: userId);
     final player = _player ??= NxWavAudioPlayer();
-    final socket = NxVoiceSocketClient()
+    final session = VoiceSocketSession()
       ..onAudioChunk = (packet) {
         _textIdleTimer?.cancel();
         _receivedPacketsThisTurn++;
@@ -427,20 +421,17 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         );
       };
 
-    final headers = <String, String>{
-      'X-User-Id': userId,
-      'X-Client-App': 'nx_main',
-      'X-Agent-Id': 'nx_main',
-      if (CfAccess.shouldAttachHeaders(socketUrl)) ...CfAccess.headers,
-    };
-    final connected = await socket.connect(socketUrl, headers: headers);
-    if (!connected) {
-      throw StateError('Could not connect to voice socket.');
-    }
+    await session.connect(
+      VoiceSocketSessionConfig(
+        socketUrl: socketUrl,
+        userId: userId,
+        clientApp: 'nx_main',
+        agentId: 'nx_main',
+      ),
+    );
 
-    _socket = socket;
-    _sessionKey = key;
-    return socket;
+    _voiceSession = session;
+    return session;
   }
 
   void _scheduleTextIdleFallback() {
@@ -648,13 +639,13 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     );
   }
 
-  Map<String, dynamic> _turnPayload(NxVoiceAudioTurn? turn) {
+  Map<String, dynamic> _turnPayload(VoiceSocketTurn? turn) {
     return {
       if (turn != null) ...{
-        'turn_id': turn.turnId,
-        'nonce': turn.turnRandom,
-        'turnkey': turn.turnkey,
-        'turn_meta': turn.metaForPacket(0),
+        'turn_id': turn.turn.turnId,
+        'nonce': turn.turn.turnRandom,
+        'turnkey': turn.turn.turnkey,
+        'turn_meta': turn.turn.metaForPacket(0),
       },
     };
   }

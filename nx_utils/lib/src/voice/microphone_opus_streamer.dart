@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import 'opus_codec.dart';
+import 'pcm_opus_stream_encoder.dart';
 
 class NxMicrophoneOpusStreamer {
   NxMicrophoneOpusStreamer({
@@ -19,8 +20,12 @@ class NxMicrophoneOpusStreamer {
   final FrameTime frameTime;
 
   final AudioRecorder _recorder = AudioRecorder();
-  final List<Uint8List> _pendingPcm = [];
   StreamSubscription<Uint8List>? _recordingSubscription;
+  late final NxPcmOpusStreamEncoder _opusEncoder = NxPcmOpusStreamEncoder(
+    sampleRate: sampleRate,
+    channels: channels,
+    frameTime: frameTime,
+  );
   bool _isRecording = false;
   bool _loggedFirstPcmChunk = false;
 
@@ -86,7 +91,7 @@ class NxMicrophoneOpusStreamer {
       }
       final stream = await _recorder.startStream(config);
       _isRecording = true;
-      _pendingPcm.clear();
+      _opusEncoder.reset();
       _loggedFirstPcmChunk = false;
       debugPrint('[nx_utils voice mic] recorder stream started');
       _recordingSubscription = stream.listen(
@@ -127,19 +132,12 @@ class NxMicrophoneOpusStreamer {
     await _recorder.stop();
     _isRecording = false;
 
-    if (!flushRemainder || _pendingPcm.isEmpty) {
-      _pendingPcm.clear();
+    if (!flushRemainder) {
+      _opusEncoder.reset();
       return const [];
     }
 
-    final remainder = _drainPending();
-    return NxOpusCodec.encodePcm16(
-      remainder,
-      sampleRate: sampleRate,
-      channels: channels,
-      frameTime: frameTime,
-      fillUpLastFrame: true,
-    );
+    return _opusEncoder.flush(padFinalFrame: true);
   }
 
   Future<void> dispose() async {
@@ -148,50 +146,6 @@ class NxMicrophoneOpusStreamer {
   }
 
   Future<List<Uint8List>> _encodeCompleteFrames(Uint8List chunk) async {
-    _pendingPcm.add(chunk);
-    final combined = _drainPending();
-    final frameSize = _frameSizeBytes();
-    if (combined.length < frameSize) {
-      _pendingPcm.add(combined);
-      return const [];
-    }
-
-    final completeLength = combined.length - (combined.length % frameSize);
-    final complete = Uint8List.sublistView(combined, 0, completeLength);
-    if (completeLength < combined.length) {
-      _pendingPcm.add(Uint8List.sublistView(combined, completeLength));
-    }
-
-    return NxOpusCodec.encodePcm16(
-      complete,
-      sampleRate: sampleRate,
-      channels: channels,
-      frameTime: frameTime,
-      fillUpLastFrame: false,
-    );
-  }
-
-  Uint8List _drainPending() {
-    final total = _pendingPcm.fold<int>(0, (sum, chunk) => sum + chunk.length);
-    final combined = Uint8List(total);
-    var offset = 0;
-    for (final chunk in _pendingPcm) {
-      combined.setRange(offset, offset + chunk.length, chunk);
-      offset += chunk.length;
-    }
-    _pendingPcm.clear();
-    return combined;
-  }
-
-  int _frameSizeBytes() {
-    final millis = switch (frameTime) {
-      FrameTime.ms2_5 => 2.5,
-      FrameTime.ms5 => 5.0,
-      FrameTime.ms10 => 10.0,
-      FrameTime.ms20 => 20.0,
-      FrameTime.ms40 => 40.0,
-      FrameTime.ms60 => 60.0,
-    };
-    return (sampleRate * (millis / 1000) * channels * 2).round();
+    return _opusEncoder.addPcmChunk(chunk);
   }
 }

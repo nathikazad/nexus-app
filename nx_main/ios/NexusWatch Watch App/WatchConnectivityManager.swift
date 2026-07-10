@@ -10,15 +10,17 @@ import WatchConnectivity
 
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
-    
+
     @Published var isReachable = false
     @Published var statusMessage = "Not connected"
     @Published var packetsSent = 0
     @Published var receivedText = ""  // Text received from phone (AI response)
-    
+
+    private let playbackEngine = WatchAudioPlaybackEngine()
+
     private override init() {
         super.init()
-        
+
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
@@ -28,16 +30,16 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             statusMessage = "WCSession not supported"
         }
     }
-    
+
     func sendMessage(_ text: String) {
         guard WCSession.default.isReachable else {
             print("[Watch] iPhone not reachable")
             statusMessage = "iPhone not reachable"
             return
         }
-        
+
         let message = ["text": text]
-        
+
         WCSession.default.sendMessage(message, replyHandler: { reply in
             DispatchQueue.main.async {
                 if let response = reply["status"] as? String {
@@ -52,12 +54,12 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
         })
     }
-    
+
     func sendAudioData(_ data: Data) {
         guard WCSession.default.isReachable else {
             return
         }
-        
+
         // Send audio data as message with Data payload
         let message: [String: Any] = [
             "type": "audio",
@@ -65,38 +67,58 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             "sampleRate": 24000,
             "timestamp": Date().timeIntervalSince1970
         ]
-        
+
         // Use sendMessage for real-time streaming (no reply handler for speed)
         WCSession.default.sendMessage(message, replyHandler: nil) { error in
             print("[Watch] Audio send error: \(error.localizedDescription)")
         }
-        
+
         DispatchQueue.main.async {
             self.packetsSent += 1
         }
     }
-    
+
+    func sendAudioStart() {
+        guard WCSession.default.isReachable else {
+            print("[Watch] Cannot send start - iPhone not reachable")
+            return
+        }
+
+        playbackEngine.stop()
+
+        let message: [String: Any] = [
+            "type": "audioStart",
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        WCSession.default.sendMessage(message, replyHandler: { reply in
+            print("[Watch] Start acknowledged: \(reply)")
+        }) { error in
+            print("[Watch] Start send error: \(error.localizedDescription)")
+        }
+    }
+
     func sendAudioEOF() {
         guard WCSession.default.isReachable else {
             print("[Watch] Cannot send EOF - iPhone not reachable")
             return
         }
-        
+
         let message: [String: Any] = [
             "type": "audioEOF",
             "totalPackets": packetsSent,
             "timestamp": Date().timeIntervalSince1970
         ]
-        
+
         WCSession.default.sendMessage(message, replyHandler: { reply in
             print("[Watch] EOF acknowledged: \(reply)")
         }) { error in
             print("[Watch] EOF send error: \(error.localizedDescription)")
         }
-        
+
         print("[Watch] Sent EOF after \(packetsSent) packets")
     }
-    
+
     func resetPacketCount() {
         DispatchQueue.main.async {
             self.packetsSent = 0
@@ -122,14 +144,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
             @unknown default:
                 self.statusMessage = "Unknown state"
             }
-            
+
             if let error = error {
                 self.statusMessage = "Error: \(error.localizedDescription)"
                 print("[Watch] Activation error: \(error)")
             }
         }
     }
-    
+
     func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
@@ -137,11 +159,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
             print("[Watch] Reachability changed: \(session.isReachable)")
         }
     }
-    
-    // Handle messages from iPhone (AI responses)
+
+    // Handle messages from iPhone (AI responses and playback)
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         print("[Watch] Received message from iPhone: \(message)")
-        
+
+        if let type = message["type"] as? String {
+            handleTypedMessage(type, message: message)
+            return
+        }
+
         if let text = message["text"] as? String {
             DispatchQueue.main.async {
                 // Append the word to the received text (streaming response)
@@ -154,11 +181,52 @@ extension WatchConnectivityManager: WCSessionDelegate {
             }
         }
     }
-    
+
+    private func handleTypedMessage(_ type: String, message: [String: Any]) {
+        switch type {
+        case "text":
+            if let text = message["text"] as? String {
+                let replace = (message["mode"] as? String) == "replace"
+                applyReceivedText(text, replace: replace)
+            }
+        case "status":
+            if let text = message["text"] as? String {
+                DispatchQueue.main.async {
+                    self.statusMessage = text
+                }
+            }
+        case "error":
+            if let text = message["text"] as? String {
+                DispatchQueue.main.async {
+                    self.statusMessage = text
+                }
+            }
+        case "playbackAudio":
+            if let data = message["data"] as? Data {
+                let sampleRate = message["sampleRate"] as? Int ?? 24000
+                playbackEngine.playPcm16(data, sampleRate: sampleRate)
+            }
+        case "playbackEOF":
+            playbackEngine.finishTurn()
+        default:
+            print("[Watch] Unknown typed message: \(type)")
+        }
+    }
+
+    private func applyReceivedText(_ text: String, replace: Bool) {
+        DispatchQueue.main.async {
+            if replace || self.receivedText.isEmpty {
+                self.receivedText = text
+            } else {
+                self.receivedText += text
+            }
+            print("[Watch] Received text: \(text), replace: \(replace)")
+        }
+    }
+
     func clearReceivedText() {
         DispatchQueue.main.async {
             self.receivedText = ""
         }
     }
 }
-

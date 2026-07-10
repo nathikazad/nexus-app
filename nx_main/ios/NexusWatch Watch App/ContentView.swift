@@ -84,6 +84,7 @@ struct ContentView: View {
             // Clear previous response and start new recording
             connectivityManager.clearReceivedText()
             connectivityManager.resetPacketCount()
+            connectivityManager.sendAudioStart()
             audioRecorder.startRecording()
         }
     }
