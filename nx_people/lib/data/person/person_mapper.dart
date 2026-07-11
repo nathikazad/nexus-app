@@ -46,6 +46,7 @@ Person personFromModel(Model model) {
     pinned: model.attrBool(kPersonAttrPinned) ?? false,
     email: model.attrString(kPersonAttrEmail) ?? '',
     phone: model.attrString(kPersonAttrPhone) ?? '',
+    imageUrl: model.attrString(kPersonAttrImageUrl) ?? '',
     tags: tagValues.toSet().toList()..sort(),
     meetings: _actualMeetingNames(model),
     planned: _plannedMeetingNames(model),

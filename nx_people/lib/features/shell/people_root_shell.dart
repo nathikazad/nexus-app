@@ -423,7 +423,7 @@ class _PersonRow extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                _InitialsBadge(initials: person.initials, size: 48),
+                _PersonAvatar(person: person, size: 48),
                 const SizedBox(width: 13),
                 Expanded(
                   child: Column(
@@ -684,7 +684,7 @@ class _ProfileHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _InitialsBadge(initials: person.initials, size: 78),
+        _PersonAvatar(person: person, size: 78),
         const SizedBox(width: 18),
         Expanded(
           child: Column(
@@ -1218,10 +1218,7 @@ class _AgendaRow extends ConsumerWidget {
                       const SizedBox(height: 9),
                       Row(
                         children: <Widget>[
-                          _InitialsBadge(
-                            initials: item.person.initials,
-                            size: 24,
-                          ),
+                          _PersonAvatar(person: item.person, size: 24),
                           const SizedBox(width: 7),
                           Expanded(
                             child: Text(
@@ -2369,6 +2366,68 @@ class _InitialsBadge extends StatelessWidget {
         border: Border.all(color: AppColors.line),
         shape: BoxShape.circle,
       ),
+      child: _AvatarInitialsText(initials: initials, size: size),
+    );
+  }
+}
+
+class _PersonAvatar extends ConsumerWidget {
+  const _PersonAvatar({required this.person, required this.size});
+
+  final Person person;
+  final double size;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final imageConfig = ref.watch(peopleImageConfigProvider);
+    final imageUrl = _resolvePersonImageUrl(
+      person.imageUrl,
+      imageConfig?.baseUrl,
+    );
+    if (imageUrl == null) {
+      return _InitialsBadge(initials: person.initials, size: size);
+    }
+
+    final headers =
+        imageConfig != null &&
+            _shouldAttachPersonImageHeaders(imageUrl, imageConfig.baseUrl)
+        ? imageConfig.headers
+        : null;
+
+    return Container(
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.subtle,
+        border: Border.all(color: AppColors.line),
+        shape: BoxShape.circle,
+      ),
+      child: Image.network(
+        imageUrl,
+        headers: headers,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _AvatarInitialsText(initials: person.initials, size: size);
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return _AvatarInitialsText(initials: person.initials, size: size);
+        },
+      ),
+    );
+  }
+}
+
+class _AvatarInitialsText extends StatelessWidget {
+  const _AvatarInitialsText({required this.initials, required this.size});
+
+  final String initials;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
       child: Text(
         initials,
         style: TextStyle(
@@ -2379,6 +2438,48 @@ class _InitialsBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _resolvePersonImageUrl(String rawUrl, String? baseUrl) {
+  final trimmed = rawUrl.trim();
+  if (trimmed.isEmpty) return null;
+
+  final parsed = Uri.tryParse(trimmed);
+  final base = _parseImageBase(baseUrl);
+  if (parsed == null) return null;
+
+  if (!parsed.hasScheme) {
+    return base == null ? null : base.resolve(trimmed).toString();
+  }
+
+  if (base != null && parsed.path.startsWith('/person_image_files/')) {
+    return parsed
+        .replace(
+          scheme: base.scheme,
+          host: base.host,
+          port: base.hasPort ? base.port : null,
+        )
+        .toString();
+  }
+
+  return trimmed;
+}
+
+bool _shouldAttachPersonImageHeaders(String imageUrl, String baseUrl) {
+  final image = Uri.tryParse(imageUrl);
+  final base = _parseImageBase(baseUrl);
+  if (image == null || base == null || !image.hasScheme) return false;
+  return image.scheme == base.scheme &&
+      image.host == base.host &&
+      image.port == base.port;
+}
+
+Uri? _parseImageBase(String? baseUrl) {
+  final trimmed = baseUrl?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  final parsed = Uri.tryParse(trimmed.replaceAll(RegExp(r'/+$'), ''));
+  if (parsed == null || !parsed.hasScheme || parsed.host.isEmpty) return null;
+  return parsed;
 }
 
 class _TinyChip extends StatelessWidget {

@@ -21,6 +21,7 @@ class Person {
     required this.currentThreads,
     required this.logs,
     required this.relatedIds,
+    this.imageUrl = '',
   });
 
   final int id;
@@ -44,6 +45,7 @@ class Person {
   final List<PersonThread> currentThreads;
   final List<PersonLog> logs;
   final List<int> relatedIds;
+  final String imageUrl;
 
   bool matches(String query) {
     final normalized = query.toLowerCase();

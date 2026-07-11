@@ -9,6 +9,7 @@ const kPersonAttrNextFollowUp = 'next_follow_up';
 const kPersonAttrPinned = 'pinned';
 const kPersonAttrEmail = 'email';
 const kPersonAttrPhone = 'phone';
+const kPersonAttrImageUrl = 'image_url';
 const kPersonAttrSummary = 'summary';
 const kPersonAttrCurrentThreads = 'current_threads';
 const kPersonAttrLogs = 'logs';
