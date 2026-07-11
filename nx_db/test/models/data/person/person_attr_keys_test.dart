@@ -6,7 +6,7 @@ import 'package:nx_db/person.dart';
 import 'package:test/test.dart' show Tags;
 
 void main() {
-  test('Person preference attribute key is stable', () {
+  test('legacy Person preference attribute key is stable', () {
     expect(kPersonAttrPreference, 'preference');
   });
 }

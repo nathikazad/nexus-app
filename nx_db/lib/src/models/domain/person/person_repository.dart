@@ -1,11 +1,11 @@
 import 'person.dart';
 
-/// Persistence for the current user’s Person row and `preference` JSON.
+/// Persistence for the current user's linked Person row and account preferences.
 abstract class PersonRepository {
-  /// First Person model for the current user (RLS).
+  /// Current user's linked Person model, enriched with `users.preferences`.
   Future<Person?> getMain();
 
-  /// Replaces the root `preference` map (use when merging manually).
+  /// Replaces `users.preferences` for the authenticated user.
   Future<Person> updatePreference(
     Person person,
     Map<String, dynamic> preference,

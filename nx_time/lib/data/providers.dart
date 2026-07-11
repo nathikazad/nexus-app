@@ -30,7 +30,7 @@ export 'package:nx_time/data/tasks/task_schema_provider.dart';
 export 'package:nx_time/data/goals/goal_schema_provider.dart';
 export 'package:nx_time/data/person/model_type_colors.dart';
 
-/// Model-type bar colors from Person `preference.model_type_colors` (with defaults).
+/// Model-type bar colors from `users.preferences.model_type_colors`.
 final modelTypeColorsProvider = FutureProvider<ModelTypeColors>((ref) async {
   final person = await ref.watch(mainPersonProvider.future);
   final pref = person?.preference ?? <String, dynamic>{};

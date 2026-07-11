@@ -1,4 +1,5 @@
-/// Person (entity, KGQL repository, Riverpod) — current user’s profile row.
+/// Person (entity, repository, Riverpod) — current user's linked Person row
+/// plus account preferences from `users.preferences`.
 /// Layout: `models/domain/person` + `models/data/person` (mirrors app `lib/domain` / `lib/data`).
 library;
 

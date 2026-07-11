@@ -6,16 +6,24 @@ import '../../domain/person/person.dart';
 import 'person_attr_keys.dart';
 
 /// [Model] ⇄ [Person].
-Person personFromModel(Model m) {
+///
+/// [preference] comes from `users.preferences`, not a KGQL Person attribute.
+Person personFromModel(
+  Model m, {
+  Map<String, dynamic> preference = const <String, dynamic>{},
+}) {
   return Person(
     id: m.id,
     name: m.name,
     description: m.description,
-    preference: parsePersonPreferenceMap(m),
+    preference: Map<String, dynamic>.from(preference),
   );
 }
 
-/// Raw `preference` attribute from a Person [Model] as a mutable map.
+/// Legacy raw `preference` attribute from a Person [Model] as a mutable map.
+///
+/// New reads and writes should use `users.preferences`; this is kept only for
+/// older tests/tools that may inspect historical payloads.
 Map<String, dynamic> parsePersonPreferenceMap(Model? person) {
   if (person == null) return {};
   final raw =

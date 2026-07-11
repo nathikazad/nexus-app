@@ -42,7 +42,7 @@ export 'src/kgql/providers/models_providers.dart';
 export 'src/kgql/providers/model_types_providers.dart';
 export 'src/kgql/providers/relation_picker_providers.dart';
 
-// Person (current user profile)
+// Person (current user's linked Person row + account preferences)
 export 'src/models/domain/person/person.dart';
 export 'src/models/domain/person/person_repository.dart';
 export 'src/models/data/person/person_attr_keys.dart';

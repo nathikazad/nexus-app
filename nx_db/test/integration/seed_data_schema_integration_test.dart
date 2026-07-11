@@ -233,7 +233,7 @@ void main() {
       }
     });
 
-    test('Person type: age attribute (seed-data)', () async {
+    test('Person type: account settings are not KGQL attributes', () async {
       final roots = await _fetchModelTypeRoots(client);
       final person = _findInForest(roots, 'Person');
       expect(person, isNotNull);
@@ -243,7 +243,9 @@ void main() {
       final keys =
           detailed!.attributes?.map((a) => a.key).whereType<String>().toSet() ??
               {};
-      expect(keys, contains('age'));
+      expect(keys, isNot(contains('age')));
+      expect(keys, isNot(contains('desire')));
+      expect(keys, isNot(contains('preference')));
     });
 
     test('Expense models: rows parse; at least one has cost', () async {

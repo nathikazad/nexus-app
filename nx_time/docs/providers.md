@@ -313,7 +313,7 @@ after writes (so **`modelTypeColorsProvider`** chain refreshes).
   `taskDetailScreenVmProvider`, `linkedActionsForTaskProvider` families as
   needed · `tasksForTodayProvider` · `allTasksProvider` · `projectBreadcrumbLabelsProvider`
   when project label changes.
-- **Person `preference` (colors):** `mainPersonProvider` invalidation (cascades to
+- **User `preferences` (colors):** `mainPersonProvider` invalidation (cascades to
   `modelTypeColorsProvider`).
 
 ## Provider reference table
@@ -344,8 +344,8 @@ in `lib/`.
 | `mainPersonProvider` | `FutureProvider<Person?>` | [`providers.dart`](../lib/data/providers.dart) | `authenticatedUserProvider`, `personRepositoryProvider` (read `.getMain()`) | `modelTypeColorsProvider` · `ActionColorsPage` |
 | `modelTypeColorsProvider` | `FutureProvider<ModelTypeColors>` | [`providers.dart`](../lib/data/providers.dart) | `mainPersonProvider`, `actionSubtypeModelTypesProvider` | `todaySnapshotProvider`, `actionCategoryOptionsProvider`, `AppShell`, `ActivityDetailPage`, `CalendarPage`, `AddChildActionsPage`, `TaskDetailPage`, `ActionColorsPage` |
 | `parentActionForChildrenProvider` | *family* `autoDispose` | [`add_child_actions_view_model.dart`](../lib/features/action_create/add_child_actions_view_model.dart) | `actionRepositoryProvider` (read) | `AddChildActionsPage` |
-| `personRepositoryProvider` | `Provider<PersonRepository>` | [`providers.dart`](../lib/data/providers.dart) | `graphqlClientProvider`, `personSchemaProvider` (read `.future`) | `mainPersonProvider` · `ActionColorsPage` (read for updates) |
-| `personSchemaProvider` | `FutureProvider<ModelType>` (via `modelTypeByNameProvider`) | [`person_schema_provider.dart`](../lib/data/person/person_schema_provider.dart) | `modelTypeByNameProvider` (nx_db) | `personRepositoryProvider` |
+| `personRepositoryProvider` | `Provider<PersonRepository>` | [`providers.dart`](../lib/data/providers.dart) | `graphqlClientProvider`, `authenticatedUserProvider` | `mainPersonProvider` · `ActionColorsPage` (read for updates) |
+| `personSchemaProvider` | `FutureProvider<ModelType>` (via `modelTypeByNameProvider`) | `nx_db/person.dart` | `modelTypeByNameProvider` (nx_db) | Legacy schema reads |
 | `pickerRecentTasksProvider` | `FutureProvider` | [`task_picker_view_model.dart`](../lib/features/tasks/task_picker_view_model.dart) | `authenticatedUserProvider`, `taskRepositoryProvider` (read `listAll`) | `TaskPickerPage` |
 | `pickerUnfinishedYesterdayProvider` | `FutureProvider` | [`task_picker_view_model.dart`](../lib/features/task_picker_view_model.dart) | `authenticatedUserProvider`, `taskRepositoryProvider` (read) | `TaskPickerPage` |
 | `projectBreadcrumbLabelsProvider` | `FutureProvider` | [`task_view_models.dart`](../lib/features/tasks/task_view_models.dart) | `allProjectsProvider` | `TasksPage`, `TaskDetailPage`, `TaskEditPage`, `TaskCreatePage`, `TaskPickerPage`, `taskDetailScreenVmProvider` |

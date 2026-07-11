@@ -1,4 +1,8 @@
-/// A Person row: identity plus JSON `preference`.
+/// A KGQL Person row plus account-level JSON preferences for the current user.
+///
+/// `id`, `name`, and `description` come from the KGQL Person model.
+/// `preference` comes from `users.preferences`; it is exposed here for
+/// compatibility with apps that already read settings through [Person].
 class Person {
   const Person({
     required this.id,

@@ -18,17 +18,17 @@ final authenticatedUserProvider = FutureProvider<User>((ref) async {
   return user;
 });
 
-/// KGQL [Person] fetch and `preference` updates.
+/// KGQL [Person] fetch with account preferences stored on `users.preferences`.
 final personRepositoryProvider = Provider<PersonRepository>(
   (ref) {
     return KgqlPersonRepository(
       client: ref.watch(graphqlClientProvider),
-      loadPersonSchema: () => ref.read(personSchemaProvider.future),
+      loadAuthenticatedUser: () => ref.read(authenticatedUserProvider.future),
     );
   },
 );
 
-/// First Person row for the current user (RLS); includes `preference` JSON.
+/// Current user's linked Person row plus `users.preferences` JSON.
 final mainPersonProvider = FutureProvider<Person?>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
   return ref.watch(personRepositoryProvider).getMain();

@@ -4,15 +4,21 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/person.dart';
 import 'package:test/test.dart' show Tags;
 
 import '../../../_support/mock_graphql_client.dart';
 
+Future<User> _user() async => User(
+      userId: '1',
+      preset: BackendPreset.localhost,
+    );
+
 void main() {
   setUpAll(registerGraphqlFallbacks);
 
-  test('updatePreference writes full preference map', () async {
+  test('updatePreference writes users.preferences', () async {
     final mock = MockGraphQLClient();
     MutationOptions? captured;
     when(() => mock.mutate(any())).thenAnswer((inv) async {
@@ -21,19 +27,26 @@ void main() {
         options: MutationOptions(document: gql('mutation { __typename }')),
         source: QueryResultSource.network,
         data: {
-          'setKgqlModels': {'json': '{"id": 1}'},
+          'updateUserById': {
+            'user': {
+              'id': 1,
+              'preferences': {
+                'model_type_colors': {'Yoga': '#00FF00'},
+              },
+            },
+          },
         },
       );
     });
 
     final repo = KgqlPersonRepository(
       client: mock,
-      loadPersonSchema: () => throw UnimplementedError(),
+      loadAuthenticatedUser: _user,
     );
     await repo.updatePreference(
       const Person(
         id: 5,
-        name: 'Main User',
+        name: 'Nathik',
         preference: <String, dynamic>{},
       ),
       <String, dynamic>{
@@ -46,18 +59,55 @@ void main() {
     );
 
     verify(() => mock.mutate(any())).called(1);
-    final input = captured!.variables['input'] as Map<String, dynamic>;
-    final data = input['data'] as Map<String, dynamic>;
-    expect(data['id'], 5);
-    expect(data['model_type'], 'Person');
-    expect(data['name'], 'Main User');
-    final attrs = data['attributes'] as List<dynamic>;
-    expect(attrs.length, 1);
-    expect(attrs[0]['key'], 'preference');
-    final pref = attrs[0]['value'] as Map<String, dynamic>;
+    expect(captured!.variables['id'], 1);
+    final pref = captured!.variables['preferences'] as Map<String, dynamic>;
     expect(pref['other'], 1);
     final mtc = pref['model_type_colors'] as Map<String, dynamic>;
     expect(mtc['Yoga'], '#00FF00');
     expect(mtc['Sleep'], '#AABBCC');
+  });
+
+  test('getMain reads linked Person plus users.preferences', () async {
+    final mock = MockGraphQLClient();
+    var queryCount = 0;
+    when(() => mock.query(any())).thenAnswer((_) async {
+      queryCount += 1;
+      if (queryCount == 1) {
+        return okQueryResult({
+          'allUsers': {
+            'nodes': [
+              {
+                'id': 1,
+                'name': 'Nathik',
+                'personModelId': 5,
+                'preferences': {
+                  'model_type_colors': {'Yoga': '#00FF00'},
+                },
+              },
+            ],
+          },
+        });
+      }
+      return okQueryResult({
+        'getKgqlModels': [
+          {
+            'id': 5,
+            'name': 'Nathik',
+            'description': 'Main user',
+            'model_type_id': 4,
+          },
+        ],
+      });
+    });
+
+    final repo = KgqlPersonRepository(
+      client: mock,
+      loadAuthenticatedUser: _user,
+    );
+
+    final person = await repo.getMain();
+    expect(person?.id, 5);
+    expect(person?.name, 'Nathik');
+    expect(person?.preference['model_type_colors'], {'Yoga': '#00FF00'});
   });
 }

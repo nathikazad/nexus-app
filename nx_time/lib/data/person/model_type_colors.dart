@@ -5,10 +5,10 @@ import 'package:nx_db/person.dart' show Person, PersonRepository;
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/domain/action/action_subtype_option.dart';
 
-/// Key inside Person `preference` JSON for per–model-type hex colors.
+/// Key inside account preference JSON for per-model-type hex colors.
 const kPrefModelTypeColors = 'model_type_colors';
 
-/// `"ModelTypeName" -> "#RRGGBB"` from [preference] root (Person JSON).
+/// `"ModelTypeName" -> "#RRGGBB"` from the root account preference map.
 Map<String, String> readModelTypeColorHexByName(
   Map<String, dynamic> preference,
 ) {
@@ -61,15 +61,15 @@ Future<Person> seedMissingModelTypeColors({
   return repo.updatePreference(person, merged);
 }
 
-/// Resolved colors for Action model types: overrides from Person [kPrefModelTypeColors]
-/// when present, else [barColorForModelTypeId].
+/// Resolved colors for Action model types: account preference overrides when
+/// present, else [barColorForModelTypeId].
 class ModelTypeColors {
   const ModelTypeColors._(this._hexByName);
 
   /// No persisted overrides; always uses [barColorForModelTypeId].
   static const ModelTypeColors fallback = ModelTypeColors._({});
 
-  /// Build from the root Person `preference` map.
+  /// Build from the root account preference map.
   factory ModelTypeColors.fromPreference(Map<String, dynamic> preference) {
     return ModelTypeColors._(readModelTypeColorHexByName(preference));
   }

@@ -252,7 +252,7 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
       }
       return const Center(
         child: Text(
-          'No Person profile found. Run server setup (Main User).',
+          'No linked Person profile found for this user.',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.slate500),
         ),

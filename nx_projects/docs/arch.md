@@ -131,7 +131,7 @@ lib/
 | `package:nx_db/auth.dart` | `lib/router.dart`, `lib/features/auth/projects_login_screen.dart`, `lib/features/shell/nx_app_menu_button.dart`, `lib/data/providers.dart` | Sign-in UI, sign-out button, redirect on auth state, the `User` type used with `authProvider` / `authenticatedUserProvider` |
 | `package:nx_db/kgql.dart` | `lib/data/project/*`, `lib/data/task/*`, `lib/data/sprint/*`, `lib/data/schema/*` | `Model`, `ModelType`, `SetModelRequest`, `attrString` / `attrDateTime` / `attrInt`, `setKgqlCreate/Update/Delete`, repository functions |
 | `package:nx_db/riverpod.dart` | `lib/data/providers.dart`, `lib/data/*/`*`_schema_provider.dart` | `graphqlClientProvider`, `modelTypeByNameProvider` |
-| `package:nx_db/person.dart` | `lib/data/providers.dart` (re-export) | `Person`, `PersonRepository`, `mainPersonProvider`, `personRepositoryProvider`, `personSchemaProvider` — current user's profile + JSON `preference` (e.g. project color overrides) |
+| `package:nx_db/person.dart` | `lib/data/providers.dart` (re-export) | `Person`, `PersonRepository`, `mainPersonProvider`, `personRepositoryProvider`, `personSchemaProvider` — current user's linked Person row plus `users.preferences` |
 | `package:nx_db/transcript.dart` | _(not used in nx_projects today)_ | Same pattern for current transcript if/when a screen needs it |
 | `package:nx_db/nx_db.dart` | _(not used)_ | The everything-shim; new code prefers the focused sub-libraries |
 
@@ -289,7 +289,7 @@ nx_projects/
         kgql_sprint_repository.dart
         sprint_schema_provider.dart
       person/
-        project_color_prefs.dart        # nx_projects-specific Person.preference slice (project color overrides)
+        project_color_prefs.dart        # nx_projects-specific users.preferences slice (project color overrides)
       schema/
         kgql_projects_schema_repository.dart  # cached schema fetcher
 
