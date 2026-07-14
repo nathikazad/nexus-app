@@ -26,6 +26,32 @@ void main() {
       expect(r.toJson()['id'], 99);
     });
 
+    test('serializes top-level suggestion and meta JSON', () {
+      final r = SetModelRequest(
+        id: 99,
+        suggestion: {
+          'work': [
+            {'company': 'Example Corp'},
+          ],
+        },
+        meta: {
+          'linked_in': {'hash': 'abc123'},
+        },
+      );
+
+      expect(r.toJson(), {
+        'id': 99,
+        'suggestion': {
+          'work': [
+            {'company': 'Example Corp'},
+          ],
+        },
+        'meta': {
+          'linked_in': {'hash': 'abc123'},
+        },
+      });
+    });
+
     test('RS5.3 SetModelAttribute delete', () {
       final r = SetModelRequest(
         attributes: [SetModelAttribute(key: 'age', delete: true)],
@@ -40,6 +66,7 @@ void main() {
         relations: [
           ModelRelation(
             modelType: 'Company',
+            relationName: 'work_for',
             link: [1, 2],
           ),
         ],
@@ -47,6 +74,7 @@ void main() {
       expect(r.toJson()['relations'], [
         {
           'model_type': 'Company',
+          'relation_name': 'work_for',
           'link': [1, 2],
         },
       ]);

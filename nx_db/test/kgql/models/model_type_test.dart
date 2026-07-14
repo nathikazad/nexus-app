@@ -92,12 +92,14 @@ void main() {
         'relations': [
           {
             'target_model_type': 'Company',
+            'relation_name': 'work_for',
             'attributes': [],
           },
         ],
       });
       expect(mt.relations?.length, 1);
       expect(mt.relations!.first.link, 'Company');
+      expect(mt.relations!.first.relationName, 'work_for');
     });
 
     test('MT2.9 toJson smoke', () {
@@ -131,11 +133,13 @@ void main() {
     test('MT2.12 relation_attribute_definitions', () {
       final rt = RelationshipType.fromName(
         'Company',
+        relationName: 'work_for',
         relationAttributeDefinitions: [
           RelationAttributeDefinition(key: 'role', valueType: 'string'),
         ],
       );
       final j = rt.toJson();
+      expect(j['relation_name'], 'work_for');
       expect(j['relation_attribute_definitions'], isA<List>());
       expect((j['relation_attribute_definitions'] as List).length, 1);
     });

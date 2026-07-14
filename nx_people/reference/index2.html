@@ -280,283 +280,680 @@
           </div>
         </header>
 
-        <div class="p-8 max-w-3xl mx-auto w-full flex flex-col gap-10">
-          <!-- Profile Header -->
-          <div class="flex flex-col md:flex-row gap-6 md:items-start">
-            <div
-              class="w-20 h-20 rounded-full bg-gradient-to-br from-[#EAE6DB] to-[#C9C5BA] flex items-center justify-center shrink-0 shadow-sm"
-            >
-              <span class="text-2xl font-medium text-[#5A5854]">ES</span>
-            </div>
-            <div class="flex flex-col flex-1 gap-1.5">
-              <h2 class="text-2xl font-medium tracking-tight text-[#2C2B29]">
-                Elena Sokolov
-              </h2>
+        <div class="p-6 md:p-8 max-w-5xl mx-auto w-full flex flex-col gap-2">
+          <!-- Core Identity -->
+          <div
+            class="flex flex-col md:flex-row gap-6 md:items-start justify-between"
+          >
+            <div class="flex flex-col md:flex-row gap-5">
               <div
-                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#5A5854]"
+                class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#EAE6DB] to-[#C9C5BA] flex items-center justify-center shrink-0 shadow-sm"
               >
-                <span>VP Engineering</span>
-                <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
-                <span class="font-medium text-[#2C2B29]">Stripe</span>
-                <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
-                <span class="flex items-center gap-1">
-                  <iconify-icon icon="solar:map-point-linear"></iconify-icon>
-                  San Francisco
+                <span class="text-xl md:text-2xl font-medium text-[#5A5854]">
+                  ES
                 </span>
               </div>
-              <p class="text-sm text-[#8B8881] mt-2 leading-relaxed max-w-xl">
-                Met at SaaStr 2023. Strong background in scaling distributed
-                systems. Potential candidate for our next platform team lead.
-                Very responsive on LinkedIn.
-              </p>
+              <div class="flex flex-col flex-1 gap-2">
+                <div class="flex flex-col">
+                  <h2
+                    class="text-2xl font-semibold tracking-tight text-[#2C2B29]"
+                  >
+                    Elena Sokolov
+                  </h2>
+                  <div
+                    class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#5A5854] mt-1"
+                  >
+                    <span>VP Engineering</span>
+                    <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
+                    <span class="font-medium text-[#2C2B29]">Stripe</span>
+                    <span class="w-1 h-1 rounded-full bg-[#D5D1C5]"></span>
+                    <span class="flex items-center gap-1">
+                      <iconify-icon
+                        icon="solar:map-point-linear"
+                      ></iconify-icon>
+                      San Francisco, CA
+                    </span>
+                  </div>
+                </div>
+                <p
+                  class="text-sm text-[#5A5854] leading-relaxed max-w-2xl mt-1"
+                >
+                  <span class="font-medium text-[#2C2B29]">Summary:</span>
+                  Met at SaaStr 2023. Strong background in scaling distributed
+                  systems. Evaluated new messaging queues recently.
+                </p>
+                <p class="text-sm text-[#5A5854] leading-relaxed max-w-2xl">
+                  <span class="font-medium text-[#2C2B29]">Looking for:</span>
+                  Next career step as a VP/SVP of Platform or Infrastructure at
+                  a mid-stage startup.
+                </p>
+                <div class="flex flex-wrap items-center gap-2 mt-2">
+                  <span
+                    class="bg-[#F5F2EB] text-[#5A5854] px-2 py-0.5 rounded text-[11px] font-medium border border-[#EAE6DB] uppercase tracking-wider"
+                  >
+                    Engineering
+                  </span>
+                  <span
+                    class="bg-[#F5F2EB] text-[#5A5854] px-2 py-0.5 rounded text-[11px] font-medium border border-[#EAE6DB] uppercase tracking-wider"
+                  >
+                    Top Tier
+                  </span>
+                  <button
+                    class="text-[#8B8881] hover:text-[#2C2B29] transition-colors text-xs flex items-center gap-1 border border-dashed border-[#D5D1C5] px-1.5 py-0.5 rounded hover:border-[#8B8881]"
+                  >
+                    <iconify-icon icon="lucide:plus"></iconify-icon>
+                    Add tag
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <!-- Tags & Contact Row -->
-          <div
-            class="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-[#EAE6DB]"
-          >
-            <div class="flex flex-wrap gap-2">
-              <span
-                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
-              >
-                Engineering
-              </span>
-              <span
-                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
-              >
-                SF Bay Area
-              </span>
-              <span
-                class="bg-[#F5F2EB] text-[#5A5854] px-2.5 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
-              >
-                Top Tier
-              </span>
+            <!-- Contact Actions -->
+            <div class="flex items-center gap-2 shrink-0">
               <button
-                class="bg-transparent text-[#8B8881] px-2 py-1 rounded-md text-xs border border-dashed border-[#D5D1C5] hover:border-[#8B8881] hover:text-[#5A5854] transition-colors flex items-center gap-1"
-              >
-                <iconify-icon icon="solar:add-square-linear"></iconify-icon>
-                Add tag
-              </button>
-            </div>
-            <div class="flex items-center gap-3">
-              <a
-                href="#"
-                class="w-8 h-8 rounded-md bg-[#F5F2EB] flex items-center justify-center text-[#5A5854] hover:bg-[#EAE6DB] transition-colors"
+                class="w-9 h-9 rounded-lg border border-[#EAE6DB] bg-white flex items-center justify-center text-[#5A5854] hover:bg-[#F5F2EB] transition-colors shadow-sm"
                 title="elena@example.com"
               >
                 <iconify-icon
                   icon="solar:letter-linear"
-                  class="text-base"
+                  class="text-lg"
                 ></iconify-icon>
-              </a>
-              <a
-                href="#"
-                class="w-8 h-8 rounded-md bg-[#F5F2EB] flex items-center justify-center text-[#5A5854] hover:bg-[#EAE6DB] transition-colors"
+              </button>
+              <button
+                class="w-9 h-9 rounded-lg border border-[#EAE6DB] bg-white flex items-center justify-center text-[#5A5854] hover:bg-[#F5F2EB] transition-colors shadow-sm"
               >
                 <iconify-icon
                   icon="solar:phone-linear"
-                  class="text-base"
+                  class="text-lg"
                 ></iconify-icon>
-              </a>
-              <a
-                href="#"
-                class="w-8 h-8 rounded-md bg-[#F5F2EB] flex items-center justify-center text-[#5A5854] hover:bg-[#EAE6DB] transition-colors"
+              </button>
+              <button
+                class="w-9 h-9 rounded-lg border border-[#EAE6DB] bg-white flex items-center justify-center text-[#5A5854] hover:bg-[#F5F2EB] transition-colors shadow-sm"
               >
                 <iconify-icon
                   icon="solar:link-linear"
-                  class="text-base"
+                  class="text-lg"
                 ></iconify-icon>
-              </a>
-            </div>
-          </div>
-
-          <!-- Pending (Next Action) & Funnels Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Pending Section -->
-            <div class="flex flex-col gap-3">
-              <h3
-                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
-              >
-                <iconify-icon icon="solar:inbox-in-linear"></iconify-icon>
-                Next Action
-              </h3>
-              <div
-                class="border border-[#D97757]/30 bg-[#FDFCF8] rounded-lg p-4 shadow-[0_2px_8px_-4px_rgba(217,119,87,0.15)] flex flex-col gap-3 relative overflow-hidden"
-              >
-                <div
-                  class="absolute top-0 left-0 w-1 h-full bg-[#D97757]"
-                ></div>
-                <div class="flex justify-between items-start gap-4">
-                  <span class="text-sm font-medium text-[#2C2B29]">
-                    Send updated platform architecture deck
-                  </span>
-                  <span
-                    class="text-xs font-medium text-[#D97757] bg-[#D97757]/10 px-1.5 py-0.5 rounded"
-                  >
-                    Overdue
-                  </span>
-                </div>
-                <div class="flex items-center justify-between mt-1">
-                  <span class="text-xs text-[#8B8881]">Due: Yesterday</span>
-                  <div class="flex gap-2">
-                    <button
-                      class="text-xs font-medium text-[#5A5854] hover:text-[#2C2B29]"
-                    >
-                      Snooze
-                    </button>
-                    <button
-                      class="text-xs font-medium bg-[#2C2B29] text-[#FDFCF8] px-2.5 py-1 rounded shadow-sm hover:bg-[#1A1A19]"
-                    >
-                      Mark Done
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Funnels Section -->
-            <div class="flex flex-col gap-3">
-              <h3
-                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
-              >
-                <iconify-icon
-                  icon="solar:sort-from-bottom-to-top-linear"
-                ></iconify-icon>
-                Active Funnels
-              </h3>
-              <div
-                class="border border-[#EAE6DB] bg-[#F5F2EB]/30 rounded-lg p-4 flex flex-col gap-3"
-              >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div class="w-1.5 h-1.5 rounded-full bg-[#738269]"></div>
-                    <span class="text-sm font-medium text-[#2C2B29]">
-                      Engineer Hire
-                    </span>
-                  </div>
-                  <button class="text-[#8B8881] hover:text-[#2C2B29]">
-                    <iconify-icon
-                      icon="solar:alt-arrow-right-linear"
-                    ></iconify-icon>
-                  </button>
-                </div>
-
-                <!-- Custom stage progress bar -->
-                <div class="flex flex-col gap-1.5">
-                  <div class="flex justify-between text-xs text-[#5A5854]">
-                    <span>
-                      Stage:
-                      <span class="font-medium text-[#2C2B29]">
-                        Active Conversation
-                      </span>
-                    </span>
-                  </div>
-                  <div class="flex gap-1 h-1.5 w-full">
-                    <div
-                      class="h-full flex-1 bg-[#738269] rounded-l-full"
-                    ></div>
-                    <div class="h-full flex-1 bg-[#738269]"></div>
-                    <div class="h-full flex-1 bg-[#738269]"></div>
-                    <div class="h-full flex-1 bg-[#EAE6DB]"></div>
-                    <div
-                      class="h-full flex-1 bg-[#EAE6DB] rounded-r-full"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Timeline / Meetings -->
-          <div class="flex flex-col gap-4 mt-4">
-            <div class="flex items-center justify-between">
-              <h3
-                class="text-xs font-medium text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
-              >
-                <iconify-icon icon="solar:history-linear"></iconify-icon>
-                Timeline &amp; Meetings
-              </h3>
-              <button
-                class="text-xs text-[#5A5854] hover:text-[#2C2B29] font-medium flex items-center gap-1"
-              >
-                <iconify-icon icon="solar:add-circle-linear"></iconify-icon>
-                Log interaction
               </button>
             </div>
+          </div>
 
-            <div
-              class="relative pl-3 border-l border-[#EAE6DB] flex flex-col gap-6 ml-2 mt-2"
+          <!-- Mobile "Show more" for Background -->
+          <div
+            class="md:hidden flex flex-col mt-4 border-t border-[#EAE6DB] pt-3"
+          >
+            <button
+              onclick="
+      const content = document.getElementById('mobile-bg-content');
+      const text = document.getElementById('mobile-bg-toggle-text');
+      const icon = this.querySelector('iconify-icon');
+      if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        content.classList.add('flex');
+        text.textContent = 'Show less';
+        icon.setAttribute('icon', 'solar:alt-arrow-up-linear');
+      } else {
+        content.classList.add('hidden');
+        content.classList.remove('flex');
+        text.textContent = 'Show background info';
+        icon.setAttribute('icon', 'solar:alt-arrow-down-linear');
+      }
+    "
+              class="text-sm font-medium text-[#8B8881] flex items-center gap-1 self-start hover:text-[#2C2B29] py-1"
             >
-              <!-- Future Meeting -->
-              <div class="relative">
-                <div
-                  class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#EAE6DB]"
-                ></div>
-                <div class="flex flex-col gap-1.5">
-                  <span class="text-xs font-medium text-[#8B8881]">
-                    Nov 15 • Planned Check-in
-                  </span>
-                  <div
-                    class="border border-[#EAE6DB] bg-[#FDFCF8] rounded-md p-3 flex justify-between items-center group cursor-pointer hover:border-[#D5D1C5] transition-colors"
+              <iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon>
+              <span id="mobile-bg-toggle-text">Show background info</span>
+            </button>
+            <div
+              id="mobile-bg-content"
+              class="hidden md:hidden flex-col gap-6 mt-4"
+            >
+              <div class="flex flex-col gap-6">
+                <div class="flex flex-col gap-4">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
                   >
-                    <div class="flex flex-col">
-                      <span class="text-sm font-medium text-[#2C2B29]">
-                        Coffee catch-up in SoMa
+                    Experience
+                  </h3>
+                  <div class="flex flex-col gap-4">
+                    <div class="flex gap-4">
+                      <div
+                        class="w-8 h-8 rounded bg-[#EAE6DB] flex items-center justify-center shrink-0 mt-1"
+                      >
+                        <iconify-icon
+                          icon="solar:buildings-2-linear"
+                          class="text-[#5A5854]"
+                        ></iconify-icon>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-[#2C2B29]">
+                          VP Engineering
+                        </span>
+                        <span class="text-sm text-[#5A5854]">
+                          Stripe • 2021 - Present
+                        </span>
+                        <p class="text-sm text-[#8B8881] mt-1">
+                          Leading the platform engineering organization,
+                          managing 150+ engineers across globally distributed
+                          teams.
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex gap-4">
+                      <div
+                        class="w-8 h-8 rounded bg-[#EAE6DB] flex items-center justify-center shrink-0 mt-1"
+                      >
+                        <iconify-icon
+                          icon="solar:buildings-2-linear"
+                          class="text-[#5A5854]"
+                        ></iconify-icon>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-[#2C2B29]">
+                          Director of Engineering
+                        </span>
+                        <span class="text-sm text-[#5A5854]">
+                          Twilio • 2017 - 2021
+                        </span>
+                        <p class="text-sm text-[#8B8881] mt-1">
+                          Grew the core messaging infrastructure team from 10 to
+                          45.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-4 mt-2">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Education
+                  </h3>
+                  <div class="flex gap-4">
+                    <div
+                      class="w-8 h-8 rounded bg-[#EAE6DB] flex items-center justify-center shrink-0 mt-1"
+                    >
+                      <iconify-icon
+                        icon="solar:diploma-linear"
+                        class="text-[#5A5854]"
+                      ></iconify-icon>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <span class="text-sm font-semibold text-[#2C2B29]">
+                        M.S. Computer Science
                       </span>
-                      <span class="text-xs text-[#5A5854]">
-                        Discuss team expansion plans
+                      <span class="text-sm text-[#5A5854]">
+                        Stanford University • 2013 - 2015
                       </span>
                     </div>
-                    <iconify-icon
-                      icon="solar:calendar-linear"
-                      class="text-[#8B8881] group-hover:text-[#2C2B29]"
-                    ></iconify-icon>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-3 mt-2">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Skills &amp; Domains
+                  </h3>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Distributed Systems
+                    </span>
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Team Building
+                    </span>
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Infrastructure
+                    </span>
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Kafka
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-3 mt-2">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Links
+                  </h3>
+                  <div class="flex flex-col gap-2">
+                    <a
+                      href="#"
+                      class="text-sm font-medium text-[#2C2B29] hover:underline flex items-center gap-2"
+                    >
+                      <iconify-icon
+                        icon="lucide:linkedin"
+                        class="text-[#8B8881]"
+                      ></iconify-icon>
+                      linkedin.com/in/esokolov
+                    </a>
+                    <a
+                      href="#"
+                      class="text-sm font-medium text-[#2C2B29] hover:underline flex items-center gap-2"
+                    >
+                      <iconify-icon
+                        icon="lucide:github"
+                        class="text-[#8B8881]"
+                      ></iconify-icon>
+                      github.com/esokolov
+                    </a>
+                    <a
+                      href="#"
+                      class="text-sm font-medium text-[#2C2B29] hover:underline flex items-center gap-2"
+                    >
+                      <iconify-icon
+                        icon="lucide:twitter"
+                        class="text-[#8B8881]"
+                      ></iconify-icon>
+                      @esokolov
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop Tabs -->
+          <div class="hidden md:flex border-b border-[#EAE6DB] gap-6 mt-4">
+            <button
+              onclick="
+      document.getElementById('content-activity').classList.remove('md:hidden');
+      document.getElementById('desktop-bg-content').classList.remove('md:flex');
+      this.classList.replace('border-transparent', 'border-[#2C2B29]');
+      this.classList.replace('text-[#8B8881]', 'text-[#2C2B29]');
+      this.classList.replace('font-medium', 'font-semibold');
+      const bgTab = document.getElementById('tab-btn-background');
+      bgTab.classList.replace('border-[#2C2B29]', 'border-transparent');
+      bgTab.classList.replace('text-[#2C2B29]', 'text-[#8B8881]');
+      bgTab.classList.replace('font-semibold', 'font-medium');
+    "
+              id="tab-btn-activity"
+              class="pb-3 border-b-2 border-[#2C2B29] text-sm font-semibold text-[#2C2B29] transition-colors"
+            >
+              Activity
+            </button>
+            <button
+              onclick="
+      document.getElementById('desktop-bg-content').classList.add('md:flex');
+      document.getElementById('content-activity').classList.add('md:hidden');
+      this.classList.replace('border-transparent', 'border-[#2C2B29]');
+      this.classList.replace('text-[#8B8881]', 'text-[#2C2B29]');
+      this.classList.replace('font-medium', 'font-semibold');
+      const actTab = document.getElementById('tab-btn-activity');
+      actTab.classList.replace('border-[#2C2B29]', 'border-transparent');
+      actTab.classList.replace('text-[#2C2B29]', 'text-[#8B8881]');
+      actTab.classList.replace('font-semibold', 'font-medium');
+    "
+              id="tab-btn-background"
+              class="pb-3 border-b-2 border-transparent text-sm font-medium text-[#8B8881] hover:text-[#5A5854] transition-colors"
+            >
+              Background
+            </button>
+          </div>
+
+          <!-- Background Content (Desktop only) -->
+          <div class="hidden flex-col gap-6 pt-6" id="desktop-bg-content">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div class="md:col-span-2 flex flex-col gap-6">
+                <div class="flex flex-col gap-4">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Experience
+                  </h3>
+                  <div class="flex flex-col gap-4">
+                    <div class="flex gap-4">
+                      <div
+                        class="w-8 h-8 rounded bg-[#EAE6DB] flex items-center justify-center shrink-0 mt-1"
+                      >
+                        <iconify-icon
+                          icon="solar:buildings-2-linear"
+                          class="text-[#5A5854]"
+                        ></iconify-icon>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-[#2C2B29]">
+                          VP Engineering
+                        </span>
+                        <span class="text-sm text-[#5A5854]">
+                          Stripe • 2021 - Present
+                        </span>
+                        <p class="text-sm text-[#8B8881] mt-1">
+                          Leading the platform engineering organization,
+                          managing 150+ engineers across globally distributed
+                          teams.
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex gap-4">
+                      <div
+                        class="w-8 h-8 rounded bg-[#EAE6DB] flex items-center justify-center shrink-0 mt-1"
+                      >
+                        <iconify-icon
+                          icon="solar:buildings-2-linear"
+                          class="text-[#5A5854]"
+                        ></iconify-icon>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-[#2C2B29]">
+                          Director of Engineering
+                        </span>
+                        <span class="text-sm text-[#5A5854]">
+                          Twilio • 2017 - 2021
+                        </span>
+                        <p class="text-sm text-[#8B8881] mt-1">
+                          Grew the core messaging infrastructure team from 10 to
+                          45.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-4 mt-2">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Education
+                  </h3>
+                  <div class="flex gap-4">
+                    <div
+                      class="w-8 h-8 rounded bg-[#EAE6DB] flex items-center justify-center shrink-0 mt-1"
+                    >
+                      <iconify-icon
+                        icon="solar:diploma-linear"
+                        class="text-[#5A5854]"
+                      ></iconify-icon>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <span class="text-sm font-semibold text-[#2C2B29]">
+                        M.S. Computer Science
+                      </span>
+                      <span class="text-sm text-[#5A5854]">
+                        Stanford University • 2013 - 2015
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex flex-col gap-6 md:border-l border-[#EAE6DB] md:pl-6"
+              >
+                <div class="flex flex-col gap-3">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Skills &amp; Domains
+                  </h3>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Distributed Systems
+                    </span>
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Team Building
+                    </span>
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Infrastructure
+                    </span>
+                    <span
+                      class="bg-[#F5F2EB] text-[#5A5854] px-2 py-1 rounded-md text-xs font-medium border border-[#EAE6DB]"
+                    >
+                      Kafka
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-3">
+                  <h3
+                    class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest"
+                  >
+                    Links
+                  </h3>
+                  <div class="flex flex-col gap-2">
+                    <a
+                      href="#"
+                      class="text-sm font-medium text-[#2C2B29] hover:underline flex items-center gap-2"
+                    >
+                      <iconify-icon
+                        icon="lucide:linkedin"
+                        class="text-[#8B8881]"
+                      ></iconify-icon>
+                      linkedin.com/in/esokolov
+                    </a>
+                    <a
+                      href="#"
+                      class="text-sm font-medium text-[#2C2B29] hover:underline flex items-center gap-2"
+                    >
+                      <iconify-icon
+                        icon="lucide:github"
+                        class="text-[#8B8881]"
+                      ></iconify-icon>
+                      github.com/esokolov
+                    </a>
+                    <a
+                      href="#"
+                      class="text-sm font-medium text-[#2C2B29] hover:underline flex items-center gap-2"
+                    >
+                      <iconify-icon
+                        icon="lucide:twitter"
+                        class="text-[#8B8881]"
+                      ></iconify-icon>
+                      @esokolov
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Content (Default Tab) -->
+          <div
+            class="flex flex-col md:flex-row gap-8 pt-4 w-full"
+            id="content-activity"
+          >
+            <!-- Main Timeline -->
+            <div class="flex-1 flex flex-col gap-6">
+              <div class="flex items-center justify-between">
+                <h3
+                  class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+                >
+                  <iconify-icon icon="solar:history-linear"></iconify-icon>
+                  Timeline &amp; Meetings
+                </h3>
+                <button
+                  class="text-xs bg-white border border-[#EAE6DB] text-[#5A5854] hover:bg-[#F5F2EB] hover:text-[#2C2B29] font-medium px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm transition-colors"
+                >
+                  <iconify-icon icon="lucide:plus"></iconify-icon>
+                  Log Activity
+                </button>
+              </div>
+
+              <div
+                class="relative pl-3 border-l border-[#EAE6DB] flex flex-col gap-6 ml-2 mt-2"
+              >
+                <!-- Future Meeting -->
+                <div class="relative">
+                  <div
+                    class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#EAE6DB]"
+                  ></div>
+                  <div class="flex flex-col gap-1.5">
+                    <span class="text-xs font-medium text-[#8B8881]">
+                      Nov 15 • Planned Check-in
+                    </span>
+                    <div
+                      class="border border-[#EAE6DB] bg-white rounded-xl p-4 flex justify-between items-center group cursor-pointer hover:border-[#D5D1C5] shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors"
+                    >
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-[#2C2B29]">
+                          Coffee catch-up in SoMa
+                        </span>
+                        <span class="text-xs text-[#5A5854]">
+                          Discuss team expansion plans
+                        </span>
+                      </div>
+                      <iconify-icon
+                        icon="solar:calendar-linear"
+                        class="text-[#8B8881] text-xl group-hover:text-[#2C2B29]"
+                      ></iconify-icon>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Past Note -->
+                <div class="relative">
+                  <div
+                    class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#D5D1C5]"
+                  ></div>
+                  <div class="flex flex-col gap-1.5">
+                    <span class="text-xs font-medium text-[#8B8881]">
+                      Oct 28 • Note
+                    </span>
+                    <div
+                      class="bg-white border border-[#EAE6DB] rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                    >
+                      <p class="text-sm text-[#2C2B29] leading-relaxed">
+                        Followed up on the architecture doc. She mentioned they
+                        are currently evaluating new messaging queues. Might be
+                        a good hook for our next chat.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Past Meeting -->
+                <div class="relative">
+                  <div
+                    class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#D5D1C5]"
+                  ></div>
+                  <div class="flex flex-col gap-1.5">
+                    <span class="text-xs font-medium text-[#8B8881]">
+                      Oct 15 • Completed Meeting
+                    </span>
+                    <div
+                      class="border border-[#EAE6DB] bg-[#FDFCF8] rounded-xl p-4 flex justify-between items-center opacity-80"
+                    >
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-[#2C2B29]">
+                          Intro Call (Zoom)
+                        </span>
+                        <span class="text-xs text-[#5A5854]">30 mins</span>
+                      </div>
+                      <iconify-icon
+                        icon="solar:check-circle-linear"
+                        class="text-[#738269] text-xl"
+                      ></iconify-icon>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Rail (Activity Summary) -->
+            <div
+              class="w-full md:w-72 shrink-0 flex flex-col gap-6 mt-4 md:mt-0"
+            >
+              <!-- Next Action -->
+              <div class="flex flex-col gap-3">
+                <h3
+                  class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+                >
+                  <iconify-icon icon="solar:inbox-in-linear"></iconify-icon>
+                  Next Action
+                </h3>
+                <div
+                  class="border border-[#D97757]/40 bg-white rounded-xl p-4 shadow-[0_2px_8px_-4px_rgba(217,119,87,0.15)] flex flex-col gap-3 relative overflow-hidden"
+                >
+                  <div
+                    class="absolute top-0 left-0 w-1 h-full bg-[#D97757]"
+                  ></div>
+                  <div class="flex justify-between items-start gap-3 pl-1">
+                    <span
+                      class="text-sm font-semibold text-[#2C2B29] leading-tight"
+                    >
+                      Send updated platform architecture deck
+                    </span>
+                    <span
+                      class="text-[10px] font-bold text-[#D97757] bg-[#D97757]/10 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 mt-0.5"
+                    >
+                      Overdue
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between mt-1 pl-1">
+                    <span class="text-xs font-medium text-[#8B8881]">
+                      Due: Yesterday
+                    </span>
+                    <div class="flex gap-2">
+                      <button
+                        class="text-xs font-medium text-[#5A5854] hover:text-[#2C2B29] px-2 py-1 rounded hover:bg-[#F5F2EB] transition-colors"
+                      >
+                        Snooze
+                      </button>
+                      <button
+                        class="text-xs font-semibold border border-[#EAE6DB] text-[#2C2B29] px-2 py-1 rounded shadow-sm hover:bg-[#F5F2EB] transition-colors"
+                      >
+                        Done
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Past Note -->
-              <div class="relative">
+              <!-- Funnels -->
+              <div class="flex flex-col gap-3">
+                <h3
+                  class="text-xs font-semibold text-[#8B8881] uppercase tracking-widest flex items-center gap-2"
+                >
+                  <iconify-icon
+                    icon="solar:sort-from-bottom-to-top-linear"
+                  ></iconify-icon>
+                  Active Funnels
+                </h3>
                 <div
-                  class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#D5D1C5]"
-                ></div>
-                <div class="flex flex-col gap-1.5">
-                  <span class="text-xs font-medium text-[#8B8881]">
-                    Oct 28 • Note
-                  </span>
-                  <div
-                    class="bg-[#F5F2EB]/50 rounded-md p-3 text-sm text-[#5A5854]"
-                  >
-                    Followed up on the architecture doc. She mentioned they are
-                    currently evaluating new messaging queues. Might be a good
-                    hook for our next chat.
-                  </div>
-                </div>
-              </div>
-
-              <!-- Past Meeting -->
-              <div class="relative">
-                <div
-                  class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full border-2 border-[#FDFCF8] bg-[#D5D1C5]"
-                ></div>
-                <div class="flex flex-col gap-1.5">
-                  <span class="text-xs font-medium text-[#8B8881]">
-                    Oct 15 • Completed Meeting
-                  </span>
-                  <div
-                    class="border border-[#EAE6DB] bg-[#FDFCF8] rounded-md p-3 flex justify-between items-center opacity-70"
-                  >
-                    <div class="flex flex-col">
-                      <span class="text-sm font-medium text-[#2C2B29]">
-                        Intro Call (Zoom)
+                  class="border border-[#EAE6DB] bg-white rounded-xl p-4 flex flex-col gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div class="w-1.5 h-1.5 rounded-full bg-[#738269]"></div>
+                      <span class="text-sm font-semibold text-[#2C2B29]">
+                        Engineer Hire
                       </span>
-                      <span class="text-xs text-[#5A5854]">30 mins</span>
                     </div>
-                    <iconify-icon
-                      icon="solar:check-circle-linear"
-                      class="text-[#738269]"
-                    ></iconify-icon>
+                    <button class="text-[#8B8881] hover:text-[#2C2B29]">
+                      <iconify-icon
+                        icon="solar:alt-arrow-right-linear"
+                      ></iconify-icon>
+                    </button>
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <div class="flex justify-between text-xs text-[#5A5854]">
+                      <span>
+                        Stage:
+                        <span class="font-semibold text-[#2C2B29]">
+                          Active Conversation
+                        </span>
+                      </span>
+                    </div>
+                    <div class="flex gap-1 h-1.5 w-full">
+                      <div
+                        class="h-full flex-1 bg-[#738269] rounded-l-full"
+                      ></div>
+                      <div class="h-full flex-1 bg-[#738269]"></div>
+                      <div class="h-full flex-1 bg-[#738269]"></div>
+                      <div class="h-full flex-1 bg-[#EAE6DB]"></div>
+                      <div
+                        class="h-full flex-1 bg-[#EAE6DB] rounded-r-full"
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -15,6 +15,12 @@ class SetModelRequest {
   /// Optional description
   final String? description;
 
+  /// Top-level `models.suggestion` JSON payload (optional).
+  final Map<String, dynamic>? suggestion;
+
+  /// Top-level `models.meta` JSON payload (optional).
+  final Map<String, dynamic>? meta;
+
   /// Attributes array (optional)
   final List<SetModelAttribute>? attributes;
 
@@ -35,6 +41,8 @@ class SetModelRequest {
     this.modelType,
     this.name,
     this.description,
+    this.suggestion,
+    this.meta,
     this.attributes,
     this.relations,
     this.traits,
@@ -67,6 +75,14 @@ class SetModelRequest {
 
     if (description != null) {
       json['description'] = description;
+    }
+
+    if (suggestion != null) {
+      json['suggestion'] = suggestion;
+    }
+
+    if (meta != null) {
+      json['meta'] = meta;
     }
 
     if (attributes != null) {
@@ -140,6 +156,7 @@ class SetModelAttribute {
 class ModelRelation {
   final int? id;
   final String? modelType;
+  final String? relationName;
   final List<dynamic>? link;
   final dynamic create;
   final bool delete;
@@ -148,6 +165,7 @@ class ModelRelation {
   ModelRelation({
     this.id,
     this.modelType,
+    this.relationName,
     this.link,
     this.create,
     this.delete = false,
@@ -168,6 +186,10 @@ class ModelRelation {
 
     if (modelType != null) {
       json['model_type'] = modelType;
+    }
+
+    if (relationName != null) {
+      json['relation_name'] = relationName;
     }
 
     if (link != null) {

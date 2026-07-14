@@ -22,6 +22,18 @@ abstract class PersonRepository {
   Future<Person?> getById(int id);
   Future<int> createPerson(PersonDraft draft);
   Future<void> updatePerson(int id, PersonDraft draft);
+  Future<void> resolveOrganizationSuggestion({
+    required int personId,
+    required PersonSuggestionKind kind,
+    required int suggestionIndex,
+    required PersonSuggestionResolution selected,
+  });
+  Future<int> createCompanyForSuggestion({
+    required int personId,
+    required PersonSuggestionKind kind,
+    required int suggestionIndex,
+    required String name,
+  });
   Future<List<PeopleTagSystem>> listTagSystems();
   Future<PeopleResultContext> context(String type, String label);
   Future<List<Person>> peopleFor(PeopleResultContext context);

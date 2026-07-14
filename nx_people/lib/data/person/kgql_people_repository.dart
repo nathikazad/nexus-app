@@ -82,6 +82,73 @@ class KgqlPeopleRepository implements PersonRepository {
   }
 
   @override
+  Future<void> resolveOrganizationSuggestion({
+    required int personId,
+    required PersonSuggestionKind kind,
+    required int suggestionIndex,
+    required PersonSuggestionResolution selected,
+  }) async {
+    final person = await getById(personId);
+    if (person == null) {
+      throw StateError('Person $personId was not found.');
+    }
+    final relation = _suggestionRelation(person, kind, suggestionIndex);
+    if (relation != null && selected.isValid) {
+      await setKgqlModel(
+        _client,
+        SetModelRequest(
+          id: personId,
+          relations: [
+            ModelRelation(
+              modelType: 'Company',
+              relationName: relation.name,
+              link: [selected.id],
+              attributes: relation.attributes,
+            ),
+          ],
+        ),
+      );
+    }
+    final nextSuggestions = person.suggestions.resolve(
+      kind: kind,
+      index: suggestionIndex,
+      selected: selected,
+    );
+    await setKgqlModel(
+      _client,
+      SetModelRequest(id: personId, suggestion: nextSuggestions.toJson()),
+    );
+  }
+
+  @override
+  Future<int> createCompanyForSuggestion({
+    required int personId,
+    required PersonSuggestionKind kind,
+    required int suggestionIndex,
+    required String name,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Company name cannot be empty.');
+    }
+    final companyId = await setKgqlModel(
+      _client,
+      SetModelRequest(modelType: 'Company', name: trimmed),
+    );
+    await resolveOrganizationSuggestion(
+      personId: personId,
+      kind: kind,
+      suggestionIndex: suggestionIndex,
+      selected: PersonSuggestionResolution(
+        id: companyId,
+        name: trimmed,
+        source: 'created',
+      ),
+    );
+    return companyId;
+  }
+
+  @override
   Future<PeopleResultContext> context(String type, String label) async {
     final rows = await _filter(type, label);
     return PeopleResultContext(
@@ -195,4 +262,54 @@ class KgqlPeopleRepository implements PersonRepository {
       SetModelAttribute(key: kPersonAttrSummary, value: draft.summary.trim()),
     ];
   }
+}
+
+_SuggestionRelation? _suggestionRelation(
+  Person person,
+  PersonSuggestionKind kind,
+  int index,
+) {
+  switch (kind) {
+    case PersonSuggestionKind.work:
+      if (index < 0 || index >= person.suggestions.work.length) return null;
+      final suggestion = person.suggestions.work[index];
+      return _SuggestionRelation(
+        name: kWorkForRelationName,
+        attributes: _relationAttributes({
+          'title': suggestion.title,
+          'start_date': suggestion.startDate,
+          'end_date': suggestion.endDate,
+          'notes': suggestion.notes,
+        }),
+      );
+    case PersonSuggestionKind.education:
+      if (index < 0 || index >= person.suggestions.education.length) {
+        return null;
+      }
+      final suggestion = person.suggestions.education[index];
+      return _SuggestionRelation(
+        name: kStudyAtRelationName,
+        attributes: _relationAttributes({
+          'type': suggestion.type,
+          'start_date': suggestion.startDate,
+          'end_date': suggestion.endDate,
+          'notes': suggestion.notes,
+        }),
+      );
+  }
+}
+
+List<RelationAttribute> _relationAttributes(Map<String, Object?> values) {
+  return [
+    for (final entry in values.entries)
+      if ((entry.value?.toString().trim() ?? '').isNotEmpty)
+        RelationAttribute(key: entry.key, value: entry.value),
+  ];
+}
+
+class _SuggestionRelation {
+  const _SuggestionRelation({required this.name, required this.attributes});
+
+  final String name;
+  final List<RelationAttribute> attributes;
 }

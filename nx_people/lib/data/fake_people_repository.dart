@@ -95,6 +95,58 @@ class FakePeopleRepository implements PersonRepository {
   }
 
   @override
+  Future<void> resolveOrganizationSuggestion({
+    required int personId,
+    required PersonSuggestionKind kind,
+    required int suggestionIndex,
+    required PersonSuggestionResolution selected,
+  }) async {
+    final index = _people.indexWhere((person) => person.id == personId);
+    if (index == -1) return;
+    final person = _people[index];
+    final relation = _backgroundRelationFromSuggestion(
+      person,
+      kind,
+      suggestionIndex,
+      selected,
+    );
+    _people[index] = person.copyWith(
+      suggestions: person.suggestions.resolve(
+        kind: kind,
+        index: suggestionIndex,
+        selected: selected,
+      ),
+      workRelations: relation?.relationName == 'work_for'
+          ? [...person.workRelations, relation!]
+          : person.workRelations,
+      educationRelations: relation?.relationName == 'study_at'
+          ? [...person.educationRelations, relation!]
+          : person.educationRelations,
+    );
+  }
+
+  @override
+  Future<int> createCompanyForSuggestion({
+    required int personId,
+    required PersonSuggestionKind kind,
+    required int suggestionIndex,
+    required String name,
+  }) async {
+    final companyId = 1000 + companies.length + suggestionIndex;
+    await resolveOrganizationSuggestion(
+      personId: personId,
+      kind: kind,
+      suggestionIndex: suggestionIndex,
+      selected: PersonSuggestionResolution(
+        id: companyId,
+        name: name.trim(),
+        source: 'created',
+      ),
+    );
+    return companyId;
+  }
+
+  @override
   Future<PeopleResultContext> context(String type, String label) async {
     final rows = await _filter(type, label);
     return PeopleResultContext(
@@ -177,7 +229,60 @@ class FakePeopleRepository implements PersonRepository {
       currentThreads: existing?.currentThreads ?? const <PersonThread>[],
       logs: existing?.logs ?? const <PersonLog>[],
       relatedIds: existing?.relatedIds ?? const <int>[],
+      imageUrl: existing?.imageUrl ?? '',
+      workRelations:
+          existing?.workRelations ?? const <PersonBackgroundRelation>[],
+      educationRelations:
+          existing?.educationRelations ?? const <PersonBackgroundRelation>[],
+      suggestions: existing?.suggestions ?? PersonSuggestions.empty,
     );
+  }
+}
+
+PersonBackgroundRelation? _backgroundRelationFromSuggestion(
+  Person person,
+  PersonSuggestionKind kind,
+  int index,
+  PersonSuggestionResolution selected,
+) {
+  if (!selected.isValid) return null;
+  switch (kind) {
+    case PersonSuggestionKind.work:
+      if (index < 0 || index >= person.suggestions.work.length) return null;
+      final suggestion = person.suggestions.work[index];
+      return PersonBackgroundRelation(
+        type: 'Company',
+        id: selected.id,
+        relationName: 'work_for',
+        name: selected.name,
+        attributes: {
+          if (suggestion.title.trim().isNotEmpty) 'title': suggestion.title,
+          if (suggestion.startDate.trim().isNotEmpty)
+            'start_date': suggestion.startDate,
+          if (suggestion.endDate?.trim().isNotEmpty ?? false)
+            'end_date': suggestion.endDate,
+          if (suggestion.notes.trim().isNotEmpty) 'notes': suggestion.notes,
+        },
+      );
+    case PersonSuggestionKind.education:
+      if (index < 0 || index >= person.suggestions.education.length) {
+        return null;
+      }
+      final suggestion = person.suggestions.education[index];
+      return PersonBackgroundRelation(
+        type: 'Company',
+        id: selected.id,
+        relationName: 'study_at',
+        name: selected.name,
+        attributes: {
+          if (suggestion.type.trim().isNotEmpty) 'type': suggestion.type,
+          if (suggestion.startDate.trim().isNotEmpty)
+            'start_date': suggestion.startDate,
+          if (suggestion.endDate?.trim().isNotEmpty ?? false)
+            'end_date': suggestion.endDate,
+          if (suggestion.notes.trim().isNotEmpty) 'notes': suggestion.notes,
+        },
+      );
   }
 }
 
@@ -242,6 +347,53 @@ const _samplePeople = <Person>[
       ),
     ],
     relatedIds: <int>[2, 4],
+    workRelations: <PersonBackgroundRelation>[
+      PersonBackgroundRelation(
+        type: 'Company',
+        name: 'Northstar Labs',
+        description: 'Current company relation.',
+      ),
+    ],
+    educationRelations: <PersonBackgroundRelation>[
+      PersonBackgroundRelation(
+        type: 'School',
+        name: 'Stanford University',
+        description: 'Education relation.',
+      ),
+    ],
+    suggestions: PersonSuggestions(
+      work: <PersonWorkSuggestion>[
+        PersonWorkSuggestion(
+          company: 'Northstar Labs',
+          title: 'Product Lead',
+          startDate: '2024-01-01T00:00:00Z',
+          endDate: null,
+          notes: 'Imported from LinkedIn.',
+          candidates: <PersonSuggestionCandidate>[
+            PersonSuggestionCandidate(
+              id: 301,
+              name: 'Northstar Labs',
+              percentage: 96,
+            ),
+            PersonSuggestionCandidate(
+              id: 302,
+              name: 'Northstar AI',
+              percentage: 78,
+            ),
+          ],
+        ),
+      ],
+      education: <PersonEducationSuggestion>[
+        PersonEducationSuggestion(
+          school: 'Stanford University',
+          type: 'master',
+          startDate: '2017-01-01T00:00:00Z',
+          endDate: '2019-01-01T00:00:00Z',
+          notes: 'Imported from LinkedIn.',
+          candidates: <PersonSuggestionCandidate>[],
+        ),
+      ],
+    ),
   ),
   Person(
     id: 2,

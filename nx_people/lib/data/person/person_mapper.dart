@@ -6,6 +6,8 @@ const String _meetStartTimeAttr = 'start_time';
 const String _meetActualStartTimeAttr = 'actual_start_time';
 const String _meetScheduledStartTimeAttr = 'scheduled_start_time';
 const String _meetPlanningStatusAttr = 'planning_status';
+const String kWorkForRelationName = 'work_for';
+const String kStudyAtRelationName = 'study_at';
 
 Person personFromModel(Model model) {
   final tags = model.tags ?? const <String, List<String>>{};
@@ -19,6 +21,7 @@ Person personFromModel(Model model) {
       'Active';
   final company =
       model.attrString(kPersonAttrCompany) ??
+      _firstNamedRelatedName(model, kWorkForRelationName) ??
       _firstRelatedName(model, 'Company') ??
       _firstRelatedName(model, 'Place') ??
       '';
@@ -56,6 +59,19 @@ Person personFromModel(Model model) {
     ),
     logs: _logsFromRaw(model.attributes?[kPersonAttrLogs]),
     relatedIds: _relatedPeople(model),
+    workRelations: _namedBackgroundRelations(
+      model,
+      relationName: kWorkForRelationName,
+    ),
+    educationRelations: [
+      ..._namedBackgroundRelations(model, relationName: kStudyAtRelationName),
+      ..._backgroundRelations(model, const <String>[
+        'School',
+        'University',
+        'Education',
+      ]),
+    ],
+    suggestions: PersonSuggestions.fromJson(model.attributes?['suggestion']),
   );
 }
 
@@ -70,6 +86,7 @@ Map<String, dynamic> personFetchStruct(ModelType schema) {
         'created_at',
         'updated_at',
         'model_type_id',
+        'suggestion',
       ],
     ),
     'tags': true,
@@ -79,8 +96,14 @@ Map<String, dynamic> personFetchStruct(ModelType schema) {
       'model_type': true,
       'name': true,
       'description': true,
+      'relation_name': true,
+      'relation_description': true,
+      'relation_attributes': {'key': true, 'value': true, 'value_type': true},
     },
     'Company': {'id': true, 'name': true, 'description': true},
+    'School': {'id': true, 'name': true, 'description': true},
+    'University': {'id': true, 'name': true, 'description': true},
+    'Education': {'id': true, 'name': true, 'description': true},
     'Meeting': {'id': true, 'name': true, 'description': true},
     'Meet': {
       'id': true,
@@ -121,10 +144,67 @@ String? _firstRelatedName(Model model, String type) {
   return names.isEmpty ? null : names.first;
 }
 
+String? _firstNamedRelatedName(Model model, String relationName) {
+  final rows = model.relationsList ?? const <Relation>[];
+  final names = [
+    for (final row in rows)
+      if (row.relationName == relationName &&
+          (row.name?.trim().isNotEmpty ?? false))
+        row.name!.trim(),
+  ]..sort();
+  return names.isEmpty ? null : names.first;
+}
+
 List<String> _relatedNames(Model model, String type) {
   final rows = model.relations?[type] ?? const <Model>[];
   return rows.map((row) => row.name).where((name) => name.isNotEmpty).toList()
     ..sort();
+}
+
+List<PersonBackgroundRelation> _namedBackgroundRelations(
+  Model model, {
+  required String relationName,
+}) {
+  final rows = <PersonBackgroundRelation>[
+    for (final row in model.relationsList ?? const <Relation>[])
+      if (row.relationName == relationName &&
+          (row.name?.trim().isNotEmpty ?? false))
+        PersonBackgroundRelation(
+          type: row.modelType,
+          id: row.modelId,
+          relationId: row.relationId,
+          relationName: row.relationName ?? '',
+          name: row.name!.trim(),
+          description: row.description?.trim() ?? '',
+          relationDescription: row.relationDescription?.trim() ?? '',
+          attributes: row.relationAttributes ?? const <String, dynamic>{},
+        ),
+  ];
+  rows.sort((a, b) => a.name.compareTo(b.name));
+  return rows;
+}
+
+List<PersonBackgroundRelation> _backgroundRelations(
+  Model model,
+  List<String> types,
+) {
+  final rows = <PersonBackgroundRelation>[
+    for (final type in types)
+      for (final row in model.relations?[type] ?? const <Model>[])
+        if (row.name.trim().isNotEmpty)
+          PersonBackgroundRelation(
+            type: type,
+            id: row.id,
+            name: row.name.trim(),
+            description: row.description?.trim() ?? '',
+          ),
+  ];
+  rows.sort((a, b) {
+    final typeCompare = a.type.compareTo(b.type);
+    if (typeCompare != 0) return typeCompare;
+    return a.name.compareTo(b.name);
+  });
+  return rows;
 }
 
 List<String> _actualMeetingNames(Model model) {

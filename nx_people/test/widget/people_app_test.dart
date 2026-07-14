@@ -6,9 +6,11 @@ import 'package:nx_people/app.dart';
 import 'package:nx_people/data/auth/people_auth_controller.dart';
 import 'package:nx_people/data/fake_people_repository.dart';
 import 'package:nx_people/data/providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size) async {
+    SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -52,6 +54,52 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('TIMELINE AND MEETINGS'), findsOneWidget);
+  });
+
+  testWidgets('desktop resolves and creates LinkedIn suggestions', (
+    tester,
+  ) async {
+    await pumpApp(tester, const Size(1200, 800));
+
+    await tester.tap(find.text('Background'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('LINKEDIN SUGGESTIONS'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Product Lead'), findsWidgets);
+    expect(find.text('Northstar Labs'), findsWidgets);
+    expect(find.text('WORK'), findsNothing);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('suggestions-toggle')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('suggestions-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('WORK'), findsOneWidget);
+    expect(find.text('EDUCATION'), findsWidgets);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('suggestion-use-work-0-301')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('suggestion-use-work-0-301')));
+    await tester.pumpAndSettle();
+    expect(find.text('Resolved to Northstar Labs'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('suggestion-create-education-0')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('suggestion-create-education-0')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Created Stanford University'), findsOneWidget);
   });
 
   testWidgets('people search filters across the repository', (tester) async {
@@ -101,7 +149,10 @@ void main() {
   testWidgets('mobile adds a person from people tab', (tester) async {
     await pumpApp(tester, const Size(390, 844));
 
-    await tester.tap(find.byKey(const ValueKey('people-add-button')));
+    expect(find.byKey(const ValueKey('people-add-button')), findsNothing);
+    expect(find.byKey(const ValueKey('people-logout-button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('people-add-fab')));
     await tester.pumpAndSettle();
 
     expect(find.text('Add Person'), findsOneWidget);
@@ -124,6 +175,17 @@ void main() {
     expect(find.text('Add Person'), findsNothing);
     expect(find.text('Jane Doe'), findsOneWidget);
     expect(find.text('Quiet Ventures'), findsOneWidget);
+  });
+
+  testWidgets('mobile top action logs out', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.byKey(const ValueKey('people-logout-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('nx_people'), findsOneWidget);
+    expect(find.text('Log In'), findsOneWidget);
+    expect(find.byKey(const ValueKey('people-add-fab')), findsNothing);
   });
 
   testWidgets('mobile edits a person from profile detail', (tester) async {
@@ -154,7 +216,10 @@ void main() {
     expect(find.text('Edit Person'), findsNothing);
     expect(find.text('Sarah Chen Updated'), findsOneWidget);
     expect(find.text('Northstar Labs Updated'), findsOneWidget);
-    expect(find.text('Updated relationship notes.'), findsOneWidget);
+    expect(
+      find.textContaining('Updated relationship notes.', findRichText: true),
+      findsOneWidget,
+    );
   });
 
   testWidgets('meetings tab shows date agenda and opens person detail', (
@@ -191,6 +256,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('PROFILE'), findsOneWidget);
+    expect(find.text('Activity'), findsOneWidget);
+    expect(find.text('Background'), findsOneWidget);
+
+    await tester.tap(find.text('Background'));
+    await tester.pumpAndSettle();
+    expect(find.text('EXPERIENCE'), findsOneWidget);
+    expect(find.text('EDUCATION'), findsWidgets);
+    expect(find.text('NEXT ACTION'), findsNothing);
+
+    await tester.tap(find.text('Activity'));
+    await tester.pumpAndSettle();
     expect(find.text('NEXT ACTION'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('TIMELINE AND MEETINGS'),

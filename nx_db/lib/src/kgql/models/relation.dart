@@ -7,6 +7,8 @@ class Relation {
   final String modelType;
   final String? name;
   final String? description;
+  final String? relationName;
+  final String? relationDescription;
 
   /// For self-type edges only (`from_model_type_id == to_model_type_id`): `'parent'`
   /// or `'child'` relative to the fetched model. Null for cross-type relations.
@@ -21,6 +23,8 @@ class Relation {
     required this.modelType,
     this.name,
     this.description,
+    this.relationName,
+    this.relationDescription,
     this.relation,
     this.relationAttributes,
   });
@@ -37,6 +41,12 @@ class Relation {
           'Unknown',
       name: parseOptionalStringField(json['name']),
       description: parseOptionalStringField(json['description']),
+      relationName: parseOptionalStringField(
+        json['relation_name'] ?? json['relationName'],
+      ),
+      relationDescription: parseOptionalStringField(
+        json['relation_description'] ?? json['relationDescription'],
+      ),
       relation: parseOptionalStringField(json['relation']),
       relationAttributes: _parseRelationAttributes(json),
     );
@@ -75,6 +85,9 @@ class Relation {
       'model_type': modelType,
       'name': name,
       'description': description,
+      if (relationName != null) 'relation_name': relationName,
+      if (relationDescription != null)
+        'relation_description': relationDescription,
       if (relation != null) 'relation': relation,
       if (relationAttributes != null) 'relation_attributes': relationAttributes,
     };
@@ -92,6 +105,9 @@ class RelationshipType {
   /// Multiplicity: defaults to 'many'
   final String? multiplicity;
 
+  /// Semantic name for this relationship type, e.g. `work_for`.
+  final String? relationName;
+
   /// Optional description
   final String? description;
 
@@ -105,6 +121,7 @@ class RelationshipType {
     this.id,
     this.link,
     this.multiplicity,
+    this.relationName,
     this.description,
     this.relationAttributeDefinitions,
     this.delete = false,
@@ -135,6 +152,10 @@ class RelationshipType {
       json['multiplicity'] = multiplicity;
     }
 
+    if (relationName != null) {
+      json['relation_name'] = relationName;
+    }
+
     if (description != null) {
       json['description'] = description;
     }
@@ -151,12 +172,14 @@ class RelationshipType {
   factory RelationshipType.fromId(
     int targetModelTypeId, {
     String? multiplicity,
+    String? relationName,
     String? description,
     List<RelationAttributeDefinition>? relationAttributeDefinitions,
   }) {
     return RelationshipType(
       link: targetModelTypeId,
       multiplicity: multiplicity,
+      relationName: relationName,
       description: description,
       relationAttributeDefinitions: relationAttributeDefinitions,
       delete: false,
@@ -167,12 +190,14 @@ class RelationshipType {
   factory RelationshipType.fromName(
     String targetModelTypeName, {
     String? multiplicity,
+    String? relationName,
     String? description,
     List<RelationAttributeDefinition>? relationAttributeDefinitions,
   }) {
     return RelationshipType(
       link: targetModelTypeName,
       multiplicity: multiplicity,
+      relationName: relationName,
       description: description,
       relationAttributeDefinitions: relationAttributeDefinitions,
       delete: false,

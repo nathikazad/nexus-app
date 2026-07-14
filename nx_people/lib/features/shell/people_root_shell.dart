@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_people/core/layout/is_desktop_layout.dart';
 import 'package:nx_people/core/theme/app_theme.dart';
 import 'package:nx_people/data/providers.dart';
@@ -57,6 +58,16 @@ class PeopleRootShell extends ConsumerWidget {
             : _MobileWorkspace(section: workspace.section),
       ),
       bottomNavigationBar: desktop ? null : const _BottomTabs(),
+      floatingActionButton:
+          !desktop && workspace.section == PeopleAppSection.people
+          ? FloatingActionButton(
+              key: const ValueKey('people-add-fab'),
+              onPressed: () => _showPersonForm(context),
+              tooltip: 'Add person',
+              child: const Icon(Icons.add),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
@@ -286,9 +297,13 @@ class _PeopleList extends ConsumerWidget {
       children: <Widget>[
         _ViewHeader(
           title: 'People',
-          actionIcon: Icons.add,
-          actionKey: const ValueKey('people-add-button'),
-          onActionPressed: () => _showPersonForm(context),
+          actionIcon: fullHeight ? Icons.logout : Icons.add,
+          actionKey: fullHeight
+              ? const ValueKey('people-logout-button')
+              : const ValueKey('people-add-button'),
+          onActionPressed: fullHeight
+              ? () => ref.read(authProvider.notifier).logout()
+              : () => _showPersonForm(context),
           child: Row(
             children: <Widget>[
               Expanded(
@@ -575,18 +590,35 @@ class _ProfileTopBar extends ConsumerWidget {
   }
 }
 
-class _PersonDetail extends StatelessWidget {
+class _PersonDetail extends StatefulWidget {
   const _PersonDetail({required this.person, required this.desktop});
 
   final Person person;
   final bool desktop;
 
   @override
+  State<_PersonDetail> createState() => _PersonDetailState();
+}
+
+class _PersonDetailState extends State<_PersonDetail> {
+  _ProfileDetailTab _selectedTab = _ProfileDetailTab.activity;
+
+  @override
+  void didUpdateWidget(covariant _PersonDetail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.person.id != widget.person.id) {
+      _selectedTab = _ProfileDetailTab.activity;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final person = widget.person;
+    final desktop = widget.desktop;
     return ListView(
       padding: EdgeInsets.fromLTRB(
         desktop ? 44 : 22,
-        28,
+        desktop ? 28 : 22,
         desktop ? 44 : 22,
         80,
       ),
@@ -597,77 +629,16 @@ class _PersonDetail extends StatelessWidget {
               ? () => _showPersonForm(context, person: person)
               : null,
         ),
-        const SizedBox(height: 24),
-        _DividerBand(
-          left: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final tag in person.tags.take(4)) _TinyChip(tag),
-            ],
-          ),
-          right: const Wrap(
-            spacing: 8,
-            children: <Widget>[
-              _IconBox(icon: Icons.mail_outline),
-              _IconBox(icon: Icons.phone_outlined),
-              _IconBox(icon: Icons.link_outlined),
-            ],
-          ),
+        SizedBox(height: desktop ? 20 : 14),
+        _ProfileTabBar(
+          selected: _selectedTab,
+          onSelected: (tab) => setState(() => _selectedTab = tab),
         ),
-        const SizedBox(height: 26),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final twoColumn = constraints.maxWidth > 560;
-            final children = <Widget>[
-              _NextActionCard(person: person),
-              _ActiveFunnelCard(person: person),
-            ];
-            if (!twoColumn) {
-              return Column(
-                children: <Widget>[
-                  for (final child in children)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: child,
-                    ),
-                ],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                for (final child in children) ...<Widget>[
-                  Expanded(child: child),
-                  if (child != children.last) const SizedBox(width: 16),
-                ],
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 28),
-        _DetailSection(
-          icon: Icons.history,
-          title: 'Timeline and meetings',
-          child: Column(
-            children: <Widget>[
-              for (final log in person.logs)
-                _TimelineRow(
-                  label: log.time,
-                  title: log.time == 'Today'
-                      ? 'Today note'
-                      : 'Relationship note',
-                  body: log.body,
-                ),
-              for (final meeting in person.meetings.take(2))
-                _TimelineRow(
-                  label: 'Meeting',
-                  title: meeting,
-                  body: 'Conversation with ${person.name}.',
-                ),
-            ],
-          ),
-        ),
+        SizedBox(height: desktop ? 24 : 18),
+        if (_selectedTab == _ProfileDetailTab.background)
+          _BackgroundContent(person: person, desktop: desktop)
+        else
+          _ActivityContent(person: person, desktop: desktop),
       ],
     );
   }
@@ -681,69 +652,715 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _PersonAvatar(person: person, size: 78),
-        const SizedBox(width: 18),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                person.name,
-                style: const TextStyle(
-                  fontSize: 28,
-                  height: 1.1,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        final identity = Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _PersonAvatar(person: person, size: compact ? 64 : 78),
+            SizedBox(width: compact ? 14 : 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    person.role,
-                    style: const TextStyle(color: AppColors.muted),
+                    person.name,
+                    style: TextStyle(
+                      fontSize: compact ? 24 : 28,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  const _SmallDot(),
-                  Text(
-                    person.company,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const _SmallDot(),
-                  Text(
-                    person.location,
-                    style: const TextStyle(color: AppColors.muted),
+                  const SizedBox(height: 7),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        person.role,
+                        style: const TextStyle(color: AppColors.muted),
+                      ),
+                      if (person.company.trim().isNotEmpty) ...<Widget>[
+                        const _SmallDot(),
+                        Text(
+                          person.company,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                      if (person.location.trim().isNotEmpty) ...<Widget>[
+                        const _SmallDot(),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 15,
+                              color: AppColors.faint,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              person.location,
+                              style: const TextStyle(color: AppColors.muted),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                person.summary,
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 14,
-                  height: 1.45,
-                ),
+            ),
+          ],
+        );
+
+        final details = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _ProfileStatement(label: 'Summary', body: person.summary),
+            const SizedBox(height: 8),
+            _ProfileStatement(
+              label: 'Looking for',
+              body: _personLookingFor(person),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                for (final tag in person.tags.take(4)) _TinyChip(tag),
+                const _AddTagChip(),
+              ],
+            ),
+          ],
+        );
+
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(child: identity),
+                  if (onEdit != null) ...<Widget>[
+                    const SizedBox(width: 8),
+                    IconButton.outlined(
+                      key: ValueKey('person-edit-button-${person.id}'),
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: 'Edit person',
+                    ),
+                  ],
+                ],
               ),
+              const SizedBox(height: 16),
+              details,
+              const SizedBox(height: 14),
+              _ContactActions(person: person),
             ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  identity,
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 96),
+                    child: details,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 18),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                _ContactActions(person: person),
+                if (onEdit != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: ValueKey('person-edit-button-${person.id}'),
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 17),
+                    label: const Text('Edit'),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProfileStatement extends StatelessWidget {
+  const _ProfileStatement({required this.label, required this.body});
+
+  final String label;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        ),
-        if (onEdit != null) ...<Widget>[
-          const SizedBox(width: 12),
-          IconButton.outlined(
-            key: ValueKey('person-edit-button-${person.id}'),
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            tooltip: 'Edit person',
-          ),
+          TextSpan(text: body),
         ],
+      ),
+      style: const TextStyle(
+        color: AppColors.muted,
+        fontSize: 14,
+        height: 1.45,
+      ),
+    );
+  }
+}
+
+class _ContactActions extends StatelessWidget {
+  const _ContactActions({required this.person});
+
+  final Person person;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: <Widget>[
+        _IconBox(icon: Icons.mail_outline, tooltip: person.email),
+        _IconBox(icon: Icons.phone_outlined, tooltip: person.phone),
+        const _IconBox(icon: Icons.link_outlined, tooltip: 'Open links'),
       ],
     );
   }
+}
+
+class _AddTagChip extends StatelessWidget {
+  const _AddTagChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.lineStrong),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.add, size: 14, color: AppColors.faint),
+          SizedBox(width: 4),
+          Text(
+            'Add tag',
+            style: TextStyle(
+              color: AppColors.faint,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTabBar extends StatelessWidget {
+  const _ProfileTabBar({required this.selected, required this.onSelected});
+
+  final _ProfileDetailTab selected;
+  final ValueChanged<_ProfileDetailTab> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: Row(
+        children: <Widget>[
+          _ProfileTabButton(
+            label: 'Activity',
+            selected: selected == _ProfileDetailTab.activity,
+            onTap: () => onSelected(_ProfileDetailTab.activity),
+          ),
+          const SizedBox(width: 22),
+          _ProfileTabButton(
+            label: 'Background',
+            selected: selected == _ProfileDetailTab.background,
+            onTap: () => onSelected(_ProfileDetailTab.background),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTabButton extends StatelessWidget {
+  const _ProfileTabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? AppColors.text : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppColors.text : AppColors.faint,
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityContent extends StatelessWidget {
+  const _ActivityContent({required this.person, required this.desktop});
+
+  final Person person;
+  final bool desktop;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final split = desktop && constraints.maxWidth > 760;
+        if (split) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: _TimelineAndMeetingsSection(person: person)),
+              const SizedBox(width: 24),
+              SizedBox(
+                width: 300,
+                child: Column(
+                  children: <Widget>[
+                    _NextActionCard(person: person),
+                    const SizedBox(height: 14),
+                    _ActiveFunnelCard(person: person),
+                    const SizedBox(height: 14),
+                    _UpcomingMeetingCard(person: person),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: <Widget>[
+            _NextActionCard(person: person),
+            const SizedBox(height: 14),
+            _ActiveFunnelCard(person: person),
+            const SizedBox(height: 14),
+            _UpcomingMeetingCard(person: person),
+            const SizedBox(height: 26),
+            _TimelineAndMeetingsSection(person: person),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TimelineAndMeetingsSection extends StatelessWidget {
+  const _TimelineAndMeetingsSection({required this.person});
+
+  final Person person;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[
+      for (final planned in person.planned.take(2))
+        _TimelineRow(
+          label: 'Planned check-in',
+          title: planned,
+          body: 'Upcoming conversation with ${person.name}.',
+        ),
+      for (final log in person.logs)
+        _TimelineRow(
+          label: log.time,
+          title: log.time == 'Today' ? 'Today note' : 'Relationship note',
+          body: log.body,
+        ),
+      for (final meeting in person.meetings.take(2))
+        _TimelineRow(
+          label: 'Meeting',
+          title: meeting,
+          body: 'Conversation with ${person.name}.',
+        ),
+    ];
+
+    return _DetailSection(
+      icon: Icons.history,
+      title: 'Timeline and meetings',
+      child: rows.isEmpty
+          ? const _EmptyPanel(
+              title: 'No relationship history yet',
+              body:
+                  'Notes, meetings, and follow-ups will appear here as you interact.',
+            )
+          : Column(children: rows),
+    );
+  }
+}
+
+class _UpcomingMeetingCard extends StatelessWidget {
+  const _UpcomingMeetingCard({required this.person});
+
+  final Person person;
+
+  @override
+  Widget build(BuildContext context) {
+    final planned = person.planned.firstOrNull;
+    final recent = person.meetings.firstOrNull;
+    final hasPlanned = planned != null && planned.trim().isNotEmpty;
+    final title = hasPlanned
+        ? planned
+        : recent != null && recent.trim().isNotEmpty
+        ? recent
+        : 'No meeting scheduled';
+    final body = hasPlanned
+        ? 'Upcoming check-in with ${person.name}.'
+        : recent != null && recent.trim().isNotEmpty
+        ? 'Most recent meeting with ${person.name}.'
+        : 'Add a meeting when there is a live touchpoint.';
+
+    return _InfoPanel(
+      icon: Icons.calendar_today_outlined,
+      title: hasPlanned ? 'Upcoming meeting' : 'Meetings',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 13,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackgroundContent extends StatelessWidget {
+  const _BackgroundContent({required this.person, required this.desktop});
+
+  final Person person;
+  final bool desktop;
+
+  @override
+  Widget build(BuildContext context) {
+    final experience = _experienceEntries(person);
+    final education = _educationEntries(person);
+    final skills = _backgroundSkills(person);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final split = desktop && constraints.maxWidth > 760;
+        final background = split
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    flex: 2,
+                    child: _BackgroundListSection(
+                      icon: Icons.business_outlined,
+                      title: 'Experience',
+                      entries: experience,
+                      emptyTitle: 'No work relations yet',
+                      emptyBody:
+                          'Company relations will appear here once they are linked.',
+                    ),
+                  ),
+                  const SizedBox(width: 28),
+                  Expanded(
+                    child: Column(
+                      children: <Widget>[
+                        _BackgroundListSection(
+                          icon: Icons.school_outlined,
+                          title: 'Education',
+                          entries: education,
+                          emptyTitle: 'No education relations yet',
+                          emptyBody:
+                              'School or education relations will appear here once they are linked.',
+                        ),
+                        const SizedBox(height: 24),
+                        _SkillsSection(skills: skills),
+                        const SizedBox(height: 24),
+                        _LinksSection(person: person),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                children: <Widget>[
+                  _BackgroundListSection(
+                    icon: Icons.business_outlined,
+                    title: 'Experience',
+                    entries: experience,
+                    emptyTitle: 'No work relations yet',
+                    emptyBody:
+                        'Company relations will appear here once they are linked.',
+                  ),
+                  const SizedBox(height: 24),
+                  _BackgroundListSection(
+                    icon: Icons.school_outlined,
+                    title: 'Education',
+                    entries: education,
+                    emptyTitle: 'No education relations yet',
+                    emptyBody:
+                        'School or education relations will appear here once they are linked.',
+                  ),
+                  const SizedBox(height: 24),
+                  _SkillsSection(skills: skills),
+                  const SizedBox(height: 24),
+                  _LinksSection(person: person),
+                ],
+              );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            background,
+            if (!person.suggestions.isEmpty) ...<Widget>[
+              const SizedBox(height: 28),
+              _SuggestionReviewSection(person: person),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BackgroundListSection extends StatelessWidget {
+  const _BackgroundListSection({
+    required this.icon,
+    required this.title,
+    required this.entries,
+    required this.emptyTitle,
+    required this.emptyBody,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<_BackgroundEntry> entries;
+  final String emptyTitle;
+  final String emptyBody;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      icon: icon,
+      title: title,
+      child: entries.isEmpty
+          ? _EmptyPanel(title: emptyTitle, body: emptyBody)
+          : Column(
+              children: <Widget>[
+                for (final entry in entries) _BackgroundEntryRow(entry: entry),
+              ],
+            ),
+    );
+  }
+}
+
+class _BackgroundEntryRow extends StatelessWidget {
+  const _BackgroundEntryRow({required this.entry});
+
+  final _BackgroundEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.hover,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(entry.icon, size: 18, color: AppColors.muted),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  entry.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (entry.subtitle.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    entry.subtitle,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+                if (entry.body.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 7),
+                  Text(
+                    entry.body,
+                    style: const TextStyle(
+                      color: AppColors.faint,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkillsSection extends StatelessWidget {
+  const _SkillsSection({required this.skills});
+
+  final List<String> skills;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      icon: Icons.auto_awesome_outlined,
+      title: 'Skills and domains',
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: <Widget>[for (final skill in skills) _TinyChip(skill)],
+      ),
+    );
+  }
+}
+
+class _LinksSection extends StatelessWidget {
+  const _LinksSection({required this.person});
+
+  final Person person;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <_LinkRowData>[
+      if (person.email.trim().isNotEmpty)
+        _LinkRowData(Icons.mail_outline, person.email),
+      if (person.phone.trim().isNotEmpty)
+        _LinkRowData(Icons.phone_outlined, person.phone),
+      if (person.company.trim().isNotEmpty)
+        _LinkRowData(Icons.business_outlined, person.company),
+    ];
+
+    return _DetailSection(
+      icon: Icons.link_outlined,
+      title: 'Links',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Row(
+                children: <Widget>[
+                  Icon(row.icon, size: 16, color: AppColors.faint),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      row.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackgroundEntry {
+  const _BackgroundEntry({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String body;
+}
+
+class _LinkRowData {
+  const _LinkRowData(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
 }
 
 class _NextActionCard extends StatelessWidget {
@@ -848,6 +1465,467 @@ class _ActiveFunnelCard extends StatelessWidget {
                   ),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestionReviewSection extends ConsumerStatefulWidget {
+  const _SuggestionReviewSection({required this.person});
+
+  final Person person;
+
+  @override
+  ConsumerState<_SuggestionReviewSection> createState() =>
+      _SuggestionReviewSectionState();
+}
+
+class _SuggestionReviewSectionState
+    extends ConsumerState<_SuggestionReviewSection> {
+  String? _busyKey;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final suggestions = widget.person.suggestions;
+    final count = suggestions.work.length + suggestions.education.length;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.panel,
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: <Widget>[
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey('suggestions-toggle'),
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(
+                      Icons.auto_awesome_outlined,
+                      size: 16,
+                      color: AppColors.muted,
+                    ),
+                    const SizedBox(width: 7),
+                    const Expanded(
+                      child: Text(
+                        'LINKEDIN SUGGESTIONS',
+                        style: TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    _TinyChip('$count'),
+                    const SizedBox(width: 8),
+                    Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: AppColors.faint,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+                  if (suggestions.work.isNotEmpty)
+                    _SuggestionGroup(
+                      title: 'Work',
+                      children: <Widget>[
+                        for (
+                          var index = 0;
+                          index < suggestions.work.length;
+                          index++
+                        )
+                          _SuggestionCard(
+                            key: ValueKey('suggestion-work-$index'),
+                            kind: PersonSuggestionKind.work,
+                            index: index,
+                            organization:
+                                suggestions.work[index].organizationName,
+                            detail: suggestions.work[index].detail,
+                            dateRange: _suggestionDateRange(
+                              suggestions.work[index].startDate,
+                              suggestions.work[index].endDate,
+                            ),
+                            notes: suggestions.work[index].notes,
+                            candidates: suggestions.work[index].candidates,
+                            selected: suggestions.work[index].selected,
+                            busyKey: _busyKey,
+                            onUseCandidate: _useCandidate,
+                            onCreateCompany: _createCompany,
+                          ),
+                      ],
+                    ),
+                  if (suggestions.work.isNotEmpty &&
+                      suggestions.education.isNotEmpty)
+                    const SizedBox(height: 14),
+                  if (suggestions.education.isNotEmpty)
+                    _SuggestionGroup(
+                      title: 'Education',
+                      children: <Widget>[
+                        for (
+                          var index = 0;
+                          index < suggestions.education.length;
+                          index++
+                        )
+                          _SuggestionCard(
+                            key: ValueKey('suggestion-education-$index'),
+                            kind: PersonSuggestionKind.education,
+                            index: index,
+                            organization:
+                                suggestions.education[index].organizationName,
+                            detail: suggestions.education[index].detail,
+                            dateRange: _suggestionDateRange(
+                              suggestions.education[index].startDate,
+                              suggestions.education[index].endDate,
+                            ),
+                            notes: suggestions.education[index].notes,
+                            candidates: suggestions.education[index].candidates,
+                            selected: suggestions.education[index].selected,
+                            busyKey: _busyKey,
+                            onUseCandidate: _useCandidate,
+                            onCreateCompany: _createCompany,
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _useCandidate(
+    PersonSuggestionKind kind,
+    int index,
+    PersonSuggestionCandidate candidate,
+  ) async {
+    final key = 'use-${kind.jsonKey}-$index-${candidate.id}';
+    await _runSuggestionAction(
+      key,
+      () => ref
+          .read(peopleRepositoryProvider)
+          .resolveOrganizationSuggestion(
+            personId: widget.person.id,
+            kind: kind,
+            suggestionIndex: index,
+            selected: PersonSuggestionResolution(
+              id: candidate.id,
+              name: candidate.name,
+              source: 'existing',
+            ),
+          ),
+      'Resolved to ${candidate.name}.',
+    );
+  }
+
+  Future<void> _createCompany(
+    PersonSuggestionKind kind,
+    int index,
+    String name,
+  ) async {
+    final key = 'create-${kind.jsonKey}-$index';
+    await _runSuggestionAction(key, () async {
+      await ref
+          .read(peopleRepositoryProvider)
+          .createCompanyForSuggestion(
+            personId: widget.person.id,
+            kind: kind,
+            suggestionIndex: index,
+            name: name,
+          );
+    }, 'Created $name.');
+  }
+
+  Future<void> _runSuggestionAction(
+    String key,
+    Future<void> Function() action,
+    String successMessage,
+  ) async {
+    if (_busyKey != null) return;
+    setState(() => _busyKey = key);
+    try {
+      await action();
+      if (!mounted) return;
+      _invalidatePeopleData(ref, personId: widget.person.id);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Suggestion update failed: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _busyKey = null);
+    }
+  }
+}
+
+class _SuggestionGroup extends StatelessWidget {
+  const _SuggestionGroup({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _SectionLabel(title),
+        const SizedBox(height: 10),
+        for (final child in children) ...<Widget>[
+          child,
+          if (child != children.last) const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
+
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard({
+    super.key,
+    required this.kind,
+    required this.index,
+    required this.organization,
+    required this.detail,
+    required this.dateRange,
+    required this.notes,
+    required this.candidates,
+    required this.selected,
+    required this.busyKey,
+    required this.onUseCandidate,
+    required this.onCreateCompany,
+  });
+
+  final PersonSuggestionKind kind;
+  final int index;
+  final String organization;
+  final String detail;
+  final String dateRange;
+  final String notes;
+  final List<PersonSuggestionCandidate> candidates;
+  final PersonSuggestionResolution? selected;
+  final String? busyKey;
+  final Future<void> Function(
+    PersonSuggestionKind kind,
+    int index,
+    PersonSuggestionCandidate candidate,
+  )
+  onUseCandidate;
+  final Future<void> Function(PersonSuggestionKind kind, int index, String name)
+  onCreateCompany;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = selected?.isValid ?? false;
+    final subtitle = [
+      detail,
+      dateRange,
+    ].where((value) => value.trim().isNotEmpty).join(' • ');
+    final createKey = 'create-${kind.jsonKey}-$index';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.panel,
+        border: Border.all(
+          color: resolved
+              ? AppColors.green.withValues(alpha: 0.42)
+              : AppColors.line,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      organization.isEmpty
+                          ? 'Unknown organization'
+                          : organization,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _TinyChip(kind.label),
+            ],
+          ),
+          if (notes.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              notes,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (resolved)
+            _ResolvedSuggestionChip(selected: selected!)
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final maxButtonWidth = constraints.maxWidth < 360
+                    ? constraints.maxWidth
+                    : 290.0;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    for (final candidate in candidates)
+                      _SuggestionActionButton(
+                        key: ValueKey(
+                          'suggestion-use-${kind.jsonKey}-$index-${candidate.id}',
+                        ),
+                        icon: Icons.check_circle_outline,
+                        label: '${candidate.name} (${candidate.percentage}%)',
+                        maxWidth: maxButtonWidth,
+                        loading:
+                            busyKey ==
+                            'use-${kind.jsonKey}-$index-${candidate.id}',
+                        onPressed: busyKey == null
+                            ? () => onUseCandidate(kind, index, candidate)
+                            : null,
+                      ),
+                    _SuggestionActionButton(
+                      key: ValueKey('suggestion-create-${kind.jsonKey}-$index'),
+                      icon: Icons.add_business_outlined,
+                      label:
+                          'Create ${organization.isEmpty ? 'Company' : organization}',
+                      maxWidth: maxButtonWidth,
+                      loading: busyKey == createKey,
+                      onPressed: busyKey == null && organization.isNotEmpty
+                          ? () => onCreateCompany(kind, index, organization)
+                          : null,
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestionActionButton extends StatelessWidget {
+  const _SuggestionActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.maxWidth,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final double maxWidth;
+  final bool loading;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: loading
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon, size: 17),
+      label: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth - 48),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+    );
+  }
+}
+
+class _ResolvedSuggestionChip extends StatelessWidget {
+  const _ResolvedSuggestionChip({required this.selected});
+
+  final PersonSuggestionResolution selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final created = selected.source == 'created';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.resultHover,
+        border: Border.all(color: AppColors.green.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const Icon(
+            Icons.check_circle_outline,
+            size: 16,
+            color: AppColors.green,
+          ),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              '${created ? 'Created' : 'Resolved to'} ${selected.name}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.green,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
@@ -2269,30 +3347,6 @@ class _TimelineRow extends StatelessWidget {
   }
 }
 
-class _DividerBand extends StatelessWidget {
-  const _DividerBand({required this.left, required this.right});
-
-  final Widget left;
-  final Widget right;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: const BoxDecoration(
-        border: Border.symmetric(horizontal: BorderSide(color: AppColors.line)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(child: left),
-          const SizedBox(width: 12),
-          right,
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyDetail extends StatelessWidget {
   const _EmptyDetail();
 
@@ -2449,7 +3503,7 @@ String? _resolvePersonImageUrl(String rawUrl, String? baseUrl) {
   if (parsed == null) return null;
 
   if (!parsed.hasScheme) {
-    return base == null ? null : base.resolve(trimmed).toString();
+    return base?.resolve(trimmed).toString();
   }
 
   if (base != null && parsed.path.startsWith('/person_image_files/')) {
@@ -2509,13 +3563,14 @@ class _TinyChip extends StatelessWidget {
 }
 
 class _IconBox extends StatelessWidget {
-  const _IconBox({required this.icon});
+  const _IconBox({required this.icon, this.tooltip});
 
   final IconData icon;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final box = Container(
       width: 34,
       height: 34,
       alignment: Alignment.center,
@@ -2525,6 +3580,9 @@ class _IconBox extends StatelessWidget {
       ),
       child: Icon(icon, color: AppColors.muted, size: 17),
     );
+    final message = tooltip?.trim() ?? '';
+    if (message.isEmpty) return box;
+    return Tooltip(message: message, child: box);
   }
 }
 
@@ -2678,6 +3736,8 @@ class _SummaryCell {
   final String label;
 }
 
+enum _ProfileDetailTab { activity, background }
+
 enum _AgendaKind { meeting, checkIn }
 
 class _AgendaItem {
@@ -2726,6 +3786,116 @@ String? _personListTimestamp(Person person) {
   final updatedAt = _compactUpdatedAt(person.updatedAt);
   if (updatedAt.isEmpty) return null;
   return updatedAt;
+}
+
+String _personLookingFor(Person person) {
+  final tags = person.tags.map((tag) => tag.toLowerCase()).toSet();
+  final role = person.role.toLowerCase();
+  final status = person.status.toLowerCase();
+  if (tags.contains('investor')) {
+    return 'Concise updates, clear momentum, and credible founder context.';
+  }
+  if (role.contains('founder')) {
+    return 'Useful operators, practical customer insight, and low-friction collaboration.';
+  }
+  if (role.contains('product')) {
+    return 'Sharp product problems, honest workflow feedback, and practical prototypes.';
+  }
+  if (role.contains('design')) {
+    return 'Clear interaction details, polished states, and thoughtful mobile behavior.';
+  }
+  if (role.contains('engineer')) {
+    return 'Strong technical context, high-agency teams, and infrastructure problems worth solving.';
+  }
+  if (status.contains('follow')) {
+    return 'A concrete next step and a useful reason to reconnect.';
+  }
+  return 'Relevant context, warm introductions, and a useful reason to reconnect.';
+}
+
+List<_BackgroundEntry> _experienceEntries(Person person) {
+  return [
+    for (final relation in person.workRelations)
+      _workBackgroundEntry(person, relation),
+  ];
+}
+
+List<_BackgroundEntry> _educationEntries(Person person) {
+  return [
+    for (final relation in person.educationRelations)
+      _BackgroundEntry(
+        icon: Icons.school_outlined,
+        title: relation.name,
+        subtitle: _backgroundRelationValue(relation, 'type') ?? relation.type,
+        body: _backgroundRelationBody(relation),
+      ),
+  ];
+}
+
+String _relationBackedWorkTitle(
+  Person person,
+  PersonBackgroundRelation relation,
+) {
+  final relationTitle = _backgroundRelationValue(relation, 'title');
+  if (relationTitle != null) return relationTitle;
+  final role = person.role.trim();
+  final currentCompany = person.company.trim().toLowerCase();
+  if (role.isNotEmpty && relation.name.toLowerCase() == currentCompany) {
+    return role;
+  }
+  return relation.name;
+}
+
+_BackgroundEntry _workBackgroundEntry(
+  Person person,
+  PersonBackgroundRelation relation,
+) {
+  final title = _relationBackedWorkTitle(person, relation);
+  return _BackgroundEntry(
+    icon: Icons.business_outlined,
+    title: title,
+    subtitle: title == relation.name ? relation.type : relation.name,
+    body: _backgroundRelationBody(relation),
+  );
+}
+
+String _backgroundRelationBody(PersonBackgroundRelation relation) {
+  final description = relation.description.trim();
+  if (description.isNotEmpty) return description;
+  final parts = <String>[
+    if (_suggestionDateRange(
+      _backgroundRelationValue(relation, 'start_date') ?? '',
+      _backgroundRelationValue(relation, 'end_date'),
+    ).isNotEmpty)
+      _suggestionDateRange(
+        _backgroundRelationValue(relation, 'start_date') ?? '',
+        _backgroundRelationValue(relation, 'end_date'),
+      ),
+    if (_backgroundRelationValue(relation, 'notes') case final notes?) notes,
+  ];
+  return parts.join(' • ');
+}
+
+String? _backgroundRelationValue(
+  PersonBackgroundRelation relation,
+  String key,
+) {
+  final value = relation.attributes[key]?.toString().trim();
+  return value == null || value.isEmpty ? null : value;
+}
+
+List<String> _backgroundSkills(Person person) {
+  final skills = <String>[
+    ...person.tags,
+    if (person.role.trim().isNotEmpty) person.role.trim(),
+    if (person.company.trim().isNotEmpty) person.company.trim(),
+  ];
+  final seen = <String>{};
+  return [
+    for (final skill in skills)
+      if (skill.trim().isNotEmpty && seen.add(skill.trim().toLowerCase()))
+        skill.trim(),
+  ].take(8).toList();
 }
 
 bool _isMeaningfulTimestamp(String value) {
@@ -2799,6 +3969,23 @@ List<_AgendaItem> _agendaFor(List<Person> people, int dayOffset) {
           kind: _AgendaKind.meeting,
         ),
   ].take(5).toList();
+}
+
+String _suggestionDateRange(String startDate, String? endDate) {
+  final start = _suggestionDateLabel(startDate);
+  final end = _suggestionDateLabel(endDate);
+  if (start.isEmpty && end.isEmpty) return '';
+  if (start.isEmpty) return end;
+  if (end.isEmpty) return '$start - Present';
+  return '$start - $end';
+}
+
+String _suggestionDateLabel(String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) return '';
+  final parsed = DateTime.tryParse(trimmed);
+  if (parsed == null) return trimmed;
+  return parsed.year.toString();
 }
 
 String _weekday(int weekday) {

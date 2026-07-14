@@ -20,6 +20,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  shared_preferences: ^2.2.2
 
 dependency_overrides:
   connectivity_plus: 6.1.5

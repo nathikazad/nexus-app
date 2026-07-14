@@ -139,6 +139,7 @@ class ModelType {
               link: targetModelTypeName,
               multiplicity: rel['multiplicity'] as String? ??
                   rel['cardinality'] as String?,
+              relationName: rel['relation_name'] as String?,
               description: rel['description'] as String?,
               relationAttributeDefinitions: relationAttributeDefinitions,
             );
