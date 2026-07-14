@@ -31,6 +31,17 @@ const fakeTagSystems = <PeopleTagSystem>[
     tags: <String>['Product', 'Finance', 'Design', 'Remote'],
   ),
   PeopleTagSystem(
+    name: 'General',
+    tags: <String>[
+      'Sales',
+      'Technical',
+      'PCB',
+      'Software Engineer',
+      'Mechanical Engineer',
+    ],
+    hierarchical: true,
+  ),
+  PeopleTagSystem(
     name: 'Location',
     tags: <String>['SF', 'Tbilisi', 'New York'],
   ),
@@ -92,6 +103,27 @@ class FakePeopleRepository implements PersonRepository {
     final index = _people.indexWhere((person) => person.id == id);
     if (index == -1) return;
     _people[index] = _personFromDraft(id, draft, existing: _people[index]);
+  }
+
+  @override
+  Future<void> updatePersonTags(
+    int id,
+    Map<String, List<String>> tagsBySystem,
+  ) async {
+    final index = _people.indexWhere((person) => person.id == id);
+    if (index == -1) return;
+    final person = _people[index];
+    final nextTagsBySystem = _resolvedTagsBySystem(person);
+    for (final entry in tagsBySystem.entries) {
+      nextTagsBySystem[entry.key] = entry.value.toSet().toList()..sort();
+    }
+    nextTagsBySystem.removeWhere((_, tags) => tags.isEmpty);
+    final nextTags =
+        nextTagsBySystem.values.expand((tags) => tags).toSet().toList()..sort();
+    _people[index] = person.copyWith(
+      tags: nextTags,
+      tagsBySystem: nextTagsBySystem,
+    );
   }
 
   @override
@@ -209,7 +241,7 @@ class FakePeopleRepository implements PersonRepository {
       id: id,
       name: draft.name.trim(),
       initials: _initials(draft.name),
-      company: draft.company.trim(),
+      company: existing?.company ?? '',
       role: existing?.role ?? '',
       location: existing?.location ?? '',
       status: existing?.status ?? 'Active',
@@ -221,15 +253,18 @@ class FakePeopleRepository implements PersonRepository {
       email: existing?.email ?? '',
       phone: existing?.phone ?? '',
       tags: existing?.tags ?? const <String>[],
+      tagsBySystem: existing?.tagsBySystem ?? const <String, List<String>>{},
       meetings: existing?.meetings ?? const <String>[],
       planned: existing?.planned ?? const <String>[],
       summary: draft.summary.trim().isEmpty
           ? 'No summary yet.'
           : draft.summary.trim(),
+      desires: draft.desires,
       currentThreads: existing?.currentThreads ?? const <PersonThread>[],
       logs: existing?.logs ?? const <PersonLog>[],
       relatedIds: existing?.relatedIds ?? const <int>[],
       imageUrl: existing?.imageUrl ?? '',
+      contacts: existing?.contacts ?? const <PersonContact>[],
       workRelations:
           existing?.workRelations ?? const <PersonBackgroundRelation>[],
       educationRelations:
@@ -237,6 +272,23 @@ class FakePeopleRepository implements PersonRepository {
       suggestions: existing?.suggestions ?? PersonSuggestions.empty,
     );
   }
+}
+
+Map<String, List<String>> _resolvedTagsBySystem(Person person) {
+  if (person.tagsBySystem.isNotEmpty) {
+    return {
+      for (final entry in person.tagsBySystem.entries)
+        entry.key: entry.value.toSet().toList()..sort(),
+    };
+  }
+  return {
+    for (final system in fakeTagSystems)
+      if (person.tags.any(system.tags.contains))
+        system.name: [
+          for (final tag in person.tags)
+            if (system.tags.contains(tag)) tag,
+        ]..sort(),
+  };
 }
 
 PersonBackgroundRelation? _backgroundRelationFromSuggestion(
@@ -313,10 +365,19 @@ const _samplePeople = <Person>[
     email: 'sarah@northstar.example',
     phone: '+1 415 555 0182',
     tags: <String>['Product', 'Investor', 'SF', 'Warm'],
+    tagsBySystem: <String, List<String>>{
+      'Relationship': <String>['Investor', 'Warm'],
+      'Context': <String>['Product'],
+      'Location': <String>['SF'],
+    },
     meetings: <String>['Design Sync', 'Investor Intro'],
     planned: <String>['Roadmap Review'],
     summary:
         'Sarah is a product operator with strong taste around internal tools. She is useful for pressure-testing whether a workflow is actually clear or just visually polished.',
+    desires: <String>[
+      'Concise updates',
+      'Warm introductions to strong technical operators',
+    ],
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'Send notes prototype',
@@ -411,10 +472,15 @@ const _samplePeople = <Person>[
     email: 'marcus@atlas.example',
     phone: '+1 212 555 0134',
     tags: <String>['Investor', 'Finance', 'Warm'],
+    tagsBySystem: <String, List<String>>{
+      'Relationship': <String>['Investor', 'Warm'],
+      'Context': <String>['Finance'],
+    },
     meetings: <String>['Investor Intro'],
     planned: <String>['Q2 Check-in'],
     summary:
         'Marcus is focused on founder systems, metrics, and capital allocation. Good person for finance-oriented product framing.',
+    desires: <String>['Clear founder context', 'Evidence of customer pull'],
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'Deck follow-up',
@@ -447,10 +513,18 @@ const _samplePeople = <Person>[
     email: 'anika@quiet.example',
     phone: '+44 20 5555 0191',
     tags: <String>['Founder', 'Product', 'Remote'],
+    tagsBySystem: <String, List<String>>{
+      'Relationship': <String>['Founder'],
+      'Context': <String>['Product', 'Remote'],
+    },
     meetings: <String>['Design Sync'],
     planned: <String>[],
     summary:
         'Anika builds calm operational software. She tends to care about density, keyboard flow, and avoiding dashboard theater.',
+    desires: <String>[
+      'Practical customer insight',
+      'Low-friction collaboration',
+    ],
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'Ask about mobile CRM',
@@ -482,10 +556,15 @@ const _samplePeople = <Person>[
     email: 'maya@nexus.example',
     phone: '+995 555 012 345',
     tags: <String>['Advisor', 'Tbilisi', 'Warm', 'Personal'],
+    tagsBySystem: <String, List<String>>{
+      'Relationship': <String>['Advisor', 'Warm', 'Personal'],
+      'Location': <String>['Tbilisi'],
+    },
     meetings: <String>['Weekly Planning', 'Investor Intro'],
     planned: <String>['Roadmap Review'],
     summary:
         'Maya connects product strategy with day-to-day execution. Usually the best person to ask whether a workflow will survive real use.',
+    desires: <String>['Useful operators', 'Clear next steps'],
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'Review people mockup',
@@ -521,10 +600,14 @@ const _samplePeople = <Person>[
     email: 'daniel@atlas.example',
     phone: '+1 646 555 0147',
     tags: <String>['Finance', 'Dormant'],
+    tagsBySystem: <String, List<String>>{
+      'Context': <String>['Finance'],
+    },
     meetings: <String>['Q1 Portfolio Review'],
     planned: <String>[],
     summary:
         'Daniel tracks portfolio tooling and research workflows. Not urgent, but useful for later finance product interviews.',
+    desires: <String>['Finance-specific product interviews'],
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'No current thread',
@@ -552,10 +635,17 @@ const _samplePeople = <Person>[
     email: 'elena@northstar.example',
     phone: '+1 512 555 0156',
     tags: <String>['Design', 'Product', 'Remote'],
+    tagsBySystem: <String, List<String>>{
+      'Context': <String>['Design', 'Product', 'Remote'],
+    },
     meetings: <String>['Design Sync'],
     planned: <String>['Roadmap Review'],
     summary:
         'Elena is detail-oriented about interaction states, overlays, and mobile adaptation.',
+    desires: <String>[
+      'Polished interaction details',
+      'Thoughtful mobile behavior',
+    ],
     currentThreads: <PersonThread>[
       PersonThread(
         title: 'Overlay question',

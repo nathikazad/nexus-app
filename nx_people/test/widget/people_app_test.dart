@@ -161,20 +161,28 @@ void main() {
       find.byKey(const ValueKey('person-name-field')),
       'Jane Doe',
     );
-    await tester.enterText(
-      find.byKey(const ValueKey('person-company-field')),
-      'Quiet Ventures',
-    );
+    expect(find.byKey(const ValueKey('person-company-field')), findsNothing);
     await tester.enterText(
       find.byKey(const ValueKey('person-summary-field')),
       'Met through the people app redesign.',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('person-desires-field')),
+      'PCB hiring context\nSales introductions',
     );
     await tester.tap(find.byKey(const ValueKey('person-save-button')));
     await tester.pumpAndSettle();
 
     expect(find.text('Add Person'), findsNothing);
     expect(find.text('Jane Doe'), findsOneWidget);
-    expect(find.text('Quiet Ventures'), findsOneWidget);
+
+    await tester.tap(find.text('Jane Doe'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('PCB hiring context', findRichText: true),
+      findsOneWidget,
+    );
   });
 
   testWidgets('mobile top action logs out', (tester) async {
@@ -202,24 +210,55 @@ void main() {
       find.byKey(const ValueKey('person-name-field')),
       'Sarah Chen Updated',
     );
-    await tester.enterText(
-      find.byKey(const ValueKey('person-company-field')),
-      'Northstar Labs Updated',
-    );
+    expect(find.byKey(const ValueKey('person-company-field')), findsNothing);
     await tester.enterText(
       find.byKey(const ValueKey('person-summary-field')),
       'Updated relationship notes.',
     );
+    await tester.enterText(
+      find.byKey(const ValueKey('person-desires-field')),
+      'Software Engineer candidates',
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('person-tag-delete-Location-SF')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('person-tag-delete-Location-SF')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add tag').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sales').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('person-save-button')));
     await tester.pumpAndSettle();
 
     expect(find.text('Edit Person'), findsNothing);
     expect(find.text('Sarah Chen Updated'), findsOneWidget);
-    expect(find.text('Northstar Labs Updated'), findsOneWidget);
     expect(
       find.textContaining('Updated relationship notes.', findRichText: true),
       findsOneWidget,
     );
+    expect(
+      find.textContaining('Software Engineer candidates', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text('Sales'), findsOneWidget);
+    expect(find.text('SF'), findsNothing);
+  });
+
+  testWidgets('profile adds a tag from the main profile page', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.text('Sarah Chen').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add tag'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sales').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sales'), findsOneWidget);
   });
 
   testWidgets('meetings tab shows date agenda and opens person detail', (

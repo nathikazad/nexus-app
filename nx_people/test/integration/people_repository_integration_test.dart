@@ -71,11 +71,6 @@ void main() {
                 key: kPersonAttrEmail,
                 value: 'people.integration@example.com',
               ),
-            if (attrKeys.contains(kPersonAttrSummary))
-              SetModelAttribute(
-                key: kPersonAttrSummary,
-                value: 'Searchable summary for $marker',
-              ),
           ],
           tags: [
             if (statusNode != null)

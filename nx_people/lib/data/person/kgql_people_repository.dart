@@ -82,6 +82,28 @@ class KgqlPeopleRepository implements PersonRepository {
   }
 
   @override
+  Future<void> updatePersonTags(
+    int id,
+    Map<String, List<String>> tagsBySystem,
+  ) async {
+    if (tagsBySystem.isEmpty) return;
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: id,
+        tags: [
+          for (final entry in tagsBySystem.entries)
+            SetModelTag(
+              system: entry.key,
+              nodes: _unique(entry.value),
+              clear: entry.value.isEmpty,
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Future<void> resolveOrganizationSuggestion({
     required int personId,
     required PersonSuggestionKind kind,
@@ -190,7 +212,6 @@ class KgqlPeopleRepository implements PersonRepository {
   @override
   Future<List<PeopleTagSystem>> listTagSystems() async {
     final schema = await _loadPersonSchema();
-    final people = await _listAll();
     return [
       for (final system in schema.tagSystems ?? const <TagSystem>[])
         PeopleTagSystem(
@@ -199,7 +220,7 @@ class KgqlPeopleRepository implements PersonRepository {
           exclusive: system.selectionMode == 'exclusive',
           tags: [
             for (final node in system.nodes)
-              if (_countForTag(people, system.name, node.name) > 0) node.name,
+              for (final name in _tagNodeNames(node)) name,
           ],
         ),
     ].where((system) => system.tags.isNotEmpty).toList();
@@ -240,13 +261,6 @@ class KgqlPeopleRepository implements PersonRepository {
     return rows;
   }
 
-  int _countForTag(List<Person> people, String system, String node) {
-    if (system == kPeopleStatusTagSystem) {
-      return people.where((person) => person.status == node).length;
-    }
-    return people.where((person) => person.tags.contains(node)).length;
-  }
-
   List<String> _unique(Iterable<String> values) {
     return values
         .map((value) => value.trim())
@@ -257,10 +271,14 @@ class KgqlPeopleRepository implements PersonRepository {
   }
 
   List<SetModelAttribute> _draftAttributes(PersonDraft draft) {
-    return [
-      SetModelAttribute(key: kPersonAttrCompany, value: draft.company.trim()),
-      SetModelAttribute(key: kPersonAttrSummary, value: draft.summary.trim()),
-    ];
+    return [SetModelAttribute(key: kPersonAttrDesires, value: draft.desires)];
+  }
+}
+
+Iterable<String> _tagNodeNames(TagNode node) sync* {
+  yield node.name;
+  for (final child in node.children ?? const <TagNode>[]) {
+    yield* _tagNodeNames(child);
   }
 }
 

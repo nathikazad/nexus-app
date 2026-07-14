@@ -19,13 +19,16 @@ class Person {
     required this.email,
     required this.phone,
     required this.tags,
+    this.tagsBySystem = const <String, List<String>>{},
     required this.meetings,
     required this.planned,
     required this.summary,
+    required this.desires,
     required this.currentThreads,
     required this.logs,
     required this.relatedIds,
     this.imageUrl = '',
+    this.contacts = const <PersonContact>[],
     this.workRelations = const <PersonBackgroundRelation>[],
     this.educationRelations = const <PersonBackgroundRelation>[],
     this.suggestions = PersonSuggestions.empty,
@@ -46,13 +49,16 @@ class Person {
   final String email;
   final String phone;
   final List<String> tags;
+  final Map<String, List<String>> tagsBySystem;
   final List<String> meetings;
   final List<String> planned;
   final String summary;
+  final List<String> desires;
   final List<PersonThread> currentThreads;
   final List<PersonLog> logs;
   final List<int> relatedIds;
   final String imageUrl;
+  final List<PersonContact> contacts;
   final List<PersonBackgroundRelation> workRelations;
   final List<PersonBackgroundRelation> educationRelations;
   final PersonSuggestions suggestions;
@@ -66,8 +72,11 @@ class Person {
       location,
       status,
       summary,
+      ...desires,
       email,
       phone,
+      for (final contact in contacts) contact.value,
+      for (final contact in contacts) contact.name,
       ...tags,
       for (final relation in workRelations) relation.name,
       for (final relation in educationRelations) relation.name,
@@ -89,13 +98,16 @@ class Person {
     String? email,
     String? phone,
     List<String>? tags,
+    Map<String, List<String>>? tagsBySystem,
     List<String>? meetings,
     List<String>? planned,
     String? summary,
+    List<String>? desires,
     List<PersonThread>? currentThreads,
     List<PersonLog>? logs,
     List<int>? relatedIds,
     String? imageUrl,
+    List<PersonContact>? contacts,
     List<PersonBackgroundRelation>? workRelations,
     List<PersonBackgroundRelation>? educationRelations,
     PersonSuggestions? suggestions,
@@ -116,18 +128,39 @@ class Person {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       tags: tags ?? this.tags,
+      tagsBySystem: tagsBySystem ?? this.tagsBySystem,
       meetings: meetings ?? this.meetings,
       planned: planned ?? this.planned,
       summary: summary ?? this.summary,
+      desires: desires ?? this.desires,
       currentThreads: currentThreads ?? this.currentThreads,
       logs: logs ?? this.logs,
       relatedIds: relatedIds ?? this.relatedIds,
       imageUrl: imageUrl ?? this.imageUrl,
+      contacts: contacts ?? this.contacts,
       workRelations: workRelations ?? this.workRelations,
       educationRelations: educationRelations ?? this.educationRelations,
       suggestions: suggestions ?? this.suggestions,
     );
   }
+}
+
+class PersonContact {
+  const PersonContact({
+    required this.type,
+    required this.value,
+    this.id = 0,
+    this.name = '',
+    this.description = '',
+    this.url = '',
+  });
+
+  final int id;
+  final String type;
+  final String value;
+  final String name;
+  final String description;
+  final String url;
 }
 
 class PersonBackgroundRelation {

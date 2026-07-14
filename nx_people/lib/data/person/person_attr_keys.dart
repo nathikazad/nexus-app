@@ -10,7 +10,7 @@ const kPersonAttrPinned = 'pinned';
 const kPersonAttrEmail = 'email';
 const kPersonAttrPhone = 'phone';
 const kPersonAttrImageUrl = 'image_url';
-const kPersonAttrSummary = 'summary';
+const kPersonAttrDesires = 'desires';
 const kPersonAttrCurrentThreads = 'current_threads';
 const kPersonAttrLogs = 'logs';
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:nx_db/kgql.dart';
 import 'package:nx_people/data/person/person_attr_keys.dart';
 import 'package:nx_people/domain/person/person.dart';
@@ -11,17 +13,15 @@ const String kStudyAtRelationName = 'study_at';
 
 Person personFromModel(Model model) {
   final tags = model.tags ?? const <String, List<String>>{};
-  final tagValues = [
-    for (final entry in tags.entries)
-      if (entry.key != kPeopleStatusTagSystem) ...entry.value,
-  ];
+  final tagsBySystem = _tagsBySystem(tags);
+  final tagValues = [for (final entry in tagsBySystem.entries) ...entry.value];
   final status =
       model.attrString(kPersonAttrStatus) ??
       tags[kPeopleStatusTagSystem]?.firstOrNull ??
       'Active';
   final company =
+      _mostRecentNamedRelatedName(model, kWorkForRelationName) ??
       model.attrString(kPersonAttrCompany) ??
-      _firstNamedRelatedName(model, kWorkForRelationName) ??
       _firstRelatedName(model, 'Company') ??
       _firstRelatedName(model, 'Place') ??
       '';
@@ -29,10 +29,7 @@ Person personFromModel(Model model) {
       model.attrString(kPersonAttrLocation) ??
       tags[kPeopleLocationTagSystem]?.firstOrNull ??
       '';
-  final summary =
-      model.attrString(kPersonAttrSummary) ??
-      model.description ??
-      'No summary yet.';
+  final summary = model.description ?? 'No summary yet.';
 
   return Person(
     id: model.id,
@@ -51,14 +48,17 @@ Person personFromModel(Model model) {
     phone: model.attrString(kPersonAttrPhone) ?? '',
     imageUrl: model.attrString(kPersonAttrImageUrl) ?? '',
     tags: tagValues.toSet().toList()..sort(),
+    tagsBySystem: tagsBySystem,
     meetings: _actualMeetingNames(model),
     planned: _plannedMeetingNames(model),
     summary: summary,
+    desires: _stringListFromRaw(model.attributes?[kPersonAttrDesires]),
     currentThreads: _threadsFromRaw(
       model.attributes?[kPersonAttrCurrentThreads],
     ),
     logs: _logsFromRaw(model.attributes?[kPersonAttrLogs]),
     relatedIds: _relatedPeople(model),
+    contacts: _contacts(model),
     workRelations: _namedBackgroundRelations(
       model,
       relationName: kWorkForRelationName,
@@ -73,6 +73,14 @@ Person personFromModel(Model model) {
     ],
     suggestions: PersonSuggestions.fromJson(model.attributes?['suggestion']),
   );
+}
+
+Map<String, List<String>> _tagsBySystem(Map<String, List<String>> raw) {
+  return {
+    for (final entry in raw.entries)
+      if (entry.key != kPeopleStatusTagSystem)
+        entry.key: entry.value.toSet().toList()..sort(),
+  };
 }
 
 Map<String, dynamic> personFetchStruct(ModelType schema) {
@@ -115,6 +123,15 @@ Map<String, dynamic> personFetchStruct(ModelType schema) {
       _meetPlanningStatusAttr: true,
     },
     'Place': {'id': true, 'name': true, 'description': true},
+    'Contact': {
+      'id': true,
+      'name': true,
+      'description': true,
+      'type': true,
+      'value': true,
+      'url': true,
+      'link': true,
+    },
     'Person': {'id': true, 'name': true, 'description': true},
   };
 }
@@ -144,15 +161,16 @@ String? _firstRelatedName(Model model, String type) {
   return names.isEmpty ? null : names.first;
 }
 
-String? _firstNamedRelatedName(Model model, String relationName) {
-  final rows = model.relationsList ?? const <Relation>[];
-  final names = [
-    for (final row in rows)
+String? _mostRecentNamedRelatedName(Model model, String relationName) {
+  final sourceRows = model.relationsList ?? const <Relation>[];
+  final rows = [
+    for (final row in sourceRows)
       if (row.relationName == relationName &&
           (row.name?.trim().isNotEmpty ?? false))
-        row.name!.trim(),
-  ]..sort();
-  return names.isEmpty ? null : names.first;
+        row,
+  ];
+  rows.sort(_compareRelationRowsByStartDateDesc);
+  return rows.isEmpty ? null : rows.first.name!.trim();
 }
 
 List<String> _relatedNames(Model model, String type) {
@@ -180,8 +198,42 @@ List<PersonBackgroundRelation> _namedBackgroundRelations(
           attributes: row.relationAttributes ?? const <String, dynamic>{},
         ),
   ];
-  rows.sort((a, b) => a.name.compareTo(b.name));
+  rows.sort(_compareBackgroundRelationsByStartDateDesc);
   return rows;
+}
+
+int _compareRelationRowsByStartDateDesc(Relation a, Relation b) {
+  final aStart = _relationStartDate(a.relationAttributes);
+  final bStart = _relationStartDate(b.relationAttributes);
+  final dateCompare = _compareNullableDatesDesc(aStart, bStart);
+  if (dateCompare != 0) return dateCompare;
+  return (a.name ?? '').compareTo(b.name ?? '');
+}
+
+int _compareBackgroundRelationsByStartDateDesc(
+  PersonBackgroundRelation a,
+  PersonBackgroundRelation b,
+) {
+  final aStart = _relationStartDate(a.attributes);
+  final bStart = _relationStartDate(b.attributes);
+  final dateCompare = _compareNullableDatesDesc(aStart, bStart);
+  if (dateCompare != 0) return dateCompare;
+  return a.name.compareTo(b.name);
+}
+
+int _compareNullableDatesDesc(DateTime? a, DateTime? b) {
+  if (a != null && b != null) return b.compareTo(a);
+  if (a != null) return -1;
+  if (b != null) return 1;
+  return 0;
+}
+
+DateTime? _relationStartDate(Map<String, dynamic>? attributes) {
+  final raw = attributes?['start_date'];
+  if (raw == null) return null;
+  final value = raw.toString().trim();
+  return DateTime.tryParse(value) ??
+      DateTime.tryParse(value.replaceFirst(' ', 'T'));
 }
 
 List<PersonBackgroundRelation> _backgroundRelations(
@@ -226,6 +278,28 @@ List<String> _plannedMeetingNames(Model model) {
   }.toList()..sort();
 }
 
+List<String> _stringListFromRaw(Object? raw) {
+  if (raw == null) return const <String>[];
+  if (raw is List) {
+    return raw
+        .map((value) => value?.toString().trim() ?? '')
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+  if (raw is String) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return const <String>[];
+    try {
+      final decoded = jsonDecode(trimmed);
+      return _stringListFromRaw(decoded);
+    } on FormatException {
+      return [trimmed];
+    }
+  }
+  return const <String>[];
+}
+
 bool _hasActualMeetingTime(Model meet) {
   return meet.attrDateTime(_meetStartTimeAttr) != null ||
       meet.attrDateTime(_meetActualStartTimeAttr) != null;
@@ -253,6 +327,87 @@ List<int> _relatedPeople(Model model) {
       .where((id) => id != model.id)
       .toSet()
       .toList();
+}
+
+List<PersonContact> _contacts(Model model) {
+  final relationRows = [
+    for (final relation in model.relationsList ?? const <Relation>[])
+      if (relation.modelType == 'Contact' &&
+          relation.relationName == 'has_contact')
+        relation,
+  ];
+  if (relationRows.isEmpty) return const <PersonContact>[];
+
+  final contactRows = {
+    for (final contact in model.relations?['Contact'] ?? const <Model>[])
+      contact.id: contact,
+  };
+
+  final contacts = <PersonContact>[
+    for (final relation in relationRows)
+      if (_contactFromRelation(relation, contactRows[relation.modelId])
+          case final contact?)
+        contact,
+  ];
+  contacts.sort((a, b) {
+    final typeCompare = a.type.compareTo(b.type);
+    if (typeCompare != 0) return typeCompare;
+    return a.value.compareTo(b.value);
+  });
+  return contacts;
+}
+
+PersonContact? _contactFromRelation(Relation relation, Model? contact) {
+  final name = contact?.name.trim().isNotEmpty == true
+      ? contact!.name.trim()
+      : relation.name?.trim() ?? '';
+  final type =
+      _contactStringAttr(contact, 'type') ?? _inferContactType(name) ?? '';
+  final value =
+      _contactStringAttr(contact, 'value') ??
+      _contactValueFromName(name, type) ??
+      '';
+  final url =
+      _contactStringAttr(contact, 'url') ??
+      _contactStringAttr(contact, 'link') ??
+      '';
+  if (type.isEmpty && value.isEmpty && url.isEmpty && name.isEmpty) {
+    return null;
+  }
+  return PersonContact(
+    id: relation.modelId,
+    type: type,
+    value: value,
+    name: name,
+    description: contact?.description?.trim() ?? relation.description ?? '',
+    url: url,
+  );
+}
+
+String? _contactStringAttr(Model? contact, String key) {
+  final raw = contact?.attributes?[key];
+  if (raw == null || raw is List || raw is Map) return null;
+  final value = raw.toString().trim();
+  return value.isEmpty ? null : value;
+}
+
+String? _inferContactType(String name) {
+  final lower = name.toLowerCase();
+  if (lower.startsWith('linkedin:')) return 'linkedin';
+  if (lower.startsWith('email:') || lower.contains('@')) return 'email';
+  if (lower.startsWith('phone:') || lower.startsWith('tel:')) return 'phone';
+  if (lower.startsWith('url:') || lower.startsWith('link:')) return 'link';
+  return null;
+}
+
+String? _contactValueFromName(String name, String type) {
+  final separator = name.indexOf(':');
+  if (separator >= 0 && separator + 1 < name.length) {
+    final value = name.substring(separator + 1).trim();
+    return value.isEmpty ? null : value;
+  }
+  if (type == 'email' && name.contains('@')) return name;
+  return null;
 }
 
 List<PersonThread> _threadsFromRaw(Object? raw) {

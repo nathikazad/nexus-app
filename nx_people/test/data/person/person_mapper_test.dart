@@ -19,6 +19,22 @@ void main() {
       expect(mapped.imageUrl, '/person_image_files/1/linkedin/ada/profile.jpg');
     });
 
+    test('maps desires JSON array onto profile desires', () {
+      final person = Model(
+        id: 1,
+        name: 'Ada Lovelace',
+        modelTypeId: 1,
+        attributes: const {
+          'desires': ['Warm technical intros', 'PCB hiring context'],
+        },
+      );
+
+      final mapped = personFromModel(person);
+
+      expect(mapped.desires, ['Warm technical intros', 'PCB hiring context']);
+      expect(mapped.matches('pcb hiring'), isTrue);
+    });
+
     test('maps LinkedIn suggestion JSON onto person suggestions', () {
       final person = Model(
         id: 1,
@@ -149,6 +165,78 @@ void main() {
       expect(mapped.educationRelations.single.name, 'University of Cambridge');
       expect(mapped.educationRelations.single.relationName, 'study_at');
       expect(mapped.educationRelations.single.attributes['type'], 'bachelor');
+    });
+
+    test('uses newest work relation start date for current company', () {
+      final person = Model(
+        id: 1,
+        name: 'Ollie Rubens',
+        modelTypeId: 1,
+        relationsList: [
+          Relation(
+            relationId: 10,
+            modelId: 10,
+            modelType: 'Company',
+            name: 'Aardvark Older Co',
+            relationName: 'work_for',
+            relationAttributes: const {'start_date': '2020-01-01T00:00:00Z'},
+          ),
+          Relation(
+            relationId: 11,
+            modelId: 11,
+            modelType: 'Company',
+            name: 'Zeta Newer Co',
+            relationName: 'work_for',
+            relationAttributes: const {'start_date': '2024-01-01T00:00:00Z'},
+          ),
+        ],
+      );
+
+      final mapped = personFromModel(person);
+
+      expect(mapped.company, 'Zeta Newer Co');
+      expect(mapped.workRelations.first.name, 'Zeta Newer Co');
+    });
+
+    test('maps has_contact relations into profile contacts', () {
+      final person = Model(
+        id: 1,
+        name: 'Ollie Rubens',
+        modelTypeId: 1,
+        relations: {
+          'Contact': [
+            Model(
+              id: 4681,
+              name: 'LinkedIn: ollierubens',
+              modelTypeId: 10,
+              attributes: const {'type': 'linkedin', 'value': 'ollierubens'},
+            ),
+          ],
+        },
+        relationsList: [
+          Relation(
+            relationId: 3232,
+            modelId: 4681,
+            modelType: 'Contact',
+            name: 'LinkedIn: ollierubens',
+            relationName: 'has_contact',
+          ),
+          Relation(
+            relationId: 3233,
+            modelId: 4682,
+            modelType: 'Contact',
+            name: 'Email: ignored@example.com',
+            relationName: 'not_has_contact',
+          ),
+        ],
+      );
+
+      final mapped = personFromModel(person);
+
+      expect(mapped.contacts, hasLength(1));
+      expect(mapped.contacts.single.type, 'linkedin');
+      expect(mapped.contacts.single.value, 'ollierubens');
+      expect(mapped.contacts.single.name, 'LinkedIn: ollierubens');
     });
 
     test('splits attended and planned Meet rows from Plannable fields', () {

@@ -15,6 +15,7 @@ dependencies:
   graphql_flutter: ^5.1.2
   nx_db:
     path: ../nx_db
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

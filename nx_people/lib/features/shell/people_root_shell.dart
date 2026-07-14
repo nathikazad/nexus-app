@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_people/core/layout/is_desktop_layout.dart';
 import 'package:nx_people/core/theme/app_theme.dart';
+import 'package:nx_people/data/person/person_attr_keys.dart';
 import 'package:nx_people/data/providers.dart';
 import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/domain/person/person_query.dart';
 import 'package:nx_people/features/shell/people_state.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const _softInputBorder = OutlineInputBorder(
   borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -63,6 +65,8 @@ class PeopleRootShell extends ConsumerWidget {
           ? FloatingActionButton(
               key: const ValueKey('people-add-fab'),
               onPressed: () => _showPersonForm(context),
+              backgroundColor: AppColors.text,
+              foregroundColor: AppColors.bg,
               tooltip: 'Add person',
               child: const Icon(Icons.add),
             )
@@ -156,29 +160,25 @@ class _SideNav extends ConsumerWidget {
               ],
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.all(18),
-            child: Row(
-              children: <Widget>[
-                _InitialsBadge(initials: 'ME', size: 32),
-                SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'My Profile',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      'Settings',
-                      style: TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
-                  ],
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => ref.read(authProvider.notifier).logout(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.text,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ],
+                child: const Text('Log Out'),
+              ),
             ),
           ),
         ],
@@ -298,6 +298,7 @@ class _PeopleList extends ConsumerWidget {
         _ViewHeader(
           title: 'People',
           actionIcon: fullHeight ? Icons.logout : Icons.add,
+          actionFilled: !fullHeight,
           actionKey: fullHeight
               ? const ValueKey('people-logout-button')
               : const ValueKey('people-add-button'),
@@ -575,15 +576,6 @@ class _ProfileTopBar extends ConsumerWidget {
             onPressed: () => _showPersonForm(context, person: person),
             child: const Text('Edit'),
           ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.more_horiz, size: 20),
-            color: AppColors.muted,
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: AppColors.muted,
-            ),
-          ),
         ],
       ),
     );
@@ -652,151 +644,171 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 620;
-        final identity = Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _PersonAvatar(person: person, size: compact ? 64 : 78),
-            SizedBox(width: compact ? 14 : 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    person.name,
-                    style: TextStyle(
-                      fontSize: compact ? 24 : 28,
-                      height: 1.1,
-                      fontWeight: FontWeight.w800,
+    return Consumer(
+      builder: (context, ref, _) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 620;
+            final currentTitle = _profileCurrentTitle(person);
+            final currentCompany = person.company.trim();
+            final location = person.location.trim();
+            final identityMeta = <Widget>[
+              if (currentTitle.isNotEmpty)
+                Text(
+                  currentTitle,
+                  style: const TextStyle(color: AppColors.muted),
+                ),
+              if (currentCompany.isNotEmpty)
+                Text(
+                  currentCompany,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              if (location.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 15,
+                      color: AppColors.faint,
                     ),
-                  ),
-                  const SizedBox(height: 7),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                    const SizedBox(width: 3),
+                    Text(
+                      location,
+                      style: const TextStyle(color: AppColors.muted),
+                    ),
+                  ],
+                ),
+            ];
+            final identity = Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _PersonAvatar(person: person, size: compact ? 64 : 78),
+                SizedBox(width: compact ? 14 : 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        person.role,
-                        style: const TextStyle(color: AppColors.muted),
-                      ),
-                      if (person.company.trim().isNotEmpty) ...<Widget>[
-                        const _SmallDot(),
-                        Text(
-                          person.company,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        person.name,
+                        style: TextStyle(
+                          fontSize: compact ? 24 : 28,
+                          height: 1.1,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                      if (person.location.trim().isNotEmpty) ...<Widget>[
-                        const _SmallDot(),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const Icon(
-                              Icons.location_on_outlined,
-                              size: 15,
-                              color: AppColors.faint,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              person.location,
-                              style: const TextStyle(color: AppColors.muted),
-                            ),
+                      ),
+                      const SizedBox(height: 7),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          for (
+                            var i = 0;
+                            i < identityMeta.length;
+                            i += 1
+                          ) ...<Widget>[
+                            if (i > 0) const _SmallDot(),
+                            identityMeta[i],
                           ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _ProfileStatement(label: 'Summary', body: person.summary),
+                if (person.desires.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 8),
+                  _ProfileStatement(
+                    label: 'Looking for',
+                    body: person.desires.join(', '),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    for (final tag in person.tags) _TinyChip(tag),
+                    _AddTagChip(
+                      onTap: () => _addProfileTag(context, ref, person),
+                    ),
+                  ],
+                ),
+              ],
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(child: identity),
+                      if (onEdit != null) ...<Widget>[
+                        const SizedBox(width: 8),
+                        TextButton(
+                          key: ValueKey('person-edit-button-${person.id}'),
+                          onPressed: onEdit,
+                          child: const Text('Edit'),
                         ),
                       ],
                     ],
                   ),
-                ],
-              ),
-            ),
-          ],
-        );
-
-        final details = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _ProfileStatement(label: 'Summary', body: person.summary),
-            const SizedBox(height: 8),
-            _ProfileStatement(
-              label: 'Looking for',
-              body: _personLookingFor(person),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                for (final tag in person.tags.take(4)) _TinyChip(tag),
-                const _AddTagChip(),
-              ],
-            ),
-          ],
-        );
-
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(child: identity),
-                  if (onEdit != null) ...<Widget>[
-                    const SizedBox(width: 8),
-                    IconButton.outlined(
-                      key: ValueKey('person-edit-button-${person.id}'),
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: 'Edit person',
-                    ),
+                  const SizedBox(height: 16),
+                  details,
+                  if (person.contacts.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 14),
+                    _ContactActions(contacts: person.contacts),
                   ],
                 ],
-              ),
-              const SizedBox(height: 16),
-              details,
-              const SizedBox(height: 14),
-              _ContactActions(person: person),
-            ],
-          );
-        }
+              );
+            }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  identity,
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 96),
-                    child: details,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 18),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                _ContactActions(person: person),
-                if (onEdit != null) ...<Widget>[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    key: ValueKey('person-edit-button-${person.id}'),
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit_outlined, size: 17),
-                    label: const Text('Edit'),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      identity,
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 96),
+                        child: details,
+                      ),
+                    ],
                   ),
-                ],
+                ),
+                const SizedBox(width: 18),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    if (person.contacts.isNotEmpty)
+                      _ContactActions(contacts: person.contacts),
+                    if (onEdit != null) ...<Widget>[
+                      if (person.contacts.isNotEmpty)
+                        const SizedBox(height: 12),
+                      TextButton(
+                        key: ValueKey('person-edit-button-${person.id}'),
+                        onPressed: onEdit,
+                        child: const Text('Edit'),
+                      ),
+                    ],
+                  ],
+                ),
               ],
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -834,9 +846,9 @@ class _ProfileStatement extends StatelessWidget {
 }
 
 class _ContactActions extends StatelessWidget {
-  const _ContactActions({required this.person});
+  const _ContactActions({required this.contacts});
 
-  final Person person;
+  final List<PersonContact> contacts;
 
   @override
   Widget build(BuildContext context) {
@@ -844,42 +856,319 @@ class _ContactActions extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: <Widget>[
-        _IconBox(icon: Icons.mail_outline, tooltip: person.email),
-        _IconBox(icon: Icons.phone_outlined, tooltip: person.phone),
-        const _IconBox(icon: Icons.link_outlined, tooltip: 'Open links'),
+        for (final contact in contacts) _ContactIconBox(contact: contact),
       ],
     );
   }
 }
 
 class _AddTagChip extends StatelessWidget {
-  const _AddTagChip();
+  const _AddTagChip({this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.lineStrong),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.add, size: 14, color: AppColors.faint),
-          SizedBox(width: 4),
-          Text(
-            'Add tag',
-            style: TextStyle(
-              color: AppColors.faint,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(7),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.lineStrong),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.add, size: 14, color: AppColors.faint),
+            SizedBox(width: 4),
+            Text(
+              'Add tag',
+              style: TextStyle(
+                color: AppColors.faint,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TagSelection {
+  const _TagSelection({
+    required this.system,
+    required this.tag,
+    this.exclusive = false,
+  });
+
+  final String system;
+  final String tag;
+  final bool exclusive;
+}
+
+class _TagPickerSheet extends StatelessWidget {
+  const _TagPickerSheet({required this.systems, required this.assignedTags});
+
+  final List<PeopleTagSystem> systems;
+  final Map<String, List<String>> assignedTags;
+
+  @override
+  Widget build(BuildContext context) {
+    final available = [
+      for (final system in systems)
+        if (system.name != kPeopleStatusTagSystem)
+          _TagPickerSystem(
+            system: system,
+            tags: [
+              for (final tag in system.tags)
+                if (!_tagIsAssigned(assignedTags, system.name, tag)) tag,
+            ],
           ),
+    ].where((system) => system.tags.isNotEmpty).toList();
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 18, 16, 16),
+              child: Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: Text(
+                      'Add Tag',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 20),
+                    color: AppColors.muted,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: available.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No available tags.',
+                        style: TextStyle(color: AppColors.muted),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
+                      itemBuilder: (context, index) {
+                        final system = available[index];
+                        return _TagPickerSection(system: system);
+                      },
+                      separatorBuilder: (_, _) => const SizedBox(height: 22),
+                      itemCount: available.length,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TagPickerSystem {
+  const _TagPickerSystem({required this.system, required this.tags});
+
+  final PeopleTagSystem system;
+  final List<String> tags;
+}
+
+class _TagPickerSection extends StatelessWidget {
+  const _TagPickerSection({required this.system});
+
+  final _TagPickerSystem system;
+
+  @override
+  Widget build(BuildContext context) {
+    return _FormSection(
+      label: system.system.name,
+      icon: system.system.hierarchical
+          ? Icons.account_tree_outlined
+          : Icons.sell_outlined,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: <Widget>[
+          for (final tag in system.tags)
+            ActionChip(
+              label: Text(tag),
+              onPressed: () => Navigator.of(context).pop(
+                _TagSelection(
+                  system: system.system.name,
+                  tag: tag,
+                  exclusive: system.system.exclusive,
+                ),
+              ),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              labelStyle: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+              backgroundColor: AppColors.panel,
+              side: const BorderSide(color: AppColors.line),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(7),
+              ),
+            ),
         ],
       ),
     );
   }
+}
+
+Future<_TagSelection?> _pickTag(
+  BuildContext context,
+  WidgetRef ref, {
+  required Map<String, List<String>> assignedTags,
+}) async {
+  final systems = await ref.read(peopleTagSystemsProvider.future);
+  if (!context.mounted) return null;
+  return showModalBottomSheet<_TagSelection>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => FractionallySizedBox(
+      heightFactor: MediaQuery.sizeOf(context).height < 700 ? 0.95 : 0.75,
+      child: _TagPickerSheet(systems: systems, assignedTags: assignedTags),
+    ),
+  );
+}
+
+Future<void> _addProfileTag(
+  BuildContext context,
+  WidgetRef ref,
+  Person person,
+) async {
+  final current = _copyTagAssignments(person.tagsBySystem);
+  final selection = await _pickTag(context, ref, assignedTags: current);
+  if (selection == null || !context.mounted) return;
+  final next = _assignTag(current, selection);
+  final changed = {
+    selection.system: next[selection.system] ?? const <String>[],
+  };
+  try {
+    await ref
+        .read(peopleRepositoryProvider)
+        .updatePersonTags(person.id, changed);
+    _invalidatePeopleData(ref, personId: person.id);
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Could not add tag: $error'),
+        backgroundColor: AppColors.red,
+      ),
+    );
+  }
+}
+
+bool _tagIsAssigned(
+  Map<String, List<String>> assignments,
+  String system,
+  String tag,
+) {
+  return assignments[system]?.contains(tag) ?? false;
+}
+
+Map<String, List<String>> _copyTagAssignments(
+  Map<String, List<String>> assignments,
+) {
+  return {
+    for (final entry in assignments.entries)
+      entry.key: entry.value.toSet().toList()..sort(),
+  };
+}
+
+List<_TagSelection> _flattenTagAssignments(
+  Map<String, List<String>> assignments,
+) {
+  return [
+    for (final entry in assignments.entries)
+      for (final tag in entry.value) _TagSelection(system: entry.key, tag: tag),
+  ]..sort((a, b) {
+    final systemCompare = a.system.compareTo(b.system);
+    if (systemCompare != 0) return systemCompare;
+    return a.tag.compareTo(b.tag);
+  });
+}
+
+Map<String, List<String>> _assignTag(
+  Map<String, List<String>> assignments,
+  _TagSelection selection,
+) {
+  final next = _copyTagAssignments(assignments);
+  if (selection.exclusive) {
+    next[selection.system] = [selection.tag];
+    return next;
+  }
+  final current = next[selection.system] ?? const <String>[];
+  next[selection.system] = {...current, selection.tag}.toList()..sort();
+  return next;
+}
+
+Map<String, List<String>> _removeTagAssignment(
+  Map<String, List<String>> assignments,
+  _TagSelection selection,
+) {
+  final next = _copyTagAssignments(assignments);
+  final tags = next[selection.system];
+  if (tags == null) return next;
+  tags.remove(selection.tag);
+  if (tags.isEmpty) {
+    next.remove(selection.system);
+  }
+  return next;
+}
+
+Map<String, List<String>> _changedTagAssignments(
+  Map<String, List<String>> oldAssignments,
+  Map<String, List<String>> nextAssignments,
+) {
+  final oldCopy = _copyTagAssignments(oldAssignments);
+  final nextCopy = _copyTagAssignments(nextAssignments);
+  final systems = {...oldCopy.keys, ...nextCopy.keys};
+  return {
+    for (final system in systems)
+      if (!_sameStringList(oldCopy[system], nextCopy[system]))
+        system: nextCopy[system] ?? const <String>[],
+  };
+}
+
+bool _sameStringList(List<String>? a, List<String>? b) {
+  final left = (a ?? const <String>[]).toSet().toList()..sort();
+  final right = (b ?? const <String>[]).toSet().toList()..sort();
+  if (left.length != right.length) return false;
+  for (var i = 0; i < left.length; i += 1) {
+    if (left[i] != right[i]) return false;
+  }
+  return true;
 }
 
 class _ProfileTabBar extends StatelessWidget {
@@ -1098,7 +1387,6 @@ class _BackgroundContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final experience = _experienceEntries(person);
     final education = _educationEntries(person);
-    final skills = _backgroundSkills(person);
     return LayoutBuilder(
       builder: (context, constraints) {
         final split = desktop && constraints.maxWidth > 760;
@@ -1129,10 +1417,6 @@ class _BackgroundContent extends StatelessWidget {
                           emptyBody:
                               'School or education relations will appear here once they are linked.',
                         ),
-                        const SizedBox(height: 24),
-                        _SkillsSection(skills: skills),
-                        const SizedBox(height: 24),
-                        _LinksSection(person: person),
                       ],
                     ),
                   ),
@@ -1157,10 +1441,6 @@ class _BackgroundContent extends StatelessWidget {
                     emptyBody:
                         'School or education relations will appear here once they are linked.',
                   ),
-                  const SizedBox(height: 24),
-                  _SkillsSection(skills: skills),
-                  const SizedBox(height: 24),
-                  _LinksSection(person: person),
                 ],
               );
 
@@ -1274,74 +1554,6 @@ class _BackgroundEntryRow extends StatelessWidget {
   }
 }
 
-class _SkillsSection extends StatelessWidget {
-  const _SkillsSection({required this.skills});
-
-  final List<String> skills;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DetailSection(
-      icon: Icons.auto_awesome_outlined,
-      title: 'Skills and domains',
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: <Widget>[for (final skill in skills) _TinyChip(skill)],
-      ),
-    );
-  }
-}
-
-class _LinksSection extends StatelessWidget {
-  const _LinksSection({required this.person});
-
-  final Person person;
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = <_LinkRowData>[
-      if (person.email.trim().isNotEmpty)
-        _LinkRowData(Icons.mail_outline, person.email),
-      if (person.phone.trim().isNotEmpty)
-        _LinkRowData(Icons.phone_outlined, person.phone),
-      if (person.company.trim().isNotEmpty)
-        _LinkRowData(Icons.business_outlined, person.company),
-    ];
-
-    return _DetailSection(
-      icon: Icons.link_outlined,
-      title: 'Links',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          for (final row in rows)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 9),
-              child: Row(
-                children: <Widget>[
-                  Icon(row.icon, size: 16, color: AppColors.faint),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      row.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BackgroundEntry {
   const _BackgroundEntry({
     required this.icon,
@@ -1354,13 +1566,6 @@ class _BackgroundEntry {
   final String title;
   final String subtitle;
   final String body;
-}
-
-class _LinkRowData {
-  const _LinkRowData(this.icon, this.label);
-
-  final IconData icon;
-  final String label;
 }
 
 class _NextActionCard extends StatelessWidget {
@@ -2464,6 +2669,7 @@ class _ViewHeader extends StatelessWidget {
     required this.title,
     required this.actionIcon,
     required this.child,
+    this.actionFilled = true,
     this.actionKey,
     this.onActionPressed,
   });
@@ -2471,6 +2677,7 @@ class _ViewHeader extends StatelessWidget {
   final String title;
   final IconData actionIcon;
   final Widget child;
+  final bool actionFilled;
   final Key? actionKey;
   final VoidCallback? onActionPressed;
 
@@ -2496,11 +2703,27 @@ class _ViewHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton.filled(
-                key: actionKey,
-                onPressed: onActionPressed,
-                icon: Icon(actionIcon, size: 20),
-              ),
+              if (actionFilled)
+                IconButton.filled(
+                  key: actionKey,
+                  onPressed: onActionPressed,
+                  icon: Icon(actionIcon, size: 20),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.text,
+                    foregroundColor: AppColors.bg,
+                  ),
+                )
+              else
+                IconButton(
+                  key: actionKey,
+                  onPressed: onActionPressed,
+                  icon: Icon(actionIcon, size: 20),
+                  color: AppColors.text,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: AppColors.text,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -2523,8 +2746,9 @@ class _PersonFormSheet extends ConsumerStatefulWidget {
 class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _companyController;
   late final TextEditingController _summaryController;
+  late final TextEditingController _desiresController;
+  late Map<String, List<String>> _tagAssignments;
   bool _saving = false;
 
   bool get _editing => widget.person != null;
@@ -2534,15 +2758,20 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
     super.initState();
     final person = widget.person;
     _nameController = TextEditingController(text: person?.name ?? '');
-    _companyController = TextEditingController(text: person?.company ?? '');
     _summaryController = TextEditingController(text: person?.summary ?? '');
+    _desiresController = TextEditingController(
+      text: person?.desires.join('\n') ?? '',
+    );
+    _tagAssignments = _copyTagAssignments(
+      person?.tagsBySystem ?? const <String, List<String>>{},
+    );
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _companyController.dispose();
     _summaryController.dispose();
+    _desiresController.dispose();
     super.dispose();
   }
 
@@ -2552,19 +2781,26 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
 
     final draft = PersonDraft(
       name: _nameController.text.trim(),
-      company: _companyController.text.trim(),
       summary: _summaryController.text.trim(),
+      desires: _parseDesiresInput(_desiresController.text),
+    );
+    final existing = widget.person;
+    final tagChanges = _changedTagAssignments(
+      existing?.tagsBySystem ?? const <String, List<String>>{},
+      _tagAssignments,
     );
 
     try {
       final repository = ref.read(peopleRepositoryProvider);
-      final existing = widget.person;
       final id = existing == null
           ? await repository.createPerson(draft)
           : existing.id;
 
       if (existing != null) {
         await repository.updatePerson(existing.id, draft);
+      }
+      if (tagChanges.isNotEmpty) {
+        await repository.updatePersonTags(id, tagChanges);
       }
 
       _invalidatePeopleData(ref, personId: id);
@@ -2583,9 +2819,32 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
     }
   }
 
+  Future<void> _showAddTagPicker() async {
+    final selection = await _pickTag(
+      context,
+      ref,
+      assignedTags: _tagAssignments,
+    );
+    if (selection == null || !mounted) return;
+    _addTag(selection);
+  }
+
+  void _addTag(_TagSelection selection) {
+    setState(() {
+      _tagAssignments = _assignTag(_tagAssignments, selection);
+    });
+  }
+
+  void _removeTag(_TagSelection selection) {
+    setState(() {
+      _tagAssignments = _removeTagAssignment(_tagAssignments, selection);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final selectedTags = _flattenTagAssignments(_tagAssignments);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
@@ -2650,16 +2909,6 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 18),
-                        _PersonFormField(
-                          fieldKey: const ValueKey('person-company-field'),
-                          controller: _companyController,
-                          label: 'Company',
-                          hint: 'Company',
-                          icon: Icons.business_outlined,
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 18),
                         _PersonFormField(
                           fieldKey: const ValueKey('person-summary-field'),
                           controller: _summaryController,
@@ -2668,6 +2917,23 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
                           icon: Icons.notes_outlined,
                           minLines: 4,
                           maxLines: 6,
+                          textInputAction: TextInputAction.newline,
+                        ),
+                        const SizedBox(height: 18),
+                        _EditableTagsField(
+                          selectedTags: selectedTags,
+                          onAdd: _saving ? null : _showAddTagPicker,
+                          onRemove: _saving ? null : _removeTag,
+                        ),
+                        const SizedBox(height: 18),
+                        _PersonFormField(
+                          fieldKey: const ValueKey('person-desires-field'),
+                          controller: _desiresController,
+                          label: 'Looking for',
+                          hint: 'One desire per line',
+                          icon: Icons.flag_outlined,
+                          minLines: 3,
+                          maxLines: 5,
                           textInputAction: TextInputAction.newline,
                         ),
                       ],
@@ -2782,6 +3048,106 @@ class _PersonFormField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EditableTagsField extends StatelessWidget {
+  const _EditableTagsField({
+    required this.selectedTags,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<_TagSelection> selectedTags;
+  final VoidCallback? onAdd;
+  final ValueChanged<_TagSelection>? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return _FormSection(
+      label: 'Tags',
+      icon: Icons.sell_outlined,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: <Widget>[
+          for (final tag in selectedTags)
+            _EditableTagChip(
+              tag: tag,
+              onDeleted: onRemove == null ? null : () => onRemove!(tag),
+            ),
+          _AddTagChip(onTap: onAdd),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormSection extends StatelessWidget {
+  const _FormSection({
+    required this.label,
+    required this.icon,
+    required this.child,
+  });
+
+  final String label;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Icon(icon, size: 16, color: AppColors.faint),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.faint,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    );
+  }
+}
+
+class _EditableTagChip extends StatelessWidget {
+  const _EditableTagChip({required this.tag, this.onDeleted});
+
+  final _TagSelection tag;
+  final VoidCallback? onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputChip(
+      key: ValueKey('person-tag-chip-${tag.system}-${tag.tag}'),
+      label: Text(tag.tag),
+      onDeleted: onDeleted,
+      deleteIcon: Icon(
+        Icons.close,
+        key: ValueKey('person-tag-delete-${tag.system}-${tag.tag}'),
+        size: 14,
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+      labelStyle: const TextStyle(
+        color: AppColors.muted,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor: AppColors.subtle,
+      side: const BorderSide(color: AppColors.line),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
     );
   }
 }
@@ -3111,7 +3477,7 @@ class _FilterRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 34,
+      height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: <Widget>[
@@ -3135,7 +3501,7 @@ class _PeopleFilterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: AppColors.subtle.withValues(alpha: 0.72),
         border: Border.all(color: AppColors.line),
@@ -3146,6 +3512,7 @@ class _PeopleFilterPill extends StatelessWidget {
         style: const TextStyle(
           color: AppColors.muted,
           fontSize: 14,
+          height: 1.15,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -3562,28 +3929,107 @@ class _TinyChip extends StatelessWidget {
   }
 }
 
-class _IconBox extends StatelessWidget {
-  const _IconBox({required this.icon, this.tooltip});
+class _ContactIconBox extends StatelessWidget {
+  const _ContactIconBox({required this.contact});
 
-  final IconData icon;
-  final String? tooltip;
+  final PersonContact contact;
 
   @override
   Widget build(BuildContext context) {
-    final box = Container(
-      width: 34,
-      height: 34,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.subtle,
-        borderRadius: BorderRadius.circular(8),
+    final target = _contactLaunchUri(contact);
+    return IconButton(
+      onPressed: target == null ? null : () => launchUrl(target),
+      tooltip: _contactTooltip(contact, target),
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.subtle,
+        disabledBackgroundColor: AppColors.subtle,
+        foregroundColor: AppColors.muted,
+        disabledForegroundColor: AppColors.faint,
+        fixedSize: const Size.square(34),
+        minimumSize: const Size.square(34),
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Icon(icon, color: AppColors.muted, size: 17),
+      icon: _contactIcon(contact),
     );
-    final message = tooltip?.trim() ?? '';
-    if (message.isEmpty) return box;
-    return Tooltip(message: message, child: box);
   }
+}
+
+Widget _contactIcon(PersonContact contact) {
+  final type = _contactType(contact);
+  if (type == 'email') {
+    return const Icon(Icons.mail_outline, size: 17);
+  }
+  if (type == 'phone') {
+    return const Icon(Icons.phone_outlined, size: 17);
+  }
+  if (type == 'linkedin') {
+    return const Text(
+      'in',
+      style: TextStyle(
+        color: Color(0xff0a66c2),
+        fontSize: 15,
+        fontWeight: FontWeight.w900,
+        height: 1,
+      ),
+    );
+  }
+  return const Icon(Icons.link_outlined, size: 17);
+}
+
+String _contactType(PersonContact contact) => contact.type.trim().toLowerCase();
+
+String _contactTooltip(PersonContact contact, Uri? target) {
+  final type = _contactType(contact);
+  final label = switch (type) {
+    'email' => 'Email',
+    'phone' => 'Phone',
+    'linkedin' => 'LinkedIn',
+    _ => 'Contact',
+  };
+  final value = target?.toString() ?? contact.value.trim();
+  if (value.isNotEmpty) return '$label: $value';
+  if (contact.name.trim().isNotEmpty) return contact.name.trim();
+  return label;
+}
+
+Uri? _contactLaunchUri(PersonContact contact) {
+  final type = _contactType(contact);
+  final value = contact.value.trim();
+  final url = contact.url.trim();
+  if (type == 'email' && value.isNotEmpty) {
+    return Uri(scheme: 'mailto', path: value);
+  }
+  if (type == 'phone' && value.isNotEmpty) {
+    return Uri(scheme: 'tel', path: value);
+  }
+  final rawLink = url.isNotEmpty ? url : _derivedContactUrl(type, value);
+  if (rawLink == null || rawLink.trim().isEmpty) return null;
+  return Uri.tryParse(_ensureUrlScheme(rawLink.trim()));
+}
+
+String? _derivedContactUrl(String type, String value) {
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  if (type == 'linkedin' && value.isNotEmpty) {
+    if (value.contains('linkedin.com/')) return value;
+    final handle = value.replaceFirst(RegExp(r'^@+'), '').trim();
+    if (handle.isEmpty) return null;
+    return 'https://www.linkedin.com/in/$handle';
+  }
+  if ((type == 'link' || type == 'url' || type == 'website') &&
+      value.isNotEmpty) {
+    return value;
+  }
+  return null;
+}
+
+String _ensureUrlScheme(String value) {
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  return 'https://$value';
 }
 
 class _StatusDot extends StatelessWidget {
@@ -3788,29 +4234,28 @@ String? _personListTimestamp(Person person) {
   return updatedAt;
 }
 
-String _personLookingFor(Person person) {
-  final tags = person.tags.map((tag) => tag.toLowerCase()).toSet();
-  final role = person.role.toLowerCase();
-  final status = person.status.toLowerCase();
-  if (tags.contains('investor')) {
-    return 'Concise updates, clear momentum, and credible founder context.';
+String _profileCurrentTitle(Person person) {
+  final company = person.company.trim().toLowerCase();
+  PersonBackgroundRelation? matchingRelation;
+  for (final relation in person.workRelations) {
+    if (company.isEmpty || relation.name.trim().toLowerCase() == company) {
+      matchingRelation = relation;
+      break;
+    }
   }
-  if (role.contains('founder')) {
-    return 'Useful operators, practical customer insight, and low-friction collaboration.';
-  }
-  if (role.contains('product')) {
-    return 'Sharp product problems, honest workflow feedback, and practical prototypes.';
-  }
-  if (role.contains('design')) {
-    return 'Clear interaction details, polished states, and thoughtful mobile behavior.';
-  }
-  if (role.contains('engineer')) {
-    return 'Strong technical context, high-agency teams, and infrastructure problems worth solving.';
-  }
-  if (status.contains('follow')) {
-    return 'A concrete next step and a useful reason to reconnect.';
-  }
-  return 'Relevant context, warm introductions, and a useful reason to reconnect.';
+  final relationTitle = matchingRelation == null
+      ? null
+      : _backgroundRelationValue(matchingRelation, 'title');
+  if (relationTitle != null) return relationTitle;
+  return person.role.trim();
+}
+
+List<String> _parseDesiresInput(String value) {
+  return value
+      .split(RegExp(r'\r?\n'))
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
 }
 
 List<_BackgroundEntry> _experienceEntries(Person person) {
@@ -3826,7 +4271,9 @@ List<_BackgroundEntry> _educationEntries(Person person) {
       _BackgroundEntry(
         icon: Icons.school_outlined,
         title: relation.name,
-        subtitle: _backgroundRelationValue(relation, 'type') ?? relation.type,
+        subtitle: _displayEducationType(
+          _backgroundRelationValue(relation, 'type') ?? relation.type,
+        ),
         body: _backgroundRelationBody(relation),
       ),
   ];
@@ -3860,42 +4307,40 @@ _BackgroundEntry _workBackgroundEntry(
 }
 
 String _backgroundRelationBody(PersonBackgroundRelation relation) {
-  final description = relation.description.trim();
-  if (description.isNotEmpty) return description;
+  final description = _normalizeDisplayText(relation.description).trim();
+  final dateRange = _suggestionDateRange(
+    _backgroundRelationValue(relation, 'start_date') ?? '',
+    _backgroundRelationValue(relation, 'end_date'),
+  );
   final parts = <String>[
-    if (_suggestionDateRange(
-      _backgroundRelationValue(relation, 'start_date') ?? '',
-      _backgroundRelationValue(relation, 'end_date'),
-    ).isNotEmpty)
-      _suggestionDateRange(
-        _backgroundRelationValue(relation, 'start_date') ?? '',
-        _backgroundRelationValue(relation, 'end_date'),
-      ),
+    if (dateRange.isNotEmpty) dateRange,
+    if (description.isNotEmpty) description,
     if (_backgroundRelationValue(relation, 'notes') case final notes?) notes,
   ];
-  return parts.join(' • ');
+  return parts.join('\n');
 }
 
 String? _backgroundRelationValue(
   PersonBackgroundRelation relation,
   String key,
 ) {
-  final value = relation.attributes[key]?.toString().trim();
-  return value == null || value.isEmpty ? null : value;
+  final value = _normalizeDisplayText(
+    relation.attributes[key]?.toString() ?? '',
+  ).trim();
+  return value.isEmpty ? null : value;
 }
 
-List<String> _backgroundSkills(Person person) {
-  final skills = <String>[
-    ...person.tags,
-    if (person.role.trim().isNotEmpty) person.role.trim(),
-    if (person.company.trim().isNotEmpty) person.company.trim(),
-  ];
-  final seen = <String>{};
-  return [
-    for (final skill in skills)
-      if (skill.trim().isNotEmpty && seen.add(skill.trim().toLowerCase()))
-        skill.trim(),
-  ].take(8).toList();
+String _normalizeDisplayText(String value) => value
+    .replaceAll(r'\r\n', '\n')
+    .replaceAll(r'\n', '\n')
+    .replaceAll(r'\r', '\n')
+    .replaceAll(r'\"', '"')
+    .replaceAll(r'\t', '\t');
+
+String _displayEducationType(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return trimmed;
+  return trimmed[0].toUpperCase() + trimmed.substring(1);
 }
 
 bool _isMeaningfulTimestamp(String value) {

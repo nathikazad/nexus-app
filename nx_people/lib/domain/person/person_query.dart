@@ -22,6 +22,7 @@ abstract class PersonRepository {
   Future<Person?> getById(int id);
   Future<int> createPerson(PersonDraft draft);
   Future<void> updatePerson(int id, PersonDraft draft);
+  Future<void> updatePersonTags(int id, Map<String, List<String>> tagsBySystem);
   Future<void> resolveOrganizationSuggestion({
     required int personId,
     required PersonSuggestionKind kind,
@@ -46,13 +47,13 @@ abstract class PersonRepository {
 class PersonDraft {
   const PersonDraft({
     required this.name,
-    required this.company,
     required this.summary,
+    this.desires = const <String>[],
   });
 
   final String name;
-  final String company;
   final String summary;
+  final List<String> desires;
 }
 
 class PeopleTagSystem {
