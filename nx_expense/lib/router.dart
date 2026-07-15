@@ -125,7 +125,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 NavigationDestination(
                   icon: Icon(Icons.account_balance_outlined),
                   selectedIcon: Icon(Icons.account_balance),
-                  label: 'Teller',
+                  label: 'Ext',
                 ),
               ],
             ),
@@ -281,7 +281,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra;
           if (extra is! TellerTransaction) {
             return const Scaffold(
-              body: Center(child: Text('Missing Teller transaction')),
+              body: Center(child: Text('Missing external transaction')),
             );
           }
           return TellerExpenseLinkPickerScreen(row: extra);
@@ -293,7 +293,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra;
           if (extra is! TellerTransaction) {
             return const Scaffold(
-              body: Center(child: Text('Missing Teller transaction')),
+              body: Center(child: Text('Missing external transaction')),
             );
           }
           return TellerTransferLinkPickerScreen(row: extra);
@@ -305,7 +305,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra;
           if (extra is! TellerTransaction) {
             return const Scaffold(
-              body: Center(child: Text('Missing Teller transaction')),
+              body: Center(child: Text('Missing external transaction')),
             );
           }
           return TellerTransferQuickCreateScreen(row: extra);

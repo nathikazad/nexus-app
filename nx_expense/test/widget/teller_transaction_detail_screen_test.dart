@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/domain/teller/teller_transaction.dart';
 import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
+
+Widget _wrapWithProviderScope(GoRouter router) {
+  return ProviderScope(
+    overrides: [tellerAccountNameByIdProvider.overrideWith((ref) => const {})],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
 
 void main() {
   testWidgets(
@@ -32,10 +41,12 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(_wrapWithProviderScope(router));
       await tester.pumpAndSettle();
 
-      expect(find.text('Teller transaction'), findsOneWidget);
+      expect(find.text('External transaction'), findsOneWidget);
+      expect(find.text('Source'), findsOneWidget);
+      expect(find.text('Teller'), findsOneWidget);
       expect(find.text('Coffee shop'), findsOneWidget);
       expect(find.text('\$4.50'), findsOneWidget);
       expect(find.text('debit'), findsOneWidget);
@@ -73,7 +84,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(_wrapWithProviderScope(router));
       await tester.pumpAndSettle();
 
       expect(find.text('true'), findsOneWidget);
@@ -112,7 +123,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(_wrapWithProviderScope(router));
     await tester.pumpAndSettle();
 
     await tester.drag(find.byType(ListView), const Offset(0, -260));

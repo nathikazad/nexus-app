@@ -3,10 +3,16 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart'
     show formatTimelineLocalTimestamp;
 import 'package:nx_expense/domain/expense/model_names.dart';
+import 'package:nx_expense/domain/teller/teller_link.dart'
+    show kBofaTimelineSource, kTellerTimelineSource;
 import 'package:nx_expense/domain/teller/teller_transaction.dart';
 
 export 'package:nx_expense/domain/teller/teller_link.dart'
-    show kTellerTimelineEventType, kTellerTimelineSource;
+    show
+        kBofaTimelineEventType,
+        kBofaTimelineSource,
+        kTellerTimelineEventType,
+        kTellerTimelineSource;
 export 'package:nx_expense/domain/teller/teller_transaction.dart';
 
 /// One-line label for a Teller payload (counterparty or description).
@@ -25,7 +31,37 @@ String tellerTransactionTitleLine(Map<String, dynamic> payload) {
   if (cleaned.isNotEmpty) {
     return cleaned.length > 120 ? '${cleaned.substring(0, 120)}…' : cleaned;
   }
-  return 'Teller transaction';
+  return 'External transaction';
+}
+
+String externalTransactionSourceLabel(TellerTransaction row) {
+  final source = (row.source ?? '').trim().toLowerCase();
+  if (source == kBofaTimelineSource) return 'BofA';
+  if (source == kTellerTimelineSource || source.isEmpty) return 'Teller';
+  return source.toUpperCase();
+}
+
+String? externalTransactionAccountLabel(
+  TellerTransaction row,
+  Map<String, String> tellerAccountNames,
+) {
+  final source = (row.source ?? '').trim().toLowerCase();
+  final bofaLast4 = _accountLast4(row.payload['account_last4']);
+  if (source == kBofaTimelineSource && bofaLast4 != null) {
+    return '****$bofaLast4';
+  }
+
+  final raw = row.payload['account_id']?.toString().trim();
+  if (raw == null || raw.isEmpty) return null;
+  final name = tellerAccountNames[raw]?.trim();
+  if (name != null && name.isNotEmpty) return name;
+  return raw;
+}
+
+String? _accountLast4(dynamic value) {
+  final digits = value?.toString().replaceAll(RegExp(r'\D'), '') ?? '';
+  if (digits.length < 4) return null;
+  return digits.substring(digits.length - 4);
 }
 
 const String tellerTimelineEventsQuery = '''
@@ -79,6 +115,10 @@ List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
     if (t == null) continue;
     final idRaw = raw['id'];
     final eventId = idRaw == null ? '' : idRaw.toString();
+    final eventTypeRaw = raw['eventType'];
+    final eventType = eventTypeRaw is String ? eventTypeRaw : null;
+    final sourceRaw = raw['source'];
+    final source = sourceRaw is String ? sourceRaw : null;
     final payload = _asMap(raw['payload']) ?? {};
     final rangeLinkNodes = raw['linkedModels'];
     final linkConn =
@@ -114,6 +154,8 @@ List<TellerTransaction> parseTellerTimelineResponse(dynamic data) {
         eventId: eventId,
         payload: payload,
         linkedModels: linked,
+        source: source,
+        eventType: eventType,
       ),
     );
   }

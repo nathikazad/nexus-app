@@ -44,6 +44,7 @@ void main() {
                   'time': '2026-03-15T14:30:00.000Z',
                   'id': 'evt-abc',
                   'eventType': kTellerTimelineEventType,
+                  'source': kTellerTimelineSource,
                   'payload': {'amount': '10', 'description': 'Coffee'},
                 },
               },
@@ -60,8 +61,37 @@ void main() {
       expect(l.payload['description'], 'Coffee');
       expect(l.eventTime.toUtc().year, 2026);
       expect(l.eventType, kTellerTimelineEventType);
+      expect(l.source, kTellerTimelineSource);
       expect(l.isTellerTimelineEvent, isTrue);
       expect(l.isBillImageEvent, isFalse);
+    });
+
+    test('parses BofA transaction link as external transaction event', () {
+      final data = {
+        'modelById': {
+          'modelTimelineEventLinksByModelId': {
+            'nodes': [
+              {
+                'id': 'bofa-link',
+                'timelineEventByEventTimeAndEventId': {
+                  'time': '2026-07-14T00:00:00.000Z',
+                  'id': 'bofa-event',
+                  'eventType': kBofaTimelineEventType,
+                  'source': kBofaTimelineSource,
+                  'payload': {'amount': '-12.50', 'description': 'Coffee'},
+                },
+              },
+            ],
+          },
+        },
+      };
+
+      final link = parseExpenseTimelineLinks(data).single;
+
+      expect(link.source, kBofaTimelineSource);
+      expect(link.eventType, kBofaTimelineEventType);
+      expect(link.isTellerTimelineEvent, isTrue);
+      expect(link.toTellerTransaction().source, kBofaTimelineSource);
     });
 
     test('skips node without timeline event or time', () {
@@ -116,11 +146,14 @@ void main() {
         eventId: 'ev',
         payload: const {'amount': '5'},
         eventType: kTellerTimelineEventType,
+        source: kTellerTimelineSource,
       );
       final row = link.toTellerTransaction();
       expect(row.time, t);
       expect(row.eventId, 'ev');
       expect(row.payload['amount'], '5');
+      expect(row.source, kTellerTimelineSource);
+      expect(row.eventType, kTellerTimelineEventType);
       expect(row.linkedModels, isEmpty);
     });
   });

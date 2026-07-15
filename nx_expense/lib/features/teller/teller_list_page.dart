@@ -15,7 +15,6 @@ import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
-import 'package:nx_expense/features/teller/widgets/teller_expense_review_sheet.dart';
 import 'teller_transaction_detail_page.dart';
 
 enum _TellerSortMode {
@@ -75,37 +74,18 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     }
     setState(() => _syncBusy = true);
     try {
-      final result = await postTellerSync(imageBaseUrl: base, userId: uid);
+      final result = await postBofaSync(imageBaseUrl: base, userId: uid);
       ref.invalidate(tellerTransactionsProvider);
-      await ref.read(tellerTransactionsProvider.future);
-      if (mounted) setState(() => _syncBusy = false);
-      final review = result.expenseReview;
-      if (!mounted || review == null || review.items.isEmpty) return;
-      final decisions = await showTellerExpenseReviewSheet(
-        context: context,
-        review: review,
-      );
-      if (!mounted || decisions == null || decisions.isEmpty) return;
-      setState(() => _syncBusy = true);
-      final applyResult = await applyTellerExpenseReview(
-        imageBaseUrl: base,
-        userId: uid,
-        domainId: review.domainId,
-        decisions: decisions,
-      );
-      ref.invalidate(tellerTransactionsProvider);
-      ref.invalidate(expenseListProvider);
-      ref.invalidate(budgetExpenseGoalsMonthProvider);
       await ref.read(tellerTransactionsProvider.future);
       if (mounted) {
-        final counts = applyResult.counts;
-        final created = counts['created'] ?? 0;
-        final linked = counts['linked'] ?? 0;
-        final skipped = counts['skipped'] ?? 0;
+        final counts = result.counts;
+        final inserted = counts['new'] ?? 0;
+        final changed = counts['changed'] ?? 0;
+        final removed = counts['removed'] ?? 0;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Expense review applied: $created created, $linked linked, $skipped skipped.',
+              'BofA sync complete: $inserted new, $changed changed, $removed removed.',
             ),
           ),
         );
@@ -114,7 +94,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Teller sync failed: $e')));
+        ).showSnackBar(SnackBar(content: Text('BofA sync failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _syncBusy = false);
@@ -327,7 +307,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                       ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
-                  Expanded(child: Text('Teller', style: refAppBarTitleLarge())),
+                  Expanded(child: Text('Ext', style: refAppBarTitleLarge())),
                   Tooltip(
                     message: 'Bank accounts',
                     child: IconButton(
@@ -355,7 +335,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                   ),
                   if (isDesktopLayout(context))
                     Tooltip(
-                      message: 'Fetch from Teller (server sync)',
+                      message: 'Fetch from BofA (server sync)',
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(
@@ -399,7 +379,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
               onChanged: (_) => setState(() {}),
               style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
               decoration: InputDecoration(
-                hintText: 'Search Teller transactions...',
+                hintText: 'Search external transactions...',
                 hintStyle: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppColors.slate400,
@@ -539,8 +519,8 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                                   const SizedBox(height: 12),
                                   Text(
                                     rows.isEmpty
-                                        ? 'No Teller transactions in this range'
-                                        : 'No Teller transactions match',
+                                        ? 'No external transactions in this range'
+                                        : 'No external transactions match',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
@@ -551,7 +531,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                                   if (!isDesktopLayout(context)) ...[
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Swipe down to sync from Teller',
+                                      'Swipe down to sync',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
@@ -637,7 +617,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: _TellerCard(
             row: r,
-            accountName: _accountLabelFor(r.payload, accountNames),
+            accountName: externalTransactionAccountLabel(r, accountNames),
             onTap: (ctx) {
               if (isDesktopLayout(ctx)) {
                 ref.read(selectedTellerRowProvider.notifier).state = r;
@@ -665,7 +645,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: _TellerCard(
             row: r,
-            accountName: _accountLabelFor(r.payload, accountNames),
+            accountName: externalTransactionAccountLabel(r, accountNames),
             onTap: (ctx) {
               if (isDesktopLayout(ctx)) {
                 ref.read(selectedTellerRowProvider.notifier).state = r;
@@ -758,16 +738,6 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     ].whereType<Object>().join(' ').toLowerCase();
   }
 
-  static String? _accountLabelFor(
-    Map<String, dynamic> payload,
-    Map<String, String> accountNames,
-  ) {
-    final raw = payload['account_id']?.toString().trim();
-    if (raw == null || raw.isEmpty) return null;
-    final name = accountNames[raw]?.trim();
-    return name == null || name.isEmpty ? raw : name;
-  }
-
   static String _summaryFor(List<TellerTransactionRow> rows) {
     num? sum;
     for (final row in rows) {
@@ -794,7 +764,7 @@ class _TellerSortButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<_TellerSortMode>(
-      tooltip: 'Sort Teller transactions',
+      tooltip: 'Sort external transactions',
       offset: const Offset(0, 36),
       onSelected: onSelected,
       itemBuilder: (context) => [
@@ -997,6 +967,10 @@ class _TellerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = tellerTransactionTitleLine(row.payload);
     final amt = _parseAmount(row.payload['amount']);
+    final sourceLabel = externalTransactionSourceLabel(row);
+    final subtitle = accountName == null
+        ? sourceLabel
+        : '$sourceLabel • $accountName';
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1031,19 +1005,17 @@ class _TellerCard extends StatelessWidget {
                               color: AppColors.slate900,
                             ),
                           ),
-                          if (accountName != null) ...[
-                            const SizedBox(height: 5),
-                            Text(
-                              accountName!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.slate500,
-                              ),
+                          const SizedBox(height: 5),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.slate500,
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
@@ -1052,7 +1024,7 @@ class _TellerCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 1),
                         child: Tooltip(
-                          message: 'Removed from Teller (no longer in API)',
+                          message: 'Removed from source (no longer in API)',
                           child: Icon(
                             Icons.delete_outline_rounded,
                             size: 18,

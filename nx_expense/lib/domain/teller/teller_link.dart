@@ -2,6 +2,8 @@ import 'package:nx_expense/domain/teller/teller_transaction.dart';
 
 const String kTellerTimelineEventType = 'teller_transaction';
 const String kTellerTimelineSource = 'teller';
+const String kBofaTimelineEventType = 'transaction';
+const String kBofaTimelineSource = 'bofa';
 const String kExpenseImageTimelineEventType = 'image';
 
 class TellerExpenseLink {
@@ -11,6 +13,7 @@ class TellerExpenseLink {
     required this.eventId,
     required this.payload,
     this.eventType,
+    this.source,
   });
 
   final String linkId;
@@ -20,9 +23,14 @@ class TellerExpenseLink {
 
   /// From `timeline_events.event_type` when present; null treated as Teller for older rows.
   final String? eventType;
+  final String? source;
 
   bool get isTellerTimelineEvent =>
-      eventType == null || eventType == kTellerTimelineEventType;
+      eventType == null ||
+      (source == null && eventType == kTellerTimelineEventType) ||
+      (source == kTellerTimelineSource &&
+          eventType == kTellerTimelineEventType) ||
+      (source == kBofaTimelineSource && eventType == kBofaTimelineEventType);
 
   bool get isBillImageEvent => eventType == kExpenseImageTimelineEventType;
 
@@ -32,6 +40,8 @@ class TellerExpenseLink {
       eventId: eventId,
       payload: payload,
       linkedModels: const [],
+      source: source,
+      eventType: eventType,
     );
   }
 }

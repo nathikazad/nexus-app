@@ -12,7 +12,7 @@ import 'package:nx_expense/domain/expense/model_names.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/desktop/panel_chrome.dart';
 
-/// Full-screen Teller transaction detail (read-only).
+/// Full-screen external transaction detail (read-only).
 class TellerTransactionDetailScreen extends ConsumerWidget {
   const TellerTransactionDetailScreen({super.key, required this.row});
 
@@ -32,7 +32,8 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
     final cpName = _counterpartyNameFromPayload(p);
     final amount = num.tryParse(p['amount']?.toString().trim() ?? '');
     final accountNames = ref.watch(tellerAccountNameByIdProvider);
-    final accountLabel = _accountLabelFromPayload(p, accountNames);
+    final accountLabel = externalTransactionAccountLabel(row, accountNames);
+    final sourceLabel = externalTransactionSourceLabel(row);
 
     final listBody = ListView(
       padding: EdgeInsets.fromLTRB(
@@ -54,6 +55,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
               ? (p['amount']?.toString() ?? '—')
               : formatMoney(amount),
         ),
+        _DetailRow(label: 'Source', value: sourceLabel),
         _DetailRow(
           label: 'deleted',
           value: tellerPayloadIsDeleted(p) ? 'true' : 'false',
@@ -81,7 +83,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
 
     if (isDesktopLayout(context)) {
       return PanelChrome(
-        title: 'Teller transaction',
+        title: 'External transaction',
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,
@@ -108,7 +110,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
           onPressed: () => navTellerTxDetailBack(context, ref, row),
         ),
         centerTitle: true,
-        title: Text('Teller transaction', style: refAppBarTitleBase()),
+        title: Text('External transaction', style: refAppBarTitleBase()),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: AppColors.slate100),
@@ -133,16 +135,6 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
     final raw = p['date'];
     if (raw == null) return null;
     return raw.toString();
-  }
-
-  static String? _accountLabelFromPayload(
-    Map<String, dynamic> payload,
-    Map<String, String> accountNames,
-  ) {
-    final raw = payload['account_id']?.toString().trim();
-    if (raw == null || raw.isEmpty) return null;
-    final name = accountNames[raw]?.trim();
-    return name == null || name.isEmpty ? raw : name;
   }
 }
 

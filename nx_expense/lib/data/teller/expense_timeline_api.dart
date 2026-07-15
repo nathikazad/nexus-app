@@ -114,6 +114,8 @@ List<TellerExpenseLink> parseExpenseTimelineLinks(dynamic data) {
     if (lid == null) continue;
     final etRaw = te['eventType'];
     final eventType = etRaw is String ? etRaw : null;
+    final sourceRaw = te['source'];
+    final source = sourceRaw is String ? sourceRaw : null;
     out.add(
       TellerExpenseLink(
         linkId: lid.toString(),
@@ -121,6 +123,7 @@ List<TellerExpenseLink> parseExpenseTimelineLinks(dynamic data) {
         eventId: eventId,
         payload: pmap,
         eventType: eventType,
+        source: source,
       ),
     );
   }

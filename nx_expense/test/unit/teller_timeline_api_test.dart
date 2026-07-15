@@ -64,6 +64,8 @@ void main() {
           {
             'time': '2026-05-16T00:00:00.000',
             'id': '16845',
+            'source': 'bofa',
+            'eventType': 'transaction',
             'payload': {'amount': '-13.45', 'description': 'Coffee'},
             'linkedModels': [
               {
@@ -86,8 +88,43 @@ void main() {
       expect(rows.first.time.year, 2026);
       expect(rows.first.time.month, 5);
       expect(rows.first.time.day, 16);
+      expect(rows.first.source, 'bofa');
+      expect(rows.first.eventType, 'transaction');
+      expect(externalTransactionSourceLabel(rows.first), 'BofA');
       expect(rows.first.linkedModels.single.id, 3295);
       expect(rows.first.linkedModels.single.modelTypeName, 'Expense');
+    });
+
+    test('formats BofA account label from account_last4', () {
+      final row = TellerTransactionRow(
+        time: DateTime.utc(2026, 5, 16),
+        eventId: 'bofa-tx',
+        source: 'bofa',
+        eventType: 'transaction',
+        payload: const {
+          'account_id': 'hashed-account-id',
+          'account_last4': '1234',
+        },
+        linkedModels: const [],
+      );
+
+      expect(externalTransactionAccountLabel(row, const {}), '****1234');
+    });
+
+    test('keeps Teller account labels from account map', () {
+      final row = TellerTransactionRow(
+        time: DateTime.utc(2026, 5, 16),
+        eventId: 'teller-tx',
+        source: 'teller',
+        eventType: 'teller_transaction',
+        payload: const {'account_id': 'acct_1', 'account_last4': '9999'},
+        linkedModels: const [],
+      );
+
+      expect(
+        externalTransactionAccountLabel(row, const {'acct_1': 'Checking'}),
+        'Checking',
+      );
     });
 
     test('fetches only the selected local date range', () async {
@@ -147,7 +184,7 @@ void main() {
     });
 
     test('default when empty', () {
-      expect(tellerTransactionTitleLine({}), 'Teller transaction');
+      expect(tellerTransactionTitleLine({}), 'External transaction');
     });
   });
 

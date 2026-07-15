@@ -20,12 +20,16 @@ class TellerTransaction {
     required this.eventId,
     required this.payload,
     required this.linkedModels,
+    this.source,
+    this.eventType,
   });
 
   final DateTime time;
   final String eventId;
   final Map<String, dynamic> payload;
   final List<LinkedTellerModel> linkedModels;
+  final String? source;
+  final String? eventType;
 }
 
 /// Legacy name kept for routes and widgets during the nx_expense layer reorg.

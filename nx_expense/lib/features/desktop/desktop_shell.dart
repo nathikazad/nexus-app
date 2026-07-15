@@ -102,7 +102,7 @@ class DesktopShell extends ConsumerWidget {
               NavigationRailDestination(
                 icon: Icon(Icons.account_balance_outlined),
                 selectedIcon: Icon(Icons.account_balance),
-                label: Text('Teller'),
+                label: Text('Ext'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.sell_outlined),
