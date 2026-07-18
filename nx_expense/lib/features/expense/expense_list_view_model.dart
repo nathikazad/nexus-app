@@ -81,22 +81,6 @@ Future<List<Expense>> buildExpenseListForUi(Ref ref) async {
     }
   }
 
-  if (filter != null &&
-      filter.relationFilters != null &&
-      filter.relationFilters!.isNotEmpty) {
-    filtered = filtered.where((m) {
-      for (final entry in filter.relationFilters!.entries) {
-        final ids = entry.value;
-        if (ids.isEmpty) continue;
-        final rels = m.relations?[entry.key];
-        if (rels == null || rels.isEmpty) return false;
-        final modelIds = rels.map((r) => r.id).toSet();
-        if (!ids.any((id) => modelIds.contains(id))) return false;
-      }
-      return true;
-    }).toList();
-  }
-
   final sorted = [...filtered];
   switch (sortMode) {
     case ExpenseSortMode.dateDesc:

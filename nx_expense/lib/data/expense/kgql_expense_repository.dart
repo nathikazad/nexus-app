@@ -34,11 +34,24 @@ class KgqlExpenseRepository implements ExpenseRepository {
     required DateTime rangeEnd,
   }) async {
     final schema = await _loadExpenseSchema();
-    final struct = buildExpenseStruct(schema);
+    final struct = buildExpenseListStruct(schema);
+    final relationFilters =
+        filter?.relationFilters?.entries
+            .where((entry) => entry.value.isNotEmpty)
+            .toList()
+          ?..sort((a, b) => a.key.compareTo(b.key));
     final filterMap = <String, dynamic>{
       'model_type': kExpenseModelTypeName,
       if (filter?.tagFilters != null && filter!.tagFilters!.isNotEmpty)
         'tag_filters': filter.tagFilters,
+      if (relationFilters != null && relationFilters.isNotEmpty)
+        'relation_filters': [
+          for (final entry in relationFilters)
+            {
+              'model_type': entry.key,
+              'model_ids': entry.value.toList()..sort(),
+            },
+        ],
       'filters': [
         {'key': 'date', 'op': '>=', 'value': _dateOnlyYmd(rangeStart)},
         {'key': 'date', 'op': '<=', 'value': _dateOnlyYmd(rangeEnd)},
@@ -55,7 +68,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
   @override
   Future<Expense?> getById(int id) async {
     final schema = await _loadExpenseSchema();
-    final struct = buildExpenseStruct(schema);
+    final struct = buildExpenseDetailStruct(schema);
     final m = await fetchKgqlModelById(
       _client,
       modelTypeName: kExpenseModelTypeName,
@@ -294,7 +307,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
     required DateTime rangeEnd,
   }) async {
     final schema = await _loadExpenseSchema();
-    final struct = buildExpenseStruct(schema);
+    final struct = buildExpenseListStruct(schema);
     final rows = await fetchKgqlModels(
       _client,
       filter: {

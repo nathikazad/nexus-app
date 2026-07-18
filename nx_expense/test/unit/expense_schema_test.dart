@@ -7,7 +7,7 @@ import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/features/expense/widgets/relation_picker.dart';
 
 void main() {
-  group('buildExpenseStruct', () {
+  group('expense structs', () {
     test('S5.1 attributes only', () {
       final mt = ModelType.fromJson({
         'id': 1,
@@ -72,6 +72,63 @@ void main() {
       final a = buildExpenseStruct(mt);
       final b = buildExpenseStruct(mt);
       expect(a, b);
+    });
+
+    test('S5.7 product details and relation attributes', () {
+      final mt = ModelType.fromJson({
+        'id': 1,
+        'name': 'Expense',
+        'relations': [
+          {'target_model_type': 'Product'},
+        ],
+      });
+
+      final struct = buildExpenseStruct(mt);
+
+      expect(struct['Product'], {
+        'id': true,
+        'name': true,
+        'brand': true,
+        'image_url': true,
+        'item_url': true,
+      });
+      expect(struct['relations']['relation_attributes'], {
+        'key': true,
+        'value': true,
+        'value_type': true,
+      });
+    });
+
+    test('S5.8 list struct keeps relation labels without detail payloads', () {
+      final mt = ModelType.fromJson({
+        'id': 1,
+        'name': 'Expense',
+        'relations': [
+          {'target_model_type': 'Product'},
+          {'target_model_type': 'Company'},
+        ],
+      });
+
+      final struct = buildExpenseListStruct(mt);
+
+      expect(struct['Product'], {'id': true, 'name': true});
+      expect(struct['Company'], {'id': true, 'name': true});
+      expect(struct, isNot(contains('relations')));
+    });
+
+    test('S5.9 detail struct keeps rich products and relation attributes', () {
+      final mt = ModelType.fromJson({
+        'id': 1,
+        'name': 'Expense',
+        'relations': [
+          {'target_model_type': 'Product'},
+        ],
+      });
+
+      final struct = buildExpenseDetailStruct(mt);
+
+      expect(struct['Product'], containsPair('brand', true));
+      expect(struct['relations'], contains('relation_attributes'));
     });
   });
 

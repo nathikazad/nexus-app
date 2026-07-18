@@ -179,6 +179,7 @@ class _ExpensesPanels extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedId = ref.watch(selectedExpenseIdProvider);
+    final panel3Stack = ref.watch(panel3StackProvider);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -196,12 +197,14 @@ class _ExpensesPanels extends ConsumerWidget {
                 )
               : _emptyPanel('Select an expense'),
         ),
-        const VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: AppColors.slate100,
-        ),
-        SizedBox(width: 380, child: _ExpensePanel3()),
+        if (panel3Stack.isNotEmpty) ...[
+          const VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: AppColors.slate100,
+          ),
+          const SizedBox(width: 380, child: _ExpensePanel3()),
+        ],
       ],
     );
   }

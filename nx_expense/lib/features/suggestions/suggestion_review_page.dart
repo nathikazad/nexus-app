@@ -10,6 +10,7 @@ import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/data/suggestion/suggestion_api.dart';
 import 'package:nx_expense/domain/suggestion/expense_suggestion.dart';
+import 'package:nx_expense/features/products/widgets/product_line_card.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
 
 import 'suggestion_state.dart';
@@ -374,7 +375,7 @@ class _SuggestionListTile extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Thumbnail(imageUrl: preview?.imageUrl, size: 52),
+              ProductThumbnail(imageUrl: preview?.imageUrl, size: 52),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -786,119 +787,24 @@ class _ProductRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final quantity = product.quantity;
-    final details = [
-      if (quantity != null)
-        '${_compactNumber(quantity)} ${product.unit ?? 'item'}',
-      if (product.price != null) '${formatMoney(product.price!)} each',
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Thumbnail(imageUrl: product.imageUrl, size: 72),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        product.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate900,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _SourceBadge(
-                      label: product.createsProduct ? 'NEW PRODUCT' : 'PRODUCT',
-                    ),
-                  ],
-                ),
-                if (details.isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Text(
-                    details.join('  ·  '),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                ],
-                if (product.maker != null) ...[
-                  const SizedBox(height: 9),
-                  _InlineRelation(
-                    icon: Icons.subdirectory_arrow_right,
-                    label: product.maker!.createsCompany
-                        ? 'Create maker'
-                        : 'Maker',
-                    value: product.maker!.name,
-                  ),
-                ],
-              ],
+    return ProductLineCard(
+      name: product.name,
+      imageUrl: product.imageUrl,
+      quantity: product.quantity,
+      unit: product.unit,
+      unitPrice: product.price,
+      badge: _SourceBadge(
+        label: product.createsProduct ? 'NEW PRODUCT' : 'PRODUCT',
+      ),
+      footer: product.maker == null
+          ? null
+          : _InlineRelation(
+              icon: Icons.subdirectory_arrow_right,
+              label: product.maker!.createsCompany ? 'Create maker' : 'Maker',
+              value: product.maker!.name,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Thumbnail extends ConsumerWidget {
-  const _Thumbnail({required this.imageUrl, required this.size});
-
-  final String? imageUrl;
-  final double size;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final base = ref.watch(imageBaseUrlProvider);
-    final userId = ref.watch(userIdProvider);
-    final path = imageUrl;
-    if (base == null || userId == null || path == null || path.isEmpty) {
-      return _ThumbnailFallback(size: size);
-    }
-    final normalizedBase = normalizeSuggestionHttpBase(base);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: Image.network(
-        resolveSuggestionAssetUrl(base, path),
-        headers: suggestionHttpHeaders(normalizedBase, userId),
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _ThumbnailFallback(size: size),
-      ),
-    );
-  }
-}
-
-class _ThumbnailFallback extends StatelessWidget {
-  const _ThumbnailFallback({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: AppColors.slate100,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: Icon(
-        Icons.inventory_2_outlined,
-        size: size * 0.4,
-        color: AppColors.slate400,
-      ),
+      thumbnailSize: 72,
+      decorated: false,
     );
   }
 }
@@ -1348,6 +1254,3 @@ String _longDate(String? value) {
   final parsed = DateTime.tryParse(value ?? '');
   return parsed == null ? value ?? '' : DateFormat('MMM d, y').format(parsed);
 }
-
-String _compactNumber(num value) =>
-    value % 1 == 0 ? value.toInt().toString() : '$value';

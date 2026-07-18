@@ -6,6 +6,7 @@ class RelationEdge {
     required this.modelType,
     this.name,
     this.description,
+    this.relationAttributes,
   });
 
   final int relationId;
@@ -13,4 +14,5 @@ class RelationEdge {
   final String modelType;
   final String? name;
   final String? description;
+  final Map<String, dynamic>? relationAttributes;
 }

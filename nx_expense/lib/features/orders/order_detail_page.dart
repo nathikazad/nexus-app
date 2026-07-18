@@ -8,6 +8,7 @@ import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/domain/order/order.dart';
+import 'package:nx_expense/features/products/widgets/product_line_card.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -93,7 +94,19 @@ class OrderDetailScreen extends ConsumerWidget {
                       RefLayout.px5,
                       8,
                     ),
-                    child: _ProductRow(product: product),
+                    child: ProductLineCard(
+                      name: product.name,
+                      quantity: product.quantity,
+                      unit: product.unit,
+                      unitPrice: product.unitPrice,
+                      lineTotal: product.lineTotal ?? product.unitPrice,
+                      additionalDetails: [
+                        if (product.tax != null)
+                          'Tax ${formatMoney(product.tax)}',
+                        if (product.status != null) product.status!,
+                        if (product.deliveryDate != null) product.deliveryDate!,
+                      ],
+                    ),
                   ),
               const SizedBox(height: RefLayout.pb24),
             ],
@@ -192,81 +205,6 @@ class _HeaderFact extends StatelessWidget {
       ],
     );
   }
-}
-
-class _ProductRow extends StatelessWidget {
-  const _ProductRow({required this.product});
-
-  final OrderProduct product;
-
-  @override
-  Widget build(BuildContext context) {
-    final details = <String>[
-      if (product.quantity != null) 'Qty ${_formatQuantity(product.quantity!)}',
-      if (product.unitPrice != null) 'Unit ${formatMoney(product.unitPrice)}',
-      if (product.tax != null) 'Tax ${formatMoney(product.tax)}',
-      if (product.status != null) product.status!,
-      if (product.deliveryDate != null) product.deliveryDate!,
-    ];
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: refCardShadow,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate900,
-                  ),
-                ),
-                if (details.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    details.join(' · '),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      height: 1.45,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            formatMoney(product.lineTotal ?? product.unitPrice),
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.teal600,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _formatQuantity(num value) {
-  if (value == value.roundToDouble()) {
-    return value.round().toString();
-  }
-  return value.toString();
 }
 
 num? _moneyFromExtras(dynamic raw) {

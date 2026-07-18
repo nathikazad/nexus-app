@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -9,12 +10,14 @@ import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 import 'package:nx_expense/domain/expense/expense.dart';
+import 'package:nx_expense/domain/expense/expense_product_line.dart';
 import 'package:nx_expense/domain/expense/model_names.dart';
 import 'package:nx_expense/domain/expense/related_model.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/desktop/panel_chrome.dart';
 import 'package:nx_expense/features/expense/widgets/expense_bills_section.dart';
+import 'package:nx_expense/features/products/widgets/product_line_card.dart';
 import 'package:nx_expense/features/teller/widgets/teller_detail_readonly_section.dart';
 
 class ExpenseDetailScreen extends ConsumerWidget {
@@ -46,7 +49,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
                 body: const Center(child: Text('Expense not found')),
               );
             }
-            return _DetailBody(
+            return ExpenseDetailContent(
               schema: schema,
               expense: expense,
               expenseId: expenseId,
@@ -58,8 +61,9 @@ class ExpenseDetailScreen extends ConsumerWidget {
   }
 }
 
-class _DetailBody extends ConsumerWidget {
-  const _DetailBody({
+class ExpenseDetailContent extends ConsumerWidget {
+  const ExpenseDetailContent({
+    super.key,
     required this.schema,
     required this.expense,
     required this.expenseId,
@@ -85,216 +89,222 @@ class _DetailBody extends ConsumerWidget {
 
     final tagSystems = schema.tagSystems;
 
-    final detailBody = Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.slate100)),
-                  color: Color(0x4DF8FAFC),
-                ),
+    final detailBody = Expanded(
+      child: LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 840),
                 child: Column(
                   children: [
-                    Text(
-                      headerAmount != null ? formatMoney(headerAmount) : '—',
-                      style: GoogleFonts.inter(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -1,
-                        height: 1,
-                        color: AppColors.teal600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 14,
-                          color: AppColors.slate400,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          modelDateCellLabel(expense),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.slate400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.all(RefLayout.px5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (expense.description != null &&
-                        expense.description!.isNotEmpty) ...[
-                      Text('Description', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      Text(
-                        expense.description!,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          height: 1.6,
-                          color: AppColors.slate700,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-
-                    if (expense.description == null ||
-                        expense.description!.isEmpty)
-                      const SizedBox(height: 24),
-
                     Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(
-                          RefLayout.rounded2xl,
-                        ),
-                        border: Border.all(color: AppColors.slate100),
-                        boxShadow: refCardShadow,
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        vertical: constraints.maxWidth < 600 ? 32 : 40,
                       ),
-                      child: _AttrRow(
-                        label: 'Id',
-                        value: '${expense.id}',
-                        showDivider: false,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    if (attrDefs.isNotEmpty) ...[
-                      Text('Attributes', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(
-                            RefLayout.rounded2xl,
-                          ),
-                          border: Border.all(color: AppColors.slate100),
-                          boxShadow: refCardShadow,
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: AppColors.slate100),
                         ),
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < attrDefs.length; i++)
-                              _AttrRow(
-                                label: formatAttributeLabel(attrDefs[i].key!),
-                                value: _formatAttr(
-                                  expense,
-                                  attrDefs[i].key!,
-                                  attrDefs[i].valueType,
-                                ),
-                                showDivider: i < attrDefs.length - 1,
-                              ),
-                          ],
-                        ),
+                        color: Color(0x4DF8FAFC),
                       ),
-                      const SizedBox(height: 32),
-                    ],
-
-                    if (_hasAnyTags(tagSystems)) ...[
-                      Text('Tags', style: refSectionTitle(context)),
-                      const SizedBox(height: 12),
-                      for (final sys in tagSystems)
-                        if ((expense.tags?[sys.name] ?? []).isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  sys.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: AppColors.slate400,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                _buildTagValues(context, ref, sys),
-                              ],
+                      child: Column(
+                        children: [
+                          Text(
+                            headerAmount != null
+                                ? formatMoney(headerAmount)
+                                : '—',
+                            style: GoogleFonts.inter(
+                              fontSize: constraints.maxWidth < 600 ? 34 : 40,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -1,
+                              height: 1,
+                              color: AppColors.teal600,
                             ),
                           ),
-                      const SizedBox(height: 20),
-                    ],
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: AppColors.slate400,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                modelDateCellLabel(expense),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.slate400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(RefLayout.px5),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (expense.description != null &&
+                              expense.description!.isNotEmpty) ...[
+                            Text(
+                              'Description',
+                              style: refSectionTitle(context),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              expense.description!,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                height: 1.6,
+                                color: AppColors.slate700,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                          ],
 
-                    if (expense.relations != null &&
-                        expense.relations!.isNotEmpty)
-                      for (final e in expense.relations!.entries)
-                        if (e.key != kTransferModelTypeName)
-                          if (dedupeModelsById(e.value).isNotEmpty)
+                          if (expense.description == null ||
+                              expense.description!.isEmpty)
+                            const SizedBox(height: 24),
+
+                          if (expense.products.isNotEmpty) ...[
+                            _ExpenseProductsSection(
+                              products: expense.products,
+                              expenseAmount: headerAmount,
+                              onRelatedExpenses: (product) =>
+                                  navToRelationExpenses(
+                                    context,
+                                    ref,
+                                    relName: kProductModelTypeName,
+                                    relId: product.id,
+                                    displayName: product.name,
+                                  ),
+                            ),
+                            const SizedBox(height: 32),
+                          ],
+
+                          if (_hasAnyTags(tagSystems)) ...[
+                            Text('Tags', style: refSectionTitle(context)),
+                            const SizedBox(height: 12),
+                            for (final sys in tagSystems)
+                              if ((expense.tags?[sys.name] ?? []).isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        sys.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: AppColors.slate400,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      _buildTagValues(context, ref, sys),
+                                    ],
+                                  ),
+                                ),
+                            const SizedBox(height: 20),
+                          ],
+
+                          if (expense.relations != null &&
+                              expense.relations!.isNotEmpty)
+                            for (final e in expense.relations!.entries)
+                              if (e.key != kTransferModelTypeName &&
+                                  e.key != kProductModelTypeName)
+                                if (dedupeModelsById(e.value).isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 24),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          formatAttributeLabel(e.key),
+                                          style: refSectionTitle(context),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        for (final relM in dedupeModelsById(
+                                          e.value,
+                                        ))
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 10,
+                                            ),
+                                            child: _relationRow(
+                                              context,
+                                              ref,
+                                              e.key,
+                                              relM,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+
+                          if (expense.relations?[kTransferModelTypeName] !=
+                                  null &&
+                              dedupeModelsById(
+                                expense.relations![kTransferModelTypeName]!,
+                              ).isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 24),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
-                                    formatAttributeLabel(e.key),
+                                    'Transfer',
                                     style: refSectionTitle(context),
                                   ),
                                   const SizedBox(height: 12),
-                                  for (final relM in dedupeModelsById(e.value))
+                                  for (final relM in dedupeModelsById(
+                                    expense.relations![kTransferModelTypeName]!,
+                                  ))
                                     Padding(
                                       padding: const EdgeInsets.only(
                                         bottom: 10,
                                       ),
-                                      child: _relationRow(
-                                        context,
-                                        ref,
-                                        e.key,
-                                        relM,
-                                      ),
+                                      child: _transferCell(context, ref, relM),
                                     ),
                                 ],
                               ),
                             ),
 
-                    if (expense.relations?[kTransferModelTypeName] != null &&
-                        dedupeModelsById(
-                          expense.relations![kTransferModelTypeName]!,
-                        ).isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text('Transfer', style: refSectionTitle(context)),
-                            const SizedBox(height: 12),
-                            for (final relM in dedupeModelsById(
-                              expense.relations![kTransferModelTypeName]!,
-                            ))
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _transferCell(context, ref, relM),
-                              ),
-                          ],
-                        ),
-                      ),
+                          _MoreDetailsSection(
+                            expense: expense,
+                            attrDefs: attrDefs,
+                            formatAttribute: (definition) => _formatAttr(
+                              expense,
+                              definition.key!,
+                              definition.valueType,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
 
-                    TellerDetailReadonlySection(modelId: expenseId),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 32),
-                      child: ExpenseBillsSection(expenseId: expenseId),
+                          TellerDetailReadonlySection(modelId: expenseId),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 32),
+                            child: ExpenseBillsSection(expenseId: expenseId),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
 
     if (isDesktopLayout(context)) {
@@ -319,7 +329,7 @@ class _DetailBody extends ConsumerWidget {
             onPressed: () => context.push('/expense/form/$expenseId'),
           ),
         ],
-        body: detailBody,
+        body: Column(children: [detailBody]),
       );
     }
 
@@ -357,7 +367,7 @@ class _DetailBody extends ConsumerWidget {
           child: Divider(height: 1, color: AppColors.slate100),
         ),
       ),
-      body: detailBody,
+      body: Column(children: [detailBody]),
     );
   }
 
@@ -574,6 +584,203 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ExpenseProductsSection extends StatelessWidget {
+  const _ExpenseProductsSection({
+    required this.products,
+    required this.expenseAmount,
+    required this.onRelatedExpenses,
+  });
+
+  final List<ExpenseProductLine> products;
+  final num? expenseAmount;
+  final ValueChanged<ExpenseProductLine> onRelatedExpenses;
+
+  @override
+  Widget build(BuildContext context) {
+    final knownTotals = products
+        .map((product) => product.lineTotal)
+        .whereType<num>()
+        .toList();
+    final productSubtotal = knownTotals.isEmpty
+        ? null
+        : knownTotals.fold<num>(0, (sum, value) => sum + value);
+    final normalizedExpenseTotal = expenseAmount?.abs();
+    final difference = productSubtotal == null || normalizedExpenseTotal == null
+        ? null
+        : normalizedExpenseTotal - productSubtotal.abs();
+    final hasMeaningfulDifference =
+        difference != null && difference.abs() >= .005;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Products (${products.length})',
+          key: const Key('expense-products-heading'),
+          style: refSectionTitle(context),
+        ),
+        const SizedBox(height: 12),
+        for (final product in products)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: ProductLineCard(
+              key: ValueKey('expense-product-${product.id}'),
+              name: product.name,
+              imageUrl: product.imageUrl,
+              brand: product.brand,
+              quantity: product.quantity,
+              unit: product.unit,
+              unitPrice: product.price,
+              lineTotal: product.lineTotal,
+              onRelatedExpenses: () => onRelatedExpenses(product),
+              onOpenItem: _validWebUri(product.itemUrl) == null
+                  ? null
+                  : () => launchUrl(_validWebUri(product.itemUrl)!),
+            ),
+          ),
+        if (productSubtotal != null || normalizedExpenseTotal != null)
+          Container(
+            key: const Key('expense-products-reconciliation'),
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.slate50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.slate100),
+            ),
+            child: Column(
+              children: [
+                if (productSubtotal != null)
+                  _MoneySummaryRow(
+                    label: 'Products subtotal',
+                    value: productSubtotal,
+                  ),
+                if (hasMeaningfulDifference) ...[
+                  const SizedBox(height: 7),
+                  _MoneySummaryRow(
+                    label: difference >= 0
+                        ? 'Unallocated / tax / fees'
+                        : 'Product total difference',
+                    value: difference,
+                  ),
+                ],
+                if (normalizedExpenseTotal != null) ...[
+                  const Divider(height: 17, color: AppColors.slate200),
+                  _MoneySummaryRow(
+                    label: 'Expense total',
+                    value: normalizedExpenseTotal,
+                    emphasized: true,
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+Uri? _validWebUri(String? value) {
+  final uri = Uri.tryParse(value ?? '');
+  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    return null;
+  }
+  return uri;
+}
+
+class _MoneySummaryRow extends StatelessWidget {
+  const _MoneySummaryRow({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final num value;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final weight = emphasized ? FontWeight.w700 : FontWeight.w500;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: weight,
+              color: emphasized ? AppColors.slate700 : AppColors.slate500,
+            ),
+          ),
+        ),
+        Text(
+          formatMoney(value),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: weight,
+            color: emphasized ? AppColors.slate900 : AppColors.slate600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MoreDetailsSection extends StatelessWidget {
+  const _MoreDetailsSection({
+    required this.expense,
+    required this.attrDefs,
+    required this.formatAttribute,
+  });
+
+  final Expense expense;
+  final List<AttributeDefView> attrDefs;
+  final String Function(AttributeDefView definition) formatAttribute;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: const Key('expense-more-details'),
+      color: Colors.white,
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+        side: const BorderSide(color: AppColors.slate100),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+        childrenPadding: EdgeInsets.zero,
+        title: Text(
+          'More details',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.slate700,
+          ),
+        ),
+        children: [
+          const Divider(height: 1, color: AppColors.slate100),
+          _AttrRow(
+            label: 'Id',
+            value: '${expense.id}',
+            showDivider: attrDefs.isNotEmpty,
+          ),
+          for (var i = 0; i < attrDefs.length; i++)
+            _AttrRow(
+              label: formatAttributeLabel(attrDefs[i].key!),
+              value: formatAttribute(attrDefs[i]),
+              showDivider: i < attrDefs.length - 1,
+            ),
+        ],
       ),
     );
   }
