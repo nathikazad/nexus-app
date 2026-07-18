@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/domain/expense/expense.dart';
+import 'package:nx_expense/domain/expense/model_names.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 import 'package:nx_expense/core/formatting/format.dart';
@@ -36,6 +37,14 @@ class ExpenseCard extends StatelessWidget {
     }
 
     final ignored = expenseIgnoredForTotals(expense);
+    final visibleRelations =
+        expense.relations?.entries
+            .where(
+              (entry) =>
+                  entry.key != kProductModelTypeName && entry.value.isNotEmpty,
+            )
+            .toList() ??
+        const [];
     final borderColor = ignored
         ? Colors.red.shade200
         : (selectionMode && selected ? AppColors.teal600 : AppColors.slate100);
@@ -111,11 +120,10 @@ class ExpenseCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (expense.relations != null &&
-                  expense.relations!.isNotEmpty) ...[
+              if (visibleRelations.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
-                  expense.relations!.entries
+                  visibleRelations
                       .map((e) => e.value.map((m) => m.name).join(', '))
                       .join(' \u00b7 '),
                   style: GoogleFonts.inter(

@@ -252,16 +252,7 @@ class _SuggestionDetailPaneState extends ConsumerState<SuggestionDetailPane> {
       ref.invalidate(expenseListProvider);
       ref.invalidate(tellerTransactionsProvider);
       ref.read(selectedExpenseSuggestionIdProvider.notifier).state = null;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              accept ? 'Suggestion applied.' : 'Suggestion dismissed.',
-            ),
-          ),
-        );
-        if (widget.mobile) widget.onBack?.call();
-      }
+      if (mounted && widget.mobile) widget.onBack?.call();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
