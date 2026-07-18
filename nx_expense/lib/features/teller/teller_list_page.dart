@@ -15,6 +15,8 @@ import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
+import 'package:nx_expense/features/suggestions/suggestion_review_page.dart';
+import 'package:nx_expense/features/suggestions/suggestion_state.dart';
 import 'teller_transaction_detail_page.dart';
 
 enum _TellerSortMode {
@@ -271,6 +273,11 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final workspaceMode = ref.watch(externalWorkspaceModeProvider);
+    if (!isDesktopLayout(context) &&
+        workspaceMode == ExternalWorkspaceMode.review) {
+      return const SuggestionReviewScreen();
+    }
     final listAsync = ref.watch(tellerTransactionsInRangeProvider);
     final dateRange = ref.watch(expenseDateRangeProvider);
     final sortMode =
@@ -367,6 +374,10 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
             ),
           ),
           const ExpenseDateRangeBar(bottomPadding: 12),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 12),
+            child: ExternalModeControl(compact: true),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               RefLayout.px5,

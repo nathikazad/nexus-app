@@ -1,0 +1,126 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_db/auth.dart';
+import 'package:nx_expense/domain/suggestion/expense_suggestion.dart';
+import 'package:nx_expense/features/suggestions/suggestion_review_page.dart';
+import 'package:nx_expense/features/suggestions/suggestion_state.dart';
+
+void main() {
+  testWidgets('review inbox presents transaction and merchant evidence', (
+    tester,
+  ) async {
+    ExpenseSuggestion? selected;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          imageBaseUrlProvider.overrideWith((ref) => null),
+          userIdProvider.overrideWith((ref) => null),
+          openExpenseSuggestionsProvider.overrideWith(
+            (ref) async => [_suggestion],
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SuggestionInboxPane(
+              desktop: true,
+              onSelected: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 ready for review'), findsOneWidget);
+    expect(find.text('AMAZON MKTPL'), findsOneWidget);
+    expect(find.text('Waveshare CM5 Mini Base Board'), findsOneWidget);
+    expect(find.text(r'$31.49'), findsOneWidget);
+
+    await tester.tap(find.text('AMAZON MKTPL'));
+    expect(selected?.id, 26);
+  });
+
+  testWidgets('detail shows the graph hierarchy and decision controls', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          imageBaseUrlProvider.overrideWith((ref) => null),
+          userIdProvider.overrideWith((ref) => null),
+          openExpenseSuggestionsProvider.overrideWith(
+            (ref) async => [_suggestion],
+          ),
+          selectedExpenseSuggestionIdProvider.overrideWith((ref) => 26),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: SuggestionDetailPane(mobile: true)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('BANK TRANSACTION'), findsOneWidget);
+    expect(find.text('AMAZON TRANSACTION'), findsOneWidget);
+    expect(find.text('EXPENSE'), findsOneWidget);
+    expect(find.text('PRODUCTS (1)'), findsOneWidget);
+    expect(find.text('Waveshare'), findsOneWidget);
+    expect(find.text('Reject'), findsOneWidget);
+    expect(find.text('Accept & apply'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+const _suggestion = ExpenseSuggestion(
+  id: 26,
+  caseKey: 'transaction-expense:teller:2207',
+  status: 'open',
+  title: 'Link Amazon purchase',
+  reason: 'The exact amount and nearby date identify this Amazon order.',
+  bank: SuggestionEvent(
+    eventId: 2207,
+    source: 'teller',
+    eventType: 'teller_transaction',
+    description: 'AMAZON MKTPL',
+    date: '2026-01-30',
+    amount: -31.49,
+    accountLast4: '8134',
+  ),
+  provider: SuggestionEvent(
+    eventId: 31049,
+    source: 'amazon',
+    eventType: 'transaction',
+    description: 'Waveshare CM5 Mini Base Board',
+    date: '2026-01-29',
+    amount: -31.49,
+    orderIds: ['113-1234567-1234567'],
+  ),
+  expense: SuggestedExpense(
+    id: 2669,
+    name: 'Raspberry Pi base board',
+    companyName: 'Amazon',
+  ),
+  tags: [
+    SuggestedTag(
+      system: 'Spending Category',
+      path: ['Shopping', 'Electronics'],
+    ),
+  ],
+  products: [
+    SuggestedProduct(
+      id: null,
+      name: 'Waveshare CM5 Mini Base Board',
+      quantity: 1,
+      unit: 'item',
+      price: 28.99,
+      imageUrl: null,
+      maker: SuggestedCompany(id: null, name: 'Waveshare'),
+    ),
+  ],
+);

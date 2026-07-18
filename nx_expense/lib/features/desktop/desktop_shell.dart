@@ -16,6 +16,8 @@ import 'package:nx_expense/features/expense/expense_form_page.dart';
 import 'package:nx_expense/features/expense/expense_list_page.dart';
 import 'package:nx_expense/features/expense/scoped_expense_list.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
+import 'package:nx_expense/features/suggestions/suggestion_review_page.dart';
+import 'package:nx_expense/features/suggestions/suggestion_state.dart';
 import 'package:nx_expense/features/tag/tag_system_form_page.dart';
 import 'package:nx_expense/features/tag/tag_systems_page.dart';
 import 'package:nx_expense/features/teller/teller_expense_link_picker_page.dart';
@@ -315,6 +317,17 @@ class _TellerPanels extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(externalWorkspaceModeProvider);
+    if (mode == ExternalWorkspaceMode.review) {
+      return const Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: 380, child: SuggestionInboxPane(desktop: true)),
+          VerticalDivider(width: 1, thickness: 1, color: AppColors.slate100),
+          Expanded(child: SuggestionDetailPane()),
+        ],
+      );
+    }
     final row = ref.watch(selectedTellerRowProvider);
 
     return Row(
