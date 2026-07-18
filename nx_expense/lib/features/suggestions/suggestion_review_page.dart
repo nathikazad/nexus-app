@@ -272,6 +272,45 @@ class _SuggestionDetailPaneState extends ConsumerState<SuggestionDetailPane> {
     }
   }
 
+  Future<void> _revise(ExpenseSuggestion suggestion) async {
+    if (_busy) return;
+    final note = await showDialog<String>(
+      context: context,
+      builder: (context) => const _RevisionDialog(),
+    );
+    if (note == null || !mounted) return;
+    final base = ref.read(imageBaseUrlProvider);
+    final userId = ref.read(userIdProvider);
+    if (base == null || base.isEmpty || userId == null || userId.isEmpty) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await reviseExpenseSuggestion(
+        imageBaseUrl: base,
+        userId: userId,
+        suggestionId: suggestion.id,
+        note: note,
+      );
+      ref.invalidate(openExpenseSuggestionsProvider);
+      ref.read(selectedExpenseSuggestionIdProvider.notifier).state = null;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Suggestion returned for revision.')),
+        );
+        if (widget.mobile) widget.onBack?.call();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not request revision: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final itemsAsync = ref.watch(openExpenseSuggestionsProvider);
@@ -294,6 +333,7 @@ class _SuggestionDetailPaneState extends ConsumerState<SuggestionDetailPane> {
           onBack: widget.onBack,
           onAccept: () => _decide(suggestion, true),
           onReject: () => _decide(suggestion, false),
+          onRevise: () => _revise(suggestion),
         );
       },
     );
@@ -417,6 +457,7 @@ class _SuggestionDetail extends StatelessWidget {
     required this.busy,
     required this.onAccept,
     required this.onReject,
+    required this.onRevise,
     this.onBack,
   });
 
@@ -425,6 +466,7 @@ class _SuggestionDetail extends StatelessWidget {
   final bool busy;
   final VoidCallback onAccept;
   final VoidCallback onReject;
+  final VoidCallback onRevise;
   final VoidCallback? onBack;
 
   @override
@@ -509,6 +551,15 @@ class _SuggestionDetail extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       _ExpensePreview(suggestion: suggestion),
+                      if (suggestion.changes.isNotEmpty) ...[
+                        const SizedBox(height: 28),
+                        const _SectionLabel(
+                          icon: Icons.compare_arrows,
+                          label: 'PROPOSED CHANGES',
+                        ),
+                        const SizedBox(height: 8),
+                        _ChangeList(changes: suggestion.changes),
+                      ],
                       if (suggestion.products.isNotEmpty) ...[
                         const SizedBox(height: 28),
                         _SectionLabel(
@@ -532,6 +583,7 @@ class _SuggestionDetail extends StatelessWidget {
             busy: busy,
             onAccept: onAccept,
             onReject: onReject,
+            onRevise: onRevise,
             mobile: mobile,
           ),
         ],
@@ -886,12 +938,14 @@ class _DecisionBar extends StatelessWidget {
     required this.busy,
     required this.onAccept,
     required this.onReject,
+    required this.onRevise,
     required this.mobile,
   });
 
   final bool busy;
   final VoidCallback onAccept;
   final VoidCallback onReject;
+  final VoidCallback onRevise;
   final bool mobile;
 
   @override
@@ -929,7 +983,23 @@ class _DecisionBar extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              flex: 2,
+              child: OutlinedButton.icon(
+                onPressed: busy ? null : onRevise,
+                icon: const Icon(Icons.edit_note, size: 18),
+                label: const Text('Revise'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  side: const BorderSide(color: AppColors.teal500),
+                  foregroundColor: AppColors.teal700,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: FilledButton.icon(
                 onPressed: busy ? null : onAccept,
                 icon: busy
@@ -942,7 +1012,9 @@ class _DecisionBar extends StatelessWidget {
                         ),
                       )
                     : const Icon(Icons.check, size: 18),
-                label: Text(busy ? 'Applying' : 'Accept & apply'),
+                label: Text(
+                  busy ? 'Applying' : (mobile ? 'Accept' : 'Accept & apply'),
+                ),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(0, 48),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -955,6 +1027,156 @@ class _DecisionBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ChangeList extends StatelessWidget {
+  const _ChangeList({required this.changes});
+
+  final List<SuggestionChange> changes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.slate200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          for (var index = 0; index < changes.length; index++) ...[
+            _ChangeRow(change: changes[index]),
+            if (index != changes.length - 1)
+              const Divider(height: 1, indent: 16, endIndent: 16),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ChangeRow extends StatelessWidget {
+  const _ChangeRow({required this.change});
+
+  final SuggestionChange change;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              change.field,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.slate500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (change.before != null)
+                  Text(
+                    change.before!,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppColors.slate500,
+                      decoration: change.after == null
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                if (change.before != null && change.after != null)
+                  const Icon(
+                    Icons.arrow_forward,
+                    size: 15,
+                    color: AppColors.slate400,
+                  ),
+                if (change.after != null)
+                  Text(
+                    change.after!,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.teal700,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RevisionDialog extends StatefulWidget {
+  const _RevisionDialog();
+
+  @override
+  State<_RevisionDialog> createState() => _RevisionDialogState();
+}
+
+class _RevisionDialogState extends State<_RevisionDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final note = _controller.text.trim();
+    if (note.isEmpty) {
+      setState(() => _error = 'Tell the AI what should change.');
+      return;
+    }
+    Navigator.of(context).pop(note);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Revise suggestion'),
+      content: SizedBox(
+        width: 440,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 6,
+          maxLength: 2000,
+          decoration: InputDecoration(
+            labelText: 'What should the AI change?',
+            alignLabelWithHint: true,
+            errorText: _error,
+          ),
+          onSubmitted: (_) => _submit(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.send, size: 17),
+          label: const Text('Send for revision'),
+        ),
+      ],
     );
   }
 }

@@ -10,6 +10,7 @@ class ExpenseSuggestion {
     required this.expense,
     required this.tags,
     required this.products,
+    this.changes = const [],
   });
 
   final int id;
@@ -22,6 +23,7 @@ class ExpenseSuggestion {
   final SuggestedExpense expense;
   final List<SuggestedTag> tags;
   final List<SuggestedProduct> products;
+  final List<SuggestionChange> changes;
 
   bool get createsExpense => expense.id == null;
   bool get hasProvider => provider != null;
@@ -31,11 +33,14 @@ class ExpenseSuggestion {
     final evidence = _map(content['evidence']);
     final proposal = _map(content['proposal']);
     final model = _map(proposal['model']);
+    final updates = _mapOrNull(proposal['updates']);
     final relations = _maps(model['relations']);
     final existingExpense = _mapOrNull(evidence['existing_expense']);
     final modelId = _int(model['id']);
     final modelName = _text(model['name']);
+    final nameUpdate = _mapOrNull(updates?['name']);
     final expenseName =
+        _text(nameUpdate?['to']) ??
         modelName ??
         _text(existingExpense?['name']) ??
         _text(existingExpense?['description']) ??
@@ -70,8 +75,17 @@ class ExpenseSuggestion {
           .where((relation) => relation['relation_name'] == 'includes_product')
           .map(SuggestedProduct.fromRelation)
           .toList(),
+      changes: _suggestionChanges(updates),
     );
   }
+}
+
+class SuggestionChange {
+  const SuggestionChange({required this.field, this.before, this.after});
+
+  final String field;
+  final String? before;
+  final String? after;
 }
 
 class SuggestionEvent {
@@ -273,6 +287,62 @@ String? _dateFromTimestamp(dynamic value) {
   final parsed = DateTime.tryParse('${value ?? ''}');
   if (parsed == null) return null;
   return '${parsed.year.toString().padLeft(4, '0')}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+}
+
+List<SuggestionChange> _suggestionChanges(Map<String, dynamic>? updates) {
+  if (updates == null) return const [];
+  final changes = <SuggestionChange>[];
+  final name = _mapOrNull(updates['name']);
+  if (name != null) {
+    changes.add(
+      SuggestionChange(
+        field: 'Name',
+        before: _displayValue(name['from']),
+        after: _displayValue(name['to']),
+      ),
+    );
+  }
+  for (final attribute in _maps(updates['attributes'])) {
+    final key = _text(attribute['key']);
+    if (key == null) continue;
+    changes.add(
+      SuggestionChange(
+        field: switch (key) {
+          'cost' => 'Cost',
+          'date' => 'Date',
+          'ignore' => 'Ignore',
+          _ => key,
+        },
+        before: _displayValue(attribute['from']),
+        after: _displayValue(attribute['to']),
+      ),
+    );
+  }
+  final tags = _mapOrNull(updates['tags']);
+  for (final tag in _maps(tags?['remove'])) {
+    changes.add(
+      SuggestionChange(
+        field: 'Remove tag',
+        before: SuggestedTag.fromJson(tag).label,
+      ),
+    );
+  }
+  for (final tag in _maps(tags?['add'])) {
+    changes.add(
+      SuggestionChange(
+        field: 'Add tag',
+        after: SuggestedTag.fromJson(tag).label,
+      ),
+    );
+  }
+  return changes;
+}
+
+String? _displayValue(dynamic value) {
+  if (value == null) return 'Not set';
+  if (value is bool) return value ? 'Yes' : 'No';
+  if (value is num) return '$value';
+  return _text(value);
 }
 
 dynamic _attributeValue(Map<String, dynamic> model, String key) {

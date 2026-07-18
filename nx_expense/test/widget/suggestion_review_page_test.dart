@@ -72,8 +72,18 @@ void main() {
     expect(find.text('PRODUCTS (1)'), findsOneWidget);
     expect(find.text('Waveshare'), findsOneWidget);
     expect(find.text('Reject'), findsOneWidget);
-    expect(find.text('Accept & apply'), findsOneWidget);
+    expect(find.text('Revise'), findsOneWidget);
+    expect(find.text('Accept'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Revise'));
+    await tester.pumpAndSettle();
+    expect(find.text('Revise suggestion'), findsOneWidget);
+    expect(find.text('What should the AI change?'), findsOneWidget);
+
+    await tester.tap(find.text('Send for revision'));
+    await tester.pump();
+    expect(find.text('Tell the AI what should change.'), findsOneWidget);
   });
 }
 

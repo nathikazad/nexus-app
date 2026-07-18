@@ -99,6 +99,36 @@ Future<void> decideExpenseSuggestion({
   }
 }
 
+Future<void> reviseExpenseSuggestion({
+  required String imageBaseUrl,
+  required String userId,
+  required int suggestionId,
+  required String note,
+  http.Client? httpClient,
+}) async {
+  final base = normalizeSuggestionHttpBase(imageBaseUrl);
+  final uri = Uri.parse('$base/suggestions/$suggestionId/revise');
+  final client = httpClient ?? http.Client();
+  try {
+    final response = await client.post(
+      uri,
+      headers: {
+        ...suggestionHttpHeaders(base, userId),
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({'note': note}),
+    );
+    final body = _decodeObject(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        body['ok'] != true) {
+      throw StateError(_errorMessage(body, response.statusCode));
+    }
+  } finally {
+    if (httpClient == null) client.close();
+  }
+}
+
 Map<String, dynamic> _decodeObject(String body) {
   try {
     final value = jsonDecode(body);

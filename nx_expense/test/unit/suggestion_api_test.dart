@@ -29,6 +29,9 @@ void main() {
       );
       expect(suggestion.products.single.maker?.name, 'Waveshare');
       expect(suggestion.products.single.maker?.createsCompany, isTrue);
+      expect(suggestion.changes.first.field, 'Name');
+      expect(suggestion.changes.first.before, 'Amazon');
+      expect(suggestion.changes.first.after, 'Raspberry Pi base board');
     });
 
     test('uses existing expense evidence when proposal name is null', () {
@@ -118,6 +121,24 @@ void main() {
       expect(paths, ['/suggestions/26/accept', '/suggestions/27/reject']);
     });
 
+    test('requests revision with a JSON note', () async {
+      final client = MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/suggestions/26/revise');
+        expect(request.headers['content-type'], 'application/json');
+        expect(jsonDecode(request.body), {'note': 'Use Electronics'});
+        return http.Response('{"ok":true}', 200);
+      });
+
+      await reviseExpenseSuggestion(
+        imageBaseUrl: 'http://10.0.0.156:8001',
+        userId: '1',
+        suggestionId: 26,
+        note: 'Use Electronics',
+        httpClient: client,
+      );
+    });
+
     test('surfaces stable server errors', () async {
       final client = MockClient(
         (_) async => http.Response(
@@ -190,6 +211,21 @@ Map<String, dynamic> _suggestionRow() => {
       },
     },
     'proposal': {
+      'updates': {
+        'name': {'from': 'Amazon', 'to': 'Raspberry Pi base board'},
+        'attributes': [
+          {'key': 'cost', 'from': 31.49, 'to': 28.99},
+        ],
+        'tags': {
+          'add': [
+            {
+              'system': 'Spending Category',
+              'path': ['Shopping', 'Electronics'],
+            },
+          ],
+          'remove': <dynamic>[],
+        },
+      },
       'model': {
         'model_type': 'Expense',
         'id': 2669,
