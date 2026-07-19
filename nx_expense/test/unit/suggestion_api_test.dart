@@ -12,8 +12,8 @@ void main() {
       final suggestion = ExpenseSuggestion.fromJson(_suggestionRow());
 
       expect(suggestion.id, 26);
-      expect(suggestion.bank.source, 'teller');
-      expect(suggestion.bank.amount, -31.49);
+      expect(suggestion.bankTransactions.single.source, 'teller');
+      expect(suggestion.bankTransactions.single.amount, -31.49);
       expect(suggestion.provider?.source, 'amazon');
       expect(suggestion.provider?.orderIds, ['113-1234567-1234567']);
       expect(suggestion.expense.id, 2669);
@@ -42,6 +42,26 @@ void main() {
       final suggestion = ExpenseSuggestion.fromJson(row);
 
       expect(suggestion.expense.name, 'Raspberry Pi base board');
+    });
+
+    test('parses multiple bank transactions and totals their amounts', () {
+      final row = _suggestionRow();
+      final evidence = row['content']['evidence'] as Map<String, dynamic>;
+      final banks = evidence['bank_transactions'] as List<dynamic>;
+      banks.first['amount'] = -15.0;
+      banks.add({
+        'event_id': 2208,
+        'source': 'bofa',
+        'event_type': 'transaction',
+        'date': '2026-01-30',
+        'amount': -12.0,
+        'description': 'SECOND CHARGE',
+      });
+
+      final suggestion = ExpenseSuggestion.fromJson(row);
+
+      expect(suggestion.bankTransactions, hasLength(2));
+      expect(suggestion.displayAmount, -27.0);
     });
 
     test('drops external and traversal-style Product images', () {
@@ -185,15 +205,17 @@ Map<String, dynamic> _suggestionRow() => {
     'title': 'Link Amazon purchase',
     'reason': 'The amount and date match this Amazon order.',
     'evidence': {
-      'bank': {
-        'event_id': 2207,
-        'source': 'teller',
-        'event_type': 'teller_transaction',
-        'date': '2026-01-30',
-        'amount': -31.49,
-        'description': 'AMAZON MKTPL',
-        'account_last4': '8134',
-      },
+      'bank_transactions': [
+        {
+          'event_id': 2207,
+          'source': 'teller',
+          'event_type': 'teller_transaction',
+          'date': '2026-01-30',
+          'amount': -31.49,
+          'description': 'AMAZON MKTPL',
+          'account_last4': '8134',
+        },
+      ],
       'provider': {
         'event_id': 31049,
         'source': 'amazon',

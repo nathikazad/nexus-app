@@ -345,7 +345,8 @@ class _SuggestionListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final amount = suggestion.bank.amount;
+    final amount = suggestion.displayAmount;
+    final primaryBank = suggestion.bankTransactions.first;
     final preview = suggestion.products.firstOrNull;
     return Material(
       color: Colors.transparent,
@@ -376,7 +377,7 @@ class _SuggestionListTile extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            suggestion.bank.description,
+                            primaryBank.description,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.inter(
@@ -412,9 +413,7 @@ class _SuggestionListTile extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        _SourceBadge(
-                          label: suggestion.bank.source.toUpperCase(),
-                        ),
+                        _SourceBadge(label: primaryBank.source.toUpperCase()),
                         if (suggestion.hasProvider) ...[
                           const SizedBox(width: 6),
                           _SourceBadge(
@@ -423,7 +422,7 @@ class _SuggestionListTile extends ConsumerWidget {
                         ],
                         const Spacer(),
                         Text(
-                          _shortDate(suggestion.bank.date),
+                          _shortDate(primaryBank.date),
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: AppColors.slate400,
@@ -522,10 +521,16 @@ class _SuggestionDetail extends StatelessWidget {
                       const SizedBox(height: 28),
                       _SectionLabel(
                         icon: Icons.account_balance_outlined,
-                        label: 'BANK TRANSACTION',
+                        label: suggestion.bankTransactions.length == 1
+                            ? 'BANK TRANSACTION'
+                            : 'BANK TRANSACTIONS (${suggestion.bankTransactions.length})',
                       ),
                       const SizedBox(height: 8),
-                      _EventRow(event: suggestion.bank, emphasis: true),
+                      for (final bank in suggestion.bankTransactions) ...[
+                        _EventRow(event: bank, emphasis: true),
+                        if (bank != suggestion.bankTransactions.last)
+                          const SizedBox(height: 8),
+                      ],
                       if (suggestion.provider != null) ...[
                         const _FlowConnector(label: 'matched with'),
                         _SectionLabel(
@@ -591,7 +596,7 @@ class _ReviewHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final amount = suggestion.bank.amount;
+    final amount = suggestion.displayAmount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

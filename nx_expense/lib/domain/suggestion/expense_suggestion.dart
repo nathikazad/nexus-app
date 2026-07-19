@@ -5,7 +5,7 @@ class ExpenseSuggestion {
     required this.status,
     required this.title,
     required this.reason,
-    required this.bank,
+    required this.bankTransactions,
     required this.provider,
     required this.expense,
     required this.tags,
@@ -18,7 +18,7 @@ class ExpenseSuggestion {
   final String status;
   final String title;
   final String reason;
-  final SuggestionEvent bank;
+  final List<SuggestionEvent> bankTransactions;
   final SuggestionEvent? provider;
   final SuggestedExpense expense;
   final List<SuggestedTag> tags;
@@ -27,6 +27,11 @@ class ExpenseSuggestion {
 
   bool get createsExpense => expense.id == null;
   bool get hasProvider => provider != null;
+  num? get displayAmount {
+    if (expense.cost != null) return expense.cost;
+    if (bankTransactions.any((event) => event.amount == null)) return null;
+    return bankTransactions.fold<num>(0, (sum, event) => sum + event.amount!);
+  }
 
   factory ExpenseSuggestion.fromJson(Map<String, dynamic> json) {
     final content = _map(json['content']);
@@ -46,10 +51,12 @@ class ExpenseSuggestion {
         _text(existingExpense?['description']) ??
         'Existing expense';
 
-    final bank = SuggestionEvent.fromJson(
-      _map(evidence['bank']),
-      fallbackSource: 'bank',
-    );
+    final bankTransactions = _maps(evidence['bank_transactions'])
+        .map((item) => SuggestionEvent.fromJson(item, fallbackSource: 'bank'))
+        .toList();
+    if (bankTransactions.isEmpty) {
+      throw const FormatException('suggestion has no bank transactions');
+    }
     final providerMap = _mapOrNull(evidence['provider']);
 
     return ExpenseSuggestion(
@@ -58,7 +65,7 @@ class ExpenseSuggestion {
       status: _text(json['status']) ?? 'open',
       title: _text(content['title']) ?? 'Review suggestion',
       reason: _text(content['reason']) ?? '',
-      bank: bank,
+      bankTransactions: bankTransactions,
       provider: providerMap == null
           ? null
           : SuggestionEvent.fromJson(providerMap, fallbackSource: 'provider'),

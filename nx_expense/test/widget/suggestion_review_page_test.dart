@@ -85,7 +85,66 @@ void main() {
     await tester.pump();
     expect(find.text('Tell the AI what should change.'), findsOneWidget);
   });
+
+  testWidgets(
+    'grouped detail shows the expense total and every bank transaction',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            imageBaseUrlProvider.overrideWith((ref) => null),
+            userIdProvider.overrideWith((ref) => null),
+            openExpenseSuggestionsProvider.overrideWith(
+              (ref) async => [_groupedSuggestion],
+            ),
+            selectedExpenseSuggestionIdProvider.overrideWith((ref) => 172),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SuggestionDetailPane(mobile: false)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('BANK TRANSACTIONS (2)'), findsOneWidget);
+      expect(find.text(r'$27.00'), findsOneWidget);
+      expect(find.text(r'$15.00'), findsOneWidget);
+      expect(find.text(r'$12.00'), findsOneWidget);
+      expect(find.text('SF LAUNDROMAT WASH'), findsOneWidget);
+      expect(find.text('SF LAUNDROMAT DRY'), findsOneWidget);
+    },
+  );
 }
+
+const _groupedSuggestion = ExpenseSuggestion(
+  id: 172,
+  caseKey: 'transaction-expense:bofa:30859',
+  status: 'open',
+  title: 'Combined laundromat expense',
+  reason: 'Both charges are from one visit.',
+  bankTransactions: [
+    SuggestionEvent(
+      eventId: 30859,
+      source: 'bofa',
+      eventType: 'transaction',
+      description: 'SF LAUNDROMAT WASH',
+      date: '2026-06-29',
+      amount: -15,
+    ),
+    SuggestionEvent(
+      eventId: 30858,
+      source: 'bofa',
+      eventType: 'transaction',
+      description: 'SF LAUNDROMAT DRY',
+      date: '2026-06-29',
+      amount: -12,
+    ),
+  ],
+  provider: null,
+  expense: SuggestedExpense(id: null, name: 'Laundry', cost: -27),
+  tags: [],
+  products: [],
+);
 
 const _suggestion = ExpenseSuggestion(
   id: 26,
@@ -93,15 +152,17 @@ const _suggestion = ExpenseSuggestion(
   status: 'open',
   title: 'Link Amazon purchase',
   reason: 'The exact amount and nearby date identify this Amazon order.',
-  bank: SuggestionEvent(
-    eventId: 2207,
-    source: 'teller',
-    eventType: 'teller_transaction',
-    description: 'AMAZON MKTPL',
-    date: '2026-01-30',
-    amount: -31.49,
-    accountLast4: '8134',
-  ),
+  bankTransactions: [
+    SuggestionEvent(
+      eventId: 2207,
+      source: 'teller',
+      eventType: 'teller_transaction',
+      description: 'AMAZON MKTPL',
+      date: '2026-01-30',
+      amount: -31.49,
+      accountLast4: '8134',
+    ),
+  ],
   provider: SuggestionEvent(
     eventId: 31049,
     source: 'amazon',
