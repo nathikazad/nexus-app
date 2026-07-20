@@ -494,6 +494,10 @@ class _MobileEditor extends ConsumerWidget {
       ),
       body: DocumentEditorView(
         documentId: documentId,
+        readOnly: true,
+        showDocumentTitle: false,
+        horizontalPadding: 16,
+        contentTopPadding: 12,
         onOpenDocumentLink: (linkedDocumentId) => ref
             .read(mobileNotesProvider.notifier)
             .openDocumentFromLink(linkedDocumentId),
@@ -505,28 +509,6 @@ class _MobileEditor extends ConsumerWidget {
                 onBack: () => ref.read(mobileNotesProvider.notifier).back(),
                 onClear: () {},
               ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: AppColors.panel,
-            border: Border(top: BorderSide(color: AppColors.line)),
-          ),
-          child: const Row(
-            children: <Widget>[
-              _ToolButton(icon: Icons.format_bold),
-              _ToolButton(icon: Icons.format_italic),
-              _ToolDivider(),
-              _ToolButton(icon: Icons.format_list_bulleted),
-              _ToolButton(icon: Icons.link),
-              Spacer(),
-              _MetadataButton(),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -590,65 +572,6 @@ class _MobileEditor extends ConsumerWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _ToolButton extends StatelessWidget {
-  const _ToolButton({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Icon(icon, size: 20, color: AppColors.muted),
-    );
-  }
-}
-
-class _ToolDivider extends StatelessWidget {
-  const _ToolDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 22,
-      margin: const EdgeInsets.only(right: 12),
-      color: AppColors.line,
-    );
-  }
-}
-
-class _MetadataButton extends StatelessWidget {
-  const _MetadataButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.subtle,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Row(
-          children: <Widget>[
-            Icon(Icons.info_outline, size: 14, color: AppColors.muted),
-            const SizedBox(width: 5),
-            Text(
-              'Metadata',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.muted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
