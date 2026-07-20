@@ -42,6 +42,23 @@ the web, iOS, and Android applications.
   incremental change cursor. The KGQL adapter can only emulate those guarantees
   inside one process until the backend contract is extended.
 
+### Phases 8-11 implementation checkpoint — 2026-07-20
+
+- Connected the sync engine to Drift and the fake remote, then verified offline
+  restart, expired-lease recovery, post-commit replay, durable conflicts, and a
+  bounded 100-document queue.
+- Connected the sync engine to the KGQL adapter with memory and Drift stores,
+  verifying create/update flow, initial reconciliation, and account partitioning
+  through a deterministic repository test double.
+- Generated the macOS Flutter target with the `com.nexus.nxnotes` application
+  identity, sandboxed network/file entitlements, and desktop window defaults.
+- Verified 112 non-integration tests, a clean `flutter analyze` run, and a
+  successful release build at `Nexus Notes.app`.
+- Phase 8 and phase 11 gates are complete. The live-backend portions of phases 9
+  and 10 remain gated on server-provided durable idempotency, atomic revision
+  preconditions, deletion reconciliation, and a real change cursor. The local
+  integration paths are complete and no live Nexus records were mutated.
+
 ## Delivery principle
 
 Development proceeds through gated phases:
