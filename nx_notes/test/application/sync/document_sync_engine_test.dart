@@ -91,6 +91,28 @@ void main() {
     );
   });
 
+  test('pushes a recoverable local deletion conditionally', () async {
+    final document = offlineLocalDocument();
+    remote.seed(
+      RemoteDocument(
+        key: document.key,
+        document: document.document,
+        revision: const RemoteRevision('rev-1'),
+      ),
+    );
+    await local.saveDraftAndEnqueue(
+      document.copyWith(deletedLocally: true),
+      operation: offlinePendingOperation(type: PendingOperationType.delete),
+    );
+
+    final result = await engine.synchronize();
+
+    expect(result.pushedCount, 1);
+    expect(remote.deleteCalls, 1);
+    expect(remote.documents.single.deleted, isTrue);
+    expect(await local.pendingOperations(), isEmpty);
+  });
+
   test('pulls a new remote document and advances the cursor', () async {
     remote.seed(
       RemoteDocument(
@@ -355,6 +377,17 @@ class DelayedRemoteGateway implements RemoteDocumentGateway {
   var pullCalls = 0;
 
   void release() => _gate.complete();
+
+  @override
+  Future<RemoteWriteResult> deleteDocument(
+    RemoteDeleteRequest request, {
+    required String idempotencyKey,
+    required RemoteRevision expectedRevision,
+  }) => delegate.deleteDocument(
+    request,
+    idempotencyKey: idempotencyKey,
+    expectedRevision: expectedRevision,
+  );
 
   @override
   Future<RemoteWriteResult> createDocument(

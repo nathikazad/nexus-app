@@ -108,6 +108,29 @@ void runLocalNotesStoreContract({
     expect(reclaimed.leaseOwner, 'worker-2');
   });
 
+  test('concurrent workers cannot claim the same operation', () async {
+    final now = DateTime.utc(2026, 1, 1, 12);
+    await store.saveDraftAndEnqueue(
+      offlineLocalDocument(),
+      operation: offlinePendingOperation(),
+    );
+
+    final claims = await Future.wait([
+      store.claimNextOperation(
+        workerId: 'tab-1',
+        lease: const Duration(minutes: 1),
+        now: now,
+      ),
+      store.claimNextOperation(
+        workerId: 'tab-2',
+        lease: const Duration(minutes: 1),
+        now: now,
+      ),
+    ]);
+
+    expect(claims.whereType<PendingOperation>(), hasLength(1));
+  });
+
   test('failure persists retry metadata and releases lease', () async {
     final now = DateTime.utc(2026, 1, 1, 12);
     await store.saveDraftAndEnqueue(

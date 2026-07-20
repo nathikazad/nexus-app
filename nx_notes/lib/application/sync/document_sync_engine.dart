@@ -202,11 +202,18 @@ class DocumentSyncEngine {
               ),
             )),
       ),
-      PendingOperationType.delete => throw const RemoteGatewayException(
-        SyncFailure(
-          kind: SyncFailureKind.validation,
-          message: 'remote deletion is not supported by this gateway yet',
-        ),
+      PendingOperationType.delete => remoteGateway.deleteDocument(
+        RemoteDeleteRequest(key: local.key),
+        idempotencyKey: operation.operationId,
+        expectedRevision:
+            operation.baseRevision ??
+            local.baseServerRevision ??
+            (throw const RemoteGatewayException(
+              SyncFailure(
+                kind: SyncFailureKind.validation,
+                message: 'delete is missing its base remote revision',
+              ),
+            )),
       ),
     };
   }

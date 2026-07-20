@@ -69,12 +69,40 @@ class SyncConflicts extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{accountKey, localId};
 }
 
+@DataClassName('LocalSnapshotRow')
+class LocalSnapshots extends Table {
+  TextColumn get snapshotId => text()();
+  TextColumn get accountKey => text()();
+  TextColumn get localId => text()();
+  IntColumn get remoteId => integer().nullable()();
+  TextColumn get documentJson => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  TextColumn get source => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{snapshotId};
+}
+
 @DriftDatabase(
-  tables: <Type>[LocalDocuments, SyncOutbox, SyncMetadata, SyncConflicts],
+  tables: <Type>[
+    LocalDocuments,
+    SyncOutbox,
+    SyncMetadata,
+    SyncConflicts,
+    LocalSnapshots,
+  ],
 )
 class NotesDatabase extends _$NotesDatabase {
   NotesDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) await migrator.createTable(localSnapshots);
+    },
+  );
 }

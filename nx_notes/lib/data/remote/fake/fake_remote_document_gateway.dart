@@ -18,6 +18,7 @@ class FakeRemoteDocumentGateway implements RemoteDocumentGateway {
   var _revision = 0;
   var createCalls = 0;
   var updateCalls = 0;
+  var deleteCalls = 0;
 
   List<RemoteDocument> get documents =>
       List<RemoteDocument>.unmodifiable(_documents.values);
@@ -102,6 +103,46 @@ class FakeRemoteDocumentGateway implements RemoteDocumentGateway {
       key: current.key,
       document: _withId(request.document, current.key.remoteId!),
       revision: revision,
+    );
+    _idempotentResults[idempotencyKey] = result;
+    _throwPostCommitFailure();
+    return result;
+  }
+
+  @override
+  Future<RemoteWriteResult> deleteDocument(
+    RemoteDeleteRequest request, {
+    required String idempotencyKey,
+    required RemoteRevision expectedRevision,
+  }) async {
+    deleteCalls++;
+    _throwQueuedFailure();
+    final prior = _idempotentResults[idempotencyKey];
+    if (prior != null) return prior;
+    final current = _documents[request.key.localId];
+    if (current == null) {
+      throw const RemoteGatewayException(
+        SyncFailure(
+          kind: SyncFailureKind.validation,
+          message: 'document not found',
+        ),
+      );
+    }
+    if (current.revision != expectedRevision) {
+      throw const RemoteGatewayException(
+        SyncFailure(
+          kind: SyncFailureKind.conflict,
+          message: 'stale document revision',
+        ),
+      );
+    }
+    final revision = _nextRevision();
+    final result = RemoteWriteResult(key: current.key, revision: revision);
+    _documents[current.key.localId] = RemoteDocument(
+      key: current.key,
+      document: current.document,
+      revision: revision,
+      deleted: true,
     );
     _idempotentResults[idempotencyKey] = result;
     _throwPostCommitFailure();

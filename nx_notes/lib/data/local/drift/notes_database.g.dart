@@ -2090,6 +2090,484 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
   }
 }
 
+class $LocalSnapshotsTable extends LocalSnapshots
+    with TableInfo<$LocalSnapshotsTable, LocalSnapshotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accountKeyMeta = const VerificationMeta(
+    'accountKey',
+  );
+  @override
+  late final GeneratedColumn<String> accountKey = GeneratedColumn<String>(
+    'account_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localIdMeta = const VerificationMeta(
+    'localId',
+  );
+  @override
+  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
+    'local_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _documentJsonMeta = const VerificationMeta(
+    'documentJson',
+  );
+  @override
+  late final GeneratedColumn<String> documentJson = GeneratedColumn<String>(
+    'document_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    accountKey,
+    localId,
+    remoteId,
+    documentJson,
+    createdAt,
+    source,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_snapshots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalSnapshotRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('account_key')) {
+      context.handle(
+        _accountKeyMeta,
+        accountKey.isAcceptableOrUnknown(data['account_key']!, _accountKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountKeyMeta);
+    }
+    if (data.containsKey('local_id')) {
+      context.handle(
+        _localIdMeta,
+        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localIdMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    if (data.containsKey('document_json')) {
+      context.handle(
+        _documentJsonMeta,
+        documentJson.isAcceptableOrUnknown(
+          data['document_json']!,
+          _documentJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_documentJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId};
+  @override
+  LocalSnapshotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSnapshotRow(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      accountKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_key'],
+      )!,
+      localId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_id'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}remote_id'],
+      ),
+      documentJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalSnapshotsTable createAlias(String alias) {
+    return $LocalSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSnapshotRow extends DataClass
+    implements Insertable<LocalSnapshotRow> {
+  final String snapshotId;
+  final String accountKey;
+  final String localId;
+  final int? remoteId;
+  final String documentJson;
+  final DateTime createdAt;
+  final String source;
+  const LocalSnapshotRow({
+    required this.snapshotId,
+    required this.accountKey,
+    required this.localId,
+    this.remoteId,
+    required this.documentJson,
+    required this.createdAt,
+    required this.source,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['account_key'] = Variable<String>(accountKey);
+    map['local_id'] = Variable<String>(localId);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<int>(remoteId);
+    }
+    map['document_json'] = Variable<String>(documentJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['source'] = Variable<String>(source);
+    return map;
+  }
+
+  LocalSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return LocalSnapshotsCompanion(
+      snapshotId: Value(snapshotId),
+      accountKey: Value(accountKey),
+      localId: Value(localId),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      documentJson: Value(documentJson),
+      createdAt: Value(createdAt),
+      source: Value(source),
+    );
+  }
+
+  factory LocalSnapshotRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSnapshotRow(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      accountKey: serializer.fromJson<String>(json['accountKey']),
+      localId: serializer.fromJson<String>(json['localId']),
+      remoteId: serializer.fromJson<int?>(json['remoteId']),
+      documentJson: serializer.fromJson<String>(json['documentJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      source: serializer.fromJson<String>(json['source']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'accountKey': serializer.toJson<String>(accountKey),
+      'localId': serializer.toJson<String>(localId),
+      'remoteId': serializer.toJson<int?>(remoteId),
+      'documentJson': serializer.toJson<String>(documentJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'source': serializer.toJson<String>(source),
+    };
+  }
+
+  LocalSnapshotRow copyWith({
+    String? snapshotId,
+    String? accountKey,
+    String? localId,
+    Value<int?> remoteId = const Value.absent(),
+    String? documentJson,
+    DateTime? createdAt,
+    String? source,
+  }) => LocalSnapshotRow(
+    snapshotId: snapshotId ?? this.snapshotId,
+    accountKey: accountKey ?? this.accountKey,
+    localId: localId ?? this.localId,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+    documentJson: documentJson ?? this.documentJson,
+    createdAt: createdAt ?? this.createdAt,
+    source: source ?? this.source,
+  );
+  LocalSnapshotRow copyWithCompanion(LocalSnapshotsCompanion data) {
+    return LocalSnapshotRow(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      accountKey: data.accountKey.present
+          ? data.accountKey.value
+          : this.accountKey,
+      localId: data.localId.present ? data.localId.value : this.localId,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      documentJson: data.documentJson.present
+          ? data.documentJson.value
+          : this.documentJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      source: data.source.present ? data.source.value : this.source,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSnapshotRow(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('accountKey: $accountKey, ')
+          ..write('localId: $localId, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('documentJson: $documentJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('source: $source')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    accountKey,
+    localId,
+    remoteId,
+    documentJson,
+    createdAt,
+    source,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSnapshotRow &&
+          other.snapshotId == this.snapshotId &&
+          other.accountKey == this.accountKey &&
+          other.localId == this.localId &&
+          other.remoteId == this.remoteId &&
+          other.documentJson == this.documentJson &&
+          other.createdAt == this.createdAt &&
+          other.source == this.source);
+}
+
+class LocalSnapshotsCompanion extends UpdateCompanion<LocalSnapshotRow> {
+  final Value<String> snapshotId;
+  final Value<String> accountKey;
+  final Value<String> localId;
+  final Value<int?> remoteId;
+  final Value<String> documentJson;
+  final Value<DateTime> createdAt;
+  final Value<String> source;
+  final Value<int> rowid;
+  const LocalSnapshotsCompanion({
+    this.snapshotId = const Value.absent(),
+    this.accountKey = const Value.absent(),
+    this.localId = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.documentJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.source = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalSnapshotsCompanion.insert({
+    required String snapshotId,
+    required String accountKey,
+    required String localId,
+    this.remoteId = const Value.absent(),
+    required String documentJson,
+    required DateTime createdAt,
+    required String source,
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       accountKey = Value(accountKey),
+       localId = Value(localId),
+       documentJson = Value(documentJson),
+       createdAt = Value(createdAt),
+       source = Value(source);
+  static Insertable<LocalSnapshotRow> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? accountKey,
+    Expression<String>? localId,
+    Expression<int>? remoteId,
+    Expression<String>? documentJson,
+    Expression<DateTime>? createdAt,
+    Expression<String>? source,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (accountKey != null) 'account_key': accountKey,
+      if (localId != null) 'local_id': localId,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (documentJson != null) 'document_json': documentJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (source != null) 'source': source,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalSnapshotsCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? accountKey,
+    Value<String>? localId,
+    Value<int?>? remoteId,
+    Value<String>? documentJson,
+    Value<DateTime>? createdAt,
+    Value<String>? source,
+    Value<int>? rowid,
+  }) {
+    return LocalSnapshotsCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      accountKey: accountKey ?? this.accountKey,
+      localId: localId ?? this.localId,
+      remoteId: remoteId ?? this.remoteId,
+      documentJson: documentJson ?? this.documentJson,
+      createdAt: createdAt ?? this.createdAt,
+      source: source ?? this.source,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (accountKey.present) {
+      map['account_key'] = Variable<String>(accountKey.value);
+    }
+    if (localId.present) {
+      map['local_id'] = Variable<String>(localId.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<int>(remoteId.value);
+    }
+    if (documentJson.present) {
+      map['document_json'] = Variable<String>(documentJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSnapshotsCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('accountKey: $accountKey, ')
+          ..write('localId: $localId, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('documentJson: $documentJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('source: $source, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$NotesDatabase extends GeneratedDatabase {
   _$NotesDatabase(QueryExecutor e) : super(e);
   $NotesDatabaseManager get managers => $NotesDatabaseManager(this);
@@ -2097,6 +2575,7 @@ abstract class _$NotesDatabase extends GeneratedDatabase {
   late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
   late final $SyncMetadataTable syncMetadata = $SyncMetadataTable(this);
   late final $SyncConflictsTable syncConflicts = $SyncConflictsTable(this);
+  late final $LocalSnapshotsTable localSnapshots = $LocalSnapshotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2106,6 +2585,7 @@ abstract class _$NotesDatabase extends GeneratedDatabase {
     syncOutbox,
     syncMetadata,
     syncConflicts,
+    localSnapshots,
   ];
 }
 
@@ -3159,6 +3639,256 @@ typedef $$SyncConflictsTableProcessedTableManager =
       SyncConflictRow,
       PrefetchHooks Function()
     >;
+typedef $$LocalSnapshotsTableCreateCompanionBuilder =
+    LocalSnapshotsCompanion Function({
+      required String snapshotId,
+      required String accountKey,
+      required String localId,
+      Value<int?> remoteId,
+      required String documentJson,
+      required DateTime createdAt,
+      required String source,
+      Value<int> rowid,
+    });
+typedef $$LocalSnapshotsTableUpdateCompanionBuilder =
+    LocalSnapshotsCompanion Function({
+      Value<String> snapshotId,
+      Value<String> accountKey,
+      Value<String> localId,
+      Value<int?> remoteId,
+      Value<String> documentJson,
+      Value<DateTime> createdAt,
+      Value<String> source,
+      Value<int> rowid,
+    });
+
+class $$LocalSnapshotsTableFilterComposer
+    extends Composer<_$NotesDatabase, $LocalSnapshotsTable> {
+  $$LocalSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localId => $composableBuilder(
+    column: $table.localId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get documentJson => $composableBuilder(
+    column: $table.documentJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalSnapshotsTableOrderingComposer
+    extends Composer<_$NotesDatabase, $LocalSnapshotsTable> {
+  $$LocalSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localId => $composableBuilder(
+    column: $table.localId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get documentJson => $composableBuilder(
+    column: $table.documentJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalSnapshotsTableAnnotationComposer
+    extends Composer<_$NotesDatabase, $LocalSnapshotsTable> {
+  $$LocalSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get localId =>
+      $composableBuilder(column: $table.localId, builder: (column) => column);
+
+  GeneratedColumn<int> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get documentJson => $composableBuilder(
+    column: $table.documentJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+}
+
+class $$LocalSnapshotsTableTableManager
+    extends
+        RootTableManager<
+          _$NotesDatabase,
+          $LocalSnapshotsTable,
+          LocalSnapshotRow,
+          $$LocalSnapshotsTableFilterComposer,
+          $$LocalSnapshotsTableOrderingComposer,
+          $$LocalSnapshotsTableAnnotationComposer,
+          $$LocalSnapshotsTableCreateCompanionBuilder,
+          $$LocalSnapshotsTableUpdateCompanionBuilder,
+          (
+            LocalSnapshotRow,
+            BaseReferences<
+              _$NotesDatabase,
+              $LocalSnapshotsTable,
+              LocalSnapshotRow
+            >,
+          ),
+          LocalSnapshotRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalSnapshotsTableTableManager(
+    _$NotesDatabase db,
+    $LocalSnapshotsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalSnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalSnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalSnapshotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> accountKey = const Value.absent(),
+                Value<String> localId = const Value.absent(),
+                Value<int?> remoteId = const Value.absent(),
+                Value<String> documentJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalSnapshotsCompanion(
+                snapshotId: snapshotId,
+                accountKey: accountKey,
+                localId: localId,
+                remoteId: remoteId,
+                documentJson: documentJson,
+                createdAt: createdAt,
+                source: source,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String accountKey,
+                required String localId,
+                Value<int?> remoteId = const Value.absent(),
+                required String documentJson,
+                required DateTime createdAt,
+                required String source,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalSnapshotsCompanion.insert(
+                snapshotId: snapshotId,
+                accountKey: accountKey,
+                localId: localId,
+                remoteId: remoteId,
+                documentJson: documentJson,
+                createdAt: createdAt,
+                source: source,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalSnapshotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$NotesDatabase,
+      $LocalSnapshotsTable,
+      LocalSnapshotRow,
+      $$LocalSnapshotsTableFilterComposer,
+      $$LocalSnapshotsTableOrderingComposer,
+      $$LocalSnapshotsTableAnnotationComposer,
+      $$LocalSnapshotsTableCreateCompanionBuilder,
+      $$LocalSnapshotsTableUpdateCompanionBuilder,
+      (
+        LocalSnapshotRow,
+        BaseReferences<_$NotesDatabase, $LocalSnapshotsTable, LocalSnapshotRow>,
+      ),
+      LocalSnapshotRow,
+      PrefetchHooks Function()
+    >;
 
 class $NotesDatabaseManager {
   final _$NotesDatabase _db;
@@ -3171,4 +3901,6 @@ class $NotesDatabaseManager {
       $$SyncMetadataTableTableManager(_db, _db.syncMetadata);
   $$SyncConflictsTableTableManager get syncConflicts =>
       $$SyncConflictsTableTableManager(_db, _db.syncConflicts);
+  $$LocalSnapshotsTableTableManager get localSnapshots =>
+      $$LocalSnapshotsTableTableManager(_db, _db.localSnapshots);
 }

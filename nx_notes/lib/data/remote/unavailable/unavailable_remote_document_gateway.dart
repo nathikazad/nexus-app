@@ -22,6 +22,13 @@ class UnavailableRemoteDocumentGateway implements RemoteDocumentGateway {
   }) async => _offline();
 
   @override
+  Future<RemoteWriteResult> deleteDocument(
+    RemoteDeleteRequest request, {
+    required String idempotencyKey,
+    required RemoteRevision expectedRevision,
+  }) async => _offline();
+
+  @override
   Future<RemoteChangeSet> pullChanges({required String? cursor}) async =>
       _offline();
 

@@ -79,6 +79,29 @@ the web, iOS, and Android applications.
   a brand-new local-only document in the current integer-based tabs and routes is
   deferred until those presentation identities accept `DocumentKey`.
 
+### Phases 16-19 implementation checkpoint — 2026-07-20
+
+- Added independent memory and Drift snapshot stores behind one reusable
+  contract, plus a version-2 Drift migration.
+- Added recoverable local deletion and conditional/idempotent remote delete
+  semantics to the gateway and sync engine. Document-wide draft persistence
+  already carries tag and pinned changes through the durable outbox.
+- Added a `DocumentAssetStore` contract with content-addressed `nxasset://`
+  identity, memory and atomic macOS filesystem adapters, deduplication, restart
+  recovery, pending-upload tracking, and incomplete-import isolation.
+- Added explicit policies that defer links until both endpoints have remote
+  identity and keep publishing online-only.
+- Added Drift WASM/IndexedDB-or-OPFS configuration, the SQLite WASM/worker web
+  assets, native isolate sharing, and concurrent outbox-claim coverage. Flutter's
+  generated web service worker provides app-shell caching.
+- Verified 150 non-integration tests, a clean `flutter analyze` run, and
+  successful macOS and web release builds.
+- Remaining product gates are deliberately not bypassed: KGQL still lacks
+  durable server idempotency, atomic revisions, and deletion tombstones; asset
+  uploading is not connected until its remote idempotency contract exists; web
+  cross-tab live-query notification needs browser-level acceptance testing; and
+  snapshots/assets/local-only routes are not connected to editor UI yet.
+
 ## Delivery principle
 
 Development proceeds through gated phases:

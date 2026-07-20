@@ -109,6 +109,43 @@ void runRemoteDocumentGatewayContract({
     expect(replay.revision, first.revision);
   });
 
+  test('delete is conditional and idempotent', () async {
+    final created = await gateway.createDocument(
+      RemoteCreateRequest(
+        key: const DocumentKey(localId: 'local-delete'),
+        document: offlineTestDocument(id: 0),
+      ),
+      idempotencyKey: 'delete-create',
+    );
+    await expectLater(
+      gateway.deleteDocument(
+        RemoteDeleteRequest(key: created.key),
+        idempotencyKey: 'stale-delete',
+        expectedRevision: const RemoteRevision('stale'),
+      ),
+      throwsA(
+        isA<RemoteGatewayException>().having(
+          (error) => error.failure.kind,
+          'failure kind',
+          SyncFailureKind.conflict,
+        ),
+      ),
+    );
+
+    final first = await gateway.deleteDocument(
+      RemoteDeleteRequest(key: created.key),
+      idempotencyKey: 'delete-operation',
+      expectedRevision: created.revision,
+    );
+    final replay = await gateway.deleteDocument(
+      RemoteDeleteRequest(key: created.key),
+      idempotencyKey: 'delete-operation',
+      expectedRevision: created.revision,
+    );
+
+    expect(replay.revision, first.revision);
+  });
+
   test('pull cursor returns only later changes', () async {
     await gateway.createDocument(
       RemoteCreateRequest(

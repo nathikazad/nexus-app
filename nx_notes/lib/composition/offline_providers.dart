@@ -67,7 +67,16 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
   if (session == null) return null;
   final accountKey = session.accountKey;
   final safeName = accountKey.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-  final database = NotesDatabase(driftDatabase(name: 'nx_notes_$safeName'));
+  final database = NotesDatabase(
+    driftDatabase(
+      name: 'nx_notes_$safeName',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+      native: const DriftNativeOptions(shareAcrossIsolates: true),
+    ),
+  );
   ref.onDispose(database.close);
   return DriftLocalNotesStore(database: database, accountKey: accountKey);
 });

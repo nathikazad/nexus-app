@@ -18,6 +18,12 @@ class RemoteUpdateRequest {
   final NxDocument document;
 }
 
+class RemoteDeleteRequest {
+  const RemoteDeleteRequest({required this.key});
+
+  final DocumentKey key;
+}
+
 class RemoteChangeSet {
   const RemoteChangeSet({required this.documents, required this.nextCursor});
 
@@ -45,6 +51,12 @@ abstract interface class RemoteDocumentGateway {
 
   Future<RemoteWriteResult> updateDocument(
     RemoteUpdateRequest request, {
+    required String idempotencyKey,
+    required RemoteRevision expectedRevision,
+  });
+
+  Future<RemoteWriteResult> deleteDocument(
+    RemoteDeleteRequest request, {
     required String idempotencyKey,
     required RemoteRevision expectedRevision,
   });

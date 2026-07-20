@@ -97,6 +97,26 @@ class OfflineNotesService {
     );
   }
 
+  Future<void> deleteDraft(LocalDocument document) async {
+    final deleted = document.copyWith(
+      deletedLocally: true,
+      localUpdatedAt: clock.now(),
+      syncState: DocumentSyncState.locallyModified,
+    );
+    await localStore.saveDraftAndEnqueue(
+      deleted,
+      operation: PendingOperation(
+        operationId: idGenerator.nextId(),
+        accountKey: localStore.accountKey,
+        documentKey: deleted.key,
+        type: PendingOperationType.delete,
+        payload: const <String, Object?>{},
+        baseRevision: deleted.baseServerRevision,
+        createdAt: clock.now(),
+      ),
+    );
+  }
+
   Future<SyncRunResult> synchronize({SyncReason reason = SyncReason.manual}) =>
       syncEngine.synchronize(reason: reason);
 }

@@ -104,6 +104,57 @@ class KgqlRemoteDocumentGateway implements RemoteDocumentGateway {
   }
 
   @override
+  Future<RemoteWriteResult> deleteDocument(
+    RemoteDeleteRequest request, {
+    required String idempotencyKey,
+    required RemoteRevision expectedRevision,
+  }) async {
+    final previous = _operationResults[idempotencyKey];
+    if (previous != null) return previous;
+    final remoteId = request.key.remoteId;
+    if (remoteId == null) {
+      throw const RemoteGatewayException(
+        SyncFailure(
+          kind: SyncFailureKind.validation,
+          message: 'remote id required for delete',
+        ),
+      );
+    }
+    try {
+      final current = await _repository.getById(remoteId);
+      if (current == null) {
+        throw const RemoteGatewayException(
+          SyncFailure(
+            kind: SyncFailureKind.validation,
+            message: 'remote document not found',
+          ),
+        );
+      }
+      if (_revisionOf(current) != expectedRevision) {
+        throw const RemoteGatewayException(
+          SyncFailure(
+            kind: SyncFailureKind.conflict,
+            message: 'stale document revision',
+          ),
+        );
+      }
+      await _repository.delete(remoteId);
+      final result = RemoteWriteResult(
+        key: request.key,
+        revision: RemoteRevision('deleted:${expectedRevision.value}'),
+      );
+      _operationResults[idempotencyKey] = result;
+      return result;
+    } on RemoteGatewayException {
+      rethrow;
+    } catch (error) {
+      throw RemoteGatewayException(
+        SyncFailure(kind: SyncFailureKind.transient, message: '$error'),
+      );
+    }
+  }
+
+  @override
   Future<RemoteChangeSet> pullChanges({required String? cursor}) async {
     try {
       final after = cursor == null ? null : DateTime.tryParse(cursor)?.toUtc();
