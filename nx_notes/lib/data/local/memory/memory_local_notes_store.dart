@@ -8,6 +8,7 @@ import 'package:nx_notes/domain/sync/local_document.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
+import 'package:nx_notes/domain/sync/sync_conflict.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
 
 class MemoryLocalNotesStore implements LocalNotesStore {
@@ -23,6 +24,8 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   final Map<String, PendingOperation> _operations =
       <String, PendingOperation>{};
   final StreamController<void> _changes = StreamController<void>.broadcast();
+  final Map<String, SyncConflict> _conflicts = <String, SyncConflict>{};
+  String? _syncCursor;
   bool _disposed = false;
 
   Future<void> dispose() async {
@@ -181,6 +184,33 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       );
     }
     _notify();
+  }
+
+  @override
+  Future<String?> readSyncCursor() async => _syncCursor;
+
+  @override
+  Future<void> writeSyncCursor(String cursor) async {
+    _syncCursor = cursor;
+  }
+
+  @override
+  Future<void> recordConflict(SyncConflict conflict) async {
+    _conflicts[conflict.documentKey.localId] = conflict;
+    final local = _documents[conflict.documentKey.localId];
+    if (local != null) {
+      _documents[local.key.localId] = local.copyWith(
+        syncState: DocumentSyncState.conflict,
+      );
+    }
+    _notify();
+  }
+
+  @override
+  Future<List<SyncConflict>> conflicts() async {
+    final rows = _conflicts.values.toList()
+      ..sort((a, b) => a.detectedAt.compareTo(b.detectedAt));
+    return rows;
   }
 
   void _validateWrite(LocalDocument document, PendingOperation operation) {

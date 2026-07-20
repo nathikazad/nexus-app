@@ -6,6 +6,7 @@ import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
+import 'package:nx_notes/domain/sync/sync_conflict.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
 
 import '../offline_fixtures.dart';
@@ -235,5 +236,37 @@ void runLocalNotesStoreContract({
         )
         .first;
     expect(rows.map((row) => row.key.localId), <String>['one']);
+  });
+
+  test('persists the synchronization cursor', () async {
+    expect(await store.readSyncCursor(), isNull);
+    await store.writeSyncCursor('cursor-42');
+    expect(await store.readSyncCursor(), 'cursor-42');
+  });
+
+  test('records both sides of a conflict and marks the local record', () async {
+    final local = offlineLocalDocument(body: 'local');
+    await store.saveDraftAndEnqueue(
+      local,
+      operation: offlinePendingOperation(body: 'local'),
+    );
+    await store.recordConflict(
+      SyncConflict(
+        documentKey: local.key,
+        localDocument: local.document,
+        remoteDocument: offlineTestDocument(body: 'remote'),
+        remoteRevision: const RemoteRevision('remote-revision'),
+        detectedAt: DateTime.utc(2026, 1, 2),
+      ),
+    );
+
+    final conflicts = await store.conflicts();
+    expect(conflicts, hasLength(1));
+    expect(conflicts.single.localDocument.document, 'local');
+    expect(conflicts.single.remoteDocument.document, 'remote');
+    expect(
+      (await store.getDocument(local.key))!.syncState,
+      DocumentSyncState.conflict,
+    );
   });
 }

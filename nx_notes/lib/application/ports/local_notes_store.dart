@@ -4,6 +4,7 @@ import 'package:nx_notes/domain/sync/local_document.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
+import 'package:nx_notes/domain/sync/sync_conflict.dart';
 
 abstract interface class LocalNotesStore {
   String get accountKey;
@@ -39,4 +40,12 @@ abstract interface class LocalNotesStore {
     required SyncFailure failure,
     required DateTime retryAt,
   });
+
+  Future<String?> readSyncCursor();
+
+  Future<void> writeSyncCursor(String cursor);
+
+  Future<void> recordConflict(SyncConflict conflict);
+
+  Future<List<SyncConflict>> conflicts();
 }

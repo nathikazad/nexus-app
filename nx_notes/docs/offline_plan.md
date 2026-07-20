@@ -23,6 +23,25 @@ the web, iOS, and Android applications.
 - Added the `LocalNotesStore` port, reusable contract suite, and memory adapter.
 - Verified 70 non-integration tests and a clean `flutter analyze` run.
 
+### Phases 4-7 complete — 2026-07-20
+
+- Added the Drift database, document mapper, and `LocalNotesStore` adapter with
+  durable documents, outbox leases, cursor metadata, and conflict snapshots.
+- Ran the reusable local-store contract against both memory and Drift adapters,
+  including database restart and uniqueness tests.
+- Added the `RemoteDocumentGateway` port, reusable contract suite, deterministic
+  fake, and KGQL adapter.
+- Added a platform-neutral synchronization engine with push-before-pull,
+  exponential retry, conditional updates, conflict preservation, authentication
+  blocking, and concurrent-run collapse.
+- Covered lost responses after server commit and engine reconstruction to prove
+  that retry uses stable operation identities without duplicate creates.
+- Verified 105 non-integration tests and a clean `flutter analyze` run.
+- Known server prerequisite: the existing KGQL repository does not yet expose
+  durable idempotency keys, atomic revision preconditions, tombstones, or an
+  incremental change cursor. The KGQL adapter can only emulate those guarantees
+  inside one process until the backend contract is extended.
+
 ## Delivery principle
 
 Development proceeds through gated phases:
