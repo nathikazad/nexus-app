@@ -114,6 +114,49 @@ void main() {
     ]);
   });
 
+  test('microblog repository reports saved post X sync failures', () async {
+    final client = _RecordingClient(
+      (_) async => http.Response(
+        jsonEncode({
+          'ok': true,
+          'microblog_id': 4627,
+          'x_sync': {
+            'enabled': true,
+            'status': 'manual_action_required',
+            'last_error': 'X requires verification',
+          },
+          'warnings': ['X requires verification'],
+        }),
+        200,
+      ),
+    );
+    final repository = MicroblogPostRepository(
+      'http://mcp.local',
+      graphqlUrl: 'http://graphql.local/graphql',
+      userId: '7',
+      client: client,
+    );
+
+    expect(
+      () => repository.createMicroblog(
+        text: 'hello',
+        postedAt: DateTime.utc(2026, 7, 9),
+        mediaUrl: '',
+        images: const [],
+        categories: const [],
+        publishEnabled: true,
+        xSyncEnabled: true,
+      ),
+      throwsA(
+        isA<XSyncException>().having(
+          (error) => error.message,
+          'message',
+          'X requires verification',
+        ),
+      ),
+    );
+  });
+
   testWidgets('renders feed shell and opens compose sheet', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(

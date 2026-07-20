@@ -2516,6 +2516,16 @@ class MicroblogPostRepository {
     if (payload is! Map<String, dynamic> || payload['ok'] != true) {
       throw StateError('Invalid microblog response');
     }
+    final xSync = payload['x_sync'];
+    if (xSync is Map) {
+      final status = xSync['status']?.toString();
+      if (status == 'failed' || status == 'manual_action_required') {
+        final message = xSync['last_error']?.toString();
+        throw XSyncException(
+          message == null || message.isEmpty ? 'X sync failed' : message,
+        );
+      }
+    }
     final warnings = payload['warnings'];
     if (warnings is List && warnings.isNotEmpty) {
       logNxPost('microblog completed with warnings=${jsonEncode(warnings)}');
