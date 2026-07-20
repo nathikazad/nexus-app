@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/features/auth/notes_login_screen.dart';
 import 'package:nx_notes/features/shell/notes_root_shell.dart';
 
@@ -17,18 +18,20 @@ class NotesInitializingScreen extends StatelessWidget {
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authProvider, (_, __) => refresh.value++);
+  ref.listen(activeOfflineSessionProvider, (_, __) => refresh.value++);
 
   return GoRouter(
     refreshListenable: refresh,
     initialLocation: '/docs',
     redirect: (context, state) {
       final auth = ref.read(authProvider);
+      final activeSession = ref.read(activeOfflineSessionProvider);
       final path = state.uri.path;
-      if (auth.isLoading) {
+      if (auth.isLoading && activeSession.isLoading) {
         if (path == '/initializing') return null;
         return '/initializing?from=${Uri.encodeComponent(_routeDestination(state))}';
       }
-      final loggedIn = auth.value != null;
+      final loggedIn = activeSession.value != null;
       if (path == '/initializing') {
         final from = _safeReturnPath(state);
         return loggedIn

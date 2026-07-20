@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_result_context.dart';
@@ -15,6 +16,7 @@ import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 import 'package:nx_notes/features/editor/nx_color_toolbar.dart';
 import 'package:nx_notes/features/editor/nx_document_link.dart';
 import 'package:nx_notes/features/editor/nx_highlight_notes.dart';
+import 'package:nx_notes/features/editor/offline_sync_status_label.dart';
 
 class DocumentEditorView extends ConsumerWidget {
   const DocumentEditorView({
@@ -40,7 +42,7 @@ class DocumentEditorView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncDocument = ref.watch(documentByIdProvider(documentId));
+    final asyncDocument = ref.watch(offlineDocumentProvider(documentId));
     return asyncDocument.when(
       data: (document) {
         if (document == null) {
@@ -232,12 +234,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     widget.onTitleChanged?.call(title);
     _draftDocument = _draftDocument.copyWith(title: title);
     _titleSaveDebounce?.cancel();
-    _titleSaveDebounce = Timer(const Duration(milliseconds: 450), () async {
-      if (!mounted) return;
-      await ref
-          .read(documentMutationControllerProvider)
-          .saveDraft(_draftDocument);
-    });
+    unawaited(
+      ref.read(documentMutationControllerProvider).saveDraft(_draftDocument),
+    );
   }
 
   void _setEditorMode(_DocumentEditorMode mode) {
@@ -264,6 +263,13 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
       child: Column(
         children: <Widget>[
           if (widget.contextBar != null) widget.contextBar!,
+          const Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: EdgeInsets.only(right: 16, top: 4),
+              child: OfflineSyncStatusLabel(),
+            ),
+          ),
           Expanded(
             child: ColoredBox(
               color: readMode ? _readModeBackgroundColor() : Colors.transparent,

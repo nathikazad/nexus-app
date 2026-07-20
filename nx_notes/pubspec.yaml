@@ -11,6 +11,7 @@ dependencies:
   appflowy_editor:
     path: ../appflowy-editor
   crypto: ^3.0.6
+  connectivity_plus: 6.1.5
   drift: ^2.34.0
   drift_flutter: ^0.3.1
   flutter:
@@ -27,6 +28,7 @@ dependencies:
   nx_db:
     path: ../nx_db
   provider: ^6.1.5+1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   build_runner: ^2.10.5
@@ -37,7 +39,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   mocktail: ^1.0.4
-  shared_preferences: ^2.2.2
 
 dependency_overrides:
   connectivity_plus: 6.1.5

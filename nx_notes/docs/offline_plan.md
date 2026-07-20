@@ -59,6 +59,26 @@ the web, iOS, and Android applications.
   preconditions, deletion reconciliation, and a real change cursor. The local
   integration paths are complete and no live Nexus records were mutated.
 
+### Phases 12-15 implementation checkpoint — 2026-07-20
+
+- Added a pure offline-session restoration use case, a preferences adapter, an
+  HTTP probe that separates 401/403 from reachability failures, explicit logout
+  retention policy, and account-partitioned router restoration.
+- Added the `OfflineNotesService` facade and Riverpod composition for clocks,
+  secure IDs, Drift, KGQL, unavailable-network behavior, and sync lifecycle.
+- Switched editor title/body durability to the local facade, added local-first
+  document reads, compact sync status, and app-start/resume/connectivity sync
+  triggers. Deferred synchronization no longer means deferred local storage.
+- Added offline creation at the application boundary with stable local identity;
+  first sync preserves that identity while assigning the remote integer ID, and
+  replay tests prove that lost create responses do not duplicate documents.
+- Verified 129 non-integration tests, a clean `flutter analyze` run, and a
+  successful macOS release build.
+- Phase 12 and 13 gates are complete. The existing-integer-document editor path
+  is durable for phase 14. Phase 15's storage/sync gate is complete, while opening
+  a brand-new local-only document in the current integer-based tabs and routes is
+  deferred until those presentation identities accept `DocumentKey`.
+
 ## Delivery principle
 
 Development proceeds through gated phases:

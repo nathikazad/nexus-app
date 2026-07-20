@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/data/document/mirror_publish_trigger.dart';
 import 'package:nx_notes/data/providers.dart';
+import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/document/document_repository.dart';
@@ -65,6 +66,10 @@ class DocumentMutationController {
       updatedLabel: 'just now',
     );
     _cacheDocument(_pendingDraft!);
+    final offline = _ref.read(offlineNotesServiceProvider);
+    if (offline != null) {
+      await offline.saveRemoteDraft(_pendingDraft!);
+    }
     if (policy == DraftSavePolicy.immediate) {
       await _flushDraftNow();
       return;
@@ -78,6 +83,10 @@ class DocumentMutationController {
       updatedLabel: 'just now',
     );
     _cacheDocument(_pendingDraft!);
+    final offline = _ref.read(offlineNotesServiceProvider);
+    if (offline != null) {
+      await offline.saveRemoteDraft(_pendingDraft!);
+    }
     await _flushDraftNow();
   }
 
@@ -292,7 +301,12 @@ class DocumentMutationController {
     }
     _pendingDraft = null;
     try {
-      await _ref.read(documentRepositoryProvider).updateDraft(draft);
+      final offline = _ref.read(offlineNotesServiceProvider);
+      if (offline == null) {
+        await _ref.read(documentRepositoryProvider).updateDraft(draft);
+      } else {
+        await offline.synchronize();
+      }
       if (draft.publish.enabled) {
         unawaited(
           _triggerMirrorPublish(
