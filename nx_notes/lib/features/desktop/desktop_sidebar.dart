@@ -62,14 +62,14 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
   @override
   Widget build(BuildContext context) {
     final workspace = ref.watch(desktopWorkspaceProvider);
-    final recent = ref.watch(recentDocumentsProvider);
-    final pinned = ref.watch(pinnedDocumentsProvider);
-    final books = ref.watch(booksProvider);
-    final tagSystems = ref.watch(tagSystemsProvider);
+    final recent = ref.watch(offlineRecentDocumentsProvider);
+    final pinned = ref.watch(offlinePinnedDocumentsProvider);
+    final books = ref.watch(offlineBooksProvider);
+    final tagSystems = ref.watch(offlineTagSystemsProvider);
     final liveQuery = _liveSearchText;
     final liveDocuments =
         liveQuery.isNotEmpty && workspace.sidebarTab == SidebarTab.documents
-        ? ref.watch(documentSearchProvider(liveQuery))
+        ? ref.watch(offlineDocumentSearchProvider(liveQuery))
         : const AsyncData<List<NxDocument>>(<NxDocument>[]);
     return DecoratedBox(
       decoration: BoxDecoration(

@@ -132,7 +132,7 @@ class _NoDocumentSelected extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recent = ref.watch(recentDocumentsProvider);
+    final recent = ref.watch(offlineRecentDocumentsProvider);
     return recent.when(
       data: (rows) {
         if (rows.isNotEmpty) {
@@ -164,7 +164,7 @@ class _EditorTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final document = ref.watch(documentByIdProvider(tab.documentId)).value;
+    final document = ref.watch(offlineDocumentProvider(tab.documentId)).value;
     return Material(
       color: active ? AppColors.panel : Colors.transparent,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),

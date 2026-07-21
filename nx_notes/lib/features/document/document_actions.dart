@@ -382,7 +382,7 @@ class DocumentResultController {
   final Ref _ref;
 
   Future<DocumentResultContext> search(String value) async {
-    final rows = await _ref.read(documentRepositoryProvider).search(value);
+    final rows = await _readLocalDocuments(DocumentQuery(searchText: value));
     return DocumentResultContext(
       title: 'Search: $value',
       query: DocumentQuery(searchText: value),
@@ -392,9 +392,9 @@ class DocumentResultController {
   }
 
   Future<DocumentResultContext> pinned() async {
-    final rows = await _ref
-        .read(documentRepositoryProvider)
-        .listPinned(limit: 50);
+    final rows = (await _readLocalDocuments(
+      const DocumentQuery(pinnedOnly: true),
+    )).take(50).toList(growable: false);
     return DocumentResultContext(
       title: 'Pinned documents',
       query: const DocumentQuery(pinnedOnly: true),
@@ -404,9 +404,9 @@ class DocumentResultController {
   }
 
   Future<DocumentResultContext> recent() async {
-    final rows = await _ref
-        .read(documentRepositoryProvider)
-        .listRecent(limit: 50);
+    final rows = (await _readLocalDocuments(
+      const DocumentQuery(),
+    )).take(50).toList(growable: false);
     return DocumentResultContext(
       title: 'Recent documents',
       query: const DocumentQuery(),
@@ -425,12 +425,35 @@ class DocumentResultController {
       node: node,
       includeDescendants: includeDescendants,
     );
-    final rows = await _ref.read(documentRepositoryProvider).listByTag(filter);
+    final rows = await _readLocalDocuments(
+      DocumentQuery(tagFilters: <DocumentTagFilter>[filter]),
+    );
     return DocumentResultContext(
       title: '$system: $node',
       query: DocumentQuery(tagFilters: <DocumentTagFilter>[filter]),
       resultIds: rows.map((document) => document.id).toList(),
       results: rows,
     );
+  }
+
+  Future<List<NxDocument>> _readLocalDocuments(DocumentQuery query) async {
+    final service = _ref.read(offlineNotesServiceProvider);
+    if (service != null) {
+      final rows = await service.readDocuments(query);
+      return rows
+          .map((local) => local.document)
+          .where((document) => document.id > 0)
+          .toList(growable: false);
+    }
+
+    final repository = _ref.read(documentRepositoryProvider);
+    if (query.searchText.trim().isNotEmpty) {
+      return repository.search(query.searchText);
+    }
+    if (query.pinnedOnly) return repository.listPinned(limit: 50);
+    if (query.tagFilters.isNotEmpty) {
+      return repository.listByTag(query.tagFilters.first);
+    }
+    return repository.listRecent(limit: 50);
   }
 }

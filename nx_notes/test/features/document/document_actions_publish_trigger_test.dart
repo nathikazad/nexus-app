@@ -291,6 +291,9 @@ class _FakeDocumentRepository implements DocumentRepository {
   Future<NxDocument?> getById(int id) async => null;
 
   @override
+  Future<List<NxDocument>> listAll() async => [];
+
+  @override
   Future<List<NxDocument>> listBooks({int limit = 50}) async => [];
 
   @override

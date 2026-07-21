@@ -226,6 +226,12 @@ class FakeDocumentRepository implements DocumentRepository {
   }
 
   @override
+  Future<List<NxDocument>> listAll() async {
+    final rows = [..._documents]..sort(_recentSort);
+    return rows;
+  }
+
+  @override
   Future<List<NxDocument>> listRecent({int limit = 20}) async {
     final rows = [..._documents]..sort(_recentSort);
     return rows.take(limit).toList();

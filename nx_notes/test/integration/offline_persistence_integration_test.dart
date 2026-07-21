@@ -10,6 +10,7 @@ import 'package:nx_notes/data/local/drift/drift_local_notes_store.dart';
 import 'package:nx_notes/data/local/drift/notes_database.dart';
 import 'package:nx_notes/data/remote/fake/fake_remote_document_gateway.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
@@ -19,6 +20,43 @@ import '../support/offline_fixtures.dart';
 
 void main() {
   const accountKey = 'prod:user-1';
+
+  test('the complete downloaded library survives a process restart', () async {
+    final fixture = await DriftFixture.create(accountKey);
+    addTearDown(fixture.dispose);
+    final remote = FakeRemoteDocumentGateway();
+    for (var id = 1; id <= 4; id++) {
+      remote.seed(
+        RemoteDocument(
+          key: DocumentKey(localId: 'remote-$id', remoteId: id),
+          document: offlineTestDocument(
+            id: id,
+            title: 'Persistent document $id',
+            body: 'Downloaded body $id',
+            updatedAt: DateTime.utc(2026, 1, id),
+          ),
+          revision: RemoteRevision('rev-$id'),
+        ),
+      );
+    }
+    final engine = fixture.engine(remote);
+    final firstSync = await engine.synchronize(reason: SyncReason.appStarted);
+    await engine.dispose();
+
+    expect(firstSync.pulledCount, 4);
+    await fixture.reopen();
+
+    final downloaded = await fixture.store
+        .watchDocuments(const DocumentQuery())
+        .first;
+    expect(downloaded.map((row) => row.document.id), <int>[4, 3, 2, 1]);
+    for (var id = 1; id <= 4; id++) {
+      final cached = await fixture.store.getDocument(
+        DocumentKey(localId: 'remote-$id', remoteId: id),
+      );
+      expect(cached?.document.document, 'Downloaded body $id');
+    }
+  });
 
   test('offline edit survives process restart and then synchronizes', () async {
     final fixture = await DriftFixture.create(accountKey);

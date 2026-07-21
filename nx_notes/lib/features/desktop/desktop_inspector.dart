@@ -19,11 +19,12 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
     final id = widget.documentId;
     final document = id == null
         ? null
-        : ref.watch(documentByIdProvider(id)).value;
+        : ref.watch(offlineDocumentProvider(id)).value;
     final snaps = id == null
         ? const <DocumentSnap>[]
         : ref.watch(documentSnapshotsProvider(id)).value ?? const [];
-    final tagSystems = ref.watch(tagSystemsProvider).value ?? const [];
+    final tagSystems =
+        ref.watch(offlineTagSystemsProvider).value ?? const <TagSystem>[];
     final statusSystem = tagSystems.where((system) => system.name == 'Status');
     final editableTagSystems = tagSystems
         .where((system) => system.name != 'Status')

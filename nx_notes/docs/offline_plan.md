@@ -13,6 +13,23 @@ the web, iOS, and Android applications.
 
 ## Implementation checkpoints
 
+### Full-library native restart checkpoint — 2026-07-21
+
+- Made the remote repository's complete-library operation explicit so initial
+  hydration cannot be silently truncated by a recent-document presentation
+  limit.
+- Kept the existing account-partitioned Drift/SQLite database as the durable
+  source for full document bodies and metadata across process restarts.
+- Connected both mobile and desktop catalogs, search, tags, editor tabs,
+  inspector metadata, and document reads to the same local-first application
+  facade. Network synchronization refreshes that database without changing the
+  visible navigation or editor layout.
+- Added a real SQLite close/reopen test covering four complete documents and a
+  desktop cold-offline widget test covering multiple cached documents.
+- Verified 162 tests, with two opt-in live-backend tests skipped, and a clean
+  `flutter analyze` run. Snapshot history and remote image-byte caching remain
+  separate asset capabilities.
+
 ### Mobile restart reader checkpoint — 2026-07-21
 
 - Connected mobile recent, pinned, books, search, tags, document chrome, and

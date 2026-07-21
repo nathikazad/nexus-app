@@ -282,6 +282,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     final width = MediaQuery.sizeOf(context).width;
     final titleSize = width < 700 ? 30.0 : 38.0;
     final imageAssetService = ref.watch(documentImageAssetServiceProvider);
+    final mutationController = ref.read(documentMutationControllerProvider);
     final readMode = _editorMode == _DocumentEditorMode.read;
     final showEditorHeader =
         (widget.canNavigateBack && widget.onNavigateBack != null) ||
@@ -549,14 +550,10 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                       wordCount: updated.wordCount,
                                       excerpt: updated.excerpt,
                                     );
-                                    await ref
-                                        .read(
-                                          documentMutationControllerProvider,
-                                        )
-                                        .saveDraft(
-                                          _draftDocument,
-                                          policy: policy,
-                                        );
+                                    await mutationController.saveDraft(
+                                      _draftDocument,
+                                      policy: policy,
+                                    );
                                   },
                           ),
                         ),
@@ -827,7 +824,6 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     _nextImmediateSaveTimer = null;
     _scrollAnchorSaveDebounce?.cancel();
     _scrollAnchorSaveDebounce = null;
-    unawaited(_saveScrollAnchorNow());
     _scrollAnchorSaveEnabled = false;
     _saveNextTransactionImmediately = false;
     _scrollController.itemPositionsListener.itemPositions.removeListener(

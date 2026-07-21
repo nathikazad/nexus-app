@@ -28,6 +28,11 @@ class OfflineNotesService {
   Stream<List<LocalDocument>> watchDocuments(DocumentQuery query) =>
       localStore.watchDocuments(query);
 
+  /// Reads the current durable catalog snapshot without requiring callers to
+  /// know which local database adapter is in use.
+  Future<List<LocalDocument>> readDocuments(DocumentQuery query) =>
+      localStore.watchDocuments(query).first;
+
   Stream<LocalDocument?> watchDocument(DocumentKey key) =>
       localStore.watchDocument(key);
 

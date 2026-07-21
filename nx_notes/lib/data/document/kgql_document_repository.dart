@@ -233,6 +233,9 @@ class KgqlDocumentRepository implements DocumentRepository {
   }
 
   @override
+  Future<List<NxDocument>> listAll() => _listAll();
+
+  @override
   Future<List<NxDocument>> listRecent({int limit = 20}) async {
     final rows = await _listAll();
     return rows.take(limit).toList();

@@ -5,6 +5,12 @@ import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 
 abstract class DocumentRepository {
+  /// Returns the complete document library without a presentation limit.
+  ///
+  /// Offline hydration depends on this method and must never use a recent-list
+  /// limit as a proxy for the full account library.
+  Future<List<NxDocument>> listAll();
+
   Future<List<NxDocument>> listRecent({int limit = 20});
   Future<List<NxDocument>> listBooks({int limit = 50});
   Future<List<NxDocument>> listPinned({int limit = 20});

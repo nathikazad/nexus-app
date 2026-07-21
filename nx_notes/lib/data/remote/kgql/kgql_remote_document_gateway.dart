@@ -158,7 +158,7 @@ class KgqlRemoteDocumentGateway implements RemoteDocumentGateway {
   Future<RemoteChangeSet> pullChanges({required String? cursor}) async {
     try {
       final after = cursor == null ? null : DateTime.tryParse(cursor)?.toUtc();
-      final summaries = await _repository.listRecent(limit: 10000);
+      final summaries = await _repository.listAll();
       final changed = summaries.where((document) {
         return after == null || document.updatedAt.toUtc().isAfter(after);
       }).toList();
