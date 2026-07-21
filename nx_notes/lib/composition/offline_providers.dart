@@ -7,6 +7,7 @@ import 'package:nx_notes/application/offline_notes_service.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/connectivity_monitor.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
+import 'package:nx_notes/application/ports/last_opened_document_store.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
 import 'package:nx_notes/application/ports/remote_document_gateway.dart';
 import 'package:nx_notes/application/sync/document_sync_engine.dart';
@@ -19,11 +20,15 @@ import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/data/remote/kgql/kgql_remote_document_gateway.dart';
 import 'package:nx_notes/data/remote/unavailable/unavailable_remote_document_gateway.dart';
 import 'package:nx_notes/data/session/http_session_probe.dart';
+import 'package:nx_notes/data/session/preferences_last_opened_document_store.dart';
 import 'package:nx_notes/data/session/preferences_session_store.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
+import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
+import 'package:nx_notes/domain/tags/tag_system.dart';
+import 'package:nx_notes/domain/tags/tag_system_index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final activeOfflineSessionProvider = FutureProvider<CachedSession?>((
@@ -51,6 +56,13 @@ final activeOfflineSessionProvider = FutureProvider<CachedSession?>((
   ).restore();
   return result.session;
 });
+
+final lastOpenedDocumentStoreProvider = FutureProvider<LastOpenedDocumentStore>(
+  (ref) async {
+    final preferences = await SharedPreferences.getInstance();
+    return PreferencesLastOpenedDocumentStore(preferences);
+  },
+);
 
 final offlineClockProvider = Provider<Clock>((ref) => const SystemClock());
 
@@ -116,6 +128,63 @@ final offlineNotesServiceProvider = Provider<OfflineNotesService?>((ref) {
     idGenerator: ref.watch(offlineIdGeneratorProvider),
   );
 });
+
+final offlineAllDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
+  return _watchOfflineDocuments(ref, const DocumentQuery());
+});
+
+final offlineRecentDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
+  return _watchOfflineDocuments(
+    ref,
+    const DocumentQuery(),
+  ).map((documents) => documents.take(20).toList(growable: false));
+});
+
+final offlinePinnedDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
+  return _watchOfflineDocuments(
+    ref,
+    const DocumentQuery(pinnedOnly: true),
+  ).map((documents) => documents.take(20).toList(growable: false));
+});
+
+final offlineBooksProvider = StreamProvider<List<NxDocument>>((ref) {
+  return _watchOfflineDocuments(ref, const DocumentQuery()).map(
+    (documents) => documents
+        .where((document) => document.isBook)
+        .take(100)
+        .toList(growable: false),
+  );
+});
+
+final offlineDocumentSearchProvider =
+    StreamProvider.family<List<NxDocument>, String>((ref, searchText) {
+      if (searchText.trim().isEmpty) {
+        return Stream<List<NxDocument>>.value(const <NxDocument>[]);
+      }
+      return _watchOfflineDocuments(ref, DocumentQuery(searchText: searchText));
+    });
+
+final offlineTagSystemsProvider = StreamProvider<List<TagSystem>>((ref) {
+  return _watchOfflineDocuments(
+    ref,
+    const DocumentQuery(),
+  ).map(tagSystemsFromDocuments);
+});
+
+Stream<List<NxDocument>> _watchOfflineDocuments(Ref ref, DocumentQuery query) {
+  final service = ref.watch(offlineNotesServiceProvider);
+  if (service == null) {
+    return Stream<List<NxDocument>>.value(const <NxDocument>[]);
+  }
+  return service
+      .watchDocuments(query)
+      .map(
+        (documents) => documents
+            .map((local) => local.document)
+            .where((document) => document.id > 0)
+            .toList(growable: false),
+      );
+}
 
 /// Local-first document read used by editor-facing code during migration.
 final offlineDocumentProvider = FutureProvider.family<NxDocument?, int>((

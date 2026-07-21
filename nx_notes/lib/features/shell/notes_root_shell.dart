@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:nx_notes/core/layout/is_desktop_layout.dart';
 import 'package:nx_notes/data/document/nx_docs_state.dart';
 import 'package:nx_notes/data/providers.dart';
+import 'package:nx_notes/composition/offline_providers.dart';
+import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/features/desktop/desktop_shell.dart';
 import 'package:nx_notes/features/mobile/mobile_shell.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
@@ -113,18 +115,37 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
     if (!mounted || widget.initialDocumentId != null) {
       return;
     }
-    final service = ref.read(nxDocsStateServiceProvider);
-    if (service == null) {
+    int? documentId;
+    final cloudService = ref.read(nxDocsStateServiceProvider);
+    try {
+      if (cloudService != null) {
+        documentId = await cloudService.loadLastDocumentId();
+      }
+    } catch (error) {
+      debugNxDocsState('cloud restore skipped: $error');
+    }
+
+    final session = await ref.read(activeOfflineSessionProvider.future);
+    if (session == null) return;
+    final localStore = await ref.read(lastOpenedDocumentStoreProvider.future);
+    if (documentId != null) {
+      await localStore.save(session.accountKey, documentId);
+    } else {
+      documentId = await localStore.load(session.accountKey);
+    }
+    if (!mounted || widget.initialDocumentId != null || documentId == null) {
       return;
     }
-    try {
-      final documentId = await service.loadLastDocumentId();
-      if (!mounted || widget.initialDocumentId != null || documentId == null) {
-        return;
-      }
+
+    if (cloudService == null) {
+      final offline = ref.read(offlineNotesServiceProvider);
+      final cached = await offline?.getDocument(
+        DocumentKey(localId: 'remote-$documentId', remoteId: documentId),
+      );
+      if (cached == null) return;
+    }
+    if (mounted && widget.initialDocumentId == null) {
       context.go('/docs/$documentId');
-    } catch (error) {
-      debugNxDocsState('restore skipped: $error');
     }
   }
 
@@ -133,14 +154,22 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
       return;
     }
     _lastPersistedDocumentId = documentId;
-    final service = ref.read(nxDocsStateServiceProvider);
-    if (service == null) {
-      return;
+    unawaited(_persistLastDocumentToStores(documentId));
+  }
+
+  Future<void> _persistLastDocumentToStores(int documentId) async {
+    final session = await ref.read(activeOfflineSessionProvider.future);
+    if (session != null) {
+      final localStore = await ref.read(lastOpenedDocumentStoreProvider.future);
+      await localStore.save(session.accountKey, documentId);
     }
-    unawaited(
-      service.saveLastDocumentId(documentId).catchError((Object error) {
-        debugNxDocsState('save skipped for document=$documentId: $error');
-      }),
-    );
+
+    final cloudService = ref.read(nxDocsStateServiceProvider);
+    if (cloudService == null) return;
+    try {
+      await cloudService.saveLastDocumentId(documentId);
+    } catch (error) {
+      debugNxDocsState('cloud save skipped for document=$documentId: $error');
+    }
   }
 }

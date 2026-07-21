@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
@@ -9,7 +10,6 @@ import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/document/document_result_context.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
-import 'package:nx_notes/features/document/document_actions.dart';
 import 'package:nx_notes/features/navigator/document_row.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
 
@@ -221,9 +221,9 @@ class _MobileHome extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pinned =
-        ref.watch(pinnedDocumentsProvider).value ?? const <NxDocument>[];
+        ref.watch(offlinePinnedDocumentsProvider).value ?? const <NxDocument>[];
     final recent =
-        ref.watch(recentDocumentsProvider).value ?? const <NxDocument>[];
+        ref.watch(offlineRecentDocumentsProvider).value ?? const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.all(14),
       children: <Widget>[
@@ -287,7 +287,7 @@ class _MobileBooks extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final books = ref.watch(booksProvider).value ?? const <NxDocument>[];
+    final books = ref.watch(offlineBooksProvider).value ?? const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.all(14),
       children: <Widget>[_MobileSection(title: 'Books', rows: books)],
@@ -300,7 +300,10 @@ class _MobileTags extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final systems = ref.watch(tagSystemsProvider).value ?? const <TagSystem>[];
+    final systems =
+        ref.watch(offlineTagSystemsProvider).value ?? const <TagSystem>[];
+    final documents =
+        ref.watch(offlineAllDocumentsProvider).value ?? const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
       children: <Widget>[
@@ -316,7 +319,8 @@ class _MobileTags extends ConsumerWidget {
               ),
             ),
           ),
-          for (final node in system.nodes) ..._tagRows(ref, system.name, node),
+          for (final node in system.nodes)
+            ..._tagRows(ref, system.name, node, documents),
           const SizedBox(height: 22),
         ],
       ],
@@ -326,7 +330,8 @@ class _MobileTags extends ConsumerWidget {
   List<Widget> _tagRows(
     WidgetRef ref,
     String system,
-    TagNode node, [
+    TagNode node,
+    List<NxDocument> documents, [
     int depth = 0,
   ]) {
     return <Widget>[
@@ -335,15 +340,28 @@ class _MobileTags extends ConsumerWidget {
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap: () async {
-            final result = await ref
-                .read(documentResultControllerProvider)
-                .tag(
-                  system: system,
-                  node: node.name,
-                  includeDescendants: depth == 0,
+          onTap: () {
+            final rows = documents
+                .where((document) {
+                  final tags =
+                      document.tagsBySystem[system] ?? const <String>[];
+                  return tags.contains(node.name);
+                })
+                .toList(growable: false);
+            ref
+                .read(mobileNotesProvider.notifier)
+                .showResults(
+                  DocumentResultContext(
+                    title: '$system: ${node.name}',
+                    query: DocumentQuery(
+                      tagFilters: <DocumentTagFilter>[
+                        DocumentTagFilter(system: system, node: node.name),
+                      ],
+                    ),
+                    resultIds: rows.map((document) => document.id).toList(),
+                    results: rows,
+                  ),
                 );
-            ref.read(mobileNotesProvider.notifier).showResults(result);
           },
           child: Padding(
             padding: EdgeInsets.fromLTRB(8 + depth * 16.0, 9, 8, 9),
@@ -369,7 +387,7 @@ class _MobileTags extends ConsumerWidget {
         ),
       ),
       for (final child in node.children)
-        ..._tagRows(ref, system, child, depth + 1),
+        ..._tagRows(ref, system, child, documents, depth + 1),
     ];
   }
 }
@@ -381,7 +399,7 @@ class _MobileSearch extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mobileNotesProvider);
     final rows =
-        ref.watch(documentSearchProvider(state.searchText)).value ??
+        ref.watch(offlineDocumentSearchProvider(state.searchText)).value ??
         const <NxDocument>[];
     return ListView(
       padding: const EdgeInsets.all(14),
@@ -475,7 +493,7 @@ class _MobileEditor extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final documentId = state.activeDocumentId!;
-    final document = ref.watch(documentByIdProvider(documentId)).value;
+    final document = ref.watch(offlineDocumentProvider(documentId)).value;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: PreferredSize(
@@ -487,7 +505,8 @@ class _MobileEditor extends ConsumerWidget {
             icon: Icon(Icons.arrow_back, size: 20, color: AppColors.muted),
           ),
           trailing: IconButton(
-            onPressed: () => _showDocumentSheet(context, ref, documentId),
+            onPressed: () =>
+                _showDocumentSheet(context, ref, documentId, document),
             icon: Icon(Icons.more_horiz, size: 22, color: AppColors.muted),
           ),
         ),
@@ -513,13 +532,18 @@ class _MobileEditor extends ConsumerWidget {
     );
   }
 
-  void _showDocumentSheet(BuildContext context, WidgetRef ref, int documentId) {
+  void _showDocumentSheet(
+    BuildContext context,
+    WidgetRef ref,
+    int documentId,
+    NxDocument? cachedDocument,
+  ) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       backgroundColor: AppColors.panel,
       builder: (context) {
-        final document = ref.watch(documentByIdProvider(documentId)).value;
+        final document = cachedDocument;
         final snaps =
             ref.watch(documentSnapshotsProvider(documentId)).value ?? const [];
         return ListView(

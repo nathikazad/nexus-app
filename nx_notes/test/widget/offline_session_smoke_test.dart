@@ -24,6 +24,7 @@ void main() {
               ),
             ),
             activeOfflineSessionProvider.overrideWith((ref) async => session),
+            offlineNotesServiceProvider.overrideWithValue(null),
             documentRepositoryProvider.overrideWithValue(
               FakeDocumentRepository(),
             ),

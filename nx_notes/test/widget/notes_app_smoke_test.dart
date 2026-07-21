@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_notes/app.dart';
+import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -20,6 +21,7 @@ void main() {
               skipBackendPing: true,
             ),
           ),
+          offlineNotesServiceProvider.overrideWithValue(null),
         ],
         child: const NexusNotesApp(),
       ),

@@ -13,6 +13,19 @@ the web, iOS, and Android applications.
 
 ## Implementation checkpoints
 
+### Mobile restart reader checkpoint — 2026-07-21
+
+- Connected mobile recent, pinned, books, search, tags, document chrome, and
+  document reads to the existing local `OfflineNotesService` catalog.
+- Added an account-partitioned last-opened-document port with a preferences
+  adapter. Cloud state remains authoritative when reachable; the local value
+  restores a downloaded document after an offline iPhone app restart.
+- Added pure cached-tag indexing and focused provider, adapter, and widget
+  tests, including an offline mobile startup that restores and renders a
+  downloaded document without an authenticated network session.
+- Verified 160 tests and a clean `flutter analyze` run. Remote image bytes and
+  snapshot history remain separate offline-storage concerns.
+
 ### Phases 0-3 complete — 2026-07-20
 
 - Added application-layer boundaries and transitional architecture tests.
