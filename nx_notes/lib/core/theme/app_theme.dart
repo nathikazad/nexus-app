@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDarkModeNotifier extends Notifier<bool> with WidgetsBindingObserver {
+  static const String preferenceKey = 'nx_notes.appearance.dark_mode';
+
   bool _followsSystem = true;
   bool _isObservingSystemBrightness = false;
+  bool _isDisposed = false;
 
   @override
   bool build() {
@@ -12,9 +18,11 @@ class AppDarkModeNotifier extends Notifier<bool> with WidgetsBindingObserver {
       WidgetsBinding.instance.addObserver(this);
       _isObservingSystemBrightness = true;
       ref.onDispose(() {
+        _isDisposed = true;
         WidgetsBinding.instance.removeObserver(this);
       });
     }
+    unawaited(_restoreSavedMode());
     return _systemPrefersDark;
   }
 
@@ -27,7 +35,32 @@ class AppDarkModeNotifier extends Notifier<bool> with WidgetsBindingObserver {
 
   void toggle() {
     _followsSystem = false;
-    state = !state;
+    final next = !state;
+    state = next;
+    unawaited(_persistMode(next));
+  }
+
+  Future<void> _restoreSavedMode() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final saved = preferences.getBool(preferenceKey);
+      if (_isDisposed || !_followsSystem || saved == null) {
+        return;
+      }
+      _followsSystem = false;
+      state = saved;
+    } catch (_) {
+      // Retain the system preference when local storage is unavailable.
+    }
+  }
+
+  Future<void> _persistMode(bool isDark) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(preferenceKey, isDark);
+    } catch (_) {
+      // The in-memory choice still applies for the current session.
+    }
   }
 
   bool get _systemPrefersDark {

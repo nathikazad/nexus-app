@@ -204,6 +204,17 @@ Future<void> showNxHighlightNoteDialog(
       : nxHighlightNoteText(editorState, effectiveNoteId) ?? '';
   final quote = editorState.getTextInSelection(normalized).join('\n').trim();
   _NxInlineHoverOverlay.hide();
+  if (!editorState.editable) {
+    if (!navigator.mounted) {
+      return;
+    }
+    await _showNxHighlightNoteViewer(
+      navigator.context,
+      noteText: initialText,
+      quote: quote,
+    );
+    return;
+  }
   _suppressFloatingToolbar(editorState);
   if (!navigator.mounted) {
     return;
@@ -235,6 +246,120 @@ Future<void> showNxHighlightNoteDialog(
       if (effectiveNoteId != null) {
         await _deleteHighlightNote(editorState, effectiveNoteId);
       }
+  }
+}
+
+Future<void> _showNxHighlightNoteViewer(
+  BuildContext context, {
+  required String noteText,
+  required String quote,
+}) async {
+  final compact = MediaQuery.sizeOf(context).width < 600;
+  if (compact) {
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.panel,
+      builder: (context) =>
+          _NxHighlightNoteViewer(noteText: noteText, quote: quote),
+    );
+    return;
+  }
+
+  await showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: AppColors.panel,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: AppColors.line),
+      ),
+      child: _NxHighlightNoteViewer(noteText: noteText, quote: quote),
+    ),
+  );
+}
+
+class _NxHighlightNoteViewer extends StatelessWidget {
+  const _NxHighlightNoteViewer({required this.noteText, required this.quote});
+
+  final String noteText;
+  final String quote;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
+    return ConstrainedBox(
+      key: const ValueKey<String>('highlight-note-reader'),
+      constraints: BoxConstraints(maxWidth: 560, maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 18,
+                  color: AppColors.faint,
+                ),
+                const SizedBox(width: 9),
+                Text(
+                  'Highlight note',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            if (quote.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.sidebar,
+                  border: Border(
+                    left: BorderSide(color: AppColors.faint, width: 3),
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  quote,
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 13,
+                    height: 1.45,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 18),
+            SelectableText(
+              noteText.trim().isEmpty ? 'No note text.' : noteText,
+              key: const ValueKey<String>('highlight-note-reader-text'),
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 15,
+                height: 1.55,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

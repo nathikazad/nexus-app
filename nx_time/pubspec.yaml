@@ -49,6 +49,8 @@ dependency_overrides:
     path: packages/opus_flutter_ios_shim
 
 flutter:
+  assets:
+    - shorebird.yaml
   uses-material-design: true
 
 flutter_launcher_icons:

@@ -16,7 +16,7 @@ dependencies:
   graphql_flutter: ^5.1.2
   nx_db:
     path: ../nx_db
-  solar_icon_pack: ^0.2.1
+  solar_icon_pack: ^0.3.0
   http: ^1.6.0
 
 dev_dependencies:
@@ -30,6 +30,8 @@ dependency_overrides:
   connectivity_plus: 6.1.5
 
 flutter:
+  assets:
+    - shorebird.yaml
   uses-material-design: true
 
 flutter_launcher_icons:

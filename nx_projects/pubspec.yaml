@@ -25,4 +25,6 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter:
+  assets:
+    - shorebird.yaml
   uses-material-design: true

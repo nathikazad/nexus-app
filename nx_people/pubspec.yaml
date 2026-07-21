@@ -27,4 +27,6 @@ dependency_overrides:
   connectivity_plus: 6.1.5
 
 flutter:
+  assets:
+    - shorebird.yaml
   uses-material-design: true
