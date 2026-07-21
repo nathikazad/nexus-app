@@ -7,7 +7,6 @@ import 'package:nx_notes/core/layout/is_desktop_layout.dart';
 import 'package:nx_notes/data/document/nx_docs_state.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
-import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/features/desktop/desktop_shell.dart';
 import 'package:nx_notes/features/mobile/mobile_shell.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
@@ -25,8 +24,6 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
   int? _bootstrappedRouteDocumentId;
   int? _lastPersistedDocumentId;
   bool? _bootstrappedRouteWasDesktop;
-  bool _restoreStarted = false;
-  bool _suppressNextPlainRestore = false;
 
   @override
   Widget build(BuildContext context) {
@@ -70,16 +67,6 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
 
     _bootstrappedRouteDocumentId = null;
     _bootstrappedRouteWasDesktop = null;
-    if (_suppressNextPlainRestore) {
-      _suppressNextPlainRestore = false;
-      _restoreStarted = true;
-      return;
-    }
-    if (_restoreStarted) {
-      return;
-    }
-    _restoreStarted = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _restoreLastDocument());
   }
 
   void _openDocument(int documentId, {required bool isDesktop}) {
@@ -96,7 +83,6 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
     }
     if (documentId == null) {
       if (widget.initialDocumentId != null) {
-        _suppressNextPlainRestore = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) context.go('/docs');
         });
@@ -109,44 +95,6 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
       });
     }
     _persistLastDocument(documentId);
-  }
-
-  Future<void> _restoreLastDocument() async {
-    if (!mounted || widget.initialDocumentId != null) {
-      return;
-    }
-    int? documentId;
-    final cloudService = ref.read(nxDocsStateServiceProvider);
-    try {
-      if (cloudService != null) {
-        documentId = await cloudService.loadLastDocumentId();
-      }
-    } catch (error) {
-      debugNxDocsState('cloud restore skipped: $error');
-    }
-
-    final session = await ref.read(activeOfflineSessionProvider.future);
-    if (session == null) return;
-    final localStore = await ref.read(lastOpenedDocumentStoreProvider.future);
-    if (documentId != null) {
-      await localStore.save(session.accountKey, documentId);
-    } else {
-      documentId = await localStore.load(session.accountKey);
-    }
-    if (!mounted || widget.initialDocumentId != null || documentId == null) {
-      return;
-    }
-
-    if (cloudService == null) {
-      final offline = ref.read(offlineNotesServiceProvider);
-      final cached = await offline?.getDocument(
-        DocumentKey(localId: 'remote-$documentId', remoteId: documentId),
-      );
-      if (cached == null) return;
-    }
-    if (mounted && widget.initialDocumentId == null) {
-      context.go('/docs/$documentId');
-    }
   }
 
   void _persistLastDocument(int documentId) {

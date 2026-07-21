@@ -22,7 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../support/offline_fixtures.dart';
 
 void main() {
-  testWidgets('mobile restart restores a downloaded document offline', (
+  testWidgets('mobile offline restart shows the cached document library', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -88,11 +88,10 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
+    expect(find.text('nx_notes'), findsOneWidget);
+    expect(find.text('Docs'), findsOneWidget);
+    expect(find.text('Search documents...'), findsOneWidget);
     expect(find.text('Restarted offline'), findsOneWidget);
-    expect(
-      find.textContaining('local database', findRichText: true),
-      findsOneWidget,
-    );
   });
 }
 
