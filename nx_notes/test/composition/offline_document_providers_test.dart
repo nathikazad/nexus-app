@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/offline_notes_service.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/unavailable/unavailable_remote_document_gateway.dart';
@@ -12,12 +11,13 @@ import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 
 import '../support/offline_fixtures.dart';
+import '../support/offline_sync_engine.dart';
 
 void main() {
   test('mobile catalog providers query downloaded documents only', () async {
     const accountKey = 'production:user-1';
     final store = MemoryLocalNotesStore(accountKey: accountKey);
-    final engine = DocumentSyncEngine(
+    final engine = createOfflineTestSyncEngine(
       localStore: store,
       remoteGateway: const UnavailableRemoteDocumentGateway(),
       clock: const _Clock(),

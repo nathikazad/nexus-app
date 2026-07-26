@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/remote_document_gateway.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/fake/fake_remote_document_gateway.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
@@ -16,6 +16,7 @@ import 'package:nx_notes/domain/sync/sync_state.dart';
 import 'package:nx_notes/domain/sync/sync_status.dart';
 
 import '../../support/offline_fixtures.dart';
+import '../../support/offline_sync_engine.dart';
 
 void main() {
   const accountKey = 'prod:user-1';
@@ -24,13 +25,13 @@ void main() {
   late MemoryLocalNotesStore local;
   late FakeRemoteDocumentGateway remote;
   late MutableClock clock;
-  late DocumentSyncEngine engine;
+  late NotesSyncEngine engine;
 
   setUp(() {
     local = MemoryLocalNotesStore(accountKey: accountKey);
     remote = FakeRemoteDocumentGateway();
     clock = MutableClock(now);
-    engine = DocumentSyncEngine(
+    engine = createOfflineTestSyncEngine(
       localStore: local,
       remoteGateway: remote,
       clock: clock,
@@ -223,7 +224,7 @@ void main() {
 
       clock.value = pending.nextAttemptAt!;
       await engine.dispose();
-      engine = DocumentSyncEngine(
+      engine = createOfflineTestSyncEngine(
         localStore: local,
         remoteGateway: remote,
         clock: clock,
@@ -336,7 +337,7 @@ void main() {
   test('concurrent triggers share one synchronization run', () async {
     final delayed = DelayedRemoteGateway(remote);
     await engine.dispose();
-    engine = DocumentSyncEngine(
+    engine = createOfflineTestSyncEngine(
       localStore: local,
       remoteGateway: delayed,
       clock: clock,

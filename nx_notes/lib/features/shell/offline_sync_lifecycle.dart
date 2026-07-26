@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 
 class OfflineSyncLifecycle extends ConsumerStatefulWidget {

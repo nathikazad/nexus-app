@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/offline_notes_service.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/fake/fake_remote_document_gateway.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
@@ -12,19 +12,20 @@ import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
 
 import '../support/offline_fixtures.dart';
+import '../support/offline_sync_engine.dart';
 
 void main() {
   late MemoryLocalNotesStore store;
   late FakeRemoteDocumentGateway remote;
   late SequenceIds ids;
-  late DocumentSyncEngine engine;
+  late NotesSyncEngine engine;
   late OfflineNotesService service;
 
   setUp(() {
     store = MemoryLocalNotesStore(accountKey: 'prod:user-1');
     remote = FakeRemoteDocumentGateway();
     ids = SequenceIds();
-    engine = DocumentSyncEngine(
+    engine = createOfflineTestSyncEngine(
       localStore: store,
       remoteGateway: remote,
       clock: const FixedClock(),

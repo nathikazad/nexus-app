@@ -320,13 +320,15 @@ final class SyncRunResult {
     required this.pushedCount,
     required this.pulledCount,
     required this.tombstoneCount,
+    required this.conflictCount,
     required this.failureCount,
   });
 
   final int pushedCount;
   final int pulledCount;
   final int tombstoneCount;
+  final int conflictCount;
   final int failureCount;
 
-  bool get succeeded => failureCount == 0;
+  bool get succeeded => failureCount == 0 && conflictCount == 0;
 }

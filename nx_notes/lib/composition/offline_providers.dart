@@ -10,7 +10,7 @@ import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/last_opened_document_store.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
 import 'package:nx_notes/application/ports/remote_document_gateway.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/application/ports/session_store.dart';
 import 'package:nx_notes/application/session/offline_session_restorer.dart';
 import 'package:nx_notes/data/connectivity/plugin_connectivity_monitor.dart';
@@ -22,6 +22,7 @@ import 'package:nx_notes/data/remote/unavailable/unavailable_remote_document_gat
 import 'package:nx_notes/data/session/http_session_probe.dart';
 import 'package:nx_notes/data/session/preferences_last_opened_document_store.dart';
 import 'package:nx_notes/data/session/preferences_session_store.dart';
+import 'package:nx_notes/data/sync/nx_offline_notes_sync_engine.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
@@ -30,6 +31,7 @@ import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/domain/tags/tag_system_index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 final activeOfflineSessionProvider = FutureProvider<CachedSession?>((
   ref,
@@ -103,13 +105,19 @@ final remoteDocumentGatewayProvider = Provider<RemoteDocumentGateway?>((ref) {
   );
 });
 
-final documentSyncEngineProvider = Provider<DocumentSyncEngine?>((ref) {
+final documentSyncEngineProvider = Provider<NotesSyncEngine?>((ref) {
+  final session = ref.watch(activeOfflineSessionProvider).value;
   final local = ref.watch(localNotesStoreProvider);
   final remote = ref.watch(remoteDocumentGatewayProvider);
-  if (local == null || remote == null) return null;
-  final engine = DocumentSyncEngine(
+  if (session == null || local == null || remote == null) return null;
+  final engine = NxOfflineNotesSyncEngine(
     localStore: local,
     remoteGateway: remote,
+    account: offline.AccountScope(
+      backend: session.backendPreset,
+      userId: session.userId,
+      application: 'nx_notes',
+    ),
     clock: ref.watch(offlineClockProvider),
     idGenerator: ref.watch(offlineIdGeneratorProvider),
   );

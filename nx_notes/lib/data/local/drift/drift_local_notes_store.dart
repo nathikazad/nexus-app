@@ -34,6 +34,18 @@ class DriftLocalNotesStore implements LocalNotesStore {
   }
 
   @override
+  Future<LocalDocument?> getDocumentByRemoteId(int remoteId) async {
+    final row =
+        await (database.select(database.localDocuments)..where(
+              (table) =>
+                  table.accountKey.equals(accountKey) &
+                  table.remoteId.equals(remoteId),
+            ))
+            .getSingleOrNull();
+    return row == null ? null : mapper.fromDocumentRow(row);
+  }
+
+  @override
   Stream<LocalDocument?> watchDocument(DocumentKey key) {
     return _documentQuery(key.localId).watchSingleOrNull().map(
       (row) => row == null ? null : mapper.fromDocumentRow(row),

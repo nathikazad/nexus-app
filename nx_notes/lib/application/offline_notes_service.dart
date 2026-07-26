@@ -1,7 +1,7 @@
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
@@ -21,7 +21,7 @@ class OfflineNotesService {
   });
 
   final LocalNotesStore localStore;
-  final DocumentSyncEngine syncEngine;
+  final NotesSyncEngine syncEngine;
   final Clock clock;
   final IdGenerator idGenerator;
 

@@ -7,7 +7,6 @@ import 'package:nx_notes/application/offline_notes_service.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/session_store.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
@@ -20,6 +19,7 @@ import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/offline_fixtures.dart';
+import '../support/offline_sync_engine.dart';
 
 void main() {
   testWidgets('mobile offline restart shows the cached document library', (
@@ -41,7 +41,7 @@ void main() {
     await lastOpened.save(session.accountKey, 7);
 
     final store = MemoryLocalNotesStore(accountKey: session.accountKey);
-    final engine = DocumentSyncEngine(
+    final engine = createOfflineTestSyncEngine(
       localStore: store,
       remoteGateway: const UnavailableRemoteDocumentGateway(),
       clock: const _Clock(),

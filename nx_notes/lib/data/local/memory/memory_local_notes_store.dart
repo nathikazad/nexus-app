@@ -40,6 +40,14 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   }
 
   @override
+  Future<LocalDocument?> getDocumentByRemoteId(int remoteId) async {
+    for (final document in _documents.values) {
+      if (document.key.remoteId == remoteId) return document;
+    }
+    return null;
+  }
+
+  @override
   Stream<LocalDocument?> watchDocument(DocumentKey key) {
     return _watch(() => _documents[key.localId]);
   }

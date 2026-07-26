@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/offline_notes_service.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/fake/fake_remote_document_gateway.dart';
@@ -11,6 +10,7 @@ import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
 
 import '../../support/offline_fixtures.dart';
+import '../../support/offline_sync_engine.dart';
 
 void main() {
   test(
@@ -19,7 +19,7 @@ void main() {
       final store = MemoryLocalNotesStore(accountKey: 'prod:user-1');
       final remote = FakeRemoteDocumentGateway();
       final ids = SequenceIds();
-      final engine = DocumentSyncEngine(
+      final engine = createOfflineTestSyncEngine(
         localStore: store,
         remoteGateway: remote,
         clock: const FixedClock(),
@@ -61,7 +61,7 @@ void main() {
 
   test('disposing feature providers retains durable pending work', () async {
     final store = MemoryLocalNotesStore(accountKey: 'prod:user-1');
-    final engine = DocumentSyncEngine(
+    final engine = createOfflineTestSyncEngine(
       localStore: store,
       remoteGateway: FakeRemoteDocumentGateway(),
       clock: const FixedClock(),

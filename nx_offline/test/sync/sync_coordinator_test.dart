@@ -111,6 +111,7 @@ void main() {
     final result = await coordinator.synchronize();
 
     expect(result.failureCount, 1);
+    expect(result.conflictCount, 1);
     expect(collection.pushConflictMutation?.operationId, 'op-1');
     expect(collection.pushConflictFailure?.kind, SyncFailureKind.conflict);
     final pending = (await store.pendingMutations()).single;
@@ -178,10 +179,12 @@ void main() {
       nextCursor: SyncCursor('cursor-2'),
     );
 
-    await coordinator.synchronize();
+    final result = await coordinator.synchronize();
 
     expect(store.conflicts, hasLength(1));
     expect(collection.preserved, [remote]);
+    expect(result.conflictCount, 1);
+    expect(result.succeeded, isFalse);
   });
 }
 

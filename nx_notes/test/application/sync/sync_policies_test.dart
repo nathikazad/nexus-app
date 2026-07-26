@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/sync/conflict_detector.dart';
 import 'package:nx_notes/application/sync/outbox_coalescer.dart';
-import 'package:nx_notes/application/sync/retry_policy.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
@@ -62,25 +61,6 @@ void main() {
         ),
         throwsArgumentError,
       );
-    });
-  });
-
-  group('RetryPolicy', () {
-    const policy = RetryPolicy(
-      initialDelay: Duration(seconds: 2),
-      maximumDelay: Duration(seconds: 10),
-    );
-
-    test('uses capped exponential delays', () {
-      expect(policy.delayForAttempt(1), const Duration(seconds: 2));
-      expect(policy.delayForAttempt(2), const Duration(seconds: 4));
-      expect(policy.delayForAttempt(3), const Duration(seconds: 8));
-      expect(policy.delayForAttempt(4), const Duration(seconds: 10));
-      expect(policy.delayForAttempt(20), const Duration(seconds: 10));
-    });
-
-    test('rejects invalid attempt numbers', () {
-      expect(() => policy.delayForAttempt(0), throwsArgumentError);
     });
   });
 

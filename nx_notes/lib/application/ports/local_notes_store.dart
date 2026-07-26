@@ -15,6 +15,8 @@ abstract interface class LocalNotesStore {
 
   Future<LocalDocument?> getDocument(DocumentKey key);
 
+  Future<LocalDocument?> getDocumentByRemoteId(int remoteId);
+
   Future<void> importRemoteDocuments(List<RemoteDocument> documents);
 
   Future<void> saveDraftAndEnqueue(

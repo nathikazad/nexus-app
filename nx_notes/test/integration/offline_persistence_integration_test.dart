@@ -5,16 +5,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/remote_document_gateway.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/data/local/drift/drift_local_notes_store.dart';
 import 'package:nx_notes/data/local/drift/notes_database.dart';
 import 'package:nx_notes/data/remote/fake/fake_remote_document_gateway.dart';
+import 'package:nx_notes/data/sync/nx_offline_notes_sync_engine.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 import '../support/offline_fixtures.dart';
 
@@ -186,6 +188,39 @@ void main() {
     expect(conflicts.single.remoteDocument.document, 'server edit');
   });
 
+  test('pull keeps stable local identity after a process restart', () async {
+    final fixture = await DriftFixture.create(accountKey);
+    addTearDown(fixture.dispose);
+    await fixture.store.importRemoteDocuments([
+      RemoteDocument(
+        key: const DocumentKey(localId: 'stable-local-id', remoteId: 1),
+        document: offlineTestDocument(body: 'first version'),
+        revision: const RemoteRevision('rev-1'),
+      ),
+    ]);
+
+    await fixture.reopen();
+    final remote = FakeRemoteDocumentGateway()
+      ..seed(
+        RemoteDocument(
+          key: const DocumentKey(localId: 'remote-1', remoteId: 1),
+          document: offlineTestDocument(body: 'second version'),
+          revision: const RemoteRevision('rev-2'),
+        ),
+      );
+    final engine = fixture.engine(remote);
+    addTearDown(engine.dispose);
+
+    await engine.synchronize();
+
+    final documents = await fixture.store
+        .watchDocuments(const DocumentQuery())
+        .first;
+    expect(documents, hasLength(1));
+    expect(documents.single.key.localId, 'stable-local-id');
+    expect(documents.single.document.document, 'second version');
+  });
+
   test('processes a bounded queue entirely from durable storage', () async {
     final fixture = await DriftFixture.create(accountKey);
     addTearDown(fixture.dispose);
@@ -260,10 +295,16 @@ class DriftFixture {
     store = DriftLocalNotesStore(database: database, accountKey: accountKey);
   }
 
-  DocumentSyncEngine engine(RemoteDocumentGateway remote) {
-    return DocumentSyncEngine(
+  NotesSyncEngine engine(RemoteDocumentGateway remote) {
+    final separator = accountKey.indexOf(':');
+    return NxOfflineNotesSyncEngine(
       localStore: store,
       remoteGateway: remote,
+      account: offline.AccountScope(
+        backend: accountKey.substring(0, separator),
+        userId: accountKey.substring(separator + 1),
+        application: 'nx_notes',
+      ),
       clock: clock,
       idGenerator: SequenceIdGenerator(),
     );

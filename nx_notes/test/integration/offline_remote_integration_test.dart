@@ -3,15 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
-import 'package:nx_notes/application/sync/document_sync_engine.dart';
+import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
 import 'package:nx_notes/data/local/drift/drift_local_notes_store.dart';
 import 'package:nx_notes/data/local/drift/notes_database.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/kgql/kgql_remote_document_gateway.dart';
+import 'package:nx_notes/data/sync/nx_offline_notes_sync_engine.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 import '../support/offline_fixtures.dart';
 
@@ -109,13 +111,18 @@ void main() {
   });
 }
 
-DocumentSyncEngine _engine(
+NotesSyncEngine _engine(
   LocalNotesStore local,
   KgqlRemoteDocumentGateway remote,
 ) {
-  return DocumentSyncEngine(
+  return NxOfflineNotesSyncEngine(
     localStore: local,
     remoteGateway: remote,
+    account: const offline.AccountScope(
+      backend: 'prod',
+      userId: 'user-1',
+      application: 'nx_notes',
+    ),
     clock: const SystemTestClock(),
     idGenerator: SequenceIdGenerator(),
   );

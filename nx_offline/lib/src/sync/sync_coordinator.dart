@@ -79,6 +79,7 @@ final class SyncCoordinator {
     var pushed = 0;
     var pulled = 0;
     var tombstones = 0;
+    var conflicts = 0;
     var failures = 0;
     var authenticationBlocked = false;
 
@@ -107,6 +108,7 @@ final class SyncCoordinator {
                 mutation: mutation,
                 failure: failure,
               );
+              conflicts++;
             } catch (_) {
               // The original mutation still needs durable failure state. The
               // collection can retry conflict materialization independently.
@@ -155,6 +157,7 @@ final class SyncCoordinator {
             } on CollectionConflictException catch (error) {
               await store.recordConflict(error.conflict);
               await collection.preserveConflict(record);
+              conflicts++;
             }
           }
           for (final tombstone in page.tombstones) {
@@ -189,6 +192,8 @@ final class SyncCoordinator {
             ? 'Authentication is required before synchronization can continue.'
             : failures > 0
             ? 'Some changes could not be synchronized.'
+            : conflicts > 0
+            ? 'Some records need conflict resolution.'
             : null,
       ),
     );
@@ -196,6 +201,7 @@ final class SyncCoordinator {
       pushedCount: pushed,
       pulledCount: pulled,
       tombstoneCount: tombstones,
+      conflictCount: conflicts,
       failureCount: failures,
     );
   }
