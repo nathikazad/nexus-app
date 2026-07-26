@@ -27,6 +27,8 @@ dependencies:
   intl: ^0.20.2
   nx_db:
     path: ../nx_db
+  nx_offline:
+    path: ../nx_offline
   provider: ^6.1.5+1
   shared_preferences: ^2.2.2
 

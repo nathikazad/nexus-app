@@ -1,0 +1,22 @@
+name: nx_offline
+description: Shared offline persistence and KGQL synchronization for Nexus apps.
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.32.0"
+
+dependencies:
+  drift: ^2.34.0
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  build_runner: ^2.10.5
+  drift_dev: ^2.34.0
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
