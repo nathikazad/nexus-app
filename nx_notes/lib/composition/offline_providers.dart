@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_notes/application/offline_notes_service.dart';
@@ -33,6 +34,13 @@ import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/domain/tags/tag_system_index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
+
+/// Controls whether Notes uses its local-first replica.
+///
+/// The default deliberately excludes Flutter web. Keeping this injectable
+/// lets tests exercise both data paths without depending on their host
+/// platform.
+final offlineEnabledProvider = Provider<bool>((ref) => !kIsWeb);
 
 final activeOfflineSessionProvider = FutureProvider<CachedSession?>((
   ref,
@@ -112,6 +120,7 @@ final notesDatabaseProvider = Provider.family<NotesDatabase, String>((
 });
 
 final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
   final session = ref.watch(activeOfflineSessionProvider).value;
   if (session == null) return null;
   final accountKey = session.accountKey;
@@ -120,6 +129,7 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
 });
 
 final remoteDocumentGatewayProvider = Provider<RemoteDocumentGateway?>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
   final session = ref.watch(activeOfflineSessionProvider).value;
   if (session == null) return null;
   final user = ref.watch(authProvider).value;
@@ -130,6 +140,7 @@ final remoteDocumentGatewayProvider = Provider<RemoteDocumentGateway?>((ref) {
 });
 
 final documentSyncEngineProvider = Provider<NotesSyncEngine?>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
   final session = ref.watch(activeOfflineSessionProvider).value;
   final local = ref.watch(localNotesStoreProvider);
   final remote = ref.watch(remoteDocumentGatewayProvider);
@@ -150,6 +161,7 @@ final documentSyncEngineProvider = Provider<NotesSyncEngine?>((ref) {
 });
 
 final offlineNotesServiceProvider = Provider<OfflineNotesService?>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
   final local = ref.watch(localNotesStoreProvider);
   final engine = ref.watch(documentSyncEngineProvider);
   if (local == null || engine == null) return null;
@@ -161,11 +173,43 @@ final offlineNotesServiceProvider = Provider<OfflineNotesService?>((ref) {
   );
 });
 
+typedef NotesLibraryRefresh = Future<void> Function();
+
+/// Refreshes the library according to the active platform data policy.
+final notesLibraryRefreshProvider = Provider<NotesLibraryRefresh>((ref) {
+  return () async {
+    if (ref.read(offlineEnabledProvider)) {
+      final service = ref.read(offlineNotesServiceProvider);
+      if (service == null) {
+        throw StateError('Notes are not ready yet.');
+      }
+      await service.hardRefetch();
+      return;
+    }
+
+    await ref.read(documentRepositoryProvider).listAll();
+    ref.invalidate(offlineAllDocumentsProvider);
+    ref.invalidate(offlineRecentDocumentsProvider);
+    ref.invalidate(offlinePinnedDocumentsProvider);
+    ref.invalidate(offlineBooksProvider);
+    ref.invalidate(offlineDocumentSearchProvider);
+    ref.invalidate(offlineTagSystemsProvider);
+  };
+});
+
 final offlineAllDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) {
+    return Stream.fromFuture(ref.watch(documentRepositoryProvider).listAll());
+  }
   return _watchOfflineDocuments(ref, const DocumentQuery());
 });
 
 final offlineRecentDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) {
+    return Stream.fromFuture(
+      ref.watch(documentRepositoryProvider).listRecent(limit: 20),
+    );
+  }
   return _watchOfflineDocuments(
     ref,
     const DocumentQuery(),
@@ -173,6 +217,11 @@ final offlineRecentDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
 });
 
 final offlinePinnedDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) {
+    return Stream.fromFuture(
+      ref.watch(documentRepositoryProvider).listPinned(limit: 20),
+    );
+  }
   return _watchOfflineDocuments(
     ref,
     const DocumentQuery(pinnedOnly: true),
@@ -180,6 +229,11 @@ final offlinePinnedDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
 });
 
 final offlineBooksProvider = StreamProvider<List<NxDocument>>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) {
+    return Stream.fromFuture(
+      ref.watch(documentRepositoryProvider).listBooks(limit: 100),
+    );
+  }
   return _watchOfflineDocuments(ref, const DocumentQuery()).map(
     (documents) => documents
         .where((document) => document.isBook)
@@ -193,10 +247,20 @@ final offlineDocumentSearchProvider =
       if (searchText.trim().isEmpty) {
         return Stream<List<NxDocument>>.value(const <NxDocument>[]);
       }
+      if (!ref.watch(offlineEnabledProvider)) {
+        return Stream.fromFuture(
+          ref.watch(documentRepositoryProvider).search(searchText),
+        );
+      }
       return _watchOfflineDocuments(ref, DocumentQuery(searchText: searchText));
     });
 
 final offlineTagSystemsProvider = StreamProvider<List<TagSystem>>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) {
+    return Stream.fromFuture(
+      ref.watch(documentRepositoryProvider).listTagSystems(),
+    );
+  }
   return _watchOfflineDocuments(
     ref,
     const DocumentQuery(),
@@ -223,6 +287,10 @@ final offlineDocumentProvider = StreamProvider.family<NxDocument?, int>((
   ref,
   remoteId,
 ) async* {
+  if (!ref.watch(offlineEnabledProvider)) {
+    yield await ref.watch(documentByIdProvider(remoteId).future);
+    return;
+  }
   final service = ref.watch(offlineNotesServiceProvider);
   if (service == null) {
     yield await ref.watch(documentRepositoryProvider).getById(remoteId);

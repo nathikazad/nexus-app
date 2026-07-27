@@ -49,6 +49,7 @@ class DocumentMutationController {
     if (kind == DocumentKind.book) {
       _ref.invalidate(booksProvider);
     }
+    _invalidateWebCatalog();
     return document;
   }
 
@@ -106,6 +107,7 @@ class DocumentMutationController {
     _ref.invalidate(tagSystemsProvider);
     _ref.invalidate(documentByIdProvider(document.id));
     _ref.invalidate(documentSnapshotsProvider(document.id));
+    _invalidateWebCatalog(documentId: document.id);
   }
 
   Future<void> setPinned(NxDocument document, bool pinned) async {
@@ -120,6 +122,7 @@ class DocumentMutationController {
     _ref.invalidate(recentDocumentsProvider);
     _ref.invalidate(pinnedDocumentsProvider);
     _ref.invalidate(booksProvider);
+    _invalidateWebCatalog(documentId: document.id);
   }
 
   Future<void> setPublishEnabled(NxDocument document, bool enabled) async {
@@ -144,6 +147,7 @@ class DocumentMutationController {
     );
     _cacheDocument(updated);
     await _ref.read(documentRepositoryProvider).updateDraft(updated);
+    _invalidateWebCatalog(documentId: document.id);
     await _triggerMirrorPublish(
       reason: 'publish_click',
       documentId: updated.id,
@@ -304,6 +308,7 @@ class DocumentMutationController {
       final offline = _ref.read(offlineNotesServiceProvider);
       if (offline == null) {
         await _ref.read(documentRepositoryProvider).updateDraft(draft);
+        _invalidateWebCatalog(documentId: draft.id);
       } else {
         await offline.synchronize();
       }
@@ -336,6 +341,18 @@ class DocumentMutationController {
     debugPrint(
       '[nx_notes db sync] $timestamp action=$action$documentPart$detailPart',
     );
+  }
+
+  void _invalidateWebCatalog({int? documentId}) {
+    if (_ref.read(offlineEnabledProvider)) return;
+    _ref.invalidate(offlineAllDocumentsProvider);
+    _ref.invalidate(offlineRecentDocumentsProvider);
+    _ref.invalidate(offlinePinnedDocumentsProvider);
+    _ref.invalidate(offlineBooksProvider);
+    _ref.invalidate(offlineTagSystemsProvider);
+    if (documentId != null) {
+      _ref.invalidate(offlineDocumentProvider(documentId));
+    }
   }
 
   Future<void> _triggerMirrorPublish({

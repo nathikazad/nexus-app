@@ -23,6 +23,7 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (!ref.read(offlineEnabledProvider)) return;
     _connectivitySubscription = ref
         .read(connectivityMonitorProvider)
         .onlineChanges
@@ -39,7 +40,8 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (ref.read(offlineEnabledProvider) &&
+        state == AppLifecycleState.resumed) {
       _synchronize(SyncReason.appStarted);
     }
   }
@@ -51,11 +53,13 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(offlineNotesServiceProvider, (previous, next) {
-      if (previous == null && next != null) {
-        unawaited(next.synchronize(reason: SyncReason.appStarted));
-      }
-    });
+    if (ref.watch(offlineEnabledProvider)) {
+      ref.listen(offlineNotesServiceProvider, (previous, next) {
+        if (previous == null && next != null) {
+          unawaited(next.synchronize(reason: SyncReason.appStarted));
+        }
+      });
+    }
     return widget.child;
   }
 }

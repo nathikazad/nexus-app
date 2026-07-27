@@ -12,6 +12,7 @@ class NotesSettingsButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final offlineEnabled = ref.watch(offlineEnabledProvider);
     return IconButton(
       key: const Key('notes-settings-button'),
       tooltip: 'Settings',
@@ -19,14 +20,11 @@ class NotesSettingsButton extends ConsumerWidget {
         showDialog<void>(
           context: context,
           builder: (context) => _NotesSettingsDialog(
+            offlineEnabled: offlineEnabled,
             onHardRefetch:
                 onHardRefetch ??
                 () async {
-                  final service = ref.read(offlineNotesServiceProvider);
-                  if (service == null) {
-                    throw StateError('Notes are not ready yet.');
-                  }
-                  await service.hardRefetch();
+                  await ref.read(notesLibraryRefreshProvider)();
                 },
           ),
         );
@@ -44,8 +42,12 @@ class NotesSettingsButton extends ConsumerWidget {
 }
 
 class _NotesSettingsDialog extends ConsumerStatefulWidget {
-  const _NotesSettingsDialog({required this.onHardRefetch});
+  const _NotesSettingsDialog({
+    required this.offlineEnabled,
+    required this.onHardRefetch,
+  });
 
+  final bool offlineEnabled;
   final HardRefetchCallback onHardRefetch;
 
   @override
@@ -69,7 +71,9 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
       await widget.onHardRefetch();
       if (!mounted) return;
       setState(() {
-        _resultMessage = 'Full library downloaded.';
+        _resultMessage = widget.offlineEnabled
+            ? 'Full library downloaded.'
+            : 'Library refreshed.';
       });
     } catch (error) {
       if (!mounted) return;
@@ -124,13 +128,15 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
             const Divider(),
             const SizedBox(height: 16),
             Text(
-              'Offline library',
+              widget.offlineEnabled ? 'Offline library' : 'Library',
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Download the complete document library again. '
-              'Local pending edits are preserved.',
+            Text(
+              widget.offlineEnabled
+                  ? 'Download the complete document library again. '
+                        'Local pending edits are preserved.'
+                  : 'Reload the document library from the server.',
             ),
             const SizedBox(height: 12),
             FilledButton.tonalIcon(
@@ -142,7 +148,13 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.refresh),
-              label: Text(_refetching ? 'Refetching…' : 'Hard refetch'),
+              label: Text(
+                _refetching
+                    ? 'Refetching…'
+                    : widget.offlineEnabled
+                    ? 'Hard refetch'
+                    : 'Refresh library',
+              ),
             ),
             if (_resultMessage != null) ...<Widget>[
               const SizedBox(height: 10),
