@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -48,6 +49,9 @@ class DocumentEditorView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (kDebugMode) {
+      debugPrint('[nx_notes editor lifecycle] view-build document=$documentId');
+    }
     final asyncDocument = ref.watch(offlineDocumentProvider(documentId));
     return asyncDocument.when(
       data: (document) {
@@ -167,6 +171,12 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   @override
   void initState() {
     super.initState();
+    if (kDebugMode) {
+      debugPrint(
+        '[nx_notes editor lifecycle] body-init '
+        'document=${widget.document.id}',
+      );
+    }
     _draftDocument = widget.document;
     _titleText = widget.document.title;
     _editorMode = widget.readOnly
@@ -180,6 +190,15 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   @override
   void didUpdateWidget(covariant DocumentEditorBody oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (kDebugMode) {
+      debugPrint(
+        '[nx_notes editor lifecycle] body-update '
+        'old=${oldWidget.document.id} new=${widget.document.id} '
+        'titleChanged=${oldWidget.document.title != widget.document.title} '
+        'contentChanged='
+        '${oldWidget.document.jsonDocument != widget.document.jsonDocument}',
+      );
+    }
     if (oldWidget.document.id != widget.document.id) {
       _titleSaveDebounce?.cancel();
       _draftDocument = widget.document;
@@ -216,6 +235,12 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
 
   @override
   void dispose() {
+    if (kDebugMode) {
+      debugPrint(
+        '[nx_notes editor lifecycle] body-dispose '
+        'document=${widget.document.id}',
+      );
+    }
     _titleSaveDebounce?.cancel();
     _DocumentLinkLaunchDispatcher.deactivate(_linkHandlerOwner);
     _titleFocusNode

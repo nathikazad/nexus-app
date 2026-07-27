@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_notes/data/document/document_attr_keys.dart';
@@ -8,6 +9,8 @@ import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart' as domain_tags;
+
+var _documentReadSequence = 0;
 
 class KgqlDocumentRepository implements DocumentRepository {
   KgqlDocumentRepository({
@@ -106,6 +109,16 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<NxDocument?> getById(int id) async {
+    final readSequence = ++_documentReadSequence;
+    if (kDebugMode) {
+      debugPrintStack(
+        label:
+            '[nx_notes repository] getById start '
+            'call=$readSequence document=$id',
+        stackTrace: StackTrace.current,
+        maxFrames: 10,
+      );
+    }
     final schema = await _loadDocumentSchema();
     final model = await fetchKgqlModelById(
       _client,
@@ -113,11 +126,26 @@ class KgqlDocumentRepository implements DocumentRepository {
       id: id,
       struct: documentFetchStruct(schema),
     );
-    if (model == null) return null;
-    return documentFromModel(
+    if (model == null) {
+      if (kDebugMode) {
+        debugPrint(
+          '[nx_notes repository] getById finish '
+          'call=$readSequence document=$id found=false',
+        );
+      }
+      return null;
+    }
+    final document = documentFromModel(
       model,
       versionNumber: _latestVersionNumberFromDocumentModel(model),
     );
+    if (kDebugMode) {
+      debugPrint(
+        '[nx_notes repository] getById finish '
+        'call=$readSequence document=$id found=true',
+      );
+    }
+    return document;
   }
 
   @override

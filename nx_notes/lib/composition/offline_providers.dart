@@ -179,6 +179,9 @@ typedef NotesLibraryRefresh = Future<void> Function();
 final notesLibraryRefreshProvider = Provider<NotesLibraryRefresh>((ref) {
   return () async {
     if (ref.read(offlineEnabledProvider)) {
+      debugPrint(
+        '[nx_notes web refresh] skipped web refresh; running native hard refetch',
+      );
       final service = ref.read(offlineNotesServiceProvider);
       if (service == null) {
         throw StateError('Notes are not ready yet.');
@@ -187,6 +190,7 @@ final notesLibraryRefreshProvider = Provider<NotesLibraryRefresh>((ref) {
       return;
     }
 
+    debugPrint('[nx_notes web refresh] explicit library refresh requested');
     await ref.read(documentRepositoryProvider).listAll();
     ref.invalidate(offlineAllDocumentsProvider);
     ref.invalidate(offlineRecentDocumentsProvider);
@@ -199,6 +203,7 @@ final notesLibraryRefreshProvider = Provider<NotesLibraryRefresh>((ref) {
 
 final offlineAllDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
   if (!ref.watch(offlineEnabledProvider)) {
+    debugPrint('[nx_notes web refresh] fetch catalog=all');
     return Stream.fromFuture(ref.watch(documentRepositoryProvider).listAll());
   }
   return _watchOfflineDocuments(ref, const DocumentQuery());
@@ -206,6 +211,7 @@ final offlineAllDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
 
 final offlineRecentDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
   if (!ref.watch(offlineEnabledProvider)) {
+    debugPrint('[nx_notes web refresh] fetch catalog=recent limit=20');
     return Stream.fromFuture(
       ref.watch(documentRepositoryProvider).listRecent(limit: 20),
     );
@@ -218,6 +224,7 @@ final offlineRecentDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
 
 final offlinePinnedDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
   if (!ref.watch(offlineEnabledProvider)) {
+    debugPrint('[nx_notes web refresh] fetch catalog=pinned limit=20');
     return Stream.fromFuture(
       ref.watch(documentRepositoryProvider).listPinned(limit: 20),
     );
@@ -230,6 +237,7 @@ final offlinePinnedDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
 
 final offlineBooksProvider = StreamProvider<List<NxDocument>>((ref) {
   if (!ref.watch(offlineEnabledProvider)) {
+    debugPrint('[nx_notes web refresh] fetch catalog=books limit=100');
     return Stream.fromFuture(
       ref.watch(documentRepositoryProvider).listBooks(limit: 100),
     );
@@ -248,6 +256,9 @@ final offlineDocumentSearchProvider =
         return Stream<List<NxDocument>>.value(const <NxDocument>[]);
       }
       if (!ref.watch(offlineEnabledProvider)) {
+        debugPrint(
+          '[nx_notes web refresh] fetch catalog=search query="$searchText"',
+        );
         return Stream.fromFuture(
           ref.watch(documentRepositoryProvider).search(searchText),
         );
@@ -257,6 +268,7 @@ final offlineDocumentSearchProvider =
 
 final offlineTagSystemsProvider = StreamProvider<List<TagSystem>>((ref) {
   if (!ref.watch(offlineEnabledProvider)) {
+    debugPrint('[nx_notes web refresh] fetch catalog=tag-systems');
     return Stream.fromFuture(
       ref.watch(documentRepositoryProvider).listTagSystems(),
     );
@@ -288,6 +300,7 @@ final offlineDocumentProvider = StreamProvider.family<NxDocument?, int>((
   remoteId,
 ) async* {
   if (!ref.watch(offlineEnabledProvider)) {
+    debugPrint('[nx_notes web refresh] resolve document=$remoteId');
     yield await ref.watch(documentByIdProvider(remoteId).future);
     return;
   }

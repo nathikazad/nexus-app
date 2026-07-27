@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
 import 'package:nx_notes/data/providers.dart';
+import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
 
 void main() {
@@ -113,6 +116,59 @@ void main() {
     expect(container.read(offlineNotesServiceProvider), isNull);
   });
 
+  test('web autosave does not refetch the catalog or open document', () async {
+    final repository = _TrackingDocumentRepository();
+    final original = (await repository.listAll()).first;
+    final container = ProviderContainer(
+      overrides: [
+        offlineEnabledProvider.overrideWithValue(false),
+        documentRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    final updatedDocument = Completer<NxDocument>();
+    final subscriptions = [
+      container.listen(offlineAllDocumentsProvider, (_, _) {}),
+      container.listen(offlineDocumentProvider(original.id), (_, next) {
+        final document = next.value;
+        if (document?.title == 'Autosaved without refetch' &&
+            !updatedDocument.isCompleted) {
+          updatedDocument.complete(document);
+        }
+      }),
+    ];
+    addTearDown(() {
+      for (final subscription in subscriptions) {
+        subscription.close();
+      }
+    });
+    await _emitted(
+      container.read(offlineAllDocumentsProvider.future),
+      'initial catalog',
+    );
+    await _emitted(
+      container.read(offlineDocumentProvider(original.id).future),
+      'initial document',
+    );
+    final catalogReadsBeforeSave = repository.listAllCalls;
+    final documentReadsBeforeSave = repository.getByIdCalls;
+
+    await container
+        .read(documentMutationControllerProvider)
+        .saveDraft(
+          original.copyWith(title: 'Autosaved without refetch'),
+          policy: DraftSavePolicy.immediate,
+        );
+
+    expect(repository.updateDraftCalls, 1);
+    expect(repository.listAllCalls, catalogReadsBeforeSave);
+    expect(repository.getByIdCalls, documentReadsBeforeSave);
+    expect(
+      (await updatedDocument.future.timeout(const Duration(seconds: 2))).title,
+      'Autosaved without refetch',
+    );
+  });
+
   test('web catalog refreshes after a direct mutation', () async {
     final repository = FakeDocumentRepository();
     final container = ProviderContainer(
@@ -156,4 +212,28 @@ Future<T> _emitted<T>(Future<T> future, String label) {
     const Duration(seconds: 2),
     onTimeout: () => throw StateError('$label provider did not emit'),
   );
+}
+
+class _TrackingDocumentRepository extends FakeDocumentRepository {
+  var listAllCalls = 0;
+  var getByIdCalls = 0;
+  var updateDraftCalls = 0;
+
+  @override
+  Future<List<NxDocument>> listAll() {
+    listAllCalls++;
+    return super.listAll();
+  }
+
+  @override
+  Future<NxDocument?> getById(int id) {
+    getByIdCalls++;
+    return super.getById(id);
+  }
+
+  @override
+  Future<NxDocument> updateDraft(NxDocument document) {
+    updateDraftCalls++;
+    return super.updateDraft(document);
+  }
 }

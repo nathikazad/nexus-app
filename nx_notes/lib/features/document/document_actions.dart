@@ -49,7 +49,7 @@ class DocumentMutationController {
     if (kind == DocumentKind.book) {
       _ref.invalidate(booksProvider);
     }
-    _invalidateWebCatalog();
+    _invalidateWebCatalog(reason: 'document-created');
     return document;
   }
 
@@ -107,7 +107,7 @@ class DocumentMutationController {
     _ref.invalidate(tagSystemsProvider);
     _ref.invalidate(documentByIdProvider(document.id));
     _ref.invalidate(documentSnapshotsProvider(document.id));
-    _invalidateWebCatalog(documentId: document.id);
+    _invalidateWebCatalog(reason: 'document-deleted', documentId: document.id);
   }
 
   Future<void> setPinned(NxDocument document, bool pinned) async {
@@ -122,7 +122,7 @@ class DocumentMutationController {
     _ref.invalidate(recentDocumentsProvider);
     _ref.invalidate(pinnedDocumentsProvider);
     _ref.invalidate(booksProvider);
-    _invalidateWebCatalog(documentId: document.id);
+    _invalidateWebCatalog(reason: 'pinned-changed', documentId: document.id);
   }
 
   Future<void> setPublishEnabled(NxDocument document, bool enabled) async {
@@ -147,7 +147,7 @@ class DocumentMutationController {
     );
     _cacheDocument(updated);
     await _ref.read(documentRepositoryProvider).updateDraft(updated);
-    _invalidateWebCatalog(documentId: document.id);
+    _invalidateWebCatalog(reason: 'publish-changed', documentId: document.id);
     await _triggerMirrorPublish(
       reason: 'publish_click',
       documentId: updated.id,
@@ -308,7 +308,6 @@ class DocumentMutationController {
       final offline = _ref.read(offlineNotesServiceProvider);
       if (offline == null) {
         await _ref.read(documentRepositoryProvider).updateDraft(draft);
-        _invalidateWebCatalog(documentId: draft.id);
       } else {
         await offline.synchronize();
       }
@@ -343,8 +342,17 @@ class DocumentMutationController {
     );
   }
 
-  void _invalidateWebCatalog({int? documentId}) {
+  void _invalidateWebCatalog({required String reason, int? documentId}) {
     if (_ref.read(offlineEnabledProvider)) return;
+    if (kDebugMode) {
+      debugPrintStack(
+        label:
+            '[nx_notes web refresh] invalidate catalog '
+            'reason=$reason document=${documentId ?? '-'}',
+        stackTrace: StackTrace.current,
+        maxFrames: 8,
+      );
+    }
     _ref.invalidate(offlineAllDocumentsProvider);
     _ref.invalidate(offlineRecentDocumentsProvider);
     _ref.invalidate(offlinePinnedDocumentsProvider);

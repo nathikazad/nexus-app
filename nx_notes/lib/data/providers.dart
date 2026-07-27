@@ -119,10 +119,26 @@ class DocumentLocalCache extends Notifier<Map<int, NxDocument>> {
   Map<int, NxDocument> build() => const <int, NxDocument>{};
 
   void put(NxDocument document) {
+    if (kDebugMode) {
+      debugPrintStack(
+        label:
+            '[nx_notes web refresh] cache-write document=${document.id} '
+            'title="${document.title}"',
+        stackTrace: StackTrace.current,
+        maxFrames: 8,
+      );
+    }
     state = {...state, document.id: document};
   }
 
   void remove(int id) {
+    if (kDebugMode) {
+      debugPrintStack(
+        label: '[nx_notes web refresh] cache-remove document=$id',
+        stackTrace: StackTrace.current,
+        maxFrames: 8,
+      );
+    }
     final next = {...state};
     next.remove(id);
     state = next;
@@ -155,7 +171,15 @@ final documentByIdProvider = FutureProvider.family<NxDocument?, int>((ref, id) {
     documentLocalCacheProvider.select((documents) => documents[id]),
   );
   if (cached != null && cached.hasFullDocument) {
+    debugPrint('[nx_notes web refresh] cache-hit document=$id');
     return cached;
+  }
+  if (kDebugMode) {
+    debugPrintStack(
+      label: '[nx_notes web refresh] fetch document=$id source=kgql',
+      stackTrace: StackTrace.current,
+      maxFrames: 8,
+    );
   }
   return ref.watch(documentRepositoryProvider).getById(id);
 });
