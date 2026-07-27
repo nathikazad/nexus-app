@@ -19,6 +19,10 @@ abstract interface class LocalNotesStore {
 
   Future<void> importRemoteDocuments(List<RemoteDocument> documents);
 
+  /// Refreshes remote-owned fields without replacing local editable content,
+  /// sync state, revisions, or pending work.
+  Future<void> mergeRemoteMetadata(RemoteDocument document);
+
   Future<void> saveDraftAndEnqueue(
     LocalDocument document, {
     required PendingOperation operation,
@@ -46,6 +50,8 @@ abstract interface class LocalNotesStore {
   Future<String?> readSyncCursor();
 
   Future<void> writeSyncCursor(String cursor);
+
+  Future<void> clearSyncCursor();
 
   Future<void> recordConflict(SyncConflict conflict);
 

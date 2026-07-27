@@ -124,4 +124,21 @@ class OfflineNotesService {
 
   Future<SyncRunResult> synchronize({SyncReason reason = SyncReason.manual}) =>
       syncEngine.synchronize(reason: reason);
+
+  /// Forces the next pull to rebuild the complete remote catalog while
+  /// retaining local documents and durable pending edits.
+  Future<SyncRunResult> hardRefetch() async {
+    if (syncEngine.status.activity == SyncActivity.syncing) {
+      await syncEngine.synchronize(reason: SyncReason.manual);
+    }
+    await localStore.clearSyncCursor();
+    final result = await syncEngine.synchronize(reason: SyncReason.manual);
+    if (await localStore.readSyncCursor() == null) {
+      throw StateError(
+        'The full library could not be downloaded. Check the connection and '
+        'try again.',
+      );
+    }
+    return result;
+  }
 }

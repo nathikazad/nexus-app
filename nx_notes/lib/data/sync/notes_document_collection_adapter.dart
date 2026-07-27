@@ -64,8 +64,10 @@ final class NotesDocumentCollectionAdapter
       case PullResolution.replaceLocal:
         await localStore.importRemoteDocuments([remote]);
       case PullResolution.keepLocal:
+        await localStore.mergeRemoteMetadata(remote);
         return;
       case PullResolution.conflict:
+        await localStore.mergeRemoteMetadata(remote);
         throw offline.CollectionConflictException(
           offline.SyncConflict(
             account: account,

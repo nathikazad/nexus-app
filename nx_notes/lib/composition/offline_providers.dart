@@ -13,6 +13,7 @@ import 'package:nx_notes/application/ports/remote_document_gateway.dart';
 import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/application/ports/session_store.dart';
 import 'package:nx_notes/application/session/offline_session_restorer.dart';
+import 'package:nx_notes/application/session/notes_logout_service.dart';
 import 'package:nx_notes/data/connectivity/plugin_connectivity_monitor.dart';
 import 'package:nx_notes/data/local/drift/drift_local_notes_store.dart';
 import 'package:nx_notes/data/local/drift/notes_database.dart';
@@ -59,6 +60,21 @@ final activeOfflineSessionProvider = FutureProvider<CachedSession?>((
   return result.session;
 });
 
+typedef NotesLogoutAction = Future<void> Function();
+
+final notesLogoutProvider = Provider<NotesLogoutAction>((ref) {
+  return () async {
+    final preferences = await SharedPreferences.getInstance();
+    await NotesLogoutService(
+      sessionStore: PreferencesSessionStore(preferences),
+      logoutAuthentication: ref.read(authProvider.notifier).logout,
+      invalidateOfflineSession: () {
+        ref.invalidate(activeOfflineSessionProvider);
+      },
+    ).logout();
+  };
+});
+
 final lastOpenedDocumentStoreProvider = FutureProvider<LastOpenedDocumentStore>(
   (ref) async {
     final preferences = await SharedPreferences.getInstance();
@@ -76,10 +92,10 @@ final connectivityMonitorProvider = Provider<ConnectivityMonitor>(
   (ref) => PluginConnectivityMonitor(),
 );
 
-final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
-  final session = ref.watch(activeOfflineSessionProvider).value;
-  if (session == null) return null;
-  final accountKey = session.accountKey;
+final notesDatabaseProvider = Provider.family<NotesDatabase, String>((
+  ref,
+  accountKey,
+) {
   final safeName = accountKey.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
   final database = NotesDatabase(
     driftDatabase(
@@ -92,6 +108,14 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
     ),
   );
   ref.onDispose(database.close);
+  return database;
+});
+
+final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
+  final session = ref.watch(activeOfflineSessionProvider).value;
+  if (session == null) return null;
+  final accountKey = session.accountKey;
+  final database = ref.watch(notesDatabaseProvider(accountKey));
   return DriftLocalNotesStore(database: database, accountKey: accountKey);
 });
 
@@ -194,29 +218,43 @@ Stream<List<NxDocument>> _watchOfflineDocuments(Ref ref, DocumentQuery query) {
       );
 }
 
-/// Local-first document read used by editor-facing code during migration.
-final offlineDocumentProvider = FutureProvider.family<NxDocument?, int>((
+/// Live local-first document read used by editor-facing code.
+final offlineDocumentProvider = StreamProvider.family<NxDocument?, int>((
   ref,
   remoteId,
-) async {
+) async* {
   final service = ref.watch(offlineNotesServiceProvider);
   if (service == null) {
-    return ref.watch(documentRepositoryProvider).getById(remoteId);
+    yield await ref.watch(documentRepositoryProvider).getById(remoteId);
+    return;
   }
   final key = DocumentKey(localId: 'remote-$remoteId', remoteId: remoteId);
-  final local = await service.getDocument(key);
-  if (local != null) return local.document;
-
-  final remote = await ref.watch(documentRepositoryProvider).getById(remoteId);
-  if (remote == null) return null;
-  await service.importRemoteDocuments(<RemoteDocument>[
-    RemoteDocument(
-      key: key,
-      document: remote,
-      revision: RemoteRevision(remote.updatedAt.toUtc().toIso8601String()),
-    ),
-  ]);
-  return remote;
+  var attemptedRemoteRead = false;
+  await for (final local in service.watchDocument(key)) {
+    if (local != null) {
+      yield local.document;
+      continue;
+    }
+    if (!attemptedRemoteRead) {
+      attemptedRemoteRead = true;
+      final remote = await ref
+          .watch(documentRepositoryProvider)
+          .getById(remoteId);
+      if (remote != null) {
+        await service.importRemoteDocuments(<RemoteDocument>[
+          RemoteDocument(
+            key: key,
+            document: remote,
+            revision: RemoteRevision(
+              remote.updatedAt.toUtc().toIso8601String(),
+            ),
+          ),
+        ]);
+        continue;
+      }
+    }
+    yield null;
+  }
 });
 
 class SystemClock implements Clock {

@@ -99,6 +99,26 @@ class DriftLocalNotesStore implements LocalNotesStore {
   }
 
   @override
+  Future<void> mergeRemoteMetadata(RemoteDocument remote) async {
+    await database.transaction(() async {
+      final row = await _documentQuery(remote.key.localId).getSingleOrNull();
+      if (row == null) return;
+      final existing = mapper.fromDocumentRow(row);
+      final merged = existing.copyWith(
+        document: existing.document.copyWith(
+          links: remote.document.links,
+          readingState: remote.document.readingState,
+          bookRank: remote.document.bookRank,
+          clearBookRank: remote.document.bookRank == null,
+        ),
+      );
+      await database
+          .into(database.localDocuments)
+          .insertOnConflictUpdate(mapper.toDocumentCompanion(merged));
+    });
+  }
+
+  @override
   Future<void> saveDraftAndEnqueue(
     LocalDocument document, {
     required PendingOperation operation,
@@ -267,6 +287,13 @@ class DriftLocalNotesStore implements LocalNotesStore {
             cursor: Value<String?>(cursor),
           ),
         );
+  }
+
+  @override
+  Future<void> clearSyncCursor() {
+    return (database.delete(
+      database.syncMetadata,
+    )..where((table) => table.accountKey.equals(accountKey))).go();
   }
 
   @override

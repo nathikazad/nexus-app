@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/offline_notes_service.dart';
@@ -6,7 +8,9 @@ import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/unavailable/unavailable_remote_document_gateway.dart';
+import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 
@@ -86,6 +90,73 @@ void main() {
     expect(search.single.id, 1);
     final topic = tags.singleWhere((system) => system.name == 'Topic');
     expect(topic.nodes.single.name, 'Flutter');
+  });
+
+  test('an open document receives refreshed remote metadata', () async {
+    const accountKey = 'production:user-1';
+    final store = MemoryLocalNotesStore(accountKey: accountKey);
+    final engine = createOfflineTestSyncEngine(
+      localStore: store,
+      remoteGateway: const UnavailableRemoteDocumentGateway(),
+      clock: const _Clock(),
+      idGenerator: _Ids(),
+    );
+    addTearDown(engine.dispose);
+    addTearDown(store.dispose);
+    final service = OfflineNotesService(
+      localStore: store,
+      syncEngine: engine,
+      clock: const _Clock(),
+      idGenerator: _Ids(),
+    );
+    const key = DocumentKey(localId: 'remote-1', remoteId: 1);
+    await store.importRemoteDocuments(<RemoteDocument>[
+      RemoteDocument(
+        key: key,
+        document: offlineTestDocument(
+          id: 1,
+          title: 'The Elephant in the Brain',
+        ),
+        revision: const RemoteRevision('rev-1'),
+      ),
+    ]);
+    final container = ProviderContainer(
+      overrides: [offlineNotesServiceProvider.overrideWithValue(service)],
+    );
+    addTearDown(container.dispose);
+    final refreshed = Completer<NxDocument>();
+    final subscription = container.listen(offlineDocumentProvider(1), (
+      previous,
+      next,
+    ) {
+      final document = next.value;
+      if (document != null &&
+          document.links.length == 17 &&
+          !refreshed.isCompleted) {
+        refreshed.complete(document);
+      }
+    }, fireImmediately: true);
+    addTearDown(subscription.close);
+    await container.read(offlineDocumentProvider(1).future);
+
+    await store.mergeRemoteMetadata(
+      RemoteDocument(
+        key: key,
+        document: offlineTestDocument(id: 1).copyWith(
+          links: <LinkedModel>[
+            for (var chapter = 1; chapter <= 17; chapter++)
+              LinkedModel(
+                id: chapter,
+                name: 'Chapter $chapter',
+                modelType: 'Document',
+              ),
+          ],
+        ),
+        revision: const RemoteRevision('rev-2'),
+      ),
+    );
+
+    expect((await refreshed.future).links, hasLength(17));
   });
 }
 

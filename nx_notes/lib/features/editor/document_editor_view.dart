@@ -193,6 +193,14 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
         widget.document.title != _titleController.text) {
       _replaceTitleText(widget.document.title);
     }
+    if (oldWidget.document.id == widget.document.id) {
+      _draftDocument = _draftDocument.copyWith(
+        links: widget.document.links,
+        readingState: widget.document.readingState,
+        bookRank: widget.document.bookRank,
+        clearBookRank: widget.document.bookRank == null,
+      );
+    }
     if (oldWidget.active != widget.active ||
         oldWidget.onOpenDocumentLink != widget.onOpenDocumentLink) {
       _syncDocumentLinkHandler();
@@ -777,7 +785,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   void dispose() {
     _saveDebounce?.cancel();
     _nextImmediateSaveTimer?.cancel();
-    _clearActiveHeading();
+    _clearActiveHeading(afterFrame: true);
     _disposeEditor();
     super.dispose();
   }
@@ -1342,11 +1350,18 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     );
   }
 
-  void _clearActiveHeading() {
+  void _clearActiveHeading({bool afterFrame = false}) {
     final current = documentActiveHeadingNotifier.value;
-    if (current?.documentId == widget.document.id) {
+    if (current?.documentId != widget.document.id) return;
+    if (!afterFrame) {
       documentActiveHeadingNotifier.value = null;
+      return;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (identical(documentActiveHeadingNotifier.value, current)) {
+        documentActiveHeadingNotifier.value = null;
+      }
+    });
   }
 
   @override

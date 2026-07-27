@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
@@ -265,7 +266,37 @@ void runLocalNotesStoreContract({
     expect(await store.readSyncCursor(), isNull);
     await store.writeSyncCursor('cursor-42');
     expect(await store.readSyncCursor(), 'cursor-42');
+    await store.clearSyncCursor();
+    expect(await store.readSyncCursor(), isNull);
   });
+
+  test(
+    'remote metadata merges without replacing local pending content',
+    () async {
+      final local = offlineLocalDocument(body: 'local edit');
+      await store.saveDraftAndEnqueue(
+        local,
+        operation: offlinePendingOperation(body: 'local edit'),
+      );
+      await store.mergeRemoteMetadata(
+        RemoteDocument(
+          key: local.key,
+          document: offlineTestDocument(body: 'server body').copyWith(
+            links: const <LinkedModel>[
+              LinkedModel(id: 17, name: 'Chapter 17', modelType: 'Document'),
+            ],
+          ),
+          revision: const RemoteRevision('remote-revision'),
+        ),
+      );
+
+      final merged = await store.getDocument(local.key);
+      expect(merged!.document.document, 'local edit');
+      expect(merged.document.links.single.name, 'Chapter 17');
+      expect(merged.syncState, DocumentSyncState.queued);
+      expect(await store.pendingOperations(), hasLength(1));
+    },
+  );
 
   test('records both sides of a conflict and marks the local record', () async {
     final local = offlineLocalDocument(body: 'local');

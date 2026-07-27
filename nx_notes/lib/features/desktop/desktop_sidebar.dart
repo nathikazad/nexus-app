@@ -193,13 +193,13 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                     icon: Icons.logout,
                     label: 'Log out',
                     onTap: () async {
-                      await ref.read(authProvider.notifier).logout();
+                      await ref.read(notesLogoutProvider)();
                       if (context.mounted) context.go('/login');
                     },
                   ),
                 ),
                 const SizedBox(width: 6),
-                const AppThemeToggleButton(),
+                const NotesSettingsButton(),
               ],
             ),
           ),

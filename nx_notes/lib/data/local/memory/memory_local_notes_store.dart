@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:nx_notes/application/ports/local_notes_store.dart';
 import 'package:nx_notes/application/sync/outbox_coalescer.dart';
+import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
@@ -78,6 +79,16 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       changed = true;
     }
     if (changed) _notify();
+  }
+
+  @override
+  Future<void> mergeRemoteMetadata(RemoteDocument remote) async {
+    final existing = _documents[remote.key.localId];
+    if (existing == null) return;
+    _documents[existing.key.localId] = existing.copyWith(
+      document: _withRemoteMetadata(existing.document, remote.document),
+    );
+    _notify();
   }
 
   @override
@@ -203,6 +214,11 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   }
 
   @override
+  Future<void> clearSyncCursor() async {
+    _syncCursor = null;
+  }
+
+  @override
   Future<void> recordConflict(SyncConflict conflict) async {
     _conflicts[conflict.documentKey.localId] = conflict;
     final local = _documents[conflict.documentKey.localId];
@@ -277,4 +293,13 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     );
     return controller.stream;
   }
+}
+
+NxDocument _withRemoteMetadata(NxDocument local, NxDocument remote) {
+  return local.copyWith(
+    links: remote.links,
+    readingState: remote.readingState,
+    bookRank: remote.bookRank,
+    clearBookRank: remote.bookRank == null,
+  );
 }

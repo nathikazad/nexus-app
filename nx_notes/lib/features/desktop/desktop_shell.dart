@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
@@ -15,6 +14,7 @@ import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
 import 'package:nx_notes/features/navigator/document_row.dart';
+import 'package:nx_notes/features/settings/notes_settings_button.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
 
 part 'desktop_sidebar.dart';

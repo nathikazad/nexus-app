@@ -34,10 +34,13 @@ class AppDarkModeNotifier extends Notifier<bool> with WidgetsBindingObserver {
   }
 
   void toggle() {
+    setDarkMode(!state);
+  }
+
+  void setDarkMode(bool isDark) {
     _followsSystem = false;
-    final next = !state;
-    state = next;
-    unawaited(_persistMode(next));
+    state = isDark;
+    unawaited(_persistMode(isDark));
   }
 
   Future<void> _restoreSavedMode() async {
@@ -160,31 +163,4 @@ ThemeData buildAppTheme() {
       indicatorColor: AppColors.subtle,
     ),
   );
-}
-
-class AppThemeToggleButton extends ConsumerWidget {
-  const AppThemeToggleButton({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = ref.watch(appDarkModeProvider);
-    return IconButton(
-      tooltip: isDark ? 'Light mode' : 'Dark mode',
-      onPressed: () {
-        ref.read(appDarkModeProvider.notifier).toggle();
-      },
-      style: IconButton.styleFrom(
-        minimumSize: const Size.square(34),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      icon: Icon(
-        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-        size: 19,
-        color: AppColors.muted,
-      ),
-      splashRadius: 18,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 34, height: 34),
-    );
-  }
 }

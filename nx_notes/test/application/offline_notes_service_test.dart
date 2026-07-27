@@ -5,6 +5,7 @@ import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/fake/fake_remote_document_gateway.dart';
+import 'package:nx_notes/data/remote/unavailable/unavailable_remote_document_gateway.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
@@ -92,6 +93,46 @@ void main() {
 
     expect(saved.document.document, 'edited');
     expect(remote.updateCalls, 0);
+  });
+
+  test(
+    'hard refetch invalidates the cursor and downloads the full catalog',
+    () async {
+      remote.seed(
+        RemoteDocument(
+          key: const DocumentKey(localId: 'remote-8', remoteId: 8),
+          document: offlineTestDocument(id: 8),
+          revision: const RemoteRevision('rev-1'),
+        ),
+      );
+      await service.synchronize();
+      expect(await store.readSyncCursor(), '1');
+      expect((await service.synchronize()).pulledCount, 0);
+
+      final result = await service.hardRefetch();
+
+      expect(result.pulledCount, 1);
+      expect(await store.readSyncCursor(), '1');
+    },
+  );
+
+  test('hard refetch reports when the full pull did not complete', () async {
+    await engine.dispose();
+    engine = createOfflineTestSyncEngine(
+      localStore: store,
+      remoteGateway: const UnavailableRemoteDocumentGateway(),
+      clock: const FixedClock(),
+      idGenerator: ids,
+    );
+    service = OfflineNotesService(
+      localStore: store,
+      syncEngine: engine,
+      clock: const FixedClock(),
+      idGenerator: ids,
+    );
+
+    await expectLater(service.hardRefetch(), throwsStateError);
+    expect(await store.readSyncCursor(), isNull);
   });
 }
 

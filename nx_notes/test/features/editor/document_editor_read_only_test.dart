@@ -53,6 +53,47 @@ void main() {
     expect(find.byKey(const ValueKey<String>('title-display-1')), findsNothing);
     expect(find.byType(AppFlowyEditor), findsOneWidget);
   });
+
+  testWidgets('editor disposal does not notify while the tree is locked', (
+    tester,
+  ) async {
+    documentActiveHeadingNotifier.value = const DocumentActiveHeading(
+      documentId: 1,
+      blockIndex: 0,
+    );
+    addTearDown(() {
+      documentActiveHeadingNotifier.value = null;
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [documentImageAssetServiceProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          home: Row(
+            children: <Widget>[
+              Expanded(
+                child: DocumentEditorBody(
+                  document: _document(),
+                  readOnly: true,
+                ),
+              ),
+              ValueListenableBuilder<DocumentActiveHeading?>(
+                valueListenable: documentActiveHeadingNotifier,
+                builder: (context, value, child) =>
+                    Text('${value?.blockIndex}'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(documentActiveHeadingNotifier.value, isNull);
+  });
 }
 
 NxDocument _document() {
