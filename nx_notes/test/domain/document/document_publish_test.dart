@@ -102,18 +102,19 @@ void main() {
         'Topic': ['Business'],
       },
     );
-    final updated = DocumentPublishState(
-      enabled: true,
-      dirty: false,
-      contentHash: oldHash,
-      lastPublishedHash: oldHash,
-      status: 'published',
-    ).withCurrentContent(
-      jsonDocument,
-      tagsBySystem: const {
-        'Topic': ['Spiritual'],
-      },
-    );
+    final updated =
+        DocumentPublishState(
+          enabled: true,
+          dirty: false,
+          contentHash: oldHash,
+          lastPublishedHash: oldHash,
+          status: 'published',
+        ).withCurrentContent(
+          jsonDocument,
+          tagsBySystem: const {
+            'Topic': ['Spiritual'],
+          },
+        );
 
     expect(updated.dirty, true);
     expect(updated.status, 'pending');
@@ -132,19 +133,20 @@ void main() {
         'Status': ['Draft'],
       },
     );
-    final updated = DocumentPublishState(
-      enabled: true,
-      dirty: false,
-      contentHash: oldHash,
-      lastPublishedHash: oldHash,
-      status: 'published',
-    ).withCurrentContent(
-      jsonDocument,
-      tagsBySystem: const {
-        'Topic': ['Business'],
-        'Status': ['Published'],
-      },
-    );
+    final updated =
+        DocumentPublishState(
+          enabled: true,
+          dirty: false,
+          contentHash: oldHash,
+          lastPublishedHash: oldHash,
+          status: 'published',
+        ).withCurrentContent(
+          jsonDocument,
+          tagsBySystem: const {
+            'Topic': ['Business'],
+            'Status': ['Published'],
+          },
+        );
 
     expect(updated.dirty, false);
     expect(updated.status, 'published');

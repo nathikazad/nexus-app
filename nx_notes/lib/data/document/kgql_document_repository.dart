@@ -9,6 +9,7 @@ import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart' as domain_tags;
+import 'package:nx_notes/domain/sync/remote_save_result.dart';
 
 var _documentReadSequence = 0;
 
@@ -322,6 +323,24 @@ class KgqlDocumentRepository implements DocumentRepository {
     return document.copyWith(
       updatedAt: DateTime.now(),
       updatedLabel: 'just now',
+    );
+  }
+
+  @override
+  Future<RemoteSaveResult> saveDraftIfNewer(NxDocument document) async {
+    final result = await setKgqlModelIfNewer(
+      _client,
+      setModelRequestForUpdateDocument(document),
+      clientUpdatedAt: document.updatedAt,
+      auditSourceKind: 'nx_notes',
+    );
+    return RemoteSaveResult(
+      status: switch (result.status) {
+        KgqlConditionalSaveStatus.applied => RemoteSaveStatus.applied,
+        KgqlConditionalSaveStatus.stale => RemoteSaveStatus.stale,
+      },
+      documentId: result.modelId,
+      updatedAt: result.updatedAt,
     );
   }
 

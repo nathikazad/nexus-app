@@ -7,7 +7,6 @@ import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
-import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_notes/application/sync/notes_sync_engine.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 
 class OfflineSyncLifecycle extends ConsumerStatefulWidget {
@@ -28,7 +27,7 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
         .read(connectivityMonitorProvider)
         .onlineChanges
         .where((online) => online)
-        .listen((_) => _synchronize(SyncReason.connectivityRestored));
+        .listen((_) => _uploadPending());
   }
 
   @override
@@ -42,21 +41,21 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (ref.read(offlineEnabledProvider) &&
         state == AppLifecycleState.resumed) {
-      _synchronize(SyncReason.appStarted);
+      _uploadPending();
     }
   }
 
-  void _synchronize(SyncReason reason) {
-    final service = ref.read(offlineNotesServiceProvider);
-    if (service != null) unawaited(service.synchronize(reason: reason));
+  void _uploadPending() {
+    final workspace = ref.read(notesWorkspaceProvider);
+    if (workspace != null) unawaited(workspace.uploadPending());
   }
 
   @override
   Widget build(BuildContext context) {
     if (ref.watch(offlineEnabledProvider)) {
-      ref.listen(offlineNotesServiceProvider, (previous, next) {
+      ref.listen(notesWorkspaceProvider, (previous, next) {
         if (previous == null && next != null) {
-          unawaited(next.synchronize(reason: SyncReason.appStarted));
+          unawaited(next.uploadPending());
         }
       });
     }

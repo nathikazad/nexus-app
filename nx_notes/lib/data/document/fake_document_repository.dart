@@ -4,6 +4,7 @@ import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
+import 'package:nx_notes/domain/sync/remote_save_result.dart';
 
 class FakeDocumentRepository implements DocumentRepository {
   FakeDocumentRepository()
@@ -351,6 +352,28 @@ class FakeDocumentRepository implements DocumentRepository {
     );
     _documents[index] = updated;
     return updated;
+  }
+
+  @override
+  Future<RemoteSaveResult> saveDraftIfNewer(NxDocument document) async {
+    final index = _documents.indexWhere((item) => item.id == document.id);
+    if (index == -1) {
+      throw StateError('Document ${document.id} not found');
+    }
+    final current = _documents[index];
+    if (!document.updatedAt.isAfter(current.updatedAt)) {
+      return RemoteSaveResult(
+        status: RemoteSaveStatus.stale,
+        documentId: current.id,
+        updatedAt: current.updatedAt,
+      );
+    }
+    _documents[index] = document;
+    return RemoteSaveResult(
+      status: RemoteSaveStatus.applied,
+      documentId: document.id,
+      updatedAt: document.updatedAt,
+    );
   }
 
   @override

@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_notes/data/document/mirror_publish_trigger.dart';
-import 'package:nx_notes/data/providers.dart';
+import 'package:nx_notes/application/history/document_history_service.dart';
+import 'package:nx_notes/application/links/document_link_service.dart';
+import 'package:nx_notes/application/notes_workspace.dart';
+import 'package:nx_notes/application/publishing/document_publish_service.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
+import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
-import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/document/document_result_context.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
@@ -23,33 +25,19 @@ final documentResultControllerProvider = Provider<DocumentResultController>(
 enum DraftSavePolicy { deferred, immediate }
 
 class DocumentMutationController {
-  DocumentMutationController(this._ref) {
-    _ref.onDispose(() {
-      _draftFlushTimer?.cancel();
-    });
-  }
+  DocumentMutationController(this._ref);
 
   final Ref _ref;
-  static const Duration _draftWriteDelay = Duration(seconds: 10);
-  Timer? _draftFlushTimer;
-  NxDocument? _pendingDraft;
-  Future<void>? _draftWriteInFlight;
 
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
   }) async {
-    final document = await _ref
-        .read(documentRepositoryProvider)
-        .create(title: title, kind: kind);
+    final document = await _workspace().createDocument(
+      title: title,
+      kind: kind,
+    );
     _logDbSync('create_document', documentId: document.id);
-    _cacheDocument(document);
-    _ref.invalidate(recentDocumentsProvider);
-    _ref.invalidate(pinnedDocumentsProvider);
-    if (kind == DocumentKind.book) {
-      _ref.invalidate(booksProvider);
-    }
-    _invalidateWebCatalog(reason: 'document-created');
     return document;
   }
 
@@ -61,99 +49,46 @@ class DocumentMutationController {
       document.jsonDocument,
       tagsBySystem: document.publishTagsBySystem,
     );
-    _pendingDraft = document.copyWith(
+    final draft = document.copyWith(
       publish: publish,
-      updatedAt: DateTime.now(),
+      updatedAt: DateTime.now().toUtc(),
       updatedLabel: 'just now',
     );
-    _cacheDocument(_pendingDraft!);
-    final offline = _ref.read(offlineNotesServiceProvider);
-    if (offline != null) {
-      await offline.saveRemoteDraft(_pendingDraft!);
+    await _workspace().openDocument(document.id).saveDraft(draft);
+    if (draft.publish.enabled) {
+      unawaited(
+        _publishService().notifyEdit(draft).catchError((Object error) {
+          debugPrint(
+            '[nx_notes mirror publish] edit trigger failed '
+            'document=${draft.id} error=$error',
+          );
+        }),
+      );
     }
     if (policy == DraftSavePolicy.immediate) {
-      await _flushDraftNow();
-      return;
+      await _workspace().uploadPending();
     }
-    _scheduleDraftWrite();
   }
 
   Future<void> saveNow(NxDocument fallback) async {
-    _pendingDraft ??= fallback.copyWith(
-      updatedAt: DateTime.now(),
-      updatedLabel: 'just now',
-    );
-    _cacheDocument(_pendingDraft!);
-    final offline = _ref.read(offlineNotesServiceProvider);
-    if (offline != null) {
-      await offline.saveRemoteDraft(_pendingDraft!);
-    }
-    await _flushDraftNow();
+    await saveDraft(fallback, policy: DraftSavePolicy.immediate);
   }
 
   Future<void> deleteDocument(NxDocument document) async {
-    _draftFlushTimer?.cancel();
-    _draftFlushTimer = null;
-    if (_draftWriteInFlight != null) {
-      await _draftWriteInFlight;
-    }
-    _pendingDraft = null;
-    await _ref.read(documentRepositoryProvider).delete(document.id);
+    await _workspace().deleteDocument(document.id);
     _logDbSync('delete_document', documentId: document.id);
-    _ref.read(documentLocalCacheProvider.notifier).remove(document.id);
-    _ref.invalidate(recentDocumentsProvider);
-    _ref.invalidate(pinnedDocumentsProvider);
-    _ref.invalidate(booksProvider);
-    _ref.invalidate(tagSystemsProvider);
-    _ref.invalidate(documentByIdProvider(document.id));
-    _ref.invalidate(documentSnapshotsProvider(document.id));
-    _invalidateWebCatalog(reason: 'document-deleted', documentId: document.id);
   }
 
   Future<void> setPinned(NxDocument document, bool pinned) async {
-    final updated = document.copyWith(
-      pinned: pinned,
-      updatedAt: DateTime.now(),
-      updatedLabel: 'just now',
-    );
-    _cacheDocument(updated);
-    await _ref.read(documentRepositoryProvider).updateDraft(updated);
+    await _workspace().openDocument(document.id).setPinned(pinned);
+    await _workspace().uploadPending();
     _logDbSync('set_pinned', documentId: document.id, detail: 'pinned=$pinned');
-    _ref.invalidate(recentDocumentsProvider);
-    _ref.invalidate(pinnedDocumentsProvider);
-    _ref.invalidate(booksProvider);
-    _invalidateWebCatalog(reason: 'pinned-changed', documentId: document.id);
   }
 
   Future<void> setPublishEnabled(NxDocument document, bool enabled) async {
     await saveNow(document);
-    final current =
-        _ref.read(documentLocalCacheProvider)[document.id] ?? document;
-    final now = DateTime.now();
-    final nowIso = now.toUtc().toIso8601String();
-    final publish = enabled
-        ? current.publish.enable(
-            jsonDocument: current.jsonDocument,
-            publishedAt: nowIso,
-            tagsBySystem: current.publishTagsBySystem,
-            title: current.title,
-            slug: _slugForTitle(current.title, current.id),
-          )
-        : current.publish.disable();
-    final updated = current.copyWith(
-      publish: publish,
-      updatedAt: now,
-      updatedLabel: 'just now',
-    );
-    _cacheDocument(updated);
-    await _ref.read(documentRepositoryProvider).updateDraft(updated);
-    _invalidateWebCatalog(reason: 'publish-changed', documentId: document.id);
-    await _triggerMirrorPublish(
-      reason: 'publish_click',
-      documentId: updated.id,
-      immediate: true,
-      waitForCompletion: true,
-    );
+    final current = _currentDocument(document.id) ?? document;
+    await _publishService().setEnabled(current, enabled);
     _logDbSync(
       'set_publish',
       documentId: document.id,
@@ -167,64 +102,33 @@ class DocumentMutationController {
     required int modelId,
     LinkedModel? model,
   }) async {
-    await _ref
-        .read(documentRepositoryProvider)
-        .attachLinkedModel(
-          documentId: documentId,
-          modelType: modelType,
-          modelId: modelId,
-        );
+    await _linkService().attach(
+      documentId: documentId,
+      modelType: modelType,
+      modelId: modelId,
+    );
     _logDbSync(
       'attach_link',
       documentId: documentId,
       detail: 'model=${modelType.kgqlName}:$modelId',
     );
-    if (model != null) {
-      _cacheDocumentWithLink(documentId, model);
-    }
   }
 
   Future<void> attachProject(int documentId, int projectId) async {
-    await _ref
-        .read(documentRepositoryProvider)
-        .attachProject(documentId, projectId);
+    await _linkService().attachProject(documentId, projectId);
     _logDbSync(
       'attach_project',
       documentId: documentId,
       detail: 'project=$projectId',
     );
-    final projects = _ref
-        .read(projectsProvider)
-        .maybeWhen(data: (rows) => rows, orElse: () => const <LinkedModel>[]);
-    LinkedModel? project;
-    for (final item in projects) {
-      if (item.id == projectId) {
-        project = item;
-        break;
-      }
-    }
-    if (project != null) {
-      _cacheDocumentWithLink(documentId, project);
-    }
   }
 
   Future<void> detachProject(int documentId, int relationId) async {
-    await _ref
-        .read(documentRepositoryProvider)
-        .detachProject(documentId, relationId);
+    await _linkService().detachProject(documentId, relationId);
     _logDbSync(
       'detach_project',
       documentId: documentId,
       detail: 'relation=$relationId',
-    );
-    final cached = _ref.read(documentLocalCacheProvider)[documentId];
-    if (cached == null) return;
-    _cacheDocument(
-      cached.copyWith(
-        links: cached.links
-            .where((link) => link.relationId != relationId)
-            .toList(),
-      ),
     );
   }
 
@@ -233,13 +137,11 @@ class DocumentMutationController {
     required String source,
     String changeSummary = '',
   }) async {
-    final snap = await _ref
-        .read(documentRepositoryProvider)
-        .createSnapshot(
-          documentId,
-          source: source,
-          changeSummary: changeSummary,
-        );
+    final snap = await _historyService().create(
+      documentId,
+      source: source,
+      changeSummary: changeSummary,
+    );
     _logDbSync(
       'create_snapshot',
       documentId: documentId,
@@ -249,88 +151,35 @@ class DocumentMutationController {
   }
 
   Future<void> restoreSnapshot(NxDocument document, DocumentSnap snap) async {
-    await createSnapshot(
-      document.id,
-      source: 'restore',
-      changeSummary: 'Before restore to version ${snap.versionNumber}',
-    );
-    await saveDraft(
-      document.copyWith(
-        document: snap.document,
-        jsonDocument: snap.jsonDocument,
-      ),
-      policy: DraftSavePolicy.immediate,
-    );
+    await _historyService().restore(document, snap);
   }
 
-  void _cacheDocument(NxDocument document) {
-    _ref.read(documentLocalCacheProvider.notifier).put(document);
+  NotesWorkspace _workspace() {
+    final workspace = _ref.read(notesWorkspaceProvider);
+    if (workspace == null) throw StateError('Notes are not ready yet.');
+    return workspace;
   }
 
-  void _cacheDocumentWithLink(int documentId, LinkedModel model) {
-    final cached = _ref.read(documentLocalCacheProvider)[documentId];
-    if (cached == null ||
-        cached.links.any(
-          (link) => link.modelType == model.modelType && link.id == model.id,
-        )) {
-      return;
-    }
-    _cacheDocument(cached.copyWith(links: [...cached.links, model]));
+  NxDocument? _currentDocument(int documentId) {
+    return _workspace().openDocument(documentId).state.document;
   }
 
-  void _scheduleDraftWrite() {
-    if (_draftWriteInFlight != null) return;
-    _draftFlushTimer ??= Timer(_draftWriteDelay, () {
-      _draftFlushTimer = null;
-      _draftWriteInFlight ??= _flushPendingDraft();
-    });
+  DocumentHistoryService _historyService() {
+    final service = _ref.read(documentHistoryServiceProvider);
+    if (service == null) throw StateError('Document history is not ready.');
+    return service;
   }
 
-  Future<void> _flushDraftNow() async {
-    _draftFlushTimer?.cancel();
-    _draftFlushTimer = null;
-    if (_draftWriteInFlight != null) {
-      await _draftWriteInFlight;
-      if (_pendingDraft == null) return;
-    }
-    _draftWriteInFlight = _flushPendingDraft();
-    await _draftWriteInFlight;
+  DocumentLinkService _linkService() {
+    final service = _ref.read(documentLinkServiceProvider);
+    if (service == null) throw StateError('Document links are not ready.');
+    return service;
   }
 
-  Future<void> _flushPendingDraft() async {
-    final draft = _pendingDraft;
-    if (draft == null) {
-      _draftWriteInFlight = null;
-      return;
-    }
-    _pendingDraft = null;
-    try {
-      final offline = _ref.read(offlineNotesServiceProvider);
-      if (offline == null) {
-        await _ref.read(documentRepositoryProvider).updateDraft(draft);
-      } else {
-        await offline.synchronize();
-      }
-      if (draft.publish.enabled) {
-        unawaited(
-          _triggerMirrorPublish(
-            reason: 'edit',
-            documentId: draft.id,
-            immediate: false,
-          ),
-        );
-      }
-      _logDbSync(
-        'update_draft',
-        documentId: draft.id,
-        detail: 'words=${draft.wordCount}',
-      );
-    } finally {
-      _draftWriteInFlight = null;
-      if (_pendingDraft != null) {
-        _scheduleDraftWrite();
-      }
-    }
+  DocumentPublishService _publishService() {
+    final service = _ref.read(documentPublishServiceProvider);
+    if (service == null) throw StateError('Document publishing is not ready.');
+    return service;
   }
 
   void _logDbSync(String action, {int? documentId, String? detail}) {
@@ -341,64 +190,6 @@ class DocumentMutationController {
       '[nx_notes db sync] $timestamp action=$action$documentPart$detailPart',
     );
   }
-
-  void _invalidateWebCatalog({required String reason, int? documentId}) {
-    if (_ref.read(offlineEnabledProvider)) return;
-    if (kDebugMode) {
-      debugPrintStack(
-        label:
-            '[nx_notes web refresh] invalidate catalog '
-            'reason=$reason document=${documentId ?? '-'}',
-        stackTrace: StackTrace.current,
-        maxFrames: 8,
-      );
-    }
-    _ref.invalidate(offlineAllDocumentsProvider);
-    _ref.invalidate(offlineRecentDocumentsProvider);
-    _ref.invalidate(offlinePinnedDocumentsProvider);
-    _ref.invalidate(offlineBooksProvider);
-    _ref.invalidate(offlineTagSystemsProvider);
-    if (documentId != null) {
-      _ref.invalidate(offlineDocumentProvider(documentId));
-    }
-  }
-
-  Future<void> _triggerMirrorPublish({
-    required String reason,
-    required int documentId,
-    required bool immediate,
-    bool waitForCompletion = false,
-  }) async {
-    final trigger = _ref.read(mirrorPublishTriggerProvider);
-    if (trigger == null) return;
-    try {
-      await trigger.trigger(
-        reason: reason,
-        documentId: documentId,
-        immediate: immediate,
-        waitForCompletion: waitForCompletion,
-      );
-      debugMirrorPublish(
-        'triggered reason=$reason document=$documentId immediate=$immediate',
-      );
-    } catch (error) {
-      debugMirrorPublish(
-        'trigger failed reason=$reason document=$documentId error=$error',
-      );
-      if (waitForCompletion) {
-        rethrow;
-      }
-    }
-  }
-}
-
-String _slugForTitle(String title, int id) {
-  final slug = title
-      .trim()
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-      .replaceAll(RegExp(r'^-+|-+$'), '');
-  return slug.isEmpty ? 'document-$id' : slug;
 }
 
 class DocumentResultController {
@@ -462,23 +253,20 @@ class DocumentResultController {
   }
 
   Future<List<NxDocument>> _readLocalDocuments(DocumentQuery query) async {
-    final service = _ref.read(offlineNotesServiceProvider);
-    if (service != null) {
-      final rows = await service.readDocuments(query);
-      return rows
-          .map((local) => local.document)
-          .where((document) => document.id > 0)
-          .toList(growable: false);
-    }
-
-    final repository = _ref.read(documentRepositoryProvider);
-    if (query.searchText.trim().isNotEmpty) {
-      return repository.search(query.searchText);
-    }
-    if (query.pinnedOnly) return repository.listPinned(limit: 50);
-    if (query.tagFilters.isNotEmpty) {
-      return repository.listByTag(query.tagFilters.first);
-    }
-    return repository.listRecent(limit: 50);
+    final workspace = _ref.read(notesWorkspaceProvider);
+    if (workspace == null) return const <NxDocument>[];
+    final catalogQuery = query.searchText.trim().isNotEmpty
+        ? CatalogQuery.search(query.searchText)
+        : query.pinnedOnly
+        ? const CatalogQuery.pinned(limit: 50)
+        : query.tagFilters.isNotEmpty
+        ? CatalogQuery.tag(query.tagFilters.first)
+        : const CatalogQuery.recent(limit: 50);
+    final state = await workspace
+        .watchCatalog(catalogQuery)
+        .firstWhere((state) => !state.isInitialLoading);
+    return state.items
+        .map((summary) => summary.toDocument())
+        .toList(growable: false);
   }
 }

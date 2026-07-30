@@ -3,6 +3,17 @@ import 'package:nx_notes/application/ports/session_store.dart';
 import 'package:nx_notes/application/session/offline_session_restorer.dart';
 
 void main() {
+  test('endpoint routes share one user cache identity', () {
+    const lan = CachedSession(userId: '7', backendPreset: 'pi_lan');
+    const wan = CachedSession(userId: '7', backendPreset: 'pi_wan');
+    const tailscale = CachedSession(userId: '7', backendPreset: 'pi_tailscale');
+
+    expect(
+      <String>{lan.accountKey, wan.accountKey, tailscale.accountKey},
+      {'user:7'},
+    );
+  });
+
   const session = CachedSession(userId: 'user-1', backendPreset: 'production');
 
   test(
@@ -15,7 +26,7 @@ void main() {
       ).restore();
 
       expect(result.mode, SessionMode.offline);
-      expect(result.session!.accountKey, 'production:user-1');
+      expect(result.session!.accountKey, 'user:user-1');
       expect(await store.load(), same(session));
     },
   );
@@ -63,7 +74,7 @@ void main() {
       erasePartition: (key) async => erased.add(key),
     ).run(session: session, downloadedData: DownloadedDataLogoutPolicy.erase);
 
-    expect(erased, ['production:user-1']);
+    expect(erased, ['user:user-1']);
   });
 }
 

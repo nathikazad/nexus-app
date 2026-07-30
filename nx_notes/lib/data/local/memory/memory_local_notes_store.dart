@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:nx_notes/application/ports/local_notes_store.dart';
 import 'package:nx_notes/application/sync/outbox_coalescer.dart';
+import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
-import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
-import 'package:nx_notes/domain/sync/sync_conflict.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
 
 class MemoryLocalNotesStore implements LocalNotesStore {
@@ -22,11 +22,12 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   final String accountKey;
   final OutboxCoalescer coalescer;
   final Map<String, LocalDocument> _documents = <String, LocalDocument>{};
+  final Map<int, DocumentSummary> _summaries = <int, DocumentSummary>{};
+  final Set<int> _deletedSummaryIds = <int>{};
   final Map<String, PendingOperation> _operations =
       <String, PendingOperation>{};
   final StreamController<void> _changes = StreamController<void>.broadcast();
-  final Map<String, SyncConflict> _conflicts = <String, SyncConflict>{};
-  String? _syncCursor;
+  final Map<String, List<int>> _catalogs = <String, List<int>>{};
   bool _disposed = false;
 
   Future<void> dispose() async {
@@ -54,8 +55,53 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   }
 
   @override
-  Stream<List<LocalDocument>> watchDocuments(DocumentQuery query) {
-    return _watch(() => _matchingDocuments(query));
+  Stream<List<DocumentSummary>> watchCatalog(CatalogQuery query) {
+    if (!query.persistsMembership) {
+      return _watch(() => _filterSummaries(_visibleSummaries(), query));
+    }
+    return _watch(() {
+      final ids = _catalogs[query.cacheKey] ?? const <int>[];
+      return <DocumentSummary>[
+        for (final id in ids)
+          if (!_deletedSummaryIds.contains(id))
+            if (_summaries[id] case final summary?) summary,
+      ];
+    });
+  }
+
+  @override
+  Future<List<DocumentSummary>> readCatalog(CatalogQuery query) {
+    if (!query.persistsMembership) {
+      return Future<List<DocumentSummary>>.value(
+        _filterSummaries(_visibleSummaries(), query),
+      );
+    }
+    final ids = _catalogs[query.cacheKey] ?? const <int>[];
+    return Future<List<DocumentSummary>>.value(<DocumentSummary>[
+      for (final id in ids)
+        if (!_deletedSummaryIds.contains(id))
+          if (_summaries[id] case final summary?) summary,
+    ]);
+  }
+
+  @override
+  Future<void> replaceCatalog(
+    CatalogQuery query,
+    List<DocumentSummary> summaries,
+  ) async {
+    if (!query.persistsMembership) return;
+    final ids = <int>[];
+    for (final summary in summaries) {
+      final remoteId = summary.id;
+      ids.add(remoteId);
+      final existing = _documentByRemoteId(remoteId);
+      if (existing == null || existing.syncState == DocumentSyncState.synced) {
+        _summaries[remoteId] = summary;
+        _deletedSummaryIds.remove(remoteId);
+      }
+    }
+    _catalogs[query.cacheKey] = ids;
+    _notify();
   }
 
   @override
@@ -76,19 +122,64 @@ class MemoryLocalNotesStore implements LocalNotesStore {
         syncState: DocumentSyncState.synced,
         deletedLocally: remote.deleted,
       );
+      _storeSummary(remote.document, deleted: remote.deleted);
       changed = true;
     }
     if (changed) _notify();
   }
 
   @override
-  Future<void> mergeRemoteMetadata(RemoteDocument remote) async {
-    final existing = _documents[remote.key.localId];
-    if (existing == null) return;
-    _documents[existing.key.localId] = existing.copyWith(
-      document: _withRemoteMetadata(existing.document, remote.document),
+  Future<void> discardPendingAndImportRemote(RemoteDocument remote) async {
+    final remoteId = remote.key.remoteId;
+    if (remoteId == null) {
+      throw ArgumentError('stale replacement requires a remote id');
+    }
+    final existing = _documentByRemoteId(remoteId);
+    final stableKey = existing?.key ?? remote.key;
+    if (existing != null) {
+      _operations.removeWhere(
+        (_, operation) => operation.documentKey.localId == existing.key.localId,
+      );
+    }
+    _documents[stableKey.localId] = LocalDocument(
+      key: stableKey,
+      accountKey: accountKey,
+      document: remote.document,
+      localUpdatedAt: remote.document.updatedAt,
+      serverRevision: remote.revision,
+      baseServerRevision: remote.revision,
+      syncState: DocumentSyncState.synced,
+      deletedLocally: remote.deleted,
     );
+    _storeSummary(remote.document, deleted: remote.deleted);
     _notify();
+  }
+
+  @override
+  Future<bool> discardStaleOperationAndImportRemote(
+    String operationId,
+    RemoteDocument remote,
+  ) async {
+    final operation = _operations.remove(operationId);
+    if (operation == null) return false;
+    final existing = _documents[operation.documentKey.localId];
+    if (existing == null) return false;
+    _documents[operation.documentKey.localId] = LocalDocument(
+      key: DocumentKey(
+        localId: operation.documentKey.localId,
+        remoteId: remote.key.remoteId,
+      ),
+      accountKey: accountKey,
+      document: remote.document,
+      localUpdatedAt: remote.document.updatedAt,
+      serverRevision: remote.revision,
+      baseServerRevision: remote.revision,
+      syncState: DocumentSyncState.synced,
+      deletedLocally: remote.deleted,
+    );
+    _storeSummary(remote.document, deleted: remote.deleted);
+    _notify();
+    return true;
   }
 
   @override
@@ -102,11 +193,15 @@ class MemoryLocalNotesStore implements LocalNotesStore {
         ? operation
         : coalescer.coalesce(existingOperation, operation);
 
-    _documents[document.key.localId] = document.copyWith(
+    final saved = document.copyWith(
       syncState: nextOperation == null
           ? DocumentSyncState.synced
           : DocumentSyncState.queued,
     );
+    _documents[document.key.localId] = saved;
+    if (saved.key.remoteId != null) {
+      _storeSummary(saved.document, deleted: saved.deletedLocally);
+    }
     if (existingOperation != null) {
       _operations.remove(existingOperation.operationId);
     }
@@ -161,9 +256,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     required RemoteWriteResult result,
   }) async {
     final operation = _operations.remove(operationId);
-    if (operation == null) {
-      throw StateError('pending operation not found: $operationId');
-    }
+    if (operation == null) return;
     final local = _documents[operation.documentKey.localId];
     if (local != null) {
       _documents[local.key.localId] = local.copyWith(
@@ -177,15 +270,39 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   }
 
   @override
+  Future<void> completeCreateOperation(
+    String operationId, {
+    required RemoteDocument document,
+  }) async {
+    final operation = _operations.remove(operationId);
+    if (operation == null) return;
+    final existing = _documents.remove(operation.documentKey.localId);
+    if (existing == null) return;
+    final key = DocumentKey(
+      localId: existing.key.localId,
+      remoteId: document.key.remoteId,
+    );
+    _documents[key.localId] = LocalDocument(
+      key: key,
+      accountKey: accountKey,
+      document: document.document,
+      localUpdatedAt: document.document.updatedAt,
+      serverRevision: document.revision,
+      baseServerRevision: document.revision,
+      syncState: DocumentSyncState.synced,
+    );
+    _storeSummary(document.document);
+    _notify();
+  }
+
+  @override
   Future<void> failOperation(
     String operationId, {
     required SyncFailure failure,
     required DateTime retryAt,
   }) async {
     final operation = _operations[operationId];
-    if (operation == null) {
-      throw StateError('pending operation not found: $operationId');
-    }
+    if (operation == null) return;
     _operations[operationId] = operation.copyWith(
       status: PendingOperationStatus.retryWaiting,
       attemptCount: operation.attemptCount + 1,
@@ -205,38 +322,6 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     _notify();
   }
 
-  @override
-  Future<String?> readSyncCursor() async => _syncCursor;
-
-  @override
-  Future<void> writeSyncCursor(String cursor) async {
-    _syncCursor = cursor;
-  }
-
-  @override
-  Future<void> clearSyncCursor() async {
-    _syncCursor = null;
-  }
-
-  @override
-  Future<void> recordConflict(SyncConflict conflict) async {
-    _conflicts[conflict.documentKey.localId] = conflict;
-    final local = _documents[conflict.documentKey.localId];
-    if (local != null) {
-      _documents[local.key.localId] = local.copyWith(
-        syncState: DocumentSyncState.conflict,
-      );
-    }
-    _notify();
-  }
-
-  @override
-  Future<List<SyncConflict>> conflicts() async {
-    final rows = _conflicts.values.toList()
-      ..sort((a, b) => a.detectedAt.compareTo(b.detectedAt));
-    return rows;
-  }
-
   void _validateWrite(LocalDocument document, PendingOperation operation) {
     if (document.accountKey != accountKey ||
         operation.accountKey != accountKey) {
@@ -254,27 +339,64 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     return null;
   }
 
-  List<LocalDocument> _matchingDocuments(DocumentQuery query) {
-    final search = query.searchText.trim().toLowerCase();
-    final rows = _documents.values.where((local) {
-      if (local.accountKey != accountKey || local.deletedLocally) return false;
-      final document = local.document;
-      if (query.pinnedOnly && !document.pinned) return false;
-      if (search.isNotEmpty &&
-          !<String>[
-            document.title,
-            document.document,
-            document.excerpt,
-          ].join(' ').toLowerCase().contains(search)) {
-        return false;
-      }
-      for (final filter in query.tagFilters) {
-        final tags = document.tagsBySystem[filter.system] ?? const <String>[];
-        if (!tags.contains(filter.node)) return false;
-      }
-      return true;
-    }).toList()..sort((a, b) => b.localUpdatedAt.compareTo(a.localUpdatedAt));
+  LocalDocument? _documentByRemoteId(int remoteId) {
+    for (final document in _documents.values) {
+      if (document.key.remoteId == remoteId) return document;
+    }
+    return null;
+  }
+
+  List<DocumentSummary> _visibleSummaries() {
+    final rows = <DocumentSummary>[
+      for (final entry in _summaries.entries)
+        if (!_deletedSummaryIds.contains(entry.key)) entry.value,
+    ]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return rows;
+  }
+
+  List<DocumentSummary> _filterSummaries(
+    List<DocumentSummary> rows,
+    CatalogQuery query,
+  ) {
+    final search = query.searchText.trim().toLowerCase();
+    return rows
+        .where((summary) {
+          if (search.isNotEmpty &&
+              !<String>[
+                summary.title,
+                summary.excerpt,
+                ...summary.tagsBySystem.values.expand((tags) => tags),
+              ].join(' ').toLowerCase().contains(search)) {
+            return false;
+          }
+          final tag = query.tagFilter;
+          if (tag != null &&
+              !(summary.tagsBySystem[tag.system]?.contains(tag.node) ??
+                  false)) {
+            return false;
+          }
+          return true;
+        })
+        .toList(growable: false);
+  }
+
+  void _storeSummary(NxDocument document, {bool deleted = false}) {
+    _summaries[document.id] = DocumentSummary.fromDocument(document);
+    if (deleted) {
+      _deletedSummaryIds.add(document.id);
+    } else {
+      _deletedSummaryIds.remove(document.id);
+    }
+    final pinnedCatalogs = <String>{
+      const CatalogQuery.pinned().cacheKey,
+      const CatalogQuery.pinned(limit: 50).cacheKey,
+      ..._catalogs.keys.where((key) => key.startsWith('pinned:')),
+    };
+    for (final key in pinnedCatalogs) {
+      final ids = _catalogs.putIfAbsent(key, () => <int>[]);
+      ids.remove(document.id);
+      if (document.pinned && !deleted) ids.insert(0, document.id);
+    }
   }
 
   void _notify() {
@@ -293,13 +415,4 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     );
     return controller.stream;
   }
-}
-
-NxDocument _withRemoteMetadata(NxDocument local, NxDocument remote) {
-  return local.copyWith(
-    links: remote.links,
-    readingState: remote.readingState,
-    bookRank: remote.bookRank,
-    clearBookRank: remote.bookRank == null,
-  );
 }

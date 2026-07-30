@@ -35,8 +35,14 @@ class OutboxCoalescer {
     };
 
     if (nextType == null) return null;
+    // A claimed operation may already be in flight. Give the new edit its own
+    // id so completion of the older request cannot delete the newer draft.
+    final existingIsInFlight =
+        existing.status == PendingOperationStatus.claimed;
     return incoming.copyWith(
-      operationId: existing.operationId,
+      operationId: existingIsInFlight
+          ? incoming.operationId
+          : existing.operationId,
       type: nextType,
       baseRevision: existing.baseRevision,
       clearBaseRevision: existing.baseRevision == null,
@@ -46,7 +52,7 @@ class OutboxCoalescer {
       clearLeaseOwner: true,
       clearLeaseExpiresAt: true,
       clearLastError: true,
-      createdAt: existing.createdAt,
+      createdAt: existingIsInFlight ? incoming.createdAt : existing.createdAt,
     );
   }
 }

@@ -3,15 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:nx_db/nx_db.dart';
+import 'package:nx_notes/application/ports/mirror_publish_trigger.dart';
 
-abstract class MirrorPublishTrigger {
-  Future<void> trigger({
-    required String reason,
-    required int documentId,
-    required bool immediate,
-    bool waitForCompletion = false,
-  });
-}
+export 'package:nx_notes/application/ports/mirror_publish_trigger.dart';
 
 class MirrorPublishTriggerService implements MirrorPublishTrigger {
   MirrorPublishTriggerService({

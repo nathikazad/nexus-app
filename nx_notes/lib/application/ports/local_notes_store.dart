@@ -1,15 +1,22 @@
 import 'package:nx_notes/domain/document/document_identity.dart';
-import 'package:nx_notes/domain/document/document_query.dart';
+import 'package:nx_notes/domain/catalog/catalog_query.dart';
+import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
-import 'package:nx_notes/domain/sync/sync_conflict.dart';
 
 abstract interface class LocalNotesStore {
   String get accountKey;
 
-  Stream<List<LocalDocument>> watchDocuments(DocumentQuery query);
+  Stream<List<DocumentSummary>> watchCatalog(CatalogQuery query);
+
+  Future<List<DocumentSummary>> readCatalog(CatalogQuery query);
+
+  Future<void> replaceCatalog(
+    CatalogQuery query,
+    List<DocumentSummary> summaries,
+  );
 
   Stream<LocalDocument?> watchDocument(DocumentKey key);
 
@@ -19,9 +26,16 @@ abstract interface class LocalNotesStore {
 
   Future<void> importRemoteDocuments(List<RemoteDocument> documents);
 
-  /// Refreshes remote-owned fields without replacing local editable content,
-  /// sync state, revisions, or pending work.
-  Future<void> mergeRemoteMetadata(RemoteDocument document);
+  /// Replaces a stale local draft with the accepted remote document and
+  /// removes pending work for that document in one transaction.
+  Future<void> discardPendingAndImportRemote(RemoteDocument document);
+
+  /// Applies a stale response only if [operationId] is still the current
+  /// pending mutation. Returns false when a newer edit replaced it in flight.
+  Future<bool> discardStaleOperationAndImportRemote(
+    String operationId,
+    RemoteDocument document,
+  );
 
   Future<void> saveDraftAndEnqueue(
     LocalDocument document, {
@@ -41,19 +55,14 @@ abstract interface class LocalNotesStore {
     required RemoteWriteResult result,
   });
 
+  Future<void> completeCreateOperation(
+    String operationId, {
+    required RemoteDocument document,
+  });
+
   Future<void> failOperation(
     String operationId, {
     required SyncFailure failure,
     required DateTime retryAt,
   });
-
-  Future<String?> readSyncCursor();
-
-  Future<void> writeSyncCursor(String cursor);
-
-  Future<void> clearSyncCursor();
-
-  Future<void> recordConflict(SyncConflict conflict);
-
-  Future<List<SyncConflict>> conflicts();
 }

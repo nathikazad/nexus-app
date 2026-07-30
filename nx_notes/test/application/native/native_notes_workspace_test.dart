@@ -1,0 +1,266 @@
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_notes/application/document_session.dart';
+import 'package:nx_notes/application/native/background_uploader.dart';
+import 'package:nx_notes/application/native/native_notes_workspace.dart';
+import 'package:nx_notes/application/ports/clock.dart';
+import 'package:nx_notes/application/ports/id_generator.dart';
+import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
+import 'package:nx_notes/data/remote/fake/fake_notes_remote_api.dart';
+import 'package:nx_notes/domain/catalog/catalog_query.dart';
+import 'package:nx_notes/domain/document/document_identity.dart';
+import 'package:nx_notes/domain/document/document_summary.dart';
+import 'package:nx_notes/domain/sync/document_revision.dart';
+import 'package:nx_notes/domain/sync/local_document.dart';
+import 'package:nx_notes/domain/sync/pending_operation.dart';
+import 'package:nx_notes/domain/sync/remote_document.dart';
+import 'package:nx_notes/domain/sync/sync_state.dart';
+
+import '../../support/offline_fixtures.dart';
+
+void main() {
+  late MemoryLocalNotesStore local;
+  late FakeNotesRemoteApi remote;
+  late _Clock clock;
+  late _Ids ids;
+  late BackgroundUploader uploader;
+  late NativeNotesWorkspace workspace;
+
+  setUp(() {
+    local = MemoryLocalNotesStore(accountKey: 'user:1');
+    remote = FakeNotesRemoteApi();
+    clock = _Clock(DateTime.utc(2026, 7, 27, 12));
+    ids = _Ids();
+    uploader = BackgroundUploader(
+      localStore: local,
+      remoteApi: remote,
+      clock: clock,
+      workerId: 'test-worker',
+      uploadDelay: const Duration(hours: 1),
+    );
+    workspace = NativeNotesWorkspace(
+      localStore: local,
+      remoteApi: remote,
+      uploader: uploader,
+      clock: clock,
+      idGenerator: ids,
+    );
+  });
+
+  tearDown(() async {
+    await workspace.close();
+    await uploader.close();
+    await local.dispose();
+  });
+
+  test(
+    'cached catalog is emitted while the network request is pending',
+    () async {
+      final cached = offlineTestDocument(id: 7, title: 'Cached recent');
+      await local.replaceCatalog(const CatalogQuery.recent(), <DocumentSummary>[
+        DocumentSummary.fromDocument(cached),
+      ]);
+      final network = Completer<void>();
+      remote
+        ..catalogBarrier = network.future
+        ..replaceRemote(offlineTestDocument(id: 8, title: 'Remote recent'));
+
+      final state = await workspace
+          .watchCatalog(const CatalogQuery.recent())
+          .firstWhere((state) => state.items.isNotEmpty);
+
+      expect(state.items.single.title, 'Cached recent');
+      expect(state.isRefreshing, isTrue);
+      expect(remote.catalogFetchCount, 1);
+      expect(network.isCompleted, isFalse);
+      network.complete();
+    },
+  );
+
+  test(
+    'opening returns cached body immediately and fetches remote once',
+    () async {
+      final cached = offlineTestDocument(id: 7, title: 'Cached body');
+      await _import(local, cached);
+      final network = Completer<void>();
+      remote
+        ..documentBarrier = network.future
+        ..replaceRemote(cached.copyWith(title: 'Remote body'));
+
+      final first = workspace.openDocument(7);
+      final second = workspace.openDocument(7);
+      final ready = await first.states.firstWhere(
+        (state) => state.phase == DocumentPhase.ready,
+      );
+
+      expect(identical(first, second), isTrue);
+      expect(ready.document!.title, 'Cached body');
+      await Future<void>.delayed(Duration.zero);
+      expect(first.state.isRefreshing, isTrue);
+      expect(remote.documentFetchCounts[7], 1);
+      network.complete();
+    },
+  );
+
+  test(
+    'uncached document reports unavailable when remote is offline',
+    () async {
+      remote.error = StateError('offline');
+
+      final session = workspace.openDocument(99);
+      final state = await session.states.firstWhere(
+        (state) => state.phase == DocumentPhase.unavailableOffline,
+      );
+
+      expect(state.document, isNull);
+      expect(state.error, isA<StateError>());
+    },
+  );
+
+  test('save is durable locally before background upload', () async {
+    final initial = offlineTestDocument(id: 3);
+    await _import(local, initial);
+    remote.replaceRemote(initial);
+    final session = workspace.openDocument(3);
+    await session.states.firstWhere((state) => !state.isRefreshing);
+    final blockedUpload = Completer<void>();
+    remote.saveBarrier = blockedUpload.future;
+
+    await session.saveDraft(initial.copyWith(document: 'local draft'));
+
+    final saved = await local.getDocumentByRemoteId(3);
+    expect(saved!.document.document, 'local draft');
+    expect(saved.syncState, DocumentSyncState.queued);
+    expect(await local.pendingOperations(), hasLength(1));
+    expect(remote.saveCount, 0);
+    blockedUpload.complete();
+  });
+
+  test('applied upload clears the outbox', () async {
+    final initial = offlineTestDocument(id: 4);
+    remote.replaceRemote(initial);
+    await _queue(
+      local,
+      initial.copyWith(
+        document: 'newer',
+        updatedAt: DateTime.utc(2026, 7, 27, 13),
+      ),
+    );
+
+    await uploader.uploadPending();
+
+    expect(await local.pendingOperations(), isEmpty);
+    expect(
+      (await local.getDocumentByRemoteId(4))!.syncState,
+      DocumentSyncState.synced,
+    );
+    expect(remote.documents.single.document, 'newer');
+  });
+
+  test(
+    'stale upload is discarded and replaced by the remote document',
+    () async {
+      final remoteDocument = offlineTestDocument(
+        id: 5,
+        body: 'iphone version',
+        updatedAt: DateTime.utc(2026, 7, 27, 15),
+      );
+      remote.replaceRemote(remoteDocument);
+      await _queue(
+        local,
+        offlineTestDocument(
+          id: 5,
+          body: 'old laptop version',
+          updatedAt: DateTime.utc(2026, 7, 27, 14),
+        ),
+      );
+
+      await uploader.uploadPending();
+
+      expect(await local.pendingOperations(), isEmpty);
+      final saved = await local.getDocumentByRemoteId(5);
+      expect(saved!.document.document, 'iphone version');
+      expect(saved.syncState, DocumentSyncState.synced);
+    },
+  );
+
+  test('network failure retains the exact draft and retry timestamp', () async {
+    final editTime = DateTime.utc(2026, 7, 27, 16);
+    final draft = offlineTestDocument(
+      id: 6,
+      body: 'not uploaded yet',
+      updatedAt: editTime,
+    );
+    await _queue(local, draft);
+    remote.error = StateError('offline');
+
+    await uploader.uploadPending();
+
+    final pending = (await local.pendingOperations()).single;
+    final saved = await local.getDocumentByRemoteId(6);
+    expect(pending.status, PendingOperationStatus.retryWaiting);
+    expect(saved!.document.updatedAt, editTime);
+    expect(saved.document.document, 'not uploaded yet');
+  });
+}
+
+Future<void> _import(MemoryLocalNotesStore local, dynamic document) {
+  return local.importRemoteDocuments(<RemoteDocument>[
+    RemoteDocument(
+      key: DocumentKey(
+        localId: 'remote-${document.id}',
+        remoteId: document.id as int,
+      ),
+      document: document,
+      revision: RemoteRevision(
+        (document.updatedAt as DateTime).toUtc().toIso8601String(),
+      ),
+    ),
+  ]);
+}
+
+Future<void> _queue(MemoryLocalNotesStore local, dynamic document) {
+  final key = DocumentKey(
+    localId: 'remote-${document.id}',
+    remoteId: document.id as int,
+  );
+  final timestamp = document.updatedAt as DateTime;
+  return local.saveDraftAndEnqueue(
+    LocalDocument(
+      key: key,
+      accountKey: local.accountKey,
+      document: document,
+      localUpdatedAt: timestamp,
+      serverRevision: const RemoteRevision('previous'),
+      baseServerRevision: const RemoteRevision('previous'),
+      syncState: DocumentSyncState.locallyModified,
+    ),
+    operation: PendingOperation(
+      operationId: 'operation-${document.id}',
+      accountKey: local.accountKey,
+      documentKey: key,
+      type: PendingOperationType.update,
+      payload: <String, Object?>{
+        'updated_at': timestamp.toUtc().toIso8601String(),
+      },
+      createdAt: timestamp,
+    ),
+  );
+}
+
+final class _Clock implements Clock {
+  _Clock(this.value);
+
+  DateTime value;
+
+  @override
+  DateTime now() => value;
+}
+
+final class _Ids implements IdGenerator {
+  int _next = 0;
+
+  @override
+  String nextId() => 'id-${_next++}';
+}

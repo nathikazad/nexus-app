@@ -1,40 +1,39 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_notes/application/fake/fake_notes_workspace.dart';
+import 'package:nx_notes/composition/notes_composition.dart';
 import 'package:nx_notes/data/document/mirror_publish_trigger.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_publish.dart';
-import 'package:nx_notes/domain/document/document_query.dart';
-import 'package:nx_notes/domain/document/document_repository.dart';
-import 'package:nx_notes/domain/document/document_snap.dart';
-import 'package:nx_notes/domain/links/linked_model.dart';
-import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
 
 void main() {
   test(
     'publish click saves publish json and triggers immediate publish',
     () async {
-      final repository = _FakeDocumentRepository();
       final trigger = _FakeMirrorPublishTrigger();
+      final document = _document(publish: DocumentPublishState.disabled());
+      final workspace = FakeNotesWorkspace(documents: [document]);
       final container = ProviderContainer(
         overrides: [
-          documentRepositoryProvider.overrideWithValue(repository),
+          notesWorkspaceProvider.overrideWithValue(workspace),
           mirrorPublishTriggerProvider.overrideWithValue(trigger),
         ],
       );
       addTearDown(container.dispose);
-
-      final document = _document(publish: DocumentPublishState.disabled());
-      repository.nextUpdate = document;
+      addTearDown(workspace.close);
 
       await container
           .read(documentMutationControllerProvider)
           .setPublishEnabled(document, true);
       await Future<void>.delayed(Duration.zero);
 
-      expect(repository.updated, hasLength(2));
-      expect(repository.updated.last.publish.enabled, true);
+      expect(workspace.sessionFor(document.id)!.saveCount, 2);
+      expect(
+        workspace.sessionFor(document.id)!.state.document!.publish.enabled,
+        true,
+      );
       expect(trigger.calls, [
         const _TriggerCall('publish_click', 3245, true, true),
       ]);
@@ -42,16 +41,7 @@ void main() {
   );
 
   test('published draft save triggers debounced edit publish', () async {
-    final repository = _FakeDocumentRepository();
     final trigger = _FakeMirrorPublishTrigger();
-    final container = ProviderContainer(
-      overrides: [
-        documentRepositoryProvider.overrideWithValue(repository),
-        mirrorPublishTriggerProvider.overrideWithValue(trigger),
-      ],
-    );
-    addTearDown(container.dispose);
-
     final document = _document(
       publish: DocumentPublishState.disabled().enable(
         jsonDocument: _jsonDocument('hello'),
@@ -60,61 +50,71 @@ void main() {
         slug: 'doc',
       ),
     );
+    final workspace = FakeNotesWorkspace(documents: [document]);
+    final container = ProviderContainer(
+      overrides: [
+        notesWorkspaceProvider.overrideWithValue(workspace),
+        mirrorPublishTriggerProvider.overrideWithValue(trigger),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(workspace.close);
 
     await container
         .read(documentMutationControllerProvider)
         .saveDraft(document, policy: DraftSavePolicy.immediate);
     await Future<void>.delayed(Duration.zero);
 
-    expect(repository.updated, hasLength(1));
+    expect(workspace.sessionFor(document.id)!.saveCount, 1);
     expect(trigger.calls, [const _TriggerCall('edit', 3245, false, false)]);
   });
 
   test('private draft save does not trigger publishing', () async {
-    final repository = _FakeDocumentRepository();
     final trigger = _FakeMirrorPublishTrigger();
+    final document = _document(publish: DocumentPublishState.disabled());
+    final workspace = FakeNotesWorkspace(documents: [document]);
     final container = ProviderContainer(
       overrides: [
-        documentRepositoryProvider.overrideWithValue(repository),
+        notesWorkspaceProvider.overrideWithValue(workspace),
         mirrorPublishTriggerProvider.overrideWithValue(trigger),
       ],
     );
     addTearDown(container.dispose);
+    addTearDown(workspace.close);
 
     await container
         .read(documentMutationControllerProvider)
-        .saveDraft(
-          _document(publish: DocumentPublishState.disabled()),
-          policy: DraftSavePolicy.immediate,
-        );
+        .saveDraft(document, policy: DraftSavePolicy.immediate);
     await Future<void>.delayed(Duration.zero);
 
-    expect(repository.updated, hasLength(1));
+    expect(workspace.sessionFor(document.id)!.saveCount, 1);
     expect(trigger.calls, isEmpty);
   });
 
   test(
     'publish click trigger failure fails after saving publish json',
     () async {
-      final repository = _FakeDocumentRepository();
       final trigger = _FakeMirrorPublishTrigger(throwsOnTrigger: true);
+      final document = _document();
+      final workspace = FakeNotesWorkspace(documents: [document]);
       final container = ProviderContainer(
         overrides: [
-          documentRepositoryProvider.overrideWithValue(repository),
+          notesWorkspaceProvider.overrideWithValue(workspace),
           mirrorPublishTriggerProvider.overrideWithValue(trigger),
         ],
       );
       addTearDown(container.dispose);
+      addTearDown(workspace.close);
 
       await expectLater(
         container
             .read(documentMutationControllerProvider)
-            .setPublishEnabled(_document(), true),
+            .setPublishEnabled(document, true),
         throwsStateError,
       );
       await Future<void>.delayed(Duration.zero);
 
-      expect(repository.updated, hasLength(2));
+      expect(workspace.sessionFor(document.id)!.saveCount, 2);
       expect(trigger.calls, [
         const _TriggerCall('publish_click', 3245, true, true),
       ]);
@@ -122,16 +122,7 @@ void main() {
   );
 
   test('edit trigger failure does not fail document save', () async {
-    final repository = _FakeDocumentRepository();
     final trigger = _FakeMirrorPublishTrigger(throwsOnTrigger: true);
-    final container = ProviderContainer(
-      overrides: [
-        documentRepositoryProvider.overrideWithValue(repository),
-        mirrorPublishTriggerProvider.overrideWithValue(trigger),
-      ],
-    );
-    addTearDown(container.dispose);
-
     final document = _document(
       publish: DocumentPublishState.disabled().enable(
         jsonDocument: _jsonDocument('hello'),
@@ -140,13 +131,22 @@ void main() {
         slug: 'doc',
       ),
     );
+    final workspace = FakeNotesWorkspace(documents: [document]);
+    final container = ProviderContainer(
+      overrides: [
+        notesWorkspaceProvider.overrideWithValue(workspace),
+        mirrorPublishTriggerProvider.overrideWithValue(trigger),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(workspace.close);
 
     await container
         .read(documentMutationControllerProvider)
         .saveDraft(document, policy: DraftSavePolicy.immediate);
     await Future<void>.delayed(Duration.zero);
 
-    expect(repository.updated, hasLength(1));
+    expect(workspace.sessionFor(document.id)!.saveCount, 1);
     expect(trigger.calls, [const _TriggerCall('edit', 3245, false, false)]);
   });
 }
@@ -241,87 +241,5 @@ class _TriggerCall {
   @override
   String toString() {
     return '_TriggerCall($reason, $documentId, $immediate, $waitForCompletion)';
-  }
-}
-
-class _FakeDocumentRepository implements DocumentRepository {
-  final List<NxDocument> updated = [];
-  NxDocument? nextUpdate;
-
-  @override
-  Future<NxDocument> updateDraft(NxDocument document) async {
-    updated.add(document);
-    return nextUpdate ?? document;
-  }
-
-  @override
-  Future<void> attachLinkedModel({
-    required int documentId,
-    required LinkableModelType modelType,
-    required int modelId,
-  }) async {}
-
-  @override
-  Future<void> attachProject(int documentId, int projectId) async {}
-
-  @override
-  Future<NxDocument> create({
-    String? title,
-    DocumentKind kind = DocumentKind.document,
-  }) async {
-    return _document();
-  }
-
-  @override
-  Future<DocumentSnap> createSnapshot(
-    int documentId, {
-    required String source,
-    String changeSummary = '',
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> delete(int id) async {}
-
-  @override
-  Future<void> detachProject(int documentId, int relationId) async {}
-
-  @override
-  Future<NxDocument?> getById(int id) async => null;
-
-  @override
-  Future<List<NxDocument>> listAll() async => [];
-
-  @override
-  Future<List<NxDocument>> listBooks({int limit = 50}) async => [];
-
-  @override
-  Future<List<NxDocument>> listByTag(DocumentTagFilter filter) async => [];
-
-  @override
-  Future<List<NxDocument>> listPinned({int limit = 20}) async => [];
-
-  @override
-  Future<List<LinkedModel>> listProjects() async => [];
-
-  @override
-  Future<List<NxDocument>> listRecent({int limit = 20}) async => [];
-
-  @override
-  Future<List<DocumentSnap>> listSnapshots(int documentId) async => [];
-
-  @override
-  Future<List<TagSystem>> listTagSystems() async => [];
-
-  @override
-  Future<List<NxDocument>> search(String query) async => [];
-
-  @override
-  Future<List<LinkedModel>> searchLinkableModels({
-    required LinkableModelType modelType,
-    required String query,
-  }) async {
-    return [];
   }
 }

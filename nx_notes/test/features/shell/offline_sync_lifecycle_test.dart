@@ -8,14 +8,14 @@ void main() {
   testWidgets('web policy does not initialize the offline lifecycle', (
     tester,
   ) async {
-    var offlineServiceReads = 0;
+    var workspaceReads = 0;
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           offlineEnabledProvider.overrideWithValue(false),
-          offlineNotesServiceProvider.overrideWith((ref) {
-            offlineServiceReads++;
+          notesWorkspaceProvider.overrideWith((ref) {
+            workspaceReads++;
             return null;
           }),
         ],
@@ -27,6 +27,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('Web notes'), findsOneWidget);
-    expect(offlineServiceReads, 0);
+    expect(workspaceReads, 0);
   });
 }

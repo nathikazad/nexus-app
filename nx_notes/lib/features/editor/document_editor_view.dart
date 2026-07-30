@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:auto_size_text/auto_size_text.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:nx_notes/application/document_session.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/providers.dart';
@@ -52,14 +54,24 @@ class DocumentEditorView extends ConsumerWidget {
     if (kDebugMode) {
       debugPrint('[nx_notes editor lifecycle] view-build document=$documentId');
     }
-    final asyncDocument = ref.watch(offlineDocumentProvider(documentId));
-    return asyncDocument.when(
-      data: (document) {
+    final asyncState = ref.watch(documentSessionStateProvider(documentId));
+    return asyncState.when(
+      data: (sessionState) {
+        final document = sessionState.document;
         if (document == null) {
-          return const Center(child: Text('Document not found'));
+          return Center(
+            child: Text(
+              sessionState.phase == DocumentPhase.unavailableOffline
+                  ? 'This document has not been downloaded on this device.'
+                  : sessionState.phase == DocumentPhase.notFound
+                  ? 'Document not found'
+                  : 'Opening document…',
+            ),
+          );
         }
         return DocumentEditorBody(
           document: document,
+          changeOrigin: sessionState.origin,
           contextBar: contextBar,
           onTitleChanged: onTitleChanged,
           onOpenDocumentLink: onOpenDocumentLink,
@@ -81,6 +93,7 @@ class DocumentEditorView extends ConsumerWidget {
 class DocumentEditorBody extends ConsumerStatefulWidget {
   const DocumentEditorBody({
     required this.document,
+    this.changeOrigin = DocumentChangeOrigin.localCache,
     this.contextBar,
     this.onTitleChanged,
     this.onOpenDocumentLink,
@@ -95,6 +108,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
   });
 
   final NxDocument document;
+  final DocumentChangeOrigin changeOrigin;
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
   final ValueChanged<int>? onOpenDocumentLink;
@@ -213,12 +227,14 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
       _replaceTitleText(widget.document.title);
     }
     if (oldWidget.document.id == widget.document.id) {
-      _draftDocument = _draftDocument.copyWith(
-        links: widget.document.links,
-        readingState: widget.document.readingState,
-        bookRank: widget.document.bookRank,
-        clearBookRank: widget.document.bookRank == null,
-      );
+      _draftDocument = _isRemoteOrigin(widget.changeOrigin)
+          ? widget.document
+          : _draftDocument.copyWith(
+              links: widget.document.links,
+              readingState: widget.document.readingState,
+              bookRank: widget.document.bookRank,
+              clearBookRank: widget.document.bookRank == null,
+            );
     }
     if (oldWidget.active != widget.active ||
         oldWidget.onOpenDocumentLink != widget.onOpenDocumentLink) {
@@ -513,17 +529,22 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                         Expanded(
                           child: _NxAppFlowyEditor(
                             document: widget.document,
+                            changeOrigin: widget.changeOrigin,
                             editorMode: _editorMode,
                             readOnly: widget.readOnly,
                             active: widget.active,
                             searchLinkableModels:
                                 ({required modelType, required query}) {
-                                  return ref
-                                      .read(documentRepositoryProvider)
-                                      .searchLinkableModels(
-                                        modelType: modelType,
-                                        query: query,
-                                      );
+                                  final service = ref.read(
+                                    documentLinkServiceProvider,
+                                  );
+                                  if (service == null) {
+                                    return Future.value(const <LinkedModel>[]);
+                                  }
+                                  return service.search(
+                                    modelType: modelType,
+                                    query: query,
+                                  );
                                 },
                             onLinkableModelSelected: widget.readOnly
                                 ? null
@@ -700,6 +721,7 @@ double _titleWidth({
 class _NxAppFlowyEditor extends StatefulWidget {
   const _NxAppFlowyEditor({
     required this.document,
+    required this.changeOrigin,
     required this.editorMode,
     required this.readOnly,
     required this.onFindBarChanged,
@@ -715,6 +737,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
   });
 
   final NxDocument document;
+  final DocumentChangeOrigin changeOrigin;
   final _DocumentEditorMode editorMode;
   final bool readOnly;
   final bool active;
@@ -750,6 +773,19 @@ class _EditorFindBarPresentation {
   final int serial;
 }
 
+bool _isRemoteOrigin(DocumentChangeOrigin origin) {
+  return origin == DocumentChangeOrigin.initialRemoteLoad ||
+      origin == DocumentChangeOrigin.remoteRefresh ||
+      origin == DocumentChangeOrigin.snapshotRestore;
+}
+
+String _contentFingerprint(NxDocument document) {
+  final appFlowyDocument = document.jsonDocument['document'];
+  return appFlowyDocument == null
+      ? document.document
+      : jsonEncode(appFlowyDocument);
+}
+
 class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   static const _scrollAnchorSaveDelay = Duration(milliseconds: 450);
   static const _scrollAnchorRestoreRetryDelay = Duration(milliseconds: 80);
@@ -768,6 +804,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   SearchServiceV3? _findSearchService;
   bool _activeHeadingPublishScheduled = false;
   bool _scrollAnchorSaveEnabled = false;
+  bool _skipNextScrollAnchorSave = true;
   bool _saveNextTransactionImmediately = false;
   bool _showFindBar = false;
   late NxDocument _editorDocument;
@@ -791,6 +828,11 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       _disposeEditor();
       _createEditor();
       return;
+    }
+    if (_isRemoteOrigin(widget.changeOrigin) &&
+        _contentFingerprint(oldWidget.document) !=
+            _contentFingerprint(widget.document)) {
+      unawaited(_applyExternalDocument(widget.document));
     }
     if (oldWidget.editorMode != widget.editorMode ||
         oldWidget.readOnly != widget.readOnly) {
@@ -821,6 +863,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     _editorDocumentId = widget.document.id;
     _lastSavedScrollAnchor = null;
     _scrollAnchorSaveEnabled = false;
+    _skipNextScrollAnchorSave = true;
     _showFindBar = false;
     _editorState = EditorState(
       document: _documentFromDocument(widget.document),
@@ -891,6 +934,30 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     }
 
     return Document.blank(withInitialText: true);
+  }
+
+  Future<void> _applyExternalDocument(NxDocument document) async {
+    _scrollAnchorSaveDebounce?.cancel();
+    _skipNextScrollAnchorSave = true;
+    final incoming = _documentFromDocument(document);
+    final transaction = _editorState.transaction;
+    final existingCount = _editorState.document.root.children.length;
+    if (existingCount > 0) {
+      transaction.deleteNodesAtPath(<int>[0], existingCount);
+    }
+    transaction.insertNodes(<int>[0], incoming.root.children);
+    final wasEditable = _editorState.editable;
+    _editorState.editable = true;
+    try {
+      await _editorState.apply(
+        transaction,
+        options: const ApplyOptions(recordUndo: false, inMemoryUpdate: true),
+        withUpdateSelection: false,
+      );
+      _editorDocument = document;
+    } finally {
+      _editorState.editable = wasEditable;
+    }
   }
 
   void _handleEditorScrolled() {
@@ -1159,6 +1226,11 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     }
     final anchor = _currentScrollAnchor();
     if (anchor == null) {
+      return;
+    }
+    if (_skipNextScrollAnchorSave) {
+      _skipNextScrollAnchorSave = false;
+      _lastSavedScrollAnchor = anchor;
       return;
     }
     if (anchor == _lastSavedScrollAnchor) {

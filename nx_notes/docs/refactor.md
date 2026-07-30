@@ -14,6 +14,28 @@ request from a widget to storage without discovering hidden provider
 invalidation, platform checks spread through features, or competing sync
 systems.
 
+## Implementation status
+
+Implemented in July 2026.
+
+- Native iOS and macOS composition now uses `NativeNotesWorkspace`,
+  `NativeDocumentSession`, Drift summary/body storage, and `BackgroundUploader`.
+- Web composition uses `WebNotesWorkspace` and direct KGQL access without
+  opening SQLite or constructing an outbox.
+- KGQL exposes one atomic `set_kgql_model_if_newer` mutation backed by a
+  PostgreSQL row lock and `models.updated_at`.
+- Catalog requests fetch summary structs only. Complete document bodies are
+  fetched once when a document session opens.
+- Riverpod constructs and owns the application objects; plain Dart services
+  own the behavior.
+- Links, history, publishing, and assets retain separate, testable
+  capabilities.
+- The old full-library pull engine, duplicate sync adapters, global document
+  cache, and save-driven invalidation paths have been removed.
+- Memory, Drift, fake remote, repository remote, native, web, provider,
+  widget, restart, retry, stale-write, account identity, and server concurrency
+  behavior are covered by automated tests.
+
 ## Product requirements
 
 ### iOS and macOS

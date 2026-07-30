@@ -8,12 +8,9 @@ import 'package:nx_notes/data/document/document_schema_provider.dart';
 import 'package:nx_notes/data/document/mirror_publish_trigger.dart';
 import 'package:nx_notes/data/document/kgql_document_repository.dart';
 import 'package:nx_notes/data/document/nx_docs_state.dart';
-import 'package:nx_notes/domain/document/document.dart';
-import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/document/document_repository.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
-import 'package:nx_notes/domain/tags/tag_system.dart';
 
 final documentRepositoryProvider = Provider<DocumentRepository>((ref) {
   return KgqlDocumentRepository(
@@ -114,90 +111,11 @@ void requestDocumentHeadingScroll({
   );
 }
 
-class DocumentLocalCache extends Notifier<Map<int, NxDocument>> {
-  @override
-  Map<int, NxDocument> build() => const <int, NxDocument>{};
-
-  void put(NxDocument document) {
-    if (kDebugMode) {
-      debugPrintStack(
-        label:
-            '[nx_notes web refresh] cache-write document=${document.id} '
-            'title="${document.title}"',
-        stackTrace: StackTrace.current,
-        maxFrames: 8,
-      );
-    }
-    state = {...state, document.id: document};
-  }
-
-  void remove(int id) {
-    if (kDebugMode) {
-      debugPrintStack(
-        label: '[nx_notes web refresh] cache-remove document=$id',
-        stackTrace: StackTrace.current,
-        maxFrames: 8,
-      );
-    }
-    final next = {...state};
-    next.remove(id);
-    state = next;
-  }
-}
-
-final documentLocalCacheProvider =
-    NotifierProvider<DocumentLocalCache, Map<int, NxDocument>>(
-      DocumentLocalCache.new,
-    );
-
-final recentDocumentsProvider = FutureProvider<List<NxDocument>>(
-  (ref) => ref.watch(documentRepositoryProvider).listRecent(limit: 20),
-);
-
-final pinnedDocumentsProvider = FutureProvider<List<NxDocument>>(
-  (ref) => ref.watch(documentRepositoryProvider).listPinned(limit: 20),
-);
-
-final booksProvider = FutureProvider<List<NxDocument>>(
-  (ref) => ref.watch(documentRepositoryProvider).listBooks(limit: 100),
-);
-
-final tagSystemsProvider = FutureProvider<List<TagSystem>>(
-  (ref) => ref.watch(documentRepositoryProvider).listTagSystems(),
-);
-
-final documentByIdProvider = FutureProvider.family<NxDocument?, int>((ref, id) {
-  final cached = ref.watch(
-    documentLocalCacheProvider.select((documents) => documents[id]),
-  );
-  if (cached != null && cached.hasFullDocument) {
-    debugPrint('[nx_notes web refresh] cache-hit document=$id');
-    return cached;
-  }
-  if (kDebugMode) {
-    debugPrintStack(
-      label: '[nx_notes web refresh] fetch document=$id source=kgql',
-      stackTrace: StackTrace.current,
-      maxFrames: 8,
-    );
-  }
-  return ref.watch(documentRepositoryProvider).getById(id);
-});
-
 final documentSnapshotsProvider =
     FutureProvider.family<List<DocumentSnap>, int>(
       (ref, id) => ref.watch(documentRepositoryProvider).listSnapshots(id),
     );
 
-final documentSearchProvider = FutureProvider.family<List<NxDocument>, String>(
-  (ref, query) => ref.watch(documentRepositoryProvider).search(query),
-);
-
 final projectsProvider = FutureProvider<List<LinkedModel>>(
   (ref) => ref.watch(documentRepositoryProvider).listProjects(),
 );
-
-final documentsByTagProvider =
-    FutureProvider.family<List<NxDocument>, DocumentTagFilter>(
-      (ref, filter) => ref.watch(documentRepositoryProvider).listByTag(filter),
-    );

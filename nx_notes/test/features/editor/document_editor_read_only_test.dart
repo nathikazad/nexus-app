@@ -2,6 +2,9 @@ import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_notes/application/document_session.dart';
+import 'package:nx_notes/application/fake/fake_notes_workspace.dart';
+import 'package:nx_notes/composition/notes_composition.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
@@ -94,6 +97,64 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(documentActiveHeadingNotifier.value, isNull);
   });
+
+  testWidgets(
+    'remote content updates keep the editor mounted and do not autosave',
+    (tester) async {
+      var document = _document();
+      var origin = DocumentChangeOrigin.initialRemoteLoad;
+      late void Function(NxDocument, DocumentChangeOrigin) update;
+      final workspace = FakeNotesWorkspace(documents: <NxDocument>[document]);
+      addTearDown(workspace.close);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            documentImageAssetServiceProvider.overrideWithValue(null),
+            notesWorkspaceProvider.overrideWithValue(workspace),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  update = (next, nextOrigin) {
+                    setState(() {
+                      document = next;
+                      origin = nextOrigin;
+                    });
+                  };
+                  return DocumentEditorBody(
+                    document: document,
+                    changeOrigin: origin,
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(workspace.openCount, 0);
+      final originalEditorState = tester.state(find.byType(AppFlowyEditor));
+
+      update(
+        document.copyWith(document: '# Heading\nRemote body'),
+        DocumentChangeOrigin.remoteRefresh,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(
+        identical(
+          originalEditorState,
+          tester.state(find.byType(AppFlowyEditor)),
+        ),
+        isTrue,
+      );
+      expect(workspace.openCount, 0);
+    },
+  );
 }
 
 NxDocument _document() {

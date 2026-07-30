@@ -1,6 +1,16 @@
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/document/document_publish.dart';
 
+enum DocumentKind {
+  document('Document', 'Document'),
+  book('Book', 'Book');
+
+  const DocumentKind(this.modelTypeName, this.label);
+
+  final String modelTypeName;
+  final String label;
+}
+
 class NxDocument {
   const NxDocument({
     required this.id,

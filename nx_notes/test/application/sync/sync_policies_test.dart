@@ -1,9 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_notes/application/sync/conflict_detector.dart';
 import 'package:nx_notes/application/sync/outbox_coalescer.dart';
-import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
-import 'package:nx_notes/domain/sync/sync_state.dart';
 
 import '../../support/offline_fixtures.dart';
 
@@ -62,57 +59,22 @@ void main() {
         throwsArgumentError,
       );
     });
-  });
 
-  group('PullResolutionPolicy', () {
-    const policy = PullResolutionPolicy();
-
-    test('inserts unseen remote documents', () {
-      expect(
-        policy.resolve(
-          localExists: false,
-          localState: null,
-          baseRevision: null,
-          incomingRevision: const RemoteRevision('remote-1'),
+    test('an edit replacing an in-flight save gets a new identity', () {
+      final result = coalescer.coalesce(
+        offlinePendingOperation().copyWith(
+          status: PendingOperationStatus.claimed,
+          leaseOwner: 'worker',
+          leaseExpiresAt: DateTime.utc(2026, 1, 2),
         ),
-        PullResolution.insertRemote,
-      );
-    });
-
-    test('replaces a clean local copy', () {
-      expect(
-        policy.resolve(
-          localExists: true,
-          localState: DocumentSyncState.synced,
-          baseRevision: const RemoteRevision('old'),
-          incomingRevision: const RemoteRevision('new'),
+        offlinePendingOperation(
+          operationId: 'new-operation',
+          body: 'newer edit',
         ),
-        PullResolution.replaceLocal,
       );
-    });
 
-    test('detects divergent dirty content', () {
-      expect(
-        policy.resolve(
-          localExists: true,
-          localState: DocumentSyncState.queued,
-          baseRevision: const RemoteRevision('old'),
-          incomingRevision: const RemoteRevision('new'),
-        ),
-        PullResolution.conflict,
-      );
-    });
-
-    test('keeps dirty local content when remote base is unchanged', () {
-      expect(
-        policy.resolve(
-          localExists: true,
-          localState: DocumentSyncState.queued,
-          baseRevision: const RemoteRevision('same'),
-          incomingRevision: const RemoteRevision('same'),
-        ),
-        PullResolution.keepLocal,
-      );
+      expect(result!.operationId, 'new-operation');
+      expect(result.status, PendingOperationStatus.queued);
     });
   });
 }

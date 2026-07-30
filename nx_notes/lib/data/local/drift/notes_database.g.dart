@@ -1646,6 +1646,724 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataData> {
   }
 }
 
+class $DocumentSummariesTable extends DocumentSummaries
+    with TableInfo<$DocumentSummariesTable, DocumentSummaryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DocumentSummariesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _accountKeyMeta = const VerificationMeta(
+    'accountKey',
+  );
+  @override
+  late final GeneratedColumn<String> accountKey = GeneratedColumn<String>(
+    'account_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
+    'remote_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _documentJsonMeta = const VerificationMeta(
+    'documentJson',
+  );
+  @override
+  late final GeneratedColumn<String> documentJson = GeneratedColumn<String>(
+    'document_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remoteUpdatedAtMeta = const VerificationMeta(
+    'remoteUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> remoteUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'remote_updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _deletedLocallyMeta = const VerificationMeta(
+    'deletedLocally',
+  );
+  @override
+  late final GeneratedColumn<bool> deletedLocally = GeneratedColumn<bool>(
+    'deleted_locally',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted_locally" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    accountKey,
+    remoteId,
+    documentJson,
+    remoteUpdatedAt,
+    deletedLocally,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'document_summaries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DocumentSummaryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('account_key')) {
+      context.handle(
+        _accountKeyMeta,
+        accountKey.isAcceptableOrUnknown(data['account_key']!, _accountKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountKeyMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteIdMeta);
+    }
+    if (data.containsKey('document_json')) {
+      context.handle(
+        _documentJsonMeta,
+        documentJson.isAcceptableOrUnknown(
+          data['document_json']!,
+          _documentJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_documentJsonMeta);
+    }
+    if (data.containsKey('remote_updated_at')) {
+      context.handle(
+        _remoteUpdatedAtMeta,
+        remoteUpdatedAt.isAcceptableOrUnknown(
+          data['remote_updated_at']!,
+          _remoteUpdatedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteUpdatedAtMeta);
+    }
+    if (data.containsKey('deleted_locally')) {
+      context.handle(
+        _deletedLocallyMeta,
+        deletedLocally.isAcceptableOrUnknown(
+          data['deleted_locally']!,
+          _deletedLocallyMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {accountKey, remoteId};
+  @override
+  DocumentSummaryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DocumentSummaryRow(
+      accountKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_key'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}remote_id'],
+      )!,
+      documentJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_json'],
+      )!,
+      remoteUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}remote_updated_at'],
+      )!,
+      deletedLocally: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted_locally'],
+      )!,
+    );
+  }
+
+  @override
+  $DocumentSummariesTable createAlias(String alias) {
+    return $DocumentSummariesTable(attachedDatabase, alias);
+  }
+}
+
+class DocumentSummaryRow extends DataClass
+    implements Insertable<DocumentSummaryRow> {
+  final String accountKey;
+  final int remoteId;
+  final String documentJson;
+  final DateTime remoteUpdatedAt;
+  final bool deletedLocally;
+  const DocumentSummaryRow({
+    required this.accountKey,
+    required this.remoteId,
+    required this.documentJson,
+    required this.remoteUpdatedAt,
+    required this.deletedLocally,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['account_key'] = Variable<String>(accountKey);
+    map['remote_id'] = Variable<int>(remoteId);
+    map['document_json'] = Variable<String>(documentJson);
+    map['remote_updated_at'] = Variable<DateTime>(remoteUpdatedAt);
+    map['deleted_locally'] = Variable<bool>(deletedLocally);
+    return map;
+  }
+
+  DocumentSummariesCompanion toCompanion(bool nullToAbsent) {
+    return DocumentSummariesCompanion(
+      accountKey: Value(accountKey),
+      remoteId: Value(remoteId),
+      documentJson: Value(documentJson),
+      remoteUpdatedAt: Value(remoteUpdatedAt),
+      deletedLocally: Value(deletedLocally),
+    );
+  }
+
+  factory DocumentSummaryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DocumentSummaryRow(
+      accountKey: serializer.fromJson<String>(json['accountKey']),
+      remoteId: serializer.fromJson<int>(json['remoteId']),
+      documentJson: serializer.fromJson<String>(json['documentJson']),
+      remoteUpdatedAt: serializer.fromJson<DateTime>(json['remoteUpdatedAt']),
+      deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'accountKey': serializer.toJson<String>(accountKey),
+      'remoteId': serializer.toJson<int>(remoteId),
+      'documentJson': serializer.toJson<String>(documentJson),
+      'remoteUpdatedAt': serializer.toJson<DateTime>(remoteUpdatedAt),
+      'deletedLocally': serializer.toJson<bool>(deletedLocally),
+    };
+  }
+
+  DocumentSummaryRow copyWith({
+    String? accountKey,
+    int? remoteId,
+    String? documentJson,
+    DateTime? remoteUpdatedAt,
+    bool? deletedLocally,
+  }) => DocumentSummaryRow(
+    accountKey: accountKey ?? this.accountKey,
+    remoteId: remoteId ?? this.remoteId,
+    documentJson: documentJson ?? this.documentJson,
+    remoteUpdatedAt: remoteUpdatedAt ?? this.remoteUpdatedAt,
+    deletedLocally: deletedLocally ?? this.deletedLocally,
+  );
+  DocumentSummaryRow copyWithCompanion(DocumentSummariesCompanion data) {
+    return DocumentSummaryRow(
+      accountKey: data.accountKey.present
+          ? data.accountKey.value
+          : this.accountKey,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      documentJson: data.documentJson.present
+          ? data.documentJson.value
+          : this.documentJson,
+      remoteUpdatedAt: data.remoteUpdatedAt.present
+          ? data.remoteUpdatedAt.value
+          : this.remoteUpdatedAt,
+      deletedLocally: data.deletedLocally.present
+          ? data.deletedLocally.value
+          : this.deletedLocally,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentSummaryRow(')
+          ..write('accountKey: $accountKey, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('documentJson: $documentJson, ')
+          ..write('remoteUpdatedAt: $remoteUpdatedAt, ')
+          ..write('deletedLocally: $deletedLocally')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    accountKey,
+    remoteId,
+    documentJson,
+    remoteUpdatedAt,
+    deletedLocally,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DocumentSummaryRow &&
+          other.accountKey == this.accountKey &&
+          other.remoteId == this.remoteId &&
+          other.documentJson == this.documentJson &&
+          other.remoteUpdatedAt == this.remoteUpdatedAt &&
+          other.deletedLocally == this.deletedLocally);
+}
+
+class DocumentSummariesCompanion extends UpdateCompanion<DocumentSummaryRow> {
+  final Value<String> accountKey;
+  final Value<int> remoteId;
+  final Value<String> documentJson;
+  final Value<DateTime> remoteUpdatedAt;
+  final Value<bool> deletedLocally;
+  final Value<int> rowid;
+  const DocumentSummariesCompanion({
+    this.accountKey = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.documentJson = const Value.absent(),
+    this.remoteUpdatedAt = const Value.absent(),
+    this.deletedLocally = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DocumentSummariesCompanion.insert({
+    required String accountKey,
+    required int remoteId,
+    required String documentJson,
+    required DateTime remoteUpdatedAt,
+    this.deletedLocally = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : accountKey = Value(accountKey),
+       remoteId = Value(remoteId),
+       documentJson = Value(documentJson),
+       remoteUpdatedAt = Value(remoteUpdatedAt);
+  static Insertable<DocumentSummaryRow> custom({
+    Expression<String>? accountKey,
+    Expression<int>? remoteId,
+    Expression<String>? documentJson,
+    Expression<DateTime>? remoteUpdatedAt,
+    Expression<bool>? deletedLocally,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (accountKey != null) 'account_key': accountKey,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (documentJson != null) 'document_json': documentJson,
+      if (remoteUpdatedAt != null) 'remote_updated_at': remoteUpdatedAt,
+      if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DocumentSummariesCompanion copyWith({
+    Value<String>? accountKey,
+    Value<int>? remoteId,
+    Value<String>? documentJson,
+    Value<DateTime>? remoteUpdatedAt,
+    Value<bool>? deletedLocally,
+    Value<int>? rowid,
+  }) {
+    return DocumentSummariesCompanion(
+      accountKey: accountKey ?? this.accountKey,
+      remoteId: remoteId ?? this.remoteId,
+      documentJson: documentJson ?? this.documentJson,
+      remoteUpdatedAt: remoteUpdatedAt ?? this.remoteUpdatedAt,
+      deletedLocally: deletedLocally ?? this.deletedLocally,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (accountKey.present) {
+      map['account_key'] = Variable<String>(accountKey.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<int>(remoteId.value);
+    }
+    if (documentJson.present) {
+      map['document_json'] = Variable<String>(documentJson.value);
+    }
+    if (remoteUpdatedAt.present) {
+      map['remote_updated_at'] = Variable<DateTime>(remoteUpdatedAt.value);
+    }
+    if (deletedLocally.present) {
+      map['deleted_locally'] = Variable<bool>(deletedLocally.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentSummariesCompanion(')
+          ..write('accountKey: $accountKey, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('documentJson: $documentJson, ')
+          ..write('remoteUpdatedAt: $remoteUpdatedAt, ')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CatalogMembershipsTable extends CatalogMemberships
+    with TableInfo<$CatalogMembershipsTable, CatalogMembership> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CatalogMembershipsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _accountKeyMeta = const VerificationMeta(
+    'accountKey',
+  );
+  @override
+  late final GeneratedColumn<String> accountKey = GeneratedColumn<String>(
+    'account_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _catalogKeyMeta = const VerificationMeta(
+    'catalogKey',
+  );
+  @override
+  late final GeneratedColumn<String> catalogKey = GeneratedColumn<String>(
+    'catalog_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
+    'remote_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    accountKey,
+    catalogKey,
+    remoteId,
+    position,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'catalog_memberships';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CatalogMembership> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('account_key')) {
+      context.handle(
+        _accountKeyMeta,
+        accountKey.isAcceptableOrUnknown(data['account_key']!, _accountKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountKeyMeta);
+    }
+    if (data.containsKey('catalog_key')) {
+      context.handle(
+        _catalogKeyMeta,
+        catalogKey.isAcceptableOrUnknown(data['catalog_key']!, _catalogKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_catalogKeyMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {accountKey, catalogKey, remoteId};
+  @override
+  CatalogMembership map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CatalogMembership(
+      accountKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_key'],
+      )!,
+      catalogKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}catalog_key'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}remote_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+    );
+  }
+
+  @override
+  $CatalogMembershipsTable createAlias(String alias) {
+    return $CatalogMembershipsTable(attachedDatabase, alias);
+  }
+}
+
+class CatalogMembership extends DataClass
+    implements Insertable<CatalogMembership> {
+  final String accountKey;
+  final String catalogKey;
+  final int remoteId;
+  final int position;
+  const CatalogMembership({
+    required this.accountKey,
+    required this.catalogKey,
+    required this.remoteId,
+    required this.position,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['account_key'] = Variable<String>(accountKey);
+    map['catalog_key'] = Variable<String>(catalogKey);
+    map['remote_id'] = Variable<int>(remoteId);
+    map['position'] = Variable<int>(position);
+    return map;
+  }
+
+  CatalogMembershipsCompanion toCompanion(bool nullToAbsent) {
+    return CatalogMembershipsCompanion(
+      accountKey: Value(accountKey),
+      catalogKey: Value(catalogKey),
+      remoteId: Value(remoteId),
+      position: Value(position),
+    );
+  }
+
+  factory CatalogMembership.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CatalogMembership(
+      accountKey: serializer.fromJson<String>(json['accountKey']),
+      catalogKey: serializer.fromJson<String>(json['catalogKey']),
+      remoteId: serializer.fromJson<int>(json['remoteId']),
+      position: serializer.fromJson<int>(json['position']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'accountKey': serializer.toJson<String>(accountKey),
+      'catalogKey': serializer.toJson<String>(catalogKey),
+      'remoteId': serializer.toJson<int>(remoteId),
+      'position': serializer.toJson<int>(position),
+    };
+  }
+
+  CatalogMembership copyWith({
+    String? accountKey,
+    String? catalogKey,
+    int? remoteId,
+    int? position,
+  }) => CatalogMembership(
+    accountKey: accountKey ?? this.accountKey,
+    catalogKey: catalogKey ?? this.catalogKey,
+    remoteId: remoteId ?? this.remoteId,
+    position: position ?? this.position,
+  );
+  CatalogMembership copyWithCompanion(CatalogMembershipsCompanion data) {
+    return CatalogMembership(
+      accountKey: data.accountKey.present
+          ? data.accountKey.value
+          : this.accountKey,
+      catalogKey: data.catalogKey.present
+          ? data.catalogKey.value
+          : this.catalogKey,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      position: data.position.present ? data.position.value : this.position,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CatalogMembership(')
+          ..write('accountKey: $accountKey, ')
+          ..write('catalogKey: $catalogKey, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('position: $position')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(accountKey, catalogKey, remoteId, position);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CatalogMembership &&
+          other.accountKey == this.accountKey &&
+          other.catalogKey == this.catalogKey &&
+          other.remoteId == this.remoteId &&
+          other.position == this.position);
+}
+
+class CatalogMembershipsCompanion extends UpdateCompanion<CatalogMembership> {
+  final Value<String> accountKey;
+  final Value<String> catalogKey;
+  final Value<int> remoteId;
+  final Value<int> position;
+  final Value<int> rowid;
+  const CatalogMembershipsCompanion({
+    this.accountKey = const Value.absent(),
+    this.catalogKey = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CatalogMembershipsCompanion.insert({
+    required String accountKey,
+    required String catalogKey,
+    required int remoteId,
+    required int position,
+    this.rowid = const Value.absent(),
+  }) : accountKey = Value(accountKey),
+       catalogKey = Value(catalogKey),
+       remoteId = Value(remoteId),
+       position = Value(position);
+  static Insertable<CatalogMembership> custom({
+    Expression<String>? accountKey,
+    Expression<String>? catalogKey,
+    Expression<int>? remoteId,
+    Expression<int>? position,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (accountKey != null) 'account_key': accountKey,
+      if (catalogKey != null) 'catalog_key': catalogKey,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (position != null) 'position': position,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CatalogMembershipsCompanion copyWith({
+    Value<String>? accountKey,
+    Value<String>? catalogKey,
+    Value<int>? remoteId,
+    Value<int>? position,
+    Value<int>? rowid,
+  }) {
+    return CatalogMembershipsCompanion(
+      accountKey: accountKey ?? this.accountKey,
+      catalogKey: catalogKey ?? this.catalogKey,
+      remoteId: remoteId ?? this.remoteId,
+      position: position ?? this.position,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (accountKey.present) {
+      map['account_key'] = Variable<String>(accountKey.value);
+    }
+    if (catalogKey.present) {
+      map['catalog_key'] = Variable<String>(catalogKey.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<int>(remoteId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CatalogMembershipsCompanion(')
+          ..write('accountKey: $accountKey, ')
+          ..write('catalogKey: $catalogKey, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('position: $position, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SyncConflictsTable extends SyncConflicts
     with TableInfo<$SyncConflictsTable, SyncConflictRow> {
   @override
@@ -2574,6 +3292,10 @@ abstract class _$NotesDatabase extends GeneratedDatabase {
   late final $LocalDocumentsTable localDocuments = $LocalDocumentsTable(this);
   late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
   late final $SyncMetadataTable syncMetadata = $SyncMetadataTable(this);
+  late final $DocumentSummariesTable documentSummaries =
+      $DocumentSummariesTable(this);
+  late final $CatalogMembershipsTable catalogMemberships =
+      $CatalogMembershipsTable(this);
   late final $SyncConflictsTable syncConflicts = $SyncConflictsTable(this);
   late final $LocalSnapshotsTable localSnapshots = $LocalSnapshotsTable(this);
   @override
@@ -2584,6 +3306,8 @@ abstract class _$NotesDatabase extends GeneratedDatabase {
     localDocuments,
     syncOutbox,
     syncMetadata,
+    documentSummaries,
+    catalogMemberships,
     syncConflicts,
     localSnapshots,
   ];
@@ -3404,6 +4128,425 @@ typedef $$SyncMetadataTableProcessedTableManager =
       SyncMetadataData,
       PrefetchHooks Function()
     >;
+typedef $$DocumentSummariesTableCreateCompanionBuilder =
+    DocumentSummariesCompanion Function({
+      required String accountKey,
+      required int remoteId,
+      required String documentJson,
+      required DateTime remoteUpdatedAt,
+      Value<bool> deletedLocally,
+      Value<int> rowid,
+    });
+typedef $$DocumentSummariesTableUpdateCompanionBuilder =
+    DocumentSummariesCompanion Function({
+      Value<String> accountKey,
+      Value<int> remoteId,
+      Value<String> documentJson,
+      Value<DateTime> remoteUpdatedAt,
+      Value<bool> deletedLocally,
+      Value<int> rowid,
+    });
+
+class $$DocumentSummariesTableFilterComposer
+    extends Composer<_$NotesDatabase, $DocumentSummariesTable> {
+  $$DocumentSummariesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get documentJson => $composableBuilder(
+    column: $table.documentJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get remoteUpdatedAt => $composableBuilder(
+    column: $table.remoteUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deletedLocally => $composableBuilder(
+    column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DocumentSummariesTableOrderingComposer
+    extends Composer<_$NotesDatabase, $DocumentSummariesTable> {
+  $$DocumentSummariesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get documentJson => $composableBuilder(
+    column: $table.documentJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get remoteUpdatedAt => $composableBuilder(
+    column: $table.remoteUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deletedLocally => $composableBuilder(
+    column: $table.deletedLocally,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DocumentSummariesTableAnnotationComposer
+    extends Composer<_$NotesDatabase, $DocumentSummariesTable> {
+  $$DocumentSummariesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get documentJson => $composableBuilder(
+    column: $table.documentJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get remoteUpdatedAt => $composableBuilder(
+    column: $table.remoteUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get deletedLocally => $composableBuilder(
+    column: $table.deletedLocally,
+    builder: (column) => column,
+  );
+}
+
+class $$DocumentSummariesTableTableManager
+    extends
+        RootTableManager<
+          _$NotesDatabase,
+          $DocumentSummariesTable,
+          DocumentSummaryRow,
+          $$DocumentSummariesTableFilterComposer,
+          $$DocumentSummariesTableOrderingComposer,
+          $$DocumentSummariesTableAnnotationComposer,
+          $$DocumentSummariesTableCreateCompanionBuilder,
+          $$DocumentSummariesTableUpdateCompanionBuilder,
+          (
+            DocumentSummaryRow,
+            BaseReferences<
+              _$NotesDatabase,
+              $DocumentSummariesTable,
+              DocumentSummaryRow
+            >,
+          ),
+          DocumentSummaryRow,
+          PrefetchHooks Function()
+        > {
+  $$DocumentSummariesTableTableManager(
+    _$NotesDatabase db,
+    $DocumentSummariesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DocumentSummariesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DocumentSummariesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DocumentSummariesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> accountKey = const Value.absent(),
+                Value<int> remoteId = const Value.absent(),
+                Value<String> documentJson = const Value.absent(),
+                Value<DateTime> remoteUpdatedAt = const Value.absent(),
+                Value<bool> deletedLocally = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DocumentSummariesCompanion(
+                accountKey: accountKey,
+                remoteId: remoteId,
+                documentJson: documentJson,
+                remoteUpdatedAt: remoteUpdatedAt,
+                deletedLocally: deletedLocally,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountKey,
+                required int remoteId,
+                required String documentJson,
+                required DateTime remoteUpdatedAt,
+                Value<bool> deletedLocally = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DocumentSummariesCompanion.insert(
+                accountKey: accountKey,
+                remoteId: remoteId,
+                documentJson: documentJson,
+                remoteUpdatedAt: remoteUpdatedAt,
+                deletedLocally: deletedLocally,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DocumentSummariesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$NotesDatabase,
+      $DocumentSummariesTable,
+      DocumentSummaryRow,
+      $$DocumentSummariesTableFilterComposer,
+      $$DocumentSummariesTableOrderingComposer,
+      $$DocumentSummariesTableAnnotationComposer,
+      $$DocumentSummariesTableCreateCompanionBuilder,
+      $$DocumentSummariesTableUpdateCompanionBuilder,
+      (
+        DocumentSummaryRow,
+        BaseReferences<
+          _$NotesDatabase,
+          $DocumentSummariesTable,
+          DocumentSummaryRow
+        >,
+      ),
+      DocumentSummaryRow,
+      PrefetchHooks Function()
+    >;
+typedef $$CatalogMembershipsTableCreateCompanionBuilder =
+    CatalogMembershipsCompanion Function({
+      required String accountKey,
+      required String catalogKey,
+      required int remoteId,
+      required int position,
+      Value<int> rowid,
+    });
+typedef $$CatalogMembershipsTableUpdateCompanionBuilder =
+    CatalogMembershipsCompanion Function({
+      Value<String> accountKey,
+      Value<String> catalogKey,
+      Value<int> remoteId,
+      Value<int> position,
+      Value<int> rowid,
+    });
+
+class $$CatalogMembershipsTableFilterComposer
+    extends Composer<_$NotesDatabase, $CatalogMembershipsTable> {
+  $$CatalogMembershipsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get catalogKey => $composableBuilder(
+    column: $table.catalogKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CatalogMembershipsTableOrderingComposer
+    extends Composer<_$NotesDatabase, $CatalogMembershipsTable> {
+  $$CatalogMembershipsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get catalogKey => $composableBuilder(
+    column: $table.catalogKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CatalogMembershipsTableAnnotationComposer
+    extends Composer<_$NotesDatabase, $CatalogMembershipsTable> {
+  $$CatalogMembershipsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get accountKey => $composableBuilder(
+    column: $table.accountKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get catalogKey => $composableBuilder(
+    column: $table.catalogKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+}
+
+class $$CatalogMembershipsTableTableManager
+    extends
+        RootTableManager<
+          _$NotesDatabase,
+          $CatalogMembershipsTable,
+          CatalogMembership,
+          $$CatalogMembershipsTableFilterComposer,
+          $$CatalogMembershipsTableOrderingComposer,
+          $$CatalogMembershipsTableAnnotationComposer,
+          $$CatalogMembershipsTableCreateCompanionBuilder,
+          $$CatalogMembershipsTableUpdateCompanionBuilder,
+          (
+            CatalogMembership,
+            BaseReferences<
+              _$NotesDatabase,
+              $CatalogMembershipsTable,
+              CatalogMembership
+            >,
+          ),
+          CatalogMembership,
+          PrefetchHooks Function()
+        > {
+  $$CatalogMembershipsTableTableManager(
+    _$NotesDatabase db,
+    $CatalogMembershipsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CatalogMembershipsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CatalogMembershipsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CatalogMembershipsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> accountKey = const Value.absent(),
+                Value<String> catalogKey = const Value.absent(),
+                Value<int> remoteId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CatalogMembershipsCompanion(
+                accountKey: accountKey,
+                catalogKey: catalogKey,
+                remoteId: remoteId,
+                position: position,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountKey,
+                required String catalogKey,
+                required int remoteId,
+                required int position,
+                Value<int> rowid = const Value.absent(),
+              }) => CatalogMembershipsCompanion.insert(
+                accountKey: accountKey,
+                catalogKey: catalogKey,
+                remoteId: remoteId,
+                position: position,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CatalogMembershipsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$NotesDatabase,
+      $CatalogMembershipsTable,
+      CatalogMembership,
+      $$CatalogMembershipsTableFilterComposer,
+      $$CatalogMembershipsTableOrderingComposer,
+      $$CatalogMembershipsTableAnnotationComposer,
+      $$CatalogMembershipsTableCreateCompanionBuilder,
+      $$CatalogMembershipsTableUpdateCompanionBuilder,
+      (
+        CatalogMembership,
+        BaseReferences<
+          _$NotesDatabase,
+          $CatalogMembershipsTable,
+          CatalogMembership
+        >,
+      ),
+      CatalogMembership,
+      PrefetchHooks Function()
+    >;
 typedef $$SyncConflictsTableCreateCompanionBuilder =
     SyncConflictsCompanion Function({
       required String accountKey,
@@ -3899,6 +5042,10 @@ class $NotesDatabaseManager {
       $$SyncOutboxTableTableManager(_db, _db.syncOutbox);
   $$SyncMetadataTableTableManager get syncMetadata =>
       $$SyncMetadataTableTableManager(_db, _db.syncMetadata);
+  $$DocumentSummariesTableTableManager get documentSummaries =>
+      $$DocumentSummariesTableTableManager(_db, _db.documentSummaries);
+  $$CatalogMembershipsTableTableManager get catalogMemberships =>
+      $$CatalogMembershipsTableTableManager(_db, _db.catalogMemberships);
   $$SyncConflictsTableTableManager get syncConflicts =>
       $$SyncConflictsTableTableManager(_db, _db.syncConflicts);
   $$LocalSnapshotsTableTableManager get localSnapshots =>

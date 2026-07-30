@@ -56,6 +56,33 @@ class SyncMetadata extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{accountKey};
 }
 
+@DataClassName('DocumentSummaryRow')
+class DocumentSummaries extends Table {
+  TextColumn get accountKey => text()();
+  IntColumn get remoteId => integer()();
+  TextColumn get documentJson => text()();
+  DateTimeColumn get remoteUpdatedAt => dateTime()();
+  BoolColumn get deletedLocally =>
+      boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{accountKey, remoteId};
+}
+
+class CatalogMemberships extends Table {
+  TextColumn get accountKey => text()();
+  TextColumn get catalogKey => text()();
+  IntColumn get remoteId => integer()();
+  IntColumn get position => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{
+    accountKey,
+    catalogKey,
+    remoteId,
+  };
+}
+
 @DataClassName('SyncConflictRow')
 class SyncConflicts extends Table {
   TextColumn get accountKey => text()();
@@ -88,6 +115,8 @@ class LocalSnapshots extends Table {
     LocalDocuments,
     SyncOutbox,
     SyncMetadata,
+    DocumentSummaries,
+    CatalogMemberships,
     SyncConflicts,
     LocalSnapshots,
   ],
@@ -96,13 +125,34 @@ class NotesDatabase extends _$NotesDatabase {
   NotesDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => migrator.createAll(),
     onUpgrade: (migrator, from, to) async {
       if (from < 2) await migrator.createTable(localSnapshots);
+      if (from < 3) await migrator.createTable(catalogMemberships);
+      if (from < 4) {
+        await migrator.createTable(documentSummaries);
+        await customStatement('''
+          INSERT OR IGNORE INTO document_summaries (
+            account_key,
+            remote_id,
+            document_json,
+            remote_updated_at,
+            deleted_locally
+          )
+          SELECT
+            account_key,
+            remote_id,
+            document_json,
+            local_updated_at,
+            deleted_locally
+          FROM local_documents
+          WHERE remote_id IS NOT NULL
+          ''');
+      }
     },
   );
 }

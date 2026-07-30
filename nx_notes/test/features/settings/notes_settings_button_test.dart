@@ -5,6 +5,7 @@ import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
 import 'package:nx_notes/data/providers.dart';
+import 'package:nx_notes/data/remote/repository_notes_remote_api.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/settings/notes_settings_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,7 +51,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(refetches, 1);
-    expect(find.text('Full library downloaded.'), findsOneWidget);
+    expect(find.text('Library refreshed.'), findsOneWidget);
   });
 
   testWidgets('web settings presents a server library refresh', (tester) async {
@@ -101,6 +102,9 @@ void main() {
         overrides: [
           offlineEnabledProvider.overrideWithValue(false),
           documentRepositoryProvider.overrideWithValue(repository),
+          notesRemoteApiProvider.overrideWithValue(
+            RepositoryNotesRemoteApi(repository),
+          ),
         ],
         child: const MaterialApp(home: Scaffold(body: NotesSettingsButton())),
       ),

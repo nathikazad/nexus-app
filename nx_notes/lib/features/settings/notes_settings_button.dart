@@ -71,9 +71,7 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
       await widget.onHardRefetch();
       if (!mounted) return;
       setState(() {
-        _resultMessage = widget.offlineEnabled
-            ? 'Full library downloaded.'
-            : 'Library refreshed.';
+        _resultMessage = 'Library refreshed.';
       });
     } catch (error) {
       if (!mounted) return;
@@ -134,8 +132,8 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
             const SizedBox(height: 6),
             Text(
               widget.offlineEnabled
-                  ? 'Download the complete document library again. '
-                        'Local pending edits are preserved.'
+                  ? 'Refresh Recent, Pinned, Books, and library summaries. '
+                        'Cached document bodies and pending edits are preserved.'
                   : 'Reload the document library from the server.',
             ),
             const SizedBox(height: 12),

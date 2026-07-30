@@ -2,11 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_notes/app.dart';
+import 'package:nx_notes/application/fake/fake_notes_workspace.dart';
 import 'package:nx_notes/application/ports/session_store.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
-import 'package:nx_notes/data/document/fake_document_repository.dart';
-import 'package:nx_notes/data/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../support/offline_fixtures.dart';
 
 void main() {
   testWidgets(
@@ -14,6 +15,8 @@ void main() {
     (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       const session = CachedSession(userId: '1', backendPreset: 'localhost');
+      final workspace = FakeNotesWorkspace(documents: [offlineTestDocument()]);
+      addTearDown(workspace.close);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -24,10 +27,7 @@ void main() {
               ),
             ),
             activeOfflineSessionProvider.overrideWith((ref) async => session),
-            offlineNotesServiceProvider.overrideWithValue(null),
-            documentRepositoryProvider.overrideWithValue(
-              FakeDocumentRepository(),
-            ),
+            notesWorkspaceProvider.overrideWithValue(workspace),
           ],
           child: const NexusNotesApp(),
         ),

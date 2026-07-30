@@ -6,7 +6,9 @@ class CachedSession {
   final String userId;
   final String backendPreset;
 
-  String get accountKey => '$backendPreset:$userId';
+  /// Endpoint presets are alternate routes to the same database. They must
+  /// never partition a user's local cache or outbox.
+  String get accountKey => 'user:$userId';
 }
 
 abstract interface class SessionStore {

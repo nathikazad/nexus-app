@@ -1,13 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
+import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
-import 'package:nx_notes/domain/document/document_query.dart';
-import 'package:nx_notes/domain/links/linked_model.dart';
+import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
-import 'package:nx_notes/domain/sync/sync_conflict.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
 
 import '../offline_fixtures.dart';
@@ -236,7 +235,7 @@ void runLocalNotesStoreContract({
     expect(emissions, <String?>[null, 'written']);
   });
 
-  test('query stream filters search and pinned documents', () async {
+  test('local summary search filters cached documents', () async {
     await store.importRemoteDocuments(<RemoteDocument>[
       RemoteDocument(
         key: const DocumentKey(localId: 'one', remoteId: 1),
@@ -255,72 +254,94 @@ void runLocalNotesStoreContract({
     ]);
 
     final rows = await store
-        .watchDocuments(
-          const DocumentQuery(searchText: 'alpha', pinnedOnly: true),
-        )
+        .watchCatalog(const CatalogQuery.search('alpha'))
         .first;
-    expect(rows.map((row) => row.key.localId), <String>['one']);
-  });
-
-  test('persists the synchronization cursor', () async {
-    expect(await store.readSyncCursor(), isNull);
-    await store.writeSyncCursor('cursor-42');
-    expect(await store.readSyncCursor(), 'cursor-42');
-    await store.clearSyncCursor();
-    expect(await store.readSyncCursor(), isNull);
+    expect(rows.map((row) => row.id), <int>[1]);
   });
 
   test(
-    'remote metadata merges without replacing local pending content',
+    'catalog membership preserves remote order and summary-only rows',
     () async {
-      final local = offlineLocalDocument(body: 'local edit');
-      await store.saveDraftAndEnqueue(
-        local,
-        operation: offlinePendingOperation(body: 'local edit'),
-      );
-      await store.mergeRemoteMetadata(
-        RemoteDocument(
-          key: local.key,
-          document: offlineTestDocument(body: 'server body').copyWith(
-            links: const <LinkedModel>[
-              LinkedModel(id: 17, name: 'Chapter 17', modelType: 'Document'),
-            ],
-          ),
-          revision: const RemoteRevision('remote-revision'),
-        ),
-      );
+      final first = offlineTestDocument(id: 10, title: 'First');
+      final second = offlineTestDocument(id: 20, title: 'Second');
 
-      final merged = await store.getDocument(local.key);
-      expect(merged!.document.document, 'local edit');
-      expect(merged.document.links.single.name, 'Chapter 17');
-      expect(merged.syncState, DocumentSyncState.queued);
-      expect(await store.pendingOperations(), hasLength(1));
+      await store.replaceCatalog(const CatalogQuery.recent(), <DocumentSummary>[
+        DocumentSummary.fromDocument(second),
+        DocumentSummary.fromDocument(first),
+      ]);
+
+      final rows = await store.watchCatalog(const CatalogQuery.recent()).first;
+      expect(rows.map((row) => row.id), <int>[20, 10]);
+      expect(await store.getDocumentByRemoteId(20), isNull);
     },
   );
 
-  test('records both sides of a conflict and marks the local record', () async {
-    final local = offlineLocalDocument(body: 'local');
-    await store.saveDraftAndEnqueue(
-      local,
-      operation: offlinePendingOperation(body: 'local'),
-    );
-    await store.recordConflict(
-      SyncConflict(
-        documentKey: local.key,
-        localDocument: local.document,
-        remoteDocument: offlineTestDocument(body: 'remote'),
-        remoteRevision: const RemoteRevision('remote-revision'),
-        detectedAt: DateTime.utc(2026, 1, 2),
+  test('catalog refresh never replaces an already cached body', () async {
+    final full = offlineTestDocument(id: 9, body: 'durable body');
+    await store.importRemoteDocuments(<RemoteDocument>[
+      RemoteDocument(
+        key: const DocumentKey(localId: 'remote-9', remoteId: 9),
+        document: full,
+        revision: const RemoteRevision('full'),
       ),
-    );
+    ]);
 
-    final conflicts = await store.conflicts();
-    expect(conflicts, hasLength(1));
-    expect(conflicts.single.localDocument.document, 'local');
-    expect(conflicts.single.remoteDocument.document, 'remote');
-    expect(
-      (await store.getDocument(local.key))!.syncState,
-      DocumentSyncState.conflict,
-    );
+    await store.replaceCatalog(const CatalogQuery.books(), <DocumentSummary>[
+      DocumentSummary.fromDocument(
+        full.copyWith(title: 'Renamed from catalog'),
+      ),
+    ]);
+
+    final cached = await store.getDocumentByRemoteId(9);
+    final catalog = await store.watchCatalog(const CatalogQuery.books()).first;
+    expect(catalog.single.title, 'Renamed from catalog');
+    expect(cached!.document.title, full.title);
+    expect(cached.document.document, 'durable body');
+    expect(cached.document.hasFullDocument, isTrue);
   });
+
+  test(
+    'local pin changes update the cached pinned catalog immediately',
+    () async {
+      final remote = offlineTestDocument(id: 7, pinned: false);
+      const key = DocumentKey(localId: 'remote-7', remoteId: 7);
+      await store.importRemoteDocuments(<RemoteDocument>[
+        RemoteDocument(
+          key: key,
+          document: remote,
+          revision: const RemoteRevision('initial'),
+        ),
+      ]);
+
+      final local = (await store.getDocument(key))!;
+      await store.saveDraftAndEnqueue(
+        local.copyWith(document: remote.copyWith(pinned: true)),
+        operation: PendingOperation(
+          operationId: 'pin',
+          accountKey: store.accountKey,
+          documentKey: key,
+          type: PendingOperationType.update,
+          payload: const <String, Object?>{},
+          createdAt: DateTime.utc(2026, 1, 2),
+        ),
+      );
+      expect(
+        (await store.readCatalog(const CatalogQuery.pinned())).single.id,
+        7,
+      );
+
+      await store.saveDraftAndEnqueue(
+        local.copyWith(document: remote.copyWith(pinned: false)),
+        operation: PendingOperation(
+          operationId: 'unpin',
+          accountKey: store.accountKey,
+          documentKey: key,
+          type: PendingOperationType.update,
+          payload: const <String, Object?>{},
+          createdAt: DateTime.utc(2026, 1, 3),
+        ),
+      );
+      expect(await store.readCatalog(const CatalogQuery.pinned()), isEmpty);
+    },
+  );
 }

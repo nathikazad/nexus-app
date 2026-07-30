@@ -3,6 +3,7 @@ import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
+import 'package:nx_notes/domain/sync/remote_save_result.dart';
 
 abstract class DocumentRepository {
   /// Returns the complete document library without a presentation limit.
@@ -22,6 +23,7 @@ abstract class DocumentRepository {
     DocumentKind kind = DocumentKind.document,
   });
   Future<NxDocument> updateDraft(NxDocument document);
+  Future<RemoteSaveResult> saveDraftIfNewer(NxDocument document);
   Future<void> delete(int id);
   Future<DocumentSnap> createSnapshot(
     int documentId, {
@@ -42,14 +44,4 @@ abstract class DocumentRepository {
   });
   Future<void> attachProject(int documentId, int projectId);
   Future<void> detachProject(int documentId, int relationId);
-}
-
-enum DocumentKind {
-  document('Document', 'Document'),
-  book('Book', 'Book');
-
-  const DocumentKind(this.modelTypeName, this.label);
-
-  final String modelTypeName;
-  final String label;
 }

@@ -190,12 +190,13 @@ Map<String, List<String>> publicDocumentTags(
 ) {
   final topicTags = tagsBySystem[kPublicDocumentTopicTagSystem];
   if (topicTags == null) return const <String, List<String>>{};
-  final normalized = topicTags
-      .map((tag) => tag.trim())
-      .where((tag) => tag.isNotEmpty)
-      .toSet()
-      .toList()
-    ..sort();
+  final normalized =
+      topicTags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
   if (normalized.isEmpty) return const <String, List<String>>{};
   return <String, List<String>>{kPublicDocumentTopicTagSystem: normalized};
 }
