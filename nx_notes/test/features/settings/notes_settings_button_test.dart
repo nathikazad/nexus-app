@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_notes/composition/app_version_provider.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/core/version/app_version_info.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/data/remote/repository_notes_remote_api.dart';
@@ -22,6 +24,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          appVersionInfoProvider.overrideWith(
+            (ref) async =>
+                const AppVersionInfo(shorebirdAvailable: true, patchNumber: 7),
+          ),
+        ],
         child: MaterialApp(
           home: Scaffold(
             body: _SettingsHarness(
@@ -43,6 +51,8 @@ void main() {
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
     expect(find.text('Sync now'), findsOneWidget);
+    expect(find.text('Version 0.1.0 (1)'), findsOneWidget);
+    expect(find.text('Shorebird patch 7'), findsOneWidget);
 
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
@@ -63,7 +73,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [offlineEnabledProvider.overrideWithValue(false)],
+        overrides: [
+          offlineEnabledProvider.overrideWithValue(false),
+          appVersionInfoProvider.overrideWith(
+            (ref) async => const AppVersionInfo(shorebirdAvailable: false),
+          ),
+        ],
         child: MaterialApp(
           home: Scaffold(
             body: _SettingsHarness(
@@ -102,6 +117,9 @@ void main() {
       ProviderScope(
         overrides: [
           offlineEnabledProvider.overrideWithValue(false),
+          appVersionInfoProvider.overrideWith(
+            (ref) async => const AppVersionInfo(shorebirdAvailable: false),
+          ),
           documentRepositoryProvider.overrideWithValue(repository),
           notesRemoteApiProvider.overrideWithValue(
             RepositoryNotesRemoteApi(

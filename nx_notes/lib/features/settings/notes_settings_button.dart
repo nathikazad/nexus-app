@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_notes/composition/app_version_provider.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
+import 'package:nx_notes/core/version/app_version_info.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 
 typedef LibrarySyncCallback = Future<void> Function();
@@ -93,81 +95,103 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = ref.watch(appDarkModeProvider);
+    final versionInfo = ref.watch(appVersionInfoProvider);
     return AlertDialog(
       title: const Text('Settings'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 380),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text('Appearance', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 10),
-            SegmentedButton<bool>(
-              key: const Key('theme-mode-selector'),
-              segments: const <ButtonSegment<bool>>[
-                ButtonSegment<bool>(
-                  value: false,
-                  icon: Icon(Icons.light_mode_outlined),
-                  label: Text('Light'),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('Appearance', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 10),
+              SegmentedButton<bool>(
+                key: const Key('theme-mode-selector'),
+                segments: const <ButtonSegment<bool>>[
+                  ButtonSegment<bool>(
+                    value: false,
+                    icon: Icon(Icons.light_mode_outlined),
+                    label: Text('Light'),
+                  ),
+                  ButtonSegment<bool>(
+                    value: true,
+                    icon: Icon(Icons.dark_mode_outlined),
+                    label: Text('Dark'),
+                  ),
+                ],
+                selected: <bool>{isDark},
+                onSelectionChanged: (selection) {
+                  ref
+                      .read(appDarkModeProvider.notifier)
+                      .setDarkMode(selection.single);
+                },
+              ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                widget.offlineEnabled ? 'Offline library' : 'Library',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.offlineEnabled
+                    ? 'Upload pending edits, compare the local manifest, and '
+                          'download every changed document for offline use.'
+                    : 'Reload the document library from the server.',
+              ),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: const Key('sync-now-button'),
+                onPressed: _refetching ? null : _syncNow,
+                icon: _refetching
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _refetching
+                      ? 'Synchronizing…'
+                      : widget.offlineEnabled
+                      ? 'Sync now'
+                      : 'Refresh library',
                 ),
-                ButtonSegment<bool>(
-                  value: true,
-                  icon: Icon(Icons.dark_mode_outlined),
-                  label: Text('Dark'),
+              ),
+              if (_resultMessage != null) ...<Widget>[
+                const SizedBox(height: 10),
+                Text(
+                  _resultMessage!,
+                  style: TextStyle(
+                    color: _failed
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ],
-              selected: <bool>{isDark},
-              onSelectionChanged: (selection) {
-                ref
-                    .read(appDarkModeProvider.notifier)
-                    .setDarkMode(selection.single);
-              },
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            Text(
-              widget.offlineEnabled ? 'Offline library' : 'Library',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.offlineEnabled
-                  ? 'Upload pending edits, compare the local manifest, and '
-                        'download every changed document for offline use.'
-                  : 'Reload the document library from the server.',
-            ),
-            const SizedBox(height: 12),
-            FilledButton.tonalIcon(
-              key: const Key('sync-now-button'),
-              onPressed: _refetching ? null : _syncNow,
-              icon: _refetching
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.refresh),
-              label: Text(
-                _refetching
-                    ? 'Synchronizing…'
-                    : widget.offlineEnabled
-                    ? 'Sync now'
-                    : 'Refresh library',
-              ),
-            ),
-            if (_resultMessage != null) ...<Widget>[
-              const SizedBox(height: 10),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
               Text(
-                _resultMessage!,
-                style: TextStyle(
-                  color: _failed
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.primary,
+                'App version',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              const Text('Version $kAppVersion ($kAppBuildNumber)'),
+              const SizedBox(height: 2),
+              Text(
+                versionInfo.when(
+                  data: (info) => info.patchLabel,
+                  loading: () => 'Reading Shorebird patch…',
+                  error: (_, _) => 'Shorebird patch status unavailable',
                 ),
+                key: const Key('shorebird-patch-version'),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-          ],
+          ),
         ),
       ),
       actions: <Widget>[
