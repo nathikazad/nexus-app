@@ -133,10 +133,10 @@ class FakeDocumentRepository implements DocumentRepository {
   }
 
   @override
-  Future<List<NxDocument>> listBooks({int limit = 50}) async {
+  Future<List<NxDocument>> listBooks({int? limit}) async {
     final rows = _documents.where((document) => document.isBook).toList()
       ..sort(_recentSort);
-    return rows.take(limit).toList();
+    return limit == null ? rows : rows.take(limit).toList();
   }
 
   @override
@@ -355,7 +355,7 @@ class FakeDocumentRepository implements DocumentRepository {
   }
 
   @override
-  Future<RemoteSaveResult> saveDraftIfNewer(NxDocument document) async {
+  Future<RemoteSaveResult> mutateDraft(NxDocument document) async {
     final index = _documents.indexWhere((item) => item.id == document.id);
     if (index == -1) {
       throw StateError('Document ${document.id} not found');
@@ -377,13 +377,27 @@ class FakeDocumentRepository implements DocumentRepository {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<RemoteSaveResult> delete(int id, {DateTime? clientUpdatedAt}) async {
     final index = _documents.indexWhere((document) => document.id == id);
     if (index == -1) {
       throw StateError('Document $id not found');
     }
+    final current = _documents[index];
+    final editTime = clientUpdatedAt ?? DateTime.now().toUtc();
+    if (!editTime.isAfter(current.updatedAt)) {
+      return RemoteSaveResult(
+        status: RemoteSaveStatus.stale,
+        documentId: id,
+        updatedAt: current.updatedAt,
+      );
+    }
     _documents.removeAt(index);
     _snaps.remove(id);
+    return RemoteSaveResult(
+      status: RemoteSaveStatus.applied,
+      documentId: id,
+      updatedAt: editTime,
+    );
   }
 
   static int _recentSort(NxDocument a, NxDocument b) =>

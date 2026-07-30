@@ -1,6 +1,7 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
+import 'package:nx_db/documents.dart' as document_api;
 import 'package:nx_db/kgql.dart';
 
 const kBookModelTypeName = 'Book';
@@ -49,7 +50,7 @@ class KgqlBookRepository implements BookRepository {
     final rows = await listBooks();
     final rank = _nextRank(rows, BookReadingState.toRead);
     final name = _bookTitleOrFallback(title);
-    final id = await setKgqlModel(
+    final result = await document_api.mutateDocument(
       _client,
       SetModelRequest(
         modelType: kBookModelTypeName,
@@ -70,10 +71,11 @@ class KgqlBookRepository implements BookRepository {
           SetModelAttribute(key: kBookAttrRank, value: rank),
         ],
       ),
+      auditSourceKind: 'nx_books',
     );
     final now = DateTime.now();
     return NxBook(
-      id: id,
+      id: result.documentId,
       title: name,
       description: '',
       author: '',
@@ -95,8 +97,7 @@ class KgqlBookRepository implements BookRepository {
     required BookReadingState state,
     required int rank,
   }) async {
-    await setKgqlModel(
-      _client,
+    await _mutate(
       SetModelRequest(
         id: id,
         attributes: [
@@ -109,8 +110,7 @@ class KgqlBookRepository implements BookRepository {
 
   @override
   Future<void> updateBookRank({required int id, required int rank}) async {
-    await setKgqlModel(
-      _client,
+    await _mutate(
       SetModelRequest(
         id: id,
         attributes: [SetModelAttribute(key: kBookAttrRank, value: rank)],
@@ -123,8 +123,7 @@ class KgqlBookRepository implements BookRepository {
     required int id,
     required List<String> tags,
   }) async {
-    await setKgqlModel(
-      _client,
+    await _mutate(
       SetModelRequest(
         id: id,
         tags: [
@@ -144,8 +143,7 @@ class KgqlBookRepository implements BookRepository {
     required int? totalChapters,
     required int? currentChapter,
   }) async {
-    await setKgqlModel(
-      _client,
+    await _mutate(
       SetModelRequest(
         id: id,
         attributes: [
@@ -170,7 +168,16 @@ class KgqlBookRepository implements BookRepository {
 
   @override
   Future<void> deleteBook(int id) async {
-    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+    await _mutate(SetModelRequest(id: id, delete: true));
+  }
+
+  Future<void> _mutate(SetModelRequest request) async {
+    await document_api.mutateDocument(
+      _client,
+      request,
+      clientUpdatedAt: DateTime.now().toUtc(),
+      auditSourceKind: 'nx_books',
+    );
   }
 
   static const Map<String, dynamic> bookSummaryFetchStruct = {

@@ -8,6 +8,7 @@ import 'package:nx_notes/application/native/native_notes_workspace.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/session_store.dart';
+import 'package:nx_notes/application/sync/document_synchronizer.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/unavailable/unavailable_notes_remote_api.dart';
@@ -52,6 +53,11 @@ void main() {
       localStore: store,
       remoteApi: const UnavailableNotesRemoteApi(),
       uploader: uploader,
+      synchronizer: DocumentSynchronizer(
+        localStore: store,
+        remoteApi: const UnavailableNotesRemoteApi(),
+        uploader: uploader,
+      ),
       clock: const _Clock(),
       idGenerator: _Ids(),
     );

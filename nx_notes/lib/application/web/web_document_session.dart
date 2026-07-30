@@ -87,7 +87,7 @@ final class WebDocumentSession implements DocumentSession {
       ),
     );
     try {
-      final result = await _remoteApi.saveDocumentIfNewer(document);
+      final result = await _remoteApi.mutateDocument(document);
       if (result.status == RemoteSaveStatus.stale) {
         final remote = await _remoteApi.fetchDocument(documentId);
         if (remote != null) {

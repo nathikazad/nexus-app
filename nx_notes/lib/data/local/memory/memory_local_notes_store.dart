@@ -7,6 +7,7 @@ import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
+import 'package:nx_notes/domain/sync/document_sync.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
@@ -119,6 +120,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
         localUpdatedAt: remote.document.updatedAt,
         serverRevision: remote.revision,
         baseServerRevision: remote.revision,
+        serverHash: remote.serverHash,
         syncState: DocumentSyncState.synced,
         deletedLocally: remote.deleted,
       );
@@ -126,6 +128,59 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       changed = true;
     }
     if (changed) _notify();
+  }
+
+  @override
+  Future<List<DocumentManifestEntry>> documentManifest() async {
+    final documents =
+        _documents.values
+            .where(
+              (document) =>
+                  document.key.remoteId != null && !document.deletedLocally,
+            )
+            .toList()
+          ..sort((a, b) => a.key.remoteId!.compareTo(b.key.remoteId!));
+    return <DocumentManifestEntry>[
+      for (final document in documents)
+        DocumentManifestEntry(
+          documentId: document.key.remoteId!,
+          serverHash: document.serverHash,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> applySyncBundle(DocumentSyncBundle bundle) async {
+    for (final remote in bundle.documents) {
+      final remoteId = remote.key.remoteId;
+      if (remoteId == null) continue;
+      final existing = _documentByRemoteId(remoteId);
+      if (existing != null && existing.syncState != DocumentSyncState.synced) {
+        continue;
+      }
+      final key = existing?.key ?? remote.key;
+      _documents[key.localId] = LocalDocument(
+        key: key,
+        accountKey: accountKey,
+        document: remote.document,
+        localUpdatedAt: remote.document.updatedAt,
+        serverRevision: remote.revision,
+        baseServerRevision: remote.revision,
+        serverHash: remote.serverHash,
+        syncState: DocumentSyncState.synced,
+      );
+      _storeSummary(remote.document);
+    }
+    for (final remoteId in bundle.deletedIds) {
+      final existing = _documentByRemoteId(remoteId);
+      if (existing == null || existing.syncState == DocumentSyncState.synced) {
+        if (existing != null) _documents.remove(existing.key.localId);
+        _summaries.remove(remoteId);
+        _deletedSummaryIds.remove(remoteId);
+      }
+    }
+    _rebuildDefaultCatalogs();
+    _notify();
   }
 
   @override
@@ -148,6 +203,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       localUpdatedAt: remote.document.updatedAt,
       serverRevision: remote.revision,
       baseServerRevision: remote.revision,
+      serverHash: remote.serverHash,
       syncState: DocumentSyncState.synced,
       deletedLocally: remote.deleted,
     );
@@ -174,6 +230,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       localUpdatedAt: remote.document.updatedAt,
       serverRevision: remote.revision,
       baseServerRevision: remote.revision,
+      serverHash: remote.serverHash,
       syncState: DocumentSyncState.synced,
       deletedLocally: remote.deleted,
     );
@@ -263,6 +320,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
         key: result.key,
         serverRevision: result.revision,
         baseServerRevision: result.revision,
+        serverHash: result.serverHash,
         syncState: DocumentSyncState.synced,
       );
     }
@@ -289,6 +347,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       localUpdatedAt: document.document.updatedAt,
       serverRevision: document.revision,
       baseServerRevision: document.revision,
+      serverHash: document.serverHash,
       syncState: DocumentSyncState.synced,
     );
     _storeSummary(document.document);
@@ -397,6 +456,23 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       ids.remove(document.id);
       if (document.pinned && !deleted) ids.insert(0, document.id);
     }
+  }
+
+  void _rebuildDefaultCatalogs() {
+    final summaries = _visibleSummaries();
+    _catalogs[const CatalogQuery.all().cacheKey] = <int>[
+      for (final summary in summaries) summary.id,
+    ];
+    _catalogs[const CatalogQuery.recent().cacheKey] = <int>[
+      for (final summary in summaries.take(20)) summary.id,
+    ];
+    _catalogs[const CatalogQuery.pinned().cacheKey] = <int>[
+      for (final summary in summaries.where((item) => item.pinned).take(20))
+        summary.id,
+    ];
+    _catalogs[const CatalogQuery.books().cacheKey] = <int>[
+      for (final summary in summaries.where((item) => item.isBook)) summary.id,
+    ];
   }
 
   void _notify() {

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_db/documents.dart' as document_api;
 import 'package:nx_db/kgql.dart';
 import 'package:nx_notes/data/document/document_attr_keys.dart';
 import 'package:nx_notes/data/document/document_mapper.dart';
@@ -30,11 +31,12 @@ class KgqlDocumentRepository implements DocumentRepository {
     String? title,
     DocumentKind kind = DocumentKind.document,
   }) async {
-    final id = await setKgqlModel(
+    final result = await document_api.mutateDocument(
       _client,
       setModelRequestForCreateDocument(title: title, kind: kind),
+      auditSourceKind: 'nx_notes',
     );
-    return documentForCreatedId(id, title: title, kind: kind);
+    return documentForCreatedId(result.documentId, title: title, kind: kind);
   }
 
   @override
@@ -85,7 +87,7 @@ class KgqlDocumentRepository implements DocumentRepository {
       );
     }
 
-    await setKgqlModel(
+    await document_api.mutateDocument(
       _client,
       SetModelRequest(
         id: documentId,
@@ -93,6 +95,8 @@ class KgqlDocumentRepository implements DocumentRepository {
           ModelRelation(modelType: kDocumentSnapModelTypeName, link: [snapId]),
         ],
       ),
+      clientUpdatedAt: _nextMutationTime(document.updatedAt),
+      auditSourceKind: 'nx_notes',
     );
 
     return DocumentSnap(
@@ -184,13 +188,14 @@ class KgqlDocumentRepository implements DocumentRepository {
   }
 
   @override
-  Future<List<NxDocument>> listBooks({int limit = 50}) async {
+  Future<List<NxDocument>> listBooks({int? limit}) async {
     final models = await fetchKgqlModels(
       _client,
       filter: {'model_type': kBookModelTypeName},
       struct: documentSummaryFetchStruct(),
     );
-    return _sortedDocumentSummaries(models).take(limit).toList();
+    final books = _sortedDocumentSummaries(models);
+    return limit == null ? books : books.take(limit).toList();
   }
 
   @override
@@ -230,7 +235,7 @@ class KgqlDocumentRepository implements DocumentRepository {
     required LinkableModelType modelType,
     required int modelId,
   }) async {
-    await setKgqlModel(
+    await document_api.mutateDocument(
       _client,
       SetModelRequest(
         id: documentId,
@@ -238,6 +243,8 @@ class KgqlDocumentRepository implements DocumentRepository {
           ModelRelation(modelType: modelType.kgqlName, link: [modelId]),
         ],
       ),
+      clientUpdatedAt: DateTime.now().toUtc(),
+      auditSourceKind: 'nx_notes',
     );
   }
 
@@ -252,12 +259,14 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<void> detachProject(int documentId, int relationId) async {
-    await setKgqlModel(
+    await document_api.mutateDocument(
       _client,
       SetModelRequest(
         id: documentId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
+      clientUpdatedAt: DateTime.now().toUtc(),
+      auditSourceKind: 'nx_notes',
     );
   }
 
@@ -319,16 +328,13 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<NxDocument> updateDraft(NxDocument document) async {
-    await setKgqlModel(_client, setModelRequestForUpdateDocument(document));
-    return document.copyWith(
-      updatedAt: DateTime.now(),
-      updatedLabel: 'just now',
-    );
+    final editedAt = _nextMutationTime(document.updatedAt);
+    return _mutate(document.copyWith(updatedAt: editedAt));
   }
 
   @override
-  Future<RemoteSaveResult> saveDraftIfNewer(NxDocument document) async {
-    final result = await setKgqlModelIfNewer(
+  Future<RemoteSaveResult> mutateDraft(NxDocument document) async {
+    final result = await document_api.mutateDocument(
       _client,
       setModelRequestForUpdateDocument(document),
       clientUpdatedAt: document.updatedAt,
@@ -336,17 +342,35 @@ class KgqlDocumentRepository implements DocumentRepository {
     );
     return RemoteSaveResult(
       status: switch (result.status) {
-        KgqlConditionalSaveStatus.applied => RemoteSaveStatus.applied,
-        KgqlConditionalSaveStatus.stale => RemoteSaveStatus.stale,
+        document_api.DocumentMutationStatus.applied => RemoteSaveStatus.applied,
+        document_api.DocumentMutationStatus.stale => RemoteSaveStatus.stale,
+        document_api.DocumentMutationStatus.deleted => throw StateError(
+          'Unexpected delete response for update',
+        ),
       },
-      documentId: result.modelId,
-      updatedAt: result.updatedAt,
+      documentId: result.documentId,
+      updatedAt: result.updatedAt ?? document.updatedAt,
+      serverHash: result.syncHash,
     );
   }
 
   @override
-  Future<void> delete(int id) async {
-    await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+  Future<RemoteSaveResult> delete(int id, {DateTime? clientUpdatedAt}) async {
+    final editTime = clientUpdatedAt ?? DateTime.now().toUtc();
+    final result = await document_api.mutateDocument(
+      _client,
+      SetModelRequest(id: id, delete: true),
+      clientUpdatedAt: editTime,
+      auditSourceKind: 'nx_notes',
+    );
+    return RemoteSaveResult(
+      status: result.status == document_api.DocumentMutationStatus.stale
+          ? RemoteSaveStatus.stale
+          : RemoteSaveStatus.applied,
+      documentId: result.documentId,
+      updatedAt: result.updatedAt ?? editTime,
+      serverHash: result.syncHash,
+    );
   }
 
   Future<List<NxDocument>> _listAll() async {
@@ -396,5 +420,23 @@ class KgqlDocumentRepository implements DocumentRepository {
       kDocumentStatusTagSystem => document.status == node,
       _ => document.tagsBySystem[system]?.contains(node) ?? false,
     };
+  }
+
+  Future<NxDocument> _mutate(NxDocument document) async {
+    final result = await mutateDraft(document);
+    if (result.status == RemoteSaveStatus.stale) {
+      return await getById(document.id) ?? document;
+    }
+    return document.copyWith(
+      updatedAt: result.updatedAt,
+      updatedLabel: 'just now',
+    );
+  }
+
+  DateTime _nextMutationTime(DateTime previous) {
+    final now = DateTime.now().toUtc();
+    return now.isAfter(previous)
+        ? now
+        : previous.toUtc().add(const Duration(microseconds: 1));
   }
 }

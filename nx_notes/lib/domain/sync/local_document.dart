@@ -12,6 +12,7 @@ class LocalDocument {
     required this.syncState,
     this.serverRevision,
     this.baseServerRevision,
+    this.serverHash,
     this.deletedLocally = false,
   });
 
@@ -21,6 +22,7 @@ class LocalDocument {
   final DateTime localUpdatedAt;
   final RemoteRevision? serverRevision;
   final RemoteRevision? baseServerRevision;
+  final String? serverHash;
   final DocumentSyncState syncState;
   final bool deletedLocally;
 
@@ -33,6 +35,8 @@ class LocalDocument {
     bool clearServerRevision = false,
     RemoteRevision? baseServerRevision,
     bool clearBaseServerRevision = false,
+    String? serverHash,
+    bool clearServerHash = false,
     DocumentSyncState? syncState,
     bool? deletedLocally,
   }) {
@@ -47,6 +51,7 @@ class LocalDocument {
       baseServerRevision: clearBaseServerRevision
           ? null
           : baseServerRevision ?? this.baseServerRevision,
+      serverHash: clearServerHash ? null : serverHash ?? this.serverHash,
       syncState: syncState ?? this.syncState,
       deletedLocally: deletedLocally ?? this.deletedLocally,
     );

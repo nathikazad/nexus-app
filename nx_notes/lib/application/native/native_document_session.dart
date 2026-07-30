@@ -5,26 +5,25 @@ import 'package:nx_notes/application/native/background_uploader.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
-import 'package:nx_notes/application/ports/notes_remote_api.dart';
+import 'package:nx_notes/application/sync/document_synchronizer.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
-import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
 
 final class NativeDocumentSession implements DocumentSession {
   NativeDocumentSession({
     required this.documentId,
     required LocalNotesStore localStore,
-    required NotesRemoteApi remoteApi,
+    required DocumentSynchronizer synchronizer,
     required BackgroundUploader uploader,
     required Clock clock,
     required IdGenerator idGenerator,
     void Function()? onClosed,
   }) : _localStore = localStore,
-       _remoteApi = remoteApi,
+       _synchronizer = synchronizer,
        _uploader = uploader,
        _clock = clock,
        _idGenerator = idGenerator,
@@ -35,7 +34,7 @@ final class NativeDocumentSession implements DocumentSession {
   @override
   final int documentId;
   final LocalNotesStore _localStore;
-  final NotesRemoteApi _remoteApi;
+  final DocumentSynchronizer _synchronizer;
   final BackgroundUploader _uploader;
   final Clock _clock;
   final IdGenerator _idGenerator;
@@ -104,9 +103,13 @@ final class NativeDocumentSession implements DocumentSession {
     if (_closed) return;
     _emit(_state.copyWith(isRefreshing: true, clearError: true));
     try {
-      final remote = await _remoteApi.fetchDocument(documentId);
+      final cached = await _localStore.getDocumentByRemoteId(documentId);
+      _nextLocalOrigin = cached == null
+          ? DocumentChangeOrigin.initialRemoteLoad
+          : DocumentChangeOrigin.remoteRefresh;
+      final refreshed = await _synchronizer.refreshDocument(documentId);
       if (_closed) return;
-      if (remote == null) {
+      if (refreshed == null) {
         _emit(
           _state.copyWith(
             phase: _state.document == null
@@ -117,25 +120,7 @@ final class NativeDocumentSession implements DocumentSession {
         );
         return;
       }
-      final local = await _localStore.getDocumentByRemoteId(documentId);
-      final remoteValue = _asRemote(remote, local?.key);
-      final localIsDirty =
-          local != null && local.syncState != DocumentSyncState.synced;
-      if (localIsDirty) {
-        if (!local.document.updatedAt.isAfter(remote.updatedAt)) {
-          _nextLocalOrigin = DocumentChangeOrigin.remoteRefresh;
-          await _localStore.discardPendingAndImportRemote(remoteValue);
-        } else {
-          _uploader.schedule();
-        }
-      } else if (local == null ||
-          !local.document.hasFullDocument ||
-          !local.document.updatedAt.isAfter(remote.updatedAt)) {
-        _nextLocalOrigin = local == null
-            ? DocumentChangeOrigin.initialRemoteLoad
-            : DocumentChangeOrigin.remoteRefresh;
-        await _localStore.importRemoteDocuments(<RemoteDocument>[remoteValue]);
-      }
+      _applyLocal(refreshed);
       _emit(_state.copyWith(isRefreshing: false, clearError: true));
     } catch (error) {
       if (_closed) return;
@@ -203,14 +188,6 @@ final class NativeDocumentSession implements DocumentSession {
       throw StateError('Document $documentId is not ready');
     }
     await saveDraft(document.copyWith(pinned: pinned));
-  }
-
-  RemoteDocument _asRemote(NxDocument document, DocumentKey? stableKey) {
-    return RemoteDocument(
-      key: stableKey ?? _key,
-      document: document,
-      revision: RemoteRevision(document.updatedAt.toUtc().toIso8601String()),
-    );
   }
 
   DocumentUploadState _uploadState(DocumentSyncState state) {

@@ -87,6 +87,17 @@ class $LocalDocumentsTable extends LocalDocuments
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _serverHashMeta = const VerificationMeta(
+    'serverHash',
+  );
+  @override
+  late final GeneratedColumn<String> serverHash = GeneratedColumn<String>(
+    'server_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _syncStateMeta = const VerificationMeta(
     'syncState',
   );
@@ -122,6 +133,7 @@ class $LocalDocumentsTable extends LocalDocuments
     localUpdatedAt,
     serverRevision,
     baseServerRevision,
+    serverHash,
     syncState,
     deletedLocally,
   ];
@@ -199,6 +211,12 @@ class $LocalDocumentsTable extends LocalDocuments
         ),
       );
     }
+    if (data.containsKey('server_hash')) {
+      context.handle(
+        _serverHashMeta,
+        serverHash.isAcceptableOrUnknown(data['server_hash']!, _serverHashMeta),
+      );
+    }
     if (data.containsKey('sync_state')) {
       context.handle(
         _syncStateMeta,
@@ -257,6 +275,10 @@ class $LocalDocumentsTable extends LocalDocuments
         DriftSqlType.string,
         data['${effectivePrefix}base_server_revision'],
       ),
+      serverHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_hash'],
+      ),
       syncState: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sync_state'],
@@ -283,6 +305,7 @@ class LocalDocumentRow extends DataClass
   final DateTime localUpdatedAt;
   final String? serverRevision;
   final String? baseServerRevision;
+  final String? serverHash;
   final String syncState;
   final bool deletedLocally;
   const LocalDocumentRow({
@@ -293,6 +316,7 @@ class LocalDocumentRow extends DataClass
     required this.localUpdatedAt,
     this.serverRevision,
     this.baseServerRevision,
+    this.serverHash,
     required this.syncState,
     required this.deletedLocally,
   });
@@ -311,6 +335,9 @@ class LocalDocumentRow extends DataClass
     }
     if (!nullToAbsent || baseServerRevision != null) {
       map['base_server_revision'] = Variable<String>(baseServerRevision);
+    }
+    if (!nullToAbsent || serverHash != null) {
+      map['server_hash'] = Variable<String>(serverHash);
     }
     map['sync_state'] = Variable<String>(syncState);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
@@ -332,6 +359,9 @@ class LocalDocumentRow extends DataClass
       baseServerRevision: baseServerRevision == null && nullToAbsent
           ? const Value.absent()
           : Value(baseServerRevision),
+      serverHash: serverHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverHash),
       syncState: Value(syncState),
       deletedLocally: Value(deletedLocally),
     );
@@ -352,6 +382,7 @@ class LocalDocumentRow extends DataClass
       baseServerRevision: serializer.fromJson<String?>(
         json['baseServerRevision'],
       ),
+      serverHash: serializer.fromJson<String?>(json['serverHash']),
       syncState: serializer.fromJson<String>(json['syncState']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
     );
@@ -367,6 +398,7 @@ class LocalDocumentRow extends DataClass
       'localUpdatedAt': serializer.toJson<DateTime>(localUpdatedAt),
       'serverRevision': serializer.toJson<String?>(serverRevision),
       'baseServerRevision': serializer.toJson<String?>(baseServerRevision),
+      'serverHash': serializer.toJson<String?>(serverHash),
       'syncState': serializer.toJson<String>(syncState),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
     };
@@ -380,6 +412,7 @@ class LocalDocumentRow extends DataClass
     DateTime? localUpdatedAt,
     Value<String?> serverRevision = const Value.absent(),
     Value<String?> baseServerRevision = const Value.absent(),
+    Value<String?> serverHash = const Value.absent(),
     String? syncState,
     bool? deletedLocally,
   }) => LocalDocumentRow(
@@ -394,6 +427,7 @@ class LocalDocumentRow extends DataClass
     baseServerRevision: baseServerRevision.present
         ? baseServerRevision.value
         : this.baseServerRevision,
+    serverHash: serverHash.present ? serverHash.value : this.serverHash,
     syncState: syncState ?? this.syncState,
     deletedLocally: deletedLocally ?? this.deletedLocally,
   );
@@ -416,6 +450,9 @@ class LocalDocumentRow extends DataClass
       baseServerRevision: data.baseServerRevision.present
           ? data.baseServerRevision.value
           : this.baseServerRevision,
+      serverHash: data.serverHash.present
+          ? data.serverHash.value
+          : this.serverHash,
       syncState: data.syncState.present ? data.syncState.value : this.syncState,
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
@@ -433,6 +470,7 @@ class LocalDocumentRow extends DataClass
           ..write('localUpdatedAt: $localUpdatedAt, ')
           ..write('serverRevision: $serverRevision, ')
           ..write('baseServerRevision: $baseServerRevision, ')
+          ..write('serverHash: $serverHash, ')
           ..write('syncState: $syncState, ')
           ..write('deletedLocally: $deletedLocally')
           ..write(')'))
@@ -448,6 +486,7 @@ class LocalDocumentRow extends DataClass
     localUpdatedAt,
     serverRevision,
     baseServerRevision,
+    serverHash,
     syncState,
     deletedLocally,
   );
@@ -462,6 +501,7 @@ class LocalDocumentRow extends DataClass
           other.localUpdatedAt == this.localUpdatedAt &&
           other.serverRevision == this.serverRevision &&
           other.baseServerRevision == this.baseServerRevision &&
+          other.serverHash == this.serverHash &&
           other.syncState == this.syncState &&
           other.deletedLocally == this.deletedLocally);
 }
@@ -474,6 +514,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
   final Value<DateTime> localUpdatedAt;
   final Value<String?> serverRevision;
   final Value<String?> baseServerRevision;
+  final Value<String?> serverHash;
   final Value<String> syncState;
   final Value<bool> deletedLocally;
   final Value<int> rowid;
@@ -485,6 +526,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
     this.localUpdatedAt = const Value.absent(),
     this.serverRevision = const Value.absent(),
     this.baseServerRevision = const Value.absent(),
+    this.serverHash = const Value.absent(),
     this.syncState = const Value.absent(),
     this.deletedLocally = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -497,6 +539,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
     required DateTime localUpdatedAt,
     this.serverRevision = const Value.absent(),
     this.baseServerRevision = const Value.absent(),
+    this.serverHash = const Value.absent(),
     required String syncState,
     this.deletedLocally = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -513,6 +556,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
     Expression<DateTime>? localUpdatedAt,
     Expression<String>? serverRevision,
     Expression<String>? baseServerRevision,
+    Expression<String>? serverHash,
     Expression<String>? syncState,
     Expression<bool>? deletedLocally,
     Expression<int>? rowid,
@@ -526,6 +570,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
       if (serverRevision != null) 'server_revision': serverRevision,
       if (baseServerRevision != null)
         'base_server_revision': baseServerRevision,
+      if (serverHash != null) 'server_hash': serverHash,
       if (syncState != null) 'sync_state': syncState,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
       if (rowid != null) 'rowid': rowid,
@@ -540,6 +585,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
     Value<DateTime>? localUpdatedAt,
     Value<String?>? serverRevision,
     Value<String?>? baseServerRevision,
+    Value<String?>? serverHash,
     Value<String>? syncState,
     Value<bool>? deletedLocally,
     Value<int>? rowid,
@@ -552,6 +598,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
       localUpdatedAt: localUpdatedAt ?? this.localUpdatedAt,
       serverRevision: serverRevision ?? this.serverRevision,
       baseServerRevision: baseServerRevision ?? this.baseServerRevision,
+      serverHash: serverHash ?? this.serverHash,
       syncState: syncState ?? this.syncState,
       deletedLocally: deletedLocally ?? this.deletedLocally,
       rowid: rowid ?? this.rowid,
@@ -582,6 +629,9 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
     if (baseServerRevision.present) {
       map['base_server_revision'] = Variable<String>(baseServerRevision.value);
     }
+    if (serverHash.present) {
+      map['server_hash'] = Variable<String>(serverHash.value);
+    }
     if (syncState.present) {
       map['sync_state'] = Variable<String>(syncState.value);
     }
@@ -604,6 +654,7 @@ class LocalDocumentsCompanion extends UpdateCompanion<LocalDocumentRow> {
           ..write('localUpdatedAt: $localUpdatedAt, ')
           ..write('serverRevision: $serverRevision, ')
           ..write('baseServerRevision: $baseServerRevision, ')
+          ..write('serverHash: $serverHash, ')
           ..write('syncState: $syncState, ')
           ..write('deletedLocally: $deletedLocally, ')
           ..write('rowid: $rowid')
@@ -3322,6 +3373,7 @@ typedef $$LocalDocumentsTableCreateCompanionBuilder =
       required DateTime localUpdatedAt,
       Value<String?> serverRevision,
       Value<String?> baseServerRevision,
+      Value<String?> serverHash,
       required String syncState,
       Value<bool> deletedLocally,
       Value<int> rowid,
@@ -3335,6 +3387,7 @@ typedef $$LocalDocumentsTableUpdateCompanionBuilder =
       Value<DateTime> localUpdatedAt,
       Value<String?> serverRevision,
       Value<String?> baseServerRevision,
+      Value<String?> serverHash,
       Value<String> syncState,
       Value<bool> deletedLocally,
       Value<int> rowid,
@@ -3381,6 +3434,11 @@ class $$LocalDocumentsTableFilterComposer
 
   ColumnFilters<String> get baseServerRevision => $composableBuilder(
     column: $table.baseServerRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverHash => $composableBuilder(
+    column: $table.serverHash,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3439,6 +3497,11 @@ class $$LocalDocumentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverHash => $composableBuilder(
+    column: $table.serverHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncState => $composableBuilder(
     column: $table.syncState,
     builder: (column) => ColumnOrderings(column),
@@ -3487,6 +3550,11 @@ class $$LocalDocumentsTableAnnotationComposer
 
   GeneratedColumn<String> get baseServerRevision => $composableBuilder(
     column: $table.baseServerRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serverHash => $composableBuilder(
+    column: $table.serverHash,
     builder: (column) => column,
   );
 
@@ -3543,6 +3611,7 @@ class $$LocalDocumentsTableTableManager
                 Value<DateTime> localUpdatedAt = const Value.absent(),
                 Value<String?> serverRevision = const Value.absent(),
                 Value<String?> baseServerRevision = const Value.absent(),
+                Value<String?> serverHash = const Value.absent(),
                 Value<String> syncState = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3554,6 +3623,7 @@ class $$LocalDocumentsTableTableManager
                 localUpdatedAt: localUpdatedAt,
                 serverRevision: serverRevision,
                 baseServerRevision: baseServerRevision,
+                serverHash: serverHash,
                 syncState: syncState,
                 deletedLocally: deletedLocally,
                 rowid: rowid,
@@ -3567,6 +3637,7 @@ class $$LocalDocumentsTableTableManager
                 required DateTime localUpdatedAt,
                 Value<String?> serverRevision = const Value.absent(),
                 Value<String?> baseServerRevision = const Value.absent(),
+                Value<String?> serverHash = const Value.absent(),
                 required String syncState,
                 Value<bool> deletedLocally = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3578,6 +3649,7 @@ class $$LocalDocumentsTableTableManager
                 localUpdatedAt: localUpdatedAt,
                 serverRevision: serverRevision,
                 baseServerRevision: baseServerRevision,
+                serverHash: serverHash,
                 syncState: syncState,
                 deletedLocally: deletedLocally,
                 rowid: rowid,

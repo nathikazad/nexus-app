@@ -8,6 +8,7 @@ import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
 import 'package:nx_notes/application/ports/local_notes_store.dart';
 import 'package:nx_notes/application/ports/notes_remote_api.dart';
+import 'package:nx_notes/application/sync/document_synchronizer.dart';
 import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/catalog/catalog_state.dart';
 import 'package:nx_notes/domain/document/document.dart';
@@ -22,17 +23,20 @@ final class NativeNotesWorkspace implements NotesWorkspace {
     required LocalNotesStore localStore,
     required NotesRemoteApi remoteApi,
     required BackgroundUploader uploader,
+    required DocumentSynchronizer synchronizer,
     required Clock clock,
     required IdGenerator idGenerator,
   }) : _localStore = localStore,
        _remoteApi = remoteApi,
        _uploader = uploader,
+       _synchronizer = synchronizer,
        _clock = clock,
        _idGenerator = idGenerator;
 
   final LocalNotesStore _localStore;
   final NotesRemoteApi _remoteApi;
   final BackgroundUploader _uploader;
+  final DocumentSynchronizer _synchronizer;
   final Clock _clock;
   final IdGenerator _idGenerator;
   final Map<CatalogQuery, _NativeCatalogFeed> _catalogs =
@@ -79,7 +83,7 @@ final class NativeNotesWorkspace implements NotesWorkspace {
       () => NativeDocumentSession(
         documentId: documentId,
         localStore: _localStore,
-        remoteApi: _remoteApi,
+        synchronizer: _synchronizer,
         uploader: _uploader,
         clock: _clock,
         idGenerator: _idGenerator,
@@ -144,6 +148,9 @@ final class NativeNotesWorkspace implements NotesWorkspace {
 
   @override
   Future<void> uploadPending() => _uploader.uploadPending();
+
+  @override
+  Future<void> syncLibrary() => _synchronizer.syncLibrary();
 
   @override
   Future<void> close() async {

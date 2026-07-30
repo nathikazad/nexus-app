@@ -6,6 +6,7 @@ import 'package:nx_notes/application/native/background_uploader.dart';
 import 'package:nx_notes/application/native/native_notes_workspace.dart';
 import 'package:nx_notes/application/ports/clock.dart';
 import 'package:nx_notes/application/ports/id_generator.dart';
+import 'package:nx_notes/application/sync/document_synchronizer.dart';
 import 'package:nx_notes/data/local/memory/memory_local_notes_store.dart';
 import 'package:nx_notes/data/remote/fake/fake_notes_remote_api.dart';
 import 'package:nx_notes/domain/catalog/catalog_query.dart';
@@ -43,6 +44,11 @@ void main() {
       localStore: local,
       remoteApi: remote,
       uploader: uploader,
+      synchronizer: DocumentSynchronizer(
+        localStore: local,
+        remoteApi: remote,
+        uploader: uploader,
+      ),
       clock: clock,
       idGenerator: ids,
     );
@@ -85,7 +91,7 @@ void main() {
       await _import(local, cached);
       final network = Completer<void>();
       remote
-        ..documentBarrier = network.future
+        ..syncBarrier = network.future
         ..replaceRemote(cached.copyWith(title: 'Remote body'));
 
       final first = workspace.openDocument(7);
@@ -98,7 +104,7 @@ void main() {
       expect(ready.document!.title, 'Cached body');
       await Future<void>.delayed(Duration.zero);
       expect(first.state.isRefreshing, isTrue);
-      expect(remote.documentFetchCounts[7], 1);
+      expect(remote.syncCount, 1);
       network.complete();
     },
   );

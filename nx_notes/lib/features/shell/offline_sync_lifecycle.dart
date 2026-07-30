@@ -27,7 +27,7 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
         .read(connectivityMonitorProvider)
         .onlineChanges
         .where((online) => online)
-        .listen((_) => _uploadPending());
+        .listen((_) => _syncLibrary());
   }
 
   @override
@@ -41,13 +41,15 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (ref.read(offlineEnabledProvider) &&
         state == AppLifecycleState.resumed) {
-      _uploadPending();
+      _syncLibrary();
     }
   }
 
-  void _uploadPending() {
+  void _syncLibrary() {
     final workspace = ref.read(notesWorkspaceProvider);
-    if (workspace != null) unawaited(workspace.uploadPending());
+    if (workspace != null) {
+      unawaited(workspace.syncLibrary().catchError((Object _) {}));
+    }
   }
 
   @override
@@ -55,7 +57,7 @@ class _OfflineSyncLifecycleState extends ConsumerState<OfflineSyncLifecycle>
     if (ref.watch(offlineEnabledProvider)) {
       ref.listen(notesWorkspaceProvider, (previous, next) {
         if (previous == null && next != null) {
-          unawaited(next.uploadPending());
+          unawaited(next.syncLibrary().catchError((Object _) {}));
         }
       });
     }

@@ -558,9 +558,17 @@ class GraphQLKgqlClient:
       getKgqlModelType(input: $input)
     }
     """
-    SET_MODEL = """
-    mutation SetKgqlModels($input: SetKgqlModelsInput!) {
-      setKgqlModels(input: $input) { json }
+    MUTATE_DOCUMENT = """
+    mutation MutateDocument(
+      $data: JSON!
+      $clientUpdatedAt: String
+      $domainId: Int
+    ) {
+      mutateDocument(
+        data: $data
+        clientUpdatedAt: $clientUpdatedAt
+        domainId: $domainId
+      )
     }
     """
 
@@ -621,11 +629,21 @@ class GraphQLKgqlClient:
         return rows or []
 
     def set_model(self, data: Mapping[str, Any]) -> dict[str, Any]:
-        result = self._request(
-            self.SET_MODEL,
-            {"input": {"domainId": self.domain_id, "data": dict(data)}},
+        payload = dict(data)
+        client_updated_at = (
+            datetime.now(timezone.utc).isoformat()
+            if payload.get("id") is not None
+            else None
         )
-        value = result["data"]["setKgqlModels"]["json"]
+        result = self._request(
+            self.MUTATE_DOCUMENT,
+            {
+                "data": payload,
+                "clientUpdatedAt": client_updated_at,
+                "domainId": self.domain_id,
+            },
+        )
+        value = result["data"]["mutateDocument"]
         return json.loads(value) if isinstance(value, str) else value
 
 

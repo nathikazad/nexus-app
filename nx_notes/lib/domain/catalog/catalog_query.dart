@@ -18,7 +18,7 @@ final class CatalogQuery {
   const CatalogQuery.pinned({int limit = 20})
     : this._(kind: CatalogKind.pinned, limit: limit);
 
-  const CatalogQuery.books({int limit = 100})
+  const CatalogQuery.books({int? limit})
     : this._(kind: CatalogKind.books, limit: limit);
 
   const CatalogQuery.search(String text)
@@ -36,7 +36,7 @@ final class CatalogQuery {
     CatalogKind.all => 'all',
     CatalogKind.recent => 'recent:${limit ?? 20}',
     CatalogKind.pinned => 'pinned:${limit ?? 20}',
-    CatalogKind.books => 'books:${limit ?? 100}',
+    CatalogKind.books => 'books:${limit ?? 'all'}',
     CatalogKind.search => 'search:${searchText.trim().toLowerCase()}',
     CatalogKind.tag =>
       'tag:${tagFilter!.system}:${tagFilter!.node}:'

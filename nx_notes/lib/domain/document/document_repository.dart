@@ -13,7 +13,7 @@ abstract class DocumentRepository {
   Future<List<NxDocument>> listAll();
 
   Future<List<NxDocument>> listRecent({int limit = 20});
-  Future<List<NxDocument>> listBooks({int limit = 50});
+  Future<List<NxDocument>> listBooks({int? limit});
   Future<List<NxDocument>> listPinned({int limit = 20});
   Future<List<NxDocument>> search(String query);
   Future<List<NxDocument>> listByTag(DocumentTagFilter filter);
@@ -23,8 +23,8 @@ abstract class DocumentRepository {
     DocumentKind kind = DocumentKind.document,
   });
   Future<NxDocument> updateDraft(NxDocument document);
-  Future<RemoteSaveResult> saveDraftIfNewer(NxDocument document);
-  Future<void> delete(int id);
+  Future<RemoteSaveResult> mutateDraft(NxDocument document);
+  Future<RemoteSaveResult> delete(int id, {DateTime? clientUpdatedAt});
   Future<DocumentSnap> createSnapshot(
     int documentId, {
     required String source,

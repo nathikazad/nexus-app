@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
+import 'package:nx_notes/data/remote/fake/fake_notes_remote_api.dart';
 import 'package:nx_notes/data/remote/repository_notes_remote_api.dart';
 
 import '../../support/contracts/notes_remote_api_contract.dart';
@@ -7,7 +8,10 @@ import '../../support/contracts/notes_remote_api_contract.dart';
 void main() {
   group('RepositoryNotesRemoteApi contract', () {
     runNotesRemoteApiContract(
-      createApi: () async => RepositoryNotesRemoteApi(FakeDocumentRepository()),
+      createApi: () async => RepositoryNotesRemoteApi(
+        repository: FakeDocumentRepository(),
+        syncTransport: FakeNotesRemoteApi(),
+      ),
     );
   });
 }

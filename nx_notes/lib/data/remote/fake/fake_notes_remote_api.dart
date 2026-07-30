@@ -1,16 +1,26 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:nx_notes/application/ports/notes_remote_api.dart';
+import 'package:nx_notes/application/ports/document_sync_transport.dart';
 import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_summary.dart';
+import 'package:nx_notes/domain/document/document_identity.dart';
+import 'package:nx_notes/domain/sync/document_revision.dart';
+import 'package:nx_notes/domain/sync/document_sync.dart';
+import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/remote_save_result.dart';
 
-final class FakeNotesRemoteApi implements NotesRemoteApi {
+final class FakeNotesRemoteApi
+    implements NotesRemoteApi, DocumentSyncTransport {
   FakeNotesRemoteApi({
     Iterable<NxDocument> documents = const <NxDocument>[],
     this.error,
     this.catalogBarrier,
     this.documentBarrier,
     this.saveBarrier,
+    this.syncBarrier,
   }) : _documents = <int, NxDocument>{
          for (final document in documents) document.id: document,
        };
@@ -20,9 +30,11 @@ final class FakeNotesRemoteApi implements NotesRemoteApi {
   Future<void>? catalogBarrier;
   Future<void>? documentBarrier;
   Future<void>? saveBarrier;
+  Future<void>? syncBarrier;
   int catalogFetchCount = 0;
   final Map<int, int> documentFetchCounts = <int, int>{};
   int saveCount = 0;
+  int syncCount = 0;
   int _nextId = 10000;
 
   List<NxDocument> get documents => _documents.values.toList(growable: false);
@@ -51,11 +63,10 @@ final class FakeNotesRemoteApi implements NotesRemoteApi {
             .where((document) => document.pinned)
             .take(query.limit ?? 20)
             .toList(),
-      CatalogKind.books =>
-        rows
-            .where((document) => document.isBook)
-            .take(query.limit ?? 100)
-            .toList(),
+      CatalogKind.books => _limit(
+        rows.where((document) => document.isBook),
+        query.limit,
+      ),
       CatalogKind.search =>
         rows
             .where(
@@ -92,7 +103,7 @@ final class FakeNotesRemoteApi implements NotesRemoteApi {
   }
 
   @override
-  Future<RemoteSaveResult> saveDocumentIfNewer(NxDocument document) async {
+  Future<RemoteSaveResult> mutateDocument(NxDocument document) async {
     saveCount += 1;
     await saveBarrier;
     _throwIfConfigured();
@@ -102,6 +113,7 @@ final class FakeNotesRemoteApi implements NotesRemoteApi {
         status: RemoteSaveStatus.stale,
         documentId: document.id,
         updatedAt: current.updatedAt,
+        serverHash: _hash(current),
       );
     }
     _documents[document.id] = document;
@@ -109,6 +121,41 @@ final class FakeNotesRemoteApi implements NotesRemoteApi {
       status: RemoteSaveStatus.applied,
       documentId: document.id,
       updatedAt: document.updatedAt,
+      serverHash: _hash(document),
+    );
+  }
+
+  @override
+  Future<DocumentSyncBundle> syncDocuments({
+    required List<DocumentManifestEntry> manifest,
+    Set<int>? documentIds,
+  }) async {
+    syncCount += 1;
+    await syncBarrier;
+    _throwIfConfigured();
+    final clientHashes = <int, String?>{
+      for (final entry in manifest) entry.documentId: entry.serverHash,
+    };
+    final candidates =
+        _documents.values
+            .where(
+              (document) =>
+                  documentIds == null || documentIds.contains(document.id),
+            )
+            .toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
+    return DocumentSyncBundle(
+      documents: <RemoteDocument>[
+        for (final document in candidates)
+          if (clientHashes[document.id] != _hash(document))
+            _remoteDocument(document),
+      ],
+      deletedIds: <int>[
+        for (final entry in manifest)
+          if ((documentIds == null || documentIds.contains(entry.documentId)) &&
+              !_documents.containsKey(entry.documentId))
+            entry.documentId,
+      ],
     );
   }
 
@@ -149,8 +196,58 @@ final class FakeNotesRemoteApi implements NotesRemoteApi {
   }
 
   @override
-  Future<void> deleteDocument(int documentId) async {
+  Future<RemoteSaveResult> deleteDocument(
+    int documentId, {
+    DateTime? clientUpdatedAt,
+  }) async {
     _throwIfConfigured();
+    final current = _documents[documentId];
+    final editTime = clientUpdatedAt ?? DateTime.now().toUtc();
+    if (current != null && !editTime.isAfter(current.updatedAt)) {
+      return RemoteSaveResult(
+        status: RemoteSaveStatus.stale,
+        documentId: documentId,
+        updatedAt: current.updatedAt,
+        serverHash: _hash(current),
+      );
+    }
     _documents.remove(documentId);
+    return RemoteSaveResult(
+      status: RemoteSaveStatus.applied,
+      documentId: documentId,
+      updatedAt: editTime,
+    );
+  }
+
+  RemoteDocument _remoteDocument(NxDocument document) {
+    return RemoteDocument(
+      key: DocumentKey(localId: 'remote-${document.id}', remoteId: document.id),
+      document: document,
+      revision: RemoteRevision(document.updatedAt.toUtc().toIso8601String()),
+      serverHash: _hash(document),
+    );
+  }
+
+  String _hash(NxDocument document) {
+    return sha256
+        .convert(
+          utf8.encode(
+            jsonEncode(<String, Object?>{
+              'id': document.id,
+              'title': document.title,
+              'model_type': document.modelTypeName,
+              'document': document.document,
+              'json_document': document.jsonDocument,
+              'pinned': document.pinned,
+              'tags': document.tagsBySystem,
+              'updated_at': document.updatedAt.toUtc().toIso8601String(),
+            }),
+          ),
+        )
+        .toString();
+  }
+
+  List<NxDocument> _limit(Iterable<NxDocument> rows, int? limit) {
+    return (limit == null ? rows : rows.take(limit)).toList();
   }
 }

@@ -133,7 +133,7 @@ final class BackgroundUploader {
           );
           break;
         case PendingOperationType.update:
-          final result = await _remoteApi.saveDocumentIfNewer(local.document);
+          final result = await _remoteApi.mutateDocument(local.document);
           if (result.status == RemoteSaveStatus.applied) {
             await _localStore.completeOperation(
               operation.operationId,
@@ -145,6 +145,7 @@ final class BackgroundUploader {
                 revision: RemoteRevision(
                   result.updatedAt.toUtc().toIso8601String(),
                 ),
+                serverHash: result.serverHash,
               ),
             );
           } else {
@@ -162,7 +163,23 @@ final class BackgroundUploader {
           break;
         case PendingOperationType.delete:
           final remoteId = operation.documentKey.remoteId;
-          if (remoteId != null) await _remoteApi.deleteDocument(remoteId);
+          if (remoteId != null) {
+            final result = await _remoteApi.deleteDocument(
+              remoteId,
+              clientUpdatedAt: operation.createdAt,
+            );
+            if (result.status == RemoteSaveStatus.stale) {
+              final remote = await _remoteApi.fetchDocument(remoteId);
+              if (remote == null) {
+                throw StateError('Stale document $remoteId no longer exists');
+              }
+              await _localStore.discardStaleOperationAndImportRemote(
+                operation.operationId,
+                _remoteDocument(remote),
+              );
+              break;
+            }
+          }
           await _localStore.completeOperation(
             operation.operationId,
             result: RemoteWriteResult(

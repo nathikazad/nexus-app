@@ -2,6 +2,7 @@ import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
+import 'package:nx_notes/domain/sync/document_sync.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
@@ -25,6 +26,10 @@ abstract interface class LocalNotesStore {
   Future<LocalDocument?> getDocumentByRemoteId(int remoteId);
 
   Future<void> importRemoteDocuments(List<RemoteDocument> documents);
+
+  Future<List<DocumentManifestEntry>> documentManifest();
+
+  Future<void> applySyncBundle(DocumentSyncBundle bundle);
 
   /// Replaces a stale local draft with the accepted remote document and
   /// removes pending work for that document in one transaction.

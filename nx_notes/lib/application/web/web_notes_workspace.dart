@@ -77,6 +77,16 @@ final class WebNotesWorkspace implements NotesWorkspace {
   Future<void> uploadPending() async {}
 
   @override
+  Future<void> syncLibrary() {
+    return Future.wait(<Future<void>>[
+      refreshCatalog(const CatalogQuery.recent()),
+      refreshCatalog(const CatalogQuery.pinned()),
+      refreshCatalog(const CatalogQuery.books()),
+      refreshCatalog(const CatalogQuery.all()),
+    ]);
+  }
+
+  @override
   Future<void> close() async {
     if (_closed) return;
     _closed = true;

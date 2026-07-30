@@ -150,6 +150,11 @@ final class FakeNotesWorkspace implements NotesWorkspace {
   }
 
   @override
+  Future<void> syncLibrary() async {
+    uploadCount += 1;
+  }
+
+  @override
   Future<void> close() async {
     await Future.wait(<Future<void>>[
       for (final session in _sessions.values.toList()) session.close(),

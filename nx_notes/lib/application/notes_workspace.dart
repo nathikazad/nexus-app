@@ -19,5 +19,9 @@ abstract interface class NotesWorkspace {
 
   Future<void> uploadPending();
 
+  /// Reconciles the complete native cache. Web implementations may refresh
+  /// their visible network-backed catalogs instead.
+  Future<void> syncLibrary();
+
   Future<void> close();
 }

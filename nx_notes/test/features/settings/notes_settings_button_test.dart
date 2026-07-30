@@ -6,12 +6,13 @@ import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/data/document/fake_document_repository.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/data/remote/repository_notes_remote_api.dart';
+import 'package:nx_notes/data/remote/fake/fake_notes_remote_api.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/settings/notes_settings_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('settings dialog changes theme and runs a hard refetch', (
+  testWidgets('settings dialog changes theme and synchronizes the library', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -24,7 +25,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: _SettingsHarness(
-              onHardRefetch: () async {
+              onSyncNow: () async {
                 refetches++;
               },
             ),
@@ -41,17 +42,17 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
-    expect(find.text('Hard refetch'), findsOneWidget);
+    expect(find.text('Sync now'), findsOneWidget);
 
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(find.text('dark'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('hard-refetch-button')));
+    await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
     expect(refetches, 1);
-    expect(find.text('Library refreshed.'), findsOneWidget);
+    expect(find.text('Library synchronized.'), findsOneWidget);
   });
 
   testWidgets('web settings presents a server library refresh', (tester) async {
@@ -66,7 +67,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: _SettingsHarness(
-              onHardRefetch: () async {
+              onSyncNow: () async {
                 refreshes++;
               },
             ),
@@ -82,7 +83,7 @@ void main() {
     expect(find.text('Library'), findsOneWidget);
     expect(find.text('Refresh library'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('hard-refetch-button')));
+    await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
     expect(refreshes, 1);
@@ -103,7 +104,10 @@ void main() {
           offlineEnabledProvider.overrideWithValue(false),
           documentRepositoryProvider.overrideWithValue(repository),
           notesRemoteApiProvider.overrideWithValue(
-            RepositoryNotesRemoteApi(repository),
+            RepositoryNotesRemoteApi(
+              repository: repository,
+              syncTransport: FakeNotesRemoteApi(),
+            ),
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: NotesSettingsButton())),
@@ -111,7 +115,7 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('notes-settings-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('hard-refetch-button')));
+    await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
     expect(repository.listAllCalls, 1);
@@ -120,9 +124,9 @@ void main() {
 }
 
 class _SettingsHarness extends ConsumerWidget {
-  const _SettingsHarness({required this.onHardRefetch});
+  const _SettingsHarness({required this.onSyncNow});
 
-  final HardRefetchCallback onHardRefetch;
+  final LibrarySyncCallback onSyncNow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -130,7 +134,7 @@ class _SettingsHarness extends ConsumerWidget {
     return Column(
       children: <Widget>[
         Text(isDark ? 'dark' : 'light'),
-        NotesSettingsButton(onHardRefetch: onHardRefetch),
+        NotesSettingsButton(onSyncNow: onSyncNow),
       ],
     );
   }

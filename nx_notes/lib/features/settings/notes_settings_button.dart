@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 
-typedef HardRefetchCallback = Future<void> Function();
+typedef LibrarySyncCallback = Future<void> Function();
 
 class NotesSettingsButton extends ConsumerWidget {
-  const NotesSettingsButton({this.onHardRefetch, super.key});
+  const NotesSettingsButton({this.onSyncNow, super.key});
 
-  final HardRefetchCallback? onHardRefetch;
+  final LibrarySyncCallback? onSyncNow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,8 +21,8 @@ class NotesSettingsButton extends ConsumerWidget {
           context: context,
           builder: (context) => _NotesSettingsDialog(
             offlineEnabled: offlineEnabled,
-            onHardRefetch:
-                onHardRefetch ??
+            onSyncNow:
+                onSyncNow ??
                 () async {
                   await ref.read(notesLibraryRefreshProvider)();
                 },
@@ -44,11 +44,11 @@ class NotesSettingsButton extends ConsumerWidget {
 class _NotesSettingsDialog extends ConsumerStatefulWidget {
   const _NotesSettingsDialog({
     required this.offlineEnabled,
-    required this.onHardRefetch,
+    required this.onSyncNow,
   });
 
   final bool offlineEnabled;
-  final HardRefetchCallback onHardRefetch;
+  final LibrarySyncCallback onSyncNow;
 
   @override
   ConsumerState<_NotesSettingsDialog> createState() =>
@@ -60,7 +60,7 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
   String? _resultMessage;
   var _failed = false;
 
-  Future<void> _hardRefetch() async {
+  Future<void> _syncNow() async {
     if (_refetching) return;
     setState(() {
       _refetching = true;
@@ -68,16 +68,18 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
       _failed = false;
     });
     try {
-      await widget.onHardRefetch();
+      await widget.onSyncNow();
       if (!mounted) return;
       setState(() {
-        _resultMessage = 'Library refreshed.';
+        _resultMessage = widget.offlineEnabled
+            ? 'Library synchronized.'
+            : 'Library refreshed.';
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _failed = true;
-        _resultMessage = 'Refetch failed: $error';
+        _resultMessage = 'Sync failed: $error';
       });
     } finally {
       if (mounted) {
@@ -132,14 +134,14 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
             const SizedBox(height: 6),
             Text(
               widget.offlineEnabled
-                  ? 'Refresh Recent, Pinned, Books, and library summaries. '
-                        'Cached document bodies and pending edits are preserved.'
+                  ? 'Upload pending edits, compare the local manifest, and '
+                        'download every changed document for offline use.'
                   : 'Reload the document library from the server.',
             ),
             const SizedBox(height: 12),
             FilledButton.tonalIcon(
-              key: const Key('hard-refetch-button'),
-              onPressed: _refetching ? null : _hardRefetch,
+              key: const Key('sync-now-button'),
+              onPressed: _refetching ? null : _syncNow,
               icon: _refetching
                   ? const SizedBox.square(
                       dimension: 16,
@@ -148,9 +150,9 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
                   : const Icon(Icons.refresh),
               label: Text(
                 _refetching
-                    ? 'Refetching…'
+                    ? 'Synchronizing…'
                     : widget.offlineEnabled
-                    ? 'Hard refetch'
+                    ? 'Sync now'
                     : 'Refresh library',
               ),
             ),

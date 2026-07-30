@@ -4,6 +4,7 @@ import 'package:nx_notes/domain/catalog/catalog_query.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/document_revision.dart';
+import 'package:nx_notes/domain/sync/document_sync.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
@@ -215,6 +216,84 @@ void runLocalNotesStoreContract({
       const DocumentKey(localId: 'local-1'),
     );
     expect(saved!.document.document, 'local');
+  });
+
+  test(
+    'manifest stores hashes and sync bundle rebuilds offline catalogs',
+    () async {
+      await store.applySyncBundle(
+        DocumentSyncBundle(
+          documents: <RemoteDocument>[
+            RemoteDocument(
+              key: const DocumentKey(localId: 'one', remoteId: 1),
+              document: offlineTestDocument(id: 1, title: 'Synced document'),
+              revision: const RemoteRevision('rev-1'),
+              serverHash: 'hash-1',
+            ),
+            RemoteDocument(
+              key: const DocumentKey(localId: 'book', remoteId: 2),
+              document: offlineTestDocument(
+                id: 2,
+                title: 'Synced book',
+              ).copyWith(modelTypeName: 'Book', pinned: true),
+              revision: const RemoteRevision('rev-2'),
+              serverHash: 'hash-2',
+            ),
+          ],
+        ),
+      );
+
+      final manifest = await store.documentManifest();
+      expect(
+        manifest.map((entry) => (entry.documentId, entry.serverHash)).toList(),
+        <(int, String?)>[(1, 'hash-1'), (2, 'hash-2')],
+      );
+      expect(
+        (await store.readCatalog(
+          const CatalogQuery.all(),
+        )).map((row) => row.id),
+        unorderedEquals(<int>[1, 2]),
+      );
+      expect(
+        (await store.readCatalog(
+          const CatalogQuery.books(),
+        )).map((row) => row.id),
+        <int>[2],
+      );
+
+      await store.applySyncBundle(
+        const DocumentSyncBundle(deletedIds: <int>[1]),
+      );
+      expect(await store.getDocumentByRemoteId(1), isNull);
+    },
+  );
+
+  test('sync bundle preserves a pending local edit', () async {
+    await store.saveDraftAndEnqueue(
+      offlineLocalDocument(body: 'pending local'),
+      operation: offlinePendingOperation(body: 'pending local'),
+    );
+
+    await store.applySyncBundle(
+      DocumentSyncBundle(
+        documents: <RemoteDocument>[
+          RemoteDocument(
+            key: const DocumentKey(localId: 'local-1', remoteId: 1),
+            document: offlineTestDocument(body: 'remote'),
+            revision: const RemoteRevision('remote'),
+            serverHash: 'remote-hash',
+          ),
+        ],
+        deletedIds: const <int>[1],
+      ),
+    );
+
+    expect(
+      (await store.getDocument(
+        const DocumentKey(localId: 'local-1'),
+      ))!.document.document,
+      'pending local',
+    );
   });
 
   test('document streams publish initial and changed values', () async {

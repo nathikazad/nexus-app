@@ -11,6 +11,7 @@ class LocalDocuments extends Table {
   DateTimeColumn get localUpdatedAt => dateTime()();
   TextColumn get serverRevision => text().nullable()();
   TextColumn get baseServerRevision => text().nullable()();
+  TextColumn get serverHash => text().nullable()();
   TextColumn get syncState => text()();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
@@ -125,7 +126,7 @@ class NotesDatabase extends _$NotesDatabase {
   NotesDatabase(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -152,6 +153,9 @@ class NotesDatabase extends _$NotesDatabase {
           FROM local_documents
           WHERE remote_id IS NOT NULL
           ''');
+      }
+      if (from < 5) {
+        await migrator.addColumn(localDocuments, localDocuments.serverHash);
       }
     },
   );

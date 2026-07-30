@@ -6,25 +6,10 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../core/json/payload_unwrap.dart';
 import '../../core/client/db_audit_context.dart';
 import '../documents/get_kgql_models.graphql.dart';
-import '../documents/set_kgql_model_if_newer.graphql.dart';
 import '../documents/set_kgql_models.graphql.dart';
 import '../models/model.dart';
 import '../requests/set_model_request.dart';
 import 'mutation_debug.dart';
-
-enum KgqlConditionalSaveStatus { applied, stale }
-
-final class KgqlConditionalSaveResult {
-  const KgqlConditionalSaveResult({
-    required this.status,
-    required this.modelId,
-    required this.updatedAt,
-  });
-
-  final KgqlConditionalSaveStatus status;
-  final int modelId;
-  final DateTime updatedAt;
-}
 
 /// Parse `getKgqlModels` JSON (string or list) into [Model] list.
 List<Model> parseKgqlModelsResult(dynamic jsonResult) {
@@ -189,91 +174,6 @@ Future<int> setKgqlModel(
 
     return modelId;
   });
-}
-
-/// Atomically applies an existing-model mutation only when [clientUpdatedAt]
-/// is newer than the model's current `updated_at`.
-///
-/// Retries must reuse the timestamp of the original local edit.
-Future<KgqlConditionalSaveResult> setKgqlModelIfNewer(
-  GraphQLClient client,
-  SetModelRequest request, {
-  required DateTime clientUpdatedAt,
-  int? domainId,
-  DbAuditContext? auditContext,
-  String auditSourceKind = '',
-}) async {
-  if (request.id == null || request.delete) {
-    throw ArgumentError(
-      'save-if-newer requires an existing, non-delete model request',
-    );
-  }
-  final context = auditContext ??
-      currentDbAuditContext() ??
-      DbAuditContext.create(
-        sourceKind: auditSourceKind,
-        sourceId: _setModelSourceId(request),
-        sourceLabel: _setModelSourceLabel(request),
-      );
-
-  return runWithDbAuditContext(context, () async {
-    final variables = <String, dynamic>{
-      'input': <String, dynamic>{
-        'data': request.toJson(),
-        'clientUpdatedAt': clientUpdatedAt.toUtc().toIso8601String(),
-        if (domainId != null) 'domainId': domainId,
-      },
-    };
-    final result = await client.mutate(
-      MutationOptions(
-        document: gql(setKgqlModelIfNewerMutation),
-        variables: variables,
-      ),
-    );
-
-    if (result.hasException) {
-      printKgqlMutationError(
-        operationName: 'setKgqlModelIfNewer',
-        mutation: setKgqlModelIfNewerMutation,
-        variables: variables,
-        exception: result.exception!,
-      );
-      throw result.exception!;
-    }
-
-    final response =
-        result.data?['setKgqlModelIfNewer'] as Map<String, dynamic>?;
-    if (response == null) {
-      throw StateError('No data returned from setKgqlModelIfNewer mutation');
-    }
-    final raw = response['json'];
-    final payload = raw is String
-        ? Map<String, dynamic>.from(jsonDecode(raw) as Map)
-        : Map<String, dynamic>.from(raw as Map);
-    final status = switch (payload['status']) {
-      'APPLIED' => KgqlConditionalSaveStatus.applied,
-      'STALE' => KgqlConditionalSaveStatus.stale,
-      final Object? value => throw StateError(
-          'Unknown save-if-newer status: $value',
-        ),
-    };
-    final modelId = payload['id'];
-    final updatedAt = payload['updated_at'];
-    if (modelId is! int || updatedAt is! String) {
-      throw StateError('Invalid save-if-newer response: $payload');
-    }
-    return KgqlConditionalSaveResult(
-      status: status,
-      modelId: modelId,
-      updatedAt: _parseServerTimestamp(updatedAt),
-    );
-  });
-}
-
-DateTime _parseServerTimestamp(String value) {
-  final hasTimeZone =
-      value.endsWith('Z') || RegExp(r'[+-]\d\d(?::?\d\d)?$').hasMatch(value);
-  return DateTime.parse(hasTimeZone ? value : '${value}Z').toUtc();
 }
 
 String _setModelSourceId(SetModelRequest request) {

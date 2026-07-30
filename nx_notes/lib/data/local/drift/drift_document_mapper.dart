@@ -23,6 +23,7 @@ class DriftDocumentMapper {
       localUpdatedAt: Value<DateTime>(local.localUpdatedAt),
       serverRevision: Value<String?>(local.serverRevision?.value),
       baseServerRevision: Value<String?>(local.baseServerRevision?.value),
+      serverHash: Value<String?>(local.serverHash),
       syncState: Value<String>(local.syncState.name),
       deletedLocally: Value<bool>(local.deletedLocally),
     );
@@ -38,6 +39,7 @@ class DriftDocumentMapper {
       localUpdatedAt: row.localUpdatedAt,
       serverRevision: _revision(row.serverRevision),
       baseServerRevision: _revision(row.baseServerRevision),
+      serverHash: row.serverHash,
       syncState: DocumentSyncState.values.byName(row.syncState),
       deletedLocally: row.deletedLocally,
     );

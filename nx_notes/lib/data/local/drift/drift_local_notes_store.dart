@@ -8,6 +8,7 @@ import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_summary.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
+import 'package:nx_notes/domain/sync/document_sync.dart';
 import 'package:nx_notes/domain/sync/pending_operation.dart';
 import 'package:nx_notes/domain/sync/remote_document.dart';
 import 'package:nx_notes/domain/sync/sync_failure.dart';
@@ -153,6 +154,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
           localUpdatedAt: remote.document.updatedAt,
           serverRevision: remote.revision,
           baseServerRevision: remote.revision,
+          serverHash: remote.serverHash,
           syncState: DocumentSyncState.synced,
           deletedLocally: remote.deleted,
         );
@@ -164,6 +166,91 @@ class DriftLocalNotesStore implements LocalNotesStore {
           deletedLocally: remote.deleted,
         );
       }
+    });
+  }
+
+  @override
+  Future<List<DocumentManifestEntry>> documentManifest() async {
+    final rows =
+        await (database.select(database.localDocuments)
+              ..where(
+                (table) =>
+                    table.accountKey.equals(accountKey) &
+                    table.remoteId.isNotNull() &
+                    table.deletedLocally.equals(false),
+              )
+              ..orderBy(<OrderingTerm Function(LocalDocuments)>[
+                (table) => OrderingTerm.asc(table.remoteId),
+              ]))
+            .get();
+    return <DocumentManifestEntry>[
+      for (final row in rows)
+        DocumentManifestEntry(
+          documentId: row.remoteId!,
+          serverHash: row.serverHash,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> applySyncBundle(DocumentSyncBundle bundle) async {
+    await database.transaction(() async {
+      for (final remote in bundle.documents) {
+        final remoteId = remote.key.remoteId;
+        if (remoteId == null) continue;
+        final existing = await getDocumentByRemoteId(remoteId);
+        if (existing != null &&
+            existing.syncState != DocumentSyncState.synced) {
+          continue;
+        }
+        final key =
+            existing?.key ??
+            DocumentKey(localId: 'remote-$remoteId', remoteId: remoteId);
+        final local = LocalDocument(
+          key: key,
+          accountKey: accountKey,
+          document: remote.document,
+          localUpdatedAt: remote.document.updatedAt,
+          serverRevision: remote.revision,
+          baseServerRevision: remote.revision,
+          serverHash: remote.serverHash,
+          syncState: DocumentSyncState.synced,
+        );
+        await database
+            .into(database.localDocuments)
+            .insertOnConflictUpdate(mapper.toDocumentCompanion(local));
+        await _upsertBodySummary(remote.document);
+      }
+
+      for (final remoteId in bundle.deletedIds) {
+        final existing = await getDocumentByRemoteId(remoteId);
+        if (existing != null &&
+            existing.syncState == DocumentSyncState.synced) {
+          await (database.delete(database.localDocuments)..where(
+                (table) =>
+                    table.accountKey.equals(accountKey) &
+                    table.remoteId.equals(remoteId),
+              ))
+              .go();
+        }
+        if (existing == null ||
+            existing.syncState == DocumentSyncState.synced) {
+          await (database.delete(database.documentSummaries)..where(
+                (table) =>
+                    table.accountKey.equals(accountKey) &
+                    table.remoteId.equals(remoteId),
+              ))
+              .go();
+          await (database.delete(database.catalogMemberships)..where(
+                (table) =>
+                    table.accountKey.equals(accountKey) &
+                    table.remoteId.equals(remoteId),
+              ))
+              .go();
+        }
+      }
+
+      await _rebuildDefaultCatalogs();
     });
   }
 
@@ -201,6 +288,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
                 localUpdatedAt: remote.document.updatedAt,
                 serverRevision: remote.revision,
                 baseServerRevision: remote.revision,
+                serverHash: remote.serverHash,
                 syncState: DocumentSyncState.synced,
                 deletedLocally: remote.deleted,
               ),
@@ -246,6 +334,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
                 localUpdatedAt: remote.document.updatedAt,
                 serverRevision: revision,
                 baseServerRevision: revision,
+                serverHash: remote.serverHash,
                 syncState: DocumentSyncState.synced,
                 deletedLocally: remote.deleted,
               ),
@@ -371,6 +460,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
               remoteId: Value<int?>(result.key.remoteId),
               serverRevision: Value<String?>(result.revision.value),
               baseServerRevision: Value<String?>(result.revision.value),
+              serverHash: Value<String?>(result.serverHash),
               syncState: Value<String>(DocumentSyncState.synced.name),
             ),
           );
@@ -405,6 +495,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
                 localUpdatedAt: document.document.updatedAt,
                 serverRevision: revision,
                 baseServerRevision: revision,
+                serverHash: document.serverHash,
                 syncState: DocumentSyncState.synced,
               ),
             ),
@@ -559,6 +650,61 @@ class DriftLocalNotesStore implements LocalNotesStore {
               catalogKey: catalogKey,
               remoteId: document.id,
               position: -1,
+            ),
+          );
+    }
+  }
+
+  Future<void> _rebuildDefaultCatalogs() async {
+    final rows =
+        await (database.select(database.documentSummaries)
+              ..where(
+                (table) =>
+                    table.accountKey.equals(accountKey) &
+                    table.deletedLocally.equals(false),
+              )
+              ..orderBy(<OrderingTerm Function(DocumentSummaries)>[
+                (table) => OrderingTerm.desc(table.remoteUpdatedAt),
+              ]))
+            .get();
+    final summaries = rows.map(_summaryFromRow).toList(growable: false);
+    await _replaceMembershipRows(const CatalogQuery.all(), summaries);
+    await _replaceMembershipRows(
+      const CatalogQuery.recent(),
+      summaries.take(20).toList(growable: false),
+    );
+    await _replaceMembershipRows(
+      const CatalogQuery.pinned(),
+      summaries
+          .where((summary) => summary.pinned)
+          .take(20)
+          .toList(growable: false),
+    );
+    await _replaceMembershipRows(
+      const CatalogQuery.books(),
+      summaries.where((summary) => summary.isBook).toList(growable: false),
+    );
+  }
+
+  Future<void> _replaceMembershipRows(
+    CatalogQuery query,
+    List<DocumentSummary> summaries,
+  ) async {
+    await (database.delete(database.catalogMemberships)..where(
+          (table) =>
+              table.accountKey.equals(accountKey) &
+              table.catalogKey.equals(query.cacheKey),
+        ))
+        .go();
+    for (var index = 0; index < summaries.length; index++) {
+      await database
+          .into(database.catalogMemberships)
+          .insert(
+            CatalogMembershipsCompanion.insert(
+              accountKey: accountKey,
+              catalogKey: query.cacheKey,
+              remoteId: summaries[index].id,
+              position: index,
             ),
           );
     }

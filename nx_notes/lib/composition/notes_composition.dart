@@ -5,6 +5,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/application/document_session.dart';
 import 'package:nx_notes/application/history/document_history_service.dart';
 import 'package:nx_notes/application/links/document_link_service.dart';
@@ -21,11 +22,13 @@ import 'package:nx_notes/application/ports/session_store.dart';
 import 'package:nx_notes/application/session/notes_logout_service.dart';
 import 'package:nx_notes/application/session/offline_session_restorer.dart';
 import 'package:nx_notes/application/publishing/document_publish_service.dart';
+import 'package:nx_notes/application/sync/document_synchronizer.dart';
 import 'package:nx_notes/application/web/web_notes_workspace.dart';
 import 'package:nx_notes/data/connectivity/plugin_connectivity_monitor.dart';
 import 'package:nx_notes/data/local/drift/drift_local_notes_store.dart';
 import 'package:nx_notes/data/local/drift/notes_database.dart';
 import 'package:nx_notes/data/providers.dart';
+import 'package:nx_notes/data/remote/kgql/kgql_document_sync_transport.dart';
 import 'package:nx_notes/data/remote/repository_notes_remote_api.dart';
 import 'package:nx_notes/data/remote/unavailable/unavailable_notes_remote_api.dart';
 import 'package:nx_notes/data/session/http_session_probe.dart';
@@ -130,7 +133,10 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
 final notesRemoteApiProvider = Provider<NotesRemoteApi>((ref) {
   final user = ref.watch(authProvider).value;
   if (user == null) return const UnavailableNotesRemoteApi();
-  return RepositoryNotesRemoteApi(ref.watch(documentRepositoryProvider));
+  return RepositoryNotesRemoteApi(
+    repository: ref.watch(documentRepositoryProvider),
+    syncTransport: KgqlDocumentSyncTransport(ref.watch(graphqlClientProvider)),
+  );
 });
 
 final backgroundUploaderProvider = Provider<BackgroundUploader?>((ref) {
@@ -147,17 +153,31 @@ final backgroundUploaderProvider = Provider<BackgroundUploader?>((ref) {
   return uploader;
 });
 
+final documentSynchronizerProvider = Provider<DocumentSynchronizer?>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
+  final local = ref.watch(localNotesStoreProvider);
+  final uploader = ref.watch(backgroundUploaderProvider);
+  if (local == null || uploader == null) return null;
+  return DocumentSynchronizer(
+    localStore: local,
+    remoteApi: ref.watch(notesRemoteApiProvider),
+    uploader: uploader,
+  );
+});
+
 final notesWorkspaceProvider = Provider<NotesWorkspace?>((ref) {
   final remote = ref.watch(notesRemoteApiProvider);
   final NotesWorkspace? workspace;
   if (ref.watch(offlineEnabledProvider)) {
     final local = ref.watch(localNotesStoreProvider);
     final uploader = ref.watch(backgroundUploaderProvider);
-    if (local == null || uploader == null) return null;
+    final synchronizer = ref.watch(documentSynchronizerProvider);
+    if (local == null || uploader == null || synchronizer == null) return null;
     workspace = NativeNotesWorkspace(
       localStore: local,
       remoteApi: remote,
       uploader: uploader,
+      synchronizer: synchronizer,
       clock: ref.watch(offlineClockProvider),
       idGenerator: ref.watch(offlineIdGeneratorProvider),
     );
@@ -230,13 +250,7 @@ final notesLibraryRefreshProvider = Provider<NotesLibraryRefresh>((ref) {
   return () async {
     final workspace = ref.read(notesWorkspaceProvider);
     if (workspace == null) throw StateError('Notes are not ready yet.');
-    await workspace.uploadPending();
-    await Future.wait(<Future<void>>[
-      workspace.refreshCatalog(const CatalogQuery.recent()),
-      workspace.refreshCatalog(const CatalogQuery.pinned()),
-      workspace.refreshCatalog(const CatalogQuery.books()),
-      workspace.refreshCatalog(const CatalogQuery.all()),
-    ]);
+    await workspace.syncLibrary();
   };
 });
 

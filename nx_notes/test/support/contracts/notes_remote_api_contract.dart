@@ -29,8 +29,8 @@ void runNotesRemoteApiContract({required NotesRemoteApiFactory createApi}) {
       updatedAt: current.updatedAt.add(const Duration(minutes: 1)),
     );
 
-    final applied = await api.saveDocumentIfNewer(edited);
-    final retry = await api.saveDocumentIfNewer(edited);
+    final applied = await api.mutateDocument(edited);
+    final retry = await api.mutateDocument(edited);
 
     expect(applied.status, RemoteSaveStatus.applied);
     expect(retry.status, RemoteSaveStatus.stale);

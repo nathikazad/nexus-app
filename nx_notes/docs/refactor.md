@@ -4,9 +4,9 @@
 
 Rebuild `nx_notes` around one simple rule:
 
-> The native app reads and writes locally, refreshes a document when it is
-> opened, and uploads pending edits in the background. The web app talks
-> directly to KGQL.
+> The native app reads and writes locally, reconciles its complete document
+> cache in the background, and performs a scoped hash check when a document is
+> opened. The web app talks directly to KGQL and has no offline subsystem.
 
 The architecture should optimize first for human understanding, then for
 modularity and independent testing. A new developer should be able to follow a
@@ -19,18 +19,25 @@ systems.
 Implemented in July 2026.
 
 - Native iOS and macOS composition now uses `NativeNotesWorkspace`,
-  `NativeDocumentSession`, Drift summary/body storage, and `BackgroundUploader`.
+  `NativeDocumentSession`, Drift summary/body storage, `BackgroundUploader`,
+  and `DocumentSynchronizer`.
 - Web composition uses `WebNotesWorkspace` and direct KGQL access without
   opening SQLite or constructing an outbox.
-- KGQL exposes one atomic `set_kgql_model_if_newer` mutation backed by a
-  PostgreSQL row lock and `models.updated_at`.
-- Catalog requests fetch summary structs only. Complete document bodies are
-  fetched once when a document session opens.
+- PostgreSQL exposes `app.mutate_document` and `app.sync_documents`.
+  `mutate_document` owns the row lock, `updated_at` conflict rule, canonical
+  payload, and SHA-256 update in one transaction.
+- Native startup renders cached catalogs immediately and starts a complete
+  hash-manifest reconciliation without awaiting it.
+- A cached document renders immediately and then performs a one-document hash
+  check. An uncached document performs the same scoped request in the
+  foreground.
+- Every changed full document body is stored locally, so a completed library
+  synchronization makes every document and Book available offline.
 - Riverpod constructs and owns the application objects; plain Dart services
   own the behavior.
 - Links, history, publishing, and assets retain separate, testable
   capabilities.
-- The old full-library pull engine, duplicate sync adapters, global document
+- The old scan-and-refetch engine, duplicate sync adapters, global document
   cache, and save-driven invalidation paths have been removed.
 - Memory, Drift, fake remote, repository remote, native, web, provider,
   widget, restart, retry, stale-write, account identity, and server concurrency
@@ -44,10 +51,12 @@ Implemented in July 2026.
 - Cached Recent and Books lists must appear immediately at startup.
 - A cached current document must appear immediately when restored or opened.
 - Startup must not wait for the complete document library to download.
-- Catalog refreshes download summaries, not every full document body.
-- Opening a cached document shows it immediately and then fetches the latest
-  version from KGQL.
-- Opening an uncached document fetches only that document.
+- Complete library reconciliation runs in the background after startup, on
+  resume, and when connectivity returns.
+- "Sync now" uses the same hash manifest and waits for that reconciliation.
+- Opening a cached document shows it immediately and then checks only that
+  document's server hash.
+- Opening an uncached document fetches only that full document.
 - An uncached document opened while offline shows a clear unavailable message.
 - Drafts are saved locally before any remote request.
 - Pending drafts upload in the background.
@@ -73,7 +82,8 @@ Implemented in July 2026.
 
 1. Native UI always renders local data first.
 2. Network work never blocks the complete application shell.
-3. Opening a document is an explicit action that triggers one remote refresh.
+3. Opening a document triggers one scoped hash reconciliation; it never
+   triggers a library scan.
 4. Editing persists to SQLite before attempting the network.
 5. A document editor remains mounted until the user closes its route or tab.
 6. Existing data and refresh status are represented separately.
@@ -93,12 +103,16 @@ flowchart TD
     Widget["Widget"] --> Provider["Riverpod provider"]
     Provider --> Workspace["NotesWorkspace"]
     Workspace --> Session["DocumentSession"]
+    Workspace --> Sync["DocumentSynchronizer"]
     Workspace --> Local["NotesLocalStore"]
     Workspace --> Remote["NotesRemoteApi"]
     Workspace --> Outbox["Background outbox"]
     Local --> SQLite["SQLite"]
     Remote --> KGQL["KGQL"]
     Outbox --> Remote
+    Sync --> Outbox
+    Sync --> Local
+    Sync --> Remote
 ```
 
 Every operation should be traceable through one direction:
@@ -112,6 +126,45 @@ Widget
 ```
 
 Repositories and services never reach back into Riverpod or widgets.
+
+## Document synchronization protocol
+
+The generic KGQL layer remains model-type and attribute agnostic. Document
+semantics live in a separate application API:
+
+```text
+Document writer
+→ GraphQL mutateDocument
+→ app.mutate_document
+→ generic set_kgql_models
+→ canonical Document payload + sync_hash in the same transaction
+```
+
+`app.mutate_document` rejects an update when its `client_updated_at` is not
+later than `models.updated_at`. On an accepted mutation it computes SHA-256
+from the complete canonical payload, excluding the `sync_hash` attribute
+itself. Document and Book writers in `nx_notes`, `nx_books`, the Book importer,
+and the mirror publisher use this wrapper.
+
+Native reconciliation is:
+
+```text
+SQLite manifest [{id, hash}]
+→ GraphQL syncDocuments
+→ app.sync_documents
+→ changed full documents + deleted ids
+→ one local transaction
+```
+
+An empty manifest is the initial full download. Later requests still send the
+small manifest, while the response contains only changed documents. A
+single-document open sends the same protocol with `documentIds: [id]`. HTTP
+compression is applied by the GraphQL server to the JSON response.
+
+The authoritative database sources are `core_schema/` and
+`schema/functions/`. Alembic revisions contain no copied model definitions or
+function bodies; the Document sync revision calls the shared schema reload
+helper.
 
 ## Primary abstractions
 
@@ -173,8 +226,9 @@ Native session behavior:
 open
 → read SQLite
 → emit cached document
-→ fetch the document from KGQL
-→ compare updated_at
+→ upload pending local edits
+→ send id + cached server hash
+→ download only if the hash differs
 → update SQLite and emit the latest document
 ```
 
@@ -229,7 +283,7 @@ abstract interface class NotesRemoteApi {
   Future<List<DocumentSummary>> fetchCatalog(CatalogQuery query);
   Future<NxDocument?> fetchDocument(int documentId);
 
-  Future<RemoteSaveResult> saveDocumentIfNewer(
+  Future<RemoteSaveResult> mutateDocument(
     NxDocument document,
   );
 
@@ -248,7 +302,7 @@ The KGQL adapter owns:
 - Model and attribute mapping
 - GraphQL error mapping
 - Endpoint selection
-- The `saveDocumentIfNewer` mutation
+- The `mutateDocument` mutation
 
 ### Supporting capabilities
 
@@ -297,12 +351,20 @@ lib/
     links/
       linked_model.dart
     sync/
-      pending_document_save.dart
+      document_sync.dart
+      local_document.dart
+      pending_operation.dart
       remote_save_result.dart
 
   application/
     notes_workspace.dart
     document_session.dart
+    ports/
+      local_notes_store.dart
+      notes_remote_api.dart
+    sync/
+      document_synchronizer.dart
+      outbox_coalescer.dart
     native/
       native_notes_workspace.dart
       native_document_session.dart
@@ -319,15 +381,15 @@ lib/
 
   data/
     local/
-      notes_local_store.dart
       drift/
+      memory/
     remote/
-      notes_remote_api.dart
-      kgql/
+      repository_notes_remote_api.dart
+      fake/
+      unavailable/
     assets/
 
-  presentation/
-    providers/
+  features/
     editor/
     library/
     shell/
@@ -590,7 +652,7 @@ A newer local edit replaces the older unsent outbox payload. The saved
 Add one atomic KGQL mutation:
 
 ```text
-saveDocumentIfNewer(document, updated_at)
+mutateDocument(document, updated_at)
 ```
 
 Server behavior:
@@ -616,7 +678,7 @@ The uploader has one narrow responsibility:
 
 ```text
 Read pending saves
-→ call saveDocumentIfNewer
+→ call mutateDocument
 → handle the response
 ```
 
@@ -716,7 +778,7 @@ Reusable behavior:
 - Publishing
 
 `nx_notes` supplies the adapter that turns a pending document save into a
-`saveDocumentIfNewer` call. This preserves reusable behavior without forcing
+`mutateDocument` call. This preserves reusable behavior without forcing
 the complete application through a generic synchronization abstraction.
 
 ## Patterns to remove
@@ -725,7 +787,7 @@ The redesigned application must not carry forward:
 
 - A global mutable `documentLocalCacheProvider`
 - Provider invalidation after draft saving
-- Full-library download during startup
+- Blocking full-library download during startup
 - Timestamp-based full catalog scans as a sync engine
 - Two competing offline engines
 - Widgets reading KGQL repositories directly
@@ -757,7 +819,7 @@ These tests define which existing core behavior must survive.
 
 ### Phase 2: Add the server mutation
 
-Implement and test `saveDocumentIfNewer`:
+Implement and test `mutateDocument`:
 
 - Atomic comparison using `models.updated_at`
 - Explicit `models.updated_at` update
