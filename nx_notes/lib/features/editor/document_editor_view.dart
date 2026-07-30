@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_notes/application/document_session.dart';
+import 'package:nx_notes/core/layout/is_desktop_layout.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/providers.dart';
@@ -1464,11 +1465,13 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   @override
   Widget build(BuildContext context) {
     final showsCaret = widget.editorMode.showsCaret;
+    final disableReaderKeyboard = widget.readOnly && !isDesktopLayout(context);
     final editorStyle = _editorStyle(
       widget.editorMode,
     ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
     final editor = AppFlowyEditor(
       editable: !widget.readOnly,
+      disableKeyboardService: disableReaderKeyboard,
       editorState: _editorState,
       editorScrollController: _scrollController,
       editorStyle: editorStyle,

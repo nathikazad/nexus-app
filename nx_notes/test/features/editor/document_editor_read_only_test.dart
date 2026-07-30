@@ -10,13 +10,53 @@ import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
 
 void main() {
-  testWidgets('read-only editor exposes no editing controls', (tester) async {
+  testWidgets(
+    'narrow read-only editor exposes no controls or software keyboard',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            documentImageAssetServiceProvider.overrideWithValue(null),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: DocumentEditorBody(document: _document(), readOnly: true),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+      expect(editor.editable, isFalse);
+      expect(editor.disableKeyboardService, isTrue);
+      expect(find.byType(FloatingToolbar), findsNothing);
+      expect(find.byKey(const ValueKey<String>('mode-toggle')), findsNothing);
+
+      await tester.tap(find.byType(AppFlowyEditor));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.testTextInput.isVisible, isFalse);
+
+      await tester.tap(find.byKey(const ValueKey<String>('title-display-1')));
+      await tester.pump();
+
+      expect(find.byType(TextField), findsNothing);
+    },
+  );
+
+  testWidgets('wide read-only editor retains desktop keyboard service', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [documentImageAssetServiceProvider.overrideWithValue(null)],
         child: MaterialApp(
-          home: Scaffold(
-            body: DocumentEditorBody(document: _document(), readOnly: true),
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1200, 800)),
+            child: Scaffold(
+              body: DocumentEditorBody(document: _document(), readOnly: true),
+            ),
           ),
         ),
       ),
@@ -25,13 +65,7 @@ void main() {
 
     final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
     expect(editor.editable, isFalse);
-    expect(find.byType(FloatingToolbar), findsNothing);
-    expect(find.byKey(const ValueKey<String>('mode-toggle')), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey<String>('title-display-1')));
-    await tester.pump();
-
-    expect(find.byType(TextField), findsNothing);
+    expect(editor.disableKeyboardService, isFalse);
   });
 
   testWidgets('reader can omit its in-document title', (tester) async {
