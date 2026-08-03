@@ -2218,14 +2218,9 @@ EditorStyle _editorStyle(
 }) {
   final readMode = mode == _DocumentEditorMode.read;
   final bodyStyle = readMode
-      ? TextStyle(
-          color: _readModeTextColor(),
-          fontFamily: 'Georgia',
-          fontSize: 17,
-          height: 1.5,
-        )
+      ? TextStyle(color: _readModeTextColor(), fontSize: 18, height: 1.6)
       : TextStyle(color: AppColors.editorText, fontSize: 16, height: 1.62);
-  final lineHeight = readMode ? 1.5 : 1.62;
+  final lineHeight = readMode ? 1.6 : 1.62;
   return EditorStyle.desktop(
     textScaleFactor: textScaleFactor,
     cursorColor: AppColors.text,

@@ -117,6 +117,11 @@ void main() {
 
     final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
     expect(editor.editorStyle.textScaleFactor, 1.4);
+    final readerTextStyle = editor.editorStyle.textStyleConfiguration.text;
+    expect(readerTextStyle.fontFamily, isNull);
+    expect(readerTextStyle.fontSize, 18);
+    expect(readerTextStyle.height, 1.6);
+    expect(editor.editorStyle.textStyleConfiguration.lineHeight, 1.6);
     final titleContext = tester.element(
       find.byKey(const ValueKey<String>('title-display-1')),
     );
