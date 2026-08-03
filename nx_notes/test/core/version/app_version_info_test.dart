@@ -5,7 +5,7 @@ void main() {
   test('describes a running Shorebird patch', () {
     const info = AppVersionInfo(shorebirdAvailable: true, patchNumber: 7);
 
-    expect(info.releaseLabel, '0.1.0 (2)');
+    expect(info.releaseLabel, '0.1.0 (3)');
     expect(info.patchLabel, 'Shorebird patch 7');
   });
 

@@ -1,5 +1,5 @@
 const String kAppVersion = '0.1.0';
-const String kAppBuildNumber = '2';
+const String kAppBuildNumber = '3';
 
 final class AppVersionInfo {
   const AppVersionInfo({

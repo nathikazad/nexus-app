@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Document text'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
     expect(find.text('Sync now'), findsOneWidget);
-    expect(find.text('Version 0.1.0 (2)'), findsOneWidget);
+    expect(find.text('Version 0.1.0 (3)'), findsOneWidget);
     expect(find.text('Shorebird patch 7'), findsOneWidget);
 
     await tester.tap(find.text('Dark'));
