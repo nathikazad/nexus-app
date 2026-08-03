@@ -39,6 +39,7 @@ import 'package:nx_notes/domain/catalog/catalog_state.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/domain/tags/tag_system_index.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Native builds use SQLite and an outbox. Web builds use direct KGQL only.
@@ -99,6 +100,23 @@ final offlineIdGeneratorProvider = Provider<IdGenerator>(
 final connectivityMonitorProvider = Provider<ConnectivityMonitor>(
   (ref) => PluginConnectivityMonitor(),
 );
+
+/// Stable native lifecycle inputs. Keeping these in providers prevents widget
+/// rebuilds from manufacturing new callbacks or transformed streams that would
+/// look like a fresh startup and accidentally trigger another synchronization.
+final offlineLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((
+  ref,
+) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
+  final workspace = ref.watch(notesWorkspaceProvider);
+  if (workspace == null) return null;
+  return (reason) => workspace.syncLibrary();
+});
+
+final offlineConnectivityChangesProvider = Provider<Stream<bool>?>((ref) {
+  if (!ref.watch(offlineEnabledProvider)) return null;
+  return ref.watch(connectivityMonitorProvider).onlineChanges;
+});
 
 final notesDatabaseProvider = Provider.family<NotesDatabase, String>((
   ref,

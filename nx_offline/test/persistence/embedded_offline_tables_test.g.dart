@@ -1,31 +1,20 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'sync_database.dart';
+part of 'embedded_offline_tables_test.dart';
 
 // ignore_for_file: type=lint
-class $LocalEntitiesTable extends LocalEntities
-    with TableInfo<$LocalEntitiesTable, LocalEntityRow> {
+class $TestExpensesTable extends TestExpenses
+    with TableInfo<$TestExpensesTable, TestExpense> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $LocalEntitiesTable(this.attachedDatabase, [this._alias]);
+  $TestExpensesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _accountKeyMeta = const VerificationMeta(
     'accountKey',
   );
   @override
   late final GeneratedColumn<String> accountKey = GeneratedColumn<String>(
     'account_key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _collectionMeta = const VerificationMeta(
-    'collection',
-  );
-  @override
-  late final GeneratedColumn<String> collection = GeneratedColumn<String>(
-    'collection',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -42,108 +31,27 @@ class $LocalEntitiesTable extends LocalEntities
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
-    'remoteId',
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
   );
   @override
-  late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
-    'remote_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
-    'payloadJson',
-  );
-  @override
-  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
-    'payload_json',
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _revisionMeta = const VerificationMeta(
-    'revision',
-  );
-  @override
-  late final GeneratedColumn<String> revision = GeneratedColumn<String>(
-    'revision',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _baseRevisionMeta = const VerificationMeta(
-    'baseRevision',
-  );
-  @override
-  late final GeneratedColumn<String> baseRevision = GeneratedColumn<String>(
-    'base_revision',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _syncStateMeta = const VerificationMeta(
-    'syncState',
-  );
-  @override
-  late final GeneratedColumn<String> syncState = GeneratedColumn<String>(
-    'sync_state',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deletedMeta = const VerificationMeta(
-    'deleted',
-  );
-  @override
-  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
-    'deleted',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("deleted" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    accountKey,
-    collection,
-    localId,
-    remoteId,
-    payloadJson,
-    updatedAt,
-    revision,
-    baseRevision,
-    syncState,
-    deleted,
-  ];
+  List<GeneratedColumn> get $columns => [accountKey, localId, description];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'local_entities';
+  static const String $name = 'test_expenses';
   @override
   VerificationContext validateIntegrity(
-    Insertable<LocalEntityRow> instance, {
+    Insertable<TestExpense> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -156,14 +64,6 @@ class $LocalEntitiesTable extends LocalEntities
     } else if (isInserting) {
       context.missing(_accountKeyMeta);
     }
-    if (data.containsKey('collection')) {
-      context.handle(
-        _collectionMeta,
-        collection.isAcceptableOrUnknown(data['collection']!, _collectionMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_collectionMeta);
-    }
     if (data.containsKey('local_id')) {
       context.handle(
         _localIdMeta,
@@ -172,204 +72,82 @@ class $LocalEntitiesTable extends LocalEntities
     } else if (isInserting) {
       context.missing(_localIdMeta);
     }
-    if (data.containsKey('remote_id')) {
+    if (data.containsKey('description')) {
       context.handle(
-        _remoteIdMeta,
-        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
-      );
-    }
-    if (data.containsKey('payload_json')) {
-      context.handle(
-        _payloadJsonMeta,
-        payloadJson.isAcceptableOrUnknown(
-          data['payload_json']!,
-          _payloadJsonMeta,
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
         ),
       );
     } else if (isInserting) {
-      context.missing(_payloadJsonMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('revision')) {
-      context.handle(
-        _revisionMeta,
-        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
-      );
-    }
-    if (data.containsKey('base_revision')) {
-      context.handle(
-        _baseRevisionMeta,
-        baseRevision.isAcceptableOrUnknown(
-          data['base_revision']!,
-          _baseRevisionMeta,
-        ),
-      );
-    }
-    if (data.containsKey('sync_state')) {
-      context.handle(
-        _syncStateMeta,
-        syncState.isAcceptableOrUnknown(data['sync_state']!, _syncStateMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_syncStateMeta);
-    }
-    if (data.containsKey('deleted')) {
-      context.handle(
-        _deletedMeta,
-        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
-      );
+      context.missing(_descriptionMeta);
     }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {accountKey, collection, localId};
+  Set<GeneratedColumn> get $primaryKey => {accountKey, localId};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {accountKey, collection, remoteId},
-  ];
-  @override
-  LocalEntityRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  TestExpense map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LocalEntityRow(
+    return TestExpense(
       accountKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}account_key'],
-      )!,
-      collection: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}collection'],
       )!,
       localId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}local_id'],
       )!,
-      remoteId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}remote_id'],
-      ),
-      payloadJson: attachedDatabase.typeMapping.read(
+      description: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}payload_json'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      revision: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}revision'],
-      ),
-      baseRevision: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}base_revision'],
-      ),
-      syncState: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}sync_state'],
-      )!,
-      deleted: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}deleted'],
+        data['${effectivePrefix}description'],
       )!,
     );
   }
 
   @override
-  $LocalEntitiesTable createAlias(String alias) {
-    return $LocalEntitiesTable(attachedDatabase, alias);
+  $TestExpensesTable createAlias(String alias) {
+    return $TestExpensesTable(attachedDatabase, alias);
   }
 }
 
-class LocalEntityRow extends DataClass implements Insertable<LocalEntityRow> {
+class TestExpense extends DataClass implements Insertable<TestExpense> {
   final String accountKey;
-  final String collection;
   final String localId;
-  final int? remoteId;
-  final String payloadJson;
-  final DateTime updatedAt;
-  final String? revision;
-  final String? baseRevision;
-  final String syncState;
-  final bool deleted;
-  const LocalEntityRow({
+  final String description;
+  const TestExpense({
     required this.accountKey,
-    required this.collection,
     required this.localId,
-    this.remoteId,
-    required this.payloadJson,
-    required this.updatedAt,
-    this.revision,
-    this.baseRevision,
-    required this.syncState,
-    required this.deleted,
+    required this.description,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['account_key'] = Variable<String>(accountKey);
-    map['collection'] = Variable<String>(collection);
     map['local_id'] = Variable<String>(localId);
-    if (!nullToAbsent || remoteId != null) {
-      map['remote_id'] = Variable<int>(remoteId);
-    }
-    map['payload_json'] = Variable<String>(payloadJson);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    if (!nullToAbsent || revision != null) {
-      map['revision'] = Variable<String>(revision);
-    }
-    if (!nullToAbsent || baseRevision != null) {
-      map['base_revision'] = Variable<String>(baseRevision);
-    }
-    map['sync_state'] = Variable<String>(syncState);
-    map['deleted'] = Variable<bool>(deleted);
+    map['description'] = Variable<String>(description);
     return map;
   }
 
-  LocalEntitiesCompanion toCompanion(bool nullToAbsent) {
-    return LocalEntitiesCompanion(
+  TestExpensesCompanion toCompanion(bool nullToAbsent) {
+    return TestExpensesCompanion(
       accountKey: Value(accountKey),
-      collection: Value(collection),
       localId: Value(localId),
-      remoteId: remoteId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(remoteId),
-      payloadJson: Value(payloadJson),
-      updatedAt: Value(updatedAt),
-      revision: revision == null && nullToAbsent
-          ? const Value.absent()
-          : Value(revision),
-      baseRevision: baseRevision == null && nullToAbsent
-          ? const Value.absent()
-          : Value(baseRevision),
-      syncState: Value(syncState),
-      deleted: Value(deleted),
+      description: Value(description),
     );
   }
 
-  factory LocalEntityRow.fromJson(
+  factory TestExpense.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LocalEntityRow(
+    return TestExpense(
       accountKey: serializer.fromJson<String>(json['accountKey']),
-      collection: serializer.fromJson<String>(json['collection']),
       localId: serializer.fromJson<String>(json['localId']),
-      remoteId: serializer.fromJson<int?>(json['remoteId']),
-      payloadJson: serializer.fromJson<String>(json['payloadJson']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-      revision: serializer.fromJson<String?>(json['revision']),
-      baseRevision: serializer.fromJson<String?>(json['baseRevision']),
-      syncState: serializer.fromJson<String>(json['syncState']),
-      deleted: serializer.fromJson<bool>(json['deleted']),
+      description: serializer.fromJson<String>(json['description']),
     );
   }
   @override
@@ -377,205 +155,96 @@ class LocalEntityRow extends DataClass implements Insertable<LocalEntityRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'accountKey': serializer.toJson<String>(accountKey),
-      'collection': serializer.toJson<String>(collection),
       'localId': serializer.toJson<String>(localId),
-      'remoteId': serializer.toJson<int?>(remoteId),
-      'payloadJson': serializer.toJson<String>(payloadJson),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-      'revision': serializer.toJson<String?>(revision),
-      'baseRevision': serializer.toJson<String?>(baseRevision),
-      'syncState': serializer.toJson<String>(syncState),
-      'deleted': serializer.toJson<bool>(deleted),
+      'description': serializer.toJson<String>(description),
     };
   }
 
-  LocalEntityRow copyWith({
+  TestExpense copyWith({
     String? accountKey,
-    String? collection,
     String? localId,
-    Value<int?> remoteId = const Value.absent(),
-    String? payloadJson,
-    DateTime? updatedAt,
-    Value<String?> revision = const Value.absent(),
-    Value<String?> baseRevision = const Value.absent(),
-    String? syncState,
-    bool? deleted,
-  }) => LocalEntityRow(
+    String? description,
+  }) => TestExpense(
     accountKey: accountKey ?? this.accountKey,
-    collection: collection ?? this.collection,
     localId: localId ?? this.localId,
-    remoteId: remoteId.present ? remoteId.value : this.remoteId,
-    payloadJson: payloadJson ?? this.payloadJson,
-    updatedAt: updatedAt ?? this.updatedAt,
-    revision: revision.present ? revision.value : this.revision,
-    baseRevision: baseRevision.present ? baseRevision.value : this.baseRevision,
-    syncState: syncState ?? this.syncState,
-    deleted: deleted ?? this.deleted,
+    description: description ?? this.description,
   );
-  LocalEntityRow copyWithCompanion(LocalEntitiesCompanion data) {
-    return LocalEntityRow(
+  TestExpense copyWithCompanion(TestExpensesCompanion data) {
+    return TestExpense(
       accountKey: data.accountKey.present
           ? data.accountKey.value
           : this.accountKey,
-      collection: data.collection.present
-          ? data.collection.value
-          : this.collection,
       localId: data.localId.present ? data.localId.value : this.localId,
-      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
-      payloadJson: data.payloadJson.present
-          ? data.payloadJson.value
-          : this.payloadJson,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      revision: data.revision.present ? data.revision.value : this.revision,
-      baseRevision: data.baseRevision.present
-          ? data.baseRevision.value
-          : this.baseRevision,
-      syncState: data.syncState.present ? data.syncState.value : this.syncState,
-      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('LocalEntityRow(')
+    return (StringBuffer('TestExpense(')
           ..write('accountKey: $accountKey, ')
-          ..write('collection: $collection, ')
           ..write('localId: $localId, ')
-          ..write('remoteId: $remoteId, ')
-          ..write('payloadJson: $payloadJson, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('revision: $revision, ')
-          ..write('baseRevision: $baseRevision, ')
-          ..write('syncState: $syncState, ')
-          ..write('deleted: $deleted')
+          ..write('description: $description')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    accountKey,
-    collection,
-    localId,
-    remoteId,
-    payloadJson,
-    updatedAt,
-    revision,
-    baseRevision,
-    syncState,
-    deleted,
-  );
+  int get hashCode => Object.hash(accountKey, localId, description);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is LocalEntityRow &&
+      (other is TestExpense &&
           other.accountKey == this.accountKey &&
-          other.collection == this.collection &&
           other.localId == this.localId &&
-          other.remoteId == this.remoteId &&
-          other.payloadJson == this.payloadJson &&
-          other.updatedAt == this.updatedAt &&
-          other.revision == this.revision &&
-          other.baseRevision == this.baseRevision &&
-          other.syncState == this.syncState &&
-          other.deleted == this.deleted);
+          other.description == this.description);
 }
 
-class LocalEntitiesCompanion extends UpdateCompanion<LocalEntityRow> {
+class TestExpensesCompanion extends UpdateCompanion<TestExpense> {
   final Value<String> accountKey;
-  final Value<String> collection;
   final Value<String> localId;
-  final Value<int?> remoteId;
-  final Value<String> payloadJson;
-  final Value<DateTime> updatedAt;
-  final Value<String?> revision;
-  final Value<String?> baseRevision;
-  final Value<String> syncState;
-  final Value<bool> deleted;
+  final Value<String> description;
   final Value<int> rowid;
-  const LocalEntitiesCompanion({
+  const TestExpensesCompanion({
     this.accountKey = const Value.absent(),
-    this.collection = const Value.absent(),
     this.localId = const Value.absent(),
-    this.remoteId = const Value.absent(),
-    this.payloadJson = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.revision = const Value.absent(),
-    this.baseRevision = const Value.absent(),
-    this.syncState = const Value.absent(),
-    this.deleted = const Value.absent(),
+    this.description = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  LocalEntitiesCompanion.insert({
+  TestExpensesCompanion.insert({
     required String accountKey,
-    required String collection,
     required String localId,
-    this.remoteId = const Value.absent(),
-    required String payloadJson,
-    required DateTime updatedAt,
-    this.revision = const Value.absent(),
-    this.baseRevision = const Value.absent(),
-    required String syncState,
-    this.deleted = const Value.absent(),
+    required String description,
     this.rowid = const Value.absent(),
   }) : accountKey = Value(accountKey),
-       collection = Value(collection),
        localId = Value(localId),
-       payloadJson = Value(payloadJson),
-       updatedAt = Value(updatedAt),
-       syncState = Value(syncState);
-  static Insertable<LocalEntityRow> custom({
+       description = Value(description);
+  static Insertable<TestExpense> custom({
     Expression<String>? accountKey,
-    Expression<String>? collection,
     Expression<String>? localId,
-    Expression<int>? remoteId,
-    Expression<String>? payloadJson,
-    Expression<DateTime>? updatedAt,
-    Expression<String>? revision,
-    Expression<String>? baseRevision,
-    Expression<String>? syncState,
-    Expression<bool>? deleted,
+    Expression<String>? description,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (accountKey != null) 'account_key': accountKey,
-      if (collection != null) 'collection': collection,
       if (localId != null) 'local_id': localId,
-      if (remoteId != null) 'remote_id': remoteId,
-      if (payloadJson != null) 'payload_json': payloadJson,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (revision != null) 'revision': revision,
-      if (baseRevision != null) 'base_revision': baseRevision,
-      if (syncState != null) 'sync_state': syncState,
-      if (deleted != null) 'deleted': deleted,
+      if (description != null) 'description': description,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  LocalEntitiesCompanion copyWith({
+  TestExpensesCompanion copyWith({
     Value<String>? accountKey,
-    Value<String>? collection,
     Value<String>? localId,
-    Value<int?>? remoteId,
-    Value<String>? payloadJson,
-    Value<DateTime>? updatedAt,
-    Value<String?>? revision,
-    Value<String?>? baseRevision,
-    Value<String>? syncState,
-    Value<bool>? deleted,
+    Value<String>? description,
     Value<int>? rowid,
   }) {
-    return LocalEntitiesCompanion(
+    return TestExpensesCompanion(
       accountKey: accountKey ?? this.accountKey,
-      collection: collection ?? this.collection,
       localId: localId ?? this.localId,
-      remoteId: remoteId ?? this.remoteId,
-      payloadJson: payloadJson ?? this.payloadJson,
-      updatedAt: updatedAt ?? this.updatedAt,
-      revision: revision ?? this.revision,
-      baseRevision: baseRevision ?? this.baseRevision,
-      syncState: syncState ?? this.syncState,
-      deleted: deleted ?? this.deleted,
+      description: description ?? this.description,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -586,32 +255,11 @@ class LocalEntitiesCompanion extends UpdateCompanion<LocalEntityRow> {
     if (accountKey.present) {
       map['account_key'] = Variable<String>(accountKey.value);
     }
-    if (collection.present) {
-      map['collection'] = Variable<String>(collection.value);
-    }
     if (localId.present) {
       map['local_id'] = Variable<String>(localId.value);
     }
-    if (remoteId.present) {
-      map['remote_id'] = Variable<int>(remoteId.value);
-    }
-    if (payloadJson.present) {
-      map['payload_json'] = Variable<String>(payloadJson.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (revision.present) {
-      map['revision'] = Variable<String>(revision.value);
-    }
-    if (baseRevision.present) {
-      map['base_revision'] = Variable<String>(baseRevision.value);
-    }
-    if (syncState.present) {
-      map['sync_state'] = Variable<String>(syncState.value);
-    }
-    if (deleted.present) {
-      map['deleted'] = Variable<bool>(deleted.value);
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -621,29 +269,22 @@ class LocalEntitiesCompanion extends UpdateCompanion<LocalEntityRow> {
 
   @override
   String toString() {
-    return (StringBuffer('LocalEntitiesCompanion(')
+    return (StringBuffer('TestExpensesCompanion(')
           ..write('accountKey: $accountKey, ')
-          ..write('collection: $collection, ')
           ..write('localId: $localId, ')
-          ..write('remoteId: $remoteId, ')
-          ..write('payloadJson: $payloadJson, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('revision: $revision, ')
-          ..write('baseRevision: $baseRevision, ')
-          ..write('syncState: $syncState, ')
-          ..write('deleted: $deleted, ')
+          ..write('description: $description, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $SyncOutboxTable extends SyncOutbox
-    with TableInfo<$SyncOutboxTable, SyncOutboxData> {
+class $OfflineOutboxEntriesTable extends OfflineOutboxEntries
+    with TableInfo<$OfflineOutboxEntriesTable, OfflineOutboxEntry> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SyncOutboxTable(this.attachedDatabase, [this._alias]);
+  $OfflineOutboxEntriesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _operationIdMeta = const VerificationMeta(
     'operationId',
   );
@@ -677,12 +318,12 @@ class $SyncOutboxTable extends SyncOutbox
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _localIdMeta = const VerificationMeta(
-    'localId',
+  static const VerificationMeta _aggregateIdMeta = const VerificationMeta(
+    'aggregateId',
   );
   @override
-  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
-    'local_id',
+  late final GeneratedColumn<String> aggregateId = GeneratedColumn<String>(
+    'aggregate_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -699,12 +340,12 @@ class $SyncOutboxTable extends SyncOutbox
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _mutationTypeMeta = const VerificationMeta(
-    'mutationType',
+  static const VerificationMeta _operationTypeMeta = const VerificationMeta(
+    'operationType',
   );
   @override
-  late final GeneratedColumn<String> mutationType = GeneratedColumn<String>(
-    'mutation_type',
+  late final GeneratedColumn<String> operationType = GeneratedColumn<String>(
+    'operation_type',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -826,9 +467,9 @@ class $SyncOutboxTable extends SyncOutbox
     operationId,
     accountKey,
     collection,
-    localId,
+    aggregateId,
     remoteId,
-    mutationType,
+    operationType,
     payloadJson,
     baseRevision,
     status,
@@ -844,10 +485,10 @@ class $SyncOutboxTable extends SyncOutbox
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'sync_outbox';
+  static const String $name = 'offline_outbox';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SyncOutboxData> instance, {
+    Insertable<OfflineOutboxEntry> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -879,13 +520,16 @@ class $SyncOutboxTable extends SyncOutbox
     } else if (isInserting) {
       context.missing(_collectionMeta);
     }
-    if (data.containsKey('local_id')) {
+    if (data.containsKey('aggregate_id')) {
       context.handle(
-        _localIdMeta,
-        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
+        _aggregateIdMeta,
+        aggregateId.isAcceptableOrUnknown(
+          data['aggregate_id']!,
+          _aggregateIdMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_localIdMeta);
+      context.missing(_aggregateIdMeta);
     }
     if (data.containsKey('remote_id')) {
       context.handle(
@@ -893,16 +537,16 @@ class $SyncOutboxTable extends SyncOutbox
         remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
       );
     }
-    if (data.containsKey('mutation_type')) {
+    if (data.containsKey('operation_type')) {
       context.handle(
-        _mutationTypeMeta,
-        mutationType.isAcceptableOrUnknown(
-          data['mutation_type']!,
-          _mutationTypeMeta,
+        _operationTypeMeta,
+        operationType.isAcceptableOrUnknown(
+          data['operation_type']!,
+          _operationTypeMeta,
         ),
       );
     } else if (isInserting) {
-      context.missing(_mutationTypeMeta);
+      context.missing(_operationTypeMeta);
     }
     if (data.containsKey('payload_json')) {
       context.handle(
@@ -995,12 +639,12 @@ class $SyncOutboxTable extends SyncOutbox
   Set<GeneratedColumn> get $primaryKey => {operationId};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {accountKey, collection, localId},
+    {accountKey, collection, aggregateId},
   ];
   @override
-  SyncOutboxData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  OfflineOutboxEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SyncOutboxData(
+    return OfflineOutboxEntry(
       operationId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}operation_id'],
@@ -1013,17 +657,17 @@ class $SyncOutboxTable extends SyncOutbox
         DriftSqlType.string,
         data['${effectivePrefix}collection'],
       )!,
-      localId: attachedDatabase.typeMapping.read(
+      aggregateId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}local_id'],
+        data['${effectivePrefix}aggregate_id'],
       )!,
       remoteId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}remote_id'],
       ),
-      mutationType: attachedDatabase.typeMapping.read(
+      operationType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}mutation_type'],
+        data['${effectivePrefix}operation_type'],
       )!,
       payloadJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1069,18 +713,19 @@ class $SyncOutboxTable extends SyncOutbox
   }
 
   @override
-  $SyncOutboxTable createAlias(String alias) {
-    return $SyncOutboxTable(attachedDatabase, alias);
+  $OfflineOutboxEntriesTable createAlias(String alias) {
+    return $OfflineOutboxEntriesTable(attachedDatabase, alias);
   }
 }
 
-class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
+class OfflineOutboxEntry extends DataClass
+    implements Insertable<OfflineOutboxEntry> {
   final String operationId;
   final String accountKey;
   final String collection;
-  final String localId;
+  final String aggregateId;
   final int? remoteId;
-  final String mutationType;
+  final String operationType;
   final String payloadJson;
   final String? baseRevision;
   final String status;
@@ -1091,13 +736,13 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
   final String? lastError;
   final String? operationGroup;
   final DateTime createdAt;
-  const SyncOutboxData({
+  const OfflineOutboxEntry({
     required this.operationId,
     required this.accountKey,
     required this.collection,
-    required this.localId,
+    required this.aggregateId,
     this.remoteId,
-    required this.mutationType,
+    required this.operationType,
     required this.payloadJson,
     this.baseRevision,
     required this.status,
@@ -1115,11 +760,11 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
     map['operation_id'] = Variable<String>(operationId);
     map['account_key'] = Variable<String>(accountKey);
     map['collection'] = Variable<String>(collection);
-    map['local_id'] = Variable<String>(localId);
+    map['aggregate_id'] = Variable<String>(aggregateId);
     if (!nullToAbsent || remoteId != null) {
       map['remote_id'] = Variable<int>(remoteId);
     }
-    map['mutation_type'] = Variable<String>(mutationType);
+    map['operation_type'] = Variable<String>(operationType);
     map['payload_json'] = Variable<String>(payloadJson);
     if (!nullToAbsent || baseRevision != null) {
       map['base_revision'] = Variable<String>(baseRevision);
@@ -1145,16 +790,16 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
     return map;
   }
 
-  SyncOutboxCompanion toCompanion(bool nullToAbsent) {
-    return SyncOutboxCompanion(
+  OfflineOutboxEntriesCompanion toCompanion(bool nullToAbsent) {
+    return OfflineOutboxEntriesCompanion(
       operationId: Value(operationId),
       accountKey: Value(accountKey),
       collection: Value(collection),
-      localId: Value(localId),
+      aggregateId: Value(aggregateId),
       remoteId: remoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteId),
-      mutationType: Value(mutationType),
+      operationType: Value(operationType),
       payloadJson: Value(payloadJson),
       baseRevision: baseRevision == null && nullToAbsent
           ? const Value.absent()
@@ -1180,18 +825,18 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
     );
   }
 
-  factory SyncOutboxData.fromJson(
+  factory OfflineOutboxEntry.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SyncOutboxData(
+    return OfflineOutboxEntry(
       operationId: serializer.fromJson<String>(json['operationId']),
       accountKey: serializer.fromJson<String>(json['accountKey']),
       collection: serializer.fromJson<String>(json['collection']),
-      localId: serializer.fromJson<String>(json['localId']),
+      aggregateId: serializer.fromJson<String>(json['aggregateId']),
       remoteId: serializer.fromJson<int?>(json['remoteId']),
-      mutationType: serializer.fromJson<String>(json['mutationType']),
+      operationType: serializer.fromJson<String>(json['operationType']),
       payloadJson: serializer.fromJson<String>(json['payloadJson']),
       baseRevision: serializer.fromJson<String?>(json['baseRevision']),
       status: serializer.fromJson<String>(json['status']),
@@ -1211,9 +856,9 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
       'operationId': serializer.toJson<String>(operationId),
       'accountKey': serializer.toJson<String>(accountKey),
       'collection': serializer.toJson<String>(collection),
-      'localId': serializer.toJson<String>(localId),
+      'aggregateId': serializer.toJson<String>(aggregateId),
       'remoteId': serializer.toJson<int?>(remoteId),
-      'mutationType': serializer.toJson<String>(mutationType),
+      'operationType': serializer.toJson<String>(operationType),
       'payloadJson': serializer.toJson<String>(payloadJson),
       'baseRevision': serializer.toJson<String?>(baseRevision),
       'status': serializer.toJson<String>(status),
@@ -1227,13 +872,13 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
     };
   }
 
-  SyncOutboxData copyWith({
+  OfflineOutboxEntry copyWith({
     String? operationId,
     String? accountKey,
     String? collection,
-    String? localId,
+    String? aggregateId,
     Value<int?> remoteId = const Value.absent(),
-    String? mutationType,
+    String? operationType,
     String? payloadJson,
     Value<String?> baseRevision = const Value.absent(),
     String? status,
@@ -1244,13 +889,13 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
     Value<String?> lastError = const Value.absent(),
     Value<String?> operationGroup = const Value.absent(),
     DateTime? createdAt,
-  }) => SyncOutboxData(
+  }) => OfflineOutboxEntry(
     operationId: operationId ?? this.operationId,
     accountKey: accountKey ?? this.accountKey,
     collection: collection ?? this.collection,
-    localId: localId ?? this.localId,
+    aggregateId: aggregateId ?? this.aggregateId,
     remoteId: remoteId.present ? remoteId.value : this.remoteId,
-    mutationType: mutationType ?? this.mutationType,
+    operationType: operationType ?? this.operationType,
     payloadJson: payloadJson ?? this.payloadJson,
     baseRevision: baseRevision.present ? baseRevision.value : this.baseRevision,
     status: status ?? this.status,
@@ -1268,8 +913,8 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
         : this.operationGroup,
     createdAt: createdAt ?? this.createdAt,
   );
-  SyncOutboxData copyWithCompanion(SyncOutboxCompanion data) {
-    return SyncOutboxData(
+  OfflineOutboxEntry copyWithCompanion(OfflineOutboxEntriesCompanion data) {
+    return OfflineOutboxEntry(
       operationId: data.operationId.present
           ? data.operationId.value
           : this.operationId,
@@ -1279,11 +924,13 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
       collection: data.collection.present
           ? data.collection.value
           : this.collection,
-      localId: data.localId.present ? data.localId.value : this.localId,
+      aggregateId: data.aggregateId.present
+          ? data.aggregateId.value
+          : this.aggregateId,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
-      mutationType: data.mutationType.present
-          ? data.mutationType.value
-          : this.mutationType,
+      operationType: data.operationType.present
+          ? data.operationType.value
+          : this.operationType,
       payloadJson: data.payloadJson.present
           ? data.payloadJson.value
           : this.payloadJson,
@@ -1313,13 +960,13 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
 
   @override
   String toString() {
-    return (StringBuffer('SyncOutboxData(')
+    return (StringBuffer('OfflineOutboxEntry(')
           ..write('operationId: $operationId, ')
           ..write('accountKey: $accountKey, ')
           ..write('collection: $collection, ')
-          ..write('localId: $localId, ')
+          ..write('aggregateId: $aggregateId, ')
           ..write('remoteId: $remoteId, ')
-          ..write('mutationType: $mutationType, ')
+          ..write('operationType: $operationType, ')
           ..write('payloadJson: $payloadJson, ')
           ..write('baseRevision: $baseRevision, ')
           ..write('status: $status, ')
@@ -1339,9 +986,9 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
     operationId,
     accountKey,
     collection,
-    localId,
+    aggregateId,
     remoteId,
-    mutationType,
+    operationType,
     payloadJson,
     baseRevision,
     status,
@@ -1356,13 +1003,13 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SyncOutboxData &&
+      (other is OfflineOutboxEntry &&
           other.operationId == this.operationId &&
           other.accountKey == this.accountKey &&
           other.collection == this.collection &&
-          other.localId == this.localId &&
+          other.aggregateId == this.aggregateId &&
           other.remoteId == this.remoteId &&
-          other.mutationType == this.mutationType &&
+          other.operationType == this.operationType &&
           other.payloadJson == this.payloadJson &&
           other.baseRevision == this.baseRevision &&
           other.status == this.status &&
@@ -1375,13 +1022,14 @@ class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
           other.createdAt == this.createdAt);
 }
 
-class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
+class OfflineOutboxEntriesCompanion
+    extends UpdateCompanion<OfflineOutboxEntry> {
   final Value<String> operationId;
   final Value<String> accountKey;
   final Value<String> collection;
-  final Value<String> localId;
+  final Value<String> aggregateId;
   final Value<int?> remoteId;
-  final Value<String> mutationType;
+  final Value<String> operationType;
   final Value<String> payloadJson;
   final Value<String?> baseRevision;
   final Value<String> status;
@@ -1393,13 +1041,13 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
   final Value<String?> operationGroup;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
-  const SyncOutboxCompanion({
+  const OfflineOutboxEntriesCompanion({
     this.operationId = const Value.absent(),
     this.accountKey = const Value.absent(),
     this.collection = const Value.absent(),
-    this.localId = const Value.absent(),
+    this.aggregateId = const Value.absent(),
     this.remoteId = const Value.absent(),
-    this.mutationType = const Value.absent(),
+    this.operationType = const Value.absent(),
     this.payloadJson = const Value.absent(),
     this.baseRevision = const Value.absent(),
     this.status = const Value.absent(),
@@ -1412,13 +1060,13 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SyncOutboxCompanion.insert({
+  OfflineOutboxEntriesCompanion.insert({
     required String operationId,
     required String accountKey,
     required String collection,
-    required String localId,
+    required String aggregateId,
     this.remoteId = const Value.absent(),
-    required String mutationType,
+    required String operationType,
     required String payloadJson,
     this.baseRevision = const Value.absent(),
     required String status,
@@ -1433,18 +1081,18 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
   }) : operationId = Value(operationId),
        accountKey = Value(accountKey),
        collection = Value(collection),
-       localId = Value(localId),
-       mutationType = Value(mutationType),
+       aggregateId = Value(aggregateId),
+       operationType = Value(operationType),
        payloadJson = Value(payloadJson),
        status = Value(status),
        createdAt = Value(createdAt);
-  static Insertable<SyncOutboxData> custom({
+  static Insertable<OfflineOutboxEntry> custom({
     Expression<String>? operationId,
     Expression<String>? accountKey,
     Expression<String>? collection,
-    Expression<String>? localId,
+    Expression<String>? aggregateId,
     Expression<int>? remoteId,
-    Expression<String>? mutationType,
+    Expression<String>? operationType,
     Expression<String>? payloadJson,
     Expression<String>? baseRevision,
     Expression<String>? status,
@@ -1461,9 +1109,9 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
       if (operationId != null) 'operation_id': operationId,
       if (accountKey != null) 'account_key': accountKey,
       if (collection != null) 'collection': collection,
-      if (localId != null) 'local_id': localId,
+      if (aggregateId != null) 'aggregate_id': aggregateId,
       if (remoteId != null) 'remote_id': remoteId,
-      if (mutationType != null) 'mutation_type': mutationType,
+      if (operationType != null) 'operation_type': operationType,
       if (payloadJson != null) 'payload_json': payloadJson,
       if (baseRevision != null) 'base_revision': baseRevision,
       if (status != null) 'status': status,
@@ -1478,13 +1126,13 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
     });
   }
 
-  SyncOutboxCompanion copyWith({
+  OfflineOutboxEntriesCompanion copyWith({
     Value<String>? operationId,
     Value<String>? accountKey,
     Value<String>? collection,
-    Value<String>? localId,
+    Value<String>? aggregateId,
     Value<int?>? remoteId,
-    Value<String>? mutationType,
+    Value<String>? operationType,
     Value<String>? payloadJson,
     Value<String?>? baseRevision,
     Value<String>? status,
@@ -1497,13 +1145,13 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
-    return SyncOutboxCompanion(
+    return OfflineOutboxEntriesCompanion(
       operationId: operationId ?? this.operationId,
       accountKey: accountKey ?? this.accountKey,
       collection: collection ?? this.collection,
-      localId: localId ?? this.localId,
+      aggregateId: aggregateId ?? this.aggregateId,
       remoteId: remoteId ?? this.remoteId,
-      mutationType: mutationType ?? this.mutationType,
+      operationType: operationType ?? this.operationType,
       payloadJson: payloadJson ?? this.payloadJson,
       baseRevision: baseRevision ?? this.baseRevision,
       status: status ?? this.status,
@@ -1530,14 +1178,14 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
     if (collection.present) {
       map['collection'] = Variable<String>(collection.value);
     }
-    if (localId.present) {
-      map['local_id'] = Variable<String>(localId.value);
+    if (aggregateId.present) {
+      map['aggregate_id'] = Variable<String>(aggregateId.value);
     }
     if (remoteId.present) {
       map['remote_id'] = Variable<int>(remoteId.value);
     }
-    if (mutationType.present) {
-      map['mutation_type'] = Variable<String>(mutationType.value);
+    if (operationType.present) {
+      map['operation_type'] = Variable<String>(operationType.value);
     }
     if (payloadJson.present) {
       map['payload_json'] = Variable<String>(payloadJson.value);
@@ -1577,13 +1225,13 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
 
   @override
   String toString() {
-    return (StringBuffer('SyncOutboxCompanion(')
+    return (StringBuffer('OfflineOutboxEntriesCompanion(')
           ..write('operationId: $operationId, ')
           ..write('accountKey: $accountKey, ')
           ..write('collection: $collection, ')
-          ..write('localId: $localId, ')
+          ..write('aggregateId: $aggregateId, ')
           ..write('remoteId: $remoteId, ')
-          ..write('mutationType: $mutationType, ')
+          ..write('operationType: $operationType, ')
           ..write('payloadJson: $payloadJson, ')
           ..write('baseRevision: $baseRevision, ')
           ..write('status: $status, ')
@@ -1600,12 +1248,12 @@ class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
   }
 }
 
-class $SyncCursorsTable extends SyncCursors
-    with TableInfo<$SyncCursorsTable, SyncCursorRow> {
+class $OfflineSyncMetadataEntriesTable extends OfflineSyncMetadataEntries
+    with TableInfo<$OfflineSyncMetadataEntriesTable, OfflineSyncMetadataEntry> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SyncCursorsTable(this.attachedDatabase, [this._alias]);
+  $OfflineSyncMetadataEntriesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _accountKeyMeta = const VerificationMeta(
     'accountKey',
   );
@@ -1617,12 +1265,12 @@ class $SyncCursorsTable extends SyncCursors
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _collectionMeta = const VerificationMeta(
-    'collection',
+  static const VerificationMeta _datasetMeta = const VerificationMeta(
+    'dataset',
   );
   @override
-  late final GeneratedColumn<String> collection = GeneratedColumn<String>(
-    'collection',
+  late final GeneratedColumn<String> dataset = GeneratedColumn<String>(
+    'dataset',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -1633,20 +1281,37 @@ class $SyncCursorsTable extends SyncCursors
   late final GeneratedColumn<String> cursor = GeneratedColumn<String>(
     'cursor',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastCompletedAtMeta = const VerificationMeta(
+    'lastCompletedAt',
   );
   @override
-  List<GeneratedColumn> get $columns => [accountKey, collection, cursor];
+  late final GeneratedColumn<DateTime> lastCompletedAt =
+      GeneratedColumn<DateTime>(
+        'last_completed_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    accountKey,
+    dataset,
+    cursor,
+    lastCompletedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'sync_cursors';
+  static const String $name = 'offline_sync_metadata';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SyncCursorRow> instance, {
+    Insertable<OfflineSyncMetadataEntry> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -1659,87 +1324,115 @@ class $SyncCursorsTable extends SyncCursors
     } else if (isInserting) {
       context.missing(_accountKeyMeta);
     }
-    if (data.containsKey('collection')) {
+    if (data.containsKey('dataset')) {
       context.handle(
-        _collectionMeta,
-        collection.isAcceptableOrUnknown(data['collection']!, _collectionMeta),
+        _datasetMeta,
+        dataset.isAcceptableOrUnknown(data['dataset']!, _datasetMeta),
       );
     } else if (isInserting) {
-      context.missing(_collectionMeta);
+      context.missing(_datasetMeta);
     }
     if (data.containsKey('cursor')) {
       context.handle(
         _cursorMeta,
         cursor.isAcceptableOrUnknown(data['cursor']!, _cursorMeta),
       );
-    } else if (isInserting) {
-      context.missing(_cursorMeta);
+    }
+    if (data.containsKey('last_completed_at')) {
+      context.handle(
+        _lastCompletedAtMeta,
+        lastCompletedAt.isAcceptableOrUnknown(
+          data['last_completed_at']!,
+          _lastCompletedAtMeta,
+        ),
+      );
     }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {accountKey, collection};
+  Set<GeneratedColumn> get $primaryKey => {accountKey, dataset};
   @override
-  SyncCursorRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  OfflineSyncMetadataEntry map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SyncCursorRow(
+    return OfflineSyncMetadataEntry(
       accountKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}account_key'],
       )!,
-      collection: attachedDatabase.typeMapping.read(
+      dataset: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}collection'],
+        data['${effectivePrefix}dataset'],
       )!,
       cursor: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cursor'],
-      )!,
+      ),
+      lastCompletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_completed_at'],
+      ),
     );
   }
 
   @override
-  $SyncCursorsTable createAlias(String alias) {
-    return $SyncCursorsTable(attachedDatabase, alias);
+  $OfflineSyncMetadataEntriesTable createAlias(String alias) {
+    return $OfflineSyncMetadataEntriesTable(attachedDatabase, alias);
   }
 }
 
-class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
+class OfflineSyncMetadataEntry extends DataClass
+    implements Insertable<OfflineSyncMetadataEntry> {
   final String accountKey;
-  final String collection;
-  final String cursor;
-  const SyncCursorRow({
+  final String dataset;
+  final String? cursor;
+  final DateTime? lastCompletedAt;
+  const OfflineSyncMetadataEntry({
     required this.accountKey,
-    required this.collection,
-    required this.cursor,
+    required this.dataset,
+    this.cursor,
+    this.lastCompletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['account_key'] = Variable<String>(accountKey);
-    map['collection'] = Variable<String>(collection);
-    map['cursor'] = Variable<String>(cursor);
+    map['dataset'] = Variable<String>(dataset);
+    if (!nullToAbsent || cursor != null) {
+      map['cursor'] = Variable<String>(cursor);
+    }
+    if (!nullToAbsent || lastCompletedAt != null) {
+      map['last_completed_at'] = Variable<DateTime>(lastCompletedAt);
+    }
     return map;
   }
 
-  SyncCursorsCompanion toCompanion(bool nullToAbsent) {
-    return SyncCursorsCompanion(
+  OfflineSyncMetadataEntriesCompanion toCompanion(bool nullToAbsent) {
+    return OfflineSyncMetadataEntriesCompanion(
       accountKey: Value(accountKey),
-      collection: Value(collection),
-      cursor: Value(cursor),
+      dataset: Value(dataset),
+      cursor: cursor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cursor),
+      lastCompletedAt: lastCompletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastCompletedAt),
     );
   }
 
-  factory SyncCursorRow.fromJson(
+  factory OfflineSyncMetadataEntry.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SyncCursorRow(
+    return OfflineSyncMetadataEntry(
       accountKey: serializer.fromJson<String>(json['accountKey']),
-      collection: serializer.fromJson<String>(json['collection']),
-      cursor: serializer.fromJson<String>(json['cursor']),
+      dataset: serializer.fromJson<String>(json['dataset']),
+      cursor: serializer.fromJson<String?>(json['cursor']),
+      lastCompletedAt: serializer.fromJson<DateTime?>(json['lastCompletedAt']),
     );
   }
   @override
@@ -1747,96 +1440,113 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'accountKey': serializer.toJson<String>(accountKey),
-      'collection': serializer.toJson<String>(collection),
-      'cursor': serializer.toJson<String>(cursor),
+      'dataset': serializer.toJson<String>(dataset),
+      'cursor': serializer.toJson<String?>(cursor),
+      'lastCompletedAt': serializer.toJson<DateTime?>(lastCompletedAt),
     };
   }
 
-  SyncCursorRow copyWith({
+  OfflineSyncMetadataEntry copyWith({
     String? accountKey,
-    String? collection,
-    String? cursor,
-  }) => SyncCursorRow(
+    String? dataset,
+    Value<String?> cursor = const Value.absent(),
+    Value<DateTime?> lastCompletedAt = const Value.absent(),
+  }) => OfflineSyncMetadataEntry(
     accountKey: accountKey ?? this.accountKey,
-    collection: collection ?? this.collection,
-    cursor: cursor ?? this.cursor,
+    dataset: dataset ?? this.dataset,
+    cursor: cursor.present ? cursor.value : this.cursor,
+    lastCompletedAt: lastCompletedAt.present
+        ? lastCompletedAt.value
+        : this.lastCompletedAt,
   );
-  SyncCursorRow copyWithCompanion(SyncCursorsCompanion data) {
-    return SyncCursorRow(
+  OfflineSyncMetadataEntry copyWithCompanion(
+    OfflineSyncMetadataEntriesCompanion data,
+  ) {
+    return OfflineSyncMetadataEntry(
       accountKey: data.accountKey.present
           ? data.accountKey.value
           : this.accountKey,
-      collection: data.collection.present
-          ? data.collection.value
-          : this.collection,
+      dataset: data.dataset.present ? data.dataset.value : this.dataset,
       cursor: data.cursor.present ? data.cursor.value : this.cursor,
+      lastCompletedAt: data.lastCompletedAt.present
+          ? data.lastCompletedAt.value
+          : this.lastCompletedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('SyncCursorRow(')
+    return (StringBuffer('OfflineSyncMetadataEntry(')
           ..write('accountKey: $accountKey, ')
-          ..write('collection: $collection, ')
-          ..write('cursor: $cursor')
+          ..write('dataset: $dataset, ')
+          ..write('cursor: $cursor, ')
+          ..write('lastCompletedAt: $lastCompletedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(accountKey, collection, cursor);
+  int get hashCode => Object.hash(accountKey, dataset, cursor, lastCompletedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SyncCursorRow &&
+      (other is OfflineSyncMetadataEntry &&
           other.accountKey == this.accountKey &&
-          other.collection == this.collection &&
-          other.cursor == this.cursor);
+          other.dataset == this.dataset &&
+          other.cursor == this.cursor &&
+          other.lastCompletedAt == this.lastCompletedAt);
 }
 
-class SyncCursorsCompanion extends UpdateCompanion<SyncCursorRow> {
+class OfflineSyncMetadataEntriesCompanion
+    extends UpdateCompanion<OfflineSyncMetadataEntry> {
   final Value<String> accountKey;
-  final Value<String> collection;
-  final Value<String> cursor;
+  final Value<String> dataset;
+  final Value<String?> cursor;
+  final Value<DateTime?> lastCompletedAt;
   final Value<int> rowid;
-  const SyncCursorsCompanion({
+  const OfflineSyncMetadataEntriesCompanion({
     this.accountKey = const Value.absent(),
-    this.collection = const Value.absent(),
+    this.dataset = const Value.absent(),
     this.cursor = const Value.absent(),
+    this.lastCompletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SyncCursorsCompanion.insert({
+  OfflineSyncMetadataEntriesCompanion.insert({
     required String accountKey,
-    required String collection,
-    required String cursor,
+    required String dataset,
+    this.cursor = const Value.absent(),
+    this.lastCompletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : accountKey = Value(accountKey),
-       collection = Value(collection),
-       cursor = Value(cursor);
-  static Insertable<SyncCursorRow> custom({
+       dataset = Value(dataset);
+  static Insertable<OfflineSyncMetadataEntry> custom({
     Expression<String>? accountKey,
-    Expression<String>? collection,
+    Expression<String>? dataset,
     Expression<String>? cursor,
+    Expression<DateTime>? lastCompletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (accountKey != null) 'account_key': accountKey,
-      if (collection != null) 'collection': collection,
+      if (dataset != null) 'dataset': dataset,
       if (cursor != null) 'cursor': cursor,
+      if (lastCompletedAt != null) 'last_completed_at': lastCompletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  SyncCursorsCompanion copyWith({
+  OfflineSyncMetadataEntriesCompanion copyWith({
     Value<String>? accountKey,
-    Value<String>? collection,
-    Value<String>? cursor,
+    Value<String>? dataset,
+    Value<String?>? cursor,
+    Value<DateTime?>? lastCompletedAt,
     Value<int>? rowid,
   }) {
-    return SyncCursorsCompanion(
+    return OfflineSyncMetadataEntriesCompanion(
       accountKey: accountKey ?? this.accountKey,
-      collection: collection ?? this.collection,
+      dataset: dataset ?? this.dataset,
       cursor: cursor ?? this.cursor,
+      lastCompletedAt: lastCompletedAt ?? this.lastCompletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1847,11 +1557,14 @@ class SyncCursorsCompanion extends UpdateCompanion<SyncCursorRow> {
     if (accountKey.present) {
       map['account_key'] = Variable<String>(accountKey.value);
     }
-    if (collection.present) {
-      map['collection'] = Variable<String>(collection.value);
+    if (dataset.present) {
+      map['dataset'] = Variable<String>(dataset.value);
     }
     if (cursor.present) {
       map['cursor'] = Variable<String>(cursor.value);
+    }
+    if (lastCompletedAt.present) {
+      map['last_completed_at'] = Variable<DateTime>(lastCompletedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1861,22 +1574,23 @@ class SyncCursorsCompanion extends UpdateCompanion<SyncCursorRow> {
 
   @override
   String toString() {
-    return (StringBuffer('SyncCursorsCompanion(')
+    return (StringBuffer('OfflineSyncMetadataEntriesCompanion(')
           ..write('accountKey: $accountKey, ')
-          ..write('collection: $collection, ')
+          ..write('dataset: $dataset, ')
           ..write('cursor: $cursor, ')
+          ..write('lastCompletedAt: $lastCompletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $SyncConflictsTable extends SyncConflicts
-    with TableInfo<$SyncConflictsTable, SyncConflictRow> {
+class $OfflineConflictEntriesTable extends OfflineConflictEntries
+    with TableInfo<$OfflineConflictEntriesTable, OfflineConflictEntry> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SyncConflictsTable(this.attachedDatabase, [this._alias]);
+  $OfflineConflictEntriesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _accountKeyMeta = const VerificationMeta(
     'accountKey',
   );
@@ -1899,12 +1613,12 @@ class $SyncConflictsTable extends SyncConflicts
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _localIdMeta = const VerificationMeta(
-    'localId',
+  static const VerificationMeta _aggregateIdMeta = const VerificationMeta(
+    'aggregateId',
   );
   @override
-  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
-    'local_id',
+  late final GeneratedColumn<String> aggregateId = GeneratedColumn<String>(
+    'aggregate_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -1970,7 +1684,7 @@ class $SyncConflictsTable extends SyncConflicts
   List<GeneratedColumn> get $columns => [
     accountKey,
     collection,
-    localId,
+    aggregateId,
     remoteId,
     localPayloadJson,
     remotePayloadJson,
@@ -1981,10 +1695,10 @@ class $SyncConflictsTable extends SyncConflicts
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'sync_conflicts';
+  static const String $name = 'offline_conflicts';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SyncConflictRow> instance, {
+    Insertable<OfflineConflictEntry> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -2005,13 +1719,16 @@ class $SyncConflictsTable extends SyncConflicts
     } else if (isInserting) {
       context.missing(_collectionMeta);
     }
-    if (data.containsKey('local_id')) {
+    if (data.containsKey('aggregate_id')) {
       context.handle(
-        _localIdMeta,
-        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
+        _aggregateIdMeta,
+        aggregateId.isAcceptableOrUnknown(
+          data['aggregate_id']!,
+          _aggregateIdMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_localIdMeta);
+      context.missing(_aggregateIdMeta);
     }
     if (data.containsKey('remote_id')) {
       context.handle(
@@ -2064,11 +1781,11 @@ class $SyncConflictsTable extends SyncConflicts
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {accountKey, collection, localId};
+  Set<GeneratedColumn> get $primaryKey => {accountKey, collection, aggregateId};
   @override
-  SyncConflictRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  OfflineConflictEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SyncConflictRow(
+    return OfflineConflictEntry(
       accountKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}account_key'],
@@ -2077,9 +1794,9 @@ class $SyncConflictsTable extends SyncConflicts
         DriftSqlType.string,
         data['${effectivePrefix}collection'],
       )!,
-      localId: attachedDatabase.typeMapping.read(
+      aggregateId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}local_id'],
+        data['${effectivePrefix}aggregate_id'],
       )!,
       remoteId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -2105,24 +1822,25 @@ class $SyncConflictsTable extends SyncConflicts
   }
 
   @override
-  $SyncConflictsTable createAlias(String alias) {
-    return $SyncConflictsTable(attachedDatabase, alias);
+  $OfflineConflictEntriesTable createAlias(String alias) {
+    return $OfflineConflictEntriesTable(attachedDatabase, alias);
   }
 }
 
-class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
+class OfflineConflictEntry extends DataClass
+    implements Insertable<OfflineConflictEntry> {
   final String accountKey;
   final String collection;
-  final String localId;
+  final String aggregateId;
   final int? remoteId;
   final String localPayloadJson;
   final String remotePayloadJson;
   final String remoteRevision;
   final DateTime detectedAt;
-  const SyncConflictRow({
+  const OfflineConflictEntry({
     required this.accountKey,
     required this.collection,
-    required this.localId,
+    required this.aggregateId,
     this.remoteId,
     required this.localPayloadJson,
     required this.remotePayloadJson,
@@ -2134,7 +1852,7 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
     final map = <String, Expression>{};
     map['account_key'] = Variable<String>(accountKey);
     map['collection'] = Variable<String>(collection);
-    map['local_id'] = Variable<String>(localId);
+    map['aggregate_id'] = Variable<String>(aggregateId);
     if (!nullToAbsent || remoteId != null) {
       map['remote_id'] = Variable<int>(remoteId);
     }
@@ -2145,11 +1863,11 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
     return map;
   }
 
-  SyncConflictsCompanion toCompanion(bool nullToAbsent) {
-    return SyncConflictsCompanion(
+  OfflineConflictEntriesCompanion toCompanion(bool nullToAbsent) {
+    return OfflineConflictEntriesCompanion(
       accountKey: Value(accountKey),
       collection: Value(collection),
-      localId: Value(localId),
+      aggregateId: Value(aggregateId),
       remoteId: remoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteId),
@@ -2160,15 +1878,15 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
     );
   }
 
-  factory SyncConflictRow.fromJson(
+  factory OfflineConflictEntry.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SyncConflictRow(
+    return OfflineConflictEntry(
       accountKey: serializer.fromJson<String>(json['accountKey']),
       collection: serializer.fromJson<String>(json['collection']),
-      localId: serializer.fromJson<String>(json['localId']),
+      aggregateId: serializer.fromJson<String>(json['aggregateId']),
       remoteId: serializer.fromJson<int?>(json['remoteId']),
       localPayloadJson: serializer.fromJson<String>(json['localPayloadJson']),
       remotePayloadJson: serializer.fromJson<String>(json['remotePayloadJson']),
@@ -2182,7 +1900,7 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
     return <String, dynamic>{
       'accountKey': serializer.toJson<String>(accountKey),
       'collection': serializer.toJson<String>(collection),
-      'localId': serializer.toJson<String>(localId),
+      'aggregateId': serializer.toJson<String>(aggregateId),
       'remoteId': serializer.toJson<int?>(remoteId),
       'localPayloadJson': serializer.toJson<String>(localPayloadJson),
       'remotePayloadJson': serializer.toJson<String>(remotePayloadJson),
@@ -2191,34 +1909,36 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
     };
   }
 
-  SyncConflictRow copyWith({
+  OfflineConflictEntry copyWith({
     String? accountKey,
     String? collection,
-    String? localId,
+    String? aggregateId,
     Value<int?> remoteId = const Value.absent(),
     String? localPayloadJson,
     String? remotePayloadJson,
     String? remoteRevision,
     DateTime? detectedAt,
-  }) => SyncConflictRow(
+  }) => OfflineConflictEntry(
     accountKey: accountKey ?? this.accountKey,
     collection: collection ?? this.collection,
-    localId: localId ?? this.localId,
+    aggregateId: aggregateId ?? this.aggregateId,
     remoteId: remoteId.present ? remoteId.value : this.remoteId,
     localPayloadJson: localPayloadJson ?? this.localPayloadJson,
     remotePayloadJson: remotePayloadJson ?? this.remotePayloadJson,
     remoteRevision: remoteRevision ?? this.remoteRevision,
     detectedAt: detectedAt ?? this.detectedAt,
   );
-  SyncConflictRow copyWithCompanion(SyncConflictsCompanion data) {
-    return SyncConflictRow(
+  OfflineConflictEntry copyWithCompanion(OfflineConflictEntriesCompanion data) {
+    return OfflineConflictEntry(
       accountKey: data.accountKey.present
           ? data.accountKey.value
           : this.accountKey,
       collection: data.collection.present
           ? data.collection.value
           : this.collection,
-      localId: data.localId.present ? data.localId.value : this.localId,
+      aggregateId: data.aggregateId.present
+          ? data.aggregateId.value
+          : this.aggregateId,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
       localPayloadJson: data.localPayloadJson.present
           ? data.localPayloadJson.value
@@ -2237,10 +1957,10 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
 
   @override
   String toString() {
-    return (StringBuffer('SyncConflictRow(')
+    return (StringBuffer('OfflineConflictEntry(')
           ..write('accountKey: $accountKey, ')
           ..write('collection: $collection, ')
-          ..write('localId: $localId, ')
+          ..write('aggregateId: $aggregateId, ')
           ..write('remoteId: $remoteId, ')
           ..write('localPayloadJson: $localPayloadJson, ')
           ..write('remotePayloadJson: $remotePayloadJson, ')
@@ -2254,7 +1974,7 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
   int get hashCode => Object.hash(
     accountKey,
     collection,
-    localId,
+    aggregateId,
     remoteId,
     localPayloadJson,
     remotePayloadJson,
@@ -2264,10 +1984,10 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SyncConflictRow &&
+      (other is OfflineConflictEntry &&
           other.accountKey == this.accountKey &&
           other.collection == this.collection &&
-          other.localId == this.localId &&
+          other.aggregateId == this.aggregateId &&
           other.remoteId == this.remoteId &&
           other.localPayloadJson == this.localPayloadJson &&
           other.remotePayloadJson == this.remotePayloadJson &&
@@ -2275,20 +1995,21 @@ class SyncConflictRow extends DataClass implements Insertable<SyncConflictRow> {
           other.detectedAt == this.detectedAt);
 }
 
-class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
+class OfflineConflictEntriesCompanion
+    extends UpdateCompanion<OfflineConflictEntry> {
   final Value<String> accountKey;
   final Value<String> collection;
-  final Value<String> localId;
+  final Value<String> aggregateId;
   final Value<int?> remoteId;
   final Value<String> localPayloadJson;
   final Value<String> remotePayloadJson;
   final Value<String> remoteRevision;
   final Value<DateTime> detectedAt;
   final Value<int> rowid;
-  const SyncConflictsCompanion({
+  const OfflineConflictEntriesCompanion({
     this.accountKey = const Value.absent(),
     this.collection = const Value.absent(),
-    this.localId = const Value.absent(),
+    this.aggregateId = const Value.absent(),
     this.remoteId = const Value.absent(),
     this.localPayloadJson = const Value.absent(),
     this.remotePayloadJson = const Value.absent(),
@@ -2296,10 +2017,10 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
     this.detectedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SyncConflictsCompanion.insert({
+  OfflineConflictEntriesCompanion.insert({
     required String accountKey,
     required String collection,
-    required String localId,
+    required String aggregateId,
     this.remoteId = const Value.absent(),
     required String localPayloadJson,
     required String remotePayloadJson,
@@ -2308,15 +2029,15 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
     this.rowid = const Value.absent(),
   }) : accountKey = Value(accountKey),
        collection = Value(collection),
-       localId = Value(localId),
+       aggregateId = Value(aggregateId),
        localPayloadJson = Value(localPayloadJson),
        remotePayloadJson = Value(remotePayloadJson),
        remoteRevision = Value(remoteRevision),
        detectedAt = Value(detectedAt);
-  static Insertable<SyncConflictRow> custom({
+  static Insertable<OfflineConflictEntry> custom({
     Expression<String>? accountKey,
     Expression<String>? collection,
-    Expression<String>? localId,
+    Expression<String>? aggregateId,
     Expression<int>? remoteId,
     Expression<String>? localPayloadJson,
     Expression<String>? remotePayloadJson,
@@ -2327,7 +2048,7 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
     return RawValuesInsertable({
       if (accountKey != null) 'account_key': accountKey,
       if (collection != null) 'collection': collection,
-      if (localId != null) 'local_id': localId,
+      if (aggregateId != null) 'aggregate_id': aggregateId,
       if (remoteId != null) 'remote_id': remoteId,
       if (localPayloadJson != null) 'local_payload_json': localPayloadJson,
       if (remotePayloadJson != null) 'remote_payload_json': remotePayloadJson,
@@ -2337,10 +2058,10 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
     });
   }
 
-  SyncConflictsCompanion copyWith({
+  OfflineConflictEntriesCompanion copyWith({
     Value<String>? accountKey,
     Value<String>? collection,
-    Value<String>? localId,
+    Value<String>? aggregateId,
     Value<int?>? remoteId,
     Value<String>? localPayloadJson,
     Value<String>? remotePayloadJson,
@@ -2348,10 +2069,10 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
     Value<DateTime>? detectedAt,
     Value<int>? rowid,
   }) {
-    return SyncConflictsCompanion(
+    return OfflineConflictEntriesCompanion(
       accountKey: accountKey ?? this.accountKey,
       collection: collection ?? this.collection,
-      localId: localId ?? this.localId,
+      aggregateId: aggregateId ?? this.aggregateId,
       remoteId: remoteId ?? this.remoteId,
       localPayloadJson: localPayloadJson ?? this.localPayloadJson,
       remotePayloadJson: remotePayloadJson ?? this.remotePayloadJson,
@@ -2370,8 +2091,8 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
     if (collection.present) {
       map['collection'] = Variable<String>(collection.value);
     }
-    if (localId.present) {
-      map['local_id'] = Variable<String>(localId.value);
+    if (aggregateId.present) {
+      map['aggregate_id'] = Variable<String>(aggregateId.value);
     }
     if (remoteId.present) {
       map['remote_id'] = Variable<int>(remoteId.value);
@@ -2396,10 +2117,10 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
 
   @override
   String toString() {
-    return (StringBuffer('SyncConflictsCompanion(')
+    return (StringBuffer('OfflineConflictEntriesCompanion(')
           ..write('accountKey: $accountKey, ')
           ..write('collection: $collection, ')
-          ..write('localId: $localId, ')
+          ..write('aggregateId: $aggregateId, ')
           ..write('remoteId: $remoteId, ')
           ..write('localPayloadJson: $localPayloadJson, ')
           ..write('remotePayloadJson: $remotePayloadJson, ')
@@ -2411,57 +2132,47 @@ class SyncConflictsCompanion extends UpdateCompanion<SyncConflictRow> {
   }
 }
 
-abstract class _$SyncDatabase extends GeneratedDatabase {
-  _$SyncDatabase(QueryExecutor e) : super(e);
-  $SyncDatabaseManager get managers => $SyncDatabaseManager(this);
-  late final $LocalEntitiesTable localEntities = $LocalEntitiesTable(this);
-  late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
-  late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
-  late final $SyncConflictsTable syncConflicts = $SyncConflictsTable(this);
+abstract class _$TestApplicationDatabase extends GeneratedDatabase {
+  _$TestApplicationDatabase(QueryExecutor e) : super(e);
+  $TestApplicationDatabaseManager get managers =>
+      $TestApplicationDatabaseManager(this);
+  late final $TestExpensesTable testExpenses = $TestExpensesTable(this);
+  late final $OfflineOutboxEntriesTable offlineOutboxEntries =
+      $OfflineOutboxEntriesTable(this);
+  late final $OfflineSyncMetadataEntriesTable offlineSyncMetadataEntries =
+      $OfflineSyncMetadataEntriesTable(this);
+  late final $OfflineConflictEntriesTable offlineConflictEntries =
+      $OfflineConflictEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-    localEntities,
-    syncOutbox,
-    syncCursors,
-    syncConflicts,
+    testExpenses,
+    offlineOutboxEntries,
+    offlineSyncMetadataEntries,
+    offlineConflictEntries,
   ];
 }
 
-typedef $$LocalEntitiesTableCreateCompanionBuilder =
-    LocalEntitiesCompanion Function({
+typedef $$TestExpensesTableCreateCompanionBuilder =
+    TestExpensesCompanion Function({
       required String accountKey,
-      required String collection,
       required String localId,
-      Value<int?> remoteId,
-      required String payloadJson,
-      required DateTime updatedAt,
-      Value<String?> revision,
-      Value<String?> baseRevision,
-      required String syncState,
-      Value<bool> deleted,
+      required String description,
       Value<int> rowid,
     });
-typedef $$LocalEntitiesTableUpdateCompanionBuilder =
-    LocalEntitiesCompanion Function({
+typedef $$TestExpensesTableUpdateCompanionBuilder =
+    TestExpensesCompanion Function({
       Value<String> accountKey,
-      Value<String> collection,
       Value<String> localId,
-      Value<int?> remoteId,
-      Value<String> payloadJson,
-      Value<DateTime> updatedAt,
-      Value<String?> revision,
-      Value<String?> baseRevision,
-      Value<String> syncState,
-      Value<bool> deleted,
+      Value<String> description,
       Value<int> rowid,
     });
 
-class $$LocalEntitiesTableFilterComposer
-    extends Composer<_$SyncDatabase, $LocalEntitiesTable> {
-  $$LocalEntitiesTableFilterComposer({
+class $$TestExpensesTableFilterComposer
+    extends Composer<_$TestApplicationDatabase, $TestExpensesTable> {
+  $$TestExpensesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2473,55 +2184,20 @@ class $$LocalEntitiesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get collection => $composableBuilder(
-    column: $table.collection,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get localId => $composableBuilder(
     column: $table.localId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get remoteId => $composableBuilder(
-    column: $table.remoteId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get payloadJson => $composableBuilder(
-    column: $table.payloadJson,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get revision => $composableBuilder(
-    column: $table.revision,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get baseRevision => $composableBuilder(
-    column: $table.baseRevision,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get syncState => $composableBuilder(
-    column: $table.syncState,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get deleted => $composableBuilder(
-    column: $table.deleted,
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$LocalEntitiesTableOrderingComposer
-    extends Composer<_$SyncDatabase, $LocalEntitiesTable> {
-  $$LocalEntitiesTableOrderingComposer({
+class $$TestExpensesTableOrderingComposer
+    extends Composer<_$TestApplicationDatabase, $TestExpensesTable> {
+  $$TestExpensesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2533,55 +2209,20 @@ class $$LocalEntitiesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get collection => $composableBuilder(
-    column: $table.collection,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get localId => $composableBuilder(
     column: $table.localId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get remoteId => $composableBuilder(
-    column: $table.remoteId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get payloadJson => $composableBuilder(
-    column: $table.payloadJson,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get revision => $composableBuilder(
-    column: $table.revision,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get baseRevision => $composableBuilder(
-    column: $table.baseRevision,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get syncState => $composableBuilder(
-    column: $table.syncState,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get deleted => $composableBuilder(
-    column: $table.deleted,
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
-class $$LocalEntitiesTableAnnotationComposer
-    extends Composer<_$SyncDatabase, $LocalEntitiesTable> {
-  $$LocalEntitiesTableAnnotationComposer({
+class $$TestExpensesTableAnnotationComposer
+    extends Composer<_$TestApplicationDatabase, $TestExpensesTable> {
+  $$TestExpensesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2593,119 +2234,72 @@ class $$LocalEntitiesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get collection => $composableBuilder(
-    column: $table.collection,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<String> get localId =>
       $composableBuilder(column: $table.localId, builder: (column) => column);
 
-  GeneratedColumn<int> get remoteId =>
-      $composableBuilder(column: $table.remoteId, builder: (column) => column);
-
-  GeneratedColumn<String> get payloadJson => $composableBuilder(
-    column: $table.payloadJson,
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => column,
   );
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<String> get revision =>
-      $composableBuilder(column: $table.revision, builder: (column) => column);
-
-  GeneratedColumn<String> get baseRevision => $composableBuilder(
-    column: $table.baseRevision,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get syncState =>
-      $composableBuilder(column: $table.syncState, builder: (column) => column);
-
-  GeneratedColumn<bool> get deleted =>
-      $composableBuilder(column: $table.deleted, builder: (column) => column);
 }
 
-class $$LocalEntitiesTableTableManager
+class $$TestExpensesTableTableManager
     extends
         RootTableManager<
-          _$SyncDatabase,
-          $LocalEntitiesTable,
-          LocalEntityRow,
-          $$LocalEntitiesTableFilterComposer,
-          $$LocalEntitiesTableOrderingComposer,
-          $$LocalEntitiesTableAnnotationComposer,
-          $$LocalEntitiesTableCreateCompanionBuilder,
-          $$LocalEntitiesTableUpdateCompanionBuilder,
+          _$TestApplicationDatabase,
+          $TestExpensesTable,
+          TestExpense,
+          $$TestExpensesTableFilterComposer,
+          $$TestExpensesTableOrderingComposer,
+          $$TestExpensesTableAnnotationComposer,
+          $$TestExpensesTableCreateCompanionBuilder,
+          $$TestExpensesTableUpdateCompanionBuilder,
           (
-            LocalEntityRow,
-            BaseReferences<_$SyncDatabase, $LocalEntitiesTable, LocalEntityRow>,
+            TestExpense,
+            BaseReferences<
+              _$TestApplicationDatabase,
+              $TestExpensesTable,
+              TestExpense
+            >,
           ),
-          LocalEntityRow,
+          TestExpense,
           PrefetchHooks Function()
         > {
-  $$LocalEntitiesTableTableManager(_$SyncDatabase db, $LocalEntitiesTable table)
-    : super(
+  $$TestExpensesTableTableManager(
+    _$TestApplicationDatabase db,
+    $TestExpensesTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$LocalEntitiesTableFilterComposer($db: db, $table: table),
+              $$TestExpensesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$LocalEntitiesTableOrderingComposer($db: db, $table: table),
+              $$TestExpensesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$LocalEntitiesTableAnnotationComposer($db: db, $table: table),
+              $$TestExpensesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> accountKey = const Value.absent(),
-                Value<String> collection = const Value.absent(),
                 Value<String> localId = const Value.absent(),
-                Value<int?> remoteId = const Value.absent(),
-                Value<String> payloadJson = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-                Value<String?> revision = const Value.absent(),
-                Value<String?> baseRevision = const Value.absent(),
-                Value<String> syncState = const Value.absent(),
-                Value<bool> deleted = const Value.absent(),
+                Value<String> description = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => LocalEntitiesCompanion(
+              }) => TestExpensesCompanion(
                 accountKey: accountKey,
-                collection: collection,
                 localId: localId,
-                remoteId: remoteId,
-                payloadJson: payloadJson,
-                updatedAt: updatedAt,
-                revision: revision,
-                baseRevision: baseRevision,
-                syncState: syncState,
-                deleted: deleted,
+                description: description,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String accountKey,
-                required String collection,
                 required String localId,
-                Value<int?> remoteId = const Value.absent(),
-                required String payloadJson,
-                required DateTime updatedAt,
-                Value<String?> revision = const Value.absent(),
-                Value<String?> baseRevision = const Value.absent(),
-                required String syncState,
-                Value<bool> deleted = const Value.absent(),
+                required String description,
                 Value<int> rowid = const Value.absent(),
-              }) => LocalEntitiesCompanion.insert(
+              }) => TestExpensesCompanion.insert(
                 accountKey: accountKey,
-                collection: collection,
                 localId: localId,
-                remoteId: remoteId,
-                payloadJson: payloadJson,
-                updatedAt: updatedAt,
-                revision: revision,
-                baseRevision: baseRevision,
-                syncState: syncState,
-                deleted: deleted,
+                description: description,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2716,31 +2310,35 @@ class $$LocalEntitiesTableTableManager
       );
 }
 
-typedef $$LocalEntitiesTableProcessedTableManager =
+typedef $$TestExpensesTableProcessedTableManager =
     ProcessedTableManager<
-      _$SyncDatabase,
-      $LocalEntitiesTable,
-      LocalEntityRow,
-      $$LocalEntitiesTableFilterComposer,
-      $$LocalEntitiesTableOrderingComposer,
-      $$LocalEntitiesTableAnnotationComposer,
-      $$LocalEntitiesTableCreateCompanionBuilder,
-      $$LocalEntitiesTableUpdateCompanionBuilder,
+      _$TestApplicationDatabase,
+      $TestExpensesTable,
+      TestExpense,
+      $$TestExpensesTableFilterComposer,
+      $$TestExpensesTableOrderingComposer,
+      $$TestExpensesTableAnnotationComposer,
+      $$TestExpensesTableCreateCompanionBuilder,
+      $$TestExpensesTableUpdateCompanionBuilder,
       (
-        LocalEntityRow,
-        BaseReferences<_$SyncDatabase, $LocalEntitiesTable, LocalEntityRow>,
+        TestExpense,
+        BaseReferences<
+          _$TestApplicationDatabase,
+          $TestExpensesTable,
+          TestExpense
+        >,
       ),
-      LocalEntityRow,
+      TestExpense,
       PrefetchHooks Function()
     >;
-typedef $$SyncOutboxTableCreateCompanionBuilder =
-    SyncOutboxCompanion Function({
+typedef $$OfflineOutboxEntriesTableCreateCompanionBuilder =
+    OfflineOutboxEntriesCompanion Function({
       required String operationId,
       required String accountKey,
       required String collection,
-      required String localId,
+      required String aggregateId,
       Value<int?> remoteId,
-      required String mutationType,
+      required String operationType,
       required String payloadJson,
       Value<String?> baseRevision,
       required String status,
@@ -2753,14 +2351,14 @@ typedef $$SyncOutboxTableCreateCompanionBuilder =
       required DateTime createdAt,
       Value<int> rowid,
     });
-typedef $$SyncOutboxTableUpdateCompanionBuilder =
-    SyncOutboxCompanion Function({
+typedef $$OfflineOutboxEntriesTableUpdateCompanionBuilder =
+    OfflineOutboxEntriesCompanion Function({
       Value<String> operationId,
       Value<String> accountKey,
       Value<String> collection,
-      Value<String> localId,
+      Value<String> aggregateId,
       Value<int?> remoteId,
-      Value<String> mutationType,
+      Value<String> operationType,
       Value<String> payloadJson,
       Value<String?> baseRevision,
       Value<String> status,
@@ -2774,9 +2372,9 @@ typedef $$SyncOutboxTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-class $$SyncOutboxTableFilterComposer
-    extends Composer<_$SyncDatabase, $SyncOutboxTable> {
-  $$SyncOutboxTableFilterComposer({
+class $$OfflineOutboxEntriesTableFilterComposer
+    extends Composer<_$TestApplicationDatabase, $OfflineOutboxEntriesTable> {
+  $$OfflineOutboxEntriesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2798,8 +2396,8 @@ class $$SyncOutboxTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get localId => $composableBuilder(
-    column: $table.localId,
+  ColumnFilters<String> get aggregateId => $composableBuilder(
+    column: $table.aggregateId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2808,8 +2406,8 @@ class $$SyncOutboxTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get mutationType => $composableBuilder(
-    column: $table.mutationType,
+  ColumnFilters<String> get operationType => $composableBuilder(
+    column: $table.operationType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2864,9 +2462,9 @@ class $$SyncOutboxTableFilterComposer
   );
 }
 
-class $$SyncOutboxTableOrderingComposer
-    extends Composer<_$SyncDatabase, $SyncOutboxTable> {
-  $$SyncOutboxTableOrderingComposer({
+class $$OfflineOutboxEntriesTableOrderingComposer
+    extends Composer<_$TestApplicationDatabase, $OfflineOutboxEntriesTable> {
+  $$OfflineOutboxEntriesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2888,8 +2486,8 @@ class $$SyncOutboxTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get localId => $composableBuilder(
-    column: $table.localId,
+  ColumnOrderings<String> get aggregateId => $composableBuilder(
+    column: $table.aggregateId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2898,8 +2496,8 @@ class $$SyncOutboxTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get mutationType => $composableBuilder(
-    column: $table.mutationType,
+  ColumnOrderings<String> get operationType => $composableBuilder(
+    column: $table.operationType,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2954,9 +2552,9 @@ class $$SyncOutboxTableOrderingComposer
   );
 }
 
-class $$SyncOutboxTableAnnotationComposer
-    extends Composer<_$SyncDatabase, $SyncOutboxTable> {
-  $$SyncOutboxTableAnnotationComposer({
+class $$OfflineOutboxEntriesTableAnnotationComposer
+    extends Composer<_$TestApplicationDatabase, $OfflineOutboxEntriesTable> {
+  $$OfflineOutboxEntriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2978,14 +2576,16 @@ class $$SyncOutboxTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get localId =>
-      $composableBuilder(column: $table.localId, builder: (column) => column);
+  GeneratedColumn<String> get aggregateId => $composableBuilder(
+    column: $table.aggregateId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get remoteId =>
       $composableBuilder(column: $table.remoteId, builder: (column) => column);
 
-  GeneratedColumn<String> get mutationType => $composableBuilder(
-    column: $table.mutationType,
+  GeneratedColumn<String> get operationType => $composableBuilder(
+    column: $table.operationType,
     builder: (column) => column,
   );
 
@@ -3034,43 +2634,55 @@ class $$SyncOutboxTableAnnotationComposer
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
 
-class $$SyncOutboxTableTableManager
+class $$OfflineOutboxEntriesTableTableManager
     extends
         RootTableManager<
-          _$SyncDatabase,
-          $SyncOutboxTable,
-          SyncOutboxData,
-          $$SyncOutboxTableFilterComposer,
-          $$SyncOutboxTableOrderingComposer,
-          $$SyncOutboxTableAnnotationComposer,
-          $$SyncOutboxTableCreateCompanionBuilder,
-          $$SyncOutboxTableUpdateCompanionBuilder,
+          _$TestApplicationDatabase,
+          $OfflineOutboxEntriesTable,
+          OfflineOutboxEntry,
+          $$OfflineOutboxEntriesTableFilterComposer,
+          $$OfflineOutboxEntriesTableOrderingComposer,
+          $$OfflineOutboxEntriesTableAnnotationComposer,
+          $$OfflineOutboxEntriesTableCreateCompanionBuilder,
+          $$OfflineOutboxEntriesTableUpdateCompanionBuilder,
           (
-            SyncOutboxData,
-            BaseReferences<_$SyncDatabase, $SyncOutboxTable, SyncOutboxData>,
+            OfflineOutboxEntry,
+            BaseReferences<
+              _$TestApplicationDatabase,
+              $OfflineOutboxEntriesTable,
+              OfflineOutboxEntry
+            >,
           ),
-          SyncOutboxData,
+          OfflineOutboxEntry,
           PrefetchHooks Function()
         > {
-  $$SyncOutboxTableTableManager(_$SyncDatabase db, $SyncOutboxTable table)
-    : super(
+  $$OfflineOutboxEntriesTableTableManager(
+    _$TestApplicationDatabase db,
+    $OfflineOutboxEntriesTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SyncOutboxTableFilterComposer($db: db, $table: table),
+              $$OfflineOutboxEntriesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$SyncOutboxTableOrderingComposer($db: db, $table: table),
+              $$OfflineOutboxEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
           createComputedFieldComposer: () =>
-              $$SyncOutboxTableAnnotationComposer($db: db, $table: table),
+              $$OfflineOutboxEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
           updateCompanionCallback:
               ({
                 Value<String> operationId = const Value.absent(),
                 Value<String> accountKey = const Value.absent(),
                 Value<String> collection = const Value.absent(),
-                Value<String> localId = const Value.absent(),
+                Value<String> aggregateId = const Value.absent(),
                 Value<int?> remoteId = const Value.absent(),
-                Value<String> mutationType = const Value.absent(),
+                Value<String> operationType = const Value.absent(),
                 Value<String> payloadJson = const Value.absent(),
                 Value<String?> baseRevision = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -3082,13 +2694,13 @@ class $$SyncOutboxTableTableManager
                 Value<String?> operationGroup = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => SyncOutboxCompanion(
+              }) => OfflineOutboxEntriesCompanion(
                 operationId: operationId,
                 accountKey: accountKey,
                 collection: collection,
-                localId: localId,
+                aggregateId: aggregateId,
                 remoteId: remoteId,
-                mutationType: mutationType,
+                operationType: operationType,
                 payloadJson: payloadJson,
                 baseRevision: baseRevision,
                 status: status,
@@ -3106,9 +2718,9 @@ class $$SyncOutboxTableTableManager
                 required String operationId,
                 required String accountKey,
                 required String collection,
-                required String localId,
+                required String aggregateId,
                 Value<int?> remoteId = const Value.absent(),
-                required String mutationType,
+                required String operationType,
                 required String payloadJson,
                 Value<String?> baseRevision = const Value.absent(),
                 required String status,
@@ -3120,13 +2732,13 @@ class $$SyncOutboxTableTableManager
                 Value<String?> operationGroup = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
-              }) => SyncOutboxCompanion.insert(
+              }) => OfflineOutboxEntriesCompanion.insert(
                 operationId: operationId,
                 accountKey: accountKey,
                 collection: collection,
-                localId: localId,
+                aggregateId: aggregateId,
                 remoteId: remoteId,
-                mutationType: mutationType,
+                operationType: operationType,
                 payloadJson: payloadJson,
                 baseRevision: baseRevision,
                 status: status,
@@ -3147,41 +2759,48 @@ class $$SyncOutboxTableTableManager
       );
 }
 
-typedef $$SyncOutboxTableProcessedTableManager =
+typedef $$OfflineOutboxEntriesTableProcessedTableManager =
     ProcessedTableManager<
-      _$SyncDatabase,
-      $SyncOutboxTable,
-      SyncOutboxData,
-      $$SyncOutboxTableFilterComposer,
-      $$SyncOutboxTableOrderingComposer,
-      $$SyncOutboxTableAnnotationComposer,
-      $$SyncOutboxTableCreateCompanionBuilder,
-      $$SyncOutboxTableUpdateCompanionBuilder,
+      _$TestApplicationDatabase,
+      $OfflineOutboxEntriesTable,
+      OfflineOutboxEntry,
+      $$OfflineOutboxEntriesTableFilterComposer,
+      $$OfflineOutboxEntriesTableOrderingComposer,
+      $$OfflineOutboxEntriesTableAnnotationComposer,
+      $$OfflineOutboxEntriesTableCreateCompanionBuilder,
+      $$OfflineOutboxEntriesTableUpdateCompanionBuilder,
       (
-        SyncOutboxData,
-        BaseReferences<_$SyncDatabase, $SyncOutboxTable, SyncOutboxData>,
+        OfflineOutboxEntry,
+        BaseReferences<
+          _$TestApplicationDatabase,
+          $OfflineOutboxEntriesTable,
+          OfflineOutboxEntry
+        >,
       ),
-      SyncOutboxData,
+      OfflineOutboxEntry,
       PrefetchHooks Function()
     >;
-typedef $$SyncCursorsTableCreateCompanionBuilder =
-    SyncCursorsCompanion Function({
+typedef $$OfflineSyncMetadataEntriesTableCreateCompanionBuilder =
+    OfflineSyncMetadataEntriesCompanion Function({
       required String accountKey,
-      required String collection,
-      required String cursor,
+      required String dataset,
+      Value<String?> cursor,
+      Value<DateTime?> lastCompletedAt,
       Value<int> rowid,
     });
-typedef $$SyncCursorsTableUpdateCompanionBuilder =
-    SyncCursorsCompanion Function({
+typedef $$OfflineSyncMetadataEntriesTableUpdateCompanionBuilder =
+    OfflineSyncMetadataEntriesCompanion Function({
       Value<String> accountKey,
-      Value<String> collection,
-      Value<String> cursor,
+      Value<String> dataset,
+      Value<String?> cursor,
+      Value<DateTime?> lastCompletedAt,
       Value<int> rowid,
     });
 
-class $$SyncCursorsTableFilterComposer
-    extends Composer<_$SyncDatabase, $SyncCursorsTable> {
-  $$SyncCursorsTableFilterComposer({
+class $$OfflineSyncMetadataEntriesTableFilterComposer
+    extends
+        Composer<_$TestApplicationDatabase, $OfflineSyncMetadataEntriesTable> {
+  $$OfflineSyncMetadataEntriesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -3193,8 +2812,8 @@ class $$SyncCursorsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get collection => $composableBuilder(
-    column: $table.collection,
+  ColumnFilters<String> get dataset => $composableBuilder(
+    column: $table.dataset,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3202,11 +2821,17 @@ class $$SyncCursorsTableFilterComposer
     column: $table.cursor,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get lastCompletedAt => $composableBuilder(
+    column: $table.lastCompletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
-class $$SyncCursorsTableOrderingComposer
-    extends Composer<_$SyncDatabase, $SyncCursorsTable> {
-  $$SyncCursorsTableOrderingComposer({
+class $$OfflineSyncMetadataEntriesTableOrderingComposer
+    extends
+        Composer<_$TestApplicationDatabase, $OfflineSyncMetadataEntriesTable> {
+  $$OfflineSyncMetadataEntriesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -3218,8 +2843,8 @@ class $$SyncCursorsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get collection => $composableBuilder(
-    column: $table.collection,
+  ColumnOrderings<String> get dataset => $composableBuilder(
+    column: $table.dataset,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3227,11 +2852,17 @@ class $$SyncCursorsTableOrderingComposer
     column: $table.cursor,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastCompletedAt => $composableBuilder(
+    column: $table.lastCompletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
-class $$SyncCursorsTableAnnotationComposer
-    extends Composer<_$SyncDatabase, $SyncCursorsTable> {
-  $$SyncCursorsTableAnnotationComposer({
+class $$OfflineSyncMetadataEntriesTableAnnotationComposer
+    extends
+        Composer<_$TestApplicationDatabase, $OfflineSyncMetadataEntriesTable> {
+  $$OfflineSyncMetadataEntriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -3243,66 +2874,88 @@ class $$SyncCursorsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get collection => $composableBuilder(
-    column: $table.collection,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get dataset =>
+      $composableBuilder(column: $table.dataset, builder: (column) => column);
 
   GeneratedColumn<String> get cursor =>
       $composableBuilder(column: $table.cursor, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastCompletedAt => $composableBuilder(
+    column: $table.lastCompletedAt,
+    builder: (column) => column,
+  );
 }
 
-class $$SyncCursorsTableTableManager
+class $$OfflineSyncMetadataEntriesTableTableManager
     extends
         RootTableManager<
-          _$SyncDatabase,
-          $SyncCursorsTable,
-          SyncCursorRow,
-          $$SyncCursorsTableFilterComposer,
-          $$SyncCursorsTableOrderingComposer,
-          $$SyncCursorsTableAnnotationComposer,
-          $$SyncCursorsTableCreateCompanionBuilder,
-          $$SyncCursorsTableUpdateCompanionBuilder,
+          _$TestApplicationDatabase,
+          $OfflineSyncMetadataEntriesTable,
+          OfflineSyncMetadataEntry,
+          $$OfflineSyncMetadataEntriesTableFilterComposer,
+          $$OfflineSyncMetadataEntriesTableOrderingComposer,
+          $$OfflineSyncMetadataEntriesTableAnnotationComposer,
+          $$OfflineSyncMetadataEntriesTableCreateCompanionBuilder,
+          $$OfflineSyncMetadataEntriesTableUpdateCompanionBuilder,
           (
-            SyncCursorRow,
-            BaseReferences<_$SyncDatabase, $SyncCursorsTable, SyncCursorRow>,
+            OfflineSyncMetadataEntry,
+            BaseReferences<
+              _$TestApplicationDatabase,
+              $OfflineSyncMetadataEntriesTable,
+              OfflineSyncMetadataEntry
+            >,
           ),
-          SyncCursorRow,
+          OfflineSyncMetadataEntry,
           PrefetchHooks Function()
         > {
-  $$SyncCursorsTableTableManager(_$SyncDatabase db, $SyncCursorsTable table)
-    : super(
+  $$OfflineSyncMetadataEntriesTableTableManager(
+    _$TestApplicationDatabase db,
+    $OfflineSyncMetadataEntriesTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SyncCursorsTableFilterComposer($db: db, $table: table),
+              $$OfflineSyncMetadataEntriesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
           createOrderingComposer: () =>
-              $$SyncCursorsTableOrderingComposer($db: db, $table: table),
+              $$OfflineSyncMetadataEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
           createComputedFieldComposer: () =>
-              $$SyncCursorsTableAnnotationComposer($db: db, $table: table),
+              $$OfflineSyncMetadataEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
           updateCompanionCallback:
               ({
                 Value<String> accountKey = const Value.absent(),
-                Value<String> collection = const Value.absent(),
-                Value<String> cursor = const Value.absent(),
+                Value<String> dataset = const Value.absent(),
+                Value<String?> cursor = const Value.absent(),
+                Value<DateTime?> lastCompletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => SyncCursorsCompanion(
+              }) => OfflineSyncMetadataEntriesCompanion(
                 accountKey: accountKey,
-                collection: collection,
+                dataset: dataset,
                 cursor: cursor,
+                lastCompletedAt: lastCompletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String accountKey,
-                required String collection,
-                required String cursor,
+                required String dataset,
+                Value<String?> cursor = const Value.absent(),
+                Value<DateTime?> lastCompletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => SyncCursorsCompanion.insert(
+              }) => OfflineSyncMetadataEntriesCompanion.insert(
                 accountKey: accountKey,
-                collection: collection,
+                dataset: dataset,
                 cursor: cursor,
+                lastCompletedAt: lastCompletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3313,28 +2966,32 @@ class $$SyncCursorsTableTableManager
       );
 }
 
-typedef $$SyncCursorsTableProcessedTableManager =
+typedef $$OfflineSyncMetadataEntriesTableProcessedTableManager =
     ProcessedTableManager<
-      _$SyncDatabase,
-      $SyncCursorsTable,
-      SyncCursorRow,
-      $$SyncCursorsTableFilterComposer,
-      $$SyncCursorsTableOrderingComposer,
-      $$SyncCursorsTableAnnotationComposer,
-      $$SyncCursorsTableCreateCompanionBuilder,
-      $$SyncCursorsTableUpdateCompanionBuilder,
+      _$TestApplicationDatabase,
+      $OfflineSyncMetadataEntriesTable,
+      OfflineSyncMetadataEntry,
+      $$OfflineSyncMetadataEntriesTableFilterComposer,
+      $$OfflineSyncMetadataEntriesTableOrderingComposer,
+      $$OfflineSyncMetadataEntriesTableAnnotationComposer,
+      $$OfflineSyncMetadataEntriesTableCreateCompanionBuilder,
+      $$OfflineSyncMetadataEntriesTableUpdateCompanionBuilder,
       (
-        SyncCursorRow,
-        BaseReferences<_$SyncDatabase, $SyncCursorsTable, SyncCursorRow>,
+        OfflineSyncMetadataEntry,
+        BaseReferences<
+          _$TestApplicationDatabase,
+          $OfflineSyncMetadataEntriesTable,
+          OfflineSyncMetadataEntry
+        >,
       ),
-      SyncCursorRow,
+      OfflineSyncMetadataEntry,
       PrefetchHooks Function()
     >;
-typedef $$SyncConflictsTableCreateCompanionBuilder =
-    SyncConflictsCompanion Function({
+typedef $$OfflineConflictEntriesTableCreateCompanionBuilder =
+    OfflineConflictEntriesCompanion Function({
       required String accountKey,
       required String collection,
-      required String localId,
+      required String aggregateId,
       Value<int?> remoteId,
       required String localPayloadJson,
       required String remotePayloadJson,
@@ -3342,11 +2999,11 @@ typedef $$SyncConflictsTableCreateCompanionBuilder =
       required DateTime detectedAt,
       Value<int> rowid,
     });
-typedef $$SyncConflictsTableUpdateCompanionBuilder =
-    SyncConflictsCompanion Function({
+typedef $$OfflineConflictEntriesTableUpdateCompanionBuilder =
+    OfflineConflictEntriesCompanion Function({
       Value<String> accountKey,
       Value<String> collection,
-      Value<String> localId,
+      Value<String> aggregateId,
       Value<int?> remoteId,
       Value<String> localPayloadJson,
       Value<String> remotePayloadJson,
@@ -3355,9 +3012,9 @@ typedef $$SyncConflictsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-class $$SyncConflictsTableFilterComposer
-    extends Composer<_$SyncDatabase, $SyncConflictsTable> {
-  $$SyncConflictsTableFilterComposer({
+class $$OfflineConflictEntriesTableFilterComposer
+    extends Composer<_$TestApplicationDatabase, $OfflineConflictEntriesTable> {
+  $$OfflineConflictEntriesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -3374,8 +3031,8 @@ class $$SyncConflictsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get localId => $composableBuilder(
-    column: $table.localId,
+  ColumnFilters<String> get aggregateId => $composableBuilder(
+    column: $table.aggregateId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3405,9 +3062,9 @@ class $$SyncConflictsTableFilterComposer
   );
 }
 
-class $$SyncConflictsTableOrderingComposer
-    extends Composer<_$SyncDatabase, $SyncConflictsTable> {
-  $$SyncConflictsTableOrderingComposer({
+class $$OfflineConflictEntriesTableOrderingComposer
+    extends Composer<_$TestApplicationDatabase, $OfflineConflictEntriesTable> {
+  $$OfflineConflictEntriesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -3424,8 +3081,8 @@ class $$SyncConflictsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get localId => $composableBuilder(
-    column: $table.localId,
+  ColumnOrderings<String> get aggregateId => $composableBuilder(
+    column: $table.aggregateId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3455,9 +3112,9 @@ class $$SyncConflictsTableOrderingComposer
   );
 }
 
-class $$SyncConflictsTableAnnotationComposer
-    extends Composer<_$SyncDatabase, $SyncConflictsTable> {
-  $$SyncConflictsTableAnnotationComposer({
+class $$OfflineConflictEntriesTableAnnotationComposer
+    extends Composer<_$TestApplicationDatabase, $OfflineConflictEntriesTable> {
+  $$OfflineConflictEntriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -3474,8 +3131,10 @@ class $$SyncConflictsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get localId =>
-      $composableBuilder(column: $table.localId, builder: (column) => column);
+  GeneratedColumn<String> get aggregateId => $composableBuilder(
+    column: $table.aggregateId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get remoteId =>
       $composableBuilder(column: $table.remoteId, builder: (column) => column);
@@ -3501,54 +3160,65 @@ class $$SyncConflictsTableAnnotationComposer
   );
 }
 
-class $$SyncConflictsTableTableManager
+class $$OfflineConflictEntriesTableTableManager
     extends
         RootTableManager<
-          _$SyncDatabase,
-          $SyncConflictsTable,
-          SyncConflictRow,
-          $$SyncConflictsTableFilterComposer,
-          $$SyncConflictsTableOrderingComposer,
-          $$SyncConflictsTableAnnotationComposer,
-          $$SyncConflictsTableCreateCompanionBuilder,
-          $$SyncConflictsTableUpdateCompanionBuilder,
+          _$TestApplicationDatabase,
+          $OfflineConflictEntriesTable,
+          OfflineConflictEntry,
+          $$OfflineConflictEntriesTableFilterComposer,
+          $$OfflineConflictEntriesTableOrderingComposer,
+          $$OfflineConflictEntriesTableAnnotationComposer,
+          $$OfflineConflictEntriesTableCreateCompanionBuilder,
+          $$OfflineConflictEntriesTableUpdateCompanionBuilder,
           (
-            SyncConflictRow,
+            OfflineConflictEntry,
             BaseReferences<
-              _$SyncDatabase,
-              $SyncConflictsTable,
-              SyncConflictRow
+              _$TestApplicationDatabase,
+              $OfflineConflictEntriesTable,
+              OfflineConflictEntry
             >,
           ),
-          SyncConflictRow,
+          OfflineConflictEntry,
           PrefetchHooks Function()
         > {
-  $$SyncConflictsTableTableManager(_$SyncDatabase db, $SyncConflictsTable table)
-    : super(
+  $$OfflineConflictEntriesTableTableManager(
+    _$TestApplicationDatabase db,
+    $OfflineConflictEntriesTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SyncConflictsTableFilterComposer($db: db, $table: table),
+              $$OfflineConflictEntriesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
           createOrderingComposer: () =>
-              $$SyncConflictsTableOrderingComposer($db: db, $table: table),
+              $$OfflineConflictEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
           createComputedFieldComposer: () =>
-              $$SyncConflictsTableAnnotationComposer($db: db, $table: table),
+              $$OfflineConflictEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
           updateCompanionCallback:
               ({
                 Value<String> accountKey = const Value.absent(),
                 Value<String> collection = const Value.absent(),
-                Value<String> localId = const Value.absent(),
+                Value<String> aggregateId = const Value.absent(),
                 Value<int?> remoteId = const Value.absent(),
                 Value<String> localPayloadJson = const Value.absent(),
                 Value<String> remotePayloadJson = const Value.absent(),
                 Value<String> remoteRevision = const Value.absent(),
                 Value<DateTime> detectedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => SyncConflictsCompanion(
+              }) => OfflineConflictEntriesCompanion(
                 accountKey: accountKey,
                 collection: collection,
-                localId: localId,
+                aggregateId: aggregateId,
                 remoteId: remoteId,
                 localPayloadJson: localPayloadJson,
                 remotePayloadJson: remotePayloadJson,
@@ -3560,17 +3230,17 @@ class $$SyncConflictsTableTableManager
               ({
                 required String accountKey,
                 required String collection,
-                required String localId,
+                required String aggregateId,
                 Value<int?> remoteId = const Value.absent(),
                 required String localPayloadJson,
                 required String remotePayloadJson,
                 required String remoteRevision,
                 required DateTime detectedAt,
                 Value<int> rowid = const Value.absent(),
-              }) => SyncConflictsCompanion.insert(
+              }) => OfflineConflictEntriesCompanion.insert(
                 accountKey: accountKey,
                 collection: collection,
-                localId: localId,
+                aggregateId: aggregateId,
                 remoteId: remoteId,
                 localPayloadJson: localPayloadJson,
                 remotePayloadJson: remotePayloadJson,
@@ -3586,33 +3256,44 @@ class $$SyncConflictsTableTableManager
       );
 }
 
-typedef $$SyncConflictsTableProcessedTableManager =
+typedef $$OfflineConflictEntriesTableProcessedTableManager =
     ProcessedTableManager<
-      _$SyncDatabase,
-      $SyncConflictsTable,
-      SyncConflictRow,
-      $$SyncConflictsTableFilterComposer,
-      $$SyncConflictsTableOrderingComposer,
-      $$SyncConflictsTableAnnotationComposer,
-      $$SyncConflictsTableCreateCompanionBuilder,
-      $$SyncConflictsTableUpdateCompanionBuilder,
+      _$TestApplicationDatabase,
+      $OfflineConflictEntriesTable,
+      OfflineConflictEntry,
+      $$OfflineConflictEntriesTableFilterComposer,
+      $$OfflineConflictEntriesTableOrderingComposer,
+      $$OfflineConflictEntriesTableAnnotationComposer,
+      $$OfflineConflictEntriesTableCreateCompanionBuilder,
+      $$OfflineConflictEntriesTableUpdateCompanionBuilder,
       (
-        SyncConflictRow,
-        BaseReferences<_$SyncDatabase, $SyncConflictsTable, SyncConflictRow>,
+        OfflineConflictEntry,
+        BaseReferences<
+          _$TestApplicationDatabase,
+          $OfflineConflictEntriesTable,
+          OfflineConflictEntry
+        >,
       ),
-      SyncConflictRow,
+      OfflineConflictEntry,
       PrefetchHooks Function()
     >;
 
-class $SyncDatabaseManager {
-  final _$SyncDatabase _db;
-  $SyncDatabaseManager(this._db);
-  $$LocalEntitiesTableTableManager get localEntities =>
-      $$LocalEntitiesTableTableManager(_db, _db.localEntities);
-  $$SyncOutboxTableTableManager get syncOutbox =>
-      $$SyncOutboxTableTableManager(_db, _db.syncOutbox);
-  $$SyncCursorsTableTableManager get syncCursors =>
-      $$SyncCursorsTableTableManager(_db, _db.syncCursors);
-  $$SyncConflictsTableTableManager get syncConflicts =>
-      $$SyncConflictsTableTableManager(_db, _db.syncConflicts);
+class $TestApplicationDatabaseManager {
+  final _$TestApplicationDatabase _db;
+  $TestApplicationDatabaseManager(this._db);
+  $$TestExpensesTableTableManager get testExpenses =>
+      $$TestExpensesTableTableManager(_db, _db.testExpenses);
+  $$OfflineOutboxEntriesTableTableManager get offlineOutboxEntries =>
+      $$OfflineOutboxEntriesTableTableManager(_db, _db.offlineOutboxEntries);
+  $$OfflineSyncMetadataEntriesTableTableManager
+  get offlineSyncMetadataEntries =>
+      $$OfflineSyncMetadataEntriesTableTableManager(
+        _db,
+        _db.offlineSyncMetadataEntries,
+      );
+  $$OfflineConflictEntriesTableTableManager get offlineConflictEntries =>
+      $$OfflineConflictEntriesTableTableManager(
+        _db,
+        _db.offlineConflictEntries,
+      );
 }

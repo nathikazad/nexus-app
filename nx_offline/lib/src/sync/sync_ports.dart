@@ -1,9 +1,13 @@
 import '../core/sync_models.dart';
 
-abstract interface class SyncStore {
-  AccountScope get account;
-
-  Future<void> enqueue(PendingMutation mutation);
+/// Durable queue operations required by the shared upload runtime.
+///
+/// The application implements this interface over the same database that owns
+/// its typed domain projection. Enqueuing a domain change remains an
+/// application repository responsibility so both writes can share one
+/// transaction.
+abstract interface class OutboxStore {
+  AccountIdentity get account;
 
   Future<List<PendingMutation>> pendingMutations();
 
@@ -21,63 +25,18 @@ abstract interface class SyncStore {
     required DateTime retryAt,
   });
 
-  Future<SyncCursor?> readCursor(String collection);
-
-  Future<void> writeCursor(String collection, SyncCursor cursor);
-
-  Future<void> recordConflict(SyncConflict conflict);
-}
-
-abstract interface class SyncTransport {
-  Future<MutationReceipt> push(PendingMutation mutation);
-
-  Future<RemoteChangePage> pull({
-    required AccountScope account,
-    required String collection,
-    required Set<String> modelTypes,
-    required SyncCursor? cursor,
-  });
-}
-
-abstract interface class SyncCollectionAdapter {
-  String get collectionName;
-
-  Set<String> get modelTypes;
-
-  Future<void> applyRemote(RemoteRecord record);
-
-  Future<void> applyTombstone(RemoteTombstone tombstone);
-
-  Future<void> preserveConflict(RemoteRecord remote);
-}
-
-/// Optional collection capability for preserving both sides of a conflict
-/// discovered while pushing a conditional mutation.
-///
-/// A coordinator invokes this before marking the outbox mutation failed. The
-/// implementation is responsible for fetching the current remote entity and
-/// durably preserving it alongside the local version.
-abstract interface class PushConflictResolver {
-  String get collectionName;
-
-  Future<void> resolvePushConflict({
-    required PendingMutation mutation,
-    required SyncFailure failure,
-  });
-}
-
-final class CollectionConflictException implements Exception {
-  const CollectionConflictException(this.conflict);
-
-  final SyncConflict conflict;
+  /// Earliest persisted retry time, or null when no retry is waiting.
+  Future<DateTime?> nextRetryAt();
 }
 
 abstract interface class Clock {
   DateTime now();
 }
 
-abstract interface class IdGenerator {
-  String nextId();
+abstract interface class SyncStatusSource {
+  SyncStatus get status;
+
+  Stream<SyncStatus> get statusChanges;
 }
 
 final class SystemClock implements Clock {

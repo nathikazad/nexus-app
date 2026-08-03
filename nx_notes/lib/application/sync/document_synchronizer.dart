@@ -4,6 +4,7 @@ import 'package:nx_notes/application/ports/notes_remote_api.dart';
 import 'package:nx_notes/domain/sync/document_sync.dart';
 import 'package:nx_notes/domain/sync/local_document.dart';
 import 'package:nx_notes/domain/sync/sync_state.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 /// Coordinates native pull synchronization.
 ///
@@ -21,19 +22,10 @@ final class DocumentSynchronizer {
   final LocalNotesStore _localStore;
   final NotesRemoteApi _remoteApi;
   final BackgroundUploader _uploader;
-  final Map<int, Future<LocalDocument?>> _documentRuns =
-      <int, Future<LocalDocument?>>{};
-  Future<void>? _libraryRun;
+  final offline.ReconciliationCoordinator<int, LocalDocument?> _runs =
+      offline.ReconciliationCoordinator<int, LocalDocument?>();
 
-  Future<void> syncLibrary() {
-    final active = _libraryRun;
-    if (active != null) return active;
-    final run = _syncLibraryOnce();
-    _libraryRun = run;
-    return run.whenComplete(() {
-      if (identical(_libraryRun, run)) _libraryRun = null;
-    });
-  }
+  Future<void> syncLibrary() => _runs.runFull(_syncLibraryOnce);
 
   Future<void> _syncLibraryOnce() async {
     await _uploader.uploadPending();
@@ -42,17 +34,11 @@ final class DocumentSynchronizer {
     await _localStore.applySyncBundle(bundle);
   }
 
-  Future<LocalDocument?> refreshDocument(int documentId) {
-    final active = _documentRuns[documentId];
-    if (active != null) return active;
-    final run = _refreshDocumentOnce(documentId);
-    _documentRuns[documentId] = run;
-    return run.whenComplete(() {
-      if (identical(_documentRuns[documentId], run)) {
-        _documentRuns.remove(documentId);
-      }
-    });
-  }
+  Future<LocalDocument?> refreshDocument(int documentId) => _runs.runItem(
+    documentId,
+    reconcile: () => _refreshDocumentOnce(documentId),
+    readAfterFull: () => _localStore.getDocumentByRemoteId(documentId),
+  );
 
   Future<LocalDocument?> _refreshDocumentOnce(int documentId) async {
     await _uploader.uploadPending();

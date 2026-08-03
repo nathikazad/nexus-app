@@ -3,6 +3,27 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('stable barrel does not export concrete database implementations', () {
+    final barrel = File('lib/nx_offline.dart').readAsStringSync();
+
+    expect(barrel, isNot(contains('drift_sync_store.dart')));
+    expect(barrel, isNot(contains('sync_database.dart')));
+    expect(barrel, isNot(contains('sync_coordinator.dart')));
+    expect(barrel, isNot(contains('kgql_sync_transport.dart')));
+  });
+
+  test('shared implementation has no application imports', () {
+    expect(
+      _filesContainingAny(Directory('lib'), const [
+        'package:nx_notes/',
+        'package:nx_expense/',
+        'package:nx_time/',
+        'package:nx_main/',
+      ]),
+      isEmpty,
+    );
+  });
+
   test('core and sync modules remain framework independent', () {
     final offenders = <String>[
       ..._filesContainingAny(Directory('lib/src/core'), const [
@@ -24,16 +45,9 @@ void main() {
     expect(offenders, isEmpty);
   });
 
-  test('storage and KGQL modules do not import Flutter presentation', () {
+  test('persistence modules do not import Flutter presentation', () {
     expect(
-      _filesContainingAny(Directory('lib/src/storage'), const [
-        'package:flutter/',
-        'src/flutter/',
-      ]),
-      isEmpty,
-    );
-    expect(
-      _filesContainingAny(Directory('lib/src/kgql'), const [
+      _filesContainingAny(Directory('lib/src/persistence'), const [
         'package:flutter/',
         'src/flutter/',
       ]),

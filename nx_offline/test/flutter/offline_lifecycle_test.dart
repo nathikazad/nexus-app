@@ -4,74 +4,67 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_offline/nx_offline.dart';
 
-import '../support/fakes.dart';
-
 void main() {
-  testWidgets('syncs on startup and restored connectivity', (tester) async {
-    const account = AccountScope(
-      backend: 'production',
-      userId: 'user-1',
-      application: 'test',
-    );
-    final transport = FakeTransport();
+  testWidgets('reports startup, resume, and restored connectivity', (
+    tester,
+  ) async {
     final connectivity = StreamController<bool>();
     addTearDown(connectivity.close);
-    final coordinator = SyncCoordinator(
-      store: MemorySyncStore(account),
-      transport: transport,
-      collections: [
-        FakeCollection('items', {'Item'}),
-      ],
-      clock: FakeClock(DateTime.utc(2026, 7, 26)),
-      idGenerator: SequenceIds(),
-    );
-    addTearDown(coordinator.dispose);
+    final reasons = <SyncReason>[];
 
     await tester.pumpWidget(
       MaterialApp(
         home: OfflineLifecycle(
-          coordinator: coordinator,
+          synchronize: (reason) async => reasons.add(reason),
           onlineChanges: connectivity.stream,
           child: const Text('App'),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(transport.pullCount, 1);
+    expect(reasons, [SyncReason.appStarted]);
 
     connectivity.add(false);
     await tester.pumpAndSettle();
-    expect(transport.pullCount, 1);
+    expect(reasons, [SyncReason.appStarted]);
 
     connectivity.add(true);
     await tester.pumpAndSettle();
-    expect(transport.pullCount, 2);
+    expect(reasons, [SyncReason.appStarted, SyncReason.connectivityRestored]);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(reasons.last, SyncReason.appResumed);
+  });
+
+  testWidgets('a disabled lifecycle does not synchronize', (tester) async {
+    final connectivity = StreamController<bool>();
+    addTearDown(connectivity.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OfflineLifecycle(
+          synchronize: null,
+          onlineChanges: connectivity.stream,
+          child: const Text('Web app'),
+        ),
+      ),
+    );
+    connectivity.add(true);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Web app'), findsOneWidget);
   });
 
   testWidgets('status view exposes current synchronization state', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
-    const account = AccountScope(
-      backend: 'production',
-      userId: 'user-1',
-      application: 'test',
-    );
-    final transport = FakeTransport();
-    final coordinator = SyncCoordinator(
-      store: MemorySyncStore(account),
-      transport: transport,
-      collections: [
-        FakeCollection('items', {'Item'}),
-      ],
-      clock: FakeClock(DateTime.utc(2026, 7, 26)),
-      idGenerator: SequenceIds(),
-    );
-    addTearDown(coordinator.dispose);
+    final source = _StatusSource();
+    addTearDown(source.close);
 
-    await tester.pumpWidget(
-      MaterialApp(home: SyncStatusView(coordinator: coordinator)),
-    );
+    await tester.pumpWidget(MaterialApp(home: SyncStatusView(source: source)));
 
     expect(find.text('Saved locally'), findsOneWidget);
     expect(
@@ -80,4 +73,17 @@ void main() {
     );
     semantics.dispose();
   });
+}
+
+final class _StatusSource implements SyncStatusSource {
+  final StreamController<SyncStatus> _changes =
+      StreamController<SyncStatus>.broadcast();
+
+  @override
+  SyncStatus get status => const SyncStatus.idle();
+
+  @override
+  Stream<SyncStatus> get statusChanges => _changes.stream;
+
+  Future<void> close() => _changes.close();
 }

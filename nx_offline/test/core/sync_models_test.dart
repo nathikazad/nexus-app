@@ -14,8 +14,8 @@ void main() {
     final now = DateTime.utc(2026, 7, 26);
     final mutation = PendingMutation(
       operationId: 'op-1',
-      account: const AccountScope(
-        backend: 'production',
+      account: const AccountIdentity(
+        serverId: 'production',
         userId: 'user-1',
         application: 'test',
       ),
@@ -41,5 +41,29 @@ void main() {
         kind == SyncFailureKind.transient || kind == SyncFailureKind.unknown,
       );
     }
+  });
+
+  test('blocked mutations never become eligible by passage of time', () {
+    final now = DateTime.utc(2026, 8, 3);
+    final mutation = PendingMutation(
+      operationId: 'blocked',
+      account: const AccountIdentity(
+        serverId: 'nexus-primary',
+        userId: 'user-1',
+        application: 'test',
+      ),
+      collection: 'items',
+      entityKey: const EntityKey(localId: 'item-1'),
+      type: MutationType.update,
+      payload: const <String, Object?>{},
+      createdAt: now,
+      status: PendingMutationStatus.blocked,
+      nextAttemptAt: now,
+    );
+
+    expect(
+      mutation.isEligibleAt(now.add(const Duration(days: 36500))),
+      isFalse,
+    );
   });
 }

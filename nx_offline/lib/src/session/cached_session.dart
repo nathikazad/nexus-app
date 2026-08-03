@@ -4,17 +4,26 @@ import '../core/sync_models.dart';
 
 final class CachedSession {
   const CachedSession({
-    required this.backend,
+    required this.serverId,
     required this.userId,
     required this.application,
-  });
+    required this.route,
+  }) : assert(serverId != ''),
+       assert(userId != ''),
+       assert(application != ''),
+       assert(route != '');
 
-  final String backend;
+  /// Stable logical database identity shared by every route preset.
+  final String serverId;
   final String userId;
   final String application;
+  final String route;
 
-  AccountScope get account =>
-      AccountScope(backend: backend, userId: userId, application: application);
+  AccountIdentity get account => AccountIdentity(
+    serverId: serverId,
+    userId: userId,
+    application: application,
+  );
 }
 
 abstract interface class CachedSessionStore {
@@ -29,27 +38,27 @@ final class PreferencesCachedSessionStore implements CachedSessionStore {
   PreferencesCachedSessionStore({
     required this.preferences,
     required this.application,
+    required this.serverId,
   });
 
   final SharedPreferences preferences;
   final String application;
+  final String serverId;
 
   String get _prefix => 'nx_offline.$application.session';
 
   @override
   Future<CachedSession?> load() async {
-    final backend = preferences.getString('$_prefix.backend');
+    final route = preferences.getString('$_prefix.route');
     final userId = preferences.getString('$_prefix.user_id');
-    if (backend == null ||
-        backend.isEmpty ||
-        userId == null ||
-        userId.isEmpty) {
+    if (route == null || route.isEmpty || userId == null || userId.isEmpty) {
       return null;
     }
     return CachedSession(
-      backend: backend,
+      serverId: serverId,
       userId: userId,
       application: application,
+      route: route,
     );
   }
 
@@ -58,13 +67,16 @@ final class PreferencesCachedSessionStore implements CachedSessionStore {
     if (session.application != application) {
       throw StateError('session belongs to a different application');
     }
-    await preferences.setString('$_prefix.backend', session.backend);
+    if (session.serverId != serverId) {
+      throw StateError('session belongs to a different server');
+    }
+    await preferences.setString('$_prefix.route', session.route);
     await preferences.setString('$_prefix.user_id', session.userId);
   }
 
   @override
   Future<void> clear() async {
-    await preferences.remove('$_prefix.backend');
+    await preferences.remove('$_prefix.route');
     await preferences.remove('$_prefix.user_id');
   }
 }

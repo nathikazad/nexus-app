@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_offline/nx_offline.dart';
 
 void main() {
-  const account = AccountScope(
-    backend: 'production',
+  const account = AccountIdentity(
+    serverId: 'production',
     userId: 'user-1',
     application: 'test',
   );

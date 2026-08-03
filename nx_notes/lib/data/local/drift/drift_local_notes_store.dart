@@ -518,7 +518,9 @@ class DriftLocalNotesStore implements LocalNotesStore {
       if (row == null) return;
       final operation = await _operationFromRow(row);
       final failed = operation.copyWith(
-        status: PendingOperationStatus.retryWaiting,
+        status: failure.isRetryable
+            ? PendingOperationStatus.retryWaiting
+            : PendingOperationStatus.blocked,
         attemptCount: operation.attemptCount + 1,
         nextAttemptAt: retryAt,
         clearLeaseOwner: true,

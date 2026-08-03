@@ -363,7 +363,9 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     final operation = _operations[operationId];
     if (operation == null) return;
     _operations[operationId] = operation.copyWith(
-      status: PendingOperationStatus.retryWaiting,
+      status: failure.isRetryable
+          ? PendingOperationStatus.retryWaiting
+          : PendingOperationStatus.blocked,
       attemptCount: operation.attemptCount + 1,
       nextAttemptAt: retryAt,
       clearLeaseOwner: true,

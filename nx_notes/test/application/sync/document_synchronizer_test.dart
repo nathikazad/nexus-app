@@ -65,6 +65,42 @@ void main() {
     expect(await local.getDocumentByRemoteId(2), isNull);
   });
 
+  test(
+    'library sync downloads both documents and books for offline use',
+    () async {
+      remote.replaceRemote(
+        offlineTestDocument(
+          id: 3,
+          title: 'Offline book',
+        ).copyWith(modelTypeName: 'Book', readingState: 'to_read'),
+      );
+
+      await synchronizer.syncLibrary();
+
+      final document = await local.getDocumentByRemoteId(1);
+      final book = await local.getDocumentByRemoteId(3);
+      expect(document?.document.modelTypeName, 'Document');
+      expect(book?.document.modelTypeName, 'Book');
+      expect(book?.document.hasFullDocument, isTrue);
+    },
+  );
+
+  test(
+    'concurrent library triggers share one complete reconciliation',
+    () async {
+      final barrier = Completer<void>();
+      remote.syncBarrier = barrier.future;
+
+      final first = synchronizer.syncLibrary();
+      final second = synchronizer.syncLibrary();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(remote.syncCount, 1);
+      barrier.complete();
+      await Future.wait(<Future<void>>[first, second]);
+    },
+  );
+
   test('concurrent document refreshes share one remote hash check', () async {
     await synchronizer.syncLibrary();
     remote.replaceRemote(
@@ -86,6 +122,45 @@ void main() {
     barrier.complete();
     await Future.wait(<Future<Object?>>[first, second]);
     expect((await local.getDocumentByRemoteId(1))?.document.title, 'Changed');
+  });
+
+  test(
+    'document opened during library sync reuses the library result',
+    () async {
+      final barrier = Completer<void>();
+      remote.syncBarrier = barrier.future;
+
+      final library = synchronizer.syncLibrary();
+      await Future<void>.delayed(Duration.zero);
+      expect(remote.syncCount, 1);
+
+      final document = synchronizer.refreshDocument(1);
+      await Future<void>.delayed(Duration.zero);
+      expect(remote.syncCount, 1);
+
+      barrier.complete();
+      await library;
+      expect((await document)?.document.title, 'One');
+      expect(remote.syncCount, 1);
+    },
+  );
+
+  test('library sync waits for an active targeted document refresh', () async {
+    final barrier = Completer<void>();
+    remote.syncBarrier = barrier.future;
+
+    final document = synchronizer.refreshDocument(1);
+    await Future<void>.delayed(Duration.zero);
+    expect(remote.syncCount, 1);
+
+    final library = synchronizer.syncLibrary();
+    await Future<void>.delayed(Duration.zero);
+    expect(remote.syncCount, 1);
+
+    barrier.complete();
+    expect((await document)?.document.title, 'One');
+    await library;
+    expect(remote.syncCount, 2);
   });
 }
 

@@ -3,7 +3,7 @@ import 'package:nx_notes/domain/sync/document_revision.dart';
 
 enum PendingOperationType { create, update, delete }
 
-enum PendingOperationStatus { queued, claimed, retryWaiting }
+enum PendingOperationStatus { queued, claimed, retryWaiting, blocked }
 
 class PendingOperation {
   const PendingOperation({
@@ -37,6 +37,7 @@ class PendingOperation {
   final DateTime createdAt;
 
   bool isEligibleAt(DateTime now) {
+    if (status == PendingOperationStatus.blocked) return false;
     if (status == PendingOperationStatus.claimed) {
       return leaseExpiresAt != null && !leaseExpiresAt!.isAfter(now);
     }

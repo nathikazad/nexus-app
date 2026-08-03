@@ -1,8 +1,8 @@
 import 'package:nx_notes/application/ports/session_store.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
-enum SessionProbeResult { available, unreachable, unauthorized }
-
-enum SessionMode { online, offline, loginRequired }
+typedef SessionProbeResult = offline.SessionProbeResult;
+typedef SessionMode = offline.SessionMode;
 
 class SessionRestoreResult {
   const SessionRestoreResult({required this.mode, this.session});
@@ -21,27 +21,16 @@ class OfflineSessionRestorer {
   final SessionProbe probe;
 
   Future<SessionRestoreResult> restore() async {
-    final session = await store.load();
-    if (session == null) {
-      return const SessionRestoreResult(mode: SessionMode.loginRequired);
-    }
-    final result = await probe(session);
-    return switch (result) {
-      SessionProbeResult.available => SessionRestoreResult(
-        mode: SessionMode.online,
-        session: session,
-      ),
-      SessionProbeResult.unreachable => SessionRestoreResult(
-        mode: SessionMode.offline,
-        session: session,
-      ),
-      SessionProbeResult.unauthorized => _reject(),
-    };
-  }
-
-  Future<SessionRestoreResult> _reject() async {
-    await store.clear();
-    return const SessionRestoreResult(mode: SessionMode.loginRequired);
+    final result = await offline.OfflineSessionRestorer(
+      store: _SharedSessionStore(store),
+      probe: (session) => probe(CachedSession.fromShared(session)),
+    ).restore();
+    return SessionRestoreResult(
+      mode: result.mode,
+      session: result.session == null
+          ? null
+          : CachedSession.fromShared(result.session!),
+    );
   }
 }
 
@@ -63,5 +52,24 @@ class OfflineLogout {
     if (downloadedData == DownloadedDataLogoutPolicy.erase) {
       await erasePartition(session.accountKey);
     }
+  }
+}
+
+/// Preserves the installed Nx Notes preference keys while sharing the generic
+/// session restoration policy with nx_offline.
+final class _SharedSessionStore implements offline.CachedSessionStore {
+  const _SharedSessionStore(this.store);
+
+  final SessionStore store;
+
+  @override
+  Future<void> clear() => store.clear();
+
+  @override
+  Future<offline.CachedSession?> load() async => (await store.load())?.shared;
+
+  @override
+  Future<void> save(offline.CachedSession session) {
+    return store.save(CachedSession.fromShared(session));
   }
 }

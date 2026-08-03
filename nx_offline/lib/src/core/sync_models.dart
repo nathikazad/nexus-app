@@ -1,8 +1,6 @@
-import 'dart:convert';
-
 enum MutationType { create, update, delete, relation }
 
-enum PendingMutationStatus { queued, claimed, retryWaiting }
+enum PendingMutationStatus { queued, claimed, retryWaiting, blocked }
 
 enum SyncFailureKind {
   transient,
@@ -14,30 +12,41 @@ enum SyncFailureKind {
 
 enum SyncActivity { idle, syncing, retryWaiting, blocked }
 
-final class AccountScope {
-  const AccountScope({
-    required this.backend,
+/// Why synchronization was requested.
+///
+/// The lifecycle layer reports intent only. Applications decide whether a
+/// reason should upload an outbox, reconcile a library, or do both.
+enum SyncReason { manual, appStarted, appResumed, connectivityRestored, timer }
+
+/// Stable identity for one application's data partition.
+///
+/// [serverId] identifies the logical server/database, not a network route.
+/// LAN, WAN, and Tailscale presets that reach the same database therefore use
+/// the same identity and local cache.
+final class AccountIdentity {
+  const AccountIdentity({
+    required this.serverId,
     required this.userId,
     required this.application,
-  }) : assert(backend != ''),
+  }) : assert(serverId != ''),
        assert(userId != ''),
        assert(application != '');
 
-  final String backend;
+  final String serverId;
   final String userId;
   final String application;
 
-  String get key => '$application:$backend:$userId';
+  String get key => '$application:$serverId:$userId';
 
   @override
   bool operator ==(Object other) =>
-      other is AccountScope &&
-      backend == other.backend &&
+      other is AccountIdentity &&
+      serverId == other.serverId &&
       userId == other.userId &&
       application == other.application;
 
   @override
-  int get hashCode => Object.hash(backend, userId, application);
+  int get hashCode => Object.hash(serverId, userId, application);
 }
 
 final class EntityKey {
@@ -64,61 +73,6 @@ extension type const Revision(String value) {
   factory Revision.checked(String value) {
     if (value.isEmpty) throw ArgumentError.value(value, 'value');
     return Revision(value);
-  }
-}
-
-extension type const SyncCursor(String value) {
-  factory SyncCursor.checked(String value) {
-    if (value.isEmpty) throw ArgumentError.value(value, 'value');
-    return SyncCursor(value);
-  }
-}
-
-enum EntitySyncState { synced, queued, syncing, retryWaiting, conflict }
-
-final class LocalEntity {
-  const LocalEntity({
-    required this.account,
-    required this.collection,
-    required this.key,
-    required this.payload,
-    required this.updatedAt,
-    required this.syncState,
-    this.revision,
-    this.baseRevision,
-    this.deleted = false,
-  });
-
-  final AccountScope account;
-  final String collection;
-  final EntityKey key;
-  final Map<String, Object?> payload;
-  final DateTime updatedAt;
-  final EntitySyncState syncState;
-  final Revision? revision;
-  final Revision? baseRevision;
-  final bool deleted;
-
-  LocalEntity copyWith({
-    EntityKey? key,
-    Map<String, Object?>? payload,
-    DateTime? updatedAt,
-    EntitySyncState? syncState,
-    Revision? revision,
-    Revision? baseRevision,
-    bool? deleted,
-  }) {
-    return LocalEntity(
-      account: account,
-      collection: collection,
-      key: key ?? this.key,
-      payload: payload ?? this.payload,
-      updatedAt: updatedAt ?? this.updatedAt,
-      syncState: syncState ?? this.syncState,
-      revision: revision ?? this.revision,
-      baseRevision: baseRevision ?? this.baseRevision,
-      deleted: deleted ?? this.deleted,
-    );
   }
 }
 
@@ -161,7 +115,7 @@ final class PendingMutation {
   });
 
   final String operationId;
-  final AccountScope account;
+  final AccountIdentity account;
   final String collection;
   final EntityKey entityKey;
   final MutationType type;
@@ -177,6 +131,7 @@ final class PendingMutation {
   final String? operationGroup;
 
   bool isEligibleAt(DateTime now) {
+    if (status == PendingMutationStatus.blocked) return false;
     if (status == PendingMutationStatus.claimed) {
       return leaseExpiresAt != null && !leaseExpiresAt!.isAfter(now);
     }
@@ -217,8 +172,6 @@ final class PendingMutation {
       operationGroup: operationGroup,
     );
   }
-
-  String payloadJson() => jsonEncode(payload);
 }
 
 final class MutationReceipt {
@@ -226,73 +179,13 @@ final class MutationReceipt {
     required this.operationId,
     required this.entityKey,
     required this.revision,
+    this.metadata = const <String, Object?>{},
   });
 
   final String operationId;
   final EntityKey entityKey;
   final Revision revision;
-}
-
-final class RemoteRecord {
-  const RemoteRecord({
-    required this.collection,
-    required this.modelType,
-    required this.entityKey,
-    required this.revision,
-    required this.payload,
-  });
-
-  final String collection;
-  final String modelType;
-  final EntityKey entityKey;
-  final Revision revision;
-  final Map<String, Object?> payload;
-}
-
-final class RemoteTombstone {
-  const RemoteTombstone({
-    required this.collection,
-    required this.modelType,
-    required this.entityKey,
-    required this.revision,
-  });
-
-  final String collection;
-  final String modelType;
-  final EntityKey entityKey;
-  final Revision revision;
-}
-
-final class RemoteChangePage {
-  const RemoteChangePage({
-    required this.records,
-    required this.tombstones,
-    required this.nextCursor,
-  });
-
-  final List<RemoteRecord> records;
-  final List<RemoteTombstone> tombstones;
-  final SyncCursor nextCursor;
-}
-
-final class SyncConflict {
-  const SyncConflict({
-    required this.account,
-    required this.collection,
-    required this.entityKey,
-    required this.localPayload,
-    required this.remotePayload,
-    required this.remoteRevision,
-    required this.detectedAt,
-  });
-
-  final AccountScope account;
-  final String collection;
-  final EntityKey entityKey;
-  final Map<String, Object?> localPayload;
-  final Map<String, Object?> remotePayload;
-  final Revision remoteRevision;
-  final DateTime detectedAt;
+  final Map<String, Object?> metadata;
 }
 
 final class SyncStatus {
@@ -313,22 +206,4 @@ final class SyncStatus {
   final int pendingCount;
   final DateTime? lastSyncedAt;
   final String? message;
-}
-
-final class SyncRunResult {
-  const SyncRunResult({
-    required this.pushedCount,
-    required this.pulledCount,
-    required this.tombstoneCount,
-    required this.conflictCount,
-    required this.failureCount,
-  });
-
-  final int pushedCount;
-  final int pulledCount;
-  final int tombstoneCount;
-  final int conflictCount;
-  final int failureCount;
-
-  bool get succeeded => failureCount == 0 && conflictCount == 0;
 }
