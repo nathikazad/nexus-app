@@ -16,6 +16,7 @@ import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_result_context.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
+import 'package:nx_notes/features/editor/document_text_scale.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 import 'package:nx_notes/features/editor/nx_color_toolbar.dart';
 import 'package:nx_notes/features/editor/nx_document_link.dart';
@@ -333,6 +334,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     final titleSize = width < 700 ? 30.0 : 38.0;
     final imageAssetService = ref.watch(documentImageAssetServiceProvider);
     final mutationController = ref.read(documentMutationControllerProvider);
+    final documentTextScale = ref.watch(documentTextScaleProvider);
     final readMode = _editorMode == _DocumentEditorMode.read;
     final showEditorHeader =
         (widget.canNavigateBack && widget.onNavigateBack != null) ||
@@ -531,6 +533,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                           child: _NxAppFlowyEditor(
                             document: widget.document,
                             changeOrigin: widget.changeOrigin,
+                            textScaleFactor: documentTextScale,
                             editorMode: _editorMode,
                             readOnly: widget.readOnly,
                             active: widget.active,
@@ -723,6 +726,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
   const _NxAppFlowyEditor({
     required this.document,
     required this.changeOrigin,
+    required this.textScaleFactor,
     required this.editorMode,
     required this.readOnly,
     required this.onFindBarChanged,
@@ -739,6 +743,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
 
   final NxDocument document;
   final DocumentChangeOrigin changeOrigin;
+  final double textScaleFactor;
   final _DocumentEditorMode editorMode;
   final bool readOnly;
   final bool active;
@@ -1468,6 +1473,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     final disableReaderKeyboard = widget.readOnly && !isDesktopLayout(context);
     final editorStyle = _editorStyle(
       widget.editorMode,
+      textScaleFactor: widget.textScaleFactor,
     ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
     final editor = AppFlowyEditor(
       editable: !widget.readOnly,
@@ -2206,7 +2212,10 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
   }
 }
 
-EditorStyle _editorStyle(_DocumentEditorMode mode) {
+EditorStyle _editorStyle(
+  _DocumentEditorMode mode, {
+  required double textScaleFactor,
+}) {
   final readMode = mode == _DocumentEditorMode.read;
   final bodyStyle = readMode
       ? TextStyle(
@@ -2218,6 +2227,7 @@ EditorStyle _editorStyle(_DocumentEditorMode mode) {
       : TextStyle(color: AppColors.editorText, fontSize: 16, height: 1.62);
   final lineHeight = readMode ? 1.5 : 1.62;
   return EditorStyle.desktop(
+    textScaleFactor: textScaleFactor,
     cursorColor: AppColors.text,
     selectionColor: const Color(0x333B82F6),
     padding: EdgeInsets.zero,

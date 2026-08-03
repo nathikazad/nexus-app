@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/features/editor/document_text_scale.dart';
 import 'package:nx_notes/router.dart';
 
 class NexusNotesApp extends ConsumerWidget {
@@ -25,6 +26,8 @@ class NexusNotesApp extends ConsumerWidget {
       ],
       supportedLocales: AppFlowyEditorLocalizations.delegate.supportedLocales,
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) =>
+          DocumentTextScaleShortcuts(child: child ?? const SizedBox.shrink()),
     );
   }
 }

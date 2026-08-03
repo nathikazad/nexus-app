@@ -4,6 +4,7 @@ import 'package:nx_notes/composition/app_version_provider.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/core/version/app_version_info.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/features/editor/document_text_scale.dart';
 
 typedef LibrarySyncCallback = Future<void> Function();
 
@@ -95,6 +96,7 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = ref.watch(appDarkModeProvider);
+    final documentTextScale = ref.watch(documentTextScaleProvider);
     final versionInfo = ref.watch(appVersionInfoProvider);
     return AlertDialog(
       title: const Text('Settings'),
@@ -127,6 +129,45 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
                       .read(appDarkModeProvider.notifier)
                       .setDarkMode(selection.single);
                 },
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Document text',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  IconButton.outlined(
+                    key: const Key('document-text-smaller'),
+                    tooltip: 'Make document text smaller (⌘−)',
+                    onPressed:
+                        documentTextScale >
+                            DocumentTextScaleNotifier.minimumScale
+                        ? ref.read(documentTextScaleProvider.notifier).decrease
+                        : null,
+                    icon: const Icon(Icons.remove),
+                  ),
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      '${(documentTextScale * 100).round()}%',
+                      key: const Key('document-text-scale-value'),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton.outlined(
+                    key: const Key('document-text-larger'),
+                    tooltip: 'Make document text larger (⌘+)',
+                    onPressed:
+                        documentTextScale <
+                            DocumentTextScaleNotifier.maximumScale
+                        ? ref.read(documentTextScaleProvider.notifier).increase
+                        : null,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               const Divider(),

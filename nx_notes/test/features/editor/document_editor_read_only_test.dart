@@ -8,6 +8,8 @@ import 'package:nx_notes/composition/notes_composition.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
+import 'package:nx_notes/features/editor/document_text_scale.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets(
@@ -89,6 +91,36 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('title-display-1')), findsNothing);
     expect(find.byType(AppFlowyEditor), findsOneWidget);
+  });
+
+  testWidgets('saved text scale applies only to document content', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      DocumentTextScaleNotifier.preferenceKey: 1.4,
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [documentImageAssetServiceProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1200, 800)),
+            child: Scaffold(
+              body: DocumentEditorBody(document: _document(), readOnly: true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+    expect(editor.editorStyle.textScaleFactor, 1.4);
+    final titleContext = tester.element(
+      find.byKey(const ValueKey<String>('title-display-1')),
+    );
+    expect(MediaQuery.textScalerOf(titleContext).scale(1), 1.0);
   });
 
   testWidgets('editor disposal does not notify while the tree is locked', (

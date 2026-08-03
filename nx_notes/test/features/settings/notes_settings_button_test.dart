@@ -10,6 +10,7 @@ import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/data/remote/repository_notes_remote_api.dart';
 import 'package:nx_notes/data/remote/fake/fake_notes_remote_api.dart';
 import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/features/editor/document_text_scale.dart';
 import 'package:nx_notes/features/settings/notes_settings_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -50,6 +51,8 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
+    expect(find.text('Document text'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
     expect(find.text('Sync now'), findsOneWidget);
     expect(find.text('Version 0.1.0 (2)'), findsOneWidget);
     expect(find.text('Shorebird patch 7'), findsOneWidget);
@@ -58,6 +61,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('dark'), findsOneWidget);
 
+    await tester.tap(find.byKey(const Key('document-text-larger')));
+    await tester.pumpAndSettle();
+    expect(find.text('110%'), findsOneWidget);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getDouble(DocumentTextScaleNotifier.preferenceKey), 1.1);
+
+    await tester.ensureVisible(find.byKey(const Key('sync-now-button')));
     await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
@@ -98,6 +108,7 @@ void main() {
     expect(find.text('Library'), findsOneWidget);
     expect(find.text('Refresh library'), findsOneWidget);
 
+    await tester.ensureVisible(find.byKey(const Key('sync-now-button')));
     await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
@@ -133,6 +144,7 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('notes-settings-button')));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('sync-now-button')));
     await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
