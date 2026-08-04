@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/features/auth/cards_login_screen.dart';
 import 'package:nx_cards/features/shell/cards_home.dart';
 import 'package:nx_db/auth.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
+  ref.onDispose(refresh.dispose);
   ref.listen(authProvider, (_, _) => refresh.value++);
+  ref.listen(activeCardsSessionProvider, (_, _) => refresh.value++);
   return GoRouter(
     refreshListenable: refresh,
     initialLocation: '/decks',
     redirect: (context, state) {
       final auth = ref.read(authProvider);
-      if (auth.isLoading) {
+      final session = ref.read(activeCardsSessionProvider);
+      if (session.isLoading || (auth.isLoading && session.value == null)) {
         return state.uri.path == '/loading' ? null : '/loading';
       }
-      final loggedIn = auth.value != null;
+      final loggedIn = session.value != null;
       if (!loggedIn && state.uri.path != '/login') return '/login';
       if (loggedIn &&
           (state.uri.path == '/login' || state.uri.path == '/loading')) {

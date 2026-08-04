@@ -34,7 +34,7 @@ read and write KGQL directly.
 - Observable synchronization status.
 - Coordination between full and keyed reconciliation requests.
 - Startup, resume, and restored-connectivity lifecycle triggers.
-- Embeddable Drift table declarations for outbox, sync metadata, and conflicts.
+- A shared Drift outbox schema and persistence adapter for app-owned databases.
 
 ### Each application owns
 
@@ -58,7 +58,7 @@ package:nx_offline/nx_offline.dart
   Stable model, session, lifecycle, outbox, retry, and reconciliation APIs.
 
 package:nx_offline/nx_offline_drift.dart
-  Optional embeddable Drift table declarations.
+  Optional Drift table declarations plus DriftOutboxPersistence.
 ```
 
 The stable library does not export a database implementation. An application
@@ -82,7 +82,9 @@ nx_offline/lib/
       cached_session.dart
       session_restorer.dart
     flutter/offline_lifecycle.dart
-    persistence/drift/offline_tables.dart
+    persistence/drift/
+      offline_tables.dart
+      drift_outbox_persistence.dart
     sync/
       policies.dart
       sync_ports.dart
@@ -165,9 +167,25 @@ this on web.
 
 ## Drift integration
 
-An application imports `nx_offline_drift.dart` and includes the required shared
-tables in its own `@DriftDatabase` declaration. The application then implements
-`OutboxStore` over that database.
+An application imports `nx_offline_drift.dart`, creates the shared schema from
+its database `onCreate`, and delegates the generic outbox operations to
+`DriftOutboxPersistence`. Its repository implements `OutboxStore` by composing
+that adapter with its typed domain tables.
+
+```dart
+@override
+MigrationStrategy get migration => MigrationStrategy(
+  onCreate: (migrator) async {
+    await migrator.createAll();
+    await DriftOutboxPersistence.createSchema(this);
+  },
+);
+```
+
+The exported table declarations remain useful when an application's Drift
+generator can discover dependency tables. The persistence adapter is the
+portable path: Drift does not reliably generate accessors for Dart table
+declarations from another package in every build layout.
 
 The package does not own migrations. The application owns its database schema
 and migration path because only the application can atomically coordinate its
@@ -195,7 +213,7 @@ target and can cause repeated refreshes.
 ## Reuse checklist for another application
 
 1. Define its typed local schema and repositories.
-2. Embed the shared Drift tables in that database.
+2. Create the shared Drift schema and compose `DriftOutboxPersistence`.
 3. Commit each local edit and outbox operation in one transaction.
 4. Implement `OutboxStore` over the application database.
 5. Implement one `MutationHandler` per remote collection.

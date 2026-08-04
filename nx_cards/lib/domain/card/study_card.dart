@@ -57,7 +57,10 @@ class StudyCard {
   }
 
   StudyCard copyWith({
+    CardContent? content,
+    List<String>? tags,
     DateTime? dueAt,
+    bool clearDueAt = false,
     DateTime? lastReviewedAt,
     double? stability,
     double? difficulty,
@@ -67,14 +70,16 @@ class StudyCard {
     int? reviewCount,
     int? lapseCount,
     List<CardReview>? reviewHistory,
+    bool? suspended,
+    DateTime? updatedAt,
   }) {
     return StudyCard(
       id: id,
-      content: content,
+      content: content ?? this.content,
       deckId: deckId,
       deckName: deckName,
-      tags: tags,
-      dueAt: dueAt ?? this.dueAt,
+      tags: tags ?? this.tags,
+      dueAt: clearDueAt ? null : dueAt ?? this.dueAt,
       lastReviewedAt: lastReviewedAt ?? this.lastReviewedAt,
       stability: stability ?? this.stability,
       difficulty: difficulty ?? this.difficulty,
@@ -82,13 +87,13 @@ class StudyCard {
       learningStep: clearLearningStep
           ? null
           : learningStep ?? this.learningStep,
-      suspended: suspended,
+      suspended: suspended ?? this.suspended,
       reviewCount: reviewCount ?? this.reviewCount,
       lapseCount: lapseCount ?? this.lapseCount,
       reviewHistory: reviewHistory ?? this.reviewHistory,
       sourceBookId: sourceBookId,
       sourceBookName: sourceBookName,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

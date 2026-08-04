@@ -4,4 +4,5 @@
 /// keeps Drift out of the stable core API.
 library;
 
+export 'src/persistence/drift/drift_outbox_persistence.dart';
 export 'src/persistence/drift/offline_tables.dart';

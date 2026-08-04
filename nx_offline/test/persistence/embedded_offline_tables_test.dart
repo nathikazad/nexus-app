@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_drift.dart';
 
 part 'embedded_offline_tables_test.g.dart';
@@ -106,5 +107,62 @@ void main() {
 
     expect(await database.select(database.testExpenses).get(), isEmpty);
     expect(await database.select(database.offlineOutboxEntries).get(), isEmpty);
+  });
+
+  test('shared persistence replaces, claims, and isolates operations', () async {
+    final database = TestApplicationDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    const account = AccountIdentity(
+      application: 'nx_expense',
+      serverId: 'nexus-primary',
+      userId: '1',
+    );
+    const otherAccount = AccountIdentity(
+      application: 'nx_expense',
+      serverId: 'nexus-primary',
+      userId: '2',
+    );
+    final outbox = DriftOutboxPersistence(
+      database: database,
+      account: account,
+    );
+    final otherOutbox = DriftOutboxPersistence(
+      database: database,
+      account: otherAccount,
+    );
+    final createdAt = DateTime.utc(2026, 8, 4, 10);
+
+    await outbox.enqueueReplacing(
+      PendingMutation(
+        operationId: 'first',
+        account: account,
+        collection: 'expenses',
+        entityKey: const EntityKey(localId: 'expense-1', remoteId: 7),
+        type: MutationType.update,
+        payload: const <String, Object?>{'amount': 10},
+        createdAt: createdAt,
+      ),
+    );
+    await outbox.enqueueReplacing(
+      PendingMutation(
+        operationId: 'replacement',
+        account: account,
+        collection: 'expenses',
+        entityKey: const EntityKey(localId: 'expense-1', remoteId: 7),
+        type: MutationType.update,
+        payload: const <String, Object?>{'amount': 12},
+        createdAt: createdAt.add(const Duration(minutes: 1)),
+      ),
+    );
+
+    expect((await outbox.pendingMutations()).single.operationId, 'replacement');
+    expect(await otherOutbox.pendingMutations(), isEmpty);
+    final claimed = await outbox.claimNext(
+      workerId: 'worker-1',
+      now: createdAt.add(const Duration(minutes: 2)),
+      lease: const Duration(minutes: 1),
+    );
+    expect(claimed?.status, PendingMutationStatus.claimed);
+    expect(claimed?.leaseOwner, 'worker-1');
   });
 }

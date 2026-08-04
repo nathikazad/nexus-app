@@ -1,0 +1,228 @@
+import 'package:graphql_flutter/graphql_flutter.dart';
+
+import '../core/client/db_audit_context.dart';
+import '../kgql/requests/set_model_request.dart';
+
+const String _mutateCardLibraryMutation = r'''
+mutation MutateCardLibrary(
+  $data: JSON!
+  $clientUpdatedAt: String
+  $domainId: Int
+) {
+  mutateCardLibrary(
+    data: $data
+    clientUpdatedAt: $clientUpdatedAt
+    domainId: $domainId
+  )
+}
+''';
+
+const String _syncCardDecksQuery = r'''
+query SyncCardDecks(
+  $manifest: JSON!
+  $deckIds: [Int!]
+  $domainId: Int
+) {
+  syncCardDecks(
+    manifest: $manifest
+    deckIds: $deckIds
+    domainId: $domainId
+  )
+}
+''';
+
+enum CardLibraryMutationStatus { applied, stale, deleted }
+
+final class CardDeckHash {
+  const CardDeckHash({required this.deckId, required this.syncHash});
+
+  final int deckId;
+  final String syncHash;
+}
+
+final class CardLibraryMutationResult {
+  const CardLibraryMutationResult({
+    required this.status,
+    required this.entityId,
+    required this.deckHashes,
+    required this.deletedDeckIds,
+    this.updatedAt,
+    this.entity,
+  });
+
+  final CardLibraryMutationStatus status;
+  final int entityId;
+  final DateTime? updatedAt;
+  final List<CardDeckHash> deckHashes;
+  final List<int> deletedDeckIds;
+  final Map<String, dynamic>? entity;
+}
+
+final class CardDeckSyncEntry {
+  const CardDeckSyncEntry({
+    required this.deckId,
+    required this.syncHash,
+    required this.bundle,
+  });
+
+  final int deckId;
+  final String syncHash;
+  final Map<String, dynamic> bundle;
+}
+
+final class CardDeckSyncResponse {
+  const CardDeckSyncResponse({
+    required this.decks,
+    required this.deletedIds,
+  });
+
+  final List<CardDeckSyncEntry> decks;
+  final List<int> deletedIds;
+}
+
+Future<CardLibraryMutationResult> mutateCardLibrary(
+  GraphQLClient client,
+  SetModelRequest request, {
+  DateTime? clientUpdatedAt,
+  int? domainId,
+  DbAuditContext? auditContext,
+  String auditSourceKind = 'nx_cards',
+}) {
+  final context = auditContext ??
+      currentDbAuditContext() ??
+      DbAuditContext.create(
+        sourceKind: auditSourceKind,
+        sourceId: _sourceId(request),
+        sourceLabel: request.name ?? 'Cards mutation',
+      );
+  return runWithDbAuditContext(context, () async {
+    final result = await client.mutate(
+      MutationOptions(
+        document: gql(_mutateCardLibraryMutation),
+        variables: <String, dynamic>{
+          'data': request.toJson(),
+          'clientUpdatedAt': clientUpdatedAt?.toUtc().toIso8601String(),
+          if (domainId != null) 'domainId': domainId,
+        },
+      ),
+    );
+    if (result.hasException) throw result.exception!;
+
+    final payload = _jsonMap(result.data?['mutateCardLibrary']);
+    final status = switch (payload['status']) {
+      'APPLIED' => CardLibraryMutationStatus.applied,
+      'STALE' => CardLibraryMutationStatus.stale,
+      'DELETED' => CardLibraryMutationStatus.deleted,
+      final Object? value => throw StateError(
+          'Unknown mutateCardLibrary status: $value',
+        ),
+    };
+    final id = payload['id'];
+    if (id is! int) {
+      throw StateError('mutateCardLibrary did not return an integer id');
+    }
+    return CardLibraryMutationResult(
+      status: status,
+      entityId: id,
+      updatedAt: _parseTimestamp(payload['updated_at']),
+      deckHashes: _deckHashes(payload['deck_hashes']),
+      deletedDeckIds: _integerList(payload['deleted_deck_ids']),
+      entity: _optionalJsonMap(payload['entity']),
+    );
+  });
+}
+
+Future<CardDeckSyncResponse> syncCardDecks(
+  GraphQLClient client, {
+  required List<Map<String, Object?>> manifest,
+  Set<int>? deckIds,
+  int? domainId,
+}) async {
+  final sortedDeckIds = deckIds == null ? null : (deckIds.toList()..sort());
+  final result = await client.query(
+    QueryOptions(
+      document: gql(_syncCardDecksQuery),
+      variables: <String, dynamic>{
+        'manifest': manifest,
+        'deckIds': sortedDeckIds,
+        if (domainId != null) 'domainId': domainId,
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+  if (result.hasException) throw result.exception!;
+
+  final payload = _jsonMap(result.data?['syncCardDecks']);
+  final rawDecks = payload['decks'];
+  final rawDeletedIds = payload['deleted_ids'];
+  if (rawDecks is! List || rawDeletedIds is! List) {
+    throw StateError('Invalid syncCardDecks response: $payload');
+  }
+  return CardDeckSyncResponse(
+    decks: <CardDeckSyncEntry>[
+      for (final raw in rawDecks)
+        if (raw is Map) _syncEntry(Map<String, dynamic>.from(raw)),
+    ],
+    deletedIds: _integerList(rawDeletedIds),
+  );
+}
+
+CardDeckSyncEntry _syncEntry(Map<String, dynamic> json) {
+  final id = json['id'];
+  final hash = json['hash'];
+  final bundle = json['bundle'];
+  if (id is! int || hash is! String || bundle is! Map) {
+    throw StateError('Invalid synchronized card deck: $json');
+  }
+  return CardDeckSyncEntry(
+    deckId: id,
+    syncHash: hash,
+    bundle: Map<String, dynamic>.from(bundle),
+  );
+}
+
+List<CardDeckHash> _deckHashes(Object? raw) {
+  if (raw == null) return const <CardDeckHash>[];
+  if (raw is! List) throw StateError('Invalid deck_hashes: $raw');
+  return <CardDeckHash>[
+    for (final value in raw)
+      if (value is Map)
+        switch (Map<String, dynamic>.from(value)) {
+          {'id': final int id, 'hash': final String hash} =>
+            CardDeckHash(deckId: id, syncHash: hash),
+          final Map<String, dynamic> value =>
+            throw StateError('Invalid deck hash: $value'),
+        },
+  ];
+}
+
+List<int> _integerList(Object? raw) {
+  if (raw == null) return const <int>[];
+  if (raw is! List) throw StateError('Expected integer list, received $raw');
+  return <int>[
+    for (final value in raw)
+      if (value is int) value
+  ];
+}
+
+Map<String, dynamic> _jsonMap(Object? value) {
+  if (value is Map) return Map<String, dynamic>.from(value);
+  throw StateError('Expected JSON object, received $value');
+}
+
+Map<String, dynamic>? _optionalJsonMap(Object? value) {
+  if (value == null) return null;
+  return _jsonMap(value);
+}
+
+DateTime? _parseTimestamp(Object? value) {
+  if (value is! String || value.isEmpty) return null;
+  final hasTimeZone =
+      value.endsWith('Z') || RegExp(r'[+-]\d\d(?::?\d\d)?$').hasMatch(value);
+  return DateTime.parse(hasTimeZone ? value : '${value}Z').toUtc();
+}
+
+String _sourceId(SetModelRequest request) {
+  if (request.id != null) return 'card-library:${request.id}';
+  return 'card-library:create:${request.modelType ?? 'unknown'}';
+}

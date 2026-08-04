@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -355,7 +357,7 @@ class _DecksDashboard extends ConsumerWidget {
     final fresh = data.newCount();
     final queue = data.studyQueue(now);
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(cardsDashboardProvider),
+      onRefresh: ref.read(cardsLibrarySyncProvider),
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
         children: [
@@ -719,6 +721,14 @@ class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
   String? _selectedTag;
 
   CardDeck get deck => widget.deck;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(cardDeckSyncProvider)(deck.id).catchError((_) {}));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

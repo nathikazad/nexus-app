@@ -10,8 +10,10 @@ import 'package:nx_db/auth.dart';
 void main() {
   group('CR core db / auth / presets', () {
     test('CR11.1 buildHttpLinkDefaultHeaders includes x-user-id', () {
-      final h =
-          buildHttpLinkDefaultHeaders('http://127.0.0.1:5001/graphql', '42');
+      final h = buildHttpLinkDefaultHeaders(
+        'http://127.0.0.1:5001/graphql',
+        '42',
+      );
       expect(h['x-user-id'], '42');
     });
 
@@ -51,22 +53,25 @@ void main() {
         overrides: [
           authProvider.overrideWith(
             () => AuthController(
-                initialDelay: Duration.zero, skipBackendPing: true),
+              initialDelay: Duration.zero,
+              skipBackendPing: true,
+            ),
           ),
         ],
       );
       addTearDown(container.dispose);
 
-      final err = await container.read(authProvider.notifier).login(
-            '77',
-            BackendPreset.laptop,
-          );
+      final err = await container
+          .read(authProvider.notifier)
+          .login('77', BackendPreset.laptop);
       expect(err, isNull);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(PrefsKeys.userId), '77');
       expect(
-          prefs.getString(PrefsKeys.backendPreset), BackendPreset.laptop.key);
+        prefs.getString(PrefsKeys.backendPreset),
+        BackendPreset.laptop.key,
+      );
       expect(prefs.getString(PrefsKeys.endpoint), isNotEmpty);
       expect(prefs.getString(PrefsKeys.sockWsUrl), isNotEmpty);
     });
@@ -82,7 +87,9 @@ void main() {
         overrides: [
           authProvider.overrideWith(
             () => AuthController(
-                initialDelay: Duration.zero, skipBackendPing: true),
+              initialDelay: Duration.zero,
+              skipBackendPing: true,
+            ),
           ),
         ],
       );
@@ -104,7 +111,9 @@ void main() {
         overrides: [
           authProvider.overrideWith(
             () => AuthController(
-                initialDelay: Duration.zero, skipBackendPing: true),
+              initialDelay: Duration.zero,
+              skipBackendPing: true,
+            ),
           ),
         ],
       );
@@ -122,7 +131,9 @@ void main() {
         overrides: [
           authProvider.overrideWith(
             () => AuthController(
-                initialDelay: Duration.zero, skipBackendPing: true),
+              initialDelay: Duration.zero,
+              skipBackendPing: true,
+            ),
           ),
         ],
       );
@@ -150,7 +161,9 @@ void main() {
         overrides: [
           authProvider.overrideWith(
             () => AuthController(
-                initialDelay: Duration.zero, skipBackendPing: true),
+              initialDelay: Duration.zero,
+              skipBackendPing: true,
+            ),
           ),
         ],
       );
@@ -158,6 +171,20 @@ void main() {
 
       await container.read(authProvider.future);
       expect(container.read(userIdProvider), '1');
+    });
+
+    test('CR11.10 offline auth restore is opt-in application policy', () {
+      final onlineOnly = ProviderContainer();
+      final offlineNative = ProviderContainer(
+        overrides: [
+          retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
+        ],
+      );
+      addTearDown(onlineOnly.dispose);
+      addTearDown(offlineNative.dispose);
+
+      expect(onlineOnly.read(retainAuthSessionWhenOfflineProvider), isFalse);
+      expect(offlineNative.read(retainAuthSessionWhenOfflineProvider), isTrue);
     });
   });
 }

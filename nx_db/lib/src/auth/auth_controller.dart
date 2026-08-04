@@ -5,6 +5,10 @@ import '../core/config/backend_presets.dart';
 import 'backend_ping.dart';
 import 'user.dart';
 
+/// Whether an application may restore a saved identity when its backend is
+/// unreachable. Online-only applications keep the default `false`.
+final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
+
 /// AuthController manages user authentication state.
 /// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
@@ -66,15 +70,15 @@ class AuthController extends AsyncNotifier<User?> {
             );
           } catch (e) {
             print('[AuthController] restore ping failed: $e');
-            print('[AuthController] clearing session → login required');
-            await _clearSessionPrefs(prefs);
-            return null;
+            if (!ref.read(retainAuthSessionWhenOfflineProvider)) {
+              print('[AuthController] clearing session → login required');
+              await _clearSessionPrefs(prefs);
+              return null;
+            }
+            print('[AuthController] keeping saved session for offline access');
           }
         }
-        return User(
-          userId: userId,
-          preset: preset,
-        );
+        return User(userId: userId, preset: preset);
       } else {
         print('[AuthController] No saved credentials found');
         return null;
@@ -88,9 +92,7 @@ class AuthController extends AsyncNotifier<User?> {
   /// Logs in with [userId] and [preset]. Persists to SharedPreferences.
   /// Returns null if login was successful, error message String otherwise.
   Future<String?> login(String userId, BackendPreset preset) async {
-    print(
-      '[AuthController] login() - user: $userId preset: ${preset.key}',
-    );
+    print('[AuthController] login() - user: $userId preset: ${preset.key}');
     state = const AsyncValue.loading();
 
     try {
@@ -111,10 +113,7 @@ class AuthController extends AsyncNotifier<User?> {
       await prefs.setString(PrefsKeys.backendPreset, preset.key);
       await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
 
-      final user = User(
-        userId: userId,
-        preset: preset,
-      );
+      final user = User(userId: userId, preset: preset);
       state = AsyncValue.data(user);
       print('[AuthController] Login successful');
       return null;
