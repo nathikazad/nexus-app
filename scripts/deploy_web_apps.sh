@@ -14,6 +14,7 @@ Apps:
   nx_expense   aliases: expense, expenses
   nx_people    aliases: people
   nx_projects  aliases: projects
+  nx_cards     aliases: cards, flashcards
 
 Options:
   --skip-build        Sync the existing build/web output instead of rebuilding.
@@ -56,7 +57,7 @@ skip_restart=0
 skip_verify=0
 requested_apps=()
 
-app_order=(nx_notes nx_books nx_expense nx_people nx_projects)
+app_order=(nx_notes nx_books nx_expense nx_people nx_projects nx_cards)
 
 base_href_for() {
   case "$1" in
@@ -65,13 +66,14 @@ base_href_for() {
     nx_expense) printf '/expenses/' ;;
     nx_people) printf '/people/' ;;
     nx_projects) printf '/projects/' ;;
+    nx_cards) printf '/flashcards/' ;;
     *) return 1 ;;
   esac
 }
 
 static_dir_for() {
   case "$1" in
-    nx_notes|nx_books|nx_expense|nx_people|nx_projects) printf '%s' "$1" ;;
+    nx_notes|nx_books|nx_expense|nx_people|nx_projects|nx_cards) printf '%s' "$1" ;;
     *) return 1 ;;
   esac
 }
@@ -84,6 +86,7 @@ normalize_app() {
     nx_expense|expense|expenses) printf 'nx_expense' ;;
     nx_people|people) printf 'nx_people' ;;
     nx_projects|projects) printf 'nx_projects' ;;
+    nx_cards|cards|flashcards) printf 'nx_cards' ;;
     *)
       printf 'Unknown app: %s\n' "$1" >&2
       return 1

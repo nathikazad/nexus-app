@@ -131,15 +131,23 @@ class CardEditorDialog extends ConsumerStatefulWidget {
 class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
   late final TextEditingController _front;
   late final TextEditingController _back;
+  late final TextEditingController _transliteration;
   late final Set<String> _tags;
   int? _bookId;
   bool _saving = false;
+
+  bool get _isLanguageCard =>
+      widget.card?.isLanguageCard ?? widget.deck.language != null;
 
   @override
   void initState() {
     super.initState();
     _front = TextEditingController(text: widget.card?.front ?? '');
     _back = TextEditingController(text: widget.card?.back ?? '');
+    final content = widget.card?.content;
+    _transliteration = TextEditingController(
+      text: content is LanguageCardContent ? content.transliteration : '',
+    );
     _tags = {...?widget.card?.tags};
     _bookId = widget.card?.sourceBookId;
   }
@@ -148,18 +156,32 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
   void dispose() {
     _front.dispose();
     _back.dispose();
+    _transliteration.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (_front.text.trim().isEmpty || _back.text.trim().isEmpty) return;
+    if (_front.text.trim().isEmpty ||
+        _back.text.trim().isEmpty ||
+        (_isLanguageCard && _transliteration.text.trim().isEmpty)) {
+      return;
+    }
     setState(() => _saving = true);
     try {
       final repository = ref.read(cardsRepositoryProvider);
+      final content = _isLanguageCard
+          ? LanguageCardContent(
+              english: _front.text.trim(),
+              originalScript: _back.text.trim(),
+              transliteration: _transliteration.text.trim(),
+            )
+          : BasicCardContent(
+              front: _front.text.trim(),
+              back: _back.text.trim(),
+            );
       if (widget.card == null) {
         await repository.createCard(
-          front: _front.text.trim(),
-          back: _back.text.trim(),
+          content: content,
           deckId: widget.deck.id,
           tags: _tags.toList(),
           sourceBookId: _bookId,
@@ -167,8 +189,7 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
       } else {
         await repository.updateCardContent(
           id: widget.card!.id,
-          front: _front.text.trim(),
-          back: _back.text.trim(),
+          content: content,
           tags: _tags.toList(),
         );
       }
@@ -211,9 +232,11 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
               TextField(
                 controller: _front,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Front',
-                  hintText: 'What should you recall?',
+                decoration: InputDecoration(
+                  labelText: _isLanguageCard ? 'English' : 'Front',
+                  hintText: _isLanguageCard
+                      ? 'English word or phrase'
+                      : 'What should you recall?',
                 ),
                 minLines: 2,
                 maxLines: 5,
@@ -221,13 +244,27 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _back,
-                decoration: const InputDecoration(
-                  labelText: 'Back',
-                  hintText: 'The answer',
+                decoration: InputDecoration(
+                  labelText: _isLanguageCard ? 'Original script' : 'Back',
+                  hintText: _isLanguageCard
+                      ? 'Word or phrase in ${widget.deck.language}'
+                      : 'The answer',
                 ),
                 minLines: 3,
                 maxLines: 8,
               ),
+              if (_isLanguageCard) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _transliteration,
+                  decoration: const InputDecoration(
+                    labelText: 'Transliteration',
+                    hintText: 'Pronunciation in Latin script',
+                  ),
+                  minLines: 1,
+                  maxLines: 3,
+                ),
+              ],
               if (availableTags.isNotEmpty) ...[
                 const SizedBox(height: 18),
                 Text('TAGS', style: monoLabel),

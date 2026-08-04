@@ -1,10 +1,10 @@
 import 'package:nx_cards/domain/card/card_review.dart';
+import 'package:nx_cards/domain/card/card_content.dart';
 
 class StudyCard {
   const StudyCard({
     required this.id,
-    required this.front,
-    required this.back,
+    required this.content,
     required this.deckId,
     required this.deckName,
     required this.tags,
@@ -24,8 +24,10 @@ class StudyCard {
   });
 
   final int id;
-  final String front;
-  final String back;
+  final CardContent content;
+  String get front => content.front;
+  String get back => content.back;
+  bool get isLanguageCard => content is LanguageCardContent;
   final int deckId;
   final String deckName;
   final List<String> tags;
@@ -68,8 +70,7 @@ class StudyCard {
   }) {
     return StudyCard(
       id: id,
-      front: front,
-      back: back,
+      content: content,
       deckId: deckId,
       deckName: deckName,
       tags: tags,

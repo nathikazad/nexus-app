@@ -36,4 +36,27 @@ void main() {
     );
     expect(systems.single['selection_mode'], 'multiple');
   });
+
+  test('language card inherits Flashcard and adds language-only fields', () {
+    final json = buildLanguageCardSchemaRequest().toJson();
+    final definitions = json['attribute_definitions'] as List<dynamic>;
+
+    expect(json['name'], languageCardModelType);
+    expect(json['parent'], {'link': cardModelType});
+    expect(definitions, hasLength(2));
+    expect(
+      definitions.singleWhere((row) => row['key'] == attrTransliteration),
+      {
+        'key': attrTransliteration,
+        'value_type': 'string',
+        'required': true,
+        'constraints': {'minLength': 1},
+      },
+    );
+    expect(definitions.singleWhere((row) => row['key'] == attrAudioUrl), {
+      'key': attrAudioUrl,
+      'value_type': 'string',
+      'required': false,
+    });
+  });
 }

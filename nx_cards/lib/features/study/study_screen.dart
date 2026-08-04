@@ -6,6 +6,7 @@ import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/domain/scheduling/card_scheduler.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_editors.dart';
+import 'package:nx_cards/features/study/language_audio_controls.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.title, required this.cards});
@@ -75,6 +76,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
         againCount: _againCount,
       );
     }
+    final audioRepository = ref.watch(cardAudioRepositoryProvider);
     return Shortcuts(
       shortcuts: const {
         SingleActivator(LogicalKeyboardKey.space): _RevealIntent(),
@@ -203,6 +205,39 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                     color: RecallColors.muted,
                                                   ),
                                                 ),
+                                                if (_card.content
+                                                    case LanguageCardContent(
+                                                      :final transliteration,
+                                                    )) ...[
+                                                  const SizedBox(height: 10),
+                                                  Text(
+                                                    transliteration,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      height: 1.35,
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                      color: RecallColors.faint,
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (_card.content
+                                                    case LanguageCardContent(
+                                                      audioUrl: final audioUrl?,
+                                                    )
+                                                    when audioUrl.isNotEmpty &&
+                                                        audioRepository !=
+                                                            null) ...[
+                                                  const SizedBox(height: 16),
+                                                  LanguageAudioControls(
+                                                    key: ValueKey(
+                                                      '${_card.id}:$audioUrl',
+                                                    ),
+                                                    audioUrl: audioUrl,
+                                                    repository: audioRepository,
+                                                  ),
+                                                ],
                                               ],
                                             ],
                                           ),

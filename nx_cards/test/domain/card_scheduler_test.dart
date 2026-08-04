@@ -7,8 +7,7 @@ void main() {
     final now = DateTime.utc(2026, 8, 3, 12);
     final card = StudyCard(
       id: 42,
-      front: 'bonjour',
-      back: 'hello',
+      content: const BasicCardContent(front: 'bonjour', back: 'hello'),
       deckId: 1,
       deckName: 'French',
       tags: const ['Vocabulary'],
@@ -50,8 +49,7 @@ void main() {
     final now = DateTime.utc(2026, 8, 3, 12);
     final card = StudyCard(
       id: 42,
-      front: 'bonjour',
-      back: 'hello',
+      content: const BasicCardContent(front: 'bonjour', back: 'hello'),
       deckId: 1,
       deckName: 'French',
       tags: const [],

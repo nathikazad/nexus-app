@@ -1,4 +1,5 @@
 import 'package:nx_cards/domain/book/related_book.dart';
+import 'package:nx_cards/domain/card/card_content.dart';
 import 'package:nx_cards/domain/card/study_card.dart';
 import 'package:nx_cards/domain/deck/card_deck.dart';
 
@@ -22,8 +23,7 @@ abstract class CardsRepository {
   });
 
   Future<int> createCard({
-    required String front,
-    required String back,
+    required CardContent content,
     required int deckId,
     required List<String> tags,
     int? sourceBookId,
@@ -31,8 +31,7 @@ abstract class CardsRepository {
 
   Future<void> updateCardContent({
     required int id,
-    required String front,
-    required String back,
+    required CardContent content,
     required List<String> tags,
   });
 

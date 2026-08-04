@@ -3,6 +3,7 @@ import 'package:nx_db/kgql.dart';
 
 const deckModelType = 'FlashcardDeck';
 const cardModelType = 'Flashcard';
+const languageCardModelType = 'LanguageFlashcard';
 const bookModelType = 'Book';
 
 const deckLanguageTagSystem = 'Language';
@@ -13,6 +14,8 @@ const attrDueAt = 'due_at';
 const attrSuspended = 'suspended';
 const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
+const attrTransliteration = 'transliteration';
+const attrAudioUrl = 'audio_url';
 
 const scheduleJsonSchema = <String, dynamic>{
   'type': 'object',
@@ -93,20 +96,33 @@ const _cardAttributes = <String, String>{
 };
 
 class CardsSchemaStatus {
-  const CardsSchemaStatus({required this.deckReady, required this.cardReady});
+  const CardsSchemaStatus({
+    required this.deckReady,
+    required this.cardReady,
+    required this.languageCardReady,
+  });
 
   final bool deckReady;
   final bool cardReady;
-  bool get ready => deckReady && cardReady;
+  final bool languageCardReady;
+  bool get ready => deckReady && cardReady && languageCardReady;
 }
 
 Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
   final deck = await _modelTypeOrNull(client, deckModelType);
   final card = await _modelTypeOrNull(client, cardModelType);
+  final languageCard = await _modelTypeOrNull(client, languageCardModelType);
   return CardsSchemaStatus(
     deckReady:
         deck != null && _hasAttributes(deck, const {attrArchived: 'boolean'}),
     cardReady: card != null && _hasAttributes(card, _cardAttributes),
+    languageCardReady:
+        languageCard != null &&
+        languageCard.parent?.name == cardModelType &&
+        _hasAttributes(languageCard, const {
+          attrTransliteration: 'string',
+          attrAudioUrl: 'string',
+        }),
   );
 }
 
@@ -148,6 +164,20 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
     );
   } else {
     await _addMissingAttributes(client, card, _cardAttributes);
+  }
+
+  final languageCard = await _modelTypeOrNull(client, languageCardModelType);
+  if (languageCard == null) {
+    await setKgqlModelType(
+      client,
+      buildLanguageCardSchemaRequest(),
+      auditSourceKind: 'nx_cards',
+    );
+  } else {
+    await _addMissingAttributes(client, languageCard, const {
+      attrTransliteration: 'string',
+      attrAudioUrl: 'string',
+    });
   }
 }
 
@@ -209,6 +239,7 @@ SetModelTypeRequest buildDeckSchemaRequest() {
           SetTagNodeRequest(name: 'Japanese'),
           SetTagNodeRequest(name: 'Spanish'),
           SetTagNodeRequest(name: 'Hindi'),
+          SetTagNodeRequest(name: 'Malayalam'),
         ],
       ),
     ],
@@ -271,6 +302,25 @@ SetModelTypeRequest buildCardSchemaRequest() {
           ),
         ],
       ),
+    ],
+  );
+}
+
+SetModelTypeRequest buildLanguageCardSchemaRequest() {
+  return SetModelTypeRequest(
+    name: languageCardModelType,
+    typeKind: 'base',
+    description:
+        'A language-learning flashcard with English on the front and original script plus transliteration on the back.',
+    parent: ParentLink.fromName(cardModelType),
+    attributeDefinitions: [
+      AttributeDefinition(
+        key: attrTransliteration,
+        valueType: 'string',
+        required: true,
+        constraints: const {'minLength': 1},
+      ),
+      AttributeDefinition(key: attrAudioUrl, valueType: 'string'),
     ],
   );
 }

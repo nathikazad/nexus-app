@@ -15,6 +15,30 @@ const _legacyLearningStep = 'learning_step';
 const _legacyReviewCount = 'review_count';
 const _legacyLapseCount = 'lapse_count';
 
+const _cardStruct = <String, dynamic>{
+  'id': true,
+  'name': true,
+  'description': true,
+  'updated_at': true,
+  attrDueAt: true,
+  attrSuspended: true,
+  attrSchedule: true,
+  attrReviewHistory: true,
+  attrTransliteration: true,
+  attrAudioUrl: true,
+  _legacyLastReviewedAt: true,
+  _legacyStability: true,
+  _legacyDifficulty: true,
+  _legacySchedulingState: true,
+  _legacyLearningStep: true,
+  _legacyReviewCount: true,
+  _legacyLapseCount: true,
+  'tags': true,
+  'model_type': {'id': true, 'name': true},
+  deckModelType: {'id': true, 'name': true},
+  bookModelType: {'id': true, 'name': true},
+};
+
 class KgqlCardsRepository implements CardsRepository {
   KgqlCardsRepository(this._client);
 
@@ -41,31 +65,26 @@ class KgqlCardsRepository implements CardsRepository {
 
   @override
   Future<List<StudyCard>> listCards() async {
-    final rows = await fetchKgqlModels(
-      _client,
-      filter: const {'model_type': cardModelType},
-      struct: const {
-        'id': true,
-        'name': true,
-        'description': true,
-        'updated_at': true,
-        attrDueAt: true,
-        attrSuspended: true,
-        attrSchedule: true,
-        attrReviewHistory: true,
-        _legacyLastReviewedAt: true,
-        _legacyStability: true,
-        _legacyDifficulty: true,
-        _legacySchedulingState: true,
-        _legacyLearningStep: true,
-        _legacyReviewCount: true,
-        _legacyLapseCount: true,
-        'tags': true,
-        deckModelType: {'id': true, 'name': true},
-        bookModelType: {'id': true, 'name': true},
-      },
-    );
-    return rows.map(_cardFromModel).whereType<StudyCard>().toList();
+    // A parent KGQL query returns child rows, but its struct can only project
+    // fields known to the parent type. Fetch the child projection separately
+    // so child-only attributes remain child-specific in the schema.
+    final results = await Future.wait([
+      fetchKgqlModels(
+        _client,
+        filter: const {'model_type': cardModelType},
+        struct: _cardStruct,
+      ),
+      fetchKgqlModels(
+        _client,
+        filter: const {'model_type': languageCardModelType},
+        struct: _cardStruct,
+      ),
+    ]);
+    final rowsById = <int, Model>{
+      for (final row in results.first) row.id: row,
+      for (final row in results.last) row.id: row,
+    };
+    return rowsById.values.map(_cardFromModel).whereType<StudyCard>().toList();
   }
 
   @override
@@ -131,8 +150,7 @@ class KgqlCardsRepository implements CardsRepository {
 
   @override
   Future<int> createCard({
-    required String front,
-    required String back,
+    required CardContent content,
     required int deckId,
     required List<String> tags,
     int? sourceBookId,
@@ -140,9 +158,11 @@ class KgqlCardsRepository implements CardsRepository {
     return setKgqlModel(
       _client,
       SetModelRequest(
-        modelType: cardModelType,
-        name: front,
-        description: back,
+        modelType: content is LanguageCardContent
+            ? languageCardModelType
+            : cardModelType,
+        name: content.front,
+        description: content.back,
         attributes: [
           SetModelAttribute(key: attrSuspended, value: false),
           SetModelAttribute(key: attrSchedule, value: _emptyScheduleJson()),
@@ -150,6 +170,8 @@ class KgqlCardsRepository implements CardsRepository {
             key: attrReviewHistory,
             value: _reviewHistoryJson(const []),
           ),
+          if (content case LanguageCardContent(:final transliteration))
+            SetModelAttribute(key: attrTransliteration, value: transliteration),
         ],
         relations: [
           ModelRelation(modelType: deckModelType, link: [deckId]),
@@ -167,16 +189,19 @@ class KgqlCardsRepository implements CardsRepository {
   @override
   Future<void> updateCardContent({
     required int id,
-    required String front,
-    required String back,
+    required CardContent content,
     required List<String> tags,
   }) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
         id: id,
-        name: front,
-        description: back,
+        name: content.front,
+        description: content.back,
+        attributes: [
+          if (content case LanguageCardContent(:final transliteration))
+            SetModelAttribute(key: attrTransliteration, value: transliteration),
+        ],
         tags: [
           SetModelTag(system: cardTagsTagSystem, nodes: tags, clear: true),
         ],
@@ -332,8 +357,18 @@ StudyCard? _cardFromModel(Model model) {
   final history = _reviewHistoryFrom(model.attributes?[attrReviewHistory]);
   return StudyCard(
     id: model.id,
-    front: model.name,
-    back: model.description?.trim() ?? '',
+    content: model.modelType?.name == languageCardModelType
+        ? LanguageCardContent(
+            english: model.name,
+            originalScript: model.description?.trim() ?? '',
+            transliteration:
+                model.attrString(attrTransliteration)?.trim() ?? '',
+            audioUrl: model.attrString(attrAudioUrl)?.trim(),
+          )
+        : BasicCardContent(
+            front: model.name,
+            back: model.description?.trim() ?? '',
+          ),
     deckId: deck.id,
     deckName: deck.name,
     tags: model.tags?[cardTagsTagSystem] ?? const [],

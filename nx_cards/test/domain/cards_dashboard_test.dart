@@ -47,8 +47,7 @@ StudyCard _card(
 }) {
   return StudyCard(
     id: id,
-    front: 'front $id',
-    back: 'back $id',
+    content: BasicCardContent(front: 'front $id', back: 'back $id'),
     deckId: 1,
     deckName: 'French',
     tags: const [],

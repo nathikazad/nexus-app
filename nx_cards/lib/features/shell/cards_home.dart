@@ -5,6 +5,7 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/cards/card_details_dialog.dart';
 import 'package:nx_cards/features/cards/card_editors.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_db/riverpod.dart';
@@ -104,7 +105,7 @@ class _SchemaSetupState extends ConsumerState<_SchemaSetup> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Create the FlashcardDeck and Flashcard KGQL model types, including language and card tag systems.',
+                    'Create the FlashcardDeck, Flashcard, and LanguageFlashcard KGQL model types, including language and card tag systems.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: RecallColors.muted, height: 1.45),
                   ),
@@ -841,11 +842,24 @@ class _CardRow extends ConsumerWidget {
   final StudyCard card;
   final CardDeck deck;
 
+  Future<void> _showDetails(BuildContext context) async {
+    final edit = await showDialog<bool>(
+      context: context,
+      builder: (_) => CardDetailsDialog(deck: deck, card: card),
+    );
+    if (edit != true || !context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => CardEditorDialog(deck: deck, card: card),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
+        onTap: () => _showDetails(context),
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         leading: Icon(
           card.suspended ? Icons.pause_circle_outline : Icons.style_outlined,
