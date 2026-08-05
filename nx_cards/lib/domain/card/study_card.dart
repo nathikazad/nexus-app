@@ -1,27 +1,27 @@
 import 'package:nx_cards/domain/card/card_review.dart';
+import 'package:nx_cards/domain/card/card_schedule.dart';
 import 'package:nx_cards/domain/card/card_content.dart';
+import 'package:nx_cards/domain/card/study_direction.dart';
+import 'package:nx_cards/domain/card/study_prompt.dart';
 
 class StudyCard {
-  const StudyCard({
+  StudyCard({
     required this.id,
     required this.content,
     required this.deckId,
     required this.deckName,
     required this.tags,
-    required this.dueAt,
-    required this.lastReviewedAt,
-    required this.stability,
-    required this.difficulty,
-    required this.schedulingState,
-    required this.learningStep,
+    required Map<StudyDirection, CardSchedule> schedules,
+    required Map<StudyDirection, List<CardReview>> reviewHistory,
     required this.suspended,
-    required this.reviewCount,
-    required this.lapseCount,
-    this.reviewHistory = const [],
     this.sourceBookId,
     this.sourceBookName,
     this.updatedAt,
-  });
+  }) : schedules = Map<StudyDirection, CardSchedule>.unmodifiable(schedules),
+       reviewHistory = Map<StudyDirection, List<CardReview>>.unmodifiable({
+         for (final entry in reviewHistory.entries)
+           entry.key: List<CardReview>.unmodifiable(entry.value),
+       });
 
   final int id;
   final CardContent content;
@@ -31,16 +31,9 @@ class StudyCard {
   final int deckId;
   final String deckName;
   final List<String> tags;
-  final DateTime? dueAt;
-  final DateTime? lastReviewedAt;
-  final double? stability;
-  final double? difficulty;
-  final String schedulingState;
-  final int? learningStep;
+  final Map<StudyDirection, CardSchedule> schedules;
+  final Map<StudyDirection, List<CardReview>> reviewHistory;
   final bool suspended;
-  final int reviewCount;
-  final int lapseCount;
-  final List<CardReview> reviewHistory;
   final int? sourceBookId;
   final String? sourceBookName;
 
@@ -48,28 +41,53 @@ class StudyCard {
   /// conflict handling.
   final DateTime? updatedAt;
 
-  bool get isNew => lastReviewedAt == null;
+  CardSchedule scheduleFor(StudyDirection direction) =>
+      schedules[direction] ?? const CardSchedule.initial(enabled: false);
 
-  bool isDueAt(DateTime now) {
-    if (suspended || isNew) return false;
-    final due = dueAt;
-    return due == null || !due.isAfter(now.toUtc());
+  List<CardReview> reviewHistoryFor(StudyDirection direction) =>
+      reviewHistory[direction] ?? const <CardReview>[];
+
+  Iterable<StudyPrompt> get prompts sync* {
+    if (suspended) return;
+    for (final direction in StudyDirection.values) {
+      if (scheduleFor(direction).enabled) {
+        yield StudyPrompt(card: this, direction: direction);
+      }
+    }
+  }
+
+  DateTime? get nextDueAt {
+    final dueDates = <DateTime>[
+      for (final direction in StudyDirection.values)
+        if (scheduleFor(direction).enabled &&
+            scheduleFor(direction).dueAt != null)
+          scheduleFor(direction).dueAt!,
+    ]..sort();
+    return dueDates.firstOrNull;
+  }
+
+  StudyCard updateDirection({
+    required StudyDirection direction,
+    required CardSchedule schedule,
+    required List<CardReview> history,
+  }) {
+    return copyWith(
+      schedules: <StudyDirection, CardSchedule>{
+        ...schedules,
+        direction: schedule,
+      },
+      reviewHistory: <StudyDirection, List<CardReview>>{
+        ...reviewHistory,
+        direction: history,
+      },
+    );
   }
 
   StudyCard copyWith({
     CardContent? content,
     List<String>? tags,
-    DateTime? dueAt,
-    bool clearDueAt = false,
-    DateTime? lastReviewedAt,
-    double? stability,
-    double? difficulty,
-    String? schedulingState,
-    int? learningStep,
-    bool clearLearningStep = false,
-    int? reviewCount,
-    int? lapseCount,
-    List<CardReview>? reviewHistory,
+    Map<StudyDirection, CardSchedule>? schedules,
+    Map<StudyDirection, List<CardReview>>? reviewHistory,
     bool? suspended,
     DateTime? updatedAt,
   }) {
@@ -79,18 +97,9 @@ class StudyCard {
       deckId: deckId,
       deckName: deckName,
       tags: tags ?? this.tags,
-      dueAt: clearDueAt ? null : dueAt ?? this.dueAt,
-      lastReviewedAt: lastReviewedAt ?? this.lastReviewedAt,
-      stability: stability ?? this.stability,
-      difficulty: difficulty ?? this.difficulty,
-      schedulingState: schedulingState ?? this.schedulingState,
-      learningStep: clearLearningStep
-          ? null
-          : learningStep ?? this.learningStep,
-      suspended: suspended ?? this.suspended,
-      reviewCount: reviewCount ?? this.reviewCount,
-      lapseCount: lapseCount ?? this.lapseCount,
+      schedules: schedules ?? this.schedules,
       reviewHistory: reviewHistory ?? this.reviewHistory,
+      suspended: suspended ?? this.suspended,
       sourceBookId: sourceBookId,
       sourceBookName: sourceBookName,
       updatedAt: updatedAt ?? this.updatedAt,

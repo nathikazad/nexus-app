@@ -16,13 +16,6 @@ const _cardStruct = <String, dynamic>{
   attrReviewHistory: true,
   attrTransliteration: true,
   attrAudioUrl: true,
-  'last_reviewed_at': true,
-  'stability': true,
-  'difficulty': true,
-  'scheduling_state': true,
-  'learning_step': true,
-  'review_count': true,
-  'lapse_count': true,
   'tags': true,
   'model_type': {'id': true, 'name': true},
   deckModelType: {'id': true, 'name': true},
@@ -158,10 +151,15 @@ class KgqlCardsRepository implements CardsRepository {
         description: content.back,
         attributes: [
           SetModelAttribute(key: attrSuspended, value: false),
-          SetModelAttribute(key: attrSchedule, value: emptyScheduleJson()),
+          SetModelAttribute(
+            key: attrSchedule,
+            value: emptyScheduleJson(
+              enableBackToFront: content is LanguageCardContent,
+            ),
+          ),
           SetModelAttribute(
             key: attrReviewHistory,
-            value: reviewHistoryJson(const <CardReview>[]),
+            value: emptyReviewHistoryJson(),
           ),
           if (content case LanguageCardContent(:final transliteration))
             SetModelAttribute(key: attrTransliteration, value: transliteration),
@@ -212,12 +210,13 @@ class KgqlCardsRepository implements CardsRepository {
         attributes: [
           SetModelAttribute(
             key: attrDueAt,
-            value: card.dueAt!.toUtc().toIso8601String(),
+            value: card.nextDueAt?.toUtc().toIso8601String(),
+            delete: card.nextDueAt == null,
           ),
           SetModelAttribute(key: attrSchedule, value: scheduleJson(card)),
           SetModelAttribute(
             key: attrReviewHistory,
-            value: reviewHistoryJson(card.reviewHistory),
+            value: reviewHistoryJson(card),
           ),
         ],
       ),

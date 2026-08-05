@@ -20,11 +20,23 @@ const attrAudioUrl = 'audio_url';
 const scheduleJsonSchema = <String, dynamic>{
   'type': 'object',
   'additionalProperties': false,
+  'required': ['version', 'algorithm', 'front_to_back', 'back_to_front'],
+  'properties': {
+    'version': {'type': 'integer', 'const': 2},
+    'algorithm': {'type': 'string', 'const': 'fsrs'},
+    'front_to_back': _directionScheduleJsonSchema,
+    'back_to_front': _directionScheduleJsonSchema,
+  },
+};
+
+const _directionScheduleJsonSchema = <String, dynamic>{
+  'type': 'object',
+  'additionalProperties': false,
   'required': [
-    'version',
-    'algorithm',
+    'enabled',
     'state',
     'step',
+    'due_at',
     'last_reviewed_at',
     'stability',
     'difficulty',
@@ -32,8 +44,7 @@ const scheduleJsonSchema = <String, dynamic>{
     'lapse_count',
   ],
   'properties': {
-    'version': {'type': 'integer', 'const': 1},
-    'algorithm': {'type': 'string', 'const': 'fsrs'},
+    'enabled': {'type': 'boolean'},
     'state': {
       'type': 'string',
       'enum': ['learning', 'review', 'relearning'],
@@ -41,6 +52,10 @@ const scheduleJsonSchema = <String, dynamic>{
     'step': {
       'type': ['integer', 'null'],
       'minimum': 0,
+    },
+    'due_at': {
+      'type': ['string', 'null'],
+      'format': 'date-time',
     },
     'last_reviewed_at': {
       'type': ['string', 'null'],
@@ -61,9 +76,19 @@ const scheduleJsonSchema = <String, dynamic>{
 const reviewHistoryJsonSchema = <String, dynamic>{
   'type': 'object',
   'additionalProperties': false,
-  'required': ['version', 'items'],
+  'required': ['version', 'front_to_back', 'back_to_front'],
   'properties': {
-    'version': {'type': 'integer', 'const': 1},
+    'version': {'type': 'integer', 'const': 2},
+    'front_to_back': _directionReviewHistoryJsonSchema,
+    'back_to_front': _directionReviewHistoryJsonSchema,
+  },
+};
+
+const _directionReviewHistoryJsonSchema = <String, dynamic>{
+  'type': 'object',
+  'additionalProperties': false,
+  'required': ['items'],
+  'properties': {
     'items': {
       'type': 'array',
       'items': {
@@ -88,13 +113,6 @@ const reviewHistoryJsonSchema = <String, dynamic>{
   },
 };
 
-const _cardAttributes = <String, String>{
-  attrDueAt: 'datetime',
-  attrSuspended: 'boolean',
-  attrSchedule: 'json',
-  attrReviewHistory: 'json',
-};
-
 class CardsSchemaStatus {
   const CardsSchemaStatus({
     required this.deckReady,
@@ -115,7 +133,12 @@ Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
   return CardsSchemaStatus(
     deckReady:
         deck != null && _hasAttributes(deck, const {attrArchived: 'boolean'}),
-    cardReady: card != null && _hasAttributes(card, _cardAttributes),
+    cardReady:
+        card != null &&
+        _hasAttributeDefinitions(
+          card,
+          buildCardSchemaRequest().attributeDefinitions!,
+        ),
     languageCardReady:
         languageCard != null &&
         languageCard.parent?.name == cardModelType &&
@@ -143,6 +166,24 @@ bool _hasAttributes(ModelType modelType, Map<String, String> expected) {
   return expected.entries.every((entry) => actual[entry.key] == entry.value);
 }
 
+bool _hasAttributeDefinitions(
+  ModelType modelType,
+  List<AttributeDefinition> expected,
+) {
+  final actual = <String, AttributeDefinition>{
+    for (final definition
+        in modelType.attributes ?? const <AttributeDefinition>[])
+      ?definition.key: definition,
+  };
+  return expected.every((desired) {
+    final current = actual[desired.key];
+    return current != null &&
+        current.valueType == desired.valueType &&
+        current.required == desired.required &&
+        _deepEquals(current.constraints, desired.constraints);
+  });
+}
+
 Future<void> bootstrapCardsSchema(GraphQLClient client) async {
   final deck = await _modelTypeOrNull(client, deckModelType);
   if (deck == null) {
@@ -152,7 +193,11 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       auditSourceKind: 'nx_cards',
     );
   } else {
-    await _addMissingAttributes(client, deck, const {attrArchived: 'boolean'});
+    await _syncAttributeDefinitions(
+      client,
+      deck,
+      buildDeckSchemaRequest().attributeDefinitions!,
+    );
   }
 
   final card = await _modelTypeOrNull(client, cardModelType);
@@ -163,7 +208,11 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       auditSourceKind: 'nx_cards',
     );
   } else {
-    await _addMissingAttributes(client, card, _cardAttributes);
+    await _syncAttributeDefinitions(
+      client,
+      card,
+      buildCardSchemaRequest().attributeDefinitions!,
+    );
   }
 
   final languageCard = await _modelTypeOrNull(client, languageCardModelType);
@@ -174,17 +223,18 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       auditSourceKind: 'nx_cards',
     );
   } else {
-    await _addMissingAttributes(client, languageCard, const {
-      attrTransliteration: 'string',
-      attrAudioUrl: 'string',
-    });
+    await _syncAttributeDefinitions(
+      client,
+      languageCard,
+      buildLanguageCardSchemaRequest().attributeDefinitions!,
+    );
   }
 }
 
-Future<void> _addMissingAttributes(
+Future<void> _syncAttributeDefinitions(
   GraphQLClient client,
   ModelType modelType,
-  Map<String, String> expected,
+  List<AttributeDefinition> expected,
 ) async {
   final existing = {
     for (final definition
@@ -192,15 +242,21 @@ Future<void> _addMissingAttributes(
       if (definition.key != null) definition.key!: definition,
   };
   final changes = <AttributeDefinition>[];
-  for (final entry in expected.entries) {
-    final definition = existing[entry.key];
-    if (definition?.valueType == entry.value) continue;
+  for (final desired in expected) {
+    final definition = existing[desired.key];
+    if (definition != null &&
+        definition.valueType == desired.valueType &&
+        definition.required == desired.required &&
+        _deepEquals(definition.constraints, desired.constraints)) {
+      continue;
+    }
     changes.add(
       AttributeDefinition(
         id: definition?.id,
-        key: entry.key,
-        valueType: entry.value,
-        required: entry.key == attrSuspended,
+        key: desired.key,
+        valueType: desired.valueType,
+        required: desired.required,
+        constraints: desired.constraints,
       ),
     );
   }
@@ -215,6 +271,28 @@ Future<void> _addMissingAttributes(
     ),
     auditSourceKind: 'nx_cards',
   );
+}
+
+bool _deepEquals(Object? left, Object? right) {
+  if (identical(left, right)) return true;
+  if (left is Map && right is Map) {
+    if (left.length != right.length) return false;
+    for (final entry in left.entries) {
+      if (!right.containsKey(entry.key) ||
+          !_deepEquals(entry.value, right[entry.key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (!_deepEquals(left[index], right[index])) return false;
+    }
+    return true;
+  }
+  return left == right;
 }
 
 SetModelTypeRequest buildDeckSchemaRequest() {
@@ -251,7 +329,7 @@ SetModelTypeRequest buildCardSchemaRequest() {
     name: cardModelType,
     typeKind: 'base',
     description:
-        'A one-direction flashcard with versioned FSRS state and review history.',
+        'A flashcard with independent front-to-back and back-to-front FSRS state and review history.',
     attributeDefinitions: [
       AttributeDefinition(key: attrDueAt, valueType: 'datetime'),
       AttributeDefinition(

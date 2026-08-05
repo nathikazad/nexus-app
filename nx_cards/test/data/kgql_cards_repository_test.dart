@@ -44,6 +44,20 @@ void main() {
             )
             as Map<String, dynamic>;
     expect(transliteration['value'], 'kazhivu');
+    final schedule =
+        attributes.singleWhere(
+              (row) => (row as Map<String, dynamic>)['key'] == attrSchedule,
+            )
+            as Map<String, dynamic>;
+    final scheduleValue = schedule['value'] as Map<String, dynamic>;
+    expect(
+      (scheduleValue['front_to_back'] as Map<String, dynamic>)['enabled'],
+      isTrue,
+    );
+    expect(
+      (scheduleValue['back_to_front'] as Map<String, dynamic>)['enabled'],
+      isTrue,
+    );
   });
 
   test('maps a LanguageFlashcard response to typed language content', () async {
@@ -65,17 +79,16 @@ void main() {
                 'transliteration': 'kazhivu',
               'suspended': false,
               'schedule': {
-                'version': 1,
+                'version': 2,
                 'algorithm': 'fsrs',
-                'state': 'learning',
-                'step': 0,
-                'last_reviewed_at': null,
-                'stability': null,
-                'difficulty': null,
-                'review_count': 0,
-                'lapse_count': 0,
+                'front_to_back': _emptySchedule(enabled: true),
+                'back_to_front': _emptySchedule(enabled: true),
               },
-              'review_history': {'version': 1, 'items': []},
+              'review_history': {
+                'version': 2,
+                'front_to_back': {'items': <Object?>[]},
+                'back_to_front': {'items': <Object?>[]},
+              },
               'model_type': {'id': 67, 'name': languageCardModelType},
               'FlashcardDeck': [
                 {'id': 7, 'name': 'Malayalam', 'model_type_id': 65},
@@ -95,9 +108,30 @@ void main() {
     expect(content.english, 'talent');
     expect(content.originalScript, 'കഴിവ്');
     expect(content.transliteration, 'kazhivu');
+    expect(
+      cards.single.scheduleFor(StudyDirection.frontToBack).enabled,
+      isTrue,
+    );
+    expect(
+      cards.single.scheduleFor(StudyDirection.backToFront).enabled,
+      isTrue,
+    );
     expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});
   });
 }
+
+Map<String, Object?> _emptySchedule({required bool enabled}) =>
+    <String, Object?>{
+      'enabled': enabled,
+      'state': 'learning',
+      'step': 0,
+      'due_at': null,
+      'last_reviewed_at': null,
+      'stability': null,
+      'difficulty': null,
+      'review_count': 0,
+      'lapse_count': 0,
+    };
 
 GraphQLClient _client(Map<String, dynamic> Function(Request) respond) {
   final link = Link.function((request, [forward]) {

@@ -44,8 +44,15 @@ void main() {
     await store.applySyncBundle(_bundle(hash: 'hash-1'));
     final original = (await store.readDashboard()).cards.single;
     final edited = original.copyWith(
-      reviewCount: 1,
-      lastReviewedAt: DateTime.utc(2026, 8, 4, 12),
+      schedules: <StudyDirection, CardSchedule>{
+        ...original.schedules,
+        StudyDirection.frontToBack: original
+            .scheduleFor(StudyDirection.frontToBack)
+            .copyWith(
+              reviewCount: 1,
+              lastReviewedAt: DateTime.utc(2026, 8, 4, 12),
+            ),
+      },
       updatedAt: DateTime.utc(2026, 8, 4, 12),
     );
 
@@ -56,7 +63,12 @@ void main() {
       createdAt: DateTime.utc(2026, 8, 4, 12),
     );
 
-    expect((await store.readDashboard()).cards.single.reviewCount, 1);
+    expect(
+      (await store.readDashboard()).cards.single
+          .scheduleFor(StudyDirection.frontToBack)
+          .reviewCount,
+      1,
+    );
     final pending = await store.pendingMutations();
     expect(pending, hasLength(1));
     expect(pending.single.operationId, 'operation-1');
@@ -97,7 +109,14 @@ void main() {
       await store.applySyncBundle(_bundle(hash: 'hash-1'));
       final original = (await store.readDashboard()).cards.single;
       await store.saveCardAndEnqueue(
-        original.copyWith(reviewCount: 1),
+        original.copyWith(
+          schedules: <StudyDirection, CardSchedule>{
+            ...original.schedules,
+            StudyDirection.frontToBack: original
+                .scheduleFor(StudyDirection.frontToBack)
+                .copyWith(reviewCount: 1),
+          },
+        ),
         operationId: 'operation-1',
         mutationType: MutationType.update,
         createdAt: DateTime.utc(2026, 8, 4, 12),
@@ -217,15 +236,15 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
             deckId: 7,
             deckName: 'Malayalam',
             tags: const <String>['Vocabulary'],
-            dueAt: null,
-            lastReviewedAt: null,
-            stability: null,
-            difficulty: null,
-            schedulingState: 'learning',
-            learningStep: 0,
+            schedules: const <StudyDirection, CardSchedule>{
+              StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
+              StudyDirection.backToFront: CardSchedule.initial(enabled: true),
+            },
+            reviewHistory: const <StudyDirection, List<CardReview>>{
+              StudyDirection.frontToBack: <CardReview>[],
+              StudyDirection.backToFront: <CardReview>[],
+            },
             suspended: false,
-            reviewCount: 0,
-            lapseCount: 0,
             updatedAt: updatedAt,
           ),
         ],

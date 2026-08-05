@@ -11,36 +11,43 @@ void main() {
       deckId: 1,
       deckName: 'French',
       tags: const ['Vocabulary'],
-      dueAt: null,
-      lastReviewedAt: null,
-      stability: null,
-      difficulty: null,
-      schedulingState: 'learning',
-      learningStep: 0,
+      schedules: const <StudyDirection, CardSchedule>{
+        StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
+        StudyDirection.backToFront: CardSchedule.initial(enabled: false),
+      },
+      reviewHistory: const <StudyDirection, List<CardReview>>{
+        StudyDirection.frontToBack: <CardReview>[],
+        StudyDirection.backToFront: <CardReview>[],
+      },
       suspended: false,
-      reviewCount: 0,
-      lapseCount: 0,
+    );
+    final prompt = StudyPrompt(
+      card: card,
+      direction: StudyDirection.frontToBack,
     );
 
     final outcomes = FsrsCardScheduler(
       reviewId: () => 'review-id',
-    ).preview(card, now);
+    ).preview(prompt, now);
 
     expect(outcomes.keys, containsAll(CardRating.values));
     for (final outcome in outcomes.values) {
-      expect(outcome.card.lastReviewedAt, now);
-      expect(outcome.card.dueAt, isNotNull);
-      expect(outcome.card.reviewCount, 1);
-      expect(outcome.card.stability, isNotNull);
-      expect(outcome.card.difficulty, isNotNull);
-      expect(outcome.card.reviewHistory, hasLength(1));
-      expect(outcome.card.reviewHistory.single.id, 'review-id');
-      expect(outcome.card.reviewHistory.single.reviewedAt, now);
-      expect(outcome.card.reviewHistory.single.rating, inInclusiveRange(1, 4));
-      expect(outcome.card.reviewHistory.single.elapsedSeconds, 0);
+      final schedule = outcome.card.scheduleFor(StudyDirection.frontToBack);
+      final history = outcome.card.reviewHistoryFor(StudyDirection.frontToBack);
+      expect(schedule.lastReviewedAt, now);
+      expect(schedule.dueAt, isNotNull);
+      expect(schedule.reviewCount, 1);
+      expect(schedule.stability, isNotNull);
+      expect(schedule.difficulty, isNotNull);
+      expect(history, hasLength(1));
+      expect(history.single.id, 'review-id');
+      expect(history.single.reviewedAt, now);
+      expect(history.single.rating, inInclusiveRange(1, 4));
+      expect(history.single.elapsedSeconds, 0);
+      expect(history.single.scheduledSeconds, greaterThan(0));
       expect(
-        outcome.card.reviewHistory.single.scheduledSeconds,
-        greaterThan(0),
+        outcome.card.scheduleFor(StudyDirection.backToFront),
+        same(card.scheduleFor(StudyDirection.backToFront)),
       );
     }
   });
@@ -53,27 +60,37 @@ void main() {
       deckId: 1,
       deckName: 'French',
       tags: const [],
-      dueAt: now,
-      lastReviewedAt: now.subtract(const Duration(days: 3)),
-      stability: 3,
-      difficulty: 5,
-      schedulingState: 'review',
-      learningStep: null,
+      schedules: <StudyDirection, CardSchedule>{
+        StudyDirection.frontToBack: CardSchedule(
+          enabled: true,
+          dueAt: now,
+          lastReviewedAt: now.subtract(const Duration(days: 3)),
+          stability: 3,
+          difficulty: 5,
+          schedulingState: 'review',
+          learningStep: null,
+          reviewCount: 4,
+          lapseCount: 1,
+        ),
+        StudyDirection.backToFront: const CardSchedule.initial(enabled: false),
+      },
+      reviewHistory: const <StudyDirection, List<CardReview>>{
+        StudyDirection.frontToBack: <CardReview>[],
+        StudyDirection.backToFront: <CardReview>[],
+      },
       suspended: false,
-      reviewCount: 4,
-      lapseCount: 1,
     );
 
-    final outcome = FsrsCardScheduler(
-      reviewId: () => 'review-id',
-    ).preview(card, now)[CardRating.again]!;
+    final outcome = FsrsCardScheduler(reviewId: () => 'review-id').preview(
+      StudyPrompt(card: card, direction: StudyDirection.frontToBack),
+      now,
+    )[CardRating.again]!;
 
-    expect(outcome.card.lapseCount, 2);
-    expect(outcome.card.schedulingState, 'relearning');
-    expect(outcome.card.reviewHistory.single.rating, 1);
-    expect(
-      outcome.card.reviewHistory.single.elapsedSeconds,
-      const Duration(days: 3).inSeconds,
-    );
+    final schedule = outcome.card.scheduleFor(StudyDirection.frontToBack);
+    final history = outcome.card.reviewHistoryFor(StudyDirection.frontToBack);
+    expect(schedule.lapseCount, 2);
+    expect(schedule.schedulingState, 'relearning');
+    expect(history.single.rating, 1);
+    expect(history.single.elapsedSeconds, const Duration(days: 3).inSeconds);
   });
 }

@@ -613,8 +613,12 @@ class _TodayView extends StatelessWidget {
   Widget build(BuildContext context) {
     final queue = data.studyQueue(DateTime.now());
     final grouped = <String, int>{};
-    for (final card in queue) {
-      grouped.update(card.deckName, (count) => count + 1, ifAbsent: () => 1);
+    for (final prompt in queue) {
+      grouped.update(
+        prompt.card.deckName,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
     }
     return ListView(
       padding: const EdgeInsets.all(28),
@@ -921,12 +925,12 @@ class _CardRow extends ConsumerWidget {
 Future<void> _openStudy(
   BuildContext context,
   String title,
-  List<StudyCard> cards,
+  List<StudyPrompt> prompts,
 ) {
   return Navigator.push<void>(
     context,
     MaterialPageRoute(
-      builder: (_) => StudyScreen(title: title, cards: cards),
+      builder: (_) => StudyScreen(title: title, prompts: prompts),
     ),
   );
 }

@@ -35,7 +35,7 @@ final class CardDeckSynchronizer {
     final manifest = await _localStore.deckManifest();
     final bundle = await transport.syncDecks(manifest: manifest);
     await _localStore.applySyncBundle(bundle);
-    _prefetchAudio(bundle);
+    unawaited(prefetchAudio());
   }
 
   Future<CardDeck?> syncDeck(int deckId) => _runs.runItem(
@@ -52,7 +52,7 @@ final class CardDeckSynchronizer {
       deckIds: <int>{deckId},
     );
     await _localStore.applySyncBundle(bundle);
-    _prefetchAudio(bundle);
+    unawaited(prefetchAudio(deckId: deckId));
     return _localStore.getDeck(deckId);
   }
 
@@ -66,16 +66,23 @@ final class CardDeckSynchronizer {
     return transport;
   }
 
-  void _prefetchAudio(CardDeckSyncBundle bundle) {
+  /// Downloads every locally referenced pronunciation that is not cached yet.
+  ///
+  /// This deliberately reads the local store instead of only inspecting the
+  /// latest sync bundle. A transient download failure must be retried by the
+  /// next sync even when the deck hashes have not changed.
+  Future<void> prefetchAudio({int? deckId}) async {
     final repository = _audioRepository;
     if (repository == null) return;
+    final cards = deckId == null
+        ? (await _localStore.readDashboard()).cards
+        : await _localStore.cardsForDeck(deckId);
     final urls = <String>{
-      for (final deck in bundle.decks)
-        for (final card in deck.cards)
-          if (card.content case final LanguageCardContent content)
-            if (content.audioUrl case final url? when url.isNotEmpty) url,
+      for (final card in cards)
+        if (card.content case final LanguageCardContent content)
+          if (content.audioUrl case final url? when url.isNotEmpty) url,
     };
-    unawaited(_downloadAudio(repository, urls));
+    await _downloadAudio(repository, urls);
   }
 
   Future<void> _downloadAudio(

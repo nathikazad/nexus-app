@@ -42,12 +42,14 @@ class ModelType {
     this.attributes,
     this.relations,
     this.tagSystems,
-  })  : mixins = mixins ?? traits,
-        traits = traits ?? mixins;
+  }) : mixins = mixins ?? traits,
+       traits = traits ?? mixins;
 
   /// Creates a ModelType from a JSON map (typically from GraphQL response)
-  factory ModelType.fromJson(Map<String, dynamic> json,
-      {bool recursive = false}) {
+  factory ModelType.fromJson(
+    Map<String, dynamic> json, {
+    bool recursive = false,
+  }) {
     ModelType? parent;
     if (json['parent'] != null) {
       final parentJson = json['parent'] as Map<String, dynamic>;
@@ -65,8 +67,9 @@ class ModelType {
     if (json['children'] != null) {
       final childrenJson = json['children'] as List<dynamic>;
       children = childrenJson.map((childJson) {
-        final childMap =
-            Map<String, dynamic>.from(childJson as Map<String, dynamic>);
+        final childMap = Map<String, dynamic>.from(
+          childJson as Map<String, dynamic>,
+        );
         if (currentId != null && !childMap.containsKey('parentId')) {
           childMap['parentId'] = currentId;
         }
@@ -79,8 +82,9 @@ class ModelType {
     if (mixinsJson != null) {
       final mixinRows = mixinsJson as List<dynamic>;
       mixins = mixinRows.map((mixinJson) {
-        final traitMap =
-            Map<String, dynamic>.from(mixinJson as Map<String, dynamic>);
+        final traitMap = Map<String, dynamic>.from(
+          mixinJson as Map<String, dynamic>,
+        );
         if (currentId != null && !traitMap.containsKey('parentId')) {
           traitMap['parentId'] = currentId;
         }
@@ -108,7 +112,10 @@ class ModelType {
           key: attr['key'] as String?,
           valueType: attr['value_type'] as String?,
           required: attr['required'] as bool? ?? false,
-          constraints: attr['constraints'] as Map<String, dynamic>?,
+          constraints: switch (attr['constraints'] ?? attr['metadata']) {
+            final Map value => Map<String, dynamic>.from(value),
+            _ => null,
+          },
         );
       }).toList();
     }
@@ -123,8 +130,9 @@ class ModelType {
             if (targetModelTypeName == null) return null;
 
             final relationAttrsJson = rel['attributes'] as List<dynamic>?;
-            final relationAttributeDefinitions =
-                relationAttrsJson?.map((attrJson) {
+            final relationAttributeDefinitions = relationAttrsJson?.map((
+              attrJson,
+            ) {
               final attr = attrJson as Map<String, dynamic>;
               return RelationAttributeDefinition(
                 id: attr['id'] as int?,
@@ -137,7 +145,8 @@ class ModelType {
             return RelationshipType(
               id: rel['id'] as int?,
               link: targetModelTypeName,
-              multiplicity: rel['multiplicity'] as String? ??
+              multiplicity:
+                  rel['multiplicity'] as String? ??
                   rel['cardinality'] as String?,
               relationName: rel['relation_name'] as String?,
               description: rel['description'] as String?,

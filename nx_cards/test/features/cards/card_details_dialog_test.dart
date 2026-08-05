@@ -15,25 +15,25 @@ void main() {
       language: 'Malayalam',
       archived: false,
     );
-    const card = StudyCard(
+    final card = StudyCard(
       id: 20,
-      content: LanguageCardContent(
+      content: const LanguageCardContent(
         english: 'fraud',
         originalScript: 'തട്ടിപ്പ്',
         transliteration: 'thattippu',
       ),
       deckId: 10,
       deckName: 'Malayalam words',
-      tags: ['legal'],
-      dueAt: null,
-      lastReviewedAt: null,
-      stability: null,
-      difficulty: null,
-      schedulingState: 'learning',
-      learningStep: null,
+      tags: const ['legal'],
+      schedules: const <StudyDirection, CardSchedule>{
+        StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
+        StudyDirection.backToFront: CardSchedule.initial(enabled: true),
+      },
+      reviewHistory: const <StudyDirection, List<CardReview>>{
+        StudyDirection.frontToBack: <CardReview>[],
+        StudyDirection.backToFront: <CardReview>[],
+      },
       suspended: false,
-      reviewCount: 0,
-      lapseCount: 0,
     );
     bool? result;
 
@@ -46,8 +46,7 @@ void main() {
                 onPressed: () async {
                   result = await showDialog<bool>(
                     context: context,
-                    builder: (_) =>
-                        const CardDetailsDialog(deck: deck, card: card),
+                    builder: (_) => CardDetailsDialog(deck: deck, card: card),
                   );
                 },
                 child: const Text('Open card'),

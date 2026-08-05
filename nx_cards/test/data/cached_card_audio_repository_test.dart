@@ -32,6 +32,17 @@ void main() {
     expect(await repository.fetch('/audio.mp3'), <int>[4, 5, 6]);
     expect(remote.calls, 1);
   });
+
+  test('cache write failure does not discard downloaded audio', () async {
+    final remote = _FakeAudioRepository(Uint8List.fromList(<int>[7, 8, 9]));
+    final repository = CachedCardAudioRepository(
+      remote: remote,
+      cache: _FailingAudioCache(),
+    );
+
+    expect(await repository.fetch('/audio.mp3'), <int>[7, 8, 9]);
+    expect(remote.calls, 1);
+  });
 }
 
 final class _MemoryAudioCache implements CardAudioByteCache {
@@ -57,4 +68,13 @@ final class _FakeAudioRepository implements CardAudioRepository {
     calls++;
     return bytes;
   }
+}
+
+final class _FailingAudioCache implements CardAudioByteCache {
+  @override
+  Future<Uint8List?> read(String key) async => null;
+
+  @override
+  Future<void> write(String key, Uint8List bytes) =>
+      Future<void>.error(StateError('disk unavailable'));
 }

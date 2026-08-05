@@ -85,6 +85,35 @@ void main() {
       expect(mt.attributes!.first.valueType, 'number');
     });
 
+    test('MT2.6b attribute constraints accept the server metadata field', () {
+      final mt = ModelType.fromJson({
+        'id': 1,
+        'name': 'Flashcard',
+        'attributes': [
+          {
+            'id': 2,
+            'key': 'schedule',
+            'value_type': 'json',
+            'metadata': {
+              'json_schema': {
+                'properties': {
+                  'version': {'const': 2},
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      expect(mt.attributes!.single.constraints, {
+        'json_schema': {
+          'properties': {
+            'version': {'const': 2},
+          },
+        },
+      });
+    });
+
     test('MT2.7 relations target_model_type', () {
       final mt = ModelType.fromJson({
         'id': 1,
@@ -121,7 +150,11 @@ void main() {
 
     test('MT2.10 AttributeDefinition delete toJson', () {
       final ad = AttributeDefinition(
-          id: 5, key: 'x', valueType: 'string', delete: true);
+        id: 5,
+        key: 'x',
+        valueType: 'string',
+        delete: true,
+      );
       expect(ad.toJson(), {'id': 5, 'delete': true});
     });
 

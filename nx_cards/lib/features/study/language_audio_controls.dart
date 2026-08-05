@@ -85,7 +85,11 @@ class _LanguageAudioControlsState extends State<LanguageAudioControls> {
       _sourceReady = true;
       if (autoPlay) await _resume();
       return true;
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint(
+        '[nx_cards audio] load failed url=${widget.audioUrl} '
+        'error=$error\n$stackTrace',
+      );
       if (mounted) {
         setState(() => _error = 'Could not load pronunciation');
       }
@@ -115,7 +119,11 @@ class _LanguageAudioControlsState extends State<LanguageAudioControls> {
       }
       if (!await _prepare(autoPlay: false)) return;
       await _resume();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint(
+        '[nx_cards audio] playback failed url=${widget.audioUrl} '
+        'error=$error\n$stackTrace',
+      );
       if (mounted) setState(() => _error = 'Could not play pronunciation');
     }
   }

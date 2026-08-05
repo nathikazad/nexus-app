@@ -25,14 +25,14 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
         attributes: <SetModelAttribute>[
           SetModelAttribute(
             key: attrDueAt,
-            value: card.dueAt?.toUtc().toIso8601String(),
-            delete: card.dueAt == null,
+            value: card.nextDueAt?.toUtc().toIso8601String(),
+            delete: card.nextDueAt == null,
           ),
           SetModelAttribute(key: attrSuspended, value: card.suspended),
           SetModelAttribute(key: attrSchedule, value: scheduleJson(card)),
           SetModelAttribute(
             key: attrReviewHistory,
-            value: reviewHistoryJson(card.reviewHistory),
+            value: reviewHistoryJson(card),
           ),
           if (content is LanguageCardContent) ...<SetModelAttribute>[
             SetModelAttribute(
@@ -100,10 +100,15 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
       description: content.back,
       attributes: <SetModelAttribute>[
         SetModelAttribute(key: attrSuspended, value: false),
-        SetModelAttribute(key: attrSchedule, value: emptyScheduleJson()),
+        SetModelAttribute(
+          key: attrSchedule,
+          value: emptyScheduleJson(
+            enableBackToFront: content is LanguageCardContent,
+          ),
+        ),
         SetModelAttribute(
           key: attrReviewHistory,
-          value: reviewHistoryJson(const <CardReview>[]),
+          value: emptyReviewHistoryJson(),
         ),
         if (content is LanguageCardContent)
           SetModelAttribute(

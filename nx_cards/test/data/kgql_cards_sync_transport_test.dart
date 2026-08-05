@@ -49,14 +49,19 @@ void main() {
                         'transliteration': 'kazhivu',
                         'audio_url': '/cards/audio/1/11.mp3',
                         'schedule': <String, Object?>{
-                          'state': 'learning',
-                          'step': 0,
-                          'review_count': 0,
-                          'lapse_count': 0,
+                          'version': 2,
+                          'algorithm': 'fsrs',
+                          'front_to_back': _emptySchedule(enabled: true),
+                          'back_to_front': _emptySchedule(enabled: true),
                         },
                         'review_history': <String, Object?>{
-                          'version': 1,
-                          'items': <Object?>[],
+                          'version': 2,
+                          'front_to_back': <String, Object?>{
+                            'items': <Object?>[],
+                          },
+                          'back_to_front': <String, Object?>{
+                            'items': <Object?>[],
+                          },
                         },
                       },
                       'tags': <String, Object?>{
@@ -132,7 +137,15 @@ void main() {
     final schedule = attributes.cast<Map<String, dynamic>>().singleWhere(
       (value) => value['key'] == 'schedule',
     );
-    expect((schedule['value'] as Map<String, dynamic>)['review_count'], 1);
+    final scheduleValue = schedule['value'] as Map<String, dynamic>;
+    expect(
+      (scheduleValue['front_to_back'] as Map<String, dynamic>)['review_count'],
+      1,
+    );
+    expect(
+      (scheduleValue['back_to_front'] as Map<String, dynamic>)['review_count'],
+      0,
+    );
     expect(result.status, CardMutationStatus.applied);
     expect(result.deckHashes.single.serverHash, 'new-hash');
   });
@@ -162,14 +175,37 @@ StudyCard _card() => StudyCard(
   deckId: 7,
   deckName: 'Malayalam',
   tags: const <String>['Vocabulary'],
-  dueAt: DateTime.utc(2026, 8, 5),
-  lastReviewedAt: DateTime.utc(2026, 8, 4),
-  stability: 3.5,
-  difficulty: 5,
-  schedulingState: 'review',
-  learningStep: null,
+  schedules: <StudyDirection, CardSchedule>{
+    StudyDirection.frontToBack: CardSchedule(
+      enabled: true,
+      dueAt: DateTime.utc(2026, 8, 5),
+      lastReviewedAt: DateTime.utc(2026, 8, 4),
+      stability: 3.5,
+      difficulty: 5,
+      schedulingState: 'review',
+      learningStep: null,
+      reviewCount: 1,
+      lapseCount: 0,
+    ),
+    StudyDirection.backToFront: const CardSchedule.initial(enabled: true),
+  },
+  reviewHistory: const <StudyDirection, List<CardReview>>{
+    StudyDirection.frontToBack: <CardReview>[],
+    StudyDirection.backToFront: <CardReview>[],
+  },
   suspended: false,
-  reviewCount: 1,
-  lapseCount: 0,
   updatedAt: DateTime.utc(2026, 8, 4),
 );
+
+Map<String, Object?> _emptySchedule({required bool enabled}) =>
+    <String, Object?>{
+      'enabled': enabled,
+      'state': 'learning',
+      'step': 0,
+      'due_at': null,
+      'last_reviewed_at': null,
+      'stability': null,
+      'difficulty': null,
+      'review_count': 0,
+      'lapse_count': 0,
+    };

@@ -4,14 +4,6 @@ import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_db/kgql.dart';
 
-const _legacyLastReviewedAt = 'last_reviewed_at';
-const _legacyStability = 'stability';
-const _legacyDifficulty = 'difficulty';
-const _legacySchedulingState = 'scheduling_state';
-const _legacyLearningStep = 'learning_step';
-const _legacyReviewCount = 'review_count';
-const _legacyLapseCount = 'lapse_count';
-
 CardDeck cardDeckFromModel(Model model) {
   final languages = model.tags?[deckLanguageTagSystem] ?? const <String>[];
   return CardDeck(
@@ -29,7 +21,9 @@ StudyCard? studyCardFromModel(Model model) {
   if (deck == null) return null;
   final book = _relatedModels(model, bookModelType).firstOrNull;
   final schedule = _jsonMap(model.attributes?[attrSchedule]);
-  final history = _reviewHistoryFrom(model.attributes?[attrReviewHistory]);
+  final history = _reviewHistoryByDirectionFrom(
+    model.attributes?[attrReviewHistory],
+  );
   return StudyCard(
     id: model.id,
     content: model.modelType?.name == languageCardModelType
@@ -47,32 +41,12 @@ StudyCard? studyCardFromModel(Model model) {
     deckId: deck.id,
     deckName: deck.name,
     tags: model.tags?[cardTagsTagSystem] ?? const <String>[],
-    dueAt: model.attrDateTime(attrDueAt)?.toUtc(),
-    lastReviewedAt:
-        _dateTimeFrom(schedule['last_reviewed_at']) ??
-        model.attrDateTime(_legacyLastReviewedAt)?.toUtc(),
-    stability:
-        _doubleFrom(schedule['stability']) ??
-        model.attrDouble(_legacyStability),
-    difficulty:
-        _doubleFrom(schedule['difficulty']) ??
-        model.attrDouble(_legacyDifficulty),
-    schedulingState:
-        schedule['state']?.toString() ??
-        model.attrString(_legacySchedulingState) ??
-        'learning',
-    learningStep:
-        _intFrom(schedule['step']) ?? model.attrInt(_legacyLearningStep),
-    suspended: model.attrBool(attrSuspended) ?? false,
-    reviewCount:
-        _intFrom(schedule['review_count']) ??
-        model.attrInt(_legacyReviewCount) ??
-        history.length,
-    lapseCount:
-        _intFrom(schedule['lapse_count']) ??
-        model.attrInt(_legacyLapseCount) ??
-        0,
+    schedules: <StudyDirection, CardSchedule>{
+      for (final direction in StudyDirection.values)
+        direction: _scheduleFrom(schedule[direction.storageKey]),
+    },
     reviewHistory: history,
+    suspended: model.attrBool(attrSuspended) ?? false,
     sourceBookId: book?.id,
     sourceBookName: book?.name,
     updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
@@ -100,41 +74,85 @@ final class _RelatedModel {
   final String name;
 }
 
-Map<String, dynamic> emptyScheduleJson() => const <String, dynamic>{
-  'version': 1,
-  'algorithm': 'fsrs',
-  'state': 'learning',
-  'step': 0,
-  'last_reviewed_at': null,
-  'stability': null,
-  'difficulty': null,
-  'review_count': 0,
-  'lapse_count': 0,
-};
-
-Map<String, dynamic> scheduleJson(StudyCard card) => <String, dynamic>{
-  'version': 1,
-  'algorithm': 'fsrs',
-  'state': card.schedulingState,
-  'step': card.learningStep,
-  'last_reviewed_at': card.lastReviewedAt?.toUtc().toIso8601String(),
-  'stability': card.stability,
-  'difficulty': card.difficulty,
-  'review_count': card.reviewCount,
-  'lapse_count': card.lapseCount,
-};
-
-Map<String, dynamic> reviewHistoryJson(List<CardReview> reviews) =>
+Map<String, dynamic> emptyScheduleJson({required bool enableBackToFront}) =>
     <String, dynamic>{
-      'version': 1,
-      'items': reviews.map((review) => review.toJson()).toList(),
+      'version': 2,
+      'algorithm': 'fsrs',
+      StudyDirection.frontToBack.storageKey: _scheduleNodeJson(
+        const CardSchedule.initial(enabled: true),
+      ),
+      StudyDirection.backToFront.storageKey: _scheduleNodeJson(
+        CardSchedule.initial(enabled: enableBackToFront),
+      ),
     };
 
-List<CardReview> _reviewHistoryFrom(Object? raw) {
+Map<String, dynamic> scheduleJson(StudyCard card) => <String, dynamic>{
+  'version': 2,
+  'algorithm': 'fsrs',
+  for (final direction in StudyDirection.values)
+    direction.storageKey: _scheduleNodeJson(card.scheduleFor(direction)),
+};
+
+Map<String, dynamic> emptyReviewHistoryJson() => <String, dynamic>{
+  'version': 2,
+  for (final direction in StudyDirection.values)
+    direction.storageKey: <String, Object?>{'items': <Object?>[]},
+};
+
+Map<String, dynamic> reviewHistoryJson(StudyCard card) => <String, dynamic>{
+  'version': 2,
+  for (final direction in StudyDirection.values)
+    direction.storageKey: <String, Object?>{
+      'items': card
+          .reviewHistoryFor(direction)
+          .map((review) => review.toJson())
+          .toList(),
+    },
+};
+
+Map<StudyDirection, List<CardReview>> _reviewHistoryByDirectionFrom(
+  Object? raw,
+) {
+  final root = _jsonMap(raw);
+  return <StudyDirection, List<CardReview>>{
+    for (final direction in StudyDirection.values)
+      direction: _reviewsFrom(root[direction.storageKey]),
+  };
+}
+
+List<CardReview> _reviewsFrom(Object? raw) {
   final items = _jsonMap(raw)['items'];
   if (items is! List) return const <CardReview>[];
   return items.map(CardReview.fromJson).whereType<CardReview>().toList();
 }
+
+CardSchedule _scheduleFrom(Object? raw) {
+  final json = _jsonMap(raw);
+  return CardSchedule(
+    enabled: json['enabled'] == true,
+    dueAt: _dateTimeFrom(json['due_at']),
+    lastReviewedAt: _dateTimeFrom(json['last_reviewed_at']),
+    stability: _doubleFrom(json['stability']),
+    difficulty: _doubleFrom(json['difficulty']),
+    schedulingState: json['state']?.toString() ?? 'learning',
+    learningStep: _intFrom(json['step']),
+    reviewCount: _intFrom(json['review_count']) ?? 0,
+    lapseCount: _intFrom(json['lapse_count']) ?? 0,
+  );
+}
+
+Map<String, Object?> _scheduleNodeJson(CardSchedule schedule) =>
+    <String, Object?>{
+      'enabled': schedule.enabled,
+      'state': schedule.schedulingState,
+      'step': schedule.learningStep,
+      'due_at': schedule.dueAt?.toUtc().toIso8601String(),
+      'last_reviewed_at': schedule.lastReviewedAt?.toUtc().toIso8601String(),
+      'stability': schedule.stability,
+      'difficulty': schedule.difficulty,
+      'review_count': schedule.reviewCount,
+      'lapse_count': schedule.lapseCount,
+    };
 
 Map<String, dynamic> _jsonMap(Object? raw) {
   if (raw is Map) return Map<String, dynamic>.from(raw);

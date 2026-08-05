@@ -125,16 +125,7 @@ final class NativeCardsWorkspace implements CardsWorkspace {
     final existing = await _requireCard(card.id);
     await _enqueue(
       existing.copyWith(
-        dueAt: card.dueAt,
-        clearDueAt: card.dueAt == null,
-        lastReviewedAt: card.lastReviewedAt,
-        stability: card.stability,
-        difficulty: card.difficulty,
-        schedulingState: card.schedulingState,
-        learningStep: card.learningStep,
-        clearLearningStep: card.learningStep == null,
-        reviewCount: card.reviewCount,
-        lapseCount: card.lapseCount,
+        schedules: card.schedules,
         reviewHistory: card.reviewHistory,
       ),
       offline.MutationType.update,

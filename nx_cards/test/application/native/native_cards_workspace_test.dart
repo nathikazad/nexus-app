@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/application/native/cards_uploader.dart';
 import 'package:nx_cards/application/native/native_cards_workspace.dart';
 import 'package:nx_cards/application/ports/cards_sync_transport.dart';
@@ -187,6 +190,31 @@ void main() {
       'newer server edit',
     );
   });
+
+  test(
+    'audio prefetch retries local URLs when deck hashes are unchanged',
+    () async {
+      final audio = _RetryingAudioRepository();
+      final transport = _FakeTransport(serverBundle: _bundle(hash: 'hash-1'));
+      final synchronizer = CardDeckSynchronizer(
+        localStore: store,
+        transport: transport,
+        uploader: null,
+        audioRepository: audio,
+      );
+
+      await synchronizer.prefetchAudio();
+      await synchronizer.syncLibrary();
+      await synchronizer.prefetchAudio();
+
+      expect(audio.urls, <String>[
+        '/cards/audio/1/11.mp3',
+        '/cards/audio/1/11.mp3',
+        '/cards/audio/1/11.mp3',
+      ]);
+      expect(transport.serverBundle.decks.single.serverHash, 'hash-1');
+    },
+  );
 }
 
 final class _FakeClock implements Clock {
@@ -196,6 +224,17 @@ final class _FakeClock implements Clock {
 
   @override
   DateTime now() => value;
+}
+
+final class _RetryingAudioRepository implements CardAudioRepository {
+  final List<String> urls = <String>[];
+
+  @override
+  Future<Uint8List> fetch(String audioUrl) async {
+    urls.add(audioUrl);
+    if (urls.length == 1) throw StateError('transient failure');
+    return Uint8List.fromList(<int>[1, 2, 3]);
+  }
 }
 
 final class _FakeTransport implements CardsSyncTransport {
@@ -315,15 +354,15 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
             deckId: 7,
             deckName: 'Malayalam',
             tags: const <String>['Vocabulary'],
-            dueAt: null,
-            lastReviewedAt: null,
-            stability: null,
-            difficulty: null,
-            schedulingState: 'learning',
-            learningStep: 0,
+            schedules: const <StudyDirection, CardSchedule>{
+              StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
+              StudyDirection.backToFront: CardSchedule.initial(enabled: true),
+            },
+            reviewHistory: const <StudyDirection, List<CardReview>>{
+              StudyDirection.frontToBack: <CardReview>[],
+              StudyDirection.backToFront: <CardReview>[],
+            },
             suspended: false,
-            reviewCount: 0,
-            lapseCount: 0,
             updatedAt: updatedAt,
           ),
         ],

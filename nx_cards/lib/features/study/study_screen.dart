@@ -9,10 +9,10 @@ import 'package:nx_cards/features/cards/card_editors.dart';
 import 'package:nx_cards/features/study/language_audio_controls.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
-  const StudyScreen({super.key, required this.title, required this.cards});
+  const StudyScreen({super.key, required this.title, required this.prompts});
 
   final String title;
-  final List<StudyCard> cards;
+  final List<StudyPrompt> prompts;
 
   @override
   ConsumerState<StudyScreen> createState() => _StudyScreenState();
@@ -24,8 +24,22 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   bool _saving = false;
   int _againCount = 0;
   Map<CardRating, ScheduledOutcome>? _outcomes;
+  late final Map<int, StudyCard> _latestCards;
 
-  StudyCard get _card => widget.cards[_index];
+  StudyPrompt get _prompt {
+    final queued = widget.prompts[_index];
+    return queued.withCard(_latestCards[queued.cardId] ?? queued.card);
+  }
+
+  StudyCard get _card => _prompt.card;
+
+  @override
+  void initState() {
+    super.initState();
+    _latestCards = <int, StudyCard>{
+      for (final prompt in widget.prompts) prompt.cardId: prompt.card,
+    };
+  }
 
   void _reveal() {
     if (_revealed) return;
@@ -33,7 +47,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       _revealed = true;
       _outcomes = ref
           .read(cardSchedulerProvider)
-          .preview(_card, DateTime.now().toUtc());
+          .preview(_prompt, DateTime.now().toUtc());
     });
   }
 
@@ -41,14 +55,14 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     if (_saving || _outcomes == null) return;
     setState(() => _saving = true);
     try {
-      await ref
-          .read(cardsRepositoryProvider)
-          .saveSchedule(_outcomes![rating]!.card);
+      final updatedCard = _outcomes![rating]!.card;
+      await ref.read(cardsRepositoryProvider).saveSchedule(updatedCard);
+      _latestCards[updatedCard.id] = updatedCard;
       if (rating == CardRating.again) _againCount++;
       ref.invalidate(cardsDashboardProvider);
       if (!mounted) return;
-      if (_index + 1 >= widget.cards.length) {
-        setState(() => _index = widget.cards.length);
+      if (_index + 1 >= widget.prompts.length) {
+        setState(() => _index = widget.prompts.length);
       } else {
         setState(() {
           _index++;
@@ -69,10 +83,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.cards.isEmpty) return const _EmptyStudyScreen();
-    if (_index >= widget.cards.length) {
+    if (widget.prompts.isEmpty) return const _EmptyStudyScreen();
+    if (_index >= widget.prompts.length) {
       return _CompletedStudyScreen(
-        count: widget.cards.length,
+        count: widget.prompts.length,
         againCount: _againCount,
       );
     }
@@ -119,11 +133,11 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                         _StudyHeader(
                           title: widget.title,
                           current: _index + 1,
-                          total: widget.cards.length,
+                          total: widget.prompts.length,
                         ),
                         const SizedBox(height: 14),
                         LinearProgressIndicator(
-                          value: (_index + 1) / widget.cards.length,
+                          value: (_index + 1) / widget.prompts.length,
                           minHeight: 4,
                           borderRadius: BorderRadius.circular(9),
                           color: RecallColors.ink,
@@ -165,7 +179,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                 MainAxisAlignment.center,
                                             children: [
                                               Text(
-                                                _card.front,
+                                                _prompt.prompt,
                                                 textAlign: TextAlign.center,
                                                 style: TextStyle(
                                                   fontSize: _revealed ? 22 : 38,
@@ -197,7 +211,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                   ),
                                                 ),
                                                 Text(
-                                                  _card.back,
+                                                  _prompt.answer,
                                                   textAlign: TextAlign.center,
                                                   style: const TextStyle(
                                                     fontSize: 21,
@@ -208,7 +222,9 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                 if (_card.content
                                                     case LanguageCardContent(
                                                       :final transliteration,
-                                                    )) ...[
+                                                    )
+                                                    when _prompt
+                                                        .showLanguageSupplements) ...[
                                                   const SizedBox(height: 10),
                                                   Text(
                                                     transliteration,
@@ -226,13 +242,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                     case LanguageCardContent(
                                                       audioUrl: final audioUrl?,
                                                     )
-                                                    when audioUrl.isNotEmpty &&
+                                                    when _prompt
+                                                            .showLanguageSupplements &&
+                                                        audioUrl.isNotEmpty &&
                                                         audioRepository !=
                                                             null) ...[
                                                   const SizedBox(height: 16),
                                                   LanguageAudioControls(
                                                     key: ValueKey(
-                                                      '${_card.id}:$audioUrl',
+                                                      '${_card.id}:${_prompt.direction.storageKey}:$audioUrl',
                                                     ),
                                                     audioUrl: audioUrl,
                                                     repository: audioRepository,

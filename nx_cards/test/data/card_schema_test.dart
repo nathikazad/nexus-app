@@ -30,6 +30,31 @@ void main() {
       final definition = definitions.singleWhere((row) => row['key'] == key);
       expect(definition['constraints']['json_schema'], isA<Map>());
     }
+    expect(scheduleJsonSchema['required'], [
+      'version',
+      'algorithm',
+      'front_to_back',
+      'back_to_front',
+    ]);
+    expect(reviewHistoryJsonSchema['required'], [
+      'version',
+      'front_to_back',
+      'back_to_front',
+    ]);
+    final scheduleProperties =
+        scheduleJsonSchema['properties'] as Map<String, dynamic>;
+    final historyProperties =
+        reviewHistoryJsonSchema['properties'] as Map<String, dynamic>;
+    expect(scheduleProperties['version'], {'type': 'integer', 'const': 2});
+    expect(historyProperties['version'], {'type': 'integer', 'const': 2});
+    expect(
+      scheduleProperties['front_to_back'],
+      scheduleProperties['back_to_front'],
+    );
+    expect(
+      historyProperties['front_to_back'],
+      historyProperties['back_to_front'],
+    );
     expect(
       relations.map((row) => row['link']),
       containsAll([deckModelType, bookModelType]),

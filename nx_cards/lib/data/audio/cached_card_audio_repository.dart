@@ -20,7 +20,12 @@ final class CachedCardAudioRepository implements CardAudioRepository {
     final cached = await cache.read(audioUrl);
     if (cached != null && cached.isNotEmpty) return cached;
     final bytes = await remote.fetch(audioUrl);
-    await cache.write(audioUrl, bytes);
+    try {
+      await cache.write(audioUrl, bytes);
+    } catch (_) {
+      // A cache failure must not prevent freshly downloaded audio from
+      // playing. A later background sync will retry persisting the file.
+    }
     return bytes;
   }
 }

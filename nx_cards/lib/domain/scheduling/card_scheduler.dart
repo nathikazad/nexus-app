@@ -11,7 +11,7 @@ class ScheduledOutcome {
 }
 
 abstract class CardScheduler {
-  Map<CardRating, ScheduledOutcome> preview(StudyCard card, DateTime now);
+  Map<CardRating, ScheduledOutcome> preview(StudyPrompt prompt, DateTime now);
 }
 
 class FsrsCardScheduler implements CardScheduler {
@@ -25,21 +25,22 @@ class FsrsCardScheduler implements CardScheduler {
   final String Function() _reviewId;
 
   @override
-  Map<CardRating, ScheduledOutcome> preview(StudyCard card, DateTime now) {
+  Map<CardRating, ScheduledOutcome> preview(StudyPrompt prompt, DateTime now) {
     final reviewedAt = now.toUtc();
     return {
       for (final rating in CardRating.values)
-        rating: _schedule(card, rating, reviewedAt),
+        rating: _schedule(prompt, rating, reviewedAt),
     };
   }
 
   ScheduledOutcome _schedule(
-    StudyCard source,
+    StudyPrompt prompt,
     CardRating rating,
     DateTime reviewedAt,
   ) {
+    final source = prompt.schedule;
     final input = fsrs.Card(
-      cardId: source.id,
+      cardId: prompt.cardId * 2 + prompt.direction.index,
       state: _stateFromString(source.schedulingState),
       step: source.learningStep,
       stability: source.stability,
@@ -53,7 +54,7 @@ class FsrsCardScheduler implements CardScheduler {
       reviewDateTime: reviewedAt,
     );
     final next = result.card;
-    final lapsed = rating == CardRating.again && !source.isNew;
+    final lapsed = rating == CardRating.again && !prompt.isNew;
     final interval = next.due.difference(reviewedAt);
     final elapsed = source.lastReviewedAt == null
         ? Duration.zero
@@ -66,17 +67,20 @@ class FsrsCardScheduler implements CardScheduler {
       scheduledSeconds: max(0, interval.inSeconds),
     );
     return ScheduledOutcome(
-      card: source.copyWith(
-        dueAt: next.due.toUtc(),
-        lastReviewedAt: reviewedAt,
-        stability: next.stability,
-        difficulty: next.difficulty,
-        schedulingState: next.state.name,
-        learningStep: next.step,
-        clearLearningStep: next.step == null,
-        reviewCount: source.reviewCount + 1,
-        lapseCount: source.lapseCount + (lapsed ? 1 : 0),
-        reviewHistory: [...source.reviewHistory, review],
+      card: prompt.card.updateDirection(
+        direction: prompt.direction,
+        schedule: source.copyWith(
+          dueAt: next.due.toUtc(),
+          lastReviewedAt: reviewedAt,
+          stability: next.stability,
+          difficulty: next.difficulty,
+          schedulingState: next.state.name,
+          learningStep: next.step,
+          clearLearningStep: next.step == null,
+          reviewCount: source.reviewCount + 1,
+          lapseCount: source.lapseCount + (lapsed ? 1 : 0),
+        ),
+        history: [...prompt.reviewHistory, review],
       ),
       interval: interval,
     );

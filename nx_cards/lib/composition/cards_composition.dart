@@ -187,12 +187,14 @@ final cardSchedulerProvider = Provider<CardScheduler>((ref) {
 });
 
 final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
-  final baseUrl = ref.watch(imageBaseUrlProvider);
-  final userId = ref.watch(userIdProvider);
+  final user = ref.watch(authProvider).value;
+  final session = ref.watch(activeCardsSessionProvider).value;
+  final preset = user?.preset ?? BackendPreset.fromKey(session?.route);
+  final baseUrl = preset == null ? null : resolve(preset).imageHttp;
+  final userId = user?.userId ?? session?.userId;
   if (baseUrl == null || userId == null) return null;
   final remote = HttpCardAudioRepository(baseUrl: baseUrl, userId: userId);
   if (!ref.watch(cardsOfflineEnabledProvider)) return remote;
-  final session = ref.watch(activeCardsSessionProvider).value;
   if (session == null) return remote;
   final safeName = session.account.key.replaceAll(
     RegExp(r'[^a-zA-Z0-9_]'),
