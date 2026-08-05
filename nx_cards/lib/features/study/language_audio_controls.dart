@@ -81,7 +81,7 @@ class _LanguageAudioControlsState extends State<LanguageAudioControls> {
       // Keep the prepared source after completion so pronunciation can be
       // replayed without downloading or preparing it again.
       await _player.setReleaseMode(ReleaseMode.stop);
-      await _player.setSource(BytesSource(_bytes!));
+      await _player.setSource(languageAudioSource(_bytes!));
       _sourceReady = true;
       if (autoPlay) await _resume();
       return true;
@@ -275,6 +275,11 @@ class _LanguageAudioControlsState extends State<LanguageAudioControls> {
     );
   }
 }
+
+/// Gives Darwin's extensionless temporary file enough type information for
+/// AVPlayer to recognize the downloaded bytes as MP3 audio.
+BytesSource languageAudioSource(Uint8List bytes) =>
+    BytesSource(bytes, mimeType: 'audio/mpeg');
 
 String formatAudioDuration(Duration duration) {
   final minutes = duration.inMinutes;
