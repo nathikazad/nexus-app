@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
@@ -149,7 +150,15 @@ class NxStoredAudioPlayer {
 
   Future<void> _ensureOpen() async {
     if (_open) return;
+    await AudioPlayer.global.setAudioContext(
+      AudioContextConfig(
+        route: AudioContextConfigRoute.system,
+        focus: AudioContextConfigFocus.gain,
+        respectSilence: false,
+      ).build(),
+    );
     await _player.openPlayer();
+    await _player.setVolume(1);
     await _player.setSubscriptionDuration(const Duration(milliseconds: 120));
     _progressSubscription = _player.onProgress?.listen((event) {
       onProgress?.call(event.position, event.duration);
