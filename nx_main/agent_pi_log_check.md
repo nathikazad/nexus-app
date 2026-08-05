@@ -21,7 +21,7 @@ The current working alias is defined in `~/.ssh/config` as:
 
 ```sshconfig
 Host pi
-  HostName 10.0.0.156
+  HostName 100.108.43.37
   User nathik
 ```
 

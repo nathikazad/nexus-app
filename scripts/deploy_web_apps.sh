@@ -26,10 +26,10 @@ Options:
 
 Environment overrides:
   NEXUS_SERVER_ROOT      Local server checkout. Default: ../servers
-  NEXUS_PI_TARGET        SSH target. Default: nathik@10.0.0.156
+  NEXUS_PI_TARGET        SSH target. Default: nathik@100.108.43.37
   NEXUS_PI_SERVER_DIR    Pi server checkout. Default: /home/nathik/Nexus/nexus-server
   NEXUS_SERVER_CONTAINER Docker container. Default: nexus-server
-  NEXUS_PI_ORIGIN        Pi HTTP origin. Default: http://10.0.0.156:8001
+  NEXUS_PI_ORIGIN        Pi HTTP origin. Default: http://100.108.43.37:8001
   NEXUS_PI_HOST_UID      Pi checkout owner uid. Default: 1000
   NEXUS_PI_HOST_GID      Pi checkout owner gid. Default: 1000
   FLUTTER_BIN            Flutter binary. Default: flutter
@@ -42,10 +42,10 @@ nexus_root="$(cd "$mobile_root/.." && pwd)"
 
 server_root="${NEXUS_SERVER_ROOT:-$nexus_root/servers}"
 local_static_root="$server_root/nexus/http/static"
-pi_target="${NEXUS_PI_TARGET:-nathik@10.0.0.156}"
+pi_target="${NEXUS_PI_TARGET:-nathik@100.108.43.37}"
 pi_server_dir="${NEXUS_PI_SERVER_DIR:-/home/nathik/Nexus/nexus-server}"
 container_name="${NEXUS_SERVER_CONTAINER:-nexus-server}"
-pi_origin="${NEXUS_PI_ORIGIN:-http://10.0.0.156:8001}"
+pi_origin="${NEXUS_PI_ORIGIN:-http://100.108.43.37:8001}"
 pi_host_uid="${NEXUS_PI_HOST_UID:-1000}"
 pi_host_gid="${NEXUS_PI_HOST_GID:-1000}"
 flutter_bin="${FLUTTER_BIN:-flutter}"
