@@ -8,4 +8,5 @@ export 'src/voice/packet_codec.dart';
 export 'src/voice/pcm_opus_stream_encoder.dart';
 export 'src/voice/pcm_resampler.dart';
 export 'src/voice/socket_client.dart';
+export 'src/voice/stored_audio_player.dart';
 export 'src/voice/wav_audio_player.dart';

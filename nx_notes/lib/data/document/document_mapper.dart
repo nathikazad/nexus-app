@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_notes/data/document/document_attr_keys.dart';
 import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/domain/document/document_publish.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
@@ -21,6 +22,11 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
   final topics = List<String>.from(tags[kDocumentTopicTagSystem] ?? const []);
   final areaTags = List<String>.from(tags[kDocumentAreaTagSystem] ?? const []);
   final statusTags = tags[kDocumentStatusTagSystem] ?? const [];
+  final audioUrl = model.attrString(kDocumentAttrAudioUrl);
+  final audioSourceHash = model.attrString(kDocumentAttrAudioSourceHash);
+  final audioManifest = DocumentAudioManifest.tryParse(
+    model.attributes?[kDocumentAttrAudioManifest],
+  );
   return NxDocument(
     id: model.id,
     title: model.name,
@@ -44,6 +50,13 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
     publish: publish,
     readingState: model.attrString(kBookAttrReadingState) ?? '',
     bookRank: model.attrInt(kBookAttrRank),
+    audio: audioUrl != null && audioSourceHash != null && audioManifest != null
+        ? DocumentAudio(
+            url: audioUrl,
+            sourceHash: audioSourceHash,
+            manifest: audioManifest,
+          )
+        : null,
   );
 }
 
@@ -276,6 +289,9 @@ Map<String, dynamic> documentFetchStruct(ModelType schema) {
     kDocumentAttrJsonDocument: true,
     kDocumentAttrPinned: true,
     kDocumentAttrPublish: true,
+    kDocumentAttrAudioUrl: true,
+    kDocumentAttrAudioManifest: true,
+    kDocumentAttrAudioSourceHash: true,
     'tags': true,
     'relations': {
       'relation_id': true,

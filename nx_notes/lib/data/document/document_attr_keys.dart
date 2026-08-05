@@ -7,6 +7,9 @@ const kDocumentAttrJsonDocument = 'json_document';
 const kDocumentAttrPinned = 'pinned';
 const kDocumentAttrPublish = 'publish';
 const kDocumentAttrWordCount = 'word_count';
+const kDocumentAttrAudioUrl = 'audio_url';
+const kDocumentAttrAudioManifest = 'audio_manifest';
+const kDocumentAttrAudioSourceHash = 'audio_source_hash';
 const kBookAttrReadingState = 'reading_state';
 const kBookAttrRank = 'rank';
 

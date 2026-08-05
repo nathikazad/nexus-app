@@ -1,4 +1,5 @@
 import 'package:nx_notes/domain/links/linked_model.dart';
+import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/domain/document/document_publish.dart';
 
 enum DocumentKind {
@@ -32,6 +33,7 @@ class NxDocument {
     this.publish = const DocumentPublishState(enabled: false, dirty: false),
     this.readingState = '',
     this.bookRank,
+    this.audio,
   });
 
   final int id;
@@ -53,6 +55,7 @@ class NxDocument {
   final DocumentPublishState publish;
   final String readingState;
   final int? bookRank;
+  final DocumentAudio? audio;
 
   bool get hasFullDocument =>
       document.isNotEmpty ||
@@ -88,6 +91,8 @@ class NxDocument {
     String? readingState,
     int? bookRank,
     bool clearBookRank = false,
+    DocumentAudio? audio,
+    bool clearAudio = false,
   }) {
     return NxDocument(
       id: id,
@@ -109,6 +114,7 @@ class NxDocument {
       publish: publish ?? this.publish,
       readingState: readingState ?? this.readingState,
       bookRank: clearBookRank ? null : bookRank ?? this.bookRank,
+      audio: clearAudio ? null : audio ?? this.audio,
     );
   }
 }

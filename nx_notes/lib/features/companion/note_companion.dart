@@ -1,0 +1,455 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/auth.dart';
+import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/data/document/document_audio_service.dart';
+import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_audio.dart';
+import 'package:nx_notes/features/companion/note_companion_controller.dart';
+
+class NoteCompanion extends ConsumerStatefulWidget {
+  const NoteCompanion({
+    required this.document,
+    this.onAudioBlockChanged,
+    super.key,
+  });
+
+  final NxDocument document;
+  final ValueChanged<DocumentAudioBlockTiming>? onAudioBlockChanged;
+
+  @override
+  ConsumerState<NoteCompanion> createState() => _NoteCompanionState();
+}
+
+class _NoteCompanionState extends ConsumerState<NoteCompanion> {
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _textFocusNode = FocusNode();
+  NoteCompanionController? _controller;
+  bool _expanded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ensureController();
+  }
+
+  @override
+  void didUpdateWidget(covariant NoteCompanion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.document.id != widget.document.id) {
+      _replaceController();
+      _expanded = false;
+    }
+  }
+
+  void _ensureController() {
+    if (_controller != null) return;
+    final socketUrl = ref.read(sockWsUrlProvider);
+    final userId = ref.read(userIdProvider);
+    final baseUrl = ref.read(imageBaseUrlProvider);
+    if (socketUrl == null ||
+        baseUrl == null ||
+        userId == null ||
+        userId.isEmpty) {
+      return;
+    }
+    final audioService = DocumentAudioService(baseUrl: baseUrl, userId: userId);
+    final initialAudio = widget.document.audio;
+    _controller = NoteCompanionController(
+      documentId: widget.document.id,
+      socketUrl: socketUrl,
+      userId: userId,
+      audioService: audioService,
+      initialAudio: initialAudio == null
+          ? null
+          : DocumentAudio(
+              url: audioService.resolveUrl(initialAudio.url),
+              sourceHash: initialAudio.sourceHash,
+              manifest: initialAudio.manifest,
+            ),
+      initialBlockKey: _scrollAnchorBlockKey(widget.document.jsonDocument),
+      onAudioBlockChanged: widget.onAudioBlockChanged,
+    )..addListener(_onControllerChanged);
+  }
+
+  void _replaceController() {
+    final previous = _controller;
+    _controller = null;
+    if (previous != null) {
+      previous.removeListener(_onControllerChanged);
+      previous.dispose();
+    }
+    _ensureController();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onControllerChanged);
+    _controller?.dispose();
+    _textController.dispose();
+    _textFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    if (!_expanded) {
+      return Semantics(
+        button: true,
+        label: 'Open note companion',
+        child: Tooltip(
+          message: 'Listen or ask AI',
+          child: FloatingActionButton.small(
+            heroTag: 'note-companion-${widget.document.id}',
+            elevation: 2,
+            backgroundColor: AppColors.floating,
+            foregroundColor: AppColors.onFloating,
+            onPressed: () {
+              setState(() => _expanded = true);
+            },
+            child: const Icon(Icons.auto_awesome_rounded, size: 18),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: AppColors.panel,
+      elevation: 8,
+      shadowColor: Colors.black45,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: (MediaQuery.sizeOf(context).width - 24).clamp(280, 420),
+        constraints: const BoxConstraints(maxHeight: 440),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _CompanionHeader(
+              phase: controller?.phase ?? NoteCompanionPhase.idle,
+              onClose: () {
+                FocusScope.of(context).unfocus();
+                setState(() => _expanded = false);
+              },
+            ),
+            if (controller == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Text(
+                  'Sign in to ask questions about this note.',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+              )
+            else ...<Widget>[
+              _AudioControls(controller: controller),
+              if (controller.messages.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Ask anything about this note.',
+                      style: TextStyle(color: AppColors.muted, fontSize: 13),
+                    ),
+                  ),
+                )
+              else
+                Flexible(child: _MessageList(messages: controller.messages)),
+              if (controller.error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          controller.error!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppColors.red, fontSize: 12),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Dismiss',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: controller.clearError,
+                        icon: const Icon(Icons.close, size: 16),
+                      ),
+                    ],
+                  ),
+                ),
+              _Composer(
+                controller: controller,
+                textController: _textController,
+                focusNode: _textFocusNode,
+                onSubmit: _submitText,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _submitText() {
+    final controller = _controller;
+    final text = _textController.text.trim();
+    if (controller == null || text.isEmpty) return;
+    _textController.clear();
+    unawaited(controller.sendText(text));
+  }
+}
+
+class _AudioControls extends StatelessWidget {
+  const _AudioControls({required this.controller});
+
+  final NoteCompanionController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!controller.hasAudio) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: controller.generatingAudio
+                ? null
+                : () => unawaited(controller.generateAudio()),
+            icon: controller.generatingAudio
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.headphones_rounded, size: 18),
+            label: Text(
+              controller.generatingAudio ? 'Creating audio…' : 'Create audio',
+            ),
+          ),
+        ),
+      );
+    }
+    final durationMs = controller.audioDuration.inMilliseconds;
+    final positionMs = controller.audioPosition.inMilliseconds.clamp(
+      0,
+      durationMs,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 12, 4),
+      child: Row(
+        children: <Widget>[
+          IconButton(
+            tooltip: controller.noteAudioPlaying ? 'Pause note' : 'Play note',
+            onPressed: () => unawaited(controller.toggleNoteAudio()),
+            icon: Icon(
+              controller.noteAudioPlaying
+                  ? Icons.pause_rounded
+                  : Icons.play_arrow_rounded,
+            ),
+          ),
+          Expanded(
+            child: Slider(
+              value: durationMs <= 0 ? 0 : positionMs.toDouble(),
+              max: durationMs <= 0 ? 1 : durationMs.toDouble(),
+              onChanged: durationMs <= 0
+                  ? null
+                  : (value) => unawaited(
+                      controller.seekNoteAudio(
+                        Duration(milliseconds: value.round()),
+                      ),
+                    ),
+            ),
+          ),
+          Text(
+            _formatDuration(controller.audioPosition),
+            style: TextStyle(color: AppColors.muted, fontSize: 11),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Audio options',
+            onSelected: (_) =>
+                unawaited(controller.generateAudio(overwrite: true)),
+            itemBuilder: (_) => const <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'regenerate',
+                child: Text('Regenerate audio'),
+              ),
+            ],
+            icon: const Icon(Icons.more_horiz_rounded, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompanionHeader extends StatelessWidget {
+  const _CompanionHeader({required this.phase, required this.onClose});
+
+  final NoteCompanionPhase phase;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = switch (phase) {
+      NoteCompanionPhase.connecting => 'Connecting…',
+      NoteCompanionPhase.recording => 'Listening…',
+      NoteCompanionPhase.waiting => 'Thinking…',
+      NoteCompanionPhase.responding => 'Answering…',
+      NoteCompanionPhase.error => 'Needs attention',
+      NoteCompanionPhase.idle => 'Ask about this note',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 9, 8, 5),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.auto_awesome_rounded, size: 16, color: AppColors.blue),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              status,
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Minimize',
+            visualDensity: VisualDensity.compact,
+            onPressed: onClose,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MessageList extends StatelessWidget {
+  const _MessageList({required this.messages});
+
+  final List<NoteCompanionMessage> messages;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      reverse: true,
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      itemCount: messages.length,
+      itemBuilder: (context, reverseIndex) {
+        final message = messages[messages.length - reverseIndex - 1];
+        return Align(
+          alignment: message.fromUser
+              ? Alignment.centerRight
+              : Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+            constraints: const BoxConstraints(maxWidth: 330),
+            decoration: BoxDecoration(
+              color: message.fromUser ? AppColors.accentSoft : AppColors.subtle,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              message.text,
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Composer extends StatelessWidget {
+  const _Composer({
+    required this.controller,
+    required this.textController,
+    required this.focusNode,
+    required this.onSubmit,
+  });
+
+  final NoteCompanionController controller;
+  final TextEditingController textController;
+  final FocusNode focusNode;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = controller.isBusy;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Expanded(
+            child: TextField(
+              controller: textController,
+              focusNode: focusNode,
+              enabled: !disabled && !controller.isRecording,
+              minLines: 1,
+              maxLines: 4,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => onSubmit(),
+              decoration: const InputDecoration(
+                hintText: 'Ask about this note…',
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          IconButton.filledTonal(
+            tooltip: controller.isRecording ? 'Stop and ask' : 'Ask by voice',
+            onPressed: disabled
+                ? null
+                : controller.isRecording
+                ? () => unawaited(controller.stopRecording())
+                : () => unawaited(controller.startRecording()),
+            icon: Icon(
+              controller.isRecording
+                  ? Icons.stop_rounded
+                  : Icons.mic_none_rounded,
+              size: 20,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Send',
+            onPressed: disabled || controller.isRecording ? null : onSubmit,
+            icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String? _scrollAnchorBlockKey(Map<String, dynamic> jsonDocument) {
+  final viewState = jsonDocument['view_state'];
+  if (viewState is! Map) return null;
+  final anchor = viewState['scroll_anchor'];
+  if (anchor is! Map) return null;
+  final key = anchor['blockKey'];
+  return key is String && key.isNotEmpty ? key : null;
+}
+
+String _formatDuration(Duration value) {
+  final minutes = value.inMinutes;
+  final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
+}

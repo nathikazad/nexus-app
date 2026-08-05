@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:nx_notes/data/local/drift/notes_database.dart';
 import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/domain/document/document_identity.dart';
 import 'package:nx_notes/domain/document/document_publish.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
@@ -128,12 +129,21 @@ Map<String, Object?> _documentToJson(NxDocument document) {
     'publish': document.publish.toJson(),
     'reading_state': document.readingState,
     'book_rank': document.bookRank,
+    if (document.audio case final audio?)
+      'audio': <String, Object>{
+        'url': audio.url,
+        'source_hash': audio.sourceHash,
+        'manifest': audio.manifest.toJson(),
+      },
   };
 }
 
 NxDocument _documentFromJson(Map<String, Object?> json) {
   final tags = Map<String, Object?>.from(json['tags_by_system']! as Map);
   final links = (json['links']! as List).cast<Map>();
+  final rawAudio = json['audio'];
+  final audioMap = rawAudio is Map ? rawAudio : null;
+  final audioManifest = DocumentAudioManifest.tryParse(audioMap?['manifest']);
   return NxDocument(
     id: json['id']! as int,
     title: json['title']! as String,
@@ -165,5 +175,15 @@ NxDocument _documentFromJson(Map<String, Object?> json) {
     publish: DocumentPublishState.fromJson(json['publish']),
     readingState: json['reading_state']! as String,
     bookRank: json['book_rank'] as int?,
+    audio:
+        audioMap?['url'] is String &&
+            audioMap?['source_hash'] is String &&
+            audioManifest != null
+        ? DocumentAudio(
+            url: audioMap!['url']! as String,
+            sourceHash: audioMap['source_hash']! as String,
+            manifest: audioManifest,
+          )
+        : null,
   );
 }

@@ -14,7 +14,9 @@ import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_result_context.dart';
+import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
+import 'package:nx_notes/features/companion/note_companion.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
 import 'package:nx_notes/features/editor/document_text_scale.dart';
 import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
@@ -71,19 +73,46 @@ class DocumentEditorView extends ConsumerWidget {
             ),
           );
         }
-        return DocumentEditorBody(
-          document: document,
-          changeOrigin: sessionState.origin,
-          contextBar: contextBar,
-          onTitleChanged: onTitleChanged,
-          onOpenDocumentLink: onOpenDocumentLink,
-          canNavigateBack: canNavigateBack,
-          onNavigateBack: onNavigateBack,
-          horizontalPadding: horizontalPadding,
-          contentTopPadding: contentTopPadding,
-          showDocumentTitle: showDocumentTitle,
-          active: active,
-          readOnly: readOnly,
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: DocumentEditorBody(
+                document: document,
+                changeOrigin: sessionState.origin,
+                contextBar: contextBar,
+                onTitleChanged: onTitleChanged,
+                onOpenDocumentLink: onOpenDocumentLink,
+                canNavigateBack: canNavigateBack,
+                onNavigateBack: onNavigateBack,
+                horizontalPadding: horizontalPadding,
+                contentTopPadding: contentTopPadding,
+                showDocumentTitle: showDocumentTitle,
+                active: active,
+                readOnly: readOnly,
+              ),
+            ),
+            if (active)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  child: NoteCompanion(
+                    document: document,
+                    onAudioBlockChanged: (block) {
+                      documentAudioBlockRequestNotifier.value =
+                          DocumentAudioBlockRequest(
+                            documentId: document.id,
+                            blockIndex: block.blockIndex,
+                            blockKey: block.blockKey,
+                          );
+                      _saveAudioScrollAnchor(ref, document, block);
+                    },
+                  ),
+                ),
+              ),
+          ],
         );
       },
       error: (error, stackTrace) => Center(child: Text('$error')),
@@ -134,6 +163,21 @@ class EditorFindRequest {
   final int documentId;
   final int serial;
 }
+
+class DocumentAudioBlockRequest {
+  const DocumentAudioBlockRequest({
+    required this.documentId,
+    required this.blockIndex,
+    required this.blockKey,
+  });
+
+  final int documentId;
+  final int blockIndex;
+  final String blockKey;
+}
+
+final documentAudioBlockRequestNotifier =
+    ValueNotifier<DocumentAudioBlockRequest?>(null);
 
 final editorFindRequestNotifier = ValueNotifier<EditorFindRequest>(
   const EditorFindRequest(documentId: -1, serial: 0),
@@ -650,6 +694,37 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   }
 }
 
+void _saveAudioScrollAnchor(
+  WidgetRef ref,
+  NxDocument document,
+  DocumentAudioBlockTiming block,
+) {
+  final existing = _scrollAnchorFromJsonDocument(document.jsonDocument);
+  if (existing?.blockKey == block.blockKey) return;
+  final anchor = _DocumentScrollAnchor(
+    documentId: document.id,
+    blockIndex: block.blockIndex,
+    blockKey: block.blockKey,
+    alignment: 0.18,
+  );
+  final jsonDocument = <String, dynamic>{
+    ...document.jsonDocument,
+    'view_state': _jsonDocumentViewState(
+      document.jsonDocument,
+      editorMode: _editorModeFromJsonDocument(document.jsonDocument),
+      scrollAnchor: anchor,
+    ),
+  };
+  unawaited(
+    ref
+        .read(documentMutationControllerProvider)
+        .saveDraft(
+          document.copyWith(jsonDocument: jsonDocument),
+          policy: DraftSavePolicy.deferred,
+        ),
+  );
+}
+
 double _fittedTitleFontSize({
   required BuildContext context,
   required String text,
@@ -888,6 +963,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       _handleHeadingScrollRequest,
     );
     editorFindRequestNotifier.addListener(_handleFindRequest);
+    documentAudioBlockRequestNotifier.addListener(_handleAudioBlockRequest);
     _transactionSubscription = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
@@ -916,6 +992,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       _handleHeadingScrollRequest,
     );
     editorFindRequestNotifier.removeListener(_handleFindRequest);
+    documentAudioBlockRequestNotifier.removeListener(_handleAudioBlockRequest);
     widget.onFindBarChanged(null);
     _transactionSubscription?.cancel();
     _findSearchService?.findAndHighlight('');
@@ -973,6 +1050,33 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   void _handleVisibleItemPositionsChanged() {
     _scheduleActiveHeadingPublish();
     _scheduleScrollAnchorSave();
+  }
+
+  void _handleAudioBlockRequest() {
+    final request = documentAudioBlockRequestNotifier.value;
+    if (request == null || request.documentId != _editorDocumentId) return;
+    final children = _editorState.document.root.children;
+    var index = -1;
+    for (var candidate = 0; candidate < children.length; candidate++) {
+      if (_scrollAnchorBlockKey(children[candidate]) == request.blockKey) {
+        index = candidate;
+        break;
+      }
+    }
+    if (index < 0 &&
+        request.blockIndex >= 0 &&
+        request.blockIndex < children.length) {
+      index = request.blockIndex;
+    }
+    if (index < 0 || !_scrollController.itemScrollController.isAttached) {
+      return;
+    }
+    _scrollController.itemScrollController.scrollTo(
+      index: index,
+      alignment: 0.18,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOut,
+    );
   }
 
   void _scheduleSave(DraftSavePolicy policy) {
