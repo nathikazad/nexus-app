@@ -29,6 +29,8 @@ dependencies:
     path: ../nx_db
   nx_offline:
     path: ../nx_offline
+  nx_utils:
+    path: ../nx_utils
   provider: ^6.1.5+1
   shared_preferences: ^2.2.2
   shorebird_code_push: ^2.0.7
