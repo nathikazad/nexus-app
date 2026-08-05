@@ -71,6 +71,10 @@ class NoteCompanionController extends ChangeNotifier {
       _noteAudioPlaying = playing;
       _notify();
     };
+    _noteAudioPlayer.onLoadingStateChanged = (loading) {
+      _loadingNoteAudio = loading;
+      _notify();
+    };
     _noteAudioPlayer.onComplete = () {
       _noteAudioPlaying = false;
       _position = Duration.zero;
@@ -97,6 +101,7 @@ class NoteCompanionController extends ChangeNotifier {
   bool _stopInFlight = false;
   bool _generatingAudio = false;
   bool _noteAudioPlaying = false;
+  bool _loadingNoteAudio = false;
   DocumentAudio? _audio;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -109,6 +114,7 @@ class NoteCompanionController extends ChangeNotifier {
   bool get generatingAudio => _generatingAudio;
   bool get hasAudio => _audio != null;
   bool get noteAudioPlaying => _noteAudioPlaying;
+  bool get loadingNoteAudio => _loadingNoteAudio;
   Duration get audioPosition => _position;
   Duration get audioDuration => _duration;
   bool get isBusy => switch (_phase) {
@@ -197,7 +203,7 @@ class NoteCompanionController extends ChangeNotifier {
 
   Future<void> toggleNoteAudio() async {
     final audio = _audio;
-    if (audio == null || _generatingAudio) return;
+    if (audio == null || _generatingAudio || _loadingNoteAudio) return;
     try {
       if (_noteAudioPlaying) {
         await pauseNoteAudio();
@@ -212,6 +218,7 @@ class NoteCompanionController extends ChangeNotifier {
       await _noteAudioPlayer.play(
         audio.url,
         startAt: _position > Duration.zero ? _position : null,
+        duration: audio.manifest.duration,
       );
     } catch (error) {
       _setError(error);

@@ -249,13 +249,24 @@ class _AudioControls extends StatelessWidget {
       child: Row(
         children: <Widget>[
           IconButton(
-            tooltip: controller.noteAudioPlaying ? 'Pause note' : 'Play note',
-            onPressed: () => unawaited(controller.toggleNoteAudio()),
-            icon: Icon(
-              controller.noteAudioPlaying
-                  ? Icons.pause_rounded
-                  : Icons.play_arrow_rounded,
-            ),
+            tooltip: controller.loadingNoteAudio
+                ? 'Loading audio'
+                : controller.noteAudioPlaying
+                ? 'Pause note'
+                : 'Play note',
+            onPressed: controller.loadingNoteAudio
+                ? null
+                : () => unawaited(controller.toggleNoteAudio()),
+            icon: controller.loadingNoteAudio
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    controller.noteAudioPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                  ),
           ),
           Expanded(
             child: Slider(
