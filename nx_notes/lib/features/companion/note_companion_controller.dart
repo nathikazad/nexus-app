@@ -477,6 +477,7 @@ class NoteCompanionController extends ChangeNotifier {
   }
 
   void _setError(Object error) {
+    debugPrint('[nx_notes companion] error=$error');
     _error = error.toString().replaceFirst('Bad state: ', '');
     _phase = NoteCompanionPhase.error;
     _notify();

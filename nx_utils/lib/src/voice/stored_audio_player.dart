@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 
 import 'opus_codec.dart';
+import 'stored_audio_file_stub.dart'
+    if (dart.library.io) 'stored_audio_file_io.dart';
 import 'stored_opus_audio.dart';
 import 'wav_audio_player.dart';
 
@@ -27,6 +28,7 @@ class NxStoredAudioPlayer {
   String? _loadedUrl;
   Duration? _loadedDuration;
   Uint8List? _loadedAudio;
+  String? _loadedFilePath;
 
   void Function(Duration position, Duration duration)? onProgress;
   void Function(bool playing)? onPlaybackStateChanged;
@@ -47,8 +49,10 @@ class NxStoredAudioPlayer {
       _markLoading(true);
       try {
         final audio = await _audioFor(url, duration: duration);
+        final filePath = await _fileForAudio(audio);
         await _player.startPlayer(
-          fromDataBuffer: audio,
+          fromURI: filePath,
+          fromDataBuffer: filePath == null ? audio : null,
           codec: Codec.pcm16WAV,
           whenFinished: () {
             _sourceStarted = false;
@@ -107,6 +111,8 @@ class NxStoredAudioPlayer {
     _loadedAudio = null;
     _loadedUrl = null;
     _loadedDuration = null;
+    await deleteStoredAudioFile(_loadedFilePath);
+    _loadedFilePath = null;
     if (_ownsHttpClient) _httpClient.close();
   }
 
@@ -131,10 +137,20 @@ class NxStoredAudioPlayer {
     final audio = storedOpus == null
         ? downloaded
         : await _decodeOpus(storedOpus, duration: duration);
+    await deleteStoredAudioFile(_loadedFilePath);
+    _loadedFilePath = null;
     _loadedUrl = url;
     _loadedDuration = duration;
     _loadedAudio = audio;
     return audio;
+  }
+
+  Future<String?> _fileForAudio(Uint8List audio) async {
+    final existing = _loadedFilePath;
+    if (existing != null) return existing;
+    final path = await writeStoredAudioFile(audio);
+    _loadedFilePath = path;
+    return path;
   }
 
   Future<Uint8List> _decodeOpus(
@@ -158,13 +174,6 @@ class NxStoredAudioPlayer {
   }
 
   Future<void> _ensureOpen() async {
-    await AudioPlayer.global.setAudioContext(
-      AudioContextConfig(
-        route: AudioContextConfigRoute.system,
-        focus: AudioContextConfigFocus.gain,
-        respectSilence: false,
-      ).build(),
-    );
     if (_open) return;
     await _player.openPlayer();
     await _player.setVolume(1);
