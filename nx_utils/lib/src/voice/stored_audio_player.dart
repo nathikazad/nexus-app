@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
@@ -56,8 +57,16 @@ class NxStoredAudioPlayer {
           },
         );
         _sourceStarted = true;
+        _markPlaying(true);
         if (startAt != null && startAt > Duration.zero) {
-          await _player.seekToPlayer(startAt);
+          try {
+            await _player.seekToPlayer(startAt);
+          } catch (error) {
+            debugPrint(
+              '[nx_utils stored audio] initial seek failed; '
+              'continuing playback: $error',
+            );
+          }
         }
       } finally {
         _markLoading(false);
@@ -149,7 +158,6 @@ class NxStoredAudioPlayer {
   }
 
   Future<void> _ensureOpen() async {
-    if (_open) return;
     await AudioPlayer.global.setAudioContext(
       AudioContextConfig(
         route: AudioContextConfigRoute.system,
@@ -157,6 +165,7 @@ class NxStoredAudioPlayer {
         respectSilence: false,
       ).build(),
     );
+    if (_open) return;
     await _player.openPlayer();
     await _player.setVolume(1);
     await _player.setSubscriptionDuration(const Duration(milliseconds: 120));

@@ -371,6 +371,28 @@ class _AudioPanel extends StatelessWidget {
               ),
             ),
             _AudioControls(controller: controller),
+            if (controller.error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 8, 8),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        controller.error!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: AppColors.red, fontSize: 12),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Dismiss error',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: controller.clearError,
+                      icon: const Icon(Icons.close, size: 16),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
