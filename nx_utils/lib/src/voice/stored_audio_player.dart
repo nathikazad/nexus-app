@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
@@ -10,6 +12,7 @@ import 'opus_codec.dart';
 import 'stored_audio_file_stub.dart'
     if (dart.library.io) 'stored_audio_file_io.dart';
 import 'stored_opus_audio.dart';
+import 'stored_audio_remote_controls.dart';
 import 'wav_audio_player.dart';
 
 class NxStoredAudioPlayer {
@@ -20,6 +23,7 @@ class NxStoredAudioPlayer {
   final FlutterSoundPlayer _player = FlutterSoundPlayer(logLevel: Level.off);
   final http.Client _httpClient;
   final bool _ownsHttpClient;
+  NxStoredAudioRemoteControls? _remoteControls;
   StreamSubscription<PlaybackDisposition>? _progressSubscription;
   bool _open = false;
   bool _sourceStarted = false;
@@ -29,6 +33,13 @@ class NxStoredAudioPlayer {
   Duration? _loadedDuration;
   Uint8List? _loadedAudio;
   String? _loadedFilePath;
+  String? _currentUrl;
+  Duration? _currentDuration;
+  Duration _currentPosition = Duration.zero;
+
+  static Future<void> initializeRemoteControls() async {
+    await NxStoredAudioRemoteControls.initialize();
+  }
 
   void Function(Duration position, Duration duration)? onProgress;
   void Function(bool playing)? onPlaybackStateChanged;
@@ -44,7 +55,11 @@ class NxStoredAudioPlayer {
     Duration? duration,
   }) async {
     if (_loading) return;
+    _currentUrl = url;
+    _currentDuration = duration;
+    if (startAt != null) _currentPosition = startAt;
     await _ensureOpen();
+    _bindRemoteControls(url, duration ?? Duration.zero);
     if (!_sourceStarted) {
       _markLoading(true);
       try {
@@ -56,7 +71,12 @@ class NxStoredAudioPlayer {
           codec: Codec.pcm16WAV,
           whenFinished: () {
             _sourceStarted = false;
+            _currentPosition = Duration.zero;
             _markPlaying(false);
+            _remoteControls?.update(
+              position: Duration.zero,
+              processingState: AudioProcessingState.completed,
+            );
             onComplete?.call();
           },
         );
@@ -90,6 +110,8 @@ class NxStoredAudioPlayer {
   Future<void> seek(Duration position) async {
     if (!_sourceStarted) return;
     await _player.seekToPlayer(position);
+    _currentPosition = position;
+    _remoteControls?.update(position: position);
   }
 
   Future<void> stop() async {
@@ -97,7 +119,12 @@ class NxStoredAudioPlayer {
       await _player.stopPlayer();
     }
     _sourceStarted = false;
+    _currentPosition = Duration.zero;
     _markPlaying(false);
+    _remoteControls?.update(
+      position: Duration.zero,
+      processingState: AudioProcessingState.ready,
+    );
   }
 
   Future<void> dispose() async {
@@ -113,6 +140,8 @@ class NxStoredAudioPlayer {
     _loadedDuration = null;
     await deleteStoredAudioFile(_loadedFilePath);
     _loadedFilePath = null;
+    _remoteControls?.unbind(this);
+    _remoteControls = null;
     if (_ownsHttpClient) _httpClient.close();
   }
 
@@ -174,11 +203,23 @@ class NxStoredAudioPlayer {
   }
 
   Future<void> _ensureOpen() async {
+    _remoteControls ??= await NxStoredAudioRemoteControls.initialize();
+    final audioSession = await AudioSession.instance;
+    await audioSession.configure(const AudioSessionConfiguration.music());
+    final activated = await audioSession.setActive(true);
+    if (!activated) {
+      throw StateError('Audio playback could not acquire the audio session.');
+    }
     if (_open) return;
     await _player.openPlayer();
     await _player.setVolume(1);
     await _player.setSubscriptionDuration(const Duration(milliseconds: 120));
     _progressSubscription = _player.onProgress?.listen((event) {
+      _currentPosition = event.position;
+      _remoteControls?.update(
+        position: event.position,
+        duration: event.duration,
+      );
       onProgress?.call(event.position, event.duration);
     });
     _open = true;
@@ -187,13 +228,44 @@ class NxStoredAudioPlayer {
   void _markPlaying(bool value) {
     if (_playing == value) return;
     _playing = value;
+    _remoteControls?.update(
+      playing: value,
+      processingState: AudioProcessingState.ready,
+    );
     onPlaybackStateChanged?.call(value);
   }
 
   void _markLoading(bool value) {
     if (_loading == value) return;
     _loading = value;
+    _remoteControls?.update(
+      processingState: value
+          ? AudioProcessingState.loading
+          : AudioProcessingState.ready,
+    );
     onLoadingStateChanged?.call(value);
+  }
+
+  void _bindRemoteControls(String url, Duration duration) {
+    _remoteControls?.bind(
+      owner: this,
+      mediaId: url,
+      duration: duration,
+      onPlay: _playCurrent,
+      onPause: pause,
+      onStop: stop,
+      onSeek: seek,
+    );
+  }
+
+  Future<void> _playCurrent() async {
+    final url = _currentUrl;
+    if (url == null) return;
+    await play(
+      url,
+      startAt: _currentPosition > Duration.zero ? _currentPosition : null,
+      duration: _currentDuration,
+    );
   }
 }
 

@@ -8,6 +8,8 @@ environment:
   flutter: '>=3.0.0'
 
 dependencies:
+  audio_session: ^0.2.4
+  audio_service: ^0.18.19
   audioplayers: 6.5.1
   flutter:
     sdk: flutter
