@@ -274,7 +274,10 @@ class NoteCompanionController extends ChangeNotifier {
       _setPhase(NoteCompanionPhase.idle);
     };
     _session.onTextChunk = (packet) {
-      _handleTextPacket(packet.text);
+      _handleTextPacket(
+        packet.text,
+        fallbackTurnkey: 'text-stream-${packet.streamIndex}',
+      );
       if (_phase == NoteCompanionPhase.waiting) {
         _setPhase(NoteCompanionPhase.responding);
       }
@@ -290,11 +293,11 @@ class NoteCompanionController extends ChangeNotifier {
     );
   }
 
-  void _handleTextPacket(String raw) {
+  void _handleTextPacket(String raw, {required String fallbackTurnkey}) {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, dynamic>) {
-        _appendAssistantDelta(raw, turnkey: null, ephemeral: false);
+        _appendAssistantDelta(raw, turnkey: fallbackTurnkey, ephemeral: false);
         return;
       }
       final type = decoded['type'];
@@ -308,6 +311,8 @@ class NoteCompanionController extends ChangeNotifier {
       }
       final turnkey = decoded['turnkey'] is String
           ? decoded['turnkey'] as String
+          : role == 'assistant'
+          ? fallbackTurnkey
           : null;
       if (type == 'transcript-delta') {
         if (role == 'assistant') {
@@ -324,7 +329,7 @@ class NoteCompanionController extends ChangeNotifier {
       }
     } catch (_) {
       if (raw.trim().isNotEmpty) {
-        _appendAssistantDelta(raw, turnkey: null, ephemeral: false);
+        _appendAssistantDelta(raw, turnkey: fallbackTurnkey, ephemeral: false);
       }
     }
   }
@@ -379,9 +384,7 @@ class NoteCompanionController extends ChangeNotifier {
     for (var index = _messages.length - 1; index >= 0; index--) {
       final message = _messages[index];
       if (message.role != role) continue;
-      if (turnkey == null ||
-          message.turnkey == null ||
-          message.turnkey == turnkey) {
+      if (message.turnkey == turnkey) {
         return index;
       }
     }

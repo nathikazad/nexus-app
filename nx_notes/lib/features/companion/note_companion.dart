@@ -28,7 +28,8 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _textFocusNode = FocusNode();
   NoteCompanionController? _controller;
-  bool _expanded = false;
+  bool _chatExpanded = false;
+  bool _audioExpanded = false;
 
   @override
   void didChangeDependencies() {
@@ -41,7 +42,8 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id) {
       _replaceController();
-      _expanded = false;
+      _chatExpanded = false;
+      _audioExpanded = false;
     }
   }
 
@@ -101,26 +103,74 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    if (!_expanded) {
-      return Semantics(
-        button: true,
-        label: 'Open note companion',
-        child: Tooltip(
-          message: 'Listen or ask AI',
-          child: FloatingActionButton.small(
-            heroTag: 'note-companion-${widget.document.id}',
-            elevation: 2,
-            backgroundColor: AppColors.floating,
-            foregroundColor: AppColors.onFloating,
-            onPressed: () {
-              setState(() => _expanded = true);
-            },
-            child: const Icon(Icons.auto_awesome_rounded, size: 18),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        if (_chatExpanded) _buildChatPanel(controller),
+        if (_audioExpanded && controller != null)
+          _AudioPanel(
+            controller: controller,
+            onClose: () => setState(() => _audioExpanded = false),
           ),
+        if (_chatExpanded || _audioExpanded) const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Tooltip(
+              message: controller?.hasAudio == true
+                  ? 'Open note playback'
+                  : 'Create note audio',
+              child: FloatingActionButton.small(
+                heroTag: 'note-audio-${widget.document.id}',
+                elevation: 2,
+                backgroundColor: AppColors.floating,
+                foregroundColor: AppColors.onFloating,
+                onPressed: controller == null || controller.generatingAudio
+                    ? null
+                    : () => unawaited(_toggleAudio(controller)),
+                child: controller?.generatingAudio == true
+                    ? const SizedBox.square(
+                        dimension: 17,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        controller?.noteAudioPlaying == true
+                            ? Icons.graphic_eq_rounded
+                            : Icons.headphones_rounded,
+                        size: 18,
+                      ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Semantics(
+              button: true,
+              label: 'Open note AI',
+              child: Tooltip(
+                message: 'Ask AI about this note',
+                child: FloatingActionButton.small(
+                  heroTag: 'note-companion-${widget.document.id}',
+                  elevation: 2,
+                  backgroundColor: AppColors.floating,
+                  foregroundColor: AppColors.onFloating,
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    setState(() {
+                      _chatExpanded = !_chatExpanded;
+                      if (_chatExpanded) _audioExpanded = false;
+                    });
+                  },
+                  child: const Icon(Icons.auto_awesome_rounded, size: 18),
+                ),
+              ),
+            ),
+          ],
         ),
-      );
-    }
+      ],
+    );
+  }
 
+  Widget _buildChatPanel(NoteCompanionController? controller) {
     return Material(
       color: AppColors.panel,
       elevation: 8,
@@ -141,7 +191,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               phase: controller?.phase ?? NoteCompanionPhase.idle,
               onClose: () {
                 FocusScope.of(context).unfocus();
-                setState(() => _expanded = false);
+                setState(() => _chatExpanded = false);
               },
             ),
             if (controller == null)
@@ -153,7 +203,6 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                 ),
               )
             else ...<Widget>[
-              _AudioControls(controller: controller),
               if (controller.messages.isEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
@@ -202,12 +251,88 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     );
   }
 
+  Future<void> _toggleAudio(NoteCompanionController controller) async {
+    if (!controller.hasAudio) {
+      await controller.generateAudio();
+      if (!mounted || !controller.hasAudio) return;
+    }
+    if (!mounted) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _audioExpanded = !_audioExpanded;
+      if (_audioExpanded) _chatExpanded = false;
+    });
+  }
+
   void _submitText() {
     final controller = _controller;
     final text = _textController.text.trim();
     if (controller == null || text.isEmpty) return;
     _textController.clear();
     unawaited(controller.sendText(text));
+  }
+}
+
+class _AudioPanel extends StatelessWidget {
+  const _AudioPanel({required this.controller, required this.onClose});
+
+  final NoteCompanionController controller;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.panel,
+      elevation: 8,
+      shadowColor: Colors.black45,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: (MediaQuery.sizeOf(context).width - 24).clamp(280, 380),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 7, 8, 0),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.headphones_rounded,
+                    size: 16,
+                    color: AppColors.blue,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Note playback',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Minimize playback',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onClose,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _AudioControls(controller: controller),
+          ],
+        ),
+      ),
+    );
   }
 }
 

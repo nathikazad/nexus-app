@@ -38,7 +38,8 @@ void main() {
           body: SizedBox(
             width: 330,
             child: NoteCompanionMessageContent(
-              text: '| Type | Explanation |\n'
+              text:
+                  '| Type | Explanation |\n'
                   '| --- | --- |\n'
                   '| Reputational risk | A deliberately long explanation |',
               fromUser: false,
@@ -67,6 +68,7 @@ void main() {
     );
 
     expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.headphones_rounded), findsOneWidget);
     expect(find.text('Ask about this note'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.auto_awesome_rounded));
