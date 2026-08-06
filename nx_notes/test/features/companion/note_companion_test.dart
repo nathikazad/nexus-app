@@ -62,7 +62,17 @@ void main() {
           imageBaseUrlProvider.overrideWithValue(null),
         ],
         child: MaterialApp(
-          home: Scaffold(body: NoteCompanion(document: _document(42))),
+          home: Scaffold(
+            body: Stack(
+              children: <Widget>[
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: NoteCompanion(document: _document(42)),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -85,7 +95,15 @@ void main() {
             find.byKey(const ValueKey<String>('note-companion-chat-panel')),
           )
           .height,
-      greaterThan(440),
+      greaterThan(380),
+    );
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey<String>('note-companion-chat-panel')),
+          )
+          .dy,
+      greaterThanOrEqualTo(20),
     );
   });
 

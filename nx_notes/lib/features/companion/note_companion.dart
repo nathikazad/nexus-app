@@ -108,85 +108,88 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        if (_chatExpanded) _buildChatPanel(controller),
-        if (_audioExpanded && controller != null)
-          _AudioPanel(
-            controller: controller,
-            onClose: () => setState(() => _audioExpanded = false),
-          ),
-        if (_chatExpanded || _audioExpanded) const SizedBox(height: 8),
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final chatHeight = constraints.hasBoundedHeight
+            ? (constraints.maxHeight - 72).clamp(300.0, 760.0)
+            : (MediaQuery.sizeOf(context).height - 190).clamp(300.0, 760.0);
+        return Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            Tooltip(
-              message: controller?.hasAudio == true
-                  ? 'Open note playback'
-                  : 'Create note audio',
-              child: FloatingActionButton.small(
-                heroTag: 'note-audio-${widget.document.id}',
-                elevation: 2,
-                backgroundColor: AppColors.floating,
-                foregroundColor: AppColors.onFloating,
-                onPressed: controller == null || controller.generatingAudio
-                    ? null
-                    : () => unawaited(_toggleAudio(controller)),
-                child: controller?.generatingAudio == true
-                    ? const SizedBox.square(
-                        dimension: 17,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        controller?.noteAudioPlaying == true
-                            ? Icons.pause_rounded
-                            : Icons.headphones_rounded,
-                        size: 18,
-                      ),
+            if (_chatExpanded) _buildChatPanel(controller, height: chatHeight),
+            if (_audioExpanded && controller != null)
+              _AudioPanel(
+                controller: controller,
+                onClose: () => setState(() => _audioExpanded = false),
               ),
-            ),
-            const SizedBox(width: 8),
-            Semantics(
-              button: true,
-              label: 'Open note AI',
-              child: Tooltip(
-                message: 'Ask AI about this note',
-                child: FloatingActionButton.small(
-                  heroTag: 'note-companion-${widget.document.id}',
-                  elevation: 2,
-                  backgroundColor: AppColors.floating,
-                  foregroundColor: AppColors.onFloating,
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    final opening = !_chatExpanded;
-                    setState(() {
-                      _chatExpanded = opening;
-                      if (_chatExpanded) _audioExpanded = false;
-                    });
-                    if (opening && controller != null) {
-                      unawaited(controller.loadHistory());
-                    }
-                  },
-                  child: const Icon(Icons.auto_awesome_rounded, size: 18),
+            if (_chatExpanded || _audioExpanded) const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Tooltip(
+                  message: controller?.hasAudio == true
+                      ? 'Open note playback'
+                      : 'Create note audio',
+                  child: FloatingActionButton.small(
+                    heroTag: 'note-audio-${widget.document.id}',
+                    elevation: 2,
+                    backgroundColor: AppColors.floating,
+                    foregroundColor: AppColors.onFloating,
+                    onPressed: controller == null || controller.generatingAudio
+                        ? null
+                        : () => unawaited(_toggleAudio(controller)),
+                    child: controller?.generatingAudio == true
+                        ? const SizedBox.square(
+                            dimension: 17,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            controller?.noteAudioPlaying == true
+                                ? Icons.pause_rounded
+                                : Icons.headphones_rounded,
+                            size: 18,
+                          ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Semantics(
+                  button: true,
+                  label: 'Open note AI',
+                  child: Tooltip(
+                    message: 'Ask AI about this note',
+                    child: FloatingActionButton.small(
+                      heroTag: 'note-companion-${widget.document.id}',
+                      elevation: 2,
+                      backgroundColor: AppColors.floating,
+                      foregroundColor: AppColors.onFloating,
+                      onPressed: () {
+                        FocusScope.of(context).unfocus();
+                        final opening = !_chatExpanded;
+                        setState(() {
+                          _chatExpanded = opening;
+                          if (_chatExpanded) _audioExpanded = false;
+                        });
+                        if (opening && controller != null) {
+                          unawaited(controller.loadHistory());
+                        }
+                      },
+                      child: const Icon(Icons.auto_awesome_rounded, size: 18),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildChatPanel(NoteCompanionController? controller) {
-    final mediaQuery = MediaQuery.of(context);
-    final height =
-        (mediaQuery.size.height -
-                mediaQuery.padding.vertical -
-                mediaQuery.viewInsets.bottom -
-                124)
-            .clamp(300.0, 760.0);
+  Widget _buildChatPanel(
+    NoteCompanionController? controller, {
+    required double height,
+  }) {
     return Material(
       color: AppColors.panel,
       elevation: 8,
