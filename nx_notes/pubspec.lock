@@ -504,12 +504,11 @@ packages:
     source: hosted
     version: "3.3.2"
   flutter_sound:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: flutter_sound
-      sha256: "77f0252a2f08449d621f68b8fd617c3b391e7f862eaa94bb32f53cc2dc3bbe85"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../third_party/flutter_sound"
+      relative: true
+    source: path
     version: "9.30.0"
   flutter_sound_platform_interface:
     dependency: transitive

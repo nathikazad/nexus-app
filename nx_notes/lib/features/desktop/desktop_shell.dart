@@ -11,6 +11,7 @@ import 'package:nx_notes/domain/tags/tag_system.dart';
 import 'package:nx_notes/domain/document/document_snap.dart';
 import 'package:nx_notes/domain/links/linked_model.dart';
 import 'package:nx_notes/features/document/document_actions.dart';
+import 'package:nx_notes/features/companion/note_companion.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
 import 'package:nx_notes/features/navigator/document_row.dart';
 import 'package:nx_notes/features/settings/notes_settings_button.dart';

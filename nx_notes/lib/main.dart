@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/riverpod.dart';
@@ -7,7 +8,11 @@ import 'package:nx_utils/nx_utils.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NxStoredAudioPlayer.initializeRemoteControls();
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android)) {
+    await NxStoredAudioPlayer.initializeRemoteControls();
+  }
   runApp(
     ProviderScope(
       overrides: [dbAuditSourceKindProvider.overrideWithValue('nx_notes')],

@@ -131,6 +131,47 @@ void main() {
     expect(find.text('Ask about this note'), findsNothing);
     expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
   });
+
+  testWidgets('embedded desktop chat is text-only without floating actions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userIdProvider.overrideWithValue(null),
+          sockWsUrlProvider.overrideWithValue(null),
+          imageBaseUrlProvider.overrideWithValue(null),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 288,
+              height: 600,
+              child: NoteCompanion(
+                document: _document(10),
+                embeddedChat: true,
+                voiceEnabled: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('note-companion-embedded-chat')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Sign in to ask questions about this note.'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
+    expect(find.byIcon(Icons.headphones_rounded), findsNothing);
+    expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 NxDocument _document(int id) {

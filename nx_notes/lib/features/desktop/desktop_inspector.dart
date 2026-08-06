@@ -1,6 +1,6 @@
 part of 'desktop_shell.dart';
 
-enum _InspectorTab { contents, details }
+enum _InspectorTab { contents, details, ai }
 
 class _DesktopInspector extends ConsumerStatefulWidget {
   const _DesktopInspector({required this.documentId});
@@ -79,15 +79,26 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
             child: Row(
               children: <Widget>[
-                _InspectorTabButton(
-                  label: 'Contents',
-                  active: _tab == _InspectorTab.contents,
-                  onTap: () => setState(() => _tab = _InspectorTab.contents),
+                Expanded(
+                  child: _InspectorTabButton(
+                    label: 'Contents',
+                    active: _tab == _InspectorTab.contents,
+                    onTap: () => setState(() => _tab = _InspectorTab.contents),
+                  ),
                 ),
-                _InspectorTabButton(
-                  label: 'Details',
-                  active: _tab == _InspectorTab.details,
-                  onTap: () => setState(() => _tab = _InspectorTab.details),
+                Expanded(
+                  child: _InspectorTabButton(
+                    label: 'Details',
+                    active: _tab == _InspectorTab.details,
+                    onTap: () => setState(() => _tab = _InspectorTab.details),
+                  ),
+                ),
+                Expanded(
+                  child: _InspectorTabButton(
+                    label: 'AI',
+                    active: _tab == _InspectorTab.ai,
+                    onTap: () => setState(() => _tab = _InspectorTab.ai),
+                  ),
                 ),
               ],
             ),
@@ -96,6 +107,13 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
           Expanded(
             child: document == null
                 ? const SizedBox.shrink()
+                : _tab == _InspectorTab.ai
+                ? NoteCompanion(
+                    key: ValueKey<int>(document.id),
+                    document: document,
+                    embeddedChat: true,
+                    voiceEnabled: false,
+                  )
                 : _tab == _InspectorTab.details
                 ? ListView(
                     padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
@@ -186,6 +204,7 @@ class _InspectorTabButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: active
             ? BoxDecoration(

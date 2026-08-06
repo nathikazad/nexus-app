@@ -48,6 +48,10 @@ dev_dependencies:
 
 dependency_overrides:
   connectivity_plus: 6.1.5
+  # flutter_sound 9.30 advertises a broken macOS plugin. Nx Notes uses its
+  # unchanged mobile implementation but intentionally omits desktop voice.
+  flutter_sound:
+    path: ../third_party/flutter_sound
 
 flutter:
   assets:

@@ -38,6 +38,7 @@ class DocumentEditorView extends ConsumerWidget {
     this.showDocumentTitle = true,
     this.active = true,
     this.readOnly = false,
+    this.showCompanion = true,
     super.key,
   });
 
@@ -52,6 +53,7 @@ class DocumentEditorView extends ConsumerWidget {
   final bool showDocumentTitle;
   final bool active;
   final bool readOnly;
+  final bool showCompanion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,7 +93,7 @@ class DocumentEditorView extends ConsumerWidget {
                 readOnly: readOnly,
               ),
             ),
-            if (active)
+            if (active && showCompanion)
               Positioned(
                 right: 12,
                 bottom: 12,

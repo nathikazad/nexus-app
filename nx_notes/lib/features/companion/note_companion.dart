@@ -16,11 +16,15 @@ class NoteCompanion extends ConsumerStatefulWidget {
   const NoteCompanion({
     required this.document,
     this.onAudioBlockChanged,
+    this.embeddedChat = false,
+    this.voiceEnabled = true,
     super.key,
   });
 
   final NxDocument document;
   final ValueChanged<DocumentAudioBlockTiming>? onAudioBlockChanged;
+  final bool embeddedChat;
+  final bool voiceEnabled;
 
   @override
   ConsumerState<NoteCompanion> createState() => _NoteCompanionState();
@@ -32,6 +36,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   NoteCompanionController? _controller;
   bool _chatExpanded = false;
   bool _audioExpanded = false;
+  bool _embeddedHistoryRequested = false;
 
   @override
   void didChangeDependencies() {
@@ -46,6 +51,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       _replaceController();
       _chatExpanded = false;
       _audioExpanded = false;
+      _embeddedHistoryRequested = false;
     }
   }
 
@@ -80,6 +86,22 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       initialBlockKey: _scrollAnchorBlockKey(widget.document.jsonDocument),
       onAudioBlockChanged: widget.onAudioBlockChanged,
     )..addListener(_onControllerChanged);
+    _loadEmbeddedHistory();
+  }
+
+  void _loadEmbeddedHistory() {
+    final controller = _controller;
+    if (!widget.embeddedChat ||
+        controller == null ||
+        _embeddedHistoryRequested) {
+      return;
+    }
+    _embeddedHistoryRequested = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && identical(controller, _controller)) {
+        unawaited(controller.loadHistory());
+      }
+    });
   }
 
   void _replaceController() {
@@ -108,6 +130,14 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
+    if (widget.embeddedChat) {
+      _loadEmbeddedHistory();
+      return _buildChatPanel(
+        controller,
+        height: double.infinity,
+        embedded: true,
+      );
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         final chatHeight = constraints.hasBoundedHeight
@@ -189,7 +219,102 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   Widget _buildChatPanel(
     NoteCompanionController? controller, {
     required double height,
+    bool embedded = false,
   }) {
+    final content = Column(
+      children: <Widget>[
+        if (!embedded)
+          _CompanionHeader(
+            phase: controller?.phase ?? NoteCompanionPhase.idle,
+            onClose: () {
+              FocusScope.of(context).unfocus();
+              setState(() => _chatExpanded = false);
+            },
+          ),
+        if (controller == null)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  'Sign in to ask questions about this note.',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+              ),
+            ),
+          )
+        else ...<Widget>[
+          if (controller.loadingHistory && controller.messages.isEmpty)
+            const Expanded(
+              child: Center(
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else if (controller.messages.isEmpty)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    'Ask anything about this note.',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13),
+                  ),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: _MessageList(
+                messages: controller.messages,
+                hasOlderMessages: controller.hasOlderMessages,
+                loadingOlder: controller.loadingHistory,
+                onLoadOlder: controller.loadOlderMessages,
+              ),
+            ),
+          if (controller.error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      controller.error!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.red, fontSize: 12),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Dismiss',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: controller.clearError,
+                    icon: const Icon(Icons.close, size: 16),
+                  ),
+                ],
+              ),
+            ),
+          _Composer(
+            controller: controller,
+            textController: _textController,
+            focusNode: _textFocusNode,
+            onSubmit: _submitText,
+            voiceEnabled: widget.voiceEnabled,
+          ),
+        ],
+      ],
+    );
+    if (embedded) {
+      return ColoredBox(
+        key: const ValueKey<String>('note-companion-embedded-chat'),
+        color: AppColors.panel,
+        child: content,
+      );
+    }
     return Material(
       color: AppColors.panel,
       elevation: 8,
@@ -204,91 +329,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
           border: Border.all(color: AppColors.line),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(
-          children: <Widget>[
-            _CompanionHeader(
-              phase: controller?.phase ?? NoteCompanionPhase.idle,
-              onClose: () {
-                FocusScope.of(context).unfocus();
-                setState(() => _chatExpanded = false);
-              },
-            ),
-            if (controller == null)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Text(
-                      'Sign in to ask questions about this note.',
-                      style: TextStyle(color: AppColors.muted, fontSize: 13),
-                    ),
-                  ),
-                ),
-              )
-            else ...<Widget>[
-              if (controller.loadingHistory && controller.messages.isEmpty)
-                const Expanded(
-                  child: Center(
-                    child: SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                )
-              else if (controller.messages.isEmpty)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        'Ask anything about this note.',
-                        style: TextStyle(color: AppColors.muted, fontSize: 13),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: _MessageList(
-                    messages: controller.messages,
-                    hasOlderMessages: controller.hasOlderMessages,
-                    loadingOlder: controller.loadingHistory,
-                    onLoadOlder: controller.loadOlderMessages,
-                  ),
-                ),
-              if (controller.error != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          controller.error!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.red, fontSize: 12),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Dismiss',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: controller.clearError,
-                        icon: const Icon(Icons.close, size: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              _Composer(
-                controller: controller,
-                textController: _textController,
-                focusNode: _textFocusNode,
-                onSubmit: _submitText,
-              ),
-            ],
-          ],
-        ),
+        child: content,
       ),
     );
   }
@@ -702,12 +743,14 @@ class _Composer extends StatelessWidget {
     required this.textController,
     required this.focusNode,
     required this.onSubmit,
+    this.voiceEnabled = true,
   });
 
   final NoteCompanionController controller;
   final TextEditingController textController;
   final FocusNode focusNode;
   final VoidCallback onSubmit;
+  final bool voiceEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -723,38 +766,42 @@ class _Composer extends StatelessWidget {
             child: TextField(
               controller: textController,
               focusNode: focusNode,
+              style: const TextStyle(fontSize: 13),
               enabled: !disabled && !controller.isRecording,
               minLines: 1,
               maxLines: 4,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSubmit(),
-              decoration: const InputDecoration(
-                hintText: 'Ask about this note…',
+              decoration: InputDecoration(
+                hintText: 'Ask about this note...',
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.faint),
                 isDense: true,
               ),
             ),
           ),
-          const SizedBox(width: 6),
-          IconButton.filledTonal(
-            tooltip: showStop
-                ? controller.isRecording
-                      ? 'Stop and ask'
-                      : 'Stop playback'
-                : 'Ask by voice',
-            onPressed: micDisabled
-                ? null
-                : showStop
-                ? () => unawaited(
-                    controller.isRecording
-                        ? controller.stopRecording()
-                        : controller.stopPlayback(),
-                  )
-                : () => unawaited(controller.startRecording()),
-            icon: Icon(
-              showStop ? Icons.stop_rounded : Icons.mic_none_rounded,
-              size: 20,
+          if (voiceEnabled) ...<Widget>[
+            const SizedBox(width: 6),
+            IconButton.filledTonal(
+              tooltip: showStop
+                  ? controller.isRecording
+                        ? 'Stop and ask'
+                        : 'Stop playback'
+                  : 'Ask by voice',
+              onPressed: micDisabled
+                  ? null
+                  : showStop
+                  ? () => unawaited(
+                      controller.isRecording
+                          ? controller.stopRecording()
+                          : controller.stopPlayback(),
+                    )
+                  : () => unawaited(controller.startRecording()),
+              icon: Icon(
+                showStop ? Icons.stop_rounded : Icons.mic_none_rounded,
+                size: 20,
+              ),
             ),
-          ),
+          ],
           IconButton(
             tooltip: 'Send',
             onPressed: disabled || controller.isRecording ? null : onSubmit,

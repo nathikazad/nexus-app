@@ -112,6 +112,7 @@ class _MountedEditorSession extends ConsumerWidget {
         child: DocumentEditorView(
           documentId: documentId,
           active: active,
+          showCompanion: false,
           onOpenDocumentLink: (linkedDocumentId) => ref
               .read(desktopWorkspaceProvider.notifier)
               .openDocumentInActiveTab(linkedDocumentId),
