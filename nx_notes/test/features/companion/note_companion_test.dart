@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/auth.dart';
@@ -6,6 +7,51 @@ import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/companion/note_companion.dart';
 
 void main() {
+  testWidgets('renders assistant markdown and keeps user input literal', (
+    tester,
+  ) async {
+    const markdown = '**Important**\n\n- First\n- Second';
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              NoteCompanionMessageContent(text: markdown, fromUser: false),
+              NoteCompanionMessageContent(text: markdown, fromUser: true),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(MarkdownBody), findsOneWidget);
+    expect(find.text(markdown), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('renders a wide markdown table without layout overflow', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 330,
+            child: NoteCompanionMessageContent(
+              text: '| Type | Explanation |\n'
+                  '| --- | --- |\n'
+                  '| Reputational risk | A deliberately long explanation |',
+              fromUser: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(MarkdownBody), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('stays compact until the user opens it', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

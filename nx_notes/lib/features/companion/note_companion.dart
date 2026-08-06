@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
@@ -373,17 +374,72 @@ class _MessageList extends StatelessWidget {
               color: message.fromUser ? AppColors.accentSoft : AppColors.subtle,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              message.text,
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 13,
-                height: 1.4,
-              ),
+            child: NoteCompanionMessageContent(
+              text: message.text,
+              fromUser: message.fromUser,
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class NoteCompanionMessageContent extends StatelessWidget {
+  const NoteCompanionMessageContent({
+    required this.text,
+    required this.fromUser,
+    super.key,
+  });
+
+  final String text;
+  final bool fromUser;
+
+  @override
+  Widget build(BuildContext context) {
+    final bodyStyle = TextStyle(
+      color: AppColors.text,
+      fontSize: 13,
+      height: 1.4,
+    );
+    if (fromUser) {
+      return Text(text, style: bodyStyle);
+    }
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      softLineBreak: true,
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        p: bodyStyle,
+        a: bodyStyle.copyWith(
+          color: AppColors.blue,
+          decoration: TextDecoration.underline,
+        ),
+        strong: bodyStyle.copyWith(fontWeight: FontWeight.w700),
+        em: bodyStyle.copyWith(fontStyle: FontStyle.italic),
+        h1: bodyStyle.copyWith(fontSize: 18, fontWeight: FontWeight.w700),
+        h2: bodyStyle.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+        h3: bodyStyle.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+        listBullet: bodyStyle,
+        blockquote: bodyStyle.copyWith(color: AppColors.muted),
+        code: bodyStyle.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: AppColors.panel,
+        ),
+        blockSpacing: 8,
+        listIndent: 18,
+        tableBody: bodyStyle.copyWith(fontSize: 12),
+        tableHead: bodyStyle.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+        tableBorder: TableBorder.all(color: AppColors.line),
+        tableCellsPadding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 6,
+        ),
+        tableColumnWidth: const IntrinsicColumnWidth(),
+      ),
     );
   }
 }
