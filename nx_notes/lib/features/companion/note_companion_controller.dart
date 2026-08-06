@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:nx_notes/data/ai/note_ai_session.dart';
+import 'package:nx_notes/data/ai/note_transcript_service.dart';
 import 'package:nx_notes/data/document/document_audio_service.dart';
 import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_utils/nx_utils.dart';
@@ -51,6 +52,7 @@ class NoteCompanionController extends ChangeNotifier {
     required this.socketUrl,
     required this.userId,
     required DocumentAudioService audioService,
+    required NoteTranscriptLoader transcriptLoader,
     this.onAudioBlockChanged,
     DocumentAudio? initialAudio,
     String? initialBlockKey,
@@ -62,10 +64,15 @@ class NoteCompanionController extends ChangeNotifier {
        _microphone = microphone ?? NxMicrophoneOpusStreamer(),
        _player = player ?? NxWavAudioPlayer(),
        _audioService = audioService,
+       _transcriptLoader = transcriptLoader,
        _noteAudioPlayer = noteAudioPlayer ?? NxStoredAudioPlayer(),
        _audio = initialAudio,
        _initialBlockKey = initialBlockKey {
     _duration = initialAudio?.manifest.duration ?? Duration.zero;
+    _player.onPlaybackStateChanged = (playing) {
+      _assistantAudioPlaying = playing;
+      _notify();
+    };
     _noteAudioPlayer.onProgress = _handleNoteAudioProgress;
     _noteAudioPlayer.onPlaybackStateChanged = (playing) {
       _noteAudioPlaying = playing;
@@ -90,6 +97,7 @@ class NoteCompanionController extends ChangeNotifier {
   final NxMicrophoneOpusStreamer _microphone;
   final NxWavAudioPlayer _player;
   final DocumentAudioService _audioService;
+  final NoteTranscriptLoader _transcriptLoader;
   final NxStoredAudioPlayer _noteAudioPlayer;
   final ValueChanged<DocumentAudioBlockTiming>? onAudioBlockChanged;
   final String? _initialBlockKey;
@@ -102,6 +110,11 @@ class NoteCompanionController extends ChangeNotifier {
   bool _generatingAudio = false;
   bool _noteAudioPlaying = false;
   bool _loadingNoteAudio = false;
+  bool _assistantAudioPlaying = false;
+  bool _suppressAssistantAudio = false;
+  bool _historyLoaded = false;
+  bool _loadingHistory = false;
+  final List<NoteCompanionMessage> _olderMessages = <NoteCompanionMessage>[];
   DocumentAudio? _audio;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -115,6 +128,10 @@ class NoteCompanionController extends ChangeNotifier {
   bool get hasAudio => _audio != null;
   bool get noteAudioPlaying => _noteAudioPlaying;
   bool get loadingNoteAudio => _loadingNoteAudio;
+  bool get assistantAudioPlaying => _assistantAudioPlaying;
+  bool get anyAudioPlaying => _assistantAudioPlaying || _noteAudioPlaying;
+  bool get loadingHistory => _loadingHistory;
+  bool get hasOlderMessages => _olderMessages.isNotEmpty;
   Duration get audioPosition => _position;
   Duration get audioDuration => _duration;
   bool get isBusy => switch (_phase) {
@@ -230,6 +247,63 @@ class NoteCompanionController extends ChangeNotifier {
     await _noteAudioPlayer.pause();
   }
 
+  Future<void> stopPlayback() async {
+    if (_assistantAudioPlaying) {
+      _suppressAssistantAudio = true;
+      await _player.stop();
+    }
+    if (_noteAudioPlaying) {
+      await pauseNoteAudio();
+    }
+  }
+
+  Future<void> loadHistory() async {
+    if (_historyLoaded || _loadingHistory) return;
+    _loadingHistory = true;
+    _notify();
+    try {
+      final transcript = await _transcriptLoader.loadForDocument(documentId);
+      final storedMessages = transcript?.sortedMessages;
+      if (storedMessages != null) {
+        final history = storedMessages
+            .where((message) => message.message.trim().isNotEmpty)
+            .where(
+              (message) =>
+                  message.sender.toLowerCase() == 'human' ||
+                  message.sender.toLowerCase() == 'agent',
+            )
+            .map(
+              (message) => NoteCompanionMessage(
+                role: message.sender.toLowerCase() == 'human'
+                    ? 'user'
+                    : 'assistant',
+                text: message.message,
+                turnkey: 'history-${message.timestamp}',
+              ),
+            )
+            .toList();
+        final visibleStart = (history.length - 6).clamp(0, history.length);
+        _olderMessages.addAll(history.take(visibleStart));
+        _messages.insertAll(0, history.skip(visibleStart));
+      }
+      _historyLoaded = true;
+    } catch (_) {
+      // History is supplementary; a failed fetch must not block a new turn.
+    } finally {
+      _loadingHistory = false;
+      _notify();
+    }
+  }
+
+  void loadOlderMessages() {
+    if (_olderMessages.isEmpty) return;
+    final start = (_olderMessages.length - 10).clamp(0, _olderMessages.length);
+    final page = _olderMessages.sublist(start);
+    _olderMessages.removeRange(start, _olderMessages.length);
+    _messages.insertAll(0, page);
+    _notify();
+  }
+
   Future<void> seekNoteAudio(Duration position) async {
     final bounded = Duration(
       milliseconds: position.inMilliseconds.clamp(0, _duration.inMilliseconds),
@@ -267,10 +341,15 @@ class NoteCompanionController extends ChangeNotifier {
       if (_phase == NoteCompanionPhase.waiting) {
         _setPhase(NoteCompanionPhase.responding);
       }
-      unawaited(_player.addOpusPacket(packet.opus));
+      if (!_suppressAssistantAudio) {
+        unawaited(_player.addOpusPacket(packet.opus));
+      }
     };
     _session.onAudioEof = (_) {
-      unawaited(_player.flush());
+      if (!_suppressAssistantAudio) {
+        unawaited(_player.flush());
+      }
+      _suppressAssistantAudio = false;
       _setPhase(NoteCompanionPhase.idle);
     };
     _session.onTextChunk = (packet) {

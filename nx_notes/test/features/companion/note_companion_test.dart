@@ -79,6 +79,14 @@ void main() {
       find.text('Sign in to ask questions about this note.'),
       findsOneWidget,
     );
+    expect(
+      tester
+          .getSize(
+            find.byKey(const ValueKey<String>('note-companion-chat-panel')),
+          )
+          .height,
+      greaterThan(440),
+    );
   });
 
   testWidgets('can be minimized back to the discreet entry point', (

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/data/ai/note_transcript_service.dart';
 import 'package:nx_notes/data/document/document_audio_service.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_audio.dart';
@@ -65,6 +67,9 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       socketUrl: socketUrl,
       userId: userId,
       audioService: audioService,
+      transcriptLoader: NoteTranscriptService(
+        client: ref.read(graphqlClientProvider),
+      ),
       initialAudio: initialAudio == null
           ? null
           : DocumentAudio(
@@ -155,10 +160,14 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                   foregroundColor: AppColors.onFloating,
                   onPressed: () {
                     FocusScope.of(context).unfocus();
+                    final opening = !_chatExpanded;
                     setState(() {
-                      _chatExpanded = !_chatExpanded;
+                      _chatExpanded = opening;
                       if (_chatExpanded) _audioExpanded = false;
                     });
+                    if (opening && controller != null) {
+                      unawaited(controller.loadHistory());
+                    }
                   },
                   child: const Icon(Icons.auto_awesome_rounded, size: 18),
                 ),
@@ -171,6 +180,13 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   }
 
   Widget _buildChatPanel(NoteCompanionController? controller) {
+    final mediaQuery = MediaQuery.of(context);
+    final height =
+        (mediaQuery.size.height -
+                mediaQuery.padding.vertical -
+                mediaQuery.viewInsets.bottom -
+                124)
+            .clamp(300.0, 760.0);
     return Material(
       color: AppColors.panel,
       elevation: 8,
@@ -178,14 +194,14 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Container(
+        key: const ValueKey<String>('note-companion-chat-panel'),
         width: (MediaQuery.sizeOf(context).width - 24).clamp(280, 420),
-        constraints: const BoxConstraints(maxHeight: 440),
+        height: height,
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.line),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             _CompanionHeader(
               phase: controller?.phase ?? NoteCompanionPhase.idle,
@@ -195,27 +211,50 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               },
             ),
             if (controller == null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Text(
-                  'Sign in to ask questions about this note.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      'Sign in to ask questions about this note.',
+                      style: TextStyle(color: AppColors.muted, fontSize: 13),
+                    ),
+                  ),
                 ),
               )
             else ...<Widget>[
-              if (controller.messages.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Ask anything about this note.',
-                      style: TextStyle(color: AppColors.muted, fontSize: 13),
+              if (controller.loadingHistory && controller.messages.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              else if (controller.messages.isEmpty)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        'Ask anything about this note.',
+                        style: TextStyle(color: AppColors.muted, fontSize: 13),
+                      ),
                     ),
                   ),
                 )
               else
-                Flexible(child: _MessageList(messages: controller.messages)),
+                Expanded(
+                  child: _MessageList(
+                    messages: controller.messages,
+                    hasOlderMessages: controller.hasOlderMessages,
+                    loadingOlder: controller.loadingHistory,
+                    onLoadOlder: controller.loadOlderMessages,
+                  ),
+                ),
               if (controller.error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
@@ -473,20 +512,83 @@ class _CompanionHeader extends StatelessWidget {
   }
 }
 
-class _MessageList extends StatelessWidget {
-  const _MessageList({required this.messages});
+class _MessageList extends StatefulWidget {
+  const _MessageList({
+    required this.messages,
+    required this.hasOlderMessages,
+    required this.loadingOlder,
+    required this.onLoadOlder,
+  });
 
   final List<NoteCompanionMessage> messages;
+  final bool hasOlderMessages;
+  final bool loadingOlder;
+  final VoidCallback onLoadOlder;
+
+  @override
+  State<_MessageList> createState() => _MessageListState();
+}
+
+class _MessageListState extends State<_MessageList> {
+  final ScrollController _scrollController = ScrollController();
+  bool _loadRequested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_maybeLoadOlder);
+  }
+
+  void _maybeLoadOlder() {
+    if (_loadRequested || !widget.hasOlderMessages || widget.loadingOlder) {
+      return;
+    }
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 80) {
+      _loadRequested = true;
+      widget.onLoadOlder();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadRequested = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_maybeLoadOlder)
+      ..dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
+      controller: _scrollController,
       reverse: true,
-      shrinkWrap: true,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      itemCount: messages.length,
+      itemCount:
+          widget.messages.length +
+          (widget.hasOlderMessages || widget.loadingOlder ? 1 : 0),
       itemBuilder: (context, reverseIndex) {
-        final message = messages[messages.length - reverseIndex - 1];
+        if (reverseIndex == widget.messages.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Center(
+              child: widget.loadingOlder
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      'Scroll up for earlier messages',
+                      style: TextStyle(color: AppColors.muted, fontSize: 11),
+                    ),
+            ),
+          );
+        }
+        final message =
+            widget.messages[widget.messages.length - reverseIndex - 1];
         return Align(
           alignment: message.fromUser
               ? Alignment.centerRight
@@ -585,6 +687,8 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = controller.isBusy;
+    final showStop = controller.isRecording || controller.anyAudioPlaying;
+    final micDisabled = disabled && !controller.anyAudioPlaying;
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
       child: Row(
@@ -607,16 +711,22 @@ class _Composer extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           IconButton.filledTonal(
-            tooltip: controller.isRecording ? 'Stop and ask' : 'Ask by voice',
-            onPressed: disabled
+            tooltip: showStop
+                ? controller.isRecording
+                      ? 'Stop and ask'
+                      : 'Stop playback'
+                : 'Ask by voice',
+            onPressed: micDisabled
                 ? null
-                : controller.isRecording
-                ? () => unawaited(controller.stopRecording())
+                : showStop
+                ? () => unawaited(
+                    controller.isRecording
+                        ? controller.stopRecording()
+                        : controller.stopPlayback(),
+                  )
                 : () => unawaited(controller.startRecording()),
             icon: Icon(
-              controller.isRecording
-                  ? Icons.stop_rounded
-                  : Icons.mic_none_rounded,
+              showStop ? Icons.stop_rounded : Icons.mic_none_rounded,
               size: 20,
             ),
           ),

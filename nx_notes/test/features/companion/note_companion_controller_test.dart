@@ -1,9 +1,12 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
+import 'package:nx_db/nx_db.dart';
 import 'package:nx_notes/data/ai/note_ai_session.dart';
+import 'package:nx_notes/data/ai/note_transcript_service.dart';
 import 'package:nx_notes/data/document/document_audio_service.dart';
+import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/features/companion/note_companion_controller.dart';
 import 'package:nx_utils/nx_utils.dart';
 
@@ -68,8 +71,34 @@ class _FakeSocket implements NoteAiSocketPort {
   }
 }
 
+class _FakeTranscriptLoader implements NoteTranscriptLoader {
+  _FakeTranscriptLoader([this.transcript]);
+
+  final Transcript? transcript;
+
+  @override
+  Future<Transcript?> loadForDocument(int documentId) async => transcript;
+}
+
+class _FakeStoredAudioPlayer extends NxStoredAudioPlayer {
+  @override
+  Future<void> play(String url, {Duration? startAt, Duration? duration}) async {
+    onPlaybackStateChanged?.call(true);
+  }
+
+  @override
+  Future<void> pause() async {
+    onPlaybackStateChanged?.call(false);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+        const MethodChannel('com.llfbandit.record/messages'),
+        (_) async => null,
+      );
 
   test('keeps assistant answers from separate text turns distinct', () async {
     final socket = _FakeSocket();
@@ -81,6 +110,7 @@ void main() {
         baseUrl: 'https://notes.example',
         userId: '1',
       ),
+      transcriptLoader: _FakeTranscriptLoader(),
       session: NoteAiSession(socket: socket),
     );
 
@@ -116,5 +146,81 @@ void main() {
         ('assistant', 'Second answer'),
       ],
     );
+  });
+
+  test('shows six recent transcript messages then pages backward', () async {
+    final storedMessages = <String, TranscriptMessage>{};
+    for (var index = 0; index < 20; index++) {
+      final timestamp = '2026-08-06T12:00:${index.toString().padLeft(2, '0')}Z';
+      storedMessages[timestamp] = TranscriptMessage(
+        timestamp: timestamp,
+        sender: index.isEven ? 'Human' : 'Agent',
+        message: 'Message $index',
+      );
+    }
+    final controller = NoteCompanionController(
+      documentId: 4450,
+      socketUrl: 'wss://socket.example',
+      userId: '1',
+      audioService: DocumentAudioService(
+        baseUrl: 'https://notes.example',
+        userId: '1',
+      ),
+      transcriptLoader: _FakeTranscriptLoader(
+        Transcript(id: 91, messages: storedMessages),
+      ),
+      session: NoteAiSession(socket: _FakeSocket()),
+    );
+
+    await controller.loadHistory();
+
+    expect(controller.messages, hasLength(6));
+    expect(controller.messages.first.text, 'Message 14');
+    expect(controller.hasOlderMessages, isTrue);
+
+    controller.loadOlderMessages();
+    expect(controller.messages, hasLength(16));
+    expect(controller.messages.first.text, 'Message 4');
+
+    controller.loadOlderMessages();
+    expect(controller.messages, hasLength(20));
+    expect(controller.messages.first.text, 'Message 0');
+    expect(controller.hasOlderMessages, isFalse);
+  });
+
+  test('reports playback so the mic action can become stop', () async {
+    final controller = NoteCompanionController(
+      documentId: 4450,
+      socketUrl: 'wss://socket.example',
+      userId: '1',
+      audioService: DocumentAudioService(
+        baseUrl: 'https://notes.example',
+        userId: '1',
+      ),
+      transcriptLoader: _FakeTranscriptLoader(),
+      session: NoteAiSession(socket: _FakeSocket()),
+      noteAudioPlayer: _FakeStoredAudioPlayer(),
+      initialAudio: const DocumentAudio(
+        url: 'https://notes.example/audio.opus',
+        sourceHash: 'hash',
+        manifest: DocumentAudioManifest(
+          duration: Duration(seconds: 10),
+          blocks: <DocumentAudioBlockTiming>[
+            DocumentAudioBlockTiming(
+              blockIndex: 0,
+              blockKey: 'block-0',
+              start: Duration.zero,
+              end: Duration(seconds: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await controller.toggleNoteAudio();
+    expect(controller.anyAudioPlaying, isTrue);
+
+    await controller.stopPlayback();
+    expect(controller.anyAudioPlaying, isFalse);
   });
 }
