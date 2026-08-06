@@ -136,7 +136,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                       )
                     : Icon(
                         controller?.noteAudioPlaying == true
-                            ? Icons.graphic_eq_rounded
+                            ? Icons.pause_rounded
                             : Icons.headphones_rounded,
                         size: 18,
                       ),
