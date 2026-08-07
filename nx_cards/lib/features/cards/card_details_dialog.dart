@@ -4,6 +4,7 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_audio_controls.dart';
+import 'package:nx_cards/features/study/language_examples.dart';
 
 class CardDetailsDialog extends ConsumerWidget {
   const CardDetailsDialog({super.key, required this.deck, required this.card});
@@ -72,6 +73,14 @@ class CardDetailsDialog extends ConsumerWidget {
                     audioUrl: audioUrl!,
                     repository: audioRepository,
                     autoPlay: false,
+                  ),
+                ],
+                if (languageContent.examples.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  LanguageExamples(
+                    examples: languageContent.examples,
+                    audioRepository: audioRepository,
+                    audioKeyPrefix: '${card.id}:details:example',
                   ),
                 ],
               ],

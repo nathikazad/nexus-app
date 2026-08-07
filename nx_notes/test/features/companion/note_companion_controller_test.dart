@@ -81,6 +81,8 @@ class _FakeTranscriptLoader implements NoteTranscriptLoader {
 }
 
 class _FakeStoredAudioPlayer extends NxStoredAudioPlayer {
+  double appliedSpeed = 1;
+
   @override
   Future<void> play(String url, {Duration? startAt, Duration? duration}) async {
     onPlaybackStateChanged?.call(true);
@@ -89,6 +91,11 @@ class _FakeStoredAudioPlayer extends NxStoredAudioPlayer {
   @override
   Future<void> pause() async {
     onPlaybackStateChanged?.call(false);
+  }
+
+  @override
+  Future<void> setSpeed(double speed) async {
+    appliedSpeed = speed;
   }
 }
 
@@ -223,4 +230,28 @@ void main() {
     await controller.stopPlayback();
     expect(controller.anyAudioPlaying, isFalse);
   });
+
+  test(
+    'changes stored note playback speed without affecting voice audio',
+    () async {
+      final notePlayer = _FakeStoredAudioPlayer();
+      final controller = NoteCompanionController(
+        documentId: 4450,
+        socketUrl: 'wss://socket.example',
+        userId: '1',
+        audioService: DocumentAudioService(
+          baseUrl: 'https://notes.example',
+          userId: '1',
+        ),
+        transcriptLoader: _FakeTranscriptLoader(),
+        session: NoteAiSession(socket: _FakeSocket()),
+        noteAudioPlayer: notePlayer,
+      );
+
+      await controller.setNoteAudioPlaybackSpeed(1.5);
+
+      expect(controller.noteAudioPlaybackSpeed, 1.5);
+      expect(notePlayer.appliedSpeed, 1.5);
+    },
+  );
 }

@@ -36,6 +36,7 @@ class NxStoredAudioPlayer {
   String? _currentUrl;
   Duration? _currentDuration;
   Duration _currentPosition = Duration.zero;
+  double _speed = 1;
 
   static Future<void> initializeRemoteControls() async {
     await NxStoredAudioRemoteControls.initialize();
@@ -48,6 +49,22 @@ class NxStoredAudioPlayer {
 
   bool get isPlaying => _playing;
   bool get isLoading => _loading;
+  double get speed => _speed;
+
+  Future<void> setSpeed(double speed) async {
+    if (!speed.isFinite || speed <= 0) {
+      throw ArgumentError.value(speed, 'speed', 'Must be greater than zero.');
+    }
+    final previous = _speed;
+    _speed = speed;
+    try {
+      if (_open) await _player.setSpeed(speed);
+      _remoteControls?.update(speed: speed);
+    } catch (_) {
+      _speed = previous;
+      rethrow;
+    }
+  }
 
   Future<void> play(
     String url, {
@@ -214,6 +231,7 @@ class NxStoredAudioPlayer {
     await _player.openPlayer();
     await _player.setVolume(1);
     await _player.setSubscriptionDuration(const Duration(milliseconds: 120));
+    await _player.setSpeed(_speed);
     _progressSubscription = _player.onProgress?.listen((event) {
       _currentPosition = event.position;
       _remoteControls?.update(
@@ -239,9 +257,8 @@ class NxStoredAudioPlayer {
     if (_loading == value) return;
     _loading = value;
     _remoteControls?.update(
-      processingState: value
-          ? AudioProcessingState.loading
-          : AudioProcessingState.ready,
+      processingState:
+          value ? AudioProcessingState.loading : AudioProcessingState.ready,
     );
     onLoadingStateChanged?.call(value);
   }
@@ -255,6 +272,7 @@ class NxStoredAudioPlayer {
       onPause: pause,
       onStop: stop,
       onSeek: seek,
+      speed: _speed,
     );
   }
 

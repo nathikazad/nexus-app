@@ -20,6 +20,7 @@ void main() {
     final systems = json['tag_systems'] as List<dynamic>;
 
     expect(attributes, {
+      attrCardDetails,
       attrDueAt,
       attrSuspended,
       attrSchedule,
@@ -68,20 +69,15 @@ void main() {
 
     expect(json['name'], languageCardModelType);
     expect(json['parent'], {'link': cardModelType});
-    expect(definitions, hasLength(2));
+    expect(definitions, hasLength(1));
     expect(
-      definitions.singleWhere((row) => row['key'] == attrTransliteration),
+      definitions.singleWhere((row) => row['key'] == attrLanguageDetails),
       {
-        'key': attrTransliteration,
-        'value_type': 'string',
+        'key': attrLanguageDetails,
+        'value_type': 'json',
         'required': true,
-        'constraints': {'minLength': 1},
+        'constraints': {'json_schema': languageDetailsJsonSchema},
       },
     );
-    expect(definitions.singleWhere((row) => row['key'] == attrAudioUrl), {
-      'key': attrAudioUrl,
-      'value_type': 'string',
-      'required': false,
-    });
   });
 }

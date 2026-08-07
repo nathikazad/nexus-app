@@ -5,7 +5,7 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/domain/card/cards_repository.dart';
 import 'package:nx_db/kgql.dart';
 
-const _cardStruct = <String, dynamic>{
+const _baseCardStruct = <String, dynamic>{
   'id': true,
   'name': true,
   'description': true,
@@ -14,12 +14,16 @@ const _cardStruct = <String, dynamic>{
   attrSuspended: true,
   attrSchedule: true,
   attrReviewHistory: true,
-  attrTransliteration: true,
-  attrAudioUrl: true,
+  attrCardDetails: true,
   'tags': true,
   'model_type': {'id': true, 'name': true},
   deckModelType: {'id': true, 'name': true},
   bookModelType: {'id': true, 'name': true},
+};
+
+const _languageCardStruct = <String, dynamic>{
+  ..._baseCardStruct,
+  attrLanguageDetails: true,
 };
 
 class KgqlCardsRepository implements CardsRepository {
@@ -55,12 +59,12 @@ class KgqlCardsRepository implements CardsRepository {
       fetchKgqlModels(
         _client,
         filter: const {'model_type': cardModelType},
-        struct: _cardStruct,
+        struct: _baseCardStruct,
       ),
       fetchKgqlModels(
         _client,
         filter: const {'model_type': languageCardModelType},
-        struct: _cardStruct,
+        struct: _languageCardStruct,
       ),
     ]);
     final rowsById = <int, Model>{
@@ -148,8 +152,11 @@ class KgqlCardsRepository implements CardsRepository {
             ? languageCardModelType
             : cardModelType,
         name: content.front,
-        description: content.back,
         attributes: [
+          SetModelAttribute(
+            key: attrCardDetails,
+            value: cardDetailsJson(content),
+          ),
           SetModelAttribute(key: attrSuspended, value: false),
           SetModelAttribute(
             key: attrSchedule,
@@ -161,8 +168,11 @@ class KgqlCardsRepository implements CardsRepository {
             key: attrReviewHistory,
             value: emptyReviewHistoryJson(),
           ),
-          if (content case LanguageCardContent(:final transliteration))
-            SetModelAttribute(key: attrTransliteration, value: transliteration),
+          if (content case final LanguageCardContent languageContent)
+            SetModelAttribute(
+              key: attrLanguageDetails,
+              value: languageDetailsJson(languageContent),
+            ),
         ],
         relations: [
           ModelRelation(modelType: deckModelType, link: [deckId]),
@@ -188,10 +198,16 @@ class KgqlCardsRepository implements CardsRepository {
       SetModelRequest(
         id: id,
         name: content.front,
-        description: content.back,
         attributes: [
-          if (content case LanguageCardContent(:final transliteration))
-            SetModelAttribute(key: attrTransliteration, value: transliteration),
+          SetModelAttribute(
+            key: attrCardDetails,
+            value: cardDetailsJson(content),
+          ),
+          if (content case final LanguageCardContent languageContent)
+            SetModelAttribute(
+              key: attrLanguageDetails,
+              value: languageDetailsJson(languageContent),
+            ),
         ],
         tags: [
           SetModelTag(system: cardTagsTagSystem, nodes: tags, clear: true),

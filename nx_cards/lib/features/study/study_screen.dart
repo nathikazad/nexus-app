@@ -7,6 +7,7 @@ import 'package:nx_cards/domain/scheduling/card_scheduler.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_editors.dart';
 import 'package:nx_cards/features/study/language_audio_controls.dart';
+import 'package:nx_cards/features/study/language_examples_page.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.title, required this.prompts});
@@ -254,6 +255,40 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                     ),
                                                     audioUrl: audioUrl,
                                                     repository: audioRepository,
+                                                  ),
+                                                ],
+                                                if (_card.content
+                                                    case LanguageCardContent(
+                                                      :final examples,
+                                                    )
+                                                    when _prompt
+                                                            .showLanguageSupplements &&
+                                                        examples
+                                                            .isNotEmpty) ...[
+                                                  const SizedBox(height: 16),
+                                                  TextButton.icon(
+                                                    onPressed: () =>
+                                                        Navigator.of(
+                                                          context,
+                                                        ).push(
+                                                          MaterialPageRoute<
+                                                            void
+                                                          >(
+                                                            builder: (_) =>
+                                                                LanguageExamplesPage(
+                                                                  card: _card,
+                                                                  audioRepository:
+                                                                      audioRepository,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                    icon: const Icon(
+                                                      Icons.menu_book_outlined,
+                                                      size: 18,
+                                                    ),
+                                                    label: Text(
+                                                      'View examples (${examples.length})',
+                                                    ),
                                                   ),
                                                 ],
                                               ],

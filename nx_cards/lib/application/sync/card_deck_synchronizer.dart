@@ -79,8 +79,11 @@ final class CardDeckSynchronizer {
         : await _localStore.cardsForDeck(deckId);
     final urls = <String>{
       for (final card in cards)
-        if (card.content case final LanguageCardContent content)
+        if (card.content case final LanguageCardContent content) ...<String>{
           if (content.audioUrl case final url? when url.isNotEmpty) url,
+          for (final example in content.examples)
+            if (example.audioUrl case final url? when url.isNotEmpty) url,
+        },
     };
     await _downloadAudio(repository, urls);
   }

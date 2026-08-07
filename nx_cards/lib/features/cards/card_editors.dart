@@ -169,11 +169,19 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
     setState(() => _saving = true);
     try {
       final repository = ref.read(cardsRepositoryProvider);
+      final existingLanguageContent = switch (widget.card?.content) {
+        final LanguageCardContent content => content,
+        _ => null,
+      };
       final content = _isLanguageCard
           ? LanguageCardContent(
               english: _front.text.trim(),
               originalScript: _back.text.trim(),
               transliteration: _transliteration.text.trim(),
+              audioUrl: existingLanguageContent?.audioUrl,
+              examples:
+                  existingLanguageContent?.examples ??
+                  const <LanguageExample>[],
             )
           : BasicCardContent(
               front: _front.text.trim(),

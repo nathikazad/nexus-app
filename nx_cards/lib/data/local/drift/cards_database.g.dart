@@ -622,6 +622,18 @@ class $LocalStudyCardsTable extends LocalStudyCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _examplesJsonMeta = const VerificationMeta(
+    'examplesJson',
+  );
+  @override
+  late final GeneratedColumn<String> examplesJson = GeneratedColumn<String>(
+    'examples_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _tagsJsonMeta = const VerificationMeta(
     'tagsJson',
   );
@@ -748,6 +760,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
     back,
     transliteration,
     audioUrl,
+    examplesJson,
     tagsJson,
     dueAt,
     scheduleJson,
@@ -832,6 +845,15 @@ class $LocalStudyCardsTable extends LocalStudyCards
       context.handle(
         _audioUrlMeta,
         audioUrl.isAcceptableOrUnknown(data['audio_url']!, _audioUrlMeta),
+      );
+    }
+    if (data.containsKey('examples_json')) {
+      context.handle(
+        _examplesJsonMeta,
+        examplesJson.isAcceptableOrUnknown(
+          data['examples_json']!,
+          _examplesJsonMeta,
+        ),
       );
     }
     if (data.containsKey('tags_json')) {
@@ -960,6 +982,10 @@ class $LocalStudyCardsTable extends LocalStudyCards
         DriftSqlType.string,
         data['${effectivePrefix}audio_url'],
       ),
+      examplesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}examples_json'],
+      )!,
       tagsJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}tags_json'],
@@ -1019,6 +1045,7 @@ class LocalStudyCardRow extends DataClass
   final String back;
   final String? transliteration;
   final String? audioUrl;
+  final String examplesJson;
   final String tagsJson;
   final DateTime? dueAt;
   final String scheduleJson;
@@ -1038,6 +1065,7 @@ class LocalStudyCardRow extends DataClass
     required this.back,
     this.transliteration,
     this.audioUrl,
+    required this.examplesJson,
     required this.tagsJson,
     this.dueAt,
     required this.scheduleJson,
@@ -1064,6 +1092,7 @@ class LocalStudyCardRow extends DataClass
     if (!nullToAbsent || audioUrl != null) {
       map['audio_url'] = Variable<String>(audioUrl);
     }
+    map['examples_json'] = Variable<String>(examplesJson);
     map['tags_json'] = Variable<String>(tagsJson);
     if (!nullToAbsent || dueAt != null) {
       map['due_at'] = Variable<DateTime>(dueAt);
@@ -1099,6 +1128,7 @@ class LocalStudyCardRow extends DataClass
       audioUrl: audioUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(audioUrl),
+      examplesJson: Value(examplesJson),
       tagsJson: Value(tagsJson),
       dueAt: dueAt == null && nullToAbsent
           ? const Value.absent()
@@ -1134,6 +1164,7 @@ class LocalStudyCardRow extends DataClass
       back: serializer.fromJson<String>(json['back']),
       transliteration: serializer.fromJson<String?>(json['transliteration']),
       audioUrl: serializer.fromJson<String?>(json['audioUrl']),
+      examplesJson: serializer.fromJson<String>(json['examplesJson']),
       tagsJson: serializer.fromJson<String>(json['tagsJson']),
       dueAt: serializer.fromJson<DateTime?>(json['dueAt']),
       scheduleJson: serializer.fromJson<String>(json['scheduleJson']),
@@ -1158,6 +1189,7 @@ class LocalStudyCardRow extends DataClass
       'back': serializer.toJson<String>(back),
       'transliteration': serializer.toJson<String?>(transliteration),
       'audioUrl': serializer.toJson<String?>(audioUrl),
+      'examplesJson': serializer.toJson<String>(examplesJson),
       'tagsJson': serializer.toJson<String>(tagsJson),
       'dueAt': serializer.toJson<DateTime?>(dueAt),
       'scheduleJson': serializer.toJson<String>(scheduleJson),
@@ -1180,6 +1212,7 @@ class LocalStudyCardRow extends DataClass
     String? back,
     Value<String?> transliteration = const Value.absent(),
     Value<String?> audioUrl = const Value.absent(),
+    String? examplesJson,
     String? tagsJson,
     Value<DateTime?> dueAt = const Value.absent(),
     String? scheduleJson,
@@ -1201,6 +1234,7 @@ class LocalStudyCardRow extends DataClass
         ? transliteration.value
         : this.transliteration,
     audioUrl: audioUrl.present ? audioUrl.value : this.audioUrl,
+    examplesJson: examplesJson ?? this.examplesJson,
     tagsJson: tagsJson ?? this.tagsJson,
     dueAt: dueAt.present ? dueAt.value : this.dueAt,
     scheduleJson: scheduleJson ?? this.scheduleJson,
@@ -1228,6 +1262,9 @@ class LocalStudyCardRow extends DataClass
           ? data.transliteration.value
           : this.transliteration,
       audioUrl: data.audioUrl.present ? data.audioUrl.value : this.audioUrl,
+      examplesJson: data.examplesJson.present
+          ? data.examplesJson.value
+          : this.examplesJson,
       tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
       dueAt: data.dueAt.present ? data.dueAt.value : this.dueAt,
       scheduleJson: data.scheduleJson.present
@@ -1262,6 +1299,7 @@ class LocalStudyCardRow extends DataClass
           ..write('back: $back, ')
           ..write('transliteration: $transliteration, ')
           ..write('audioUrl: $audioUrl, ')
+          ..write('examplesJson: $examplesJson, ')
           ..write('tagsJson: $tagsJson, ')
           ..write('dueAt: $dueAt, ')
           ..write('scheduleJson: $scheduleJson, ')
@@ -1286,6 +1324,7 @@ class LocalStudyCardRow extends DataClass
     back,
     transliteration,
     audioUrl,
+    examplesJson,
     tagsJson,
     dueAt,
     scheduleJson,
@@ -1309,6 +1348,7 @@ class LocalStudyCardRow extends DataClass
           other.back == this.back &&
           other.transliteration == this.transliteration &&
           other.audioUrl == this.audioUrl &&
+          other.examplesJson == this.examplesJson &&
           other.tagsJson == this.tagsJson &&
           other.dueAt == this.dueAt &&
           other.scheduleJson == this.scheduleJson &&
@@ -1330,6 +1370,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<String> back;
   final Value<String?> transliteration;
   final Value<String?> audioUrl;
+  final Value<String> examplesJson;
   final Value<String> tagsJson;
   final Value<DateTime?> dueAt;
   final Value<String> scheduleJson;
@@ -1350,6 +1391,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.back = const Value.absent(),
     this.transliteration = const Value.absent(),
     this.audioUrl = const Value.absent(),
+    this.examplesJson = const Value.absent(),
     this.tagsJson = const Value.absent(),
     this.dueAt = const Value.absent(),
     this.scheduleJson = const Value.absent(),
@@ -1371,6 +1413,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     required String back,
     this.transliteration = const Value.absent(),
     this.audioUrl = const Value.absent(),
+    this.examplesJson = const Value.absent(),
     required String tagsJson,
     this.dueAt = const Value.absent(),
     required String scheduleJson,
@@ -1402,6 +1445,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<String>? back,
     Expression<String>? transliteration,
     Expression<String>? audioUrl,
+    Expression<String>? examplesJson,
     Expression<String>? tagsJson,
     Expression<DateTime>? dueAt,
     Expression<String>? scheduleJson,
@@ -1423,6 +1467,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       if (back != null) 'back': back,
       if (transliteration != null) 'transliteration': transliteration,
       if (audioUrl != null) 'audio_url': audioUrl,
+      if (examplesJson != null) 'examples_json': examplesJson,
       if (tagsJson != null) 'tags_json': tagsJson,
       if (dueAt != null) 'due_at': dueAt,
       if (scheduleJson != null) 'schedule_json': scheduleJson,
@@ -1446,6 +1491,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<String>? back,
     Value<String?>? transliteration,
     Value<String?>? audioUrl,
+    Value<String>? examplesJson,
     Value<String>? tagsJson,
     Value<DateTime?>? dueAt,
     Value<String>? scheduleJson,
@@ -1467,6 +1513,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       back: back ?? this.back,
       transliteration: transliteration ?? this.transliteration,
       audioUrl: audioUrl ?? this.audioUrl,
+      examplesJson: examplesJson ?? this.examplesJson,
       tagsJson: tagsJson ?? this.tagsJson,
       dueAt: dueAt ?? this.dueAt,
       scheduleJson: scheduleJson ?? this.scheduleJson,
@@ -1507,6 +1554,9 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     }
     if (audioUrl.present) {
       map['audio_url'] = Variable<String>(audioUrl.value);
+    }
+    if (examplesJson.present) {
+      map['examples_json'] = Variable<String>(examplesJson.value);
     }
     if (tagsJson.present) {
       map['tags_json'] = Variable<String>(tagsJson.value);
@@ -1555,6 +1605,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
           ..write('back: $back, ')
           ..write('transliteration: $transliteration, ')
           ..write('audioUrl: $audioUrl, ')
+          ..write('examplesJson: $examplesJson, ')
           ..write('tagsJson: $tagsJson, ')
           ..write('dueAt: $dueAt, ')
           ..write('scheduleJson: $scheduleJson, ')
@@ -1867,6 +1918,7 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
       required String back,
       Value<String?> transliteration,
       Value<String?> audioUrl,
+      Value<String> examplesJson,
       required String tagsJson,
       Value<DateTime?> dueAt,
       required String scheduleJson,
@@ -1889,6 +1941,7 @@ typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
       Value<String> back,
       Value<String?> transliteration,
       Value<String?> audioUrl,
+      Value<String> examplesJson,
       Value<String> tagsJson,
       Value<DateTime?> dueAt,
       Value<String> scheduleJson,
@@ -1948,6 +2001,11 @@ class $$LocalStudyCardsTableFilterComposer
 
   ColumnFilters<String> get audioUrl => $composableBuilder(
     column: $table.audioUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get examplesJson => $composableBuilder(
+    column: $table.examplesJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2051,6 +2109,11 @@ class $$LocalStudyCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get examplesJson => $composableBuilder(
+    column: $table.examplesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get tagsJson => $composableBuilder(
     column: $table.tagsJson,
     builder: (column) => ColumnOrderings(column),
@@ -2139,6 +2202,11 @@ class $$LocalStudyCardsTableAnnotationComposer
   GeneratedColumn<String> get audioUrl =>
       $composableBuilder(column: $table.audioUrl, builder: (column) => column);
 
+  GeneratedColumn<String> get examplesJson => $composableBuilder(
+    column: $table.examplesJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get tagsJson =>
       $composableBuilder(column: $table.tagsJson, builder: (column) => column);
 
@@ -2225,6 +2293,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<String> back = const Value.absent(),
                 Value<String?> transliteration = const Value.absent(),
                 Value<String?> audioUrl = const Value.absent(),
+                Value<String> examplesJson = const Value.absent(),
                 Value<String> tagsJson = const Value.absent(),
                 Value<DateTime?> dueAt = const Value.absent(),
                 Value<String> scheduleJson = const Value.absent(),
@@ -2245,6 +2314,7 @@ class $$LocalStudyCardsTableTableManager
                 back: back,
                 transliteration: transliteration,
                 audioUrl: audioUrl,
+                examplesJson: examplesJson,
                 tagsJson: tagsJson,
                 dueAt: dueAt,
                 scheduleJson: scheduleJson,
@@ -2267,6 +2337,7 @@ class $$LocalStudyCardsTableTableManager
                 required String back,
                 Value<String?> transliteration = const Value.absent(),
                 Value<String?> audioUrl = const Value.absent(),
+                Value<String> examplesJson = const Value.absent(),
                 required String tagsJson,
                 Value<DateTime?> dueAt = const Value.absent(),
                 required String scheduleJson,
@@ -2287,6 +2358,7 @@ class $$LocalStudyCardsTableTableManager
                 back: back,
                 transliteration: transliteration,
                 audioUrl: audioUrl,
+                examplesJson: examplesJson,
                 tagsJson: tagsJson,
                 dueAt: dueAt,
                 scheduleJson: scheduleJson,

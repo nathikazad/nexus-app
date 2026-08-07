@@ -37,7 +37,6 @@ void main() {
                     <String, Object?>{
                       'id': 11,
                       'name': 'talent',
-                      'description': 'കഴിവ്',
                       'model_type_id': 62,
                       'updated_at': '2026-08-04T10:00:00Z',
                       'model_type': <String, Object?>{
@@ -46,8 +45,15 @@ void main() {
                       },
                       'attributes': <String, Object?>{
                         'suspended': false,
-                        'transliteration': 'kazhivu',
-                        'audio_url': '/cards/audio/1/11.mp3',
+                        'card_details': <String, Object?>{
+                          'front': 'talent',
+                          'back': 'കഴിവ്',
+                        },
+                        'language_details': <String, Object?>{
+                          'transliteration': 'kazhivu',
+                          'audio_url': '/cards/audio/1/11.mp3',
+                          'examples': <Object?>[],
+                        },
                         'schedule': <String, Object?>{
                           'version': 2,
                           'algorithm': 'fsrs',

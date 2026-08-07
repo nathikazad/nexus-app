@@ -55,6 +55,13 @@ final class DriftCardsMapper {
         content is LanguageCardContent ? content.transliteration : null,
       ),
       audioUrl: Value(content is LanguageCardContent ? content.audioUrl : null),
+      examplesJson: Value(
+        jsonEncode(
+          content is LanguageCardContent
+              ? content.examples.map((example) => example.toJson()).toList()
+              : const <Object?>[],
+        ),
+      ),
       tagsJson: jsonEncode(card.tags),
       dueAt: Value(card.nextDueAt),
       scheduleJson: jsonEncode(scheduleJson(card)),
@@ -79,6 +86,7 @@ final class DriftCardsMapper {
               originalScript: row.back,
               transliteration: row.transliteration ?? '',
               audioUrl: row.audioUrl,
+              examples: languageExamplesFromJson(jsonDecode(row.examplesJson)),
             )
           : BasicCardContent(front: row.front, back: row.back),
       deckId: row.deckId,

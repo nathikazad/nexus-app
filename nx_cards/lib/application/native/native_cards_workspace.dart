@@ -111,6 +111,7 @@ final class NativeCardsWorkspace implements CardsWorkspace {
           originalScript: newContent.originalScript,
           transliteration: newContent.transliteration,
           audioUrl: newContent.audioUrl ?? oldContent.audioUrl,
+          examples: newContent.examples,
         ),
       _ => content,
     };

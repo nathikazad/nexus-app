@@ -35,15 +35,25 @@ void main() {
     final data = input['data'] as Map<String, dynamic>;
     expect(data['model_type'], languageCardModelType);
     expect(data['name'], 'talent');
-    expect(data['description'], 'കഴിവ്');
+    expect(data, isNot(contains('description')));
     final attributes = data['attributes'] as List<dynamic>;
-    final transliteration =
+    final cardDetails =
         attributes.singleWhere(
-              (row) =>
-                  (row as Map<String, dynamic>)['key'] == attrTransliteration,
+              (row) => (row as Map<String, dynamic>)['key'] == attrCardDetails,
             )
             as Map<String, dynamic>;
-    expect(transliteration['value'], 'kazhivu');
+    expect(cardDetails['value'], {'front': 'talent', 'back': 'കഴിവ്'});
+    final languageDetails =
+        attributes.singleWhere(
+              (row) =>
+                  (row as Map<String, dynamic>)['key'] == attrLanguageDetails,
+            )
+            as Map<String, dynamic>;
+    expect(languageDetails['value'], {
+      'transliteration': 'kazhivu',
+      'audio_url': null,
+      'examples': <Object?>[],
+    });
     final schedule =
         attributes.singleWhere(
               (row) => (row as Map<String, dynamic>)['key'] == attrSchedule,
@@ -73,10 +83,21 @@ void main() {
             {
               'id': 42,
               'name': 'talent',
-              'description': 'കഴിവ്',
               'model_type_id': 67,
+              'card_details': {'front': 'talent', 'back': 'കഴിവ്'},
               if (requestedType == languageCardModelType)
-                'transliteration': 'kazhivu',
+                'language_details': {
+                  'transliteration': 'kazhivu',
+                  'audio_url': null,
+                  'examples': <Object?>[
+                    {
+                      'text': 'അവന് നല്ല കഴിവുണ്ട്.',
+                      'transliteration': 'avan nalla kazhivundu',
+                      'translation': 'He has good talent.',
+                      'audio_url': null,
+                    },
+                  ],
+                },
               'suspended': false,
               'schedule': {
                 'version': 2,
@@ -108,6 +129,7 @@ void main() {
     expect(content.english, 'talent');
     expect(content.originalScript, 'കഴിവ്');
     expect(content.transliteration, 'kazhivu');
+    expect(content.examples.single.translation, 'He has good talent.');
     expect(
       cards.single.scheduleFor(StudyDirection.frontToBack).enabled,
       isTrue,

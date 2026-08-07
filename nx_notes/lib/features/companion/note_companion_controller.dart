@@ -118,6 +118,7 @@ class NoteCompanionController extends ChangeNotifier {
   DocumentAudio? _audio;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  double _noteAudioPlaybackSpeed = 1;
   String? _lastPlaybackBlockKey;
 
   NoteCompanionPhase get phase => _phase;
@@ -134,6 +135,7 @@ class NoteCompanionController extends ChangeNotifier {
   bool get hasOlderMessages => _olderMessages.isNotEmpty;
   Duration get audioPosition => _position;
   Duration get audioDuration => _duration;
+  double get noteAudioPlaybackSpeed => _noteAudioPlaybackSpeed;
   bool get isBusy => switch (_phase) {
     NoteCompanionPhase.connecting ||
     NoteCompanionPhase.waiting ||
@@ -312,6 +314,17 @@ class NoteCompanionController extends ChangeNotifier {
     await _noteAudioPlayer.seek(bounded);
     _syncBlockForPosition(bounded);
     _notify();
+  }
+
+  Future<void> setNoteAudioPlaybackSpeed(double speed) async {
+    if (!speed.isFinite || speed <= 0) return;
+    try {
+      await _noteAudioPlayer.setSpeed(speed);
+      _noteAudioPlaybackSpeed = speed;
+      _notify();
+    } catch (error) {
+      _setError(error);
+    }
   }
 
   void _handleNoteAudioProgress(Duration position, Duration duration) {

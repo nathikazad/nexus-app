@@ -17,6 +17,13 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
         audioUrl: '/cards/assets/audio/file?user_id=1&name=12-abcd.mp3',
+        examples: <LanguageExample>[
+          LanguageExample(
+            text: 'അവന് നല്ല കഴിവുണ്ട്.',
+            transliteration: 'avan nalla kazhivundu',
+            translation: 'He has good talent.',
+          ),
+        ],
       );
 
       expect(content.front, 'talent');
@@ -25,6 +32,8 @@ void main() {
       expect(content.originalScript, 'കഴിവ്');
       expect(content.transliteration, 'kazhivu');
       expect(content.audioUrl, endsWith('12-abcd.mp3'));
+      expect(content.examples.single.translation, 'He has good talent.');
+      expect(content.examples.single.toJson(), isNot(contains('audio_url')));
     },
   );
 }

@@ -14,8 +14,46 @@ const attrDueAt = 'due_at';
 const attrSuspended = 'suspended';
 const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
-const attrTransliteration = 'transliteration';
-const attrAudioUrl = 'audio_url';
+const attrCardDetails = 'card_details';
+const attrLanguageDetails = 'language_details';
+
+const cardDetailsJsonSchema = <String, dynamic>{
+  'type': 'object',
+  'additionalProperties': false,
+  'required': ['front', 'back'],
+  'properties': {
+    'front': {'type': 'string', 'minLength': 1},
+    'back': {'type': 'string', 'minLength': 1},
+  },
+};
+
+const languageDetailsJsonSchema = <String, dynamic>{
+  'type': 'object',
+  'additionalProperties': false,
+  'required': ['transliteration', 'audio_url', 'examples'],
+  'properties': {
+    'transliteration': {'type': 'string', 'minLength': 1},
+    'audio_url': {
+      'type': ['string', 'null'],
+    },
+    'examples': {
+      'type': 'array',
+      'items': {
+        'type': 'object',
+        'additionalProperties': false,
+        'required': ['text', 'transliteration', 'translation'],
+        'properties': {
+          'text': {'type': 'string', 'minLength': 1},
+          'transliteration': {'type': 'string', 'minLength': 1},
+          'translation': {'type': 'string', 'minLength': 1},
+          'audio_url': {
+            'type': ['string', 'null'],
+          },
+        },
+      },
+    },
+  },
+};
 
 const scheduleJsonSchema = <String, dynamic>{
   'type': 'object',
@@ -142,10 +180,10 @@ Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
     languageCardReady:
         languageCard != null &&
         languageCard.parent?.name == cardModelType &&
-        _hasAttributes(languageCard, const {
-          attrTransliteration: 'string',
-          attrAudioUrl: 'string',
-        }),
+        _hasAttributeDefinitions(
+          languageCard,
+          buildLanguageCardSchemaRequest().attributeDefinitions!,
+        ),
   );
 }
 
@@ -329,8 +367,14 @@ SetModelTypeRequest buildCardSchemaRequest() {
     name: cardModelType,
     typeKind: 'base',
     description:
-        'A flashcard with independent front-to-back and back-to-front FSRS state and review history.',
+        'A bidirectional flashcard with structured front/back content and independent FSRS state and review history.',
     attributeDefinitions: [
+      AttributeDefinition(
+        key: attrCardDetails,
+        valueType: 'json',
+        required: true,
+        constraints: const {'json_schema': cardDetailsJsonSchema},
+      ),
       AttributeDefinition(key: attrDueAt, valueType: 'datetime'),
       AttributeDefinition(
         key: attrSuspended,
@@ -389,16 +433,15 @@ SetModelTypeRequest buildLanguageCardSchemaRequest() {
     name: languageCardModelType,
     typeKind: 'base',
     description:
-        'A language-learning flashcard with English on the front and original script plus transliteration on the back.',
+        'A language-learning flashcard with structured language details and optional reinforcement examples.',
     parent: ParentLink.fromName(cardModelType),
     attributeDefinitions: [
       AttributeDefinition(
-        key: attrTransliteration,
-        valueType: 'string',
+        key: attrLanguageDetails,
+        valueType: 'json',
         required: true,
-        constraints: const {'minLength': 1},
+        constraints: const {'json_schema': languageDetailsJsonSchema},
       ),
-      AttributeDefinition(key: attrAudioUrl, valueType: 'string'),
     ],
   );
 }

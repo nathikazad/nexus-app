@@ -36,6 +36,13 @@ void main() {
       (dashboard.cards.single.content as LanguageCardContent).audioUrl,
       '/cards/audio/1/11.mp3',
     );
+    expect(
+      (dashboard.cards.single.content as LanguageCardContent)
+          .examples
+          .single
+          .translation,
+      'He has good talent.',
+    );
     expect(await store.deckManifest(), hasLength(1));
     expect((await store.deckManifest()).single.serverHash, 'hash-1');
   });
@@ -209,6 +216,38 @@ void main() {
       'survives-restart',
     );
   });
+
+  test(
+    'schema v3 invalidates deck hashes to force a canonical resync',
+    () async {
+      await database.close();
+      final directory = await Directory.systemTemp.createTemp(
+        'nx-cards-migration-test-',
+      );
+      addTearDown(() async {
+        if (await directory.exists()) await directory.delete(recursive: true);
+      });
+      final file = File('${directory.path}/cards.sqlite');
+
+      final oldDatabase = CardsDatabase(NativeDatabase(file));
+      final oldStore = DriftLocalCardsStore(
+        database: oldDatabase,
+        account: account,
+      );
+      await oldStore.applySyncBundle(_bundle(hash: 'already-current-hash'));
+      await oldDatabase.customStatement('PRAGMA user_version = 2');
+      await oldDatabase.close();
+
+      final upgradedDatabase = CardsDatabase(NativeDatabase(file));
+      addTearDown(upgradedDatabase.close);
+      final upgradedStore = DriftLocalCardsStore(
+        database: upgradedDatabase,
+        account: account,
+      );
+
+      expect((await upgradedStore.deckManifest()).single.serverHash, isNull);
+    },
+  );
 }
 
 CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
@@ -232,6 +271,13 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
               originalScript: 'കഴിവ്',
               transliteration: 'kazhivu',
               audioUrl: '/cards/audio/1/11.mp3',
+              examples: const <LanguageExample>[
+                LanguageExample(
+                  text: 'അവന് നല്ല കഴിവുണ്ട്.',
+                  transliteration: 'avan nalla kazhivundu',
+                  translation: 'He has good talent.',
+                ),
+              ],
             ),
             deckId: 7,
             deckName: 'Malayalam',

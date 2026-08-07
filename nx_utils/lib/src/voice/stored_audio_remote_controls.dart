@@ -11,16 +11,15 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
   static Future<NxStoredAudioRemoteControls>? _initialization;
 
   static Future<NxStoredAudioRemoteControls> initialize() {
-    return _initialization ??=
-        AudioService.init<NxStoredAudioRemoteControls>(
-          builder: NxStoredAudioRemoteControls._,
-          config: const AudioServiceConfig(
-            androidNotificationChannelId: 'com.nexus.nxNotes.note_audio',
-            androidNotificationChannelName: 'Note audio',
-            rewindInterval: Duration(seconds: 15),
-            fastForwardInterval: Duration(seconds: 15),
-          ),
-        );
+    return _initialization ??= AudioService.init<NxStoredAudioRemoteControls>(
+      builder: NxStoredAudioRemoteControls._,
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.nexus.nxNotes.note_audio',
+        androidNotificationChannelName: 'Note audio',
+        rewindInterval: Duration(seconds: 15),
+        fastForwardInterval: Duration(seconds: 15),
+      ),
+    );
   }
 
   Object? _owner;
@@ -31,6 +30,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _playing = false;
+  double _speed = 1;
   AudioProcessingState _processingState = AudioProcessingState.idle;
 
   void bind({
@@ -41,6 +41,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     required NxRemoteAudioAction onPause,
     required NxRemoteAudioAction onStop,
     required NxRemoteAudioSeek onSeek,
+    required double speed,
   }) {
     _owner = owner;
     _onPlay = onPlay;
@@ -48,6 +49,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     _onStop = onStop;
     _onSeek = onSeek;
     _duration = duration;
+    _speed = speed;
     _processingState = AudioProcessingState.ready;
     mediaItem.add(
       MediaItem(
@@ -70,6 +72,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     _playing = false;
     _position = Duration.zero;
     _duration = Duration.zero;
+    _speed = 1;
     _processingState = AudioProcessingState.idle;
     mediaItem.add(null);
     _publish();
@@ -79,11 +82,13 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     Duration? position,
     Duration? duration,
     bool? playing,
+    double? speed,
     AudioProcessingState? processingState,
   }) {
     if (position != null) _position = position;
     if (duration != null && duration > Duration.zero) _duration = duration;
     if (playing != null) _playing = playing;
+    if (speed != null) _speed = speed;
     if (processingState != null) _processingState = processingState;
     _publish();
   }
@@ -123,7 +128,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
         playing: _playing,
         updatePosition: _position,
         bufferedPosition: _duration,
-        speed: 1,
+        speed: _speed,
       ),
     );
   }

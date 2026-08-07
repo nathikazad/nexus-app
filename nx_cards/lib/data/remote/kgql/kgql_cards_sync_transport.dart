@@ -21,8 +21,11 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
       SetModelRequest(
         id: card.id,
         name: card.front,
-        description: card.back,
         attributes: <SetModelAttribute>[
+          SetModelAttribute(
+            key: attrCardDetails,
+            value: cardDetailsJson(content),
+          ),
           SetModelAttribute(
             key: attrDueAt,
             value: card.nextDueAt?.toUtc().toIso8601String(),
@@ -34,14 +37,11 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
             key: attrReviewHistory,
             value: reviewHistoryJson(card),
           ),
-          if (content is LanguageCardContent) ...<SetModelAttribute>[
+          if (content case final LanguageCardContent languageContent)
             SetModelAttribute(
-              key: attrTransliteration,
-              value: content.transliteration,
+              key: attrLanguageDetails,
+              value: languageDetailsJson(languageContent),
             ),
-            if (content.audioUrl?.isNotEmpty == true)
-              SetModelAttribute(key: attrAudioUrl, value: content.audioUrl),
-          ],
         ],
         tags: <SetModelTag>[
           SetModelTag(system: cardTagsTagSystem, nodes: card.tags, clear: true),
@@ -97,8 +97,11 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
           ? languageCardModelType
           : cardModelType,
       name: content.front,
-      description: content.back,
       attributes: <SetModelAttribute>[
+        SetModelAttribute(
+          key: attrCardDetails,
+          value: cardDetailsJson(content),
+        ),
         SetModelAttribute(key: attrSuspended, value: false),
         SetModelAttribute(
           key: attrSchedule,
@@ -110,10 +113,10 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
           key: attrReviewHistory,
           value: emptyReviewHistoryJson(),
         ),
-        if (content is LanguageCardContent)
+        if (content case final LanguageCardContent languageContent)
           SetModelAttribute(
-            key: attrTransliteration,
-            value: content.transliteration,
+            key: attrLanguageDetails,
+            value: languageDetailsJson(languageContent),
           ),
       ],
       relations: <ModelRelation>[

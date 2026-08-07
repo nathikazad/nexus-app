@@ -11,6 +11,10 @@ import 'package:nx_notes/data/document/document_audio_service.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/features/companion/note_companion_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+const notePlaybackSpeeds = <double>[0.75, 1, 1.25, 1.5, 2];
+const _notePlaybackSpeedPreferenceKey = 'nx_notes.note_playback_speed';
 
 class NoteCompanion extends ConsumerStatefulWidget {
   const NoteCompanion({
@@ -68,7 +72,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     }
     final audioService = DocumentAudioService(baseUrl: baseUrl, userId: userId);
     final initialAudio = widget.document.audio;
-    _controller = NoteCompanionController(
+    final controller = NoteCompanionController(
       documentId: widget.document.id,
       socketUrl: socketUrl,
       userId: userId,
@@ -86,7 +90,24 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       initialBlockKey: _scrollAnchorBlockKey(widget.document.jsonDocument),
       onAudioBlockChanged: widget.onAudioBlockChanged,
     )..addListener(_onControllerChanged);
+    _controller = controller;
+    unawaited(_restorePlaybackSpeed(controller));
     _loadEmbeddedHistory();
+  }
+
+  Future<void> _restorePlaybackSpeed(NoteCompanionController controller) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final speed = preferences.getDouble(_notePlaybackSpeedPreferenceKey);
+      if (speed != null &&
+          notePlaybackSpeeds.contains(speed) &&
+          mounted &&
+          identical(controller, _controller)) {
+        await controller.setNoteAudioPlaybackSpeed(speed);
+      }
+    } catch (_) {
+      // Playback remains at 1x if preferences are unavailable.
+    }
   }
 
   void _loadEmbeddedHistory() {
@@ -130,89 +151,97 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
+    final Widget content;
     if (widget.embeddedChat) {
       _loadEmbeddedHistory();
-      return _buildChatPanel(
+      content = _buildChatPanel(
         controller,
         height: double.infinity,
         embedded: true,
       );
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final chatHeight = constraints.hasBoundedHeight
-            ? (constraints.maxHeight - 72).clamp(300.0, 760.0)
-            : (MediaQuery.sizeOf(context).height - 190).clamp(300.0, 760.0);
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            if (_chatExpanded) _buildChatPanel(controller, height: chatHeight),
-            if (_audioExpanded && controller != null)
-              _AudioPanel(
-                controller: controller,
-                onClose: () => setState(() => _audioExpanded = false),
-              ),
-            if (_chatExpanded || _audioExpanded) const SizedBox(height: 8),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Tooltip(
-                  message: controller?.hasAudio == true
-                      ? 'Open note playback'
-                      : 'Create note audio',
-                  child: FloatingActionButton.small(
-                    heroTag: 'note-audio-${widget.document.id}',
-                    elevation: 2,
-                    backgroundColor: AppColors.floating,
-                    foregroundColor: AppColors.onFloating,
-                    onPressed: controller == null || controller.generatingAudio
-                        ? null
-                        : () => unawaited(_toggleAudio(controller)),
-                    child: controller?.generatingAudio == true
-                        ? const SizedBox.square(
-                            dimension: 17,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            controller?.noteAudioPlaying == true
-                                ? Icons.pause_rounded
-                                : Icons.headphones_rounded,
-                            size: 18,
-                          ),
-                  ),
+    } else {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          final chatHeight = constraints.hasBoundedHeight
+              ? (constraints.maxHeight - 72).clamp(300.0, 760.0)
+              : (MediaQuery.sizeOf(context).height - 190).clamp(300.0, 760.0);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              if (_chatExpanded)
+                _buildChatPanel(controller, height: chatHeight),
+              if (_audioExpanded && controller != null)
+                _AudioPanel(
+                  controller: controller,
+                  onClose: () => setState(() => _audioExpanded = false),
                 ),
-                const SizedBox(width: 8),
-                Semantics(
-                  button: true,
-                  label: 'Open note AI',
-                  child: Tooltip(
-                    message: 'Ask AI about this note',
+              if (_chatExpanded || _audioExpanded) const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Tooltip(
+                    message: controller?.hasAudio == true
+                        ? 'Open note playback'
+                        : 'Create note audio',
                     child: FloatingActionButton.small(
-                      heroTag: 'note-companion-${widget.document.id}',
+                      heroTag: 'note-audio-${widget.document.id}',
                       elevation: 2,
                       backgroundColor: AppColors.floating,
                       foregroundColor: AppColors.onFloating,
-                      onPressed: () {
-                        FocusScope.of(context).unfocus();
-                        final opening = !_chatExpanded;
-                        setState(() {
-                          _chatExpanded = opening;
-                          if (_chatExpanded) _audioExpanded = false;
-                        });
-                        if (opening && controller != null) {
-                          unawaited(controller.loadHistory());
-                        }
-                      },
-                      child: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      onPressed:
+                          controller == null || controller.generatingAudio
+                          ? null
+                          : () => unawaited(_toggleAudio(controller)),
+                      child: controller?.generatingAudio == true
+                          ? const SizedBox.square(
+                              dimension: 17,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              controller?.noteAudioPlaying == true
+                                  ? Icons.pause_rounded
+                                  : Icons.headphones_rounded,
+                              size: 18,
+                            ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
+                  const SizedBox(width: 8),
+                  Semantics(
+                    button: true,
+                    label: 'Open note AI',
+                    child: Tooltip(
+                      message: 'Ask AI about this note',
+                      child: FloatingActionButton.small(
+                        heroTag: 'note-companion-${widget.document.id}',
+                        elevation: 2,
+                        backgroundColor: AppColors.floating,
+                        foregroundColor: AppColors.onFloating,
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          final opening = !_chatExpanded;
+                          setState(() {
+                            _chatExpanded = opening;
+                            if (_chatExpanded) _audioExpanded = false;
+                          });
+                          if (opening && controller != null) {
+                            unawaited(controller.loadHistory());
+                          }
+                        },
+                        child: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    }
+    return Theme(
+      data: _neutralCompanionTheme(Theme.of(context)),
+      child: content,
     );
   }
 
@@ -516,6 +545,22 @@ class _AudioControls extends StatelessWidget {
             _formatDuration(controller.audioPosition),
             style: TextStyle(color: AppColors.muted, fontSize: 11),
           ),
+          NotePlaybackSpeedButton(
+            speed: controller.noteAudioPlaybackSpeed,
+            onSelected: (speed) async {
+              await controller.setNoteAudioPlaybackSpeed(speed);
+              if (controller.noteAudioPlaybackSpeed != speed) return;
+              try {
+                final preferences = await SharedPreferences.getInstance();
+                await preferences.setDouble(
+                  _notePlaybackSpeedPreferenceKey,
+                  speed,
+                );
+              } catch (_) {
+                // The selected speed still applies for this app session.
+              }
+            },
+          ),
           PopupMenuButton<String>(
             tooltip: 'Audio options',
             onSelected: (_) =>
@@ -532,6 +577,129 @@ class _AudioControls extends StatelessWidget {
       ),
     );
   }
+}
+
+class NotePlaybackSpeedButton extends StatelessWidget {
+  const NotePlaybackSpeedButton({
+    required this.speed,
+    required this.onSelected,
+    super.key,
+  });
+
+  final double speed;
+  final ValueChanged<double> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<double>(
+      key: const ValueKey<String>('note-playback-speed-button'),
+      tooltip: 'Playback speed',
+      initialValue: speed,
+      onSelected: onSelected,
+      position: PopupMenuPosition.under,
+      offset: const Offset(-112, -224),
+      color: Colors.black,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.black54,
+      elevation: 10,
+      menuPadding: const EdgeInsets.symmetric(vertical: 6),
+      constraints: const BoxConstraints.tightFor(width: 124),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: Color(0xff3f3f46)),
+      ),
+      itemBuilder: (_) => <PopupMenuEntry<double>>[
+        for (final option in notePlaybackSpeeds)
+          PopupMenuItem<double>(
+            key: ValueKey<String>('note-playback-speed-$option'),
+            value: option,
+            height: 38,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  child: option == speed
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  formatNotePlaybackSpeed(option),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: option == speed
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 10),
+        child: Text(
+          formatNotePlaybackSpeed(speed),
+          style: TextStyle(
+            color: AppColors.muted,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String formatNotePlaybackSpeed(double speed) =>
+    '${speed.toStringAsFixed(speed == speed.roundToDouble() ? 0 : 2).replaceFirst(RegExp(r'0$'), '')}×';
+
+ThemeData _neutralCompanionTheme(ThemeData base) {
+  final scheme = base.colorScheme.copyWith(
+    primary: AppColors.text,
+    onPrimary: AppColors.panel,
+    primaryContainer: AppColors.subtle,
+    onPrimaryContainer: AppColors.text,
+    secondary: AppColors.text,
+    onSecondary: AppColors.panel,
+    secondaryContainer: AppColors.subtle,
+    onSecondaryContainer: AppColors.text,
+    surfaceTint: Colors.transparent,
+  );
+  return base.copyWith(
+    colorScheme: scheme,
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: AppColors.text),
+    sliderTheme: base.sliderTheme.copyWith(
+      activeTrackColor: AppColors.text,
+      inactiveTrackColor: AppColors.line,
+      thumbColor: AppColors.text,
+      overlayColor: AppColors.text.withValues(alpha: 0.08),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: AppColors.text),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: AppColors.text,
+        backgroundColor: Colors.transparent,
+        disabledForegroundColor: AppColors.faint,
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: AppColors.panel,
+      surfaceTintColor: Colors.transparent,
+      textStyle: TextStyle(color: AppColors.text),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: AppColors.line),
+      ),
+    ),
+  );
 }
 
 class _CompanionHeader extends StatelessWidget {

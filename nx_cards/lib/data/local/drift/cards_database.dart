@@ -28,6 +28,7 @@ class LocalStudyCards extends Table {
   TextColumn get back => text()();
   TextColumn get transliteration => text().nullable()();
   TextColumn get audioUrl => text().nullable()();
+  TextColumn get examplesJson => text().withDefault(const Constant('[]'))();
   TextColumn get tagsJson => text()();
   DateTimeColumn get dueAt => dateTime().nullable()();
   TextColumn get scheduleJson => text()();
@@ -49,13 +50,26 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await DriftOutboxPersistence.createSchema(this);
+    },
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.addColumn(localStudyCards, localStudyCards.examplesJson);
+      }
+      if (from < 3) {
+        // Older app code could accept the current server hash while dropping
+        // structured card fields. Invalidate those hashes once so the next
+        // lifecycle sync replaces every cached card with the canonical bundle.
+        await update(
+          localCardDecks,
+        ).write(const LocalCardDecksCompanion(serverHash: Value(null)));
+      }
     },
   );
 }

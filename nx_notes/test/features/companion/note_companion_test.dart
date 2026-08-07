@@ -53,6 +53,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('offers compact note playback speed choices', (tester) async {
+    double? selected;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.bottomRight,
+            child: NotePlaybackSpeedButton(
+              speed: 1,
+              onSelected: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('1×'), findsOneWidget);
+
+    await tester.tap(find.text('1×'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0.75×'), findsOneWidget);
+    expect(find.text('1.25×'), findsOneWidget);
+    expect(find.text('1.5×'), findsOneWidget);
+    expect(find.text('2×'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('1.5×')).style?.color, Colors.white);
+
+    final buttonRect = tester.getRect(
+      find.byKey(const ValueKey<String>('note-playback-speed-button')),
+    );
+    final menuItemRect = tester.getRect(
+      find.byKey(const ValueKey<String>('note-playback-speed-1.5')),
+    );
+    expect(menuItemRect.center.dx, lessThan(buttonRect.center.dx));
+    expect(menuItemRect.center.dy, lessThan(buttonRect.center.dy));
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('note-playback-speed-1.5')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selected, 1.5);
+  });
+
   testWidgets('stays compact until the user opens it', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

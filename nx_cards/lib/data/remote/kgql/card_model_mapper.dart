@@ -24,20 +24,22 @@ StudyCard? studyCardFromModel(Model model) {
   final history = _reviewHistoryByDirectionFrom(
     model.attributes?[attrReviewHistory],
   );
+  final cardDetails = _jsonMap(model.attributes?[attrCardDetails]);
+  final front = cardDetails['front']?.toString().trim() ?? '';
+  final back = cardDetails['back']?.toString().trim() ?? '';
+  final languageDetails = _jsonMap(model.attributes?[attrLanguageDetails]);
   return StudyCard(
     id: model.id,
     content: model.modelType?.name == languageCardModelType
         ? LanguageCardContent(
-            english: model.name,
-            originalScript: model.description?.trim() ?? '',
+            english: front,
+            originalScript: back,
             transliteration:
-                model.attrString(attrTransliteration)?.trim() ?? '',
-            audioUrl: model.attrString(attrAudioUrl)?.trim(),
+                languageDetails['transliteration']?.toString().trim() ?? '',
+            audioUrl: languageDetails['audio_url']?.toString().trim(),
+            examples: languageExamplesFromJson(languageDetails['examples']),
           )
-        : BasicCardContent(
-            front: model.name,
-            back: model.description?.trim() ?? '',
-          ),
+        : BasicCardContent(front: front, back: back),
     deckId: deck.id,
     deckName: deck.name,
     tags: model.tags?[cardTagsTagSystem] ?? const <String>[],
@@ -51,6 +53,27 @@ StudyCard? studyCardFromModel(Model model) {
     sourceBookName: book?.name,
     updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
   );
+}
+
+Map<String, Object?> cardDetailsJson(CardContent content) => <String, Object?>{
+  'front': content.front,
+  'back': content.back,
+};
+
+Map<String, Object?> languageDetailsJson(LanguageCardContent content) =>
+    <String, Object?>{
+      'transliteration': content.transliteration,
+      'audio_url': content.audioUrl,
+      'examples': content.examples.map((example) => example.toJson()).toList(),
+    };
+
+List<LanguageExample> languageExamplesFromJson(Object? raw) {
+  if (raw is! List) return const <LanguageExample>[];
+  return <LanguageExample>[
+    for (final value in raw)
+      if (value is Map)
+        LanguageExample.fromJson(Map<String, dynamic>.from(value)),
+  ];
 }
 
 List<_RelatedModel> _relatedModels(Model model, String modelType) {

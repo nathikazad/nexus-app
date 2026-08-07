@@ -1,7 +1,7 @@
 name: nx_notes
 description: Internal notes and essay editor for Nexus.
 publish_to: "none"
-version: 0.1.0+3
+version: 0.1.0+4
 
 environment:
   sdk: ^3.9.2
