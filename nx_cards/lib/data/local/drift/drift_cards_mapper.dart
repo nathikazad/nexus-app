@@ -19,7 +19,8 @@ final class DriftCardsMapper {
       remoteId: deck.id,
       name: deck.name,
       description: deck.description,
-      language: Value(deck.language),
+      fromLanguage: Value(deck.fromLanguage),
+      toLanguage: Value(deck.toLanguage),
       archived: deck.archived,
       updatedAt: Value(deck.updatedAt),
       serverHash: Value(serverHash),
@@ -30,7 +31,8 @@ final class DriftCardsMapper {
     id: row.remoteId,
     name: row.name,
     description: row.description,
-    language: row.language,
+    fromLanguage: row.fromLanguage,
+    toLanguage: row.toLanguage,
     archived: row.archived,
     updatedAt: row.updatedAt?.toUtc(),
   );
@@ -94,13 +96,12 @@ final class DriftCardsMapper {
       tags: <String>[
         for (final value in _jsonList(row.tagsJson)) value.toString(),
       ],
-      schedules: <StudyDirection, CardSchedule>{
-        for (final direction in StudyDirection.values)
-          direction: _scheduleFrom(schedule[direction.storageKey]),
+      schedules: <StudyCue, CardSchedule>{
+        for (final cue in StudyCue.values)
+          cue: _scheduleFrom(_cueNode(schedule, cue)),
       },
-      reviewHistory: <StudyDirection, List<CardReview>>{
-        for (final direction in StudyDirection.values)
-          direction: _historyFrom(history[direction.storageKey]),
+      reviewHistory: <StudyCue, List<CardReview>>{
+        for (final cue in StudyCue.values) cue: _historyForCue(history, cue),
       },
       suspended: row.suspended,
       sourceBookId: row.sourceBookId,
@@ -108,6 +109,22 @@ final class DriftCardsMapper {
       updatedAt: row.updatedAt?.toUtc(),
     );
   }
+}
+
+Object? _cueNode(Map<String, dynamic> schedule, StudyCue cue) {
+  final cues = schedule['cues'];
+  return cues is Map ? cues[cue.storageKey] : null;
+}
+
+List<CardReview> _historyForCue(Map<String, dynamic> history, StudyCue cue) {
+  final items = history['items'];
+  if (items is! List) return const <CardReview>[];
+  return items
+      .whereType<Map>()
+      .where((item) => item['cue'] == cue.storageKey)
+      .map((item) => CardReview.fromJson(Map<String, dynamic>.from(item)))
+      .whereType<CardReview>()
+      .toList();
 }
 
 CardSchedule _scheduleFrom(Object? raw) {
@@ -125,13 +142,6 @@ CardSchedule _scheduleFrom(Object? raw) {
     reviewCount: _int(json['review_count']) ?? 0,
     lapseCount: _int(json['lapse_count']) ?? 0,
   );
-}
-
-List<CardReview> _historyFrom(Object? raw) {
-  if (raw is! Map) return const <CardReview>[];
-  final items = raw['items'];
-  if (items is! List) return const <CardReview>[];
-  return items.map(CardReview.fromJson).whereType<CardReview>().toList();
 }
 
 Map<String, dynamic> _jsonMap(String raw) {

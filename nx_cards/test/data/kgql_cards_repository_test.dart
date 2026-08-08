@@ -60,12 +60,11 @@ void main() {
             )
             as Map<String, dynamic>;
     final scheduleValue = schedule['value'] as Map<String, dynamic>;
+    final cues = scheduleValue['cues'] as Map<String, dynamic>;
+    expect((cues['from_language'] as Map<String, dynamic>)['enabled'], isTrue);
+    expect((cues['to_language'] as Map<String, dynamic>)['enabled'], isTrue);
     expect(
-      (scheduleValue['front_to_back'] as Map<String, dynamic>)['enabled'],
-      isTrue,
-    );
-    expect(
-      (scheduleValue['back_to_front'] as Map<String, dynamic>)['enabled'],
+      (cues['transliteration'] as Map<String, dynamic>)['enabled'],
       isTrue,
     );
   });
@@ -100,16 +99,15 @@ void main() {
                 },
               'suspended': false,
               'schedule': {
-                'version': 2,
+                'version': 3,
                 'algorithm': 'fsrs',
-                'front_to_back': _emptySchedule(enabled: true),
-                'back_to_front': _emptySchedule(enabled: true),
+                'cues': {
+                  'from_language': _emptySchedule(enabled: true),
+                  'to_language': _emptySchedule(enabled: true),
+                  'transliteration': _emptySchedule(enabled: true),
+                },
               },
-              'review_history': {
-                'version': 2,
-                'front_to_back': {'items': <Object?>[]},
-                'back_to_front': {'items': <Object?>[]},
-              },
+              'review_history': {'version': 3, 'items': <Object?>[]},
               'model_type': {'id': 67, 'name': languageCardModelType},
               'FlashcardDeck': [
                 {'id': 7, 'name': 'Malayalam', 'model_type_id': 65},
@@ -130,14 +128,8 @@ void main() {
     expect(content.originalScript, 'കഴിവ്');
     expect(content.transliteration, 'kazhivu');
     expect(content.examples.single.translation, 'He has good talent.');
-    expect(
-      cards.single.scheduleFor(StudyDirection.frontToBack).enabled,
-      isTrue,
-    );
-    expect(
-      cards.single.scheduleFor(StudyDirection.backToFront).enabled,
-      isTrue,
-    );
+    expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
+    expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
     expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});
   });
 }

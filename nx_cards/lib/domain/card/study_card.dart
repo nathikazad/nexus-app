@@ -1,7 +1,7 @@
 import 'package:nx_cards/domain/card/card_review.dart';
 import 'package:nx_cards/domain/card/card_schedule.dart';
 import 'package:nx_cards/domain/card/card_content.dart';
-import 'package:nx_cards/domain/card/study_direction.dart';
+import 'package:nx_cards/domain/card/study_cue.dart';
 import 'package:nx_cards/domain/card/study_prompt.dart';
 
 class StudyCard {
@@ -11,14 +11,14 @@ class StudyCard {
     required this.deckId,
     required this.deckName,
     required this.tags,
-    required Map<StudyDirection, CardSchedule> schedules,
-    required Map<StudyDirection, List<CardReview>> reviewHistory,
+    required Map<StudyCue, CardSchedule> schedules,
+    required Map<StudyCue, List<CardReview>> reviewHistory,
     required this.suspended,
     this.sourceBookId,
     this.sourceBookName,
     this.updatedAt,
-  }) : schedules = Map<StudyDirection, CardSchedule>.unmodifiable(schedules),
-       reviewHistory = Map<StudyDirection, List<CardReview>>.unmodifiable({
+  }) : schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
+       reviewHistory = Map<StudyCue, List<CardReview>>.unmodifiable({
          for (final entry in reviewHistory.entries)
            entry.key: List<CardReview>.unmodifiable(entry.value),
        });
@@ -31,8 +31,8 @@ class StudyCard {
   final int deckId;
   final String deckName;
   final List<String> tags;
-  final Map<StudyDirection, CardSchedule> schedules;
-  final Map<StudyDirection, List<CardReview>> reviewHistory;
+  final Map<StudyCue, CardSchedule> schedules;
+  final Map<StudyCue, List<CardReview>> reviewHistory;
   final bool suspended;
   final int? sourceBookId;
   final String? sourceBookName;
@@ -41,44 +41,40 @@ class StudyCard {
   /// conflict handling.
   final DateTime? updatedAt;
 
-  CardSchedule scheduleFor(StudyDirection direction) =>
-      schedules[direction] ?? const CardSchedule.initial(enabled: false);
+  CardSchedule scheduleFor(StudyCue cue) =>
+      schedules[cue] ?? const CardSchedule.initial(enabled: false);
 
-  List<CardReview> reviewHistoryFor(StudyDirection direction) =>
-      reviewHistory[direction] ?? const <CardReview>[];
+  List<CardReview> reviewHistoryFor(StudyCue cue) =>
+      reviewHistory[cue] ?? const <CardReview>[];
 
   Iterable<StudyPrompt> get prompts sync* {
     if (suspended) return;
-    for (final direction in StudyDirection.values) {
-      if (scheduleFor(direction).enabled) {
-        yield StudyPrompt(card: this, direction: direction);
+    for (final cue in StudyCue.values) {
+      if (scheduleFor(cue).enabled) {
+        yield StudyPrompt(card: this, cue: cue);
       }
     }
   }
 
   DateTime? get nextDueAt {
     final dueDates = <DateTime>[
-      for (final direction in StudyDirection.values)
-        if (scheduleFor(direction).enabled &&
-            scheduleFor(direction).dueAt != null)
-          scheduleFor(direction).dueAt!,
+      for (final cue in StudyCue.values)
+        if (scheduleFor(cue).enabled && scheduleFor(cue).dueAt != null)
+          scheduleFor(cue).dueAt!,
     ]..sort();
     return dueDates.firstOrNull;
   }
 
-  StudyCard updateDirection({
-    required StudyDirection direction,
+  StudyCard updateCue({
+    required StudyCue cue,
     required CardSchedule schedule,
     required List<CardReview> history,
   }) {
     return copyWith(
-      schedules: <StudyDirection, CardSchedule>{
-        ...schedules,
-        direction: schedule,
-      },
-      reviewHistory: <StudyDirection, List<CardReview>>{
+      schedules: <StudyCue, CardSchedule>{...schedules, cue: schedule},
+      reviewHistory: <StudyCue, List<CardReview>>{
         ...reviewHistory,
-        direction: history,
+        cue: history,
       },
     );
   }
@@ -86,8 +82,8 @@ class StudyCard {
   StudyCard copyWith({
     CardContent? content,
     List<String>? tags,
-    Map<StudyDirection, CardSchedule>? schedules,
-    Map<StudyDirection, List<CardReview>>? reviewHistory,
+    Map<StudyCue, CardSchedule>? schedules,
+    Map<StudyCue, List<CardReview>>? reviewHistory,
     bool? suspended,
     DateTime? updatedAt,
   }) {

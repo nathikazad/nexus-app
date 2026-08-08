@@ -6,7 +6,6 @@ const cardModelType = 'Flashcard';
 const languageCardModelType = 'LanguageFlashcard';
 const bookModelType = 'Book';
 
-const deckLanguageTagSystem = 'Language';
 const cardTagsTagSystem = 'Tags';
 
 const attrArchived = 'archived';
@@ -16,6 +15,9 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
+const attrFromLanguage = 'from_language';
+const attrToLanguage = 'to_language';
+const _legacyAttrLanguage = 'language';
 
 const cardDetailsJsonSchema = <String, dynamic>{
   'type': 'object',
@@ -58,16 +60,25 @@ const languageDetailsJsonSchema = <String, dynamic>{
 const scheduleJsonSchema = <String, dynamic>{
   'type': 'object',
   'additionalProperties': false,
-  'required': ['version', 'algorithm', 'front_to_back', 'back_to_front'],
+  r'$defs': {'cue_schedule': _cueScheduleJsonSchema},
+  'required': ['version', 'algorithm', 'cues'],
   'properties': {
-    'version': {'type': 'integer', 'const': 2},
+    'version': {'type': 'integer', 'const': 3},
     'algorithm': {'type': 'string', 'const': 'fsrs'},
-    'front_to_back': _directionScheduleJsonSchema,
-    'back_to_front': _directionScheduleJsonSchema,
+    'cues': {
+      'type': 'object',
+      'additionalProperties': false,
+      'required': ['from_language', 'to_language', 'transliteration'],
+      'properties': {
+        'from_language': {r'$ref': r'#/$defs/cue_schedule'},
+        'to_language': {r'$ref': r'#/$defs/cue_schedule'},
+        'transliteration': {r'$ref': r'#/$defs/cue_schedule'},
+      },
+    },
   },
 };
 
-const _directionScheduleJsonSchema = <String, dynamic>{
+const _cueScheduleJsonSchema = <String, dynamic>{
   'type': 'object',
   'additionalProperties': false,
   'required': [
@@ -114,19 +125,9 @@ const _directionScheduleJsonSchema = <String, dynamic>{
 const reviewHistoryJsonSchema = <String, dynamic>{
   'type': 'object',
   'additionalProperties': false,
-  'required': ['version', 'front_to_back', 'back_to_front'],
+  'required': ['version', 'items'],
   'properties': {
-    'version': {'type': 'integer', 'const': 2},
-    'front_to_back': _directionReviewHistoryJsonSchema,
-    'back_to_front': _directionReviewHistoryJsonSchema,
-  },
-};
-
-const _directionReviewHistoryJsonSchema = <String, dynamic>{
-  'type': 'object',
-  'additionalProperties': false,
-  'required': ['items'],
-  'properties': {
+    'version': {'type': 'integer', 'const': 3},
     'items': {
       'type': 'array',
       'items': {
@@ -134,6 +135,7 @@ const _directionReviewHistoryJsonSchema = <String, dynamic>{
         'additionalProperties': false,
         'required': [
           'id',
+          'cue',
           'reviewed_at',
           'rating',
           'elapsed_seconds',
@@ -141,6 +143,10 @@ const _directionReviewHistoryJsonSchema = <String, dynamic>{
         ],
         'properties': {
           'id': {'type': 'string', 'minLength': 1},
+          'cue': {
+            'type': 'string',
+            'enum': ['from_language', 'to_language', 'transliteration'],
+          },
           'reviewed_at': {'type': 'string', 'format': 'date-time'},
           'rating': {'type': 'integer', 'minimum': 1, 'maximum': 4},
           'elapsed_seconds': {'type': 'integer', 'minimum': 0},
@@ -170,7 +176,18 @@ Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
   final languageCard = await _modelTypeOrNull(client, languageCardModelType);
   return CardsSchemaStatus(
     deckReady:
-        deck != null && _hasAttributes(deck, const {attrArchived: 'boolean'}),
+        deck != null &&
+        _hasAttributes(deck, const {
+          attrArchived: 'boolean',
+          attrFromLanguage: 'string',
+          attrToLanguage: 'string',
+        }) &&
+        !(deck.attributes ?? const []).any(
+          (attribute) => attribute.key == _legacyAttrLanguage,
+        ) &&
+        !(deck.tagSystems ?? const []).any(
+          (system) => system.name == 'Language',
+        ),
     cardReady:
         card != null &&
         _hasAttributeDefinitions(
@@ -236,6 +253,14 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       deck,
       buildDeckSchemaRequest().attributeDefinitions!,
     );
+    await _migrateDeckLanguageTags(
+      client,
+      hasLegacyLanguageAttribute: (deck.attributes ?? const []).any(
+        (attribute) => attribute.key == _legacyAttrLanguage,
+      ),
+    );
+    await _removeLegacyDeckLanguageAttribute(client, deck);
+    await _removeDeckLanguageTagSystem(client, deck);
   }
 
   final card = await _modelTypeOrNull(client, cardModelType);
@@ -267,6 +292,91 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       buildLanguageCardSchemaRequest().attributeDefinitions!,
     );
   }
+}
+
+Future<void> _migrateDeckLanguageTags(
+  GraphQLClient client, {
+  required bool hasLegacyLanguageAttribute,
+}) async {
+  final decks = await fetchKgqlModels(
+    client,
+    filter: const {'model_type': deckModelType},
+    struct: {
+      'id': true,
+      'name': true,
+      if (hasLegacyLanguageAttribute) _legacyAttrLanguage: true,
+      attrFromLanguage: true,
+      attrToLanguage: true,
+      'tags': true,
+    },
+  );
+  for (final deck in decks) {
+    final existingFrom =
+        deck.attributes?[attrFromLanguage]?.toString().trim() ?? '';
+    final existingTo =
+        deck.attributes?[attrToLanguage]?.toString().trim() ?? '';
+    if (existingFrom.isNotEmpty && existingTo.isNotEmpty) continue;
+    final legacy =
+        deck.attributes?[_legacyAttrLanguage]?.toString().trim() ?? '';
+    final tagged = deck.tags?['Language']?.firstOrNull?.trim() ?? '';
+    final target = legacy.isNotEmpty ? legacy : tagged;
+    if (target.isEmpty) continue;
+    await setKgqlModel(
+      client,
+      SetModelRequest(
+        id: deck.id,
+        attributes: [
+          if (existingFrom.isEmpty)
+            SetModelAttribute(key: attrFromLanguage, value: 'English'),
+          if (existingTo.isEmpty)
+            SetModelAttribute(key: attrToLanguage, value: target),
+        ],
+      ),
+      auditSourceKind: 'nx_cards',
+    );
+  }
+}
+
+Future<void> _removeLegacyDeckLanguageAttribute(
+  GraphQLClient client,
+  ModelType deck,
+) async {
+  final attribute = (deck.attributes ?? const [])
+      .where((value) => value.key == _legacyAttrLanguage)
+      .firstOrNull;
+  if (attribute == null) return;
+  await setKgqlModelType(
+    client,
+    SetModelTypeRequest(
+      id: deck.id,
+      name: deck.name,
+      typeKind: deck.typeKind ?? 'base',
+      attributeDefinitions: [
+        AttributeDefinition(id: attribute.id, delete: true),
+      ],
+    ),
+    auditSourceKind: 'nx_cards',
+  );
+}
+
+Future<void> _removeDeckLanguageTagSystem(
+  GraphQLClient client,
+  ModelType deck,
+) async {
+  final system = (deck.tagSystems ?? const [])
+      .where((value) => value.name == 'Language')
+      .firstOrNull;
+  if (system == null) return;
+  await setKgqlModelType(
+    client,
+    SetModelTypeRequest(
+      id: deck.id,
+      name: deck.name,
+      typeKind: deck.typeKind ?? 'base',
+      tagSystems: [SetTagSystemRequest(id: system.id, delete: true)],
+    ),
+    auditSourceKind: 'nx_cards',
+  );
 }
 
 Future<void> _syncAttributeDefinitions(
@@ -337,27 +447,15 @@ SetModelTypeRequest buildDeckSchemaRequest() {
   return SetModelTypeRequest(
     name: deckModelType,
     typeKind: 'base',
-    description: 'A collection of one-direction spaced-repetition cards.',
+    description: 'A collection of cue-based spaced-repetition cards.',
     attributeDefinitions: [
       AttributeDefinition(
         key: attrArchived,
         valueType: 'boolean',
         required: true,
       ),
-    ],
-    tagSystems: [
-      SetTagSystemRequest(
-        name: deckLanguageTagSystem,
-        isHierarchical: false,
-        selectionMode: 'exclusive',
-        nodes: [
-          SetTagNodeRequest(name: 'French'),
-          SetTagNodeRequest(name: 'Japanese'),
-          SetTagNodeRequest(name: 'Spanish'),
-          SetTagNodeRequest(name: 'Hindi'),
-          SetTagNodeRequest(name: 'Malayalam'),
-        ],
-      ),
+      AttributeDefinition(key: attrFromLanguage, valueType: 'string'),
+      AttributeDefinition(key: attrToLanguage, valueType: 'string'),
     ],
   );
 }
@@ -367,7 +465,7 @@ SetModelTypeRequest buildCardSchemaRequest() {
     name: cardModelType,
     typeKind: 'base',
     description:
-        'A bidirectional flashcard with structured front/back content and independent FSRS state and review history.',
+        'A flashcard with structured content and independent cue-based FSRS state and review history.',
     attributeDefinitions: [
       AttributeDefinition(
         key: attrCardDetails,

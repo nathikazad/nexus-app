@@ -19,7 +19,8 @@ abstract class CardsRepository {
   Future<int> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
   });
 
   Future<int> createCard({

@@ -1,0 +1,64 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nx_cards/composition/cards_composition.dart';
+import 'package:nx_cards/core/theme/app_theme.dart';
+import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/study/language_study_page.dart';
+
+void main() {
+  testWidgets('shows and searches all words on one study sheet', (
+    tester,
+  ) async {
+    final cards = [
+      _card(1, 'relief', 'ആശ്വാസം', 'āśvāsaṃ'),
+      _card(2, 'talent', 'കഴിവ്', 'kaḻiv'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          theme: buildRecallTheme(),
+          home: LanguageStudyPage(title: 'Malayalam', cards: cards),
+        ),
+      ),
+    );
+
+    expect(find.text('2 words'), findsOneWidget);
+    expect(find.text('relief'), findsOneWidget);
+    expect(find.text('talent'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'talent');
+    await tester.pump();
+
+    expect(find.text('1 of 2 words'), findsOneWidget);
+    expect(find.text('relief'), findsNothing);
+    expect(find.text('കഴിവ്'), findsOneWidget);
+  });
+}
+
+StudyCard _card(int id, String english, String script, String transliteration) {
+  return StudyCard(
+    id: id,
+    content: LanguageCardContent(
+      english: english,
+      originalScript: script,
+      transliteration: transliteration,
+    ),
+    deckId: 7,
+    deckName: 'Malayalam',
+    tags: const [],
+    schedules: const <StudyCue, CardSchedule>{
+      StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+      StudyCue.transliteration: CardSchedule.initial(enabled: true),
+    },
+    reviewHistory: const <StudyCue, List<CardReview>>{
+      StudyCue.fromLanguage: [],
+      StudyCue.toLanguage: [],
+      StudyCue.transliteration: [],
+    },
+    suspended: false,
+  );
+}

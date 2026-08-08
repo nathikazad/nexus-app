@@ -41,12 +41,16 @@ class CardDetailsDialog extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               _CardField(
-                label: languageContent == null ? 'Front' : 'English',
+                label: languageContent == null
+                    ? 'Front'
+                    : deck.fromLanguage ?? 'Front',
                 value: card.front,
               ),
               const SizedBox(height: 16),
               _CardField(
-                label: languageContent == null ? 'Back' : 'Original script',
+                label: languageContent == null
+                    ? 'Back'
+                    : deck.toLanguage ?? 'Back',
                 value: card.back,
                 valueStyle: languageContent == null
                     ? null

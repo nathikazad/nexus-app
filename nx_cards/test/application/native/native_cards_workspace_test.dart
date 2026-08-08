@@ -324,7 +324,8 @@ final class _FakeTransport implements CardsSyncTransport {
   Future<CardMutationResult> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
     required DateTime clientUpdatedAt,
   }) => throw UnimplementedError();
 }
@@ -338,7 +339,8 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
           id: 7,
           name: 'Malayalam',
           description: 'Basic words',
-          language: 'Malayalam',
+          fromLanguage: 'English',
+          toLanguage: 'Malayalam',
           archived: false,
           updatedAt: updatedAt,
         ),
@@ -354,13 +356,15 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
             deckId: 7,
             deckName: 'Malayalam',
             tags: const <String>['Vocabulary'],
-            schedules: const <StudyDirection, CardSchedule>{
-              StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
-              StudyDirection.backToFront: CardSchedule.initial(enabled: true),
+            schedules: const <StudyCue, CardSchedule>{
+              StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+              StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+              StudyCue.transliteration: CardSchedule.initial(enabled: true),
             },
-            reviewHistory: const <StudyDirection, List<CardReview>>{
-              StudyDirection.frontToBack: <CardReview>[],
-              StudyDirection.backToFront: <CardReview>[],
+            reviewHistory: const <StudyCue, List<CardReview>>{
+              StudyCue.fromLanguage: <CardReview>[],
+              StudyCue.toLanguage: <CardReview>[],
+              StudyCue.transliteration: <CardReview>[],
             },
             suspended: false,
             updatedAt: updatedAt,

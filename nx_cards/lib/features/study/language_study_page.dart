@@ -1,0 +1,302 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cards/composition/cards_composition.dart';
+import 'package:nx_cards/core/theme/app_theme.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
+import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/study/language_audio_controls.dart';
+import 'package:nx_cards/features/study/language_examples_page.dart';
+
+class LanguageStudyPage extends ConsumerStatefulWidget {
+  const LanguageStudyPage({
+    super.key,
+    required this.title,
+    required this.cards,
+  });
+
+  final String title;
+  final List<StudyCard> cards;
+
+  @override
+  ConsumerState<LanguageStudyPage> createState() => _LanguageStudyPageState();
+}
+
+class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
+  final AudioPlayer _player = AudioPlayer();
+  final List<StreamSubscription<Object?>> _subscriptions = [];
+  String _query = '';
+  int? _activeCardId;
+  int? _loadingCardId;
+  bool _playing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscriptions.addAll([
+      _player.onPlayerStateChanged.listen((state) {
+        if (!mounted) return;
+        setState(() => _playing = state == PlayerState.playing);
+      }),
+      _player.onPlayerComplete.listen((_) {
+        if (!mounted) return;
+        setState(() {
+          _playing = false;
+          _activeCardId = null;
+        });
+      }),
+    ]);
+  }
+
+  List<StudyCard> get _visibleCards {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return widget.cards;
+    return widget.cards
+        .where((card) {
+          final content = card.content;
+          if (content is! LanguageCardContent) return false;
+          return content.english.toLowerCase().contains(query) ||
+              content.originalScript.toLowerCase().contains(query) ||
+              content.transliteration.toLowerCase().contains(query);
+        })
+        .toList(growable: false);
+  }
+
+  Future<void> _toggleAudio(
+    StudyCard card,
+    String audioUrl,
+    CardAudioRepository repository,
+  ) async {
+    if (_loadingCardId != null) return;
+    if (_activeCardId == card.id) {
+      if (_playing) {
+        await _player.pause();
+      } else {
+        await _player.resume();
+      }
+      return;
+    }
+
+    setState(() => _loadingCardId = card.id);
+    try {
+      await _player.stop();
+      final bytes = await repository.fetch(audioUrl);
+      await _player.setReleaseMode(ReleaseMode.stop);
+      await _player.play(languageAudioSource(bytes));
+      if (!mounted) return;
+      setState(() {
+        _activeCardId = card.id;
+        _playing = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not play pronunciation')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingCardId = null);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final subscription in _subscriptions) {
+      unawaited(subscription.cancel());
+    }
+    unawaited(_player.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final audioRepository = ref.watch(cardAudioRepositoryProvider);
+    final cards = _visibleCards;
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
+            itemCount: cards.length + 1,
+            separatorBuilder: (_, index) => index == 0
+                ? const SizedBox(height: 10)
+                : const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _StudySheetHeader(
+                  total: widget.cards.length,
+                  visible: cards.length,
+                  onSearch: (value) => setState(() => _query = value),
+                );
+              }
+              final card = cards[index - 1];
+              final content = card.content;
+              if (content is! LanguageCardContent) {
+                return const SizedBox.shrink();
+              }
+              return _StudySheetRow(
+                number: index,
+                card: card,
+                content: content,
+                audioRepository: audioRepository,
+                loading: _loadingCardId == card.id,
+                playing: _activeCardId == card.id && _playing,
+                onAudio:
+                    audioRepository == null ||
+                        content.audioUrl?.isNotEmpty != true
+                    ? null
+                    : () => _toggleAudio(
+                        card,
+                        content.audioUrl!,
+                        audioRepository,
+                      ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudySheetHeader extends StatelessWidget {
+  const _StudySheetHeader({
+    required this.total,
+    required this.visible,
+    required this.onSearch,
+  });
+
+  final int total;
+  final int visible;
+  final ValueChanged<String> onSearch;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text('STUDY SHEET', style: monoLabel),
+      const SizedBox(height: 7),
+      Text(
+        visible == total ? '$total words' : '$visible of $total words',
+        style: const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.6,
+        ),
+      ),
+      const SizedBox(height: 16),
+      TextField(
+        onChanged: onSearch,
+        textInputAction: TextInputAction.search,
+        decoration: const InputDecoration(
+          hintText: 'Search words',
+          prefixIcon: Icon(Icons.search, size: 20),
+        ),
+      ),
+      const SizedBox(height: 12),
+    ],
+  );
+}
+
+class _StudySheetRow extends StatelessWidget {
+  const _StudySheetRow({
+    required this.number,
+    required this.card,
+    required this.content,
+    required this.audioRepository,
+    required this.loading,
+    required this.playing,
+    required this.onAudio,
+  });
+
+  final int number;
+  final StudyCard card;
+  final LanguageCardContent content;
+  final CardAudioRepository? audioRepository;
+  final bool loading;
+  final bool playing;
+  final VoidCallback? onAudio;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 18),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 38,
+          child: Text(number.toString().padLeft(2, '0'), style: monoLabel),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                content.originalScript,
+                style: const TextStyle(
+                  fontSize: 25,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                content.transliteration,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.35,
+                  fontStyle: FontStyle.italic,
+                  color: RecallColors.faint,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                content.english,
+                style: const TextStyle(
+                  fontSize: 17,
+                  height: 1.35,
+                  color: RecallColors.muted,
+                ),
+              ),
+              if (content.examples.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => LanguageExamplesPage(
+                        card: card,
+                        audioRepository: audioRepository,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Examples'),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (onAudio != null)
+          IconButton(
+            tooltip: playing ? 'Pause pronunciation' : 'Play pronunciation',
+            onPressed: loading ? null : onAudio,
+            icon: loading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  ),
+          ),
+      ],
+    ),
+  );
+}

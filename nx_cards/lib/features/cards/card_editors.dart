@@ -14,7 +14,8 @@ class CreateDeckDialog extends ConsumerStatefulWidget {
 class _CreateDeckDialogState extends ConsumerState<CreateDeckDialog> {
   final _name = TextEditingController();
   final _description = TextEditingController();
-  String? _language;
+  String? _fromLanguage = 'English';
+  String? _toLanguage;
   bool _saving = false;
 
   @override
@@ -33,7 +34,8 @@ class _CreateDeckDialogState extends ConsumerState<CreateDeckDialog> {
           .createDeck(
             name: _name.text.trim(),
             description: _description.text.trim(),
-            language: _language,
+            fromLanguage: _toLanguage == null ? null : _fromLanguage,
+            toLanguage: _toLanguage,
           );
       ref.invalidate(cardsDashboardProvider);
       if (mounted) Navigator.pop(context, true);
@@ -48,17 +50,32 @@ class _CreateDeckDialogState extends ConsumerState<CreateDeckDialog> {
     }
   }
 
-  Future<void> _addLanguage() async {
+  Future<void> _addLanguage({required bool from}) async {
     final value = await _promptForTag(context, 'New language');
     if (value == null) return;
     await ref.read(cardsRepositoryProvider).addLanguage(value);
     ref.invalidate(languagesProvider);
-    if (mounted) setState(() => _language = value);
+    if (mounted) {
+      setState(() {
+        if (from) {
+          _fromLanguage = value;
+        } else {
+          _toLanguage = value;
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final languages = ref.watch(languagesProvider).value ?? const <String>[];
+    final knownLanguages =
+        ref.watch(languagesProvider).value ?? const <String>[];
+    final languages = <String>{
+      ...knownLanguages,
+      'English',
+      ?_fromLanguage,
+      ?_toLanguage,
+    }.toList()..sort();
     return AlertDialog(
       title: const Text('New deck'),
       content: SizedBox(
@@ -79,24 +96,34 @@ class _CreateDeckDialogState extends ConsumerState<CreateDeckDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String?>(
-              initialValue: _language,
+              initialValue: _fromLanguage,
+              decoration: const InputDecoration(labelText: 'From language'),
+              items: [
+                for (final language in languages)
+                  DropdownMenuItem(value: language, child: Text(language)),
+              ],
+              onChanged: (value) => setState(() => _fromLanguage = value),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _toLanguage,
               decoration: const InputDecoration(
-                labelText: 'Language (optional)',
+                labelText: 'To language (optional)',
               ),
               items: [
                 const DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('No language'),
+                  child: Text('Not a language deck'),
                 ),
                 for (final language in languages)
                   DropdownMenuItem(value: language, child: Text(language)),
               ],
-              onChanged: (value) => setState(() => _language = value),
+              onChanged: (value) => setState(() => _toLanguage = value),
             ),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: _saving ? null : _addLanguage,
+                onPressed: _saving ? null : () => _addLanguage(from: false),
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Add language'),
               ),
@@ -137,7 +164,7 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
   bool _saving = false;
 
   bool get _isLanguageCard =>
-      widget.card?.isLanguageCard ?? widget.deck.language != null;
+      widget.card?.isLanguageCard ?? widget.deck.isLanguageDeck;
 
   @override
   void initState() {
@@ -241,9 +268,11 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
                 controller: _front,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: _isLanguageCard ? 'English' : 'Front',
+                  labelText: _isLanguageCard
+                      ? widget.deck.fromLanguage
+                      : 'Front',
                   hintText: _isLanguageCard
-                      ? 'English word or phrase'
+                      ? 'Word or phrase in ${widget.deck.fromLanguage}'
                       : 'What should you recall?',
                 ),
                 minLines: 2,
@@ -253,9 +282,9 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
               TextField(
                 controller: _back,
                 decoration: InputDecoration(
-                  labelText: _isLanguageCard ? 'Original script' : 'Back',
+                  labelText: _isLanguageCard ? widget.deck.toLanguage : 'Back',
                   hintText: _isLanguageCard
-                      ? 'Word or phrase in ${widget.deck.language}'
+                      ? 'Word or phrase in ${widget.deck.toLanguage}'
                       : 'The answer',
                 ),
                 minLines: 3,

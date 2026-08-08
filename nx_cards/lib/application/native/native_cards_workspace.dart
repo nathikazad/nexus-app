@@ -64,12 +64,14 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   Future<int> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
   }) async {
     final result = await _requireTransport().createDeck(
       name: name,
       description: description,
-      language: language,
+      fromLanguage: fromLanguage,
+      toLanguage: toLanguage,
       clientUpdatedAt: _clock.now(),
     );
     await _synchronizer.syncDeck(result.entityId);

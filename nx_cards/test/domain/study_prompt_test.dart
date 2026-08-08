@@ -13,36 +13,28 @@ void main() {
     deckId: 7,
     deckName: 'Malayalam',
     tags: const <String>['Vocabulary'],
-    schedules: const <StudyDirection, CardSchedule>{
-      StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
-      StudyDirection.backToFront: CardSchedule.initial(enabled: true),
+    schedules: const <StudyCue, CardSchedule>{
+      StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+      StudyCue.transliteration: CardSchedule.initial(enabled: true),
     },
-    reviewHistory: const <StudyDirection, List<CardReview>>{
-      StudyDirection.frontToBack: <CardReview>[],
-      StudyDirection.backToFront: <CardReview>[],
+    reviewHistory: const <StudyCue, List<CardReview>>{
+      StudyCue.fromLanguage: <CardReview>[],
+      StudyCue.toLanguage: <CardReview>[],
+      StudyCue.transliteration: <CardReview>[],
     },
     suspended: false,
   );
 
-  test('forward language prompt reveals script and language supplements', () {
-    final prompt = StudyPrompt(
-      card: card,
-      direction: StudyDirection.frontToBack,
+  test('language prompts expose each supported cue', () {
+    expect(
+      StudyPrompt(card: card, cue: StudyCue.fromLanguage).prompt,
+      'talent',
     );
-
-    expect(prompt.prompt, 'talent');
-    expect(prompt.answer, 'കഴിവ്');
-    expect(prompt.showLanguageSupplements, isTrue);
-  });
-
-  test('reverse language prompt exposes only script before English answer', () {
-    final prompt = StudyPrompt(
-      card: card,
-      direction: StudyDirection.backToFront,
+    expect(StudyPrompt(card: card, cue: StudyCue.toLanguage).prompt, 'കഴിവ്');
+    expect(
+      StudyPrompt(card: card, cue: StudyCue.transliteration).prompt,
+      'kazhivu',
     );
-
-    expect(prompt.prompt, 'കഴിവ്');
-    expect(prompt.answer, 'talent');
-    expect(prompt.showLanguageSupplements, isFalse);
   });
 }

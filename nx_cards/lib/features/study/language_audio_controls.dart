@@ -100,8 +100,7 @@ class _LanguageAudioControlsState extends State<LanguageAudioControls> {
   }
 
   Future<void> _resume() async {
-    if (_state == PlayerState.completed ||
-        (_duration > Duration.zero && _position >= _duration)) {
+    if (_duration > Duration.zero && _position >= _duration) {
       await _player.seek(Duration.zero);
       if (mounted) setState(() => _position = Duration.zero);
     }

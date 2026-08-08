@@ -10,6 +10,8 @@ class LocalCardDecks extends Table {
   TextColumn get name => text()();
   TextColumn get description => text()();
   TextColumn get language => text().nullable()();
+  TextColumn get fromLanguage => text().nullable()();
+  TextColumn get toLanguage => text().nullable()();
   BoolColumn get archived => boolean()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
   TextColumn get serverHash => text().nullable()();
@@ -50,7 +52,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -66,6 +68,23 @@ class CardsDatabase extends _$CardsDatabase {
         // Older app code could accept the current server hash while dropping
         // structured card fields. Invalidate those hashes once so the next
         // lifecycle sync replaces every cached card with the canonical bundle.
+        await update(
+          localCardDecks,
+        ).write(const LocalCardDecksCompanion(serverHash: Value(null)));
+      }
+      if (from < 4) {
+        await migrator.addColumn(localCardDecks, localCardDecks.fromLanguage);
+        await migrator.addColumn(localCardDecks, localCardDecks.toLanguage);
+        await customStatement(
+          "UPDATE local_card_decks SET from_language = 'English', "
+          'to_language = language WHERE language IS NOT NULL',
+        );
+        await update(
+          localCardDecks,
+        ).write(const LocalCardDecksCompanion(serverHash: Value(null)));
+      }
+      if (from < 5) {
+        // Cue-based schedule/history JSON must be reloaded canonically.
         await update(
           localCardDecks,
         ).write(const LocalCardDecksCompanion(serverHash: Value(null)));

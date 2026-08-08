@@ -10,6 +10,7 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
 import 'package:nx_cards/features/cards/card_editors.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
+import 'package:nx_cards/features/study/study_setup_screen.dart';
 import 'package:nx_db/riverpod.dart';
 
 class CardsHome extends ConsumerStatefulWidget {
@@ -107,7 +108,7 @@ class _SchemaSetupState extends ConsumerState<_SchemaSetup> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Create the FlashcardDeck, Flashcard, and LanguageFlashcard KGQL model types, including language and card tag systems.',
+                    'Create the FlashcardDeck, Flashcard, and LanguageFlashcard KGQL model types, including deck language and card topics.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: RecallColors.muted, height: 1.45),
                   ),
@@ -392,15 +393,18 @@ class _DecksDashboard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      FilledButton.icon(
-                        onPressed: queue.isEmpty
-                            ? null
-                            : () =>
-                                  _openStudy(context, "Today's review", queue),
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          child: Text('Start review'),
+                      _StudyLauncher(
+                        title: "Today's review",
+                        prompts: queue,
+                        studyCards: _studyCardsForPrompts(queue),
+                        languagePair: _languagesForPrompts(data, queue),
+                        builder: (onPressed) => FilledButton.icon(
+                          onPressed: onPressed,
+                          icon: const Icon(Icons.play_circle_outline),
+                          label: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Text('Start review'),
+                          ),
                         ),
                       ),
                     ],
@@ -503,9 +507,7 @@ class _DeckCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final due = data.dueCount(DateTime.now(), deckId: deck.id);
     final queue = data.studyQueue(DateTime.now(), deckId: deck.id);
-    final color = deck.language == null
-        ? RecallColors.sky
-        : RecallColors.violet;
+    final color = !deck.isLanguageDeck ? RecallColors.sky : RecallColors.violet;
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -526,7 +528,7 @@ class _DeckCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  deck.language == null
+                  !deck.isLanguageDeck
                       ? Icons.menu_book_outlined
                       : Icons.translate_outlined,
                   color: color,
@@ -544,8 +546,11 @@ class _DeckCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (deck.language != null)
-                    _Pill(deck.language!, color: color),
+                  if (deck.isLanguageDeck)
+                    _Pill(
+                      '${deck.fromLanguage} → ${deck.toLanguage}',
+                      color: color,
+                    ),
                 ],
               ),
               const SizedBox(height: 5),
@@ -575,11 +580,21 @@ class _DeckCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (queue.isNotEmpty)
-                    FilledButton(
-                      onPressed: () => _openStudy(context, deck.name, queue),
-                      child: const Text(
-                        'Study  →',
-                        style: TextStyle(fontSize: 12),
+                    _StudyLauncher(
+                      title: deck.name,
+                      prompts: queue,
+                      studyCards: data.cards
+                          .where((card) => card.deckId == deck.id)
+                          .toList(growable: false),
+                      languagePair: deck.isLanguageDeck
+                          ? _LanguagePair(deck.fromLanguage!, deck.toLanguage!)
+                          : null,
+                      builder: (onPressed) => FilledButton(
+                        onPressed: onPressed,
+                        child: const Text(
+                          'Study  →',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ),
                     )
                   else
@@ -689,16 +704,16 @@ class _TodayView extends StatelessWidget {
                             ],
                           ),
                         ),
-                        FilledButton.icon(
-                          onPressed: queue.isEmpty
-                              ? null
-                              : () => _openStudy(
-                                  context,
-                                  "Today's review",
-                                  queue,
-                                ),
-                          icon: const Icon(Icons.play_circle_outline),
-                          label: const Text('Begin session'),
+                        _StudyLauncher(
+                          title: "Today's review",
+                          prompts: queue,
+                          studyCards: _studyCardsForPrompts(queue),
+                          languagePair: _languagesForPrompts(data, queue),
+                          builder: (onPressed) => FilledButton.icon(
+                            onPressed: onPressed,
+                            icon: const Icon(Icons.play_circle_outline),
+                            label: const Text('Begin session'),
+                          ),
                         ),
                       ],
                     ),
@@ -771,7 +786,11 @@ class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
               : allCards
                     .where((card) => card.tags.contains(_selectedTag))
                     .toList();
-          final queue = data.studyQueue(DateTime.now(), deckId: deck.id);
+          final queue = data.studyQueue(
+            DateTime.now(),
+            deckId: deck.id,
+            newCardLimit: allCards.length * StudyCue.values.length,
+          );
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
@@ -791,17 +810,25 @@ class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
                               style: const TextStyle(color: RecallColors.muted),
                             ),
                           ),
-                          FilledButton.icon(
-                            onPressed: queue.isEmpty
-                                ? null
-                                : () => _openStudy(context, deck.name, queue),
-                            icon: const Icon(Icons.play_circle_outline),
-                            label: Text('Study ${queue.length}'),
+                          _StudyLauncher(
+                            title: deck.name,
+                            prompts: queue,
+                            studyCards: allCards,
+                            languagePair: deck.isLanguageDeck
+                                ? _LanguagePair(
+                                    deck.fromLanguage!,
+                                    deck.toLanguage!,
+                                  )
+                                : null,
+                            builder: (onPressed) => FilledButton(
+                              onPressed: onPressed,
+                              child: const Text('Study'),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 22),
-                      if (tags.isNotEmpty) ...[
+                      if (tags.length > 1) ...[
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
@@ -933,6 +960,84 @@ Future<void> _openStudy(
       builder: (_) => StudyScreen(title: title, prompts: prompts),
     ),
   );
+}
+
+typedef _StudyButtonBuilder = Widget Function(VoidCallback? onPressed);
+
+class _StudyLauncher extends StatelessWidget {
+  const _StudyLauncher({
+    required this.title,
+    required this.prompts,
+    required this.studyCards,
+    required this.builder,
+    this.languagePair,
+  });
+
+  final String title;
+  final List<StudyPrompt> prompts;
+  final List<StudyCard> studyCards;
+  final _StudyButtonBuilder builder;
+  final _LanguagePair? languagePair;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLanguageCards = studyCards.any((card) => card.isLanguageCard);
+    if (prompts.isEmpty && !hasLanguageCards) return builder(null);
+    if (languagePair == null || !hasLanguageCards) {
+      if (prompts.isEmpty) return builder(null);
+      return builder(() => _openStudy(context, title, prompts));
+    }
+    return builder(
+      () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => StudySetupScreen(
+            title: title,
+            prompts: prompts,
+            studyCards: studyCards,
+            fromLanguage: languagePair!.from,
+            toLanguage: languagePair!.to,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+List<StudyCard> _studyCardsForPrompts(List<StudyPrompt> prompts) {
+  final cards = <int, StudyCard>{};
+  for (final prompt in prompts) {
+    cards[prompt.cardId] = prompt.card;
+  }
+  return cards.values.toList(growable: false);
+}
+
+_LanguagePair? _languagesForPrompts(
+  CardsDashboard dashboard,
+  List<StudyPrompt> prompts,
+) {
+  final deckIds = prompts
+      .where((prompt) => prompt.card.isLanguageCard)
+      .map((prompt) => prompt.card.deckId)
+      .toSet();
+  final pairs = dashboard.decks
+      .where((deck) => deckIds.contains(deck.id))
+      .where((deck) => deck.isLanguageDeck)
+      .map((deck) => _LanguagePair(deck.fromLanguage!, deck.toLanguage!))
+      .toSet();
+  return pairs.length == 1 ? pairs.single : null;
+}
+
+class _LanguagePair {
+  const _LanguagePair(this.from, this.to);
+  final String from;
+  final String to;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _LanguagePair && other.from == from && other.to == to;
+
+  @override
+  int get hashCode => Object.hash(from, to);
 }
 
 class _MetricCard extends StatelessWidget {

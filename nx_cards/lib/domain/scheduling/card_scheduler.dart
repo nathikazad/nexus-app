@@ -40,7 +40,7 @@ class FsrsCardScheduler implements CardScheduler {
   ) {
     final source = prompt.schedule;
     final input = fsrs.Card(
-      cardId: prompt.cardId * 2 + prompt.direction.index,
+      cardId: prompt.cardId * StudyCue.values.length + prompt.cue.index,
       state: _stateFromString(source.schedulingState),
       step: source.learningStep,
       stability: source.stability,
@@ -67,8 +67,8 @@ class FsrsCardScheduler implements CardScheduler {
       scheduledSeconds: max(0, interval.inSeconds),
     );
     return ScheduledOutcome(
-      card: prompt.card.updateDirection(
-        direction: prompt.direction,
+      card: prompt.card.updateCue(
+        cue: prompt.cue,
         schedule: source.copyWith(
           dueAt: next.due.toUtc(),
           lastReviewedAt: reviewedAt,

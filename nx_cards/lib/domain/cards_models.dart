@@ -5,7 +5,7 @@ export 'card/card_review.dart';
 export 'card/card_schedule.dart';
 export 'card/cards_dashboard.dart';
 export 'card/study_card.dart';
-export 'card/study_direction.dart';
+export 'card/study_cue.dart';
 export 'card/study_prompt.dart';
 export 'deck/card_deck.dart';
 export 'sync/card_sync.dart';

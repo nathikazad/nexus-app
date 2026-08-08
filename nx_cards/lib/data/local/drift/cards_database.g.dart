@@ -62,6 +62,28 @@ class $LocalCardDecksTable extends LocalCardDecks
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _fromLanguageMeta = const VerificationMeta(
+    'fromLanguage',
+  );
+  @override
+  late final GeneratedColumn<String> fromLanguage = GeneratedColumn<String>(
+    'from_language',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _toLanguageMeta = const VerificationMeta(
+    'toLanguage',
+  );
+  @override
+  late final GeneratedColumn<String> toLanguage = GeneratedColumn<String>(
+    'to_language',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _archivedMeta = const VerificationMeta(
     'archived',
   );
@@ -105,6 +127,8 @@ class $LocalCardDecksTable extends LocalCardDecks
     name,
     description,
     language,
+    fromLanguage,
+    toLanguage,
     archived,
     updatedAt,
     serverHash,
@@ -162,6 +186,21 @@ class $LocalCardDecksTable extends LocalCardDecks
         language.isAcceptableOrUnknown(data['language']!, _languageMeta),
       );
     }
+    if (data.containsKey('from_language')) {
+      context.handle(
+        _fromLanguageMeta,
+        fromLanguage.isAcceptableOrUnknown(
+          data['from_language']!,
+          _fromLanguageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('to_language')) {
+      context.handle(
+        _toLanguageMeta,
+        toLanguage.isAcceptableOrUnknown(data['to_language']!, _toLanguageMeta),
+      );
+    }
     if (data.containsKey('archived')) {
       context.handle(
         _archivedMeta,
@@ -211,6 +250,14 @@ class $LocalCardDecksTable extends LocalCardDecks
         DriftSqlType.string,
         data['${effectivePrefix}language'],
       ),
+      fromLanguage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}from_language'],
+      ),
+      toLanguage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}to_language'],
+      ),
       archived: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}archived'],
@@ -239,6 +286,8 @@ class LocalCardDeckRow extends DataClass
   final String name;
   final String description;
   final String? language;
+  final String? fromLanguage;
+  final String? toLanguage;
   final bool archived;
   final DateTime? updatedAt;
   final String? serverHash;
@@ -248,6 +297,8 @@ class LocalCardDeckRow extends DataClass
     required this.name,
     required this.description,
     this.language,
+    this.fromLanguage,
+    this.toLanguage,
     required this.archived,
     this.updatedAt,
     this.serverHash,
@@ -261,6 +312,12 @@ class LocalCardDeckRow extends DataClass
     map['description'] = Variable<String>(description);
     if (!nullToAbsent || language != null) {
       map['language'] = Variable<String>(language);
+    }
+    if (!nullToAbsent || fromLanguage != null) {
+      map['from_language'] = Variable<String>(fromLanguage);
+    }
+    if (!nullToAbsent || toLanguage != null) {
+      map['to_language'] = Variable<String>(toLanguage);
     }
     map['archived'] = Variable<bool>(archived);
     if (!nullToAbsent || updatedAt != null) {
@@ -281,6 +338,12 @@ class LocalCardDeckRow extends DataClass
       language: language == null && nullToAbsent
           ? const Value.absent()
           : Value(language),
+      fromLanguage: fromLanguage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fromLanguage),
+      toLanguage: toLanguage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toLanguage),
       archived: Value(archived),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
@@ -302,6 +365,8 @@ class LocalCardDeckRow extends DataClass
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String>(json['description']),
       language: serializer.fromJson<String?>(json['language']),
+      fromLanguage: serializer.fromJson<String?>(json['fromLanguage']),
+      toLanguage: serializer.fromJson<String?>(json['toLanguage']),
       archived: serializer.fromJson<bool>(json['archived']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       serverHash: serializer.fromJson<String?>(json['serverHash']),
@@ -316,6 +381,8 @@ class LocalCardDeckRow extends DataClass
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String>(description),
       'language': serializer.toJson<String?>(language),
+      'fromLanguage': serializer.toJson<String?>(fromLanguage),
+      'toLanguage': serializer.toJson<String?>(toLanguage),
       'archived': serializer.toJson<bool>(archived),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'serverHash': serializer.toJson<String?>(serverHash),
@@ -328,6 +395,8 @@ class LocalCardDeckRow extends DataClass
     String? name,
     String? description,
     Value<String?> language = const Value.absent(),
+    Value<String?> fromLanguage = const Value.absent(),
+    Value<String?> toLanguage = const Value.absent(),
     bool? archived,
     Value<DateTime?> updatedAt = const Value.absent(),
     Value<String?> serverHash = const Value.absent(),
@@ -337,6 +406,8 @@ class LocalCardDeckRow extends DataClass
     name: name ?? this.name,
     description: description ?? this.description,
     language: language.present ? language.value : this.language,
+    fromLanguage: fromLanguage.present ? fromLanguage.value : this.fromLanguage,
+    toLanguage: toLanguage.present ? toLanguage.value : this.toLanguage,
     archived: archived ?? this.archived,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     serverHash: serverHash.present ? serverHash.value : this.serverHash,
@@ -352,6 +423,12 @@ class LocalCardDeckRow extends DataClass
           ? data.description.value
           : this.description,
       language: data.language.present ? data.language.value : this.language,
+      fromLanguage: data.fromLanguage.present
+          ? data.fromLanguage.value
+          : this.fromLanguage,
+      toLanguage: data.toLanguage.present
+          ? data.toLanguage.value
+          : this.toLanguage,
       archived: data.archived.present ? data.archived.value : this.archived,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       serverHash: data.serverHash.present
@@ -368,6 +445,8 @@ class LocalCardDeckRow extends DataClass
           ..write('name: $name, ')
           ..write('description: $description, ')
           ..write('language: $language, ')
+          ..write('fromLanguage: $fromLanguage, ')
+          ..write('toLanguage: $toLanguage, ')
           ..write('archived: $archived, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('serverHash: $serverHash')
@@ -382,6 +461,8 @@ class LocalCardDeckRow extends DataClass
     name,
     description,
     language,
+    fromLanguage,
+    toLanguage,
     archived,
     updatedAt,
     serverHash,
@@ -395,6 +476,8 @@ class LocalCardDeckRow extends DataClass
           other.name == this.name &&
           other.description == this.description &&
           other.language == this.language &&
+          other.fromLanguage == this.fromLanguage &&
+          other.toLanguage == this.toLanguage &&
           other.archived == this.archived &&
           other.updatedAt == this.updatedAt &&
           other.serverHash == this.serverHash);
@@ -406,6 +489,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
   final Value<String> name;
   final Value<String> description;
   final Value<String?> language;
+  final Value<String?> fromLanguage;
+  final Value<String?> toLanguage;
   final Value<bool> archived;
   final Value<DateTime?> updatedAt;
   final Value<String?> serverHash;
@@ -416,6 +501,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
     this.name = const Value.absent(),
     this.description = const Value.absent(),
     this.language = const Value.absent(),
+    this.fromLanguage = const Value.absent(),
+    this.toLanguage = const Value.absent(),
     this.archived = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.serverHash = const Value.absent(),
@@ -427,6 +514,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
     required String name,
     required String description,
     this.language = const Value.absent(),
+    this.fromLanguage = const Value.absent(),
+    this.toLanguage = const Value.absent(),
     required bool archived,
     this.updatedAt = const Value.absent(),
     this.serverHash = const Value.absent(),
@@ -442,6 +531,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
     Expression<String>? name,
     Expression<String>? description,
     Expression<String>? language,
+    Expression<String>? fromLanguage,
+    Expression<String>? toLanguage,
     Expression<bool>? archived,
     Expression<DateTime>? updatedAt,
     Expression<String>? serverHash,
@@ -453,6 +544,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
       if (name != null) 'name': name,
       if (description != null) 'description': description,
       if (language != null) 'language': language,
+      if (fromLanguage != null) 'from_language': fromLanguage,
+      if (toLanguage != null) 'to_language': toLanguage,
       if (archived != null) 'archived': archived,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (serverHash != null) 'server_hash': serverHash,
@@ -466,6 +559,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
     Value<String>? name,
     Value<String>? description,
     Value<String?>? language,
+    Value<String?>? fromLanguage,
+    Value<String?>? toLanguage,
     Value<bool>? archived,
     Value<DateTime?>? updatedAt,
     Value<String?>? serverHash,
@@ -477,6 +572,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
       name: name ?? this.name,
       description: description ?? this.description,
       language: language ?? this.language,
+      fromLanguage: fromLanguage ?? this.fromLanguage,
+      toLanguage: toLanguage ?? this.toLanguage,
       archived: archived ?? this.archived,
       updatedAt: updatedAt ?? this.updatedAt,
       serverHash: serverHash ?? this.serverHash,
@@ -502,6 +599,12 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
     if (language.present) {
       map['language'] = Variable<String>(language.value);
     }
+    if (fromLanguage.present) {
+      map['from_language'] = Variable<String>(fromLanguage.value);
+    }
+    if (toLanguage.present) {
+      map['to_language'] = Variable<String>(toLanguage.value);
+    }
     if (archived.present) {
       map['archived'] = Variable<bool>(archived.value);
     }
@@ -525,6 +628,8 @@ class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
           ..write('name: $name, ')
           ..write('description: $description, ')
           ..write('language: $language, ')
+          ..write('fromLanguage: $fromLanguage, ')
+          ..write('toLanguage: $toLanguage, ')
           ..write('archived: $archived, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('serverHash: $serverHash, ')
@@ -1646,6 +1751,8 @@ typedef $$LocalCardDecksTableCreateCompanionBuilder =
       required String name,
       required String description,
       Value<String?> language,
+      Value<String?> fromLanguage,
+      Value<String?> toLanguage,
       required bool archived,
       Value<DateTime?> updatedAt,
       Value<String?> serverHash,
@@ -1658,6 +1765,8 @@ typedef $$LocalCardDecksTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> description,
       Value<String?> language,
+      Value<String?> fromLanguage,
+      Value<String?> toLanguage,
       Value<bool> archived,
       Value<DateTime?> updatedAt,
       Value<String?> serverHash,
@@ -1695,6 +1804,16 @@ class $$LocalCardDecksTableFilterComposer
 
   ColumnFilters<String> get language => $composableBuilder(
     column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fromLanguage => $composableBuilder(
+    column: $table.fromLanguage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toLanguage => $composableBuilder(
+    column: $table.toLanguage,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1748,6 +1867,16 @@ class $$LocalCardDecksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fromLanguage => $composableBuilder(
+    column: $table.fromLanguage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toLanguage => $composableBuilder(
+    column: $table.toLanguage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get archived => $composableBuilder(
     column: $table.archived,
     builder: (column) => ColumnOrderings(column),
@@ -1791,6 +1920,16 @@ class $$LocalCardDecksTableAnnotationComposer
 
   GeneratedColumn<String> get language =>
       $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<String> get fromLanguage => $composableBuilder(
+    column: $table.fromLanguage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get toLanguage => $composableBuilder(
+    column: $table.toLanguage,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get archived =>
       $composableBuilder(column: $table.archived, builder: (column) => column);
@@ -1846,6 +1985,8 @@ class $$LocalCardDecksTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<String?> language = const Value.absent(),
+                Value<String?> fromLanguage = const Value.absent(),
+                Value<String?> toLanguage = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<String?> serverHash = const Value.absent(),
@@ -1856,6 +1997,8 @@ class $$LocalCardDecksTableTableManager
                 name: name,
                 description: description,
                 language: language,
+                fromLanguage: fromLanguage,
+                toLanguage: toLanguage,
                 archived: archived,
                 updatedAt: updatedAt,
                 serverHash: serverHash,
@@ -1868,6 +2011,8 @@ class $$LocalCardDecksTableTableManager
                 required String name,
                 required String description,
                 Value<String?> language = const Value.absent(),
+                Value<String?> fromLanguage = const Value.absent(),
+                Value<String?> toLanguage = const Value.absent(),
                 required bool archived,
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<String?> serverHash = const Value.absent(),
@@ -1878,6 +2023,8 @@ class $$LocalCardDecksTableTableManager
                 name: name,
                 description: description,
                 language: language,
+                fromLanguage: fromLanguage,
+                toLanguage: toLanguage,
                 archived: archived,
                 updatedAt: updatedAt,
                 serverHash: serverHash,

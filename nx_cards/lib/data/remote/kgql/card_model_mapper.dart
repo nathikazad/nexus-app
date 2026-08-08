@@ -5,12 +5,18 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_db/kgql.dart';
 
 CardDeck cardDeckFromModel(Model model) {
-  final languages = model.tags?[deckLanguageTagSystem] ?? const <String>[];
   return CardDeck(
     id: model.id,
     name: model.name,
     description: model.description?.trim() ?? '',
-    language: languages.firstOrNull,
+    fromLanguage: model.attributes?[attrFromLanguage]
+        ?.toString()
+        .trim()
+        .nullIfEmpty,
+    toLanguage: model.attributes?[attrToLanguage]
+        ?.toString()
+        .trim()
+        .nullIfEmpty,
     archived: model.attrBool(attrArchived) ?? false,
     updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
   );
@@ -21,9 +27,7 @@ StudyCard? studyCardFromModel(Model model) {
   if (deck == null) return null;
   final book = _relatedModels(model, bookModelType).firstOrNull;
   final schedule = _jsonMap(model.attributes?[attrSchedule]);
-  final history = _reviewHistoryByDirectionFrom(
-    model.attributes?[attrReviewHistory],
-  );
+  final history = _reviewHistoryByCueFrom(model.attributes?[attrReviewHistory]);
   final cardDetails = _jsonMap(model.attributes?[attrCardDetails]);
   final front = cardDetails['front']?.toString().trim() ?? '';
   final back = cardDetails['back']?.toString().trim() ?? '';
@@ -43,9 +47,9 @@ StudyCard? studyCardFromModel(Model model) {
     deckId: deck.id,
     deckName: deck.name,
     tags: model.tags?[cardTagsTagSystem] ?? const <String>[],
-    schedules: <StudyDirection, CardSchedule>{
-      for (final direction in StudyDirection.values)
-        direction: _scheduleFrom(schedule[direction.storageKey]),
+    schedules: <StudyCue, CardSchedule>{
+      for (final cue in StudyCue.values)
+        cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
@@ -66,6 +70,10 @@ Map<String, Object?> languageDetailsJson(LanguageCardContent content) =>
       'audio_url': content.audioUrl,
       'examples': content.examples.map((example) => example.toJson()).toList(),
     };
+
+extension on String {
+  String? get nullIfEmpty => isEmpty ? null : this;
+}
 
 List<LanguageExample> languageExamplesFromJson(Object? raw) {
   if (raw is! List) return const <LanguageExample>[];
@@ -97,56 +105,70 @@ final class _RelatedModel {
   final String name;
 }
 
-Map<String, dynamic> emptyScheduleJson({required bool enableBackToFront}) =>
+Map<String, dynamic> emptyScheduleJson({required bool languageCard}) =>
     <String, dynamic>{
-      'version': 2,
+      'version': 3,
       'algorithm': 'fsrs',
-      StudyDirection.frontToBack.storageKey: _scheduleNodeJson(
-        const CardSchedule.initial(enabled: true),
-      ),
-      StudyDirection.backToFront.storageKey: _scheduleNodeJson(
-        CardSchedule.initial(enabled: enableBackToFront),
-      ),
+      'cues': <String, Object?>{
+        for (final cue in StudyCue.values)
+          cue.storageKey: _scheduleNodeJson(
+            CardSchedule.initial(
+              enabled: cue == StudyCue.fromLanguage || languageCard,
+            ),
+          ),
+      },
     };
 
 Map<String, dynamic> scheduleJson(StudyCard card) => <String, dynamic>{
-  'version': 2,
+  'version': 3,
   'algorithm': 'fsrs',
-  for (final direction in StudyDirection.values)
-    direction.storageKey: _scheduleNodeJson(card.scheduleFor(direction)),
+  'cues': <String, Object?>{
+    for (final cue in StudyCue.values)
+      cue.storageKey: _scheduleNodeJson(card.scheduleFor(cue)),
+  },
 };
 
 Map<String, dynamic> emptyReviewHistoryJson() => <String, dynamic>{
-  'version': 2,
-  for (final direction in StudyDirection.values)
-    direction.storageKey: <String, Object?>{'items': <Object?>[]},
+  'version': 3,
+  'items': <Object?>[],
 };
 
 Map<String, dynamic> reviewHistoryJson(StudyCard card) => <String, dynamic>{
-  'version': 2,
-  for (final direction in StudyDirection.values)
-    direction.storageKey: <String, Object?>{
-      'items': card
-          .reviewHistoryFor(direction)
-          .map((review) => review.toJson())
-          .toList(),
-    },
+  'version': 3,
+  'items': _reviewHistoryItems(card),
 };
 
-Map<StudyDirection, List<CardReview>> _reviewHistoryByDirectionFrom(
-  Object? raw,
-) {
-  final root = _jsonMap(raw);
-  return <StudyDirection, List<CardReview>>{
-    for (final direction in StudyDirection.values)
-      direction: _reviewsFrom(root[direction.storageKey]),
-  };
+List<Map<String, Object?>> _reviewHistoryItems(StudyCard card) {
+  final items = <Map<String, Object?>>[
+    for (final cue in StudyCue.values)
+      for (final review in card.reviewHistoryFor(cue))
+        <String, Object?>{'cue': cue.storageKey, ...review.toJson()},
+  ];
+  items.sort(
+    (left, right) => left['reviewed_at'].toString().compareTo(
+      right['reviewed_at'].toString(),
+    ),
+  );
+  return items;
 }
 
-List<CardReview> _reviewsFrom(Object? raw) {
-  final items = _jsonMap(raw)['items'];
-  if (items is! List) return const <CardReview>[];
-  return items.map(CardReview.fromJson).whereType<CardReview>().toList();
+Map<StudyCue, List<CardReview>> _reviewHistoryByCueFrom(Object? raw) {
+  final root = _jsonMap(raw);
+  final items = root['items'];
+  return <StudyCue, List<CardReview>>{
+    for (final cue in StudyCue.values)
+      cue: items is List
+          ? items
+                .whereType<Map>()
+                .where((item) => item['cue'] == cue.storageKey)
+                .map(
+                  (item) =>
+                      CardReview.fromJson(Map<String, dynamic>.from(item)),
+                )
+                .whereType<CardReview>()
+                .toList()
+          : const <CardReview>[],
+  };
 }
 
 CardSchedule _scheduleFrom(Object? raw) {

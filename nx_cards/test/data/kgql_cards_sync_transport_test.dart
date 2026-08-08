@@ -28,9 +28,10 @@ void main() {
                       'id': 60,
                       'name': 'FlashcardDeck',
                     },
-                    'attributes': <String, Object?>{'archived': false},
-                    'tags': <String, Object?>{
-                      'Language': <String>['Malayalam'],
+                    'attributes': <String, Object?>{
+                      'archived': false,
+                      'from_language': 'English',
+                      'to_language': 'Malayalam',
                     },
                   },
                   'cards': <Object?>[
@@ -55,19 +56,17 @@ void main() {
                           'examples': <Object?>[],
                         },
                         'schedule': <String, Object?>{
-                          'version': 2,
+                          'version': 3,
                           'algorithm': 'fsrs',
-                          'front_to_back': _emptySchedule(enabled: true),
-                          'back_to_front': _emptySchedule(enabled: true),
+                          'cues': <String, Object?>{
+                            'from_language': _emptySchedule(enabled: true),
+                            'to_language': _emptySchedule(enabled: true),
+                            'transliteration': _emptySchedule(enabled: true),
+                          },
                         },
                         'review_history': <String, Object?>{
-                          'version': 2,
-                          'front_to_back': <String, Object?>{
-                            'items': <Object?>[],
-                          },
-                          'back_to_front': <String, Object?>{
-                            'items': <Object?>[],
-                          },
+                          'version': 3,
+                          'items': <Object?>[],
                         },
                       },
                       'tags': <String, Object?>{
@@ -102,7 +101,8 @@ void main() {
     expect(printNode(captured!.operation.document), contains('syncCardDecks'));
     expect(captured!.variables['deckIds'], <int>[7]);
     expect(bundle.decks.single.serverHash, 'deck-hash');
-    expect(bundle.decks.single.deck.language, 'Malayalam');
+    expect(bundle.decks.single.deck.fromLanguage, 'English');
+    expect(bundle.decks.single.deck.toLanguage, 'Malayalam');
     final card = bundle.decks.single.cards.single;
     expect(card.deckId, 7);
     expect(card.content, isA<LanguageCardContent>());
@@ -145,11 +145,13 @@ void main() {
     );
     final scheduleValue = schedule['value'] as Map<String, dynamic>;
     expect(
-      (scheduleValue['front_to_back'] as Map<String, dynamic>)['review_count'],
+      ((scheduleValue['cues'] as Map<String, dynamic>)['from_language']
+          as Map<String, dynamic>)['review_count'],
       1,
     );
     expect(
-      (scheduleValue['back_to_front'] as Map<String, dynamic>)['review_count'],
+      ((scheduleValue['cues'] as Map<String, dynamic>)['to_language']
+          as Map<String, dynamic>)['review_count'],
       0,
     );
     expect(result.status, CardMutationStatus.applied);
@@ -181,8 +183,8 @@ StudyCard _card() => StudyCard(
   deckId: 7,
   deckName: 'Malayalam',
   tags: const <String>['Vocabulary'],
-  schedules: <StudyDirection, CardSchedule>{
-    StudyDirection.frontToBack: CardSchedule(
+  schedules: <StudyCue, CardSchedule>{
+    StudyCue.fromLanguage: CardSchedule(
       enabled: true,
       dueAt: DateTime.utc(2026, 8, 5),
       lastReviewedAt: DateTime.utc(2026, 8, 4),
@@ -193,11 +195,13 @@ StudyCard _card() => StudyCard(
       reviewCount: 1,
       lapseCount: 0,
     ),
-    StudyDirection.backToFront: const CardSchedule.initial(enabled: true),
+    StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
+    StudyCue.transliteration: const CardSchedule.initial(enabled: true),
   },
-  reviewHistory: const <StudyDirection, List<CardReview>>{
-    StudyDirection.frontToBack: <CardReview>[],
-    StudyDirection.backToFront: <CardReview>[],
+  reviewHistory: const <StudyCue, List<CardReview>>{
+    StudyCue.fromLanguage: <CardReview>[],
+    StudyCue.toLanguage: <CardReview>[],
+    StudyCue.transliteration: <CardReview>[],
   },
   suspended: false,
   updatedAt: DateTime.utc(2026, 8, 4),

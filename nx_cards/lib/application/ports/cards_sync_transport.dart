@@ -14,7 +14,8 @@ abstract interface class CardsSyncTransport {
   Future<CardMutationResult> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
     required DateTime clientUpdatedAt,
   });
 

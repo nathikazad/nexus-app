@@ -40,11 +40,13 @@ final class WebCardsWorkspace implements CardsWorkspace {
   Future<int> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
   }) => _repository.createDeck(
     name: name,
     description: description,
-    language: language,
+    fromLanguage: fromLanguage,
+    toLanguage: toLanguage,
   );
   @override
   Future<int> createCard({

@@ -42,6 +42,8 @@ class KgqlCardsRepository implements CardsRepository {
         'description': true,
         'updated_at': true,
         attrArchived: true,
+        attrFromLanguage: true,
+        attrToLanguage: true,
         'tags': true,
       },
     );
@@ -78,17 +80,27 @@ class KgqlCardsRepository implements CardsRepository {
   }
 
   @override
-  Future<List<String>> listLanguages() =>
-      _listTagNodes(deckModelType, deckLanguageTagSystem);
+  Future<List<String>> listLanguages() async {
+    final values = <String>{
+      'French',
+      'Hindi',
+      'Japanese',
+      'Malayalam',
+      'Spanish',
+      for (final deck in await listDecks()) ...[
+        ?deck.fromLanguage,
+        ?deck.toLanguage,
+      ],
+    }.toList()..sort();
+    return values;
+  }
 
   @override
   Future<List<String>> listCardTags() =>
       _listTagNodes(cardModelType, cardTagsTagSystem, leavesOnly: true);
 
   @override
-  Future<void> addLanguage(String name) {
-    return _addTagNode(deckModelType, deckLanguageTagSystem, name);
-  }
+  Future<void> addLanguage(String name) async {}
 
   @override
   Future<void> addCardTag(String name) {
@@ -115,7 +127,8 @@ class KgqlCardsRepository implements CardsRepository {
   Future<int> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
   }) {
     return setKgqlModel(
       _client,
@@ -123,16 +136,13 @@ class KgqlCardsRepository implements CardsRepository {
         modelType: deckModelType,
         name: name,
         description: description,
-        attributes: [SetModelAttribute(key: attrArchived, value: false)],
-        tags: language == null
-            ? null
-            : [
-                SetModelTag(
-                  system: deckLanguageTagSystem,
-                  nodes: [language],
-                  clear: true,
-                ),
-              ],
+        attributes: [
+          SetModelAttribute(key: attrArchived, value: false),
+          if (fromLanguage != null)
+            SetModelAttribute(key: attrFromLanguage, value: fromLanguage),
+          if (toLanguage != null)
+            SetModelAttribute(key: attrToLanguage, value: toLanguage),
+        ],
       ),
       auditSourceKind: 'nx_cards',
     );
@@ -161,7 +171,7 @@ class KgqlCardsRepository implements CardsRepository {
           SetModelAttribute(
             key: attrSchedule,
             value: emptyScheduleJson(
-              enableBackToFront: content is LanguageCardContent,
+              languageCard: content is LanguageCardContent,
             ),
           ),
           SetModelAttribute(

@@ -11,20 +11,19 @@ void main() {
       deckId: 1,
       deckName: 'French',
       tags: const ['Vocabulary'],
-      schedules: const <StudyDirection, CardSchedule>{
-        StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
-        StudyDirection.backToFront: CardSchedule.initial(enabled: false),
+      schedules: const <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.toLanguage: CardSchedule.initial(enabled: false),
+        StudyCue.transliteration: CardSchedule.initial(enabled: false),
       },
-      reviewHistory: const <StudyDirection, List<CardReview>>{
-        StudyDirection.frontToBack: <CardReview>[],
-        StudyDirection.backToFront: <CardReview>[],
+      reviewHistory: const <StudyCue, List<CardReview>>{
+        StudyCue.fromLanguage: <CardReview>[],
+        StudyCue.toLanguage: <CardReview>[],
+        StudyCue.transliteration: <CardReview>[],
       },
       suspended: false,
     );
-    final prompt = StudyPrompt(
-      card: card,
-      direction: StudyDirection.frontToBack,
-    );
+    final prompt = StudyPrompt(card: card, cue: StudyCue.fromLanguage);
 
     final outcomes = FsrsCardScheduler(
       reviewId: () => 'review-id',
@@ -32,8 +31,8 @@ void main() {
 
     expect(outcomes.keys, containsAll(CardRating.values));
     for (final outcome in outcomes.values) {
-      final schedule = outcome.card.scheduleFor(StudyDirection.frontToBack);
-      final history = outcome.card.reviewHistoryFor(StudyDirection.frontToBack);
+      final schedule = outcome.card.scheduleFor(StudyCue.fromLanguage);
+      final history = outcome.card.reviewHistoryFor(StudyCue.fromLanguage);
       expect(schedule.lastReviewedAt, now);
       expect(schedule.dueAt, isNotNull);
       expect(schedule.reviewCount, 1);
@@ -46,8 +45,8 @@ void main() {
       expect(history.single.elapsedSeconds, 0);
       expect(history.single.scheduledSeconds, greaterThan(0));
       expect(
-        outcome.card.scheduleFor(StudyDirection.backToFront),
-        same(card.scheduleFor(StudyDirection.backToFront)),
+        outcome.card.scheduleFor(StudyCue.toLanguage),
+        same(card.scheduleFor(StudyCue.toLanguage)),
       );
     }
   });
@@ -60,8 +59,8 @@ void main() {
       deckId: 1,
       deckName: 'French',
       tags: const [],
-      schedules: <StudyDirection, CardSchedule>{
-        StudyDirection.frontToBack: CardSchedule(
+      schedules: <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: CardSchedule(
           enabled: true,
           dueAt: now,
           lastReviewedAt: now.subtract(const Duration(days: 3)),
@@ -72,22 +71,24 @@ void main() {
           reviewCount: 4,
           lapseCount: 1,
         ),
-        StudyDirection.backToFront: const CardSchedule.initial(enabled: false),
+        StudyCue.toLanguage: const CardSchedule.initial(enabled: false),
+        StudyCue.transliteration: const CardSchedule.initial(enabled: false),
       },
-      reviewHistory: const <StudyDirection, List<CardReview>>{
-        StudyDirection.frontToBack: <CardReview>[],
-        StudyDirection.backToFront: <CardReview>[],
+      reviewHistory: const <StudyCue, List<CardReview>>{
+        StudyCue.fromLanguage: <CardReview>[],
+        StudyCue.toLanguage: <CardReview>[],
+        StudyCue.transliteration: <CardReview>[],
       },
       suspended: false,
     );
 
     final outcome = FsrsCardScheduler(reviewId: () => 'review-id').preview(
-      StudyPrompt(card: card, direction: StudyDirection.frontToBack),
+      StudyPrompt(card: card, cue: StudyCue.fromLanguage),
       now,
     )[CardRating.again]!;
 
-    final schedule = outcome.card.scheduleFor(StudyDirection.frontToBack);
-    final history = outcome.card.reviewHistoryFor(StudyDirection.frontToBack);
+    final schedule = outcome.card.scheduleFor(StudyCue.fromLanguage);
+    final history = outcome.card.reviewHistoryFor(StudyCue.fromLanguage);
     expect(schedule.lapseCount, 2);
     expect(schedule.schedulingState, 'relearning');
     expect(history.single.rating, 1);

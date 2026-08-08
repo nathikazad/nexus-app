@@ -3,7 +3,8 @@ class CardDeck {
     required this.id,
     required this.name,
     required this.description,
-    required this.language,
+    required this.fromLanguage,
+    required this.toLanguage,
     required this.archived,
     this.updatedAt,
   });
@@ -11,7 +12,9 @@ class CardDeck {
   final int id;
   final String name;
   final String description;
-  final String? language;
+  final String? fromLanguage;
+  final String? toLanguage;
+  bool get isLanguageDeck => fromLanguage != null && toLanguage != null;
   final bool archived;
 
   /// Kept in the domain model so a future offline store can resolve remote

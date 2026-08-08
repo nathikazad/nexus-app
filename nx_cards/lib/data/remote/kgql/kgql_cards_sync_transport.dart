@@ -61,7 +61,8 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
   Future<CardMutationResult> createDeck({
     required String name,
     required String description,
-    String? language,
+    String? fromLanguage,
+    String? toLanguage,
     required DateTime clientUpdatedAt,
   }) => _mutate(
     SetModelRequest(
@@ -70,16 +71,11 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
       description: description,
       attributes: <SetModelAttribute>[
         SetModelAttribute(key: attrArchived, value: false),
+        if (fromLanguage != null)
+          SetModelAttribute(key: attrFromLanguage, value: fromLanguage),
+        if (toLanguage != null)
+          SetModelAttribute(key: attrToLanguage, value: toLanguage),
       ],
-      tags: language == null
-          ? null
-          : <SetModelTag>[
-              SetModelTag(
-                system: deckLanguageTagSystem,
-                nodes: <String>[language],
-                clear: true,
-              ),
-            ],
     ),
     clientUpdatedAt,
   );
@@ -106,7 +102,7 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
         SetModelAttribute(
           key: attrSchedule,
           value: emptyScheduleJson(
-            enableBackToFront: content is LanguageCardContent,
+            languageCard: content is LanguageCardContent,
           ),
         ),
         SetModelAttribute(

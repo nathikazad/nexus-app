@@ -12,7 +12,8 @@ void main() {
       id: 10,
       name: 'Malayalam words',
       description: '',
-      language: 'Malayalam',
+      fromLanguage: 'English',
+      toLanguage: 'Malayalam',
       archived: false,
     );
     final card = StudyCard(
@@ -32,13 +33,15 @@ void main() {
       deckId: 10,
       deckName: 'Malayalam words',
       tags: const ['legal'],
-      schedules: const <StudyDirection, CardSchedule>{
-        StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
-        StudyDirection.backToFront: CardSchedule.initial(enabled: true),
+      schedules: const <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.transliteration: CardSchedule.initial(enabled: true),
       },
-      reviewHistory: const <StudyDirection, List<CardReview>>{
-        StudyDirection.frontToBack: <CardReview>[],
-        StudyDirection.backToFront: <CardReview>[],
+      reviewHistory: const <StudyCue, List<CardReview>>{
+        StudyCue.fromLanguage: <CardReview>[],
+        StudyCue.toLanguage: <CardReview>[],
+        StudyCue.transliteration: <CardReview>[],
       },
       suspended: false,
     );

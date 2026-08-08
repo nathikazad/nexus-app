@@ -7,7 +7,8 @@ void main() {
     id: 1,
     name: 'French',
     description: '',
-    language: 'French',
+    fromLanguage: 'English',
+    toLanguage: 'French',
     archived: false,
   );
 
@@ -38,43 +39,37 @@ void main() {
     expect(dashboard.studyQueue(now), isEmpty);
   });
 
-  test('each enabled direction has independent queue eligibility', () {
+  test('each enabled cue has independent queue eligibility', () {
     final dashboard = CardsDashboard(
       decks: const [deck],
-      cards: [_card(1, enableReverse: true)],
+      cards: [_card(1, enableAllCues: true)],
     );
 
     final queue = dashboard.studyQueue(now);
 
-    expect(queue, hasLength(2));
-    expect(queue.map((prompt) => prompt.direction), [
-      StudyDirection.frontToBack,
-      StudyDirection.backToFront,
-    ]);
-    expect(dashboard.newCount(), 2);
+    expect(queue, hasLength(3));
+    expect(queue.map((prompt) => prompt.cue), StudyCue.values);
+    expect(dashboard.newCount(), 1);
     expect(dashboard.cardCount(1), 1);
   });
 
-  test('new language directions are mixed without adjacent siblings', () {
+  test('new language cues are mixed without adjacent siblings', () {
     final dashboard = CardsDashboard(
       decks: const [deck],
       cards: [
-        _card(1, enableReverse: true),
-        _card(2, enableReverse: true),
-        _card(3, enableReverse: true),
+        _card(1, enableAllCues: true),
+        _card(2, enableAllCues: true),
+        _card(3, enableAllCues: true),
       ],
     );
 
     final queue = dashboard.studyQueue(now);
 
-    expect(queue, hasLength(6));
+    expect(queue, hasLength(9));
     for (var index = 1; index < queue.length; index++) {
       expect(queue[index].cardId, isNot(queue[index - 1].cardId));
     }
-    expect(
-      queue.map((prompt) => prompt.direction).toSet(),
-      StudyDirection.values.toSet(),
-    );
+    expect(queue.map((prompt) => prompt.cue).toSet(), StudyCue.values.toSet());
   });
 }
 
@@ -83,16 +78,20 @@ StudyCard _card(
   DateTime? dueAt,
   DateTime? reviewed,
   bool suspended = false,
-  bool enableReverse = false,
+  bool enableAllCues = false,
 }) {
   return StudyCard(
     id: id,
-    content: BasicCardContent(front: 'front $id', back: 'back $id'),
+    content: LanguageCardContent(
+      english: 'front $id',
+      originalScript: 'back $id',
+      transliteration: 'sound $id',
+    ),
     deckId: 1,
     deckName: 'French',
     tags: const [],
-    schedules: <StudyDirection, CardSchedule>{
-      StudyDirection.frontToBack: CardSchedule(
+    schedules: <StudyCue, CardSchedule>{
+      StudyCue.fromLanguage: CardSchedule(
         enabled: true,
         dueAt: dueAt,
         lastReviewedAt: reviewed,
@@ -103,11 +102,13 @@ StudyCard _card(
         reviewCount: reviewed == null ? 0 : 1,
         lapseCount: 0,
       ),
-      StudyDirection.backToFront: CardSchedule.initial(enabled: enableReverse),
+      StudyCue.toLanguage: CardSchedule.initial(enabled: enableAllCues),
+      StudyCue.transliteration: CardSchedule.initial(enabled: enableAllCues),
     },
-    reviewHistory: const <StudyDirection, List<CardReview>>{
-      StudyDirection.frontToBack: <CardReview>[],
-      StudyDirection.backToFront: <CardReview>[],
+    reviewHistory: const <StudyCue, List<CardReview>>{
+      StudyCue.fromLanguage: <CardReview>[],
+      StudyCue.toLanguage: <CardReview>[],
+      StudyCue.transliteration: <CardReview>[],
     },
     suspended: suspended,
   );

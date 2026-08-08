@@ -12,11 +12,17 @@ class CardsDashboard {
       .where((card) => deckId == null || card.deckId == deckId)
       .expand((card) => card.prompts);
 
-  int dueCount(DateTime now, {int? deckId}) =>
-      _prompts(deckId: deckId).where((prompt) => prompt.isDueAt(now)).length;
+  int dueCount(DateTime now, {int? deckId}) => _prompts(deckId: deckId)
+      .where((prompt) => prompt.isDueAt(now))
+      .map((prompt) => prompt.cardId)
+      .toSet()
+      .length;
 
-  int newCount({int? deckId}) =>
-      _prompts(deckId: deckId).where((prompt) => prompt.isNew).length;
+  int newCount({int? deckId}) => _prompts(deckId: deckId)
+      .where((prompt) => prompt.isNew)
+      .map((prompt) => prompt.cardId)
+      .toSet()
+      .length;
 
   int cardCount(int deckId) =>
       cards.where((card) => card.deckId == deckId).length;
@@ -34,8 +40,8 @@ class CardsDashboard {
     final fresh =
         eligible.where((prompt) => prompt.isNew).take(newCardLimit).toList()
           ..sort((a, b) {
-            final direction = a.direction.index.compareTo(b.direction.index);
-            return direction != 0 ? direction : a.cardId.compareTo(b.cardId);
+            final cue = a.cue.index.compareTo(b.cue.index);
+            return cue != 0 ? cue : a.cardId.compareTo(b.cardId);
           });
     return _separateSiblingPrompts(<StudyPrompt>[...due, ...fresh]);
   }

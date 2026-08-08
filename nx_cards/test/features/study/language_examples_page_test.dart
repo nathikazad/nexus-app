@@ -7,9 +7,7 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 
 void main() {
-  testWidgets('opens examples from a revealed forward review card', (
-    tester,
-  ) async {
+  testWidgets('opens examples from a revealed language card', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -30,11 +28,15 @@ void main() {
       deckId: 10,
       deckName: 'Malayalam words',
       tags: const <String>[],
-      schedules: const <StudyDirection, CardSchedule>{
-        StudyDirection.frontToBack: CardSchedule.initial(enabled: true),
+      schedules: const <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.transliteration: CardSchedule.initial(enabled: true),
       },
-      reviewHistory: const <StudyDirection, List<CardReview>>{
-        StudyDirection.frontToBack: <CardReview>[],
+      reviewHistory: const <StudyCue, List<CardReview>>{
+        StudyCue.fromLanguage: <CardReview>[],
+        StudyCue.toLanguage: <CardReview>[],
+        StudyCue.transliteration: <CardReview>[],
       },
       suspended: false,
     );
@@ -47,27 +49,27 @@ void main() {
           home: StudyScreen(
             title: 'Malayalam words',
             prompts: <StudyPrompt>[
-              StudyPrompt(card: card, direction: StudyDirection.frontToBack),
+              StudyPrompt(card: card, cue: StudyCue.fromLanguage),
             ],
           ),
         ),
       ),
     );
 
-    expect(find.text('View examples (1)'), findsNothing);
+    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
 
     await tester.tap(find.text('Show answer   Space'));
     await tester.pumpAndSettle();
 
-    expect(find.text('View examples (1)'), findsOneWidget);
+    expect(find.text('fraud'), findsOneWidget);
+    expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
+    expect(find.text('thattippu'), findsOneWidget);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
 
-    await tester.tap(find.text('View examples (1)'));
+    await tester.tap(find.text('Examples'));
     await tester.pumpAndSettle();
 
     expect(find.text('Examples'), findsOneWidget);
-    expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
-    expect(find.text('thattippu'), findsOneWidget);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
     expect(find.text('athu oru thattippayirunnu'), findsOneWidget);
     expect(find.text('It was a fraud.'), findsOneWidget);

@@ -1,32 +1,28 @@
+import 'package:nx_cards/domain/card/card_content.dart';
 import 'package:nx_cards/domain/card/card_review.dart';
 import 'package:nx_cards/domain/card/card_schedule.dart';
 import 'package:nx_cards/domain/card/study_card.dart';
-import 'package:nx_cards/domain/card/study_direction.dart';
+import 'package:nx_cards/domain/card/study_cue.dart';
 
 class StudyPrompt {
-  const StudyPrompt({required this.card, required this.direction});
+  const StudyPrompt({required this.card, required this.cue});
 
   final StudyCard card;
-  final StudyDirection direction;
+  final StudyCue cue;
 
   int get cardId => card.id;
-  String get prompt => switch (direction) {
-    StudyDirection.frontToBack => card.front,
-    StudyDirection.backToFront => card.back,
+  String get prompt => switch (cue) {
+    StudyCue.fromLanguage => card.front,
+    StudyCue.toLanguage => card.back,
+    StudyCue.transliteration => switch (card.content) {
+      LanguageCardContent(:final transliteration) => transliteration,
+      _ => card.front,
+    },
   };
-  String get answer => switch (direction) {
-    StudyDirection.frontToBack => card.back,
-    StudyDirection.backToFront => card.front,
-  };
-  CardSchedule get schedule => card.scheduleFor(direction);
-  List<CardReview> get reviewHistory => card.reviewHistoryFor(direction);
+  CardSchedule get schedule => card.scheduleFor(cue);
+  List<CardReview> get reviewHistory => card.reviewHistoryFor(cue);
   bool get isNew => schedule.isNew;
   bool isDueAt(DateTime now) => schedule.isDueAt(now);
 
-  /// Language supplements describe the stored back side. They are answer
-  /// aids in the forward direction, never hints on a reverse prompt.
-  bool get showLanguageSupplements => direction == StudyDirection.frontToBack;
-
-  StudyPrompt withCard(StudyCard value) =>
-      StudyPrompt(card: value, direction: direction);
+  StudyPrompt withCard(StudyCard value) => StudyPrompt(card: value, cue: cue);
 }
