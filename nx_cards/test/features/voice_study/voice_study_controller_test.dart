@@ -16,6 +16,7 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
   final instructions = <String>[];
   List<LiveAgentToolDefinition> connectedTools = const [];
   int responseRequests = 0;
+  int closeRequests = 0;
 
   @override
   Stream<LiveAgentEvent> get events => eventsController.stream;
@@ -66,7 +67,7 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
   Future<void> setMuted(bool muted) async {}
 
   @override
-  Future<void> close() async {}
+  Future<void> close() async => closeRequests += 1;
 
   @override
   Future<void> dispose() async {
@@ -166,6 +167,57 @@ void main() {
       (transport.toolResults['advance-early'] as Map)['reason'],
       'current_card_not_assessed',
     );
+    controller.dispose();
+  });
+
+  test('recap aggregates performance, usage, and gpt-realtime cost', () async {
+    final repository = _MockCardsRepository();
+    when(() => repository.saveSchedule(any())).thenAnswer((_) async {});
+    final transport = _FakeLiveAgentTransport();
+    final controller = VoiceStudyController(
+      session: LiveAgentSession(transport: transport),
+      repository: repository,
+      scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
+      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
+      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      onScheduleSaved: () {},
+    );
+    await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
+
+    transport.call('assess-1', 'assess_current_card', {
+      'rating': 'hard',
+      'heard': 'kazhiv',
+      'feedback': 'Nearly correct.',
+    });
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.usage,
+        usage: LiveAgentUsage(
+          inputTokens: 1100,
+          outputTokens: 550,
+          inputTextTokens: 1000,
+          inputAudioTokens: 100,
+          cachedInputTokens: 220,
+          cachedInputTextTokens: 200,
+          cachedInputAudioTokens: 20,
+          outputTextTokens: 500,
+          outputAudioTokens: 50,
+        ),
+      ),
+    );
+    await pumpEventQueue();
+
+    expect(controller.correctCount, 0);
+    expect(controller.partialCount, 1);
+    expect(controller.incorrectCount, 0);
+    expect(controller.usage.totalTokens, 1650);
+    expect(controller.inputCost, closeTo(0.005848, 0.0000001));
+    expect(controller.outputCost, closeTo(0.0112, 0.0000001));
+    expect(controller.totalCost, closeTo(0.017048, 0.0000001));
+
+    await controller.end();
+    expect(controller.phase, VoiceStudyPhase.completed);
+    expect(transport.closeRequests, 1);
     controller.dispose();
   });
 }

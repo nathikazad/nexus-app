@@ -301,10 +301,16 @@ List<LiveAgentEvent> parseOpenAiRealtimeEvent(Map<String, dynamic> event) {
               ),
             ];
     case 'response.done':
+      final usage = _usageFromResponse(event['response']);
       final toolCalls = _toolCallsFromResponse(event['response']);
-      return toolCalls.isEmpty
-          ? const [LiveAgentEvent(LiveAgentEventType.listening)]
-          : toolCalls;
+      return [
+        if (usage != null)
+          LiveAgentEvent(LiveAgentEventType.usage, usage: usage),
+        if (toolCalls.isEmpty)
+          const LiveAgentEvent(LiveAgentEventType.listening)
+        else
+          ...toolCalls,
+      ];
     case 'error':
       final error = event['error'];
       final message = error is Map
@@ -320,6 +326,37 @@ List<LiveAgentEvent> parseOpenAiRealtimeEvent(Map<String, dynamic> event) {
       return const [];
   }
 }
+
+LiveAgentUsage? _usageFromResponse(Object? rawResponse) {
+  if (rawResponse is! Map || rawResponse['usage'] is! Map) return null;
+  final usage = rawResponse['usage'] as Map;
+  final inputDetails = usage['input_token_details'] is Map
+      ? usage['input_token_details'] as Map
+      : const <Object?, Object?>{};
+  final cachedDetails = inputDetails['cached_tokens_details'] is Map
+      ? inputDetails['cached_tokens_details'] as Map
+      : const <Object?, Object?>{};
+  final outputDetails = usage['output_token_details'] is Map
+      ? usage['output_token_details'] as Map
+      : const <Object?, Object?>{};
+  return LiveAgentUsage(
+    inputTokens: _tokenCount(usage['input_tokens']),
+    outputTokens: _tokenCount(usage['output_tokens']),
+    inputTextTokens: _tokenCount(inputDetails['text_tokens']),
+    inputAudioTokens: _tokenCount(inputDetails['audio_tokens']),
+    cachedInputTokens: _tokenCount(inputDetails['cached_tokens']),
+    cachedInputTextTokens: _tokenCount(cachedDetails['text_tokens']),
+    cachedInputAudioTokens: _tokenCount(cachedDetails['audio_tokens']),
+    outputTextTokens: _tokenCount(outputDetails['text_tokens']),
+    outputAudioTokens: _tokenCount(outputDetails['audio_tokens']),
+  );
+}
+
+int _tokenCount(Object? value) => switch (value) {
+  int count => count,
+  num count => count.toInt(),
+  _ => int.tryParse(value?.toString() ?? '') ?? 0,
+};
 
 List<LiveAgentEvent> _toolCallsFromResponse(Object? rawResponse) {
   if (rawResponse is! Map || rawResponse['output'] is! List) return const [];

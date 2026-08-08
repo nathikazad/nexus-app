@@ -64,4 +64,31 @@ void main() {
     expect(speech.single.type, LiveAgentEventType.userSpeechStarted);
     expect(completed.single.type, LiveAgentEventType.listening);
   });
+
+  test('parses detailed token usage from completed responses', () {
+    final events = parseOpenAiRealtimeEvent({
+      'type': 'response.done',
+      'response': {
+        'output': <Object?>[],
+        'usage': {
+          'input_tokens': 1100,
+          'output_tokens': 550,
+          'input_token_details': {
+            'text_tokens': 1000,
+            'audio_tokens': 100,
+            'cached_tokens': 220,
+            'cached_tokens_details': {'text_tokens': 200, 'audio_tokens': 20},
+          },
+          'output_token_details': {'text_tokens': 500, 'audio_tokens': 50},
+        },
+      },
+    });
+
+    expect(events, hasLength(2));
+    expect(events.first.type, LiveAgentEventType.usage);
+    expect(events.first.usage?.inputTokens, 1100);
+    expect(events.first.usage?.cachedInputAudioTokens, 20);
+    expect(events.first.usage?.outputAudioTokens, 50);
+    expect(events.last.type, LiveAgentEventType.listening);
+  });
 }

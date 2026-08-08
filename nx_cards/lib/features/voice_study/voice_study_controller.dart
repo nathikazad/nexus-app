@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
@@ -62,6 +63,9 @@ class VoiceStudyController extends ChangeNotifier {
 
   int _index = 0;
   int _reviewedCount = 0;
+  int _correctCount = 0;
+  int _partialCount = 0;
+  int _incorrectCount = 0;
   bool _currentCardAssessed = false;
   bool _completed = false;
   CardRating? _assessmentRating;
@@ -71,6 +75,9 @@ class VoiceStudyController extends ChangeNotifier {
   int get index => _index;
   int get total => _prompts.length;
   int get reviewedCount => _reviewedCount;
+  int get correctCount => _correctCount;
+  int get partialCount => _partialCount;
+  int get incorrectCount => _incorrectCount;
   bool get currentCardAssessed => _currentCardAssessed;
   CardRating? get assessmentRating => _assessmentRating;
   bool get isMuted => _session.muted;
@@ -85,6 +92,10 @@ class VoiceStudyController extends ChangeNotifier {
       _index < _prompts.length ? _prompts[_index] : null;
   double get progress =>
       total == 0 ? 0 : (_index + (_currentCardAssessed ? 1 : 0)) / total;
+  LiveAgentUsage get usage => _session.usage;
+  double get inputCost => _gptRealtimeInputCost(usage);
+  double get outputCost => _gptRealtimeOutputCost(usage);
+  double get totalCost => inputCost + outputCost;
 
   VoiceStudyPhase get phase {
     if (_completed) return VoiceStudyPhase.completed;
@@ -237,6 +248,14 @@ Keep spoken responses short unless the learner asks for more detail.
     _feedback = arguments['feedback']?.toString().trim() ?? '';
     _currentCardAssessed = true;
     _reviewedCount += 1;
+    switch (rating) {
+      case CardRating.again:
+        _incorrectCount += 1;
+      case CardRating.hard:
+        _partialCount += 1;
+      case CardRating.good || CardRating.easy:
+        _correctCount += 1;
+    }
     _onScheduleSaved();
     notifyListeners();
 
@@ -348,6 +367,13 @@ Keep spoken responses short unless the learner asks for more detail.
 
   Future<void> stop() => _session.stop();
 
+  Future<void> end() async {
+    if (_completed) return;
+    _completed = true;
+    notifyListeners();
+    await _session.stop();
+  }
+
   Map<String, Object?> _answerPayload(StudyPrompt prompt) {
     final pronunciationHint = _pronunciationHint(prompt);
     return {
@@ -431,6 +457,54 @@ Keep spoken responses short unless the learner asks for more detail.
     _session.dispose();
     super.dispose();
   }
+}
+
+const _perMillion = 1000000;
+const _textInputPrice = 4.0;
+const _audioInputPrice = 32.0;
+const _cachedInputPrice = 0.4;
+const _textOutputPrice = 16.0;
+const _audioOutputPrice = 64.0;
+
+double _gptRealtimeInputCost(LiveAgentUsage usage) {
+  var cachedText = math.min(usage.inputTextTokens, usage.cachedInputTextTokens);
+  var cachedAudio = math.min(
+    usage.inputAudioTokens,
+    usage.cachedInputAudioTokens,
+  );
+  var remainingCached = math.max(
+    0,
+    usage.cachedInputTokens - cachedText - cachedAudio,
+  );
+  final additionalCachedText = math.min(
+    usage.inputTextTokens - cachedText,
+    remainingCached,
+  );
+  cachedText += additionalCachedText;
+  remainingCached -= additionalCachedText;
+  final additionalCachedAudio = math.min(
+    usage.inputAudioTokens - cachedAudio,
+    remainingCached,
+  );
+  cachedAudio += additionalCachedAudio;
+  remainingCached -= additionalCachedAudio;
+  final categorizedInput = usage.inputTextTokens + usage.inputAudioTokens;
+  final otherInput = math.max(
+    0,
+    usage.inputTokens - categorizedInput - remainingCached,
+  );
+  return ((usage.inputTextTokens - cachedText + otherInput) * _textInputPrice +
+          (usage.inputAudioTokens - cachedAudio) * _audioInputPrice +
+          (cachedText + cachedAudio + remainingCached) * _cachedInputPrice) /
+      _perMillion;
+}
+
+double _gptRealtimeOutputCost(LiveAgentUsage usage) {
+  final categorizedOutput = usage.outputTextTokens + usage.outputAudioTokens;
+  final otherOutput = math.max(0, usage.outputTokens - categorizedOutput);
+  return ((usage.outputTextTokens + otherOutput) * _textOutputPrice +
+          usage.outputAudioTokens * _audioOutputPrice) /
+      _perMillion;
 }
 
 CardRating cardRatingForTutorResult(String? result) {

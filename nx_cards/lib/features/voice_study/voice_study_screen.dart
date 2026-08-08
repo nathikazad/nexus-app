@@ -54,46 +54,64 @@ class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, _) => Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 18),
-              child: Center(
-                child: Text(
-                  '${controller.reviewedCount}/${controller.total}',
-                  style: const TextStyle(color: RecallColors.muted),
+      builder: (context, _) => PopScope(
+        canPop: controller.phase == VoiceStudyPhase.completed,
+        child: Scaffold(
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: Text(widget.title),
+            actions: [
+              if (controller.phase != VoiceStudyPhase.completed)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: TextButton(
+                    onPressed: controller.end,
+                    child: const Text('End'),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    LinearProgressIndicator(
-                      value: controller.progress,
-                      minHeight: 3,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    const Spacer(),
-                    _SessionBody(controller: controller),
-                    const Spacer(),
-                    _VoiceControls(controller: controller),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'The voice session keeps running while this app is in the background. End it here when you are done.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: RecallColors.muted, fontSize: 12),
-                    ),
-                  ],
+            ],
+          ),
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      LinearProgressIndicator(
+                        value: controller.progress,
+                        minHeight: 3,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${controller.reviewedCount}/${controller.total}',
+                          style: monoLabel.copyWith(color: RecallColors.muted),
+                        ),
+                      ),
+                      if (controller.phase == VoiceStudyPhase.completed)
+                        Expanded(child: _SessionBody(controller: controller))
+                      else ...[
+                        const Spacer(),
+                        _SessionBody(controller: controller),
+                        const Spacer(),
+                        _VoiceControls(controller: controller),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'The voice session keeps running while this app is in the background. End it here when you are done.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: RecallColors.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -130,24 +148,56 @@ class _SessionBody extends StatelessWidget {
       );
     }
     if (controller.phase == VoiceStudyPhase.completed) {
-      return Column(
-        children: [
-          const Icon(
-            Icons.check_circle_outline,
-            size: 62,
-            color: RecallColors.emerald,
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Session complete',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${controller.reviewedCount} cards reviewed',
-            style: const TextStyle(color: RecallColors.muted),
-          ),
-        ],
+      return SingleChildScrollView(
+        child: Column(
+          children: [
+            const Icon(
+              Icons.check_circle_outline,
+              size: 62,
+              color: RecallColors.emerald,
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Session complete',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${controller.reviewedCount} of ${controller.total} cards reviewed',
+              style: const TextStyle(color: RecallColors.muted),
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 24,
+              runSpacing: 12,
+              children: [
+                _SummaryStat(
+                  value: '${controller.correctCount}',
+                  label: 'Correct',
+                  color: RecallColors.emerald,
+                ),
+                _SummaryStat(
+                  value: '${controller.partialCount}',
+                  label: 'Partial',
+                  color: RecallColors.orange,
+                ),
+                _SummaryStat(
+                  value: '${controller.incorrectCount}',
+                  label: 'Incorrect',
+                  color: RecallColors.rose,
+                ),
+              ],
+            ),
+            const SizedBox(height: 26),
+            _UsageRecap(controller: controller),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Return to decks'),
+            ),
+          ],
+        ),
       );
     }
 
@@ -199,6 +249,117 @@ class _SessionBody extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SummaryStat extends StatelessWidget {
+  const _SummaryStat({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        value,
+        style: TextStyle(
+          color: color,
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      Text(label, style: const TextStyle(color: RecallColors.muted)),
+    ],
+  );
+}
+
+class _UsageRecap extends StatelessWidget {
+  const _UsageRecap({required this.controller});
+
+  final VoiceStudyController controller;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: RecallColors.ink.withValues(alpha: 0.045),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('GPT-REALTIME USAGE', style: monoLabel),
+        const SizedBox(height: 12),
+        _UsageRow(
+          label: 'Input',
+          tokens: controller.usage.inputTokens,
+          cost: controller.inputCost,
+        ),
+        const SizedBox(height: 8),
+        _UsageRow(
+          label: 'Output',
+          tokens: controller.usage.outputTokens,
+          cost: controller.outputCost,
+        ),
+        const Divider(height: 22),
+        _UsageRow(
+          label: 'Total',
+          tokens: controller.usage.totalTokens,
+          cost: controller.totalCost,
+          emphasized: true,
+        ),
+      ],
+    ),
+  );
+}
+
+class _UsageRow extends StatelessWidget {
+  const _UsageRow({
+    required this.label,
+    required this.tokens,
+    required this.cost,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final int tokens;
+  final double cost;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      color: emphasized ? RecallColors.ink : RecallColors.muted,
+      fontWeight: emphasized ? FontWeight.w700 : FontWeight.w400,
+    );
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: style)),
+        Text('$tokens tokens', style: style),
+        const SizedBox(width: 18),
+        SizedBox(
+          width: 74,
+          child: Text(
+            _formatCost(cost),
+            textAlign: TextAlign.right,
+            style: style,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatCost(double cost) {
+  if (cost > 0 && cost < 0.0001) return '<\$0.0001';
+  return '\$${cost.toStringAsFixed(4)}';
 }
 
 class _LatestTurn extends StatelessWidget {

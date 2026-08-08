@@ -20,9 +20,49 @@ enum LiveAgentEventType {
   thinking,
   speaking,
   transcript,
+  usage,
   toolCall,
   disconnected,
   error,
+}
+
+final class LiveAgentUsage {
+  const LiveAgentUsage({
+    this.inputTokens = 0,
+    this.outputTokens = 0,
+    this.inputTextTokens = 0,
+    this.inputAudioTokens = 0,
+    this.cachedInputTokens = 0,
+    this.cachedInputTextTokens = 0,
+    this.cachedInputAudioTokens = 0,
+    this.outputTextTokens = 0,
+    this.outputAudioTokens = 0,
+  });
+
+  final int inputTokens;
+  final int outputTokens;
+  final int inputTextTokens;
+  final int inputAudioTokens;
+  final int cachedInputTokens;
+  final int cachedInputTextTokens;
+  final int cachedInputAudioTokens;
+  final int outputTextTokens;
+  final int outputAudioTokens;
+
+  int get totalTokens => inputTokens + outputTokens;
+
+  LiveAgentUsage operator +(LiveAgentUsage other) => LiveAgentUsage(
+    inputTokens: inputTokens + other.inputTokens,
+    outputTokens: outputTokens + other.outputTokens,
+    inputTextTokens: inputTextTokens + other.inputTextTokens,
+    inputAudioTokens: inputAudioTokens + other.inputAudioTokens,
+    cachedInputTokens: cachedInputTokens + other.cachedInputTokens,
+    cachedInputTextTokens: cachedInputTextTokens + other.cachedInputTextTokens,
+    cachedInputAudioTokens:
+        cachedInputAudioTokens + other.cachedInputAudioTokens,
+    outputTextTokens: outputTextTokens + other.outputTextTokens,
+    outputAudioTokens: outputAudioTokens + other.outputAudioTokens,
+  );
 }
 
 final class LiveAgentToolCall {
@@ -38,12 +78,19 @@ final class LiveAgentToolCall {
 }
 
 final class LiveAgentEvent {
-  const LiveAgentEvent(this.type, {this.role, this.text, this.toolCall});
+  const LiveAgentEvent(
+    this.type, {
+    this.role,
+    this.text,
+    this.toolCall,
+    this.usage,
+  });
 
   final LiveAgentEventType type;
   final String? role;
   final String? text;
   final LiveAgentToolCall? toolCall;
+  final LiveAgentUsage? usage;
 }
 
 final class LiveAgentToolDefinition {
@@ -169,6 +216,7 @@ final class LiveAgentSession extends ChangeNotifier {
   String latestAssistantTranscript = '';
   String? error;
   int interruptionCount = 0;
+  LiveAgentUsage usage = const LiveAgentUsage();
 
   Future<void> start({
     required LiveAgentCredentialProvider credentialProvider,
@@ -185,6 +233,7 @@ final class LiveAgentSession extends ChangeNotifier {
     latestAssistantTranscript = '';
     error = null;
     interruptionCount = 0;
+    usage = const LiveAgentUsage();
     muted = false;
     phase = LiveAgentPhase.connecting;
     _notify();
@@ -239,6 +288,8 @@ final class LiveAgentSession extends ChangeNotifier {
             transcript += text;
           }
         }
+      case LiveAgentEventType.usage:
+        if (event.usage case final delta?) usage += delta;
       case LiveAgentEventType.toolCall:
         final call = event.toolCall;
         if (call != null) await _invokeTool(call);

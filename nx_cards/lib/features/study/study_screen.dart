@@ -23,6 +23,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   int _index = 0;
   bool _revealed = false;
   bool _saving = false;
+  bool _ended = false;
   int _missCount = 0;
   Map<CardRating, ScheduledOutcome>? _outcomes;
   late final Map<int, StudyCard> _latestCards;
@@ -82,12 +83,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     }
   }
 
+  void _endReview() => setState(() => _ended = true);
+
   @override
   Widget build(BuildContext context) {
     if (widget.prompts.isEmpty) return const _EmptyStudyScreen();
-    if (_index >= widget.prompts.length) {
+    if (_ended || _index >= widget.prompts.length) {
       return _CompletedStudyScreen(
-        count: widget.prompts.length,
+        reviewedCount: _index,
+        totalCount: widget.prompts.length,
         missCount: _missCount,
       );
     }
@@ -129,6 +133,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                           title: widget.title,
                           current: _index + 1,
                           total: widget.prompts.length,
+                          onEnd: _endReview,
                         ),
                         const SizedBox(height: 14),
                         LinearProgressIndicator(
@@ -416,20 +421,18 @@ class _StudyHeader extends StatelessWidget {
     required this.title,
     required this.current,
     required this.total,
+    required this.onEnd,
   });
   final String title;
   final int current;
   final int total;
+  final VoidCallback onEnd;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        TextButton.icon(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, size: 18),
-          label: const Text('Exit review'),
-        ),
+        const SizedBox(width: 64),
         Expanded(
           child: Column(
             children: [
@@ -446,7 +449,10 @@ class _StudyHeader extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 100),
+        SizedBox(
+          width: 64,
+          child: TextButton(onPressed: onEnd, child: const Text('End')),
+        ),
       ],
     );
   }
@@ -558,8 +564,13 @@ class _EmptyStudyScreen extends StatelessWidget {
 }
 
 class _CompletedStudyScreen extends StatelessWidget {
-  const _CompletedStudyScreen({required this.count, required this.missCount});
-  final int count;
+  const _CompletedStudyScreen({
+    required this.reviewedCount,
+    required this.totalCount,
+    required this.missCount,
+  });
+  final int reviewedCount;
+  final int totalCount;
   final int missCount;
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -579,8 +590,26 @@ class _CompletedStudyScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$count cards studied · $missCount not recalled',
+            '$reviewedCount of $totalCount cards reviewed',
             style: const TextStyle(color: RecallColors.muted),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 24,
+            runSpacing: 8,
+            children: [
+              _RecapStat(
+                value: '${reviewedCount - missCount}',
+                label: 'Recalled',
+                color: RecallColors.emerald,
+              ),
+              _RecapStat(
+                value: '$missCount',
+                label: 'Not recalled',
+                color: RecallColors.rose,
+              ),
+            ],
           ),
           const SizedBox(height: 22),
           FilledButton(
@@ -590,6 +619,34 @@ class _CompletedStudyScreen extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+class _RecapStat extends StatelessWidget {
+  const _RecapStat({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        value,
+        style: TextStyle(
+          color: color,
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      Text(label, style: const TextStyle(color: RecallColors.muted)),
+    ],
   );
 }
 
