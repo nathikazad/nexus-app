@@ -15,6 +15,7 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
   final toolResults = <String, Object?>{};
   final instructions = <String>[];
   List<LiveAgentToolDefinition> connectedTools = const [];
+  LiveAgentSpec? connectedSpec;
   int responseRequests = 0;
   int closeRequests = 0;
 
@@ -27,6 +28,7 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
     required LiveAgentSpec spec,
     required List<LiveAgentToolDefinition> tools,
   }) async {
+    connectedSpec = spec;
     connectedTools = tools;
     eventsController.add(const LiveAgentEvent(LiveAgentEventType.connected));
   }
@@ -103,6 +105,7 @@ void main() {
     );
 
     await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
+    expect(transport.connectedSpec?.model, 'gpt-realtime-2.1-mini');
     expect(
       transport.connectedTools.map((tool) => tool.name),
       containsAll([
@@ -211,9 +214,9 @@ void main() {
     expect(controller.partialCount, 1);
     expect(controller.incorrectCount, 0);
     expect(controller.usage.totalTokens, 1650);
-    expect(controller.inputCost, closeTo(0.005848, 0.0000001));
-    expect(controller.outputCost, closeTo(0.0112, 0.0000001));
-    expect(controller.totalCost, closeTo(0.017048, 0.0000001));
+    expect(controller.inputCost, closeTo(0.001298, 0.0000001));
+    expect(controller.outputCost, closeTo(0.0022, 0.0000001));
+    expect(controller.totalCost, closeTo(0.003498, 0.0000001));
 
     await controller.end();
     expect(controller.phase, VoiceStudyPhase.completed);

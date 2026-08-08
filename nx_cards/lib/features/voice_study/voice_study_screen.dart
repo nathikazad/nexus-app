@@ -295,7 +295,7 @@ class _UsageRecap extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('GPT-REALTIME USAGE', style: monoLabel),
+        Text('GPT-REALTIME-2.1 MINI USAGE', style: monoLabel),
         const SizedBox(height: 12),
         _UsageRow(
           label: 'Input',

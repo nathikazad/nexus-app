@@ -123,6 +123,7 @@ class VoiceStudyController extends ChangeNotifier {
       spec: LiveAgentSpec(
         instructions: _instructions,
         initialContext: _contextForCurrentCard(firstCard: true),
+        model: 'gpt-realtime-2.1-mini',
       ),
       tools: _tools,
     );
@@ -460,11 +461,12 @@ Keep spoken responses short unless the learner asks for more detail.
 }
 
 const _perMillion = 1000000;
-const _textInputPrice = 4.0;
-const _audioInputPrice = 32.0;
-const _cachedInputPrice = 0.4;
-const _textOutputPrice = 16.0;
-const _audioOutputPrice = 64.0;
+const _textInputPrice = 0.6;
+const _audioInputPrice = 10.0;
+const _cachedTextInputPrice = 0.06;
+const _cachedAudioInputPrice = 0.3;
+const _textOutputPrice = 2.4;
+const _audioOutputPrice = 20.0;
 
 double _gptRealtimeInputCost(LiveAgentUsage usage) {
   var cachedText = math.min(usage.inputTextTokens, usage.cachedInputTextTokens);
@@ -495,7 +497,8 @@ double _gptRealtimeInputCost(LiveAgentUsage usage) {
   );
   return ((usage.inputTextTokens - cachedText + otherInput) * _textInputPrice +
           (usage.inputAudioTokens - cachedAudio) * _audioInputPrice +
-          (cachedText + cachedAudio + remainingCached) * _cachedInputPrice) /
+          (cachedText + remainingCached) * _cachedTextInputPrice +
+          cachedAudio * _cachedAudioInputPrice) /
       _perMillion;
 }
 
