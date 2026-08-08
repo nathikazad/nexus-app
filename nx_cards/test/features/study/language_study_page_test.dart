@@ -10,6 +10,8 @@ void main() {
   testWidgets('shows and searches all words on one study sheet', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final cards = [
       _card(1, 'relief', 'ആശ്വാസം', 'āśvāsaṃ'),
       _card(2, 'talent', 'കഴിവ്', 'kaḻiv'),

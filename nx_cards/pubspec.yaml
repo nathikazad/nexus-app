@@ -44,6 +44,8 @@ dependencies:
     path: ../nx_db
   nx_offline:
     path: ../nx_offline
+  nx_live_agent:
+    path: ../nx_live_agent
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.8
 

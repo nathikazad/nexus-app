@@ -5,10 +5,11 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
+import 'package:nx_cards/features/voice_study/voice_study_screen.dart';
 
 enum StudyOrder { normal, shuffle }
 
-enum StudyMode { study, recall }
+enum StudyMode { study, recall, ai }
 
 class StudySetupScreen extends StatefulWidget {
   const StudySetupScreen({
@@ -57,15 +58,20 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
   }
 
   void _start() {
-    if (_cue == null || _candidates.isEmpty) return;
-    final selected = [..._candidates];
-    if (_order == StudyOrder.shuffle) selected.shuffle(Random.secure());
-    final prompts = selected.take(_count).toList(growable: false);
+    final prompts = _selectedPrompts();
+    if (prompts.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => StudyScreen(title: widget.title, prompts: prompts),
       ),
     );
+  }
+
+  List<StudyPrompt> _selectedPrompts() {
+    if (_cue == null || _candidates.isEmpty) return const <StudyPrompt>[];
+    final selected = [..._candidates];
+    if (_order == StudyOrder.shuffle) selected.shuffle(Random.secure());
+    return selected.take(_count).toList(growable: false);
   }
 
   void _openStudySheet() {
@@ -76,6 +82,23 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LanguageStudyPage(title: widget.title, cards: cards),
+      ),
+    );
+  }
+
+  void _startAiTutor() {
+    final prompts = _selectedPrompts();
+    if (prompts.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VoiceStudyScreen(
+          title: widget.title,
+          prompts: prompts,
+          deckLanguages: {
+            for (final deckId in widget.studyCards.map((card) => card.deckId))
+              deckId: (from: widget.fromLanguage, to: widget.toLanguage),
+          },
+        ),
       ),
     );
   }
@@ -115,6 +138,11 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                         value: StudyMode.recall,
                         label: Text('Recall'),
                       ),
+                      ButtonSegment(
+                        value: StudyMode.ai,
+                        icon: Icon(Icons.auto_awesome_outlined),
+                        label: Text('AI'),
+                      ),
                     ],
                     selected: {_mode},
                     onSelectionChanged: (value) =>
@@ -150,72 +178,21 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                         child: Text('Open study sheet'),
                       ),
                     ),
-                  ] else ...[
+                  ] else if (_mode == StudyMode.recall) ...[
                     _SetupCard(
                       number: '01',
                       title: 'What should be in front?',
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final cue in StudyCue.values)
-                            ChoiceChip(
-                              label: Text(_cueLabel(cue)),
-                              selected: _cue == cue,
-                              onSelected: (_) => _selectCue(cue),
-                            ),
-                        ],
-                      ),
+                      child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
-                    const _SetupCard(
+                    _SetupCard(
                       number: '02',
-                      title: 'What should be in back?',
-                      child: _EverythingAnswer(),
+                      title: 'How many cards?',
+                      child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: '03',
-                      title: 'How many cards?',
-                      child: maxCount == 0
-                          ? const Text(
-                              'Choose the front first',
-                              style: TextStyle(color: RecallColors.faint),
-                            )
-                          : Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      '$_count',
-                                      style: const TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      '$maxCount available',
-                                      style: const TextStyle(
-                                        color: RecallColors.muted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Slider(
-                                  value: _count.clamp(1, maxCount).toDouble(),
-                                  min: 1,
-                                  max: maxCount.toDouble(),
-                                  divisions: maxCount > 1 ? maxCount - 1 : null,
-                                  onChanged: (value) =>
-                                      setState(() => _count = value.round()),
-                                ),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 14),
-                    _SetupCard(
-                      number: '04',
                       title: 'Choose the order',
                       child: _OrderControl(
                         value: _order,
@@ -231,6 +208,38 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                         child: Text('Start recall'),
                       ),
                     ),
+                  ] else ...[
+                    _SetupCard(
+                      number: '01',
+                      title: 'What should AI ask you?',
+                      child: _cueChoices(),
+                    ),
+                    const SizedBox(height: 14),
+                    _SetupCard(
+                      number: '02',
+                      title: 'How many cards?',
+                      child: _countControl(maxCount),
+                    ),
+                    const SizedBox(height: 14),
+                    _SetupCard(
+                      number: '03',
+                      title: 'Choose the order',
+                      child: _OrderControl(
+                        value: _order,
+                        onChanged: (value) => setState(() => _order = value),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    FilledButton.icon(
+                      onPressed: _cue == null || maxCount == 0
+                          ? null
+                          : _startAiTutor,
+                      icon: const Icon(Icons.record_voice_over_outlined),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 13),
+                        child: Text('Start AI tutor'),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -240,6 +249,52 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
       ),
     );
   }
+
+  Widget _cueChoices() => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final cue in StudyCue.values)
+        ChoiceChip(
+          label: Text(_cueLabel(cue)),
+          selected: _cue == cue,
+          onSelected: (_) => _selectCue(cue),
+        ),
+    ],
+  );
+
+  Widget _countControl(int maxCount) => maxCount == 0
+      ? const Text(
+          'Choose what should be prompted first',
+          style: TextStyle(color: RecallColors.faint),
+        )
+      : Column(
+          children: [
+            Row(
+              children: [
+                Text(
+                  '$_count',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$maxCount available',
+                  style: const TextStyle(color: RecallColors.muted),
+                ),
+              ],
+            ),
+            Slider(
+              value: _count.clamp(1, maxCount).toDouble(),
+              min: 1,
+              max: maxCount.toDouble(),
+              divisions: maxCount > 1 ? maxCount - 1 : null,
+              onChanged: (value) => setState(() => _count = value.round()),
+            ),
+          ],
+        );
 }
 
 class _OrderControl extends StatelessWidget {
@@ -288,23 +343,5 @@ class _SetupCard extends StatelessWidget {
         ],
       ),
     ),
-  );
-}
-
-class _EverythingAnswer extends StatelessWidget {
-  const _EverythingAnswer();
-
-  @override
-  Widget build(BuildContext context) => const Row(
-    children: [
-      Icon(Icons.check_circle_outline, size: 19, color: RecallColors.ink),
-      SizedBox(width: 9),
-      Expanded(
-        child: Text(
-          'Everything — both languages, transliteration, audio and examples',
-          style: TextStyle(color: RecallColors.muted),
-        ),
-      ),
-    ],
   );
 }

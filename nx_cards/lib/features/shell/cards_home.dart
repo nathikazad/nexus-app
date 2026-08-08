@@ -737,8 +737,6 @@ class DeckDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
-  String? _selectedTag;
-
   CardDeck get deck => widget.deck;
 
   @override
@@ -779,13 +777,7 @@ class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
           final allCards = data.cards
               .where((card) => card.deckId == deck.id)
               .toList();
-          final tags = allCards.expand((card) => card.tags).toSet().toList()
-            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-          final cards = _selectedTag == null
-              ? allCards
-              : allCards
-                    .where((card) => card.tags.contains(_selectedTag))
-                    .toList();
+          final cards = allCards;
           final queue = data.studyQueue(
             DateTime.now(),
             deckId: deck.id,
@@ -828,41 +820,13 @@ class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 22),
-                      if (tags.length > 1) ...[
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              ChoiceChip(
-                                label: const Text('All'),
-                                selected: _selectedTag == null,
-                                onSelected: (_) =>
-                                    setState(() => _selectedTag = null),
-                              ),
-                              const SizedBox(width: 7),
-                              for (final tag in tags) ...[
-                                ChoiceChip(
-                                  label: Text(tag),
-                                  selected: _selectedTag == tag,
-                                  onSelected: (_) =>
-                                      setState(() => _selectedTag = tag),
-                                ),
-                                const SizedBox(width: 7),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
                       if (cards.isEmpty)
-                        _selectedTag == null
-                            ? _EmptyCards(
-                                onCreate: () => showDialog<void>(
-                                  context: context,
-                                  builder: (_) => CardEditorDialog(deck: deck),
-                                ),
-                              )
-                            : const _EmptyTagResult()
+                        _EmptyCards(
+                          onCreate: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => CardEditorDialog(deck: deck),
+                          ),
+                        )
                       else
                         for (final card in cards)
                           _CardRow(card: card, deck: deck),
@@ -912,7 +876,6 @@ class _CardRow extends ConsumerWidget {
           child: Text(
             [
               card.back,
-              if (card.tags.isNotEmpty) card.tags.join(' · '),
               if (card.sourceBookName != null) card.sourceBookName!,
             ].join('  •  '),
             maxLines: 2,
@@ -1278,23 +1241,6 @@ class _EmptyCards extends StatelessWidget {
     detail: 'Add a front and back to begin studying.',
     action: 'Create card',
     onAction: onCreate,
-  );
-}
-
-class _EmptyTagResult extends StatelessWidget {
-  const _EmptyTagResult();
-
-  @override
-  Widget build(BuildContext context) => const Card(
-    child: Padding(
-      padding: EdgeInsets.all(28),
-      child: Center(
-        child: Text(
-          'No cards match this tag.',
-          style: TextStyle(color: RecallColors.muted),
-        ),
-      ),
-    ),
   );
 }
 
