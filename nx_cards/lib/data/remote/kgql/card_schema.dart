@@ -6,8 +6,6 @@ const cardModelType = 'Flashcard';
 const languageCardModelType = 'LanguageFlashcard';
 const bookModelType = 'Book';
 
-const cardTagsTagSystem = 'Tags';
-
 const attrArchived = 'archived';
 const attrDueAt = 'due_at';
 const attrSuspended = 'suspended';
@@ -193,7 +191,8 @@ Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
         _hasAttributeDefinitions(
           card,
           buildCardSchemaRequest().attributeDefinitions!,
-        ),
+        ) &&
+        !(card.tagSystems ?? const []).any((system) => system.name == 'Tags'),
     languageCardReady:
         languageCard != null &&
         languageCard.parent?.name == cardModelType &&
@@ -276,6 +275,7 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       card,
       buildCardSchemaRequest().attributeDefinitions!,
     );
+    await _removeCardTagSystem(client, card);
   }
 
   final languageCard = await _modelTypeOrNull(client, languageCardModelType);
@@ -373,6 +373,23 @@ Future<void> _removeDeckLanguageTagSystem(
       id: deck.id,
       name: deck.name,
       typeKind: deck.typeKind ?? 'base',
+      tagSystems: [SetTagSystemRequest(id: system.id, delete: true)],
+    ),
+    auditSourceKind: 'nx_cards',
+  );
+}
+
+Future<void> _removeCardTagSystem(GraphQLClient client, ModelType card) async {
+  final system = (card.tagSystems ?? const [])
+      .where((value) => value.name == 'Tags')
+      .firstOrNull;
+  if (system == null) return;
+  await setKgqlModelType(
+    client,
+    SetModelTypeRequest(
+      id: card.id,
+      name: card.name,
+      typeKind: card.typeKind ?? 'base',
       tagSystems: [SetTagSystemRequest(id: system.id, delete: true)],
     ),
     auditSourceKind: 'nx_cards',
@@ -500,27 +517,6 @@ SetModelTypeRequest buildCardSchemaRequest() {
         bookModelType,
         multiplicity: 'one',
         relationName: 'source_book',
-      ),
-    ],
-    tagSystems: [
-      SetTagSystemRequest(
-        name: cardTagsTagSystem,
-        isHierarchical: true,
-        selectionMode: 'multiple',
-        nodes: [
-          SetTagNodeRequest(
-            name: 'Topic',
-            children: [
-              SetTagNodeRequest(name: 'Script'),
-              SetTagNodeRequest(name: 'Vocabulary'),
-              SetTagNodeRequest(name: 'Grammar'),
-            ],
-          ),
-          SetTagNodeRequest(
-            name: 'Source',
-            children: [SetTagNodeRequest(name: 'Book')],
-          ),
-        ],
       ),
     ],
   );

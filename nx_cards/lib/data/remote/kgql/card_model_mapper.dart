@@ -46,7 +46,6 @@ StudyCard? studyCardFromModel(Model model) {
         : BasicCardContent(front: front, back: back),
     deckId: deck.id,
     deckName: deck.name,
-    tags: model.tags?[cardTagsTagSystem] ?? const <String>[],
     schedules: <StudyCue, CardSchedule>{
       for (final cue in StudyCue.values)
         cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),

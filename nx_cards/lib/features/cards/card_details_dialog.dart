@@ -88,18 +88,6 @@ class CardDetailsDialog extends ConsumerWidget {
                   ),
                 ],
               ],
-              if (card.tags.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text('TAGS', style: monoLabel),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: [
-                    for (final tag in card.tags) Chip(label: Text(tag)),
-                  ],
-                ),
-              ],
               if (card.sourceBookName case final sourceBook?) ...[
                 const SizedBox(height: 20),
                 _CardField(label: 'Source book', value: sourceBook),

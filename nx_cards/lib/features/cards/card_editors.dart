@@ -159,7 +159,6 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
   late final TextEditingController _front;
   late final TextEditingController _back;
   late final TextEditingController _transliteration;
-  late final Set<String> _tags;
   int? _bookId;
   bool _saving = false;
 
@@ -175,7 +174,6 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
     _transliteration = TextEditingController(
       text: content is LanguageCardContent ? content.transliteration : '',
     );
-    _tags = {...?widget.card?.tags};
     _bookId = widget.card?.sourceBookId;
   }
 
@@ -218,14 +216,12 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
         await repository.createCard(
           content: content,
           deckId: widget.deck.id,
-          tags: _tags.toList(),
           sourceBookId: _bookId,
         );
       } else {
         await repository.updateCardContent(
           id: widget.card!.id,
           content: content,
-          tags: _tags.toList(),
         );
       }
       ref.invalidate(cardsDashboardProvider);
@@ -241,17 +237,8 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
     }
   }
 
-  Future<void> _addTag() async {
-    final value = await _promptForTag(context, 'New card tag');
-    if (value == null) return;
-    await ref.read(cardsRepositoryProvider).addCardTag(value);
-    ref.invalidate(cardTagsProvider);
-    if (mounted) setState(() => _tags.add(value));
-  }
-
   @override
   Widget build(BuildContext context) {
-    final availableTags = ref.watch(cardTagsProvider).value ?? const <String>[];
     final books =
         ref.watch(relatedBooksProvider).value ?? const <RelatedBook>[];
     return AlertDialog(
@@ -300,30 +287,6 @@ class _CardEditorDialogState extends ConsumerState<CardEditorDialog> {
                   ),
                   minLines: 1,
                   maxLines: 3,
-                ),
-              ],
-              if (availableTags.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                Text('TAGS', style: monoLabel),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: [
-                    for (final tag in availableTags)
-                      FilterChip(
-                        label: Text(tag),
-                        selected: _tags.contains(tag),
-                        onSelected: (selected) => setState(
-                          () => selected ? _tags.add(tag) : _tags.remove(tag),
-                        ),
-                      ),
-                    ActionChip(
-                      avatar: const Icon(Icons.add, size: 16),
-                      label: const Text('New tag'),
-                      onPressed: _saving ? null : _addTag,
-                    ),
-                  ],
                 ),
               ],
               if (widget.card == null && books.isNotEmpty) ...[

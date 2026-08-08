@@ -27,7 +27,6 @@ void main() {
       ),
       deckId: 10,
       deckName: 'Malayalam words',
-      tags: const <String>[],
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: true),

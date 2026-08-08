@@ -10,7 +10,6 @@ void main() {
       content: const BasicCardContent(front: 'bonjour', back: 'hello'),
       deckId: 1,
       deckName: 'French',
-      tags: const ['Vocabulary'],
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: false),
@@ -58,7 +57,6 @@ void main() {
       content: const BasicCardContent(front: 'bonjour', back: 'hello'),
       deckId: 1,
       deckName: 'French',
-      tags: const [],
       schedules: <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule(
           enabled: true,

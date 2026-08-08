@@ -11,10 +11,8 @@ abstract class CardsRepository {
   Future<List<CardDeck>> listDecks();
   Future<List<StudyCard>> listCards();
   Future<List<String>> listLanguages();
-  Future<List<String>> listCardTags();
   Future<List<RelatedBook>> listBooks();
   Future<void> addLanguage(String name);
-  Future<void> addCardTag(String name);
 
   Future<int> createDeck({
     required String name,
@@ -26,14 +24,12 @@ abstract class CardsRepository {
   Future<int> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
   });
 
   Future<void> updateCardContent({
     required int id,
     required CardContent content,
-    required List<String> tags,
   });
 
   Future<void> saveSchedule(StudyCard card);

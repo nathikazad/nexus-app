@@ -32,7 +32,6 @@ void main() {
       ),
       deckId: 10,
       deckName: 'Malayalam words',
-      tags: const ['legal'],
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: true),
@@ -77,7 +76,6 @@ void main() {
     expect(find.text('EXAMPLES'), findsOneWidget);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
     expect(find.text('It was a fraud.'), findsOneWidget);
-    expect(find.text('legal'), findsOneWidget);
 
     await tester.tap(find.text('Edit card'));
     await tester.pumpAndSettle();

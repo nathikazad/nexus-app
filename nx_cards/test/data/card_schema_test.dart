@@ -23,7 +23,6 @@ void main() {
         .map((row) => row['key'])
         .toSet();
     final relations = json['relationship_types'] as List<dynamic>;
-    final systems = json['tag_systems'] as List<dynamic>;
 
     expect(attributes, {
       attrCardDetails,
@@ -55,7 +54,7 @@ void main() {
       relations.map((row) => row['link']),
       containsAll([deckModelType, bookModelType]),
     );
-    expect(systems.single['selection_mode'], 'multiple');
+    expect(json['tag_systems'], isNull);
   });
 
   test('language card inherits Flashcard and adds language-only fields', () {

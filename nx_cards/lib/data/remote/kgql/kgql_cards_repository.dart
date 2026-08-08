@@ -15,7 +15,6 @@ const _baseCardStruct = <String, dynamic>{
   attrSchedule: true,
   attrReviewHistory: true,
   attrCardDetails: true,
-  'tags': true,
   'model_type': {'id': true, 'name': true},
   deckModelType: {'id': true, 'name': true},
   bookModelType: {'id': true, 'name': true},
@@ -44,7 +43,6 @@ class KgqlCardsRepository implements CardsRepository {
         attrArchived: true,
         attrFromLanguage: true,
         attrToLanguage: true,
-        'tags': true,
       },
     );
     final decks = rows.map(cardDeckFromModel).toList()
@@ -96,16 +94,7 @@ class KgqlCardsRepository implements CardsRepository {
   }
 
   @override
-  Future<List<String>> listCardTags() =>
-      _listTagNodes(cardModelType, cardTagsTagSystem, leavesOnly: true);
-
-  @override
   Future<void> addLanguage(String name) async {}
-
-  @override
-  Future<void> addCardTag(String name) {
-    return _addTagNode(cardModelType, cardTagsTagSystem, name);
-  }
 
   @override
   Future<List<RelatedBook>> listBooks() async {
@@ -152,7 +141,6 @@ class KgqlCardsRepository implements CardsRepository {
   Future<int> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
   }) {
     return setKgqlModel(
@@ -189,9 +177,6 @@ class KgqlCardsRepository implements CardsRepository {
           if (sourceBookId != null)
             ModelRelation(modelType: bookModelType, link: [sourceBookId]),
         ],
-        tags: [
-          SetModelTag(system: cardTagsTagSystem, nodes: tags, clear: true),
-        ],
       ),
       auditSourceKind: 'nx_cards',
     );
@@ -201,7 +186,6 @@ class KgqlCardsRepository implements CardsRepository {
   Future<void> updateCardContent({
     required int id,
     required CardContent content,
-    required List<String> tags,
   }) async {
     await setKgqlModel(
       _client,
@@ -218,9 +202,6 @@ class KgqlCardsRepository implements CardsRepository {
               key: attrLanguageDetails,
               value: languageDetailsJson(languageContent),
             ),
-        ],
-        tags: [
-          SetModelTag(system: cardTagsTagSystem, nodes: tags, clear: true),
         ],
       ),
       auditSourceKind: 'nx_cards',
@@ -270,85 +251,4 @@ class KgqlCardsRepository implements CardsRepository {
       auditSourceKind: 'nx_cards',
     );
   }
-
-  Future<List<String>> _listTagNodes(
-    String modelType,
-    String systemName, {
-    bool leavesOnly = false,
-  }) async {
-    final schema = await fetchKgqlModelTypeByName(
-      _client,
-      modelType,
-      struct: const {'id': true, 'name': true, 'tag_systems': true},
-    );
-    final systems = schema.tagSystems ?? const <TagSystem>[];
-    final system = systems.where((row) => row.name == systemName).firstOrNull;
-    if (system == null) return const [];
-    final result = <String>[];
-    void visit(TagNode node) {
-      final children = node.children ?? const <TagNode>[];
-      if (!leavesOnly || children.isEmpty) result.add(node.name);
-      for (final child in children) {
-        visit(child);
-      }
-    }
-
-    for (final node in system.nodes) {
-      visit(node);
-    }
-    return result;
-  }
-
-  Future<void> _addTagNode(
-    String modelTypeName,
-    String systemName,
-    String rawName,
-  ) async {
-    final name = rawName.trim();
-    if (name.isEmpty) return;
-    final schema = await fetchKgqlModelTypeByName(_client, modelTypeName);
-    final system = (schema.tagSystems ?? const <TagSystem>[])
-        .where((row) => row.name == systemName)
-        .firstOrNull;
-    if (system == null) {
-      throw StateError('Tag system "$systemName" was not found');
-    }
-    bool contains(TagNode node) {
-      if (node.name.toLowerCase() == name.toLowerCase()) return true;
-      return (node.children ?? const <TagNode>[]).any(contains);
-    }
-
-    if (system.nodes.any(contains)) return;
-    final nodes = system.nodes.map(_tagNodeToRequest).toList()
-      ..add(SetTagNodeRequest(name: name));
-    await setKgqlModelType(
-      _client,
-      SetModelTypeRequest(
-        id: schema.id,
-        name: schema.name,
-        typeKind: schema.typeKind ?? 'base',
-        tagSystems: [
-          SetTagSystemRequest(
-            id: system.id,
-            name: system.name,
-            isHierarchical: system.isHierarchical,
-            selectionMode: system.selectionMode,
-            nodes: nodes,
-          ),
-        ],
-      ),
-      auditSourceKind: 'nx_cards',
-    );
-  }
-}
-
-SetTagNodeRequest _tagNodeToRequest(TagNode node) {
-  final children = node.children ?? const <TagNode>[];
-  return SetTagNodeRequest(
-    id: node.id,
-    name: node.name,
-    children: children.isEmpty
-        ? null
-        : children.map(_tagNodeToRequest).toList(),
-  );
 }

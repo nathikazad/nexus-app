@@ -59,7 +59,6 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      tags: const <String>['Vocabulary'],
     );
 
     expect((await store.readDashboard()).cards.single.front, 'ability');
@@ -90,7 +89,6 @@ void main() {
           originalScript: 'കഴിവ്',
           transliteration: 'kazhivu',
         ),
-        tags: const <String>['Vocabulary'],
       );
 
       final transport = _FakeTransport(serverBundle: _bundle(hash: 'hash-1'));
@@ -315,7 +313,6 @@ final class _FakeTransport implements CardsSyncTransport {
   Future<CardMutationResult> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   }) => throw UnimplementedError();
@@ -355,7 +352,6 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
             ),
             deckId: 7,
             deckName: 'Malayalam',
-            tags: const <String>['Vocabulary'],
             schedules: const <StudyCue, CardSchedule>{
               StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
               StudyCue.toLanguage: CardSchedule.initial(enabled: true),

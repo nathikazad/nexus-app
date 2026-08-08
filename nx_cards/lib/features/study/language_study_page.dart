@@ -227,114 +227,112 @@ class _StudySheetRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 34,
+          width: 30,
           child: Text(number.toString().padLeft(2, '0'), style: monoLabel),
         ),
         Expanded(
-          child: Row(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              content.english,
+              style: const TextStyle(
+                fontSize: 16,
+                height: 1.35,
+                color: RecallColors.muted,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 4,
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 5, right: 10),
-                  child: Text(
-                    content.english,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.35,
-                      color: RecallColors.muted,
-                    ),
-                  ),
+              Text(
+                content.originalScript,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  height: 1.35,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              Expanded(
-                flex: 7,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              content.originalScript,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                height: 1.35,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 5),
-                            child: Text(
-                              content.transliteration,
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                height: 1.35,
-                                fontStyle: FontStyle.italic,
-                                color: RecallColors.faint,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (onAudio != null) ...[
-                          const SizedBox(width: 7),
-                          IconButton(
-                            tooltip: playing
-                                ? 'Pause pronunciation'
-                                : 'Play pronunciation',
-                            visualDensity: VisualDensity.compact,
-                            style: IconButton.styleFrom(
-                              foregroundColor: RecallColors.ink,
-                              side: const BorderSide(color: RecallColors.line),
-                            ),
-                            onPressed: loading ? null : onAudio,
-                            icon: loading
-                                ? const SizedBox.square(
-                                    dimension: 17,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Icon(
-                                    playing
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                  ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (content.examples.isNotEmpty)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.only(top: 2),
-                            minimumSize: const Size(0, 30),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => LanguageExamplesPage(
-                                card: card,
-                                audioRepository: audioRepository,
-                              ),
-                            ),
-                          ),
-                          child: const Text('Examples'),
-                        ),
-                      ),
-                  ],
+              const SizedBox(height: 3),
+              Text(
+                content.transliteration,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.35,
+                  fontStyle: FontStyle.italic,
+                  color: RecallColors.faint,
                 ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        SizedBox(
+          width: 58,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SizedBox(
+                height: 34,
+                child: onAudio == null
+                    ? null
+                    : IconButton(
+                        tooltip: playing
+                            ? 'Pause pronunciation'
+                            : 'Play pronunciation',
+                        constraints: const BoxConstraints.tightFor(
+                          width: 34,
+                          height: 34,
+                        ),
+                        padding: const EdgeInsets.all(6),
+                        style: IconButton.styleFrom(
+                          foregroundColor: RecallColors.ink,
+                        ),
+                        onPressed: loading ? null : onAudio,
+                        icon: loading
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                playing
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                              ),
+                      ),
+              ),
+              const SizedBox(height: 2),
+              SizedBox(
+                height: 24,
+                child: content.examples.isEmpty
+                    ? null
+                    : TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: RecallColors.muted,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 24),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          textStyle: const TextStyle(fontSize: 11),
+                        ),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => LanguageExamplesPage(
+                              card: card,
+                              audioRepository: audioRepository,
+                            ),
+                          ),
+                        ),
+                        child: const Text('Examples'),
+                      ),
               ),
             ],
           ),

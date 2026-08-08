@@ -22,7 +22,6 @@ abstract interface class CardsSyncTransport {
   Future<CardMutationResult> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   });

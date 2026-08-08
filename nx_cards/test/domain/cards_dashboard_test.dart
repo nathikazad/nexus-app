@@ -89,7 +89,6 @@ StudyCard _card(
     ),
     deckId: 1,
     deckName: 'French',
-    tags: const [],
     schedules: <StudyCue, CardSchedule>{
       StudyCue.fromLanguage: CardSchedule(
         enabled: true,

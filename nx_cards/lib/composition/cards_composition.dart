@@ -236,11 +236,6 @@ final languagesProvider = FutureProvider<List<String>>((ref) {
   return workspace?.listLanguages() ?? Future<List<String>>.value(const []);
 });
 
-final cardTagsProvider = FutureProvider<List<String>>((ref) {
-  final workspace = ref.watch(cardsWorkspaceProvider);
-  return workspace?.listCardTags() ?? Future<List<String>>.value(const []);
-});
-
 final relatedBooksProvider = FutureProvider<List<RelatedBook>>((ref) {
   final workspace = ref.watch(cardsWorkspaceProvider);
   return workspace?.listBooks() ?? Future<List<RelatedBook>>.value(const []);
@@ -290,7 +285,6 @@ void invalidateCardsData(Ref ref) {
     ref.invalidate(cardsDashboardProvider);
   }
   ref.invalidate(languagesProvider);
-  ref.invalidate(cardTagsProvider);
   ref.invalidate(relatedBooksProvider);
 }
 

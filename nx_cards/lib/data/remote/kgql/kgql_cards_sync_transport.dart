@@ -43,9 +43,6 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
               value: languageDetailsJson(languageContent),
             ),
         ],
-        tags: <SetModelTag>[
-          SetModelTag(system: cardTagsTagSystem, nodes: card.tags, clear: true),
-        ],
       ),
       clientUpdatedAt,
     );
@@ -84,7 +81,6 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
   Future<CardMutationResult> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   }) => _mutate(
@@ -119,9 +115,6 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
         ModelRelation(modelType: deckModelType, link: <int>[deckId]),
         if (sourceBookId != null)
           ModelRelation(modelType: bookModelType, link: <int>[sourceBookId]),
-      ],
-      tags: <SetModelTag>[
-        SetModelTag(system: cardTagsTagSystem, nodes: tags, clear: true),
       ],
     ),
     clientUpdatedAt,

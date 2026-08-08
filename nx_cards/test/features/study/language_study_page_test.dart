@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
 
@@ -19,7 +22,11 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(
+            _UnusedAudioRepository(),
+          ),
+        ],
         child: MaterialApp(
           theme: buildRecallTheme(),
           home: LanguageStudyPage(title: 'Malayalam', cards: cards),
@@ -30,7 +37,7 @@ void main() {
     expect(find.text('2 words'), findsOneWidget);
     expect(find.text('relief'), findsOneWidget);
     expect(find.text('talent'), findsOneWidget);
-
+    expect(find.text('Examples'), findsNWidgets(2));
     await tester.enterText(find.byType(TextField), 'talent');
     await tester.pump();
 
@@ -47,10 +54,17 @@ StudyCard _card(int id, String english, String script, String transliteration) {
       english: english,
       originalScript: script,
       transliteration: transliteration,
+      audioUrl: '/audio/$id.mp3',
+      examples: const [
+        LanguageExample(
+          text: 'ഉദാഹരണം',
+          transliteration: 'udāharaṇaṃ',
+          translation: 'example',
+        ),
+      ],
     ),
     deckId: 7,
     deckName: 'Malayalam',
-    tags: const [],
     schedules: const <StudyCue, CardSchedule>{
       StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       StudyCue.toLanguage: CardSchedule.initial(enabled: true),
@@ -63,4 +77,9 @@ StudyCard _card(int id, String english, String script, String transliteration) {
     },
     suspended: false,
   );
+}
+
+class _UnusedAudioRepository implements CardAudioRepository {
+  @override
+  Future<Uint8List> fetch(String audioUrl) async => Uint8List(0);
 }

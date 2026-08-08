@@ -29,13 +29,9 @@ final class WebCardsWorkspace implements CardsWorkspace {
   @override
   Future<List<String>> listLanguages() => _repository.listLanguages();
   @override
-  Future<List<String>> listCardTags() => _repository.listCardTags();
-  @override
   Future<List<RelatedBook>> listBooks() => _repository.listBooks();
   @override
   Future<void> addLanguage(String name) => _repository.addLanguage(name);
-  @override
-  Future<void> addCardTag(String name) => _repository.addCardTag(name);
   @override
   Future<int> createDeck({
     required String name,
@@ -52,20 +48,17 @@ final class WebCardsWorkspace implements CardsWorkspace {
   Future<int> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
   }) => _repository.createCard(
     content: content,
     deckId: deckId,
-    tags: tags,
     sourceBookId: sourceBookId,
   );
   @override
   Future<void> updateCardContent({
     required int id,
     required CardContent content,
-    required List<String> tags,
-  }) => _repository.updateCardContent(id: id, content: content, tags: tags);
+  }) => _repository.updateCardContent(id: id, content: content);
   @override
   Future<void> saveSchedule(StudyCard card) => _repository.saveSchedule(card);
   @override

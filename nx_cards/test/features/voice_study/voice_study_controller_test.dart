@@ -123,7 +123,10 @@ void main() {
     expect(controller.currentCardAssessed, isTrue);
     expect(controller.assessmentRating, CardRating.again);
     verify(() => repository.saveSchedule(any())).called(1);
-    expect((transport.toolResults['assess-1'] as Map)['answer'], 'കഴിവ്');
+    final assessment = transport.toolResults['assess-1'] as Map;
+    expect(assessment['answer'], 'കഴിവ്');
+    expect(assessment['pronunciation_hint'], 'kazhivu');
+    expect(assessment, isNot(contains('answer_transliteration')));
 
     transport.call('examples-1', 'get_current_examples', const {});
     await pumpEventQueue();
@@ -183,7 +186,6 @@ StudyCard _card(int id) => StudyCard(
   ),
   deckId: 7,
   deckName: 'Malayalam basics',
-  tags: const [],
   schedules: const {
     StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
     StudyCue.toLanguage: CardSchedule.initial(enabled: false),

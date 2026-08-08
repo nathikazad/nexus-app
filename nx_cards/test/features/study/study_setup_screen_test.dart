@@ -16,7 +16,6 @@ void main() {
       ),
       deckId: 7,
       deckName: 'Malayalam',
-      tags: const <String>[],
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: true),
@@ -69,7 +68,6 @@ void main() {
       ),
       deckId: 7,
       deckName: 'Malayalam',
-      tags: const <String>[],
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       },

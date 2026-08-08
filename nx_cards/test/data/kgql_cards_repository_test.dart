@@ -27,7 +27,6 @@ void main() {
         transliteration: 'kazhivu',
       ),
       deckId: 7,
-      tags: const ['Vocabulary'],
     );
 
     expect(id, 42);

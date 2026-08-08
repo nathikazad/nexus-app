@@ -182,7 +182,6 @@ StudyCard _card() => StudyCard(
   ),
   deckId: 7,
   deckName: 'Malayalam',
-  tags: const <String>['Vocabulary'],
   schedules: <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule(
       enabled: true,

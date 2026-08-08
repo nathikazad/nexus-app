@@ -192,6 +192,10 @@ For every card:
    partially correct or hesitant answer, and good for a confident correct one.
 3. After assessment, teach or confirm the authoritative answer returned by the
    tool. Do not invent a spelling or transliteration.
+   Say the answer only once. Treat pronunciation_hint and stored example
+   transliterations as silent pronunciation aids. Never read a Malayalam word
+   and then repeat its transliteration unless the learner explicitly asks for
+   the transliteration.
 4. Stay anchored to the same card for follow-up questions. If asked for examples
    or usage, call get_current_examples and use only those stored examples.
 5. Call advance_card only when the learner explicitly says to move on, next,
@@ -243,7 +247,9 @@ Keep spoken responses short unless the learner asks for more detail.
       'feedback': _feedback,
       ..._answerPayload(currentPrompt!),
       'instruction':
-          'Teach or confirm this answer, then remain on this card for follow-ups.',
+          'Say the answer once, using pronunciation_hint silently. Do not '
+          'repeat the transliteration unless asked. Then remain on this card '
+          'for follow-ups.',
     });
   }
 
@@ -343,16 +349,15 @@ Keep spoken responses short unless the learner asks for more detail.
   Future<void> stop() => _session.stop();
 
   Map<String, Object?> _answerPayload(StudyPrompt prompt) {
-    final content = _languageContent(prompt);
+    final pronunciationHint = _pronunciationHint(prompt);
     return {
       'question': prompt.prompt,
       'answer': _expectedAnswer(prompt),
-      'answer_transliteration': content?.transliteration ?? '',
+      if (pronunciationHint.isNotEmpty) 'pronunciation_hint': pronunciationHint,
     };
   }
 
   Map<String, Object?> _contextMap(StudyPrompt prompt) {
-    final content = _languageContent(prompt);
     final languages = _deckLanguages[prompt.card.deckId];
     return {
       'card_id': prompt.card.id,
@@ -361,7 +366,8 @@ Keep spoken responses short unless the learner asks for more detail.
       'to_language': languages?.to,
       'question': prompt.prompt,
       'expected_answer': _expectedAnswer(prompt),
-      'answer_transliteration': content?.transliteration ?? '',
+      if (_pronunciationHint(prompt).isNotEmpty)
+        'pronunciation_hint': _pronunciationHint(prompt),
       'cue': prompt.cue.storageKey,
       'question_instruction': _questionInstruction(prompt, languages),
       'already_assessed': _currentCardAssessed,
@@ -371,6 +377,11 @@ Keep spoken responses short unless the learner asks for more detail.
   String _expectedAnswer(StudyPrompt prompt) => switch (prompt.cue) {
     StudyCue.fromLanguage => prompt.card.back,
     StudyCue.toLanguage || StudyCue.transliteration => prompt.card.front,
+  };
+
+  String _pronunciationHint(StudyPrompt prompt) => switch (prompt.cue) {
+    StudyCue.fromLanguage => _languageContent(prompt)?.transliteration ?? '',
+    StudyCue.toLanguage || StudyCue.transliteration => '',
   };
 
   String _questionInstruction(

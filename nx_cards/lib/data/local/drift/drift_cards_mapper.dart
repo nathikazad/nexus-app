@@ -64,7 +64,7 @@ final class DriftCardsMapper {
               : const <Object?>[],
         ),
       ),
-      tagsJson: jsonEncode(card.tags),
+      tagsJson: '[]',
       dueAt: Value(card.nextDueAt),
       scheduleJson: jsonEncode(scheduleJson(card)),
       reviewHistoryJson: jsonEncode(reviewHistoryJson(card)),
@@ -93,9 +93,6 @@ final class DriftCardsMapper {
           : BasicCardContent(front: row.front, back: row.back),
       deckId: row.deckId,
       deckName: deck.name,
-      tags: <String>[
-        for (final value in _jsonList(row.tagsJson)) value.toString(),
-      ],
       schedules: <StudyCue, CardSchedule>{
         for (final cue in StudyCue.values)
           cue: _scheduleFrom(_cueNode(schedule, cue)),
@@ -147,11 +144,6 @@ CardSchedule _scheduleFrom(Object? raw) {
 Map<String, dynamic> _jsonMap(String raw) {
   final value = jsonDecode(raw);
   return value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
-}
-
-List<dynamic> _jsonList(String raw) {
-  final value = jsonDecode(raw);
-  return value is List ? value : <dynamic>[];
 }
 
 DateTime? _dateTime(Object? value) =>

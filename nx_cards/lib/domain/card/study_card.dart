@@ -10,7 +10,6 @@ class StudyCard {
     required this.content,
     required this.deckId,
     required this.deckName,
-    required this.tags,
     required Map<StudyCue, CardSchedule> schedules,
     required Map<StudyCue, List<CardReview>> reviewHistory,
     required this.suspended,
@@ -30,7 +29,6 @@ class StudyCard {
   bool get isLanguageCard => content is LanguageCardContent;
   final int deckId;
   final String deckName;
-  final List<String> tags;
   final Map<StudyCue, CardSchedule> schedules;
   final Map<StudyCue, List<CardReview>> reviewHistory;
   final bool suspended;
@@ -81,7 +79,6 @@ class StudyCard {
 
   StudyCard copyWith({
     CardContent? content,
-    List<String>? tags,
     Map<StudyCue, CardSchedule>? schedules,
     Map<StudyCue, List<CardReview>>? reviewHistory,
     bool? suspended,
@@ -92,7 +89,6 @@ class StudyCard {
       content: content ?? this.content,
       deckId: deckId,
       deckName: deckName,
-      tags: tags ?? this.tags,
       schedules: schedules ?? this.schedules,
       reviewHistory: reviewHistory ?? this.reviewHistory,
       suspended: suspended ?? this.suspended,

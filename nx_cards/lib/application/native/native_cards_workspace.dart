@@ -48,17 +48,11 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   Future<List<String>> listLanguages() => _requireRepository().listLanguages();
 
   @override
-  Future<List<String>> listCardTags() => _requireRepository().listCardTags();
-
-  @override
   Future<List<RelatedBook>> listBooks() => _requireRepository().listBooks();
 
   @override
   Future<void> addLanguage(String name) =>
       _requireRepository().addLanguage(name);
-
-  @override
-  Future<void> addCardTag(String name) => _requireRepository().addCardTag(name);
 
   @override
   Future<int> createDeck({
@@ -82,13 +76,11 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   Future<int> createCard({
     required CardContent content,
     required int deckId,
-    required List<String> tags,
     int? sourceBookId,
   }) async {
     final result = await _requireTransport().createCard(
       content: content,
       deckId: deckId,
-      tags: tags,
       sourceBookId: sourceBookId,
       clientUpdatedAt: _clock.now(),
     );
@@ -100,7 +92,6 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   Future<void> updateCardContent({
     required int id,
     required CardContent content,
-    required List<String> tags,
   }) async {
     final existing = await _requireCard(id);
     final mergedContent = switch ((existing.content, content)) {
@@ -118,7 +109,7 @@ final class NativeCardsWorkspace implements CardsWorkspace {
       _ => content,
     };
     await _enqueue(
-      existing.copyWith(content: mergedContent, tags: tags),
+      existing.copyWith(content: mergedContent),
       offline.MutationType.update,
     );
   }
