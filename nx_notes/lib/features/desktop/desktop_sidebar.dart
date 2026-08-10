@@ -828,11 +828,13 @@ class _SidebarBooks extends ConsumerStatefulWidget {
 
 class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
   final Set<String> _selectedTopics = <String>{};
-  final Set<String> _selectedStates = <String>{};
+  BookCollectionView _collection = BookCollectionView.toRead;
 
   @override
   Widget build(BuildContext context) {
     final rows = _filteredRows(widget.books.value ?? const <NxDocument>[]);
+    final reading = booksForReadingState(rows, 'reading');
+    final collection = booksForReadingState(rows, _collection.value);
     final topics = _topicOptions(
       widget.tagSystems.value ?? const <TagSystem>[],
       widget.books.value ?? const <NxDocument>[],
@@ -841,34 +843,58 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
       padding: const EdgeInsets.all(12),
       children: <Widget>[
         _SidebarBooksHeader(
-          hasFilters: _selectedTopics.isNotEmpty || _selectedStates.isNotEmpty,
+          hasFilters: _selectedTopics.isNotEmpty,
           searchActive: widget.liveQuery.isNotEmpty,
           topics: topics,
           selectedTopics: _selectedTopics,
-          selectedStates: _selectedStates,
           onToggleTopic: (topic) => setState(() {
             _toggle(_selectedTopics, topic);
           }),
-          onToggleState: (state) => setState(() {
-            _toggle(_selectedStates, state);
-          }),
           onClear: () => setState(() {
             _selectedTopics.clear();
-            _selectedStates.clear();
           }),
         ),
-        for (final document in rows)
+        BookShelfSectionHeader(
+          title: 'Currently Reading',
+          count: reading.length,
+        ),
+        const SizedBox(height: 5),
+        for (final document in reading)
           _SidebarDocumentLink(
             document: document,
             onTap: () => ref
                 .read(desktopWorkspaceProvider.notifier)
                 .openDocument(document.id),
           ),
-        if (rows.isEmpty)
+        if (reading.isEmpty)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(8, 8, 8, 4),
+            child: _SidebarMutedText('No books in progress'),
+          ),
+        const SizedBox(height: 18),
+        BookShelfSectionHeader(
+          title: 'Library',
+          count: collection.length,
+          trailing: BookCollectionSwitch(
+            value: _collection,
+            onChanged: (value) => setState(() => _collection = value),
+          ),
+        ),
+        const SizedBox(height: 5),
+        for (final document in collection)
+          _SidebarDocumentLink(
+            document: document,
+            onTap: () => ref
+                .read(desktopWorkspaceProvider.notifier)
+                .openDocument(document.id),
+          ),
+        if (collection.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
             child: Text(
-              'No books match',
+              _collection == BookCollectionView.toRead
+                  ? 'No books waiting'
+                  : 'No finished books',
               style: TextStyle(fontSize: 12, color: AppColors.faint),
             ),
           ),
@@ -896,10 +922,6 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
   }
 
   bool _matchesFilters(NxDocument document) {
-    if (_selectedStates.isNotEmpty &&
-        !_selectedStates.contains(_bookReadingState(document))) {
-      return false;
-    }
     if (_selectedTopics.isNotEmpty &&
         !document.topics.any(_selectedTopics.contains)) {
       return false;
@@ -908,25 +930,9 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
   }
 
   int _compareBooks(NxDocument a, NxDocument b) {
-    final state = _stateSort(a).compareTo(_stateSort(b));
-    if (state != 0) return state;
     final rank = (a.bookRank ?? 1 << 30).compareTo(b.bookRank ?? 1 << 30);
     if (rank != 0) return rank;
     return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-  }
-
-  int _stateSort(NxDocument document) {
-    return switch (_bookReadingState(document)) {
-      'reading' => 0,
-      'read' => 1,
-      'to_read' => 2,
-      _ => 3,
-    };
-  }
-
-  String _bookReadingState(NxDocument document) {
-    final value = document.readingState.trim();
-    return value.isEmpty ? 'to_read' : value;
   }
 
   List<String> _topicOptions(List<TagSystem> systems, List<NxDocument> books) {
@@ -952,9 +958,7 @@ class _SidebarBooksHeader extends StatelessWidget {
     required this.searchActive,
     required this.topics,
     required this.selectedTopics,
-    required this.selectedStates,
     required this.onToggleTopic,
-    required this.onToggleState,
     required this.onClear,
   });
 
@@ -962,9 +966,7 @@ class _SidebarBooksHeader extends StatelessWidget {
   final bool searchActive;
   final List<String> topics;
   final Set<String> selectedTopics;
-  final Set<String> selectedStates;
   final ValueChanged<String> onToggleTopic;
-  final ValueChanged<String> onToggleState;
   final VoidCallback onClear;
 
   @override
@@ -1007,32 +1009,11 @@ class _SidebarBooksHeader extends StatelessWidget {
               switch (action.kind) {
                 case _BookFilterKind.topic:
                   onToggleTopic(action.value);
-                case _BookFilterKind.state:
-                  onToggleState(action.value);
                 case _BookFilterKind.clear:
                   onClear();
               }
             },
             itemBuilder: (context) => <PopupMenuEntry<_BookFilterAction>>[
-              PopupMenuItem<_BookFilterAction>(
-                enabled: false,
-                height: 28,
-                child: Text(
-                  'Read status',
-                  style: TextStyle(fontSize: 11, color: AppColors.faint),
-                ),
-              ),
-              for (final state in _bookReadingStateOptions)
-                CheckedPopupMenuItem<_BookFilterAction>(
-                  value: _BookFilterAction(_BookFilterKind.state, state.value),
-                  checked: selectedStates.contains(state.value),
-                  height: 34,
-                  child: Text(
-                    state.label,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              const PopupMenuDivider(height: 8),
               PopupMenuItem<_BookFilterAction>(
                 enabled: false,
                 height: 28,
@@ -1079,7 +1060,7 @@ class _SidebarBooksHeader extends StatelessWidget {
   }
 }
 
-enum _BookFilterKind { topic, state, clear }
+enum _BookFilterKind { topic, clear }
 
 class _BookFilterAction {
   const _BookFilterAction(this.kind, this.value);
@@ -1087,19 +1068,6 @@ class _BookFilterAction {
   final _BookFilterKind kind;
   final String value;
 }
-
-class _BookReadingStateOption {
-  const _BookReadingStateOption(this.value, this.label);
-
-  final String value;
-  final String label;
-}
-
-const _bookReadingStateOptions = <_BookReadingStateOption>[
-  _BookReadingStateOption('reading', 'Reading'),
-  _BookReadingStateOption('read', 'Read'),
-  _BookReadingStateOption('to_read', 'To Read'),
-];
 
 List<String> _flattenTagNodeNames(TagNode node) {
   return <String>[

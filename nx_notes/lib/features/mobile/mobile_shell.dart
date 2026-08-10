@@ -8,6 +8,7 @@ import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_query.dart';
 import 'package:nx_notes/domain/document/document_result_context.dart';
 import 'package:nx_notes/domain/tags/tag_system.dart';
+import 'package:nx_notes/features/books/book_shelf_sections.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
 import 'package:nx_notes/features/navigator/document_row.dart';
 import 'package:nx_notes/features/settings/notes_settings_button.dart';
@@ -282,15 +283,92 @@ class _MobileSection extends ConsumerWidget {
   }
 }
 
-class _MobileBooks extends ConsumerWidget {
+class _MobileBooks extends ConsumerStatefulWidget {
   const _MobileBooks();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MobileBooks> createState() => _MobileBooksState();
+}
+
+class _MobileBooksState extends ConsumerState<_MobileBooks> {
+  BookCollectionView _collection = BookCollectionView.toRead;
+
+  @override
+  Widget build(BuildContext context) {
     final books = ref.watch(offlineBooksProvider).value ?? const <NxDocument>[];
+    final reading = booksForReadingState(books, 'reading');
+    final collection = booksForReadingState(books, _collection.value);
     return ListView(
-      padding: const EdgeInsets.all(14),
-      children: <Widget>[_MobileSection(title: 'Books', rows: books)],
+      key: const ValueKey<String>('mobile-book-sections'),
+      padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
+      children: <Widget>[
+        BookShelfSectionHeader(
+          title: 'Currently Reading',
+          count: reading.length,
+        ),
+        const SizedBox(height: 10),
+        _MobileBookRows(
+          rows: reading,
+          emptyMessage: 'No books currently in progress',
+        ),
+        const SizedBox(height: 24),
+        BookShelfSectionHeader(
+          title: 'Library',
+          count: collection.length,
+          trailing: BookCollectionSwitch(
+            value: _collection,
+            onChanged: (value) => setState(() => _collection = value),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _MobileBookRows(
+          rows: collection,
+          emptyMessage: _collection == BookCollectionView.toRead
+              ? 'No books waiting to be read'
+              : 'No finished books',
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileBookRows extends ConsumerWidget {
+  const _MobileBookRows({required this.rows, required this.emptyMessage});
+
+  final List<NxDocument> rows;
+  final String emptyMessage;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (rows.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+        decoration: BoxDecoration(
+          color: AppColors.panel,
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          emptyMessage,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, color: AppColors.faint),
+        ),
+      );
+    }
+    return Column(
+      children: <Widget>[
+        for (final document in rows) ...<Widget>[
+          DocumentRow(
+            key: ValueKey<String>('mobile-book-${document.id}'),
+            document: document,
+            onTap: () => ref
+                .read(mobileNotesProvider.notifier)
+                .openDocument(document.id),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
     );
   }
 }
