@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/core/layout/is_desktop_layout.dart';
 import 'package:nx_notes/data/ai/note_transcript_service.dart';
 import 'package:nx_notes/data/document/document_audio_service.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/features/companion/note_companion_controller.dart';
+import 'package:nx_notes/features/live_conversation/note_live_conversation_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const notePlaybackSpeeds = <double>[0.75, 1, 1.25, 1.5, 2];
@@ -40,6 +42,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   NoteCompanionController? _controller;
   bool _chatExpanded = false;
   bool _audioExpanded = false;
+  bool _liveConversationActive = false;
   bool _embeddedHistoryRequested = false;
 
   @override
@@ -55,6 +58,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       _replaceController();
       _chatExpanded = false;
       _audioExpanded = false;
+      _liveConversationActive = false;
       _embeddedHistoryRequested = false;
     }
   }
@@ -239,9 +243,21 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
         },
       );
     }
-    return Theme(
-      data: _neutralCompanionTheme(Theme.of(context)),
-      child: content,
+    return TapRegion(
+      onTapOutside: !widget.embeddedChat && !isDesktopLayout(context)
+          ? (_) {
+              if (!_chatExpanded) return;
+              FocusScope.of(context).unfocus();
+              setState(() {
+                _chatExpanded = false;
+                _liveConversationActive = false;
+              });
+            }
+          : null,
+      child: Theme(
+        data: _neutralCompanionTheme(Theme.of(context)),
+        child: content,
+      ),
     );
   }
 
@@ -257,7 +273,10 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
             phase: controller?.phase ?? NoteCompanionPhase.idle,
             onClose: () {
               FocusScope.of(context).unfocus();
-              setState(() => _chatExpanded = false);
+              setState(() {
+                _chatExpanded = false;
+                _liveConversationActive = false;
+              });
             },
           ),
         if (controller == null)
@@ -271,6 +290,18 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                   style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
               ),
+            ),
+          )
+        else if (_liveConversationActive)
+          Expanded(
+            child: NoteLiveConversationPanel(
+              key: ValueKey<int>(widget.document.id),
+              document: widget.document,
+              onEnd: () {
+                if (mounted) {
+                  setState(() => _liveConversationActive = false);
+                }
+              },
             ),
           )
         else ...<Widget>[
@@ -332,6 +363,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
             textController: _textController,
             focusNode: _textFocusNode,
             onSubmit: _submitText,
+            onStartLiveConversation: _startLiveConversation,
             voiceEnabled: widget.voiceEnabled,
           ),
         ],
@@ -382,6 +414,11 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     if (controller == null || text.isEmpty) return;
     _textController.clear();
     unawaited(controller.sendText(text));
+  }
+
+  void _startLiveConversation() {
+    FocusScope.of(context).unfocus();
+    setState(() => _liveConversationActive = true);
   }
 }
 
@@ -911,6 +948,7 @@ class _Composer extends StatelessWidget {
     required this.textController,
     required this.focusNode,
     required this.onSubmit,
+    required this.onStartLiveConversation,
     this.voiceEnabled = true,
   });
 
@@ -918,6 +956,7 @@ class _Composer extends StatelessWidget {
   final TextEditingController textController;
   final FocusNode focusNode;
   final VoidCallback onSubmit;
+  final VoidCallback onStartLiveConversation;
   final bool voiceEnabled;
 
   @override
@@ -970,15 +1009,57 @@ class _Composer extends StatelessWidget {
               ),
             ),
           ],
-          IconButton(
-            tooltip: 'Send',
-            onPressed: disabled || controller.isRecording ? null : onSubmit,
-            icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+          NoteCompanionComposerAction(
+            textController: textController,
+            disabled: disabled || controller.isRecording,
+            onSend: onSubmit,
+            onStartLiveConversation: onStartLiveConversation,
           ),
         ],
       ),
     );
   }
+}
+
+class NoteCompanionComposerAction extends StatelessWidget {
+  const NoteCompanionComposerAction({
+    required this.textController,
+    required this.disabled,
+    required this.onSend,
+    required this.onStartLiveConversation,
+    super.key,
+  });
+
+  final TextEditingController textController;
+  final bool disabled;
+  final VoidCallback onSend;
+  final VoidCallback onStartLiveConversation;
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<TextEditingValue>(
+        valueListenable: textController,
+        builder: (context, value, _) {
+          final hasText = value.text.trim().isNotEmpty;
+          return IconButton(
+            key: ValueKey<String>(
+              hasText ? 'note-ai-send-button' : 'note-ai-live-button',
+            ),
+            tooltip: hasText ? 'Send' : 'Talk to AI',
+            onPressed: disabled
+                ? null
+                : hasText
+                ? onSend
+                : onStartLiveConversation,
+            icon: Icon(
+              hasText
+                  ? Icons.arrow_upward_rounded
+                  : Icons.record_voice_over_outlined,
+              size: 20,
+            ),
+          );
+        },
+      );
 }
 
 String? _scrollAnchorBlockKey(Map<String, dynamic> jsonDocument) {

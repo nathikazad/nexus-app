@@ -9,6 +9,7 @@ void main() {
         'output': [
           {
             'type': 'function_call',
+            'id': 'item-1',
             'name': 'get_current_examples',
             'call_id': 'call-1',
             'arguments': '{}',
@@ -20,6 +21,7 @@ void main() {
     expect(events.single.type, LiveAgentEventType.toolCall);
     expect(events.single.toolCall?.name, 'get_current_examples');
     expect(events.single.toolCall?.callId, 'call-1');
+    expect(events.single.toolCall?.itemId, 'item-1');
   });
 
   test('builds a session from an app-owned spec and tools', () {
@@ -40,6 +42,39 @@ void main() {
     expect(session['model'], 'test-model');
     expect(session['instructions'], 'Stay anchored.');
     expect((session['tools'] as List).single, tool.toJson());
+  });
+
+  test('can disable input transcription for audio-only clients', () {
+    final session = openAiRealtimeSession(
+      spec: const LiveAgentSpec(
+        instructions: 'Stay anchored.',
+        enableInputTranscription: false,
+        emitTranscripts: false,
+        maxConversationPairs: 4,
+      ),
+      tools: const [],
+    );
+
+    final audio = session['audio'] as Map;
+    final input = audio['input'] as Map;
+    expect(input, isNot(contains('transcription')));
+  });
+
+  test('keeps only the requested number of complete conversation pairs', () {
+    final obsolete = conversationItemIdsOutsideRecentPairs(const [
+      (id: 'user-1', role: 'user'),
+      (id: 'assistant-1', role: 'assistant'),
+      (id: 'user-2', role: 'user'),
+      (id: 'assistant-2', role: 'assistant'),
+      (id: 'user-3', role: 'user'),
+      (id: 'assistant-3', role: 'assistant'),
+      (id: 'user-4', role: 'user'),
+      (id: 'assistant-4', role: 'assistant'),
+      (id: 'user-5', role: 'user'),
+      (id: 'assistant-5', role: 'assistant'),
+    ], 4);
+
+    expect(obsolete, ['user-1', 'assistant-1']);
   });
 
   test('surfaces Realtime errors', () {
@@ -63,6 +98,14 @@ void main() {
 
     expect(speech.single.type, LiveAgentEventType.userSpeechStarted);
     expect(completed.single.type, LiveAgentEventType.listening);
+  });
+
+  test('distinguishes completed client audio playback', () {
+    final events = parseOpenAiRealtimeEvent({
+      'type': 'output_audio_buffer.stopped',
+    });
+
+    expect(events.single.type, LiveAgentEventType.playbackStopped);
   });
 
   test('parses detailed token usage from completed responses', () {
@@ -90,5 +133,20 @@ void main() {
     expect(events.first.usage?.cachedInputAudioTokens, 20);
     expect(events.first.usage?.outputAudioTokens, 50);
     expect(events.last.type, LiveAgentEventType.listening);
+  });
+
+  test('parses separately billed input transcription usage', () {
+    final events = parseOpenAiRealtimeEvent({
+      'type': 'conversation.item.input_audio_transcription.completed',
+      'transcript': 'next',
+      'usage': {'total_tokens': 50, 'input_tokens': 40, 'output_tokens': 10},
+    });
+
+    expect(events, hasLength(2));
+    expect(events.first.type, LiveAgentEventType.usage);
+    expect(events.first.usage?.transcriptionInputTokens, 40);
+    expect(events.first.usage?.transcriptionOutputTokens, 10);
+    expect(events.last.type, LiveAgentEventType.transcript);
+    expect(events.last.text, 'next');
   });
 }

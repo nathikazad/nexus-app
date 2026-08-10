@@ -93,6 +93,37 @@ void main() {
     expect(find.byType(AppFlowyEditor), findsOneWidget);
   });
 
+  testWidgets('narrow long document shows a subtle scroll position dot', (
+    tester,
+  ) async {
+    final longDocument = _document().copyWith(
+      document: List<String>.generate(
+        80,
+        (index) => 'Paragraph $index with enough text to form the document.',
+      ).join('\n\n'),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [documentImageAssetServiceProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 390,
+              height: 700,
+              child: DocumentEditorBody(document: longDocument, readOnly: true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('document-scroll-position-dot')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('saved text scale applies only to document content', (
     tester,
   ) async {

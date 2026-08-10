@@ -44,6 +44,11 @@ class _FakeTransport implements LiveAgentTransport {
   }
 
   @override
+  Future<void> discardConversation({
+    Set<String> keepItemIds = const {},
+  }) async {}
+
+  @override
   Future<void> cancelResponse() async => cancels += 1;
 
   @override

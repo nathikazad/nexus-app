@@ -21,6 +21,38 @@ enum VoiceStudyPhase {
 
 typedef VoiceStudyDeckLanguages = ({String? from, String? to});
 
+final class VoiceStudyAnswerReveal {
+  const VoiceStudyAnswerReveal({
+    required this.english,
+    required this.malayalam,
+    required this.transliteration,
+    required this.rating,
+    required this.feedback,
+  });
+
+  final String english;
+  final String malayalam;
+  final String transliteration;
+  final CardRating rating;
+  final String feedback;
+}
+
+final class VoiceStudyRecapEntry {
+  const VoiceStudyRecapEntry({
+    required this.english,
+    required this.malayalam,
+    required this.transliteration,
+    required this.rating,
+    required this.tokens,
+  });
+
+  final String english;
+  final String malayalam;
+  final String transliteration;
+  final CardRating? rating;
+  final int tokens;
+}
+
 class VoiceStudyController extends ChangeNotifier {
   factory VoiceStudyController({
     required LiveAgentSession session,
@@ -71,6 +103,13 @@ class VoiceStudyController extends ChangeNotifier {
   CardRating? _assessmentRating;
   String _heard = '';
   String _feedback = '';
+  VoiceStudyAnswerReveal? _answerReveal;
+  final Map<int, CardRating> _ratingsByPromptIndex = <int, CardRating>{};
+  final Map<int, int> _tokensByPromptIndex = <int, int>{};
+  int _usagePromptIndex = 0;
+  int _lastObservedTokens = 0;
+  int _lastPlaybackCompletionCount = 0;
+  bool _clearRevealAfterPlayback = false;
 
   int get index => _index;
   int get total => _prompts.length;
@@ -87,9 +126,18 @@ class VoiceStudyController extends ChangeNotifier {
   String get assistantTranscript => _session.latestAssistantTranscript;
   String get heard => _heard;
   String get feedback => _feedback;
+  VoiceStudyAnswerReveal? get answerReveal => _answerReveal;
+  List<VoiceStudyRecapEntry> get recapEntries => <VoiceStudyRecapEntry>[
+    for (var promptIndex = 0; promptIndex < _prompts.length; promptIndex += 1)
+      if (_ratingsByPromptIndex.containsKey(promptIndex) ||
+          (_tokensByPromptIndex[promptIndex] ?? 0) > 0)
+        _recapEntry(promptIndex),
+  ];
   String? get error => _session.error;
   StudyPrompt? get currentPrompt =>
       _index < _prompts.length ? _prompts[_index] : null;
+  StudyPrompt? get displayedPrompt =>
+      _clearRevealAfterPlayback ? null : currentPrompt;
   double get progress =>
       total == 0 ? 0 : (_index + (_currentCardAssessed ? 1 : 0)) / total;
   LiveAgentUsage get usage => _session.usage;
@@ -134,8 +182,9 @@ class VoiceStudyController extends ChangeNotifier {
       definition: const LiveAgentToolDefinition(
         name: 'assess_current_card',
         description:
-            'Save the learner assessment for the current card. This does not '
-            'advance to another card.',
+            'Save the learner assessment for the current card. A good rating '
+            'automatically advances to the next card; again and hard remain '
+            'on the current card.',
         parameters: {
           'type': 'object',
           'properties': {
@@ -203,13 +252,16 @@ For every card:
    assess_current_card exactly once. Use again for unknown/wrong, hard for a
    partially correct or hesitant answer, and good for a confident correct one.
 3. After assessment, teach or confirm the authoritative answer returned by the
-   tool. Do not invent a spelling or transliteration.
+   tool. Do not invent a spelling or transliteration. If the answer was good,
+   the tool advances automatically: briefly confirm it and immediately ask the
+   supplied next card question. Do not call advance_card for a good answer.
    Say the answer only once. Treat pronunciation_hint and stored example
    transliterations as silent pronunciation aids. Never read a Malayalam word
    and then repeat its transliteration unless the learner explicitly asks for
    the transliteration.
-4. Stay anchored to the same card for follow-up questions. If asked for examples
-   or usage, call get_current_examples and use only those stored examples.
+4. After an again or hard assessment, stay anchored to the same card for
+   follow-up questions. If asked for examples or usage, call
+   get_current_examples and use only those stored examples.
 5. Call advance_card only when the learner explicitly says to move on, next,
    continue, or an unmistakable equivalent. Never advance merely because an
    answer was assessed.
@@ -247,6 +299,8 @@ Keep spoken responses short unless the learner asks for more detail.
     _assessmentRating = rating;
     _heard = arguments['heard']?.toString().trim() ?? '';
     _feedback = arguments['feedback']?.toString().trim() ?? '';
+    _answerReveal = _answerRevealFor(prompt, rating, _feedback);
+    _ratingsByPromptIndex[_index] = rating;
     _currentCardAssessed = true;
     _reviewedCount += 1;
     switch (rating) {
@@ -259,6 +313,27 @@ Keep spoken responses short unless the learner asks for more detail.
     }
     _onScheduleSaved();
     notifyListeners();
+
+    if (rating == CardRating.good || rating == CardRating.easy) {
+      final answer = _answerPayload(prompt);
+      final advance = _moveToNextCard();
+      final advanceOutput = Map<String, Object?>.from(advance.output! as Map);
+      final completed = advanceOutput['completed'] == true;
+      return LiveAgentToolResult({
+        'ok': true,
+        'saved': true,
+        'rating': rating.name,
+        'feedback': _answerReveal!.feedback,
+        ...answer,
+        'advanced': true,
+        ...advanceOutput,
+        'instruction': completed
+            ? 'Briefly confirm the correct answer, congratulate the learner, '
+                  'and give one short closing sentence.'
+            : 'Briefly confirm the correct answer once, then immediately ask '
+                  'the supplied new card question without revealing its answer.',
+      }, discardConversationBeforeResponse: true);
+    }
 
     return LiveAgentToolResult({
       'ok': true,
@@ -320,15 +395,18 @@ Keep spoken responses short unless the learner asks for more detail.
 
     if (_index >= _prompts.length) {
       _completed = true;
+      _session.closeAfterNextPlayback();
       notifyListeners();
       return LiveAgentToolResult({
         'ok': true,
         'completed': true,
         'reviewed_count': _reviewedCount,
         'instruction': 'Briefly congratulate the learner and end the session.',
-      });
+      }, discardConversationBeforeResponse: true);
     }
 
+    _clearRevealAfterPlayback = _answerReveal != null;
+    _usagePromptIndex = _index;
     notifyListeners();
     return LiveAgentToolResult({
       'ok': true,
@@ -336,7 +414,7 @@ Keep spoken responses short unless the learner asks for more detail.
       'card': _contextMap(currentPrompt!),
       'instruction':
           'Ask the new card question now without revealing the answer.',
-    });
+    }, discardConversationBeforeResponse: true);
   }
 
   Future<void> repeat() => _session.sendInstruction(
@@ -347,6 +425,7 @@ Keep spoken responses short unless the learner asks for more detail.
   Future<void> skip() async {
     if (_completed || currentPrompt == null) return;
     final result = _moveToNextCard();
+    await _session.discardConversation();
     await _session.sendInstruction(
       jsonEncode(result.output),
       requestResponse: true,
@@ -440,6 +519,33 @@ Keep spoken responses short unless the learner asks for more detail.
     return content is LanguageCardContent ? content : null;
   }
 
+  VoiceStudyAnswerReveal _answerRevealFor(
+    StudyPrompt prompt,
+    CardRating rating,
+    String feedback,
+  ) {
+    final content = _languageContent(prompt);
+    return VoiceStudyAnswerReveal(
+      english: content?.english ?? prompt.card.front,
+      malayalam: content?.originalScript ?? prompt.card.back,
+      transliteration: content?.transliteration ?? '',
+      rating: rating,
+      feedback: feedback,
+    );
+  }
+
+  VoiceStudyRecapEntry _recapEntry(int promptIndex) {
+    final prompt = _prompts[promptIndex];
+    final content = _languageContent(prompt);
+    return VoiceStudyRecapEntry(
+      english: content?.english ?? prompt.card.front,
+      malayalam: content?.originalScript ?? prompt.card.back,
+      transliteration: content?.transliteration ?? '',
+      rating: _ratingsByPromptIndex[promptIndex],
+      tokens: _tokensByPromptIndex[promptIndex] ?? 0,
+    );
+  }
+
   void _replaceCard(int id, StudyCard updated) {
     for (var i = 0; i < _prompts.length; i += 1) {
       if (_prompts[i].card.id == id) {
@@ -449,6 +555,23 @@ Keep spoken responses short unless the learner asks for more detail.
   }
 
   void _syncSession() {
+    final totalTokens = _session.usage.totalTokens;
+    final newTokens = math.max(0, totalTokens - _lastObservedTokens);
+    if (newTokens > 0 && _prompts.isNotEmpty) {
+      _tokensByPromptIndex.update(
+        _usagePromptIndex,
+        (tokens) => tokens + newTokens,
+        ifAbsent: () => newTokens,
+      );
+    }
+    _lastObservedTokens = totalTokens;
+    if (_session.playbackCompletionCount > _lastPlaybackCompletionCount) {
+      _lastPlaybackCompletionCount = _session.playbackCompletionCount;
+      if (_clearRevealAfterPlayback) {
+        _clearRevealAfterPlayback = false;
+        _answerReveal = null;
+      }
+    }
     notifyListeners();
   }
 
@@ -467,6 +590,8 @@ const _cachedTextInputPrice = 0.06;
 const _cachedAudioInputPrice = 0.3;
 const _textOutputPrice = 2.4;
 const _audioOutputPrice = 20.0;
+const _transcriptionInputPrice = 1.25;
+const _transcriptionOutputPrice = 5.0;
 
 double _gptRealtimeInputCost(LiveAgentUsage usage) {
   var cachedText = math.min(usage.inputTextTokens, usage.cachedInputTextTokens);
@@ -498,7 +623,8 @@ double _gptRealtimeInputCost(LiveAgentUsage usage) {
   return ((usage.inputTextTokens - cachedText + otherInput) * _textInputPrice +
           (usage.inputAudioTokens - cachedAudio) * _audioInputPrice +
           (cachedText + remainingCached) * _cachedTextInputPrice +
-          cachedAudio * _cachedAudioInputPrice) /
+          cachedAudio * _cachedAudioInputPrice +
+          usage.transcriptionInputTokens * _transcriptionInputPrice) /
       _perMillion;
 }
 
@@ -506,7 +632,8 @@ double _gptRealtimeOutputCost(LiveAgentUsage usage) {
   final categorizedOutput = usage.outputTextTokens + usage.outputAudioTokens;
   final otherOutput = math.max(0, usage.outputTokens - categorizedOutput);
   return ((usage.outputTextTokens + otherOutput) * _textOutputPrice +
-          usage.outputAudioTokens * _audioOutputPrice) /
+          usage.outputAudioTokens * _audioOutputPrice +
+          usage.transcriptionOutputTokens * _transcriptionOutputPrice) /
       _perMillion;
 }
 

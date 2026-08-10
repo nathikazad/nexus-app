@@ -19,6 +19,7 @@ enum LiveAgentEventType {
   listening,
   thinking,
   speaking,
+  playbackStopped,
   transcript,
   usage,
   toolCall,
@@ -37,6 +38,8 @@ final class LiveAgentUsage {
     this.cachedInputAudioTokens = 0,
     this.outputTextTokens = 0,
     this.outputAudioTokens = 0,
+    this.transcriptionInputTokens = 0,
+    this.transcriptionOutputTokens = 0,
   });
 
   final int inputTokens;
@@ -48,8 +51,12 @@ final class LiveAgentUsage {
   final int cachedInputAudioTokens;
   final int outputTextTokens;
   final int outputAudioTokens;
+  final int transcriptionInputTokens;
+  final int transcriptionOutputTokens;
 
-  int get totalTokens => inputTokens + outputTokens;
+  int get billedInputTokens => inputTokens + transcriptionInputTokens;
+  int get billedOutputTokens => outputTokens + transcriptionOutputTokens;
+  int get totalTokens => billedInputTokens + billedOutputTokens;
 
   LiveAgentUsage operator +(LiveAgentUsage other) => LiveAgentUsage(
     inputTokens: inputTokens + other.inputTokens,
@@ -62,6 +69,10 @@ final class LiveAgentUsage {
         cachedInputAudioTokens + other.cachedInputAudioTokens,
     outputTextTokens: outputTextTokens + other.outputTextTokens,
     outputAudioTokens: outputAudioTokens + other.outputAudioTokens,
+    transcriptionInputTokens:
+        transcriptionInputTokens + other.transcriptionInputTokens,
+    transcriptionOutputTokens:
+        transcriptionOutputTokens + other.transcriptionOutputTokens,
   );
 }
 
@@ -70,11 +81,13 @@ final class LiveAgentToolCall {
     required this.callId,
     required this.name,
     required this.arguments,
+    this.itemId,
   });
 
   final String callId;
   final String name;
   final Map<String, Object?> arguments;
+  final String? itemId;
 }
 
 final class LiveAgentEvent {
@@ -113,10 +126,15 @@ final class LiveAgentToolDefinition {
 }
 
 final class LiveAgentToolResult {
-  const LiveAgentToolResult(this.output, {this.requestResponse = true});
+  const LiveAgentToolResult(
+    this.output, {
+    this.requestResponse = true,
+    this.discardConversationBeforeResponse = false,
+  });
 
   final Object? output;
   final bool requestResponse;
+  final bool discardConversationBeforeResponse;
 }
 
 abstract interface class LiveAgentTool {
@@ -147,12 +165,18 @@ final class LiveAgentSpec {
     this.initialContext,
     this.model = 'gpt-realtime',
     this.voice = 'marin',
-  });
+    this.enableInputTranscription = true,
+    this.emitTranscripts = true,
+    this.maxConversationPairs,
+  }) : assert(maxConversationPairs == null || maxConversationPairs > 0);
 
   final String instructions;
   final String? initialContext;
   final String model;
   final String voice;
+  final bool enableInputTranscription;
+  final bool emitTranscripts;
+  final int? maxConversationPairs;
 }
 
 abstract interface class LiveAgentCredentialProvider {
@@ -188,6 +212,8 @@ abstract interface class LiveAgentTransport {
 
   Future<void> sendToolResult(String callId, Object? output);
 
+  Future<void> discardConversation({Set<String> keepItemIds = const {}});
+
   Future<void> requestResponse();
 
   Future<void> cancelResponse();
@@ -208,6 +234,8 @@ final class LiveAgentSession extends ChangeNotifier {
   StreamSubscription<LiveAgentEvent>? _subscription;
   Map<String, LiveAgentTool> _tools = const <String, LiveAgentTool>{};
   bool _disposed = false;
+  bool _closeAfterNextPlayback = false;
+  bool _expectsInitialResponse = false;
 
   LiveAgentPhase phase = LiveAgentPhase.idle;
   bool muted = false;
@@ -216,6 +244,7 @@ final class LiveAgentSession extends ChangeNotifier {
   String latestAssistantTranscript = '';
   String? error;
   int interruptionCount = 0;
+  int playbackCompletionCount = 0;
   LiveAgentUsage usage = const LiveAgentUsage();
 
   Future<void> start({
@@ -233,7 +262,10 @@ final class LiveAgentSession extends ChangeNotifier {
     latestAssistantTranscript = '';
     error = null;
     interruptionCount = 0;
+    playbackCompletionCount = 0;
     usage = const LiveAgentUsage();
+    _closeAfterNextPlayback = false;
+    _expectsInitialResponse = spec.initialContext?.trim().isNotEmpty == true;
     muted = false;
     phase = LiveAgentPhase.connecting;
     _notify();
@@ -262,7 +294,9 @@ final class LiveAgentSession extends ChangeNotifier {
     if (_disposed) return;
     switch (event.type) {
       case LiveAgentEventType.connected:
-        phase = LiveAgentPhase.thinking;
+        phase = _expectsInitialResponse
+            ? LiveAgentPhase.thinking
+            : LiveAgentPhase.listening;
       case LiveAgentEventType.userSpeechStarted:
         if (phase == LiveAgentPhase.speaking) interruptionCount += 1;
         latestAssistantTranscript = '';
@@ -273,6 +307,14 @@ final class LiveAgentSession extends ChangeNotifier {
         if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.thinking;
       case LiveAgentEventType.speaking:
         if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.speaking;
+      case LiveAgentEventType.playbackStopped:
+        playbackCompletionCount += 1;
+        if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.listening;
+        if (_closeAfterNextPlayback) {
+          _closeAfterNextPlayback = false;
+          await stop();
+          return;
+        }
       case LiveAgentEventType.transcript:
         final text = event.text;
         if (text?.isNotEmpty == true) {
@@ -318,6 +360,11 @@ final class LiveAgentSession extends ChangeNotifier {
     }
     try {
       final result = await tool.invoke(call.arguments);
+      if (result.discardConversationBeforeResponse) {
+        await _transport.discardConversation(
+          keepItemIds: <String>{if (call.itemId != null) call.itemId!},
+        );
+      }
       await _transport.sendToolResult(call.callId, result.output);
       if (result.requestResponse) await _transport.requestResponse();
     } catch (caught) {
@@ -331,6 +378,11 @@ final class LiveAgentSession extends ChangeNotifier {
 
   Future<void> sendInstruction(String text, {bool requestResponse = true}) =>
       _transport.sendInstruction(text, requestResponse: requestResponse);
+
+  Future<void> discardConversation({Set<String> keepItemIds = const {}}) =>
+      _transport.discardConversation(keepItemIds: keepItemIds);
+
+  void closeAfterNextPlayback() => _closeAfterNextPlayback = true;
 
   Future<void> interruptResponse() => _transport.cancelResponse();
 
@@ -359,6 +411,7 @@ final class LiveAgentSession extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _closeAfterNextPlayback = false;
     phase = LiveAgentPhase.closed;
     _notify();
     await _subscription?.cancel();

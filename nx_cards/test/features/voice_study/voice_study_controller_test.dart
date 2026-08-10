@@ -18,6 +18,7 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
   LiveAgentSpec? connectedSpec;
   int responseRequests = 0;
   int closeRequests = 0;
+  int discardConversationRequests = 0;
 
   @override
   Stream<LiveAgentEvent> get events => eventsController.stream;
@@ -58,6 +59,11 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
   Future<void> sendToolResult(String callId, Object? output) async {
     toolResults[callId] = output;
   }
+
+  @override
+  Future<void> discardConversation({
+    Set<String> keepItemIds = const {},
+  }) async => discardConversationRequests += 1;
 
   @override
   Future<void> requestResponse() async => responseRequests += 1;
@@ -126,6 +132,9 @@ void main() {
     expect(controller.reviewedCount, 1);
     expect(controller.currentCardAssessed, isTrue);
     expect(controller.assessmentRating, CardRating.again);
+    expect(controller.answerReveal?.english, 'talent');
+    expect(controller.answerReveal?.malayalam, 'കഴിവ്');
+    expect(controller.answerReveal?.transliteration, 'kazhivu');
     verify(() => repository.saveSchedule(any())).called(1);
     final assessment = transport.toolResults['assess-1'] as Map;
     expect(assessment['answer'], 'കഴിവ്');
@@ -145,6 +154,175 @@ void main() {
     expect(controller.index, 1);
     expect(controller.currentCardAssessed, isFalse);
     expect(controller.assessmentRating, isNull);
+    expect(controller.answerReveal?.malayalam, 'കഴിവ്');
+    expect(controller.displayedPrompt, isNull);
+    expect(transport.discardConversationRequests, 1);
+
+    transport.eventsController.add(
+      const LiveAgentEvent(LiveAgentEventType.playbackStopped),
+    );
+    await pumpEventQueue();
+    expect(controller.answerReveal, isNull);
+    expect(controller.displayedPrompt?.card.id, 2);
+
+    controller.dispose();
+  });
+
+  test(
+    'a correct answer reveals all forms and advances automatically',
+    () async {
+      final repository = _MockCardsRepository();
+      when(() => repository.saveSchedule(any())).thenAnswer((_) async {});
+      final transport = _FakeLiveAgentTransport();
+      final controller = VoiceStudyController(
+        session: LiveAgentSession(transport: transport),
+        repository: repository,
+        scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
+        prompts: [
+          StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
+          StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
+        ],
+        deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+        onScheduleSaved: () {},
+      );
+      await controller.start(
+        const StaticLiveAgentCredentialProvider('test-key'),
+      );
+
+      transport.call('assess-correct', 'assess_current_card', {
+        'rating': 'good',
+        'heard': 'kazhivu',
+        'feedback': 'Correct.',
+      });
+      await pumpEventQueue();
+
+      expect(controller.index, 1);
+      expect(controller.currentCardAssessed, isFalse);
+      expect(controller.correctCount, 1);
+      expect(controller.answerReveal?.english, 'talent');
+      expect(controller.answerReveal?.malayalam, 'കഴിവ്');
+      expect(controller.answerReveal?.transliteration, 'kazhivu');
+      expect(controller.displayedPrompt, isNull);
+      expect(transport.discardConversationRequests, 1);
+      final output = transport.toolResults['assess-correct'] as Map;
+      expect(output['advanced'], isTrue);
+      expect(output['completed'], isFalse);
+      expect((output['card'] as Map)['card_id'], 2);
+
+      transport.eventsController.add(
+        const LiveAgentEvent(LiveAgentEventType.playbackStopped),
+      );
+      await pumpEventQueue();
+      expect(controller.answerReveal, isNull);
+      expect(controller.displayedPrompt?.card.id, 2);
+
+      controller.dispose();
+    },
+  );
+
+  test('the final correct answer closes after the farewell playback', () async {
+    final repository = _MockCardsRepository();
+    when(() => repository.saveSchedule(any())).thenAnswer((_) async {});
+    final transport = _FakeLiveAgentTransport();
+    final controller = VoiceStudyController(
+      session: LiveAgentSession(transport: transport),
+      repository: repository,
+      scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
+      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
+      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      onScheduleSaved: () {},
+    );
+    await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
+
+    transport.call('assess-final', 'assess_current_card', {
+      'rating': 'good',
+      'heard': 'kazhivu',
+      'feedback': 'Correct.',
+    });
+    await pumpEventQueue();
+
+    expect(controller.phase, VoiceStudyPhase.completed);
+    expect(transport.closeRequests, 0);
+    expect((transport.toolResults['assess-final'] as Map)['completed'], isTrue);
+
+    transport.eventsController.add(
+      const LiveAgentEvent(LiveAgentEventType.listening),
+    );
+    await pumpEventQueue();
+    expect(transport.closeRequests, 0);
+
+    transport.eventsController.add(
+      const LiveAgentEvent(LiveAgentEventType.playbackStopped),
+    );
+    await pumpEventQueue();
+    expect(transport.closeRequests, 1);
+    expect(controller.answerReveal?.english, 'talent');
+
+    controller.dispose();
+  });
+
+  test('recap attributes token deltas to each active word', () async {
+    final repository = _MockCardsRepository();
+    when(() => repository.saveSchedule(any())).thenAnswer((_) async {});
+    final transport = _FakeLiveAgentTransport();
+    final controller = VoiceStudyController(
+      session: LiveAgentSession(transport: transport),
+      repository: repository,
+      scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
+      prompts: [
+        StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
+        StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
+      ],
+      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      onScheduleSaved: () {},
+    );
+    await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
+
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.usage,
+        usage: LiveAgentUsage(inputTokens: 100, inputTextTokens: 100),
+      ),
+    );
+    await pumpEventQueue();
+    transport.call('assess-first', 'assess_current_card', {
+      'rating': 'good',
+      'heard': 'kazhivu',
+      'feedback': 'Correct.',
+    });
+    await pumpEventQueue();
+
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.usage,
+        usage: LiveAgentUsage(inputTokens: 50, inputTextTokens: 50),
+      ),
+    );
+    await pumpEventQueue();
+    transport.call('assess-second', 'assess_current_card', {
+      'rating': 'good',
+      'heard': 'kazhivu',
+      'feedback': 'Correct.',
+    });
+    await pumpEventQueue();
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.usage,
+        usage: LiveAgentUsage(outputTokens: 25, outputAudioTokens: 25),
+      ),
+    );
+    await pumpEventQueue();
+
+    expect(controller.recapEntries, hasLength(2));
+    expect(controller.recapEntries.first.tokens, 100);
+    expect(controller.recapEntries.last.tokens, 75);
+    expect(controller.recapEntries.first.english, 'talent');
+    expect(controller.recapEntries.first.malayalam, 'കഴിവ്');
+    expect(controller.recapEntries.first.transliteration, 'kazhivu');
+    expect(controller.recapEntries.map((entry) => entry.rating), [
+      CardRating.good,
+      CardRating.good,
+    ]);
 
     controller.dispose();
   });
@@ -205,6 +383,8 @@ void main() {
           cachedInputAudioTokens: 20,
           outputTextTokens: 500,
           outputAudioTokens: 50,
+          transcriptionInputTokens: 40,
+          transcriptionOutputTokens: 10,
         ),
       ),
     );
@@ -213,10 +393,12 @@ void main() {
     expect(controller.correctCount, 0);
     expect(controller.partialCount, 1);
     expect(controller.incorrectCount, 0);
-    expect(controller.usage.totalTokens, 1650);
-    expect(controller.inputCost, closeTo(0.001298, 0.0000001));
-    expect(controller.outputCost, closeTo(0.0022, 0.0000001));
-    expect(controller.totalCost, closeTo(0.003498, 0.0000001));
+    expect(controller.usage.totalTokens, 1700);
+    expect(controller.usage.billedInputTokens, 1140);
+    expect(controller.usage.billedOutputTokens, 560);
+    expect(controller.inputCost, closeTo(0.001348, 0.0000001));
+    expect(controller.outputCost, closeTo(0.00225, 0.0000001));
+    expect(controller.totalCost, closeTo(0.003598, 0.0000001));
 
     await controller.end();
     expect(controller.phase, VoiceStudyPhase.completed);

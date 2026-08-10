@@ -896,6 +896,8 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   int _handledFindRequestSerial = 0;
   int _findBarOpenSerial = 0;
   int _scrollAnchorRestoreAttempts = 0;
+  double _documentScrollProgress = 0;
+  bool _documentCanScroll = false;
   _DocumentScrollAnchor? _lastSavedScrollAnchor;
 
   @override
@@ -1052,6 +1054,56 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   void _handleVisibleItemPositionsChanged() {
     _scheduleActiveHeadingPublish();
     _scheduleScrollAnchorSave();
+    _updateDocumentScrollProgress();
+  }
+
+  void _updateDocumentScrollProgress() {
+    if (!mounted) return;
+    final childCount = _editorState.document.root.children.length;
+    final visible =
+        _scrollController.itemPositionsListener.itemPositions.value
+            .where(
+              (position) =>
+                  position.index >= 0 &&
+                  position.index < childCount &&
+                  position.itemTrailingEdge > 0 &&
+                  position.itemLeadingEdge < 1,
+            )
+            .toList()
+          ..sort((a, b) => a.index.compareTo(b.index));
+    if (childCount < 2 || visible.isEmpty) return;
+
+    final first = visible.first;
+    final last = visible.last;
+    final canScroll =
+        visible.length < childCount ||
+        first.itemLeadingEdge < -0.01 ||
+        last.itemTrailingEdge > 1.01;
+    final double progress;
+    if (first.index == 0 && first.itemLeadingEdge >= -0.01) {
+      progress = 0;
+    } else if (last.index == childCount - 1 && last.itemTrailingEdge <= 1.01) {
+      progress = 1;
+    } else {
+      final center = visible.reduce((closest, candidate) {
+        final closestDistance =
+            ((closest.itemLeadingEdge + closest.itemTrailingEdge) / 2 - 0.5)
+                .abs();
+        final candidateDistance =
+            ((candidate.itemLeadingEdge + candidate.itemTrailingEdge) / 2 - 0.5)
+                .abs();
+        return candidateDistance < closestDistance ? candidate : closest;
+      });
+      progress = center.index / (childCount - 1);
+    }
+    if (canScroll == _documentCanScroll &&
+        (progress - _documentScrollProgress).abs() < 0.005) {
+      return;
+    }
+    setState(() {
+      _documentCanScroll = canScroll;
+      _documentScrollProgress = progress.clamp(0, 1).toDouble();
+    });
   }
 
   void _handleAudioBlockRequest() {
@@ -1608,33 +1660,64 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       commandShortcutEvents: _commandShortcutEvents(),
       footer: SizedBox(height: widget.readOnly ? 24 : 120),
     );
-    if (widget.readOnly) return editor;
-    return FloatingToolbar(
-      editorState: _editorState,
-      editorScrollController: _scrollController,
-      textDirection: Directionality.of(context),
-      items: [
-        paragraphItem,
-        ...headingItems,
-        ...markdownFormatItems,
-        quoteItem,
-        bulletedListItem,
-        numberedListItem,
-        linkItem,
-        buildNxTextColorItem(),
-        buildNxHighlightColorItem(),
-        nxHighlightNoteToolbarItem,
-        buildNxDocumentLinkToolbarItem(
-          searchLinkableModels: widget.searchLinkableModels,
-          createDocument: widget.createLinkedDocument!,
-          onLinkableModelSelected: widget.onLinkableModelSelected!,
+    final Widget editorSurface;
+    if (widget.readOnly) {
+      editorSurface = editor;
+    } else {
+      editorSurface = FloatingToolbar(
+        editorState: _editorState,
+        editorScrollController: _scrollController,
+        textDirection: Directionality.of(context),
+        items: [
+          paragraphItem,
+          ...headingItems,
+          ...markdownFormatItems,
+          quoteItem,
+          bulletedListItem,
+          numberedListItem,
+          linkItem,
+          buildNxTextColorItem(),
+          buildNxHighlightColorItem(),
+          nxHighlightNoteToolbarItem,
+          buildNxDocumentLinkToolbarItem(
+            searchLinkableModels: widget.searchLinkableModels,
+            createDocument: widget.createLinkedDocument!,
+            onLinkableModelSelected: widget.onLinkableModelSelected!,
+          ),
+          ...alignmentItems,
+        ],
+        tooltipBuilder: (context, _, message, child) {
+          return Tooltip(message: message, preferBelow: false, child: child);
+        },
+        child: editor,
+      );
+    }
+    if (isDesktopLayout(context) || !_documentCanScroll) {
+      return editorSurface;
+    }
+    return Stack(
+      children: [
+        Positioned.fill(child: editorSurface),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 8, 4, 8),
+              child: Align(
+                alignment: Alignment(1, _documentScrollProgress * 2 - 1),
+                child: Container(
+                  key: const ValueKey<String>('document-scroll-position-dot'),
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: AppColors.text.withValues(alpha: 0.38),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-        ...alignmentItems,
       ],
-      tooltipBuilder: (context, _, message, child) {
-        return Tooltip(message: message, preferBelow: false, child: child);
-      },
-      child: editor,
     );
   }
 }

@@ -123,6 +123,7 @@ void main() {
 
     expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
     expect(find.byIcon(Icons.headphones_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.record_voice_over_outlined), findsNothing);
     expect(find.text('Ask about this note'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.auto_awesome_rounded));
@@ -149,6 +150,53 @@ void main() {
           .dy,
       greaterThanOrEqualTo(20),
     );
+
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('note-companion-chat-panel')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('composer action switches between live conversation and send', (
+    tester,
+  ) async {
+    final textController = TextEditingController();
+    var liveRequests = 0;
+    var sendRequests = 0;
+    addTearDown(textController.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: NoteCompanionComposerAction(
+            textController: textController,
+            disabled: false,
+            onSend: () => sendRequests += 1,
+            onStartLiveConversation: () => liveRequests += 1,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('note-ai-live-button')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('note-ai-live-button')));
+    expect(liveRequests, 1);
+    expect(sendRequests, 0);
+
+    textController.text = 'What does this mean?';
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey<String>('note-ai-send-button')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('note-ai-send-button')));
+    expect(sendRequests, 1);
   });
 
   testWidgets('can be minimized back to the discreet entry point', (
@@ -213,6 +261,7 @@ void main() {
     );
     expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
     expect(find.byIcon(Icons.headphones_rounded), findsNothing);
+    expect(find.byIcon(Icons.record_voice_over_outlined), findsNothing);
     expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
     expect(tester.takeException(), isNull);
   });

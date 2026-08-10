@@ -167,6 +167,15 @@ class _SessionBody extends StatelessWidget {
               style: const TextStyle(color: RecallColors.muted),
             ),
             const SizedBox(height: 20),
+            if (controller.answerReveal case final reveal?) ...[
+              _AssessmentResult(
+                rating: reveal.rating,
+                feedback: reveal.feedback,
+              ),
+              const SizedBox(height: 12),
+              _AnswerReveal(reveal: reveal),
+              const SizedBox(height: 20),
+            ],
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 24,
@@ -190,6 +199,10 @@ class _SessionBody extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 26),
+            if (controller.recapEntries.isNotEmpty) ...[
+              _WordRecap(entries: controller.recapEntries),
+              const SizedBox(height: 18),
+            ],
             _UsageRecap(controller: controller),
             const SizedBox(height: 24),
             FilledButton(
@@ -201,7 +214,7 @@ class _SessionBody extends StatelessWidget {
       );
     }
 
-    final prompt = controller.currentPrompt;
+    final prompt = controller.displayedPrompt;
     return Column(
       children: [
         _StatusOrb(phase: controller.phase),
@@ -219,12 +232,11 @@ class _SessionBody extends StatelessWidget {
               letterSpacing: -0.5,
             ),
           ),
-        if (controller.assessmentRating != null) ...[
+        if (controller.answerReveal case final reveal?) ...[
           const SizedBox(height: 22),
-          _AssessmentResult(
-            rating: controller.assessmentRating!,
-            feedback: controller.feedback,
-          ),
+          _AssessmentResult(rating: reveal.rating, feedback: reveal.feedback),
+          const SizedBox(height: 10),
+          _AnswerReveal(reveal: reveal),
         ],
         if (controller.currentCardAssessed) ...[
           const SizedBox(height: 14),
@@ -279,6 +291,104 @@ class _SummaryStat extends StatelessWidget {
   );
 }
 
+class _WordRecap extends StatelessWidget {
+  const _WordRecap({required this.entries});
+
+  final List<VoiceStudyRecapEntry> entries;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text('WORDS', style: monoLabel),
+      const SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: RecallColors.ink.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            for (var index = 0; index < entries.length; index += 1) ...[
+              if (index > 0)
+                Divider(
+                  height: 1,
+                  color: RecallColors.ink.withValues(alpha: 0.1),
+                ),
+              _WordRecapRow(entry: entries[index]),
+            ],
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _WordRecapRow extends StatelessWidget {
+  const _WordRecapRow({required this.entry});
+
+  final VoiceStudyRecapEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final (result, color) = switch (entry.rating) {
+      CardRating.again => ('INCORRECT', RecallColors.rose),
+      CardRating.hard => ('PARTLY RIGHT', RecallColors.orange),
+      CardRating.good || CardRating.easy => ('CORRECT', RecallColors.emerald),
+      null => ('NOT REVIEWED', RecallColors.muted),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.english,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  entry.malayalam,
+                  style: const TextStyle(fontSize: 18, height: 1.2),
+                ),
+                if (entry.transliteration.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    entry.transliteration,
+                    style: const TextStyle(
+                      color: RecallColors.muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(result, style: monoLabel.copyWith(color: color)),
+              const SizedBox(height: 6),
+              Text(
+                '${entry.tokens} tokens',
+                style: monoLabel.copyWith(color: RecallColors.muted),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _UsageRecap extends StatelessWidget {
   const _UsageRecap({required this.controller});
 
@@ -299,13 +409,13 @@ class _UsageRecap extends StatelessWidget {
         const SizedBox(height: 12),
         _UsageRow(
           label: 'Input',
-          tokens: controller.usage.inputTokens,
+          tokens: controller.usage.billedInputTokens,
           cost: controller.inputCost,
         ),
         const SizedBox(height: 8),
         _UsageRow(
           label: 'Output',
-          tokens: controller.usage.outputTokens,
+          tokens: controller.usage.billedOutputTokens,
           cost: controller.outputCost,
         ),
         const Divider(height: 22),
@@ -476,6 +586,67 @@ class _AssessmentResult extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AnswerReveal extends StatelessWidget {
+  const _AnswerReveal({required this.reveal});
+
+  final VoiceStudyAnswerReveal reveal;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      color: RecallColors.ink.withValues(alpha: 0.045),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      children: [
+        _AnswerValue(label: 'ENGLISH', value: reveal.english),
+        const Divider(height: 20),
+        _AnswerValue(
+          label: 'MALAYALAM',
+          value: reveal.malayalam,
+          primary: true,
+        ),
+        const SizedBox(height: 8),
+        _AnswerValue(label: 'TRANSLITERATION', value: reveal.transliteration),
+      ],
+    ),
+  );
+}
+
+class _AnswerValue extends StatelessWidget {
+  const _AnswerValue({
+    required this.label,
+    required this.value,
+    this.primary = false,
+  });
+
+  final String label;
+  final String value;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(width: 118, child: Text(label, style: monoLabel)),
+      Expanded(
+        child: Text(
+          value.isEmpty ? '—' : value,
+          textAlign: TextAlign.right,
+          style: TextStyle(
+            color: value.isEmpty ? RecallColors.muted : RecallColors.ink,
+            fontSize: primary ? 21 : 16,
+            height: 1.2,
+            fontWeight: primary ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class _StatusOrb extends StatelessWidget {

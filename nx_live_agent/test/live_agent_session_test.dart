@@ -8,7 +8,9 @@ class _FakeTransport implements LiveAgentTransport {
   final results = <String, Object?>{};
   int responseRequests = 0;
   int cancelRequests = 0;
+  int closeRequests = 0;
   final mutedValues = <bool>[];
+  final discardedKeepItemIds = <Set<String>>[];
 
   @override
   Stream<LiveAgentEvent> get events => controller.stream;
@@ -26,6 +28,11 @@ class _FakeTransport implements LiveAgentTransport {
   }
 
   @override
+  Future<void> discardConversation({
+    Set<String> keepItemIds = const {},
+  }) async => discardedKeepItemIds.add(Set<String>.of(keepItemIds));
+
+  @override
   Future<void> requestResponse() async => responseRequests += 1;
 
   @override
@@ -41,13 +48,34 @@ class _FakeTransport implements LiveAgentTransport {
   Future<void> setMuted(bool muted) async => mutedValues.add(muted);
 
   @override
-  Future<void> close() async {}
+  Future<void> close() async => closeRequests += 1;
 
   @override
   Future<void> dispose() async => controller.close();
 }
 
 void main() {
+  test(
+    'starts in listening state when no initial response is requested',
+    () async {
+      final transport = _FakeTransport();
+      final session = LiveAgentSession(transport: transport);
+      await session.start(
+        credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+        spec: const LiveAgentSpec(instructions: 'Test'),
+        tools: const [],
+      );
+
+      transport.controller.add(
+        const LiveAgentEvent(LiveAgentEventType.connected),
+      );
+      await pumpEventQueue();
+
+      expect(session.phase, LiveAgentPhase.listening);
+      session.dispose();
+    },
+  );
+
   test('dispatches generic tools once and returns their output', () async {
     final transport = _FakeTransport();
     final session = LiveAgentSession(transport: transport);
@@ -88,6 +116,47 @@ void main() {
     session.dispose();
   });
 
+  test('a tool can discard old conversation before its response', () async {
+    final transport = _FakeTransport();
+    final session = LiveAgentSession(transport: transport);
+    await session.start(
+      credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+      spec: const LiveAgentSpec(instructions: 'Test'),
+      tools: [
+        CallbackLiveAgentTool(
+          definition: const LiveAgentToolDefinition(
+            name: 'advance',
+            description: 'Advance',
+            parameters: {'type': 'object'},
+          ),
+          onInvoke: (_) => const LiveAgentToolResult({
+            'ok': true,
+          }, discardConversationBeforeResponse: true),
+        ),
+      ],
+    );
+
+    transport.controller.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.toolCall,
+        toolCall: LiveAgentToolCall(
+          callId: 'call-advance',
+          itemId: 'item-advance',
+          name: 'advance',
+          arguments: {},
+        ),
+      ),
+    );
+    await pumpEventQueue();
+
+    expect(transport.discardedKeepItemIds, [
+      <String>{'item-advance'},
+    ]);
+    expect(transport.results['call-advance'], {'ok': true});
+    expect(transport.responseRequests, 1);
+    session.dispose();
+  });
+
   test('counts user speech over assistant audio as an interruption', () async {
     final transport = _FakeTransport();
     final session = LiveAgentSession(transport: transport);
@@ -105,6 +174,33 @@ void main() {
 
     expect(session.interruptionCount, 1);
     expect(session.phase, LiveAgentPhase.listening);
+    session.dispose();
+  });
+
+  test('closes only after the requested audio playback finishes', () async {
+    final transport = _FakeTransport();
+    final session = LiveAgentSession(transport: transport);
+    await session.start(
+      credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+      spec: const LiveAgentSpec(instructions: 'Test'),
+      tools: const [],
+    );
+    session.closeAfterNextPlayback();
+
+    transport.controller.add(
+      const LiveAgentEvent(LiveAgentEventType.listening),
+    );
+    await pumpEventQueue();
+    expect(transport.closeRequests, 0);
+
+    transport.controller.add(
+      const LiveAgentEvent(LiveAgentEventType.playbackStopped),
+    );
+    await pumpEventQueue();
+
+    expect(session.playbackCompletionCount, 1);
+    expect(transport.closeRequests, 1);
+    expect(session.phase, LiveAgentPhase.closed);
     session.dispose();
   });
 
