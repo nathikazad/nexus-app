@@ -5,12 +5,15 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_notes/composition/book_context_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/core/layout/is_desktop_layout.dart';
 import 'package:nx_notes/data/ai/note_transcript_service.dart';
 import 'package:nx_notes/data/document/document_audio_service.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/domain/document/document_audio.dart';
+import 'package:nx_notes/domain/ai/conversation_reference.dart';
+import 'package:nx_notes/features/books/ai/book_chapter_conversation_picker.dart';
 import 'package:nx_notes/features/companion/note_companion_controller.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,6 +46,8 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   bool _chatExpanded = false;
   bool _audioExpanded = false;
   bool _liveConversationActive = false;
+  bool _bookChapterPickerActive = false;
+  List<ConversationReference> _liveConversationReferences = const [];
   bool _embeddedHistoryRequested = false;
 
   @override
@@ -59,6 +64,8 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       _chatExpanded = false;
       _audioExpanded = false;
       _liveConversationActive = false;
+      _bookChapterPickerActive = false;
+      _liveConversationReferences = const [];
       _embeddedHistoryRequested = false;
     }
   }
@@ -251,6 +258,8 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               setState(() {
                 _chatExpanded = false;
                 _liveConversationActive = false;
+                _bookChapterPickerActive = false;
+                _liveConversationReferences = const [];
               });
             }
           : null,
@@ -276,6 +285,8 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               setState(() {
                 _chatExpanded = false;
                 _liveConversationActive = false;
+                _bookChapterPickerActive = false;
+                _liveConversationReferences = const [];
               });
             },
           ),
@@ -297,9 +308,34 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
             child: NoteLiveConversationPanel(
               key: ValueKey<int>(widget.document.id),
               document: widget.document,
+              references: _liveConversationReferences,
               onEnd: () {
                 if (mounted) {
-                  setState(() => _liveConversationActive = false);
+                  setState(() {
+                    _liveConversationActive = false;
+                    _liveConversationReferences = const [];
+                  });
+                }
+              },
+            ),
+          )
+        else if (_bookChapterPickerActive)
+          Expanded(
+            child: BookChapterConversationPicker(
+              bookId: widget.document.id,
+              repository: ref.read(bookChapterRepositoryProvider),
+              onCancel: () {
+                if (mounted) {
+                  setState(() => _bookChapterPickerActive = false);
+                }
+              },
+              onStart: (references) {
+                if (mounted) {
+                  setState(() {
+                    _bookChapterPickerActive = false;
+                    _liveConversationReferences = references;
+                    _liveConversationActive = true;
+                  });
                 }
               },
             ),
@@ -418,7 +454,14 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
 
   void _startLiveConversation() {
     FocusScope.of(context).unfocus();
-    setState(() => _liveConversationActive = true);
+    setState(() {
+      _liveConversationReferences = const [];
+      if (widget.document.isBook) {
+        _bookChapterPickerActive = true;
+      } else {
+        _liveConversationActive = true;
+      }
+    });
   }
 }
 

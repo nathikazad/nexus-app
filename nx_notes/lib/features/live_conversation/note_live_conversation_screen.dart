@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/domain/ai/conversation_reference.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_controller.dart';
 import 'package:nx_notes/features/live_conversation/openai_api_key.dart';
@@ -10,11 +11,13 @@ import 'package:nx_notes/features/live_conversation/openai_api_key.dart';
 class NoteLiveConversationPanel extends StatefulWidget {
   const NoteLiveConversationPanel({
     required this.document,
+    required this.references,
     required this.onEnd,
     super.key,
   });
 
   final NxDocument document;
+  final List<ConversationReference> references;
   final VoidCallback onEnd;
 
   @override
@@ -36,6 +39,7 @@ class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
     unawaited(
       controller.start(
         document: widget.document,
+        references: widget.references,
         credentialProvider: const StaticLiveAgentCredentialProvider(
           openAiApiKey,
         ),
@@ -175,9 +179,15 @@ class _LiveConversationRecap extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _UsageRow(
-                label: 'Input',
-                tokens: controller.usage.billedInputTokens,
-                cost: controller.inputCost,
+                label: 'New input',
+                tokens: controller.newInputTokens,
+                cost: controller.newInputCost,
+              ),
+              const SizedBox(height: 8),
+              _UsageRow(
+                label: 'Cached input',
+                tokens: controller.cachedInputTokens,
+                cost: controller.cachedInputCost,
               ),
               const SizedBox(height: 8),
               _UsageRow(
