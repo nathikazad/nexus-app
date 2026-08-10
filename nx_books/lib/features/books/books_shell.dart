@@ -112,7 +112,7 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
   }
 }
 
-class _DesktopBookshelf extends StatelessWidget {
+class _DesktopBookshelf extends ConsumerWidget {
   const _DesktopBookshelf({
     required this.books,
     required this.selected,
@@ -124,7 +124,10 @@ class _DesktopBookshelf extends StatelessWidget {
   final Future<void> Function(NxBook book) onOpenInNotes;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final collectionState = ref.watch(bookCollectionStateProvider);
+    final reading = sortedBooksForState(books, BookReadingState.reading);
+    final collection = sortedBooksForState(books, collectionState);
     return Row(
       children: [
         Expanded(
@@ -134,21 +137,37 @@ class _DesktopBookshelf extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Column(
                     children: [
-                      for (final state in BookReadingState.values) ...[
-                        Expanded(
-                          child: _BookLane(
-                            key: ValueKey('lane-${state.kgqlValue}'),
-                            state: state,
-                            books: sortedBooksForState(books, state),
-                            selectedId: selected?.id,
+                      Expanded(
+                        child: _BookSection(
+                          key: const ValueKey('lane-reading'),
+                          title: 'Currently Reading',
+                          subtitle: 'Books currently in motion',
+                          state: BookReadingState.reading,
+                          books: reading,
+                          selectedId: selected?.id,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child: _BookSection(
+                          key: ValueKey('lane-${collectionState.kgqlValue}'),
+                          title: 'Library',
+                          subtitle: collectionState == BookReadingState.toRead
+                              ? 'Books waiting to be read'
+                              : 'Finished books',
+                          state: collectionState,
+                          books: collection,
+                          selectedId: selected?.id,
+                          trailing: _CollectionSwitch(
+                            state: collectionState,
+                            onChanged: (state) => ref
+                                .read(bookCollectionStateProvider.notifier)
+                                .set(state),
                           ),
                         ),
-                        if (state != BookReadingState.values.last)
-                          const SizedBox(width: 14),
-                      ],
+                      ),
                     ],
                   ),
                 ),
@@ -179,45 +198,72 @@ class _MobileBookshelf extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(mobileStateProvider);
-    final lane = sortedBooksForState(books, state);
+    final collectionState = ref.watch(bookCollectionStateProvider);
+    final reading = sortedBooksForState(books, BookReadingState.reading);
+    final collection = sortedBooksForState(books, collectionState);
     return Column(
       children: [
         _MobileTopBar(totalCount: books.length),
-        Container(
-          color: AppColors.panel,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: Row(
-            children: [
-              for (final item in BookReadingState.values)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: item == BookReadingState.values.last ? 0 : 5,
-                    ),
-                    child: _StateChip(
-                      state: item,
-                      active: item == state,
-                      onTap: () =>
-                          ref.read(mobileStateProvider.notifier).set(item),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(12),
+            key: const ValueKey('mobile-books-sections'),
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
             children: [
-              for (final book in lane)
+              _SectionHeader(
+                title: 'Currently Reading',
+                subtitle: 'Books currently in motion',
+                state: BookReadingState.reading,
+                count: reading.length,
+              ),
+              const SizedBox(height: 10),
+              for (final book in reading)
                 _BookCard(
+                  key: ValueKey('book-card-${book.id}'),
                   book: book,
                   selected: selected?.id == book.id,
                   compact: true,
                 ),
-              if (lane.isEmpty)
-                const _EmptyLane(message: 'No books in this state'),
+              if (reading.isEmpty)
+                const _MobileEmptySection(message: 'No books in progress'),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SectionHeader(
+                      title: 'Library',
+                      subtitle: collectionState == BookReadingState.toRead
+                          ? 'Books waiting to be read'
+                          : 'Finished books',
+                      state: collectionState,
+                      count: collection.length,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 184,
+                    child: _CollectionSwitch(
+                      state: collectionState,
+                      onChanged: (state) => ref
+                          .read(bookCollectionStateProvider.notifier)
+                          .set(state),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              for (final book in collection)
+                _BookCard(
+                  key: ValueKey('book-card-${book.id}'),
+                  book: book,
+                  selected: selected?.id == book.id,
+                  compact: true,
+                ),
+              if (collection.isEmpty)
+                _MobileEmptySection(
+                  message: collectionState == BookReadingState.toRead
+                      ? 'No books waiting'
+                      : 'No finished books',
+                ),
             ],
           ),
         ),
@@ -340,17 +386,23 @@ class _MainHeader extends ConsumerWidget {
   }
 }
 
-class _BookLane extends StatelessWidget {
-  const _BookLane({
+class _BookSection extends StatelessWidget {
+  const _BookSection({
     super.key,
+    required this.title,
+    required this.subtitle,
     required this.state,
     required this.books,
     required this.selectedId,
+    this.trailing,
   });
 
+  final String title;
+  final String subtitle;
   final BookReadingState state;
   final List<NxBook> books;
   final int? selectedId;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -359,34 +411,21 @@ class _BookLane extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
             child: Row(
               children: [
-                _StateDot(state: state),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        state.label,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _laneSubtitle(state),
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                  child: _SectionHeader(
+                    title: title,
+                    subtitle: subtitle,
+                    state: state,
+                    count: books.length,
                   ),
                 ),
-                _CountBadge(count: books.length),
+                if (trailing != null) ...[
+                  const SizedBox(width: 14),
+                  SizedBox(width: 210, child: trailing!),
+                ],
               ],
             ),
           ),
@@ -394,15 +433,30 @@ class _BookLane extends StatelessWidget {
           Expanded(
             child: books.isEmpty
                 ? const _EmptyLane(message: 'No books')
-                : ListView.builder(
-                    padding: const EdgeInsets.all(10),
-                    itemCount: books.length,
-                    itemBuilder: (context, index) {
-                      final book = books[index];
-                      return _BookCard(
-                        key: ValueKey('book-card-${book.id}'),
-                        book: book,
-                        selected: selectedId == book.id,
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 720
+                          ? 3
+                          : constraints.maxWidth >= 440
+                          ? 2
+                          : 1;
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(10),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 1,
+                          mainAxisExtent: 118,
+                        ),
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          return _BookCard(
+                            key: ValueKey('book-card-${book.id}'),
+                            book: book,
+                            selected: selectedId == book.id,
+                          );
+                        },
                       );
                     },
                   ),
@@ -411,14 +465,93 @@ class _BookLane extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _laneSubtitle(BookReadingState state) {
-    return switch (state) {
-      BookReadingState.reading => 'Books currently in motion',
-      BookReadingState.toRead => 'Ordered queue',
-      BookReadingState.read => 'Finished books',
-    };
-  }
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+    required this.state,
+    required this.count,
+  });
+
+  final String title;
+  final String subtitle;
+  final BookReadingState state;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      _StateDot(state: state),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(width: 8),
+      _CountBadge(count: count),
+    ],
+  );
+}
+
+class _CollectionSwitch extends StatelessWidget {
+  const _CollectionSwitch({required this.state, required this.onChanged});
+
+  final BookReadingState state;
+  final ValueChanged<BookReadingState> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      for (final item in const [BookReadingState.toRead, BookReadingState.read])
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: item == BookReadingState.toRead ? 5 : 0,
+            ),
+            child: _StateChip(
+              key: ValueKey('collection-${item.kgqlValue}'),
+              state: item,
+              active: item == state,
+              onTap: () => onChanged(item),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+class _MobileEmptySection extends StatelessWidget {
+  const _MobileEmptySection({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+    decoration: panelDecoration(),
+    child: Text(
+      message,
+      textAlign: TextAlign.center,
+      style: const TextStyle(color: AppColors.muted, fontSize: 12),
+    ),
+  );
 }
 
 class _BookCard extends ConsumerWidget {

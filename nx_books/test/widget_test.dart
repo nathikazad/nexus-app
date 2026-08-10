@@ -67,7 +67,9 @@ void main() {
     );
   });
 
-  testWidgets('bookshelf groups books into desktop lanes', (tester) async {
+  testWidgets('desktop bookshelf keeps reading separate and switches library', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1280, 820);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -93,11 +95,12 @@ void main() {
     await tester.pumpWidget(_testApp(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('Reading'), findsWidgets);
+    expect(find.text('Currently Reading'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
     expect(find.text('To Read'), findsWidgets);
     expect(find.text('Read'), findsWidgets);
     expect(find.text('Queued book'), findsOneWidget);
-    expect(find.text('Finished book'), findsOneWidget);
+    expect(find.text('Finished book'), findsNothing);
     expect(find.text('startup'), findsWidgets);
     expect(find.text('strategy'), findsWidgets);
     expect(find.text('Example Author'), findsWidgets);
@@ -107,7 +110,48 @@ void main() {
 
     final first = tester.getTopLeft(find.byKey(const ValueKey('book-card-2')));
     final second = tester.getTopLeft(find.byKey(const ValueKey('book-card-1')));
-    expect(first.dy, lessThan(second.dy));
+    expect(
+      first.dy < second.dy || (first.dy == second.dy && first.dx < second.dx),
+      isTrue,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('collection-read')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Currently Reading'), findsOneWidget);
+    expect(find.text('Queued book'), findsNothing);
+    expect(find.text('Finished book'), findsOneWidget);
+  });
+
+  testWidgets('mobile bookshelf shows reading above switchable library', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repo = _FakeBookRepository([
+      _book(1, 'In progress', BookReadingState.reading, rank: 0),
+      _book(2, 'Waiting book', BookReadingState.toRead, rank: 0),
+      _book(3, 'Completed book', BookReadingState.read, rank: 0),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Currently Reading'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
+    expect(find.text('In progress'), findsWidgets);
+    expect(find.text('Waiting book'), findsOneWidget);
+    expect(find.text('Completed book'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('collection-read')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('In progress'), findsWidgets);
+    expect(find.text('Waiting book'), findsNothing);
+    expect(find.text('Completed book'), findsOneWidget);
   });
 
   test('changing state appends the book to the target lane', () async {

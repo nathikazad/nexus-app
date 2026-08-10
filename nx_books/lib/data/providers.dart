@@ -24,9 +24,10 @@ final searchQueryProvider = NotifierProvider<SearchQuery, String>(
   SearchQuery.new,
 );
 
-final mobileStateProvider = NotifierProvider<MobileBookState, BookReadingState>(
-  MobileBookState.new,
-);
+final bookCollectionStateProvider =
+    NotifierProvider<BookCollectionState, BookReadingState>(
+      BookCollectionState.new,
+    );
 
 final bookMutationControllerProvider = Provider<BookMutationController>(
   BookMutationController.new,
@@ -152,11 +153,12 @@ class SearchQuery extends Notifier<String> {
   }
 }
 
-class MobileBookState extends Notifier<BookReadingState> {
+class BookCollectionState extends Notifier<BookReadingState> {
   @override
-  BookReadingState build() => BookReadingState.reading;
+  BookReadingState build() => BookReadingState.toRead;
 
   void set(BookReadingState value) {
+    if (value == BookReadingState.reading) return;
     state = value;
   }
 }
