@@ -285,6 +285,8 @@ final desktopWorkspaceProvider =
 
 enum MobileSection { documents, books, tags, search }
 
+enum MobileNavigationDirection { forward, backward, neutral }
+
 class MobileNotesState {
   const MobileNotesState({
     this.section = MobileSection.documents,
@@ -293,6 +295,7 @@ class MobileNotesState {
     this.searchText = '',
     this.showResults = false,
     this.history = const <int>[],
+    this.navigationDirection = MobileNavigationDirection.neutral,
   });
 
   final MobileSection section;
@@ -301,6 +304,7 @@ class MobileNotesState {
   final String searchText;
   final bool showResults;
   final List<int> history;
+  final MobileNavigationDirection navigationDirection;
 
   MobileNotesState copyWith({
     MobileSection? section,
@@ -309,6 +313,7 @@ class MobileNotesState {
     String? searchText,
     bool? showResults,
     List<int>? history,
+    MobileNavigationDirection? navigationDirection,
     bool clearDocument = false,
     bool clearContext = false,
   }) {
@@ -321,6 +326,7 @@ class MobileNotesState {
       searchText: searchText ?? this.searchText,
       showResults: showResults ?? this.showResults,
       history: clearDocument ? const <int>[] : history ?? this.history,
+      navigationDirection: navigationDirection ?? this.navigationDirection,
     );
   }
 }
@@ -334,6 +340,7 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
       section: section,
       clearDocument: true,
       showResults: false,
+      navigationDirection: MobileNavigationDirection.neutral,
     );
   }
 
@@ -342,6 +349,7 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
       section: MobileSection.search,
       searchText: value,
       showResults: false,
+      navigationDirection: MobileNavigationDirection.neutral,
     );
   }
 
@@ -350,6 +358,7 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
       resultContext: context,
       showResults: true,
       clearDocument: true,
+      navigationDirection: MobileNavigationDirection.forward,
     );
   }
 
@@ -358,6 +367,7 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
       activeDocumentId: id,
       resultContext: context ?? state.resultContext,
       showResults: false,
+      navigationDirection: MobileNavigationDirection.forward,
     );
   }
 
@@ -368,6 +378,7 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
       activeDocumentId: id,
       history: [...state.history, activeDocumentId],
       showResults: false,
+      navigationDirection: MobileNavigationDirection.forward,
     );
   }
 
@@ -378,17 +389,27 @@ class MobileNotesNotifier extends Notifier<MobileNotesState> {
       state = state.copyWith(
         activeDocumentId: previousDocumentId,
         history: history,
+        navigationDirection: MobileNavigationDirection.backward,
       );
     } else if (state.activeDocumentId != null && state.resultContext != null) {
-      state = state.copyWith(clearDocument: true, showResults: true);
+      state = state.copyWith(
+        clearDocument: true,
+        showResults: true,
+        navigationDirection: MobileNavigationDirection.backward,
+      );
     } else if (state.activeDocumentId != null) {
       state = state.copyWith(
         clearDocument: true,
         clearContext: true,
         showResults: false,
+        navigationDirection: MobileNavigationDirection.backward,
       );
     } else if (state.showResults) {
-      state = state.copyWith(showResults: false, clearContext: true);
+      state = state.copyWith(
+        showResults: false,
+        clearContext: true,
+        navigationDirection: MobileNavigationDirection.backward,
+      );
     }
   }
 }

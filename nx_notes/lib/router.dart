@@ -58,13 +58,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', redirect: (context, state) => '/docs'),
       GoRoute(
         path: '/docs',
-        builder: (context, state) => const NotesRootShell(),
+        pageBuilder: (context, state) => const NoTransitionPage<void>(
+          key: ValueKey<String>('notes-shell'),
+          child: NotesRootShell(),
+        ),
       ),
       GoRoute(
         path: '/docs/:documentId',
-        builder: (context, state) => NotesRootShell(
-          initialDocumentId: int.tryParse(
-            state.pathParameters['documentId'] ?? '',
+        pageBuilder: (context, state) => NoTransitionPage<void>(
+          key: const ValueKey<String>('notes-shell'),
+          child: NotesRootShell(
+            initialDocumentId: int.tryParse(
+              state.pathParameters['documentId'] ?? '',
+            ),
           ),
         ),
       ),

@@ -20,12 +20,33 @@ class MobileShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mobileNotesProvider);
+    final Widget page;
+    final Object pageKey;
     if (state.activeDocumentId != null) {
-      return _MobileEditor(state: state);
+      pageKey = 'document-${state.activeDocumentId}';
+      page = _MobileEditor(state: state);
+    } else if (state.showResults && state.resultContext != null) {
+      pageKey = 'results-${state.resultContext.hashCode}';
+      page = _MobileResults(contextState: state.resultContext!);
+    } else {
+      pageKey = 'section-${state.section.name}';
+      page = _MobileSectionPage(state: state);
     }
-    if (state.showResults && state.resultContext != null) {
-      return _MobileResults(contextState: state.resultContext!);
-    }
+    return _MobilePageTransition(
+      pageKey: pageKey,
+      direction: state.navigationDirection,
+      child: page,
+    );
+  }
+}
+
+class _MobileSectionPage extends ConsumerWidget {
+  const _MobileSectionPage({required this.state});
+
+  final MobileNotesState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: PreferredSize(
@@ -66,6 +87,109 @@ class MobileShell extends ConsumerWidget {
         MobileSection.search => const _MobileSearch(),
       },
       bottomNavigationBar: _MobileBottomNav(section: state.section),
+    );
+  }
+}
+
+class _MobilePageTransition extends StatefulWidget {
+  const _MobilePageTransition({
+    required this.pageKey,
+    required this.direction,
+    required this.child,
+  });
+
+  final Object pageKey;
+  final MobileNavigationDirection direction;
+  final Widget child;
+
+  @override
+  State<_MobilePageTransition> createState() => _MobilePageTransitionState();
+}
+
+class _MobilePageTransitionState extends State<_MobilePageTransition>
+    with SingleTickerProviderStateMixin {
+  static const _duration = Duration(milliseconds: 240);
+
+  late final AnimationController _controller;
+  late Widget _currentChild;
+  Widget? _outgoingChild;
+  late Object _currentKey;
+  MobileNavigationDirection _direction = MobileNavigationDirection.neutral;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentKey = widget.pageKey;
+    _currentChild = widget.child;
+    _controller = AnimationController(vsync: this, duration: _duration)
+      ..value = 1
+      ..addStatusListener(_handleAnimationStatus);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MobilePageTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_currentKey == widget.pageKey) {
+      _currentChild = widget.child;
+      return;
+    }
+    _outgoingChild = _currentChild;
+    _currentChild = widget.child;
+    _currentKey = widget.pageKey;
+    _direction = widget.direction;
+    _controller.forward(from: 0);
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed &&
+        _outgoingChild != null &&
+        mounted) {
+      setState(() => _outgoingChild = null);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final value = Curves.easeOutCubic.transform(_controller.value);
+        final direction = switch (_direction) {
+          MobileNavigationDirection.forward => 1.0,
+          MobileNavigationDirection.backward => -1.0,
+          MobileNavigationDirection.neutral => 0.0,
+        };
+        return Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            if (_outgoingChild != null)
+              IgnorePointer(
+                child: ExcludeSemantics(
+                  child: Opacity(
+                    opacity: 1 - (0.35 * value),
+                    child: FractionalTranslation(
+                      translation: Offset(-direction * 0.18 * value, 0),
+                      child: _outgoingChild!,
+                    ),
+                  ),
+                ),
+              ),
+            Opacity(
+              opacity: 0.65 + (0.35 * value),
+              child: FractionalTranslation(
+                translation: Offset(direction * 0.18 * (1 - value), 0),
+                child: _currentChild,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
