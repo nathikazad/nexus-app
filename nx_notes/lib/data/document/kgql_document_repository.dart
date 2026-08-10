@@ -155,35 +155,27 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<List<NxDocument>> listByTag(DocumentTagFilter filter) async {
-    final models = await fetchKgqlModels(
-      _client,
-      filter: {
-        'model_type': kDocumentModelTypeName,
-        'tag_filters': [
-          {
-            'system': filter.system,
-            'node': filter.node,
-            'include_descendants': filter.includeDescendants,
-          },
-        ],
-      },
-      struct: documentSummaryFetchStruct(),
-    );
+    final models = await _fetchDocumentsAndBooks({
+      'model_type': kDocumentModelTypeName,
+      'tag_filters': [
+        {
+          'system': filter.system,
+          'node': filter.node,
+          'include_descendants': filter.includeDescendants,
+        },
+      ],
+    });
     return _sortedDocumentSummaries(models);
   }
 
   @override
   Future<List<NxDocument>> listPinned({int limit = 20}) async {
-    final models = await fetchKgqlModels(
-      _client,
-      filter: {
-        'model_type': kDocumentModelTypeName,
-        'filters': [
-          {'key': kDocumentAttrPinned, 'op': '=', 'value': true},
-        ],
-      },
-      struct: documentSummaryFetchStruct(),
-    );
+    final models = await _fetchDocumentsAndBooks({
+      'model_type': kDocumentModelTypeName,
+      'filters': [
+        {'key': kDocumentAttrPinned, 'op': '=', 'value': true},
+      ],
+    });
     return _sortedDocumentSummaries(models).take(limit).toList();
   }
 
@@ -374,12 +366,35 @@ class KgqlDocumentRepository implements DocumentRepository {
   }
 
   Future<List<NxDocument>> _listAll() async {
-    final models = await fetchKgqlModels(
-      _client,
-      filter: {'model_type': kDocumentModelTypeName},
-      struct: documentSummaryFetchStruct(),
-    );
+    final models = await _fetchDocumentsAndBooks({
+      'model_type': kDocumentModelTypeName,
+    });
     return _sortedDocumentSummaries(models);
+  }
+
+  Future<List<Model>> _fetchDocumentsAndBooks(
+    Map<String, dynamic> documentFilter,
+  ) async {
+    final results = await Future.wait(<Future<List<Model>>>[
+      fetchKgqlModels(
+        _client,
+        filter: documentFilter,
+        struct: documentSummaryFetchStruct(),
+      ),
+      fetchKgqlModels(
+        _client,
+        filter: <String, dynamic>{
+          ...documentFilter,
+          'model_type': kBookModelTypeName,
+        },
+        struct: documentSummaryFetchStruct(),
+      ),
+    ]);
+    final modelsById = <int, Model>{
+      for (final model in results.first) model.id: model,
+      for (final book in results.last) book.id: book,
+    };
+    return modelsById.values.toList(growable: false);
   }
 
   Future<List<NxDocument>> _listAllSummaries() => _listAll();

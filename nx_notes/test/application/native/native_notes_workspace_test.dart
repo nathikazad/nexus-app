@@ -94,6 +94,10 @@ void main() {
       remote.replaceRemote(initialBook);
       final initial = await remote.syncDocuments(manifest: const []);
       await local.importRemoteDocuments(initial.documents);
+      await local.replaceCatalog(
+        const CatalogQuery.books(),
+        <DocumentSummary>[DocumentSummary.fromDocument(initialBook)],
+      );
       final book = initialBook.copyWith(readingState: 'read');
       remote.replaceRemote(book);
 
@@ -108,16 +112,6 @@ void main() {
 
       expect(remote.syncCount, 2);
       expect(remote.catalogFetchCount, libraryCatalogQueries.length);
-      expect(
-        (await local.readCatalog(
-          const CatalogQuery.books(),
-        )).single.readingState,
-        'read',
-      );
-
-      await local.replaceCatalog(const CatalogQuery.all(), <DocumentSummary>[
-        DocumentSummary.fromDocument(book.copyWith(readingState: '')),
-      ]);
       expect(
         (await local.readCatalog(
           const CatalogQuery.books(),
