@@ -150,7 +150,17 @@ final class NativeNotesWorkspace implements NotesWorkspace {
   Future<void> uploadPending() => _uploader.uploadPending();
 
   @override
-  Future<void> syncLibrary() => _synchronizer.syncLibrary();
+  Future<void> syncLibrary() async {
+    await _synchronizer.syncLibrary();
+    await Future.wait(<Future<void>>[
+      for (final query in libraryCatalogQueries) _refreshCatalogForSync(query),
+    ]);
+  }
+
+  Future<void> _refreshCatalogForSync(CatalogQuery query) async {
+    final summaries = await _remoteApi.fetchCatalog(query);
+    await _localStore.replaceCatalog(query, summaries);
+  }
 
   @override
   Future<void> close() async {

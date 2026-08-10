@@ -85,6 +85,49 @@ void main() {
   );
 
   test(
+    'library sync refreshes catalogs when document hashes are unchanged',
+    () async {
+      final initialBook = offlineTestDocument(
+        id: 9,
+        title: 'Correct book',
+      ).copyWith(modelTypeName: 'Book', readingState: 'to_read');
+      remote.replaceRemote(initialBook);
+      final initial = await remote.syncDocuments(manifest: const []);
+      await local.importRemoteDocuments(initial.documents);
+      final book = initialBook.copyWith(readingState: 'read');
+      remote.replaceRemote(book);
+
+      expect(
+        (await local.readCatalog(
+          const CatalogQuery.books(),
+        )).single.readingState,
+        'to_read',
+      );
+
+      await workspace.syncLibrary();
+
+      expect(remote.syncCount, 2);
+      expect(remote.catalogFetchCount, libraryCatalogQueries.length);
+      expect(
+        (await local.readCatalog(
+          const CatalogQuery.books(),
+        )).single.readingState,
+        'read',
+      );
+
+      await local.replaceCatalog(const CatalogQuery.all(), <DocumentSummary>[
+        DocumentSummary.fromDocument(book.copyWith(readingState: '')),
+      ]);
+      expect(
+        (await local.readCatalog(
+          const CatalogQuery.books(),
+        )).single.readingState,
+        'read',
+      );
+    },
+  );
+
+  test(
     'opening returns cached body immediately and fetches remote once',
     () async {
       final cached = offlineTestDocument(id: 7, title: 'Cached body');

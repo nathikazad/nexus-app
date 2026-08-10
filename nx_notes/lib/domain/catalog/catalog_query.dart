@@ -2,6 +2,13 @@ import 'package:nx_notes/domain/document/document_query.dart';
 
 enum CatalogKind { all, recent, pinned, books, search, tag }
 
+const libraryCatalogQueries = <CatalogQuery>[
+  CatalogQuery.all(),
+  CatalogQuery.recent(),
+  CatalogQuery.pinned(),
+  CatalogQuery.books(),
+];
+
 final class CatalogQuery {
   const CatalogQuery._({
     required this.kind,

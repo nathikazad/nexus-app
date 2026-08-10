@@ -79,10 +79,7 @@ final class WebNotesWorkspace implements NotesWorkspace {
   @override
   Future<void> syncLibrary() {
     return Future.wait(<Future<void>>[
-      refreshCatalog(const CatalogQuery.recent()),
-      refreshCatalog(const CatalogQuery.pinned()),
-      refreshCatalog(const CatalogQuery.books()),
-      refreshCatalog(const CatalogQuery.all()),
+      for (final query in libraryCatalogQueries) refreshCatalog(query),
     ]);
   }
 
