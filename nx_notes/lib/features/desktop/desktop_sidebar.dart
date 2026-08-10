@@ -873,7 +873,7 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
           ),
         const SizedBox(height: 18),
         BookShelfSectionHeader(
-          title: 'Library',
+          title: '',
           count: collection.length,
           trailing: BookCollectionSwitch(
             value: _collection,

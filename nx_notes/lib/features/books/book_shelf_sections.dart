@@ -98,19 +98,23 @@ class BookShelfSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: <Widget>[
-      Expanded(
-        child: Text(
-          title.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: AppColors.faint,
-            letterSpacing: 0.3,
+      if (title.isNotEmpty)
+        Expanded(
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.faint,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
-      ),
       if (trailing != null) ...<Widget>[
-        SizedBox(width: 150, child: trailing),
+        if (title.isEmpty)
+          Expanded(child: trailing!)
+        else
+          SizedBox(width: 150, child: trailing!),
         const SizedBox(width: 8),
       ],
       Container(

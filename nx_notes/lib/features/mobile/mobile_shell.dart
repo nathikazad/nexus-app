@@ -313,7 +313,7 @@ class _MobileBooksState extends ConsumerState<_MobileBooks> {
         ),
         const SizedBox(height: 24),
         BookShelfSectionHeader(
-          title: 'Library',
+          title: '',
           count: collection.length,
           trailing: BookCollectionSwitch(
             value: _collection,
