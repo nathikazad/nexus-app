@@ -127,6 +127,93 @@ void main() {
     expect(find.text('Start AI tutor'), findsOneWidget);
   });
 
+  testWidgets('script study offers drawing practice by learning status', (
+    tester,
+  ) async {
+    final learning = _scriptCard(
+      id: 1,
+      letter: 'ക',
+      learningStatus: LearningStatus.learning,
+    );
+    final learnt = _scriptCard(
+      id: 2,
+      letter: 'ഖ',
+      learningStatus: LearningStatus.learnt,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(
+              CardsDashboard(decks: const [], cards: [learning, learnt]),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: StudySetupScreen(
+            title: 'Script',
+            prompts: [...learning.prompts, ...learnt.prompts],
+            studyCards: [learning, learnt],
+            fromLanguage: 'English',
+            toLanguage: 'Malayalam',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Study sheet'), findsOneWidget);
+    expect(find.text('Draw'), findsOneWidget);
+    await tester.tap(find.text('Draw'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Which letters?'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, 'Learnt'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 available'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start drawing'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ക'), findsOneWidget);
+    expect(find.text('Letter 1'), findsOneWidget);
+    expect(find.text('LETTER 1 OF 2'), findsOneWidget);
+    final erase = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Erase'),
+    );
+    expect(erase.onPressed, isNull);
+    await tester.drag(
+      find.byKey(const ValueKey<String>('script-drawing-canvas')),
+      const Offset(80, 80),
+    );
+    await tester.pump();
+    final drawingPaint = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey<String>('script-drawing-paint')),
+    );
+    expect(drawingPaint.painter, isNull);
+    expect(drawingPaint.foregroundPainter, isNotNull);
+    expect(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Erase'))
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.text('Erase'));
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('ഖ'), findsOneWidget);
+    expect(find.text('Letter 2'), findsOneWidget);
+    expect(find.text('LETTER 2 OF 2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Quit drawing practice'));
+    await tester.pumpAndSettle();
+    expect(find.text('How do you want to study?'), findsOneWidget);
+  });
+
   testWidgets('revalidates a stale setup queue before starting recall', (
     tester,
   ) async {
@@ -210,4 +297,31 @@ StudyCard _languageCard({required CardSchedule schedule}) => StudyCard(
   },
   suspended: false,
   learningStatus: LearningStatus.learning,
+);
+
+StudyCard _scriptCard({
+  required int id,
+  required String letter,
+  required LearningStatus learningStatus,
+}) => StudyCard(
+  id: id,
+  content: LanguageCardContent(
+    english: 'Letter $id',
+    originalScript: letter,
+    transliteration: 'letter$id',
+  ),
+  deckId: 8,
+  deckName: 'Malayalam script',
+  schedules: const <StudyCue, CardSchedule>{
+    StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+  },
+  reviewHistory: const <StudyCue, List<CardReview>>{
+    StudyCue.fromLanguage: <CardReview>[],
+  },
+  suspended: false,
+  learningStatus: learningStatus,
+  tags: const <String, List<String>>{
+    'Word Category': <String>['Script'],
+  },
+  modelTypeName: 'Word',
 );

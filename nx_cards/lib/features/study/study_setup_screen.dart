@@ -6,12 +6,15 @@ import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
+import 'package:nx_cards/features/study/script_draw_practice_page.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/voice_study/voice_study_screen.dart';
 
 enum StudyOrder { normal, shuffle }
 
 enum StudyMode { study, recall, ai }
+
+enum StudyPresentation { sheet, draw }
 
 class StudySetupScreen extends ConsumerStatefulWidget {
   const StudySetupScreen({
@@ -35,6 +38,7 @@ class StudySetupScreen extends ConsumerStatefulWidget {
 
 class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   StudyMode _mode = StudyMode.study;
+  StudyPresentation _studyPresentation = StudyPresentation.sheet;
   StudyCue? _cue = StudyCue.fromLanguage;
   final Set<LearningStatus> _learningStatuses = <LearningStatus>{
     LearningStatus.learning,
@@ -58,6 +62,21 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                   _learningStatuses.contains(prompt.card.learningStatus),
             )
             .toList();
+
+  List<StudyCard> get _drawCandidates => widget.studyCards
+      .where(
+        (card) =>
+            card.content is LanguageCardContent &&
+            !card.suspended &&
+            _learningStatuses.contains(card.learningStatus),
+      )
+      .toList(growable: false);
+
+  bool get _isScriptStudy =>
+      widget.studyCards.isNotEmpty &&
+      widget.studyCards.every(
+        (card) => card.wordCategory?.trim().toLowerCase() == 'script',
+      );
 
   String _cueLabel(StudyCue cue) => switch (cue) {
     StudyCue.fromLanguage => widget.fromLanguage,
@@ -84,8 +103,25 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   }
 
   void _resetCount() {
-    final available = _candidates.length;
+    final available =
+        _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
+        ? _drawCandidates.length
+        : _candidates.length;
     _count = min(10, max(1, available));
+  }
+
+  void _selectMode(StudyMode mode) {
+    setState(() {
+      _mode = mode;
+      _resetCount();
+    });
+  }
+
+  void _selectStudyPresentation(StudyPresentation presentation) {
+    setState(() {
+      _studyPresentation = presentation;
+      _resetCount();
+    });
   }
 
   Future<void> _start() async {
@@ -159,6 +195,51 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     );
   }
 
+  Future<void> _openDrawPractice() async {
+    if (_starting) return;
+    setState(() => _starting = true);
+    try {
+      final dashboard = await ref.read(cardsDashboardProvider.future);
+      final eligibleIds = widget.studyCards.map((card) => card.id).toSet();
+      final cards = dashboard.cards
+          .where(
+            (card) =>
+                eligibleIds.contains(card.id) &&
+                card.content is LanguageCardContent &&
+                !card.suspended &&
+                _learningStatuses.contains(card.learningStatus),
+          )
+          .toList(growable: true);
+      if (_order == StudyOrder.shuffle) cards.shuffle(Random.secure());
+      final selected = cards
+          .take(min(_count, cards.length))
+          .toList(growable: false);
+      if (selected.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No letters match this selection')),
+          );
+        }
+        return;
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              ScriptDrawPracticePage(title: widget.title, cards: selected),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open drawing practice: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
+
   Future<void> _startAiTutor() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
@@ -179,7 +260,10 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   @override
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
-    final maxCount = _candidates.length;
+    final maxCount =
+        _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
+        ? _drawCandidates.length
+        : _candidates.length;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: ListView(
@@ -219,39 +303,97 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                       ),
                     ],
                     selected: {_mode},
-                    onSelectionChanged: (value) =>
-                        setState(() => _mode = value.single),
+                    onSelectionChanged: (value) => _selectMode(value.single),
                   ),
                   const SizedBox(height: 28),
                   if (_mode == StudyMode.study) ...[
-                    _SetupCard(
-                      number: '01',
-                      title: 'All words on one page',
-                      child: Text(
-                        '${widget.studyCards.length} cards with both languages, transliteration and audio',
-                        style: const TextStyle(color: RecallColors.muted),
+                    if (_isScriptStudy) ...[
+                      _SetupCard(
+                        number: '01',
+                        title: 'Study format',
+                        child: SegmentedButton<StudyPresentation>(
+                          segments: const [
+                            ButtonSegment(
+                              value: StudyPresentation.sheet,
+                              label: Text('Study sheet'),
+                            ),
+                            ButtonSegment(
+                              value: StudyPresentation.draw,
+                              label: Text('Draw'),
+                            ),
+                          ],
+                          selected: {_studyPresentation},
+                          onSelectionChanged: (value) =>
+                              _selectStudyPresentation(value.single),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    _SetupCard(
-                      number: '02',
-                      title: 'Choose the order',
-                      child: _OrderControl(
-                        value: _order,
-                        onChanged: (value) => setState(() => _order = value),
+                      const SizedBox(height: 14),
+                    ],
+                    if (!_isScriptStudy ||
+                        _studyPresentation == StudyPresentation.sheet) ...[
+                      _SetupCard(
+                        number: _isScriptStudy ? '02' : '01',
+                        title: _isScriptStudy
+                            ? 'All letters on one page'
+                            : 'All words on one page',
+                        child: Text(
+                          '${widget.studyCards.length} cards with both languages, transliteration and audio',
+                          style: const TextStyle(color: RecallColors.muted),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 22),
-                    FilledButton.icon(
-                      onPressed: widget.studyCards.isEmpty
-                          ? null
-                          : _openStudySheet,
-                      icon: const Icon(Icons.menu_book_outlined),
-                      label: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 13),
-                        child: Text('Open study sheet'),
+                      const SizedBox(height: 14),
+                      _SetupCard(
+                        number: _isScriptStudy ? '03' : '02',
+                        title: 'Choose the order',
+                        child: _OrderControl(
+                          value: _order,
+                          onChanged: (value) => setState(() => _order = value),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 22),
+                      FilledButton.icon(
+                        onPressed: widget.studyCards.isEmpty
+                            ? null
+                            : _openStudySheet,
+                        icon: const Icon(Icons.menu_book_outlined),
+                        label: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 13),
+                          child: Text('Open study sheet'),
+                        ),
+                      ),
+                    ] else ...[
+                      _SetupCard(
+                        number: '02',
+                        title: 'Which letters?',
+                        child: _learningStatusChoices(),
+                      ),
+                      const SizedBox(height: 14),
+                      _SetupCard(
+                        number: '03',
+                        title: 'How many letters?',
+                        child: _countControl(maxCount),
+                      ),
+                      const SizedBox(height: 14),
+                      _SetupCard(
+                        number: '04',
+                        title: 'Choose the order',
+                        child: _OrderControl(
+                          value: _order,
+                          onChanged: (value) => setState(() => _order = value),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      FilledButton.icon(
+                        onPressed: maxCount == 0 || _starting
+                            ? null
+                            : _openDrawPractice,
+                        icon: const Icon(Icons.gesture_outlined),
+                        label: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 13),
+                          child: Text('Start drawing'),
+                        ),
+                      ),
+                    ],
                   ] else if (_mode == StudyMode.recall) ...[
                     _SetupCard(
                       number: '01',

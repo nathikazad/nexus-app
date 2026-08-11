@@ -625,6 +625,8 @@ class WordCategoryScreen extends ConsumerWidget {
                       _LearningTab(
                         cards: learning,
                         emptyText: 'No words are currently being learned.',
+                        previousStatus: LearningStatus.notStarted,
+                        previousActionLabel: '←',
                         nextStatus: LearningStatus.learnt,
                         actionLabel: '✓',
                         dashboard: data,
@@ -632,6 +634,8 @@ class WordCategoryScreen extends ConsumerWidget {
                       _LearningTab(
                         cards: learnt,
                         emptyText: 'No words have been marked learnt yet.',
+                        previousStatus: LearningStatus.learning,
+                        previousActionLabel: '←',
                         dashboard: data,
                       ),
                       _LearningTab(
@@ -658,6 +662,8 @@ class _LearningTab extends ConsumerWidget {
     required this.cards,
     required this.emptyText,
     required this.dashboard,
+    this.previousStatus,
+    this.previousActionLabel,
     this.nextStatus,
     this.actionLabel,
   });
@@ -665,6 +671,8 @@ class _LearningTab extends ConsumerWidget {
   final List<StudyCard> cards;
   final String emptyText;
   final CardsDashboard dashboard;
+  final LearningStatus? previousStatus;
+  final String? previousActionLabel;
   final LearningStatus? nextStatus;
   final String? actionLabel;
 
@@ -704,6 +712,8 @@ class _LearningTab extends ConsumerWidget {
                             deck: dashboard.decks
                                 .where((deck) => deck.id == card.deckId)
                                 .firstOrNull,
+                            previousStatus: previousStatus,
+                            previousActionLabel: previousActionLabel,
                             nextStatus: nextStatus,
                             actionLabel: actionLabel,
                           ),
@@ -722,12 +732,16 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
     super.key,
     required this.card,
     required this.deck,
+    this.previousStatus,
+    this.previousActionLabel,
     this.nextStatus,
     this.actionLabel,
   });
 
   final StudyCard card;
   final CardDeck? deck;
+  final LearningStatus? previousStatus;
+  final String? previousActionLabel;
   final LearningStatus? nextStatus;
   final String? actionLabel;
 
@@ -741,33 +755,38 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
   bool _dragging = false;
   bool _working = false;
 
+  bool get _canDrag =>
+      widget.previousStatus != null || widget.nextStatus != null;
+
   void _drag(DragUpdateDetails details) {
-    if (widget.nextStatus == null) return;
+    if (!_canDrag) return;
+    final minimum = widget.nextStatus == null ? 0.0 : -_actionWidth;
+    final maximum = widget.previousStatus == null ? 0.0 : _actionWidth;
     setState(() {
       _dragging = true;
-      _offset = (_offset + details.delta.dx)
-          .clamp(-_actionWidth, 0.0)
-          .toDouble();
+      _offset = (_offset + details.delta.dx).clamp(minimum, maximum).toDouble();
     });
   }
 
   void _finishDrag(DragEndDetails details) {
     final reveal = _offset.abs() >= _actionWidth * .42;
+    final status = _offset < 0 ? widget.nextStatus : widget.previousStatus;
     setState(() {
       _dragging = false;
-      _offset = reveal ? -_actionWidth : 0;
+      _offset = reveal && status != null
+          ? (_offset < 0 ? -_actionWidth : _actionWidth)
+          : 0;
     });
-    if (reveal) _changeStatus();
+    if (reveal && status != null) _changeStatus(status);
   }
 
-  Future<void> _changeStatus() async {
-    final nextStatus = widget.nextStatus;
-    if (_working || nextStatus == null) return;
+  Future<void> _changeStatus(LearningStatus status) async {
+    if (_working) return;
     setState(() => _working = true);
     try {
       await ref
           .read(cardsRepositoryProvider)
-          .setLearningStatus(widget.card, nextStatus);
+          .setLearningStatus(widget.card, status);
       ref.invalidate(cardsDashboardProvider);
     } catch (error) {
       if (mounted) {
@@ -821,32 +840,21 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
           Positioned.fill(
             child: ColoredBox(
               color: RecallColors.ink,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: SizedBox(
-                  width: _actionWidth,
-                  child: InkWell(
-                    onTap: _working ? null : _changeStatus,
-                    child: Center(
-                      child: _working
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              widget.actionLabel ?? '',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
+              child: Stack(
+                children: [
+                  if (widget.previousStatus case final status?)
+                    _statusAction(
+                      alignment: Alignment.centerLeft,
+                      status: status,
+                      label: widget.previousActionLabel ?? '',
                     ),
-                  ),
-                ),
+                  if (widget.nextStatus case final status?)
+                    _statusAction(
+                      alignment: Alignment.centerRight,
+                      status: status,
+                      label: widget.actionLabel ?? '',
+                    ),
+                ],
               ),
             ),
           ),
@@ -858,12 +866,8 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
             transform: Matrix4.translationValues(_offset, 0, 0),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onHorizontalDragUpdate: _working || widget.nextStatus == null
-                  ? null
-                  : _drag,
-              onHorizontalDragEnd: _working || widget.nextStatus == null
-                  ? null
-                  : _finishDrag,
+              onHorizontalDragUpdate: _working || !_canDrag ? null : _drag,
+              onHorizontalDragEnd: _working || !_canDrag ? null : _finishDrag,
               onTap: _working ? null : _showDetails,
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -960,6 +964,38 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
       ),
     );
   }
+
+  Widget _statusAction({
+    required Alignment alignment,
+    required LearningStatus status,
+    required String label,
+  }) => Align(
+    alignment: alignment,
+    child: SizedBox(
+      width: _actionWidth,
+      child: InkWell(
+        onTap: _working ? null : () => _changeStatus(status),
+        child: Center(
+          child: _working
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+        ),
+      ),
+    ),
+  );
 }
 
 IconData _categoryIcon(String category) => switch (category) {

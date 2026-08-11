@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
+import 'package:nx_cards/domain/card/cards_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/shell/cards_home.dart';
 
@@ -49,6 +50,67 @@ void main() {
     expect(find.text('Not started  1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('right swipe moves learning and learnt words back one status', (
+    tester,
+  ) async {
+    final repository = _RecordingCardsRepository();
+    final now = DateTime.now().toUtc();
+    final learning = _word(
+      id: 1,
+      learningStatus: LearningStatus.learning,
+      schedule: _schedule(now),
+    );
+    final learnt = _word(
+      id: 3,
+      learningStatus: LearningStatus.learnt,
+      schedule: _schedule(now),
+    );
+    final dashboard = CardsDashboard(
+      decks: const [_deck],
+      cards: [learning, learnt],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsRepositoryProvider.overrideWithValue(repository),
+          cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
+        ],
+        child: const MaterialApp(home: WordCategoryScreen(category: 'Noun')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('learning:1')),
+      const Offset(100, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.changes.last, (1, LearningStatus.notStarted));
+
+    await tester.tap(find.text('Learnt  1'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const ValueKey('learnt:3')),
+      const Offset(100, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.changes.last, (3, LearningStatus.learning));
+  });
+}
+
+final class _RecordingCardsRepository implements CardsRepository {
+  final changes = <(int, LearningStatus)>[];
+
+  @override
+  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+    changes.add((card.id, status));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 const _deck = CardDeck(
