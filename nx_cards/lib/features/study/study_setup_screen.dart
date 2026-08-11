@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
@@ -11,7 +13,7 @@ enum StudyOrder { normal, shuffle }
 
 enum StudyMode { study, recall, ai }
 
-class StudySetupScreen extends StatefulWidget {
+class StudySetupScreen extends ConsumerStatefulWidget {
   const StudySetupScreen({
     super.key,
     required this.title,
@@ -28,18 +30,34 @@ class StudySetupScreen extends StatefulWidget {
   final String toLanguage;
 
   @override
-  State<StudySetupScreen> createState() => _StudySetupScreenState();
+  ConsumerState<StudySetupScreen> createState() => _StudySetupScreenState();
 }
 
-class _StudySetupScreenState extends State<StudySetupScreen> {
+class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   StudyMode _mode = StudyMode.study;
-  StudyCue? _cue;
+  StudyCue? _cue = StudyCue.fromLanguage;
+  final Set<LearningStatus> _learningStatuses = <LearningStatus>{
+    LearningStatus.learning,
+  };
   StudyOrder _order = StudyOrder.normal;
   int _count = 1;
+  bool _starting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetCount();
+  }
 
   List<StudyPrompt> get _candidates => _cue == null
       ? const <StudyPrompt>[]
-      : widget.prompts.where((prompt) => prompt.cue == _cue).toList();
+      : widget.prompts
+            .where(
+              (prompt) =>
+                  prompt.cue == _cue &&
+                  _learningStatuses.contains(prompt.card.learningStatus),
+            )
+            .toList();
 
   String _cueLabel(StudyCue cue) => switch (cue) {
     StudyCue.fromLanguage => widget.fromLanguage,
@@ -48,30 +66,85 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
   };
 
   void _selectCue(StudyCue cue) {
-    final available = widget.prompts
-        .where((prompt) => prompt.cue == cue)
-        .length;
     setState(() {
       _cue = cue;
-      _count = min(10, max(1, available));
+      _resetCount();
     });
   }
 
-  void _start() {
-    final prompts = _selectedPrompts();
-    if (prompts.isEmpty) return;
-    Navigator.of(context).push(
+  void _toggleLearningStatus(LearningStatus status) {
+    setState(() {
+      if (_learningStatuses.contains(status)) {
+        if (_learningStatuses.length > 1) _learningStatuses.remove(status);
+      } else {
+        _learningStatuses.add(status);
+      }
+      _resetCount();
+    });
+  }
+
+  void _resetCount() {
+    final available = _candidates.length;
+    _count = min(10, max(1, available));
+  }
+
+  Future<void> _start() async {
+    final prompts = await _latestSelectedPrompts();
+    if (!mounted || prompts == null) return;
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => StudyScreen(title: widget.title, prompts: prompts),
       ),
     );
   }
 
-  List<StudyPrompt> _selectedPrompts() {
-    if (_cue == null || _candidates.isEmpty) return const <StudyPrompt>[];
-    final selected = [..._candidates];
-    if (_order == StudyOrder.shuffle) selected.shuffle(Random.secure());
-    return selected.take(_count).toList(growable: false);
+  Future<List<StudyPrompt>?> _latestSelectedPrompts() async {
+    if (_starting || _cue == null) return null;
+    setState(() => _starting = true);
+    try {
+      final dashboard = await ref.read(cardsDashboardProvider.future);
+      final cardsById = <int, StudyCard>{
+        for (final card in dashboard.cards) card.id: card,
+      };
+      final now = DateTime.now().toUtc();
+      final selected =
+          <StudyPrompt>[
+                for (final queued in _candidates)
+                  if (cardsById[queued.cardId] case final latestCard?
+                      when !latestCard.suspended &&
+                          _learningStatuses.contains(latestCard.learningStatus))
+                    StudyPrompt(card: latestCard, cue: queued.cue),
+              ]
+              .where(
+                (prompt) =>
+                    prompt.schedule.enabled &&
+                    (prompt.isNew || prompt.isDueAt(now)),
+              )
+              .toList();
+
+      if (selected.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nothing due right now')),
+          );
+        }
+        return null;
+      }
+
+      if (_order == StudyOrder.shuffle) selected.shuffle(Random.secure());
+      return selected
+          .take(min(_count, selected.length))
+          .toList(growable: false);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not refresh recall queue: $error')),
+        );
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
   }
 
   void _openStudySheet() {
@@ -86,10 +159,10 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
     );
   }
 
-  void _startAiTutor() {
-    final prompts = _selectedPrompts();
-    if (prompts.isEmpty) return;
-    Navigator.of(context).push(
+  Future<void> _startAiTutor() async {
+    final prompts = await _latestSelectedPrompts();
+    if (!mounted || prompts == null) return;
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => VoiceStudyScreen(
           title: widget.title,
@@ -105,6 +178,7 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(cardsDashboardProvider);
     final maxCount = _candidates.length;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
@@ -181,18 +255,24 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                   ] else if (_mode == StudyMode.recall) ...[
                     _SetupCard(
                       number: '01',
+                      title: 'Which words?',
+                      child: _learningStatusChoices(),
+                    ),
+                    const SizedBox(height: 14),
+                    _SetupCard(
+                      number: '02',
                       title: 'What should be in front?',
                       child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '02',
+                      number: '03',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '03',
+                      number: '04',
                       title: 'Choose the order',
                       child: _OrderControl(
                         value: _order,
@@ -201,7 +281,9 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                     ),
                     const SizedBox(height: 22),
                     FilledButton.icon(
-                      onPressed: _cue == null || maxCount == 0 ? null : _start,
+                      onPressed: _cue == null || maxCount == 0 || _starting
+                          ? null
+                          : _start,
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 13),
@@ -211,18 +293,24 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                   ] else ...[
                     _SetupCard(
                       number: '01',
+                      title: 'Which words?',
+                      child: _learningStatusChoices(),
+                    ),
+                    const SizedBox(height: 14),
+                    _SetupCard(
+                      number: '02',
                       title: 'What should AI ask you?',
                       child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '02',
+                      number: '03',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '03',
+                      number: '04',
                       title: 'Choose the order',
                       child: _OrderControl(
                         value: _order,
@@ -231,7 +319,7 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
                     ),
                     const SizedBox(height: 22),
                     FilledButton.icon(
-                      onPressed: _cue == null || maxCount == 0
+                      onPressed: _cue == null || maxCount == 0 || _starting
                           ? null
                           : _startAiTutor,
                       icon: const Icon(Icons.record_voice_over_outlined),
@@ -260,6 +348,23 @@ class _StudySetupScreenState extends State<StudySetupScreen> {
           selected: _cue == cue,
           onSelected: (_) => _selectCue(cue),
         ),
+    ],
+  );
+
+  Widget _learningStatusChoices() => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      FilterChip(
+        label: const Text('Learning'),
+        selected: _learningStatuses.contains(LearningStatus.learning),
+        onSelected: (_) => _toggleLearningStatus(LearningStatus.learning),
+      ),
+      FilterChip(
+        label: const Text('Learnt'),
+        selected: _learningStatuses.contains(LearningStatus.learnt),
+        onSelected: (_) => _toggleLearningStatus(LearningStatus.learnt),
+      ),
     ],
   );
 

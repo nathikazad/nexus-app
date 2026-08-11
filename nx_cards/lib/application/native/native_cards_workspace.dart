@@ -136,13 +136,10 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   }
 
   @override
-  Future<void> setCurrentlyLearning(
-    StudyCard card,
-    bool currentlyLearning,
-  ) async {
+  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
     final existing = await _requireCard(card.id);
     await _enqueue(
-      existing.copyWith(currentlyLearning: currentlyLearning),
+      existing.copyWith(learningStatus: status),
       offline.MutationType.update,
     );
   }

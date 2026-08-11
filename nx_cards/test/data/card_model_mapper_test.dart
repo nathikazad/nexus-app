@@ -35,7 +35,7 @@ void main() {
           'audio_url': null,
           'examples': <Object?>[],
         },
-        attrCurrentlyLearning: true,
+        attrLearningStatus: 'learning',
       },
       tags: const <String, List<String>>{
         'Language': <String>['Malayalam'],
@@ -64,7 +64,7 @@ void main() {
 
     expect(card, isNotNull);
     expect(card!.modelTypeName, wordCardModelType);
-    expect(card.currentlyLearning, isTrue);
+    expect(card.learningStatus, LearningStatus.learning);
     expect(card.tags['Language'], <String>['Malayalam']);
     expect(card.tags['Part of Speech'], <String>['Noun']);
     final content = card.content as LanguageCardContent;

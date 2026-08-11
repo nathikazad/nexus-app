@@ -750,20 +750,17 @@ class $LocalStudyCardsTable extends LocalStudyCards
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _currentlyLearningMeta = const VerificationMeta(
-    'currentlyLearning',
+  static const VerificationMeta _learningStatusMeta = const VerificationMeta(
+    'learningStatus',
   );
   @override
-  late final GeneratedColumn<bool> currentlyLearning = GeneratedColumn<bool>(
-    'currently_learning',
+  late final GeneratedColumn<String> learningStatus = GeneratedColumn<String>(
+    'learning_status',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("currently_learning" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
+    defaultValue: const Constant('not_started'),
   );
   static const VerificationMeta _dueAtMeta = const VerificationMeta('dueAt');
   @override
@@ -882,7 +879,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
     audioUrl,
     examplesJson,
     tagsJson,
-    currentlyLearning,
+    learningStatus,
     dueAt,
     scheduleJson,
     reviewHistoryJson,
@@ -985,12 +982,12 @@ class $LocalStudyCardsTable extends LocalStudyCards
     } else if (isInserting) {
       context.missing(_tagsJsonMeta);
     }
-    if (data.containsKey('currently_learning')) {
+    if (data.containsKey('learning_status')) {
       context.handle(
-        _currentlyLearningMeta,
-        currentlyLearning.isAcceptableOrUnknown(
-          data['currently_learning']!,
-          _currentlyLearningMeta,
+        _learningStatusMeta,
+        learningStatus.isAcceptableOrUnknown(
+          data['learning_status']!,
+          _learningStatusMeta,
         ),
       );
     }
@@ -1120,9 +1117,9 @@ class $LocalStudyCardsTable extends LocalStudyCards
         DriftSqlType.string,
         data['${effectivePrefix}tags_json'],
       )!,
-      currentlyLearning: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}currently_learning'],
+      learningStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}learning_status'],
       )!,
       dueAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1181,7 +1178,7 @@ class LocalStudyCardRow extends DataClass
   final String? audioUrl;
   final String examplesJson;
   final String tagsJson;
-  final bool currentlyLearning;
+  final String learningStatus;
   final DateTime? dueAt;
   final String scheduleJson;
   final String reviewHistoryJson;
@@ -1202,7 +1199,7 @@ class LocalStudyCardRow extends DataClass
     this.audioUrl,
     required this.examplesJson,
     required this.tagsJson,
-    required this.currentlyLearning,
+    required this.learningStatus,
     this.dueAt,
     required this.scheduleJson,
     required this.reviewHistoryJson,
@@ -1230,7 +1227,7 @@ class LocalStudyCardRow extends DataClass
     }
     map['examples_json'] = Variable<String>(examplesJson);
     map['tags_json'] = Variable<String>(tagsJson);
-    map['currently_learning'] = Variable<bool>(currentlyLearning);
+    map['learning_status'] = Variable<String>(learningStatus);
     if (!nullToAbsent || dueAt != null) {
       map['due_at'] = Variable<DateTime>(dueAt);
     }
@@ -1267,7 +1264,7 @@ class LocalStudyCardRow extends DataClass
           : Value(audioUrl),
       examplesJson: Value(examplesJson),
       tagsJson: Value(tagsJson),
-      currentlyLearning: Value(currentlyLearning),
+      learningStatus: Value(learningStatus),
       dueAt: dueAt == null && nullToAbsent
           ? const Value.absent()
           : Value(dueAt),
@@ -1304,7 +1301,7 @@ class LocalStudyCardRow extends DataClass
       audioUrl: serializer.fromJson<String?>(json['audioUrl']),
       examplesJson: serializer.fromJson<String>(json['examplesJson']),
       tagsJson: serializer.fromJson<String>(json['tagsJson']),
-      currentlyLearning: serializer.fromJson<bool>(json['currentlyLearning']),
+      learningStatus: serializer.fromJson<String>(json['learningStatus']),
       dueAt: serializer.fromJson<DateTime?>(json['dueAt']),
       scheduleJson: serializer.fromJson<String>(json['scheduleJson']),
       reviewHistoryJson: serializer.fromJson<String>(json['reviewHistoryJson']),
@@ -1330,7 +1327,7 @@ class LocalStudyCardRow extends DataClass
       'audioUrl': serializer.toJson<String?>(audioUrl),
       'examplesJson': serializer.toJson<String>(examplesJson),
       'tagsJson': serializer.toJson<String>(tagsJson),
-      'currentlyLearning': serializer.toJson<bool>(currentlyLearning),
+      'learningStatus': serializer.toJson<String>(learningStatus),
       'dueAt': serializer.toJson<DateTime?>(dueAt),
       'scheduleJson': serializer.toJson<String>(scheduleJson),
       'reviewHistoryJson': serializer.toJson<String>(reviewHistoryJson),
@@ -1354,7 +1351,7 @@ class LocalStudyCardRow extends DataClass
     Value<String?> audioUrl = const Value.absent(),
     String? examplesJson,
     String? tagsJson,
-    bool? currentlyLearning,
+    String? learningStatus,
     Value<DateTime?> dueAt = const Value.absent(),
     String? scheduleJson,
     String? reviewHistoryJson,
@@ -1377,7 +1374,7 @@ class LocalStudyCardRow extends DataClass
     audioUrl: audioUrl.present ? audioUrl.value : this.audioUrl,
     examplesJson: examplesJson ?? this.examplesJson,
     tagsJson: tagsJson ?? this.tagsJson,
-    currentlyLearning: currentlyLearning ?? this.currentlyLearning,
+    learningStatus: learningStatus ?? this.learningStatus,
     dueAt: dueAt.present ? dueAt.value : this.dueAt,
     scheduleJson: scheduleJson ?? this.scheduleJson,
     reviewHistoryJson: reviewHistoryJson ?? this.reviewHistoryJson,
@@ -1408,9 +1405,9 @@ class LocalStudyCardRow extends DataClass
           ? data.examplesJson.value
           : this.examplesJson,
       tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
-      currentlyLearning: data.currentlyLearning.present
-          ? data.currentlyLearning.value
-          : this.currentlyLearning,
+      learningStatus: data.learningStatus.present
+          ? data.learningStatus.value
+          : this.learningStatus,
       dueAt: data.dueAt.present ? data.dueAt.value : this.dueAt,
       scheduleJson: data.scheduleJson.present
           ? data.scheduleJson.value
@@ -1446,7 +1443,7 @@ class LocalStudyCardRow extends DataClass
           ..write('audioUrl: $audioUrl, ')
           ..write('examplesJson: $examplesJson, ')
           ..write('tagsJson: $tagsJson, ')
-          ..write('currentlyLearning: $currentlyLearning, ')
+          ..write('learningStatus: $learningStatus, ')
           ..write('dueAt: $dueAt, ')
           ..write('scheduleJson: $scheduleJson, ')
           ..write('reviewHistoryJson: $reviewHistoryJson, ')
@@ -1472,7 +1469,7 @@ class LocalStudyCardRow extends DataClass
     audioUrl,
     examplesJson,
     tagsJson,
-    currentlyLearning,
+    learningStatus,
     dueAt,
     scheduleJson,
     reviewHistoryJson,
@@ -1497,7 +1494,7 @@ class LocalStudyCardRow extends DataClass
           other.audioUrl == this.audioUrl &&
           other.examplesJson == this.examplesJson &&
           other.tagsJson == this.tagsJson &&
-          other.currentlyLearning == this.currentlyLearning &&
+          other.learningStatus == this.learningStatus &&
           other.dueAt == this.dueAt &&
           other.scheduleJson == this.scheduleJson &&
           other.reviewHistoryJson == this.reviewHistoryJson &&
@@ -1520,7 +1517,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<String?> audioUrl;
   final Value<String> examplesJson;
   final Value<String> tagsJson;
-  final Value<bool> currentlyLearning;
+  final Value<String> learningStatus;
   final Value<DateTime?> dueAt;
   final Value<String> scheduleJson;
   final Value<String> reviewHistoryJson;
@@ -1542,7 +1539,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.audioUrl = const Value.absent(),
     this.examplesJson = const Value.absent(),
     this.tagsJson = const Value.absent(),
-    this.currentlyLearning = const Value.absent(),
+    this.learningStatus = const Value.absent(),
     this.dueAt = const Value.absent(),
     this.scheduleJson = const Value.absent(),
     this.reviewHistoryJson = const Value.absent(),
@@ -1565,7 +1562,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.audioUrl = const Value.absent(),
     this.examplesJson = const Value.absent(),
     required String tagsJson,
-    this.currentlyLearning = const Value.absent(),
+    this.learningStatus = const Value.absent(),
     this.dueAt = const Value.absent(),
     required String scheduleJson,
     required String reviewHistoryJson,
@@ -1598,7 +1595,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<String>? audioUrl,
     Expression<String>? examplesJson,
     Expression<String>? tagsJson,
-    Expression<bool>? currentlyLearning,
+    Expression<String>? learningStatus,
     Expression<DateTime>? dueAt,
     Expression<String>? scheduleJson,
     Expression<String>? reviewHistoryJson,
@@ -1621,7 +1618,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       if (audioUrl != null) 'audio_url': audioUrl,
       if (examplesJson != null) 'examples_json': examplesJson,
       if (tagsJson != null) 'tags_json': tagsJson,
-      if (currentlyLearning != null) 'currently_learning': currentlyLearning,
+      if (learningStatus != null) 'learning_status': learningStatus,
       if (dueAt != null) 'due_at': dueAt,
       if (scheduleJson != null) 'schedule_json': scheduleJson,
       if (reviewHistoryJson != null) 'review_history_json': reviewHistoryJson,
@@ -1646,7 +1643,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<String?>? audioUrl,
     Value<String>? examplesJson,
     Value<String>? tagsJson,
-    Value<bool>? currentlyLearning,
+    Value<String>? learningStatus,
     Value<DateTime?>? dueAt,
     Value<String>? scheduleJson,
     Value<String>? reviewHistoryJson,
@@ -1669,7 +1666,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       audioUrl: audioUrl ?? this.audioUrl,
       examplesJson: examplesJson ?? this.examplesJson,
       tagsJson: tagsJson ?? this.tagsJson,
-      currentlyLearning: currentlyLearning ?? this.currentlyLearning,
+      learningStatus: learningStatus ?? this.learningStatus,
       dueAt: dueAt ?? this.dueAt,
       scheduleJson: scheduleJson ?? this.scheduleJson,
       reviewHistoryJson: reviewHistoryJson ?? this.reviewHistoryJson,
@@ -1716,8 +1713,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     if (tagsJson.present) {
       map['tags_json'] = Variable<String>(tagsJson.value);
     }
-    if (currentlyLearning.present) {
-      map['currently_learning'] = Variable<bool>(currentlyLearning.value);
+    if (learningStatus.present) {
+      map['learning_status'] = Variable<String>(learningStatus.value);
     }
     if (dueAt.present) {
       map['due_at'] = Variable<DateTime>(dueAt.value);
@@ -1765,7 +1762,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
           ..write('audioUrl: $audioUrl, ')
           ..write('examplesJson: $examplesJson, ')
           ..write('tagsJson: $tagsJson, ')
-          ..write('currentlyLearning: $currentlyLearning, ')
+          ..write('learningStatus: $learningStatus, ')
           ..write('dueAt: $dueAt, ')
           ..write('scheduleJson: $scheduleJson, ')
           ..write('reviewHistoryJson: $reviewHistoryJson, ')
@@ -2121,7 +2118,7 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
       Value<String?> audioUrl,
       Value<String> examplesJson,
       required String tagsJson,
-      Value<bool> currentlyLearning,
+      Value<String> learningStatus,
       Value<DateTime?> dueAt,
       required String scheduleJson,
       required String reviewHistoryJson,
@@ -2145,7 +2142,7 @@ typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
       Value<String?> audioUrl,
       Value<String> examplesJson,
       Value<String> tagsJson,
-      Value<bool> currentlyLearning,
+      Value<String> learningStatus,
       Value<DateTime?> dueAt,
       Value<String> scheduleJson,
       Value<String> reviewHistoryJson,
@@ -2217,8 +2214,8 @@ class $$LocalStudyCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get currentlyLearning => $composableBuilder(
-    column: $table.currentlyLearning,
+  ColumnFilters<String> get learningStatus => $composableBuilder(
+    column: $table.learningStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2327,8 +2324,8 @@ class $$LocalStudyCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get currentlyLearning => $composableBuilder(
-    column: $table.currentlyLearning,
+  ColumnOrderings<String> get learningStatus => $composableBuilder(
+    column: $table.learningStatus,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2423,8 +2420,8 @@ class $$LocalStudyCardsTableAnnotationComposer
   GeneratedColumn<String> get tagsJson =>
       $composableBuilder(column: $table.tagsJson, builder: (column) => column);
 
-  GeneratedColumn<bool> get currentlyLearning => $composableBuilder(
-    column: $table.currentlyLearning,
+  GeneratedColumn<String> get learningStatus => $composableBuilder(
+    column: $table.learningStatus,
     builder: (column) => column,
   );
 
@@ -2513,7 +2510,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<String?> audioUrl = const Value.absent(),
                 Value<String> examplesJson = const Value.absent(),
                 Value<String> tagsJson = const Value.absent(),
-                Value<bool> currentlyLearning = const Value.absent(),
+                Value<String> learningStatus = const Value.absent(),
                 Value<DateTime?> dueAt = const Value.absent(),
                 Value<String> scheduleJson = const Value.absent(),
                 Value<String> reviewHistoryJson = const Value.absent(),
@@ -2535,7 +2532,7 @@ class $$LocalStudyCardsTableTableManager
                 audioUrl: audioUrl,
                 examplesJson: examplesJson,
                 tagsJson: tagsJson,
-                currentlyLearning: currentlyLearning,
+                learningStatus: learningStatus,
                 dueAt: dueAt,
                 scheduleJson: scheduleJson,
                 reviewHistoryJson: reviewHistoryJson,
@@ -2559,7 +2556,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<String?> audioUrl = const Value.absent(),
                 Value<String> examplesJson = const Value.absent(),
                 required String tagsJson,
-                Value<bool> currentlyLearning = const Value.absent(),
+                Value<String> learningStatus = const Value.absent(),
                 Value<DateTime?> dueAt = const Value.absent(),
                 required String scheduleJson,
                 required String reviewHistoryJson,
@@ -2581,7 +2578,7 @@ class $$LocalStudyCardsTableTableManager
                 audioUrl: audioUrl,
                 examplesJson: examplesJson,
                 tagsJson: tagsJson,
-                currentlyLearning: currentlyLearning,
+                learningStatus: learningStatus,
                 dueAt: dueAt,
                 scheduleJson: scheduleJson,
                 reviewHistoryJson: reviewHistoryJson,

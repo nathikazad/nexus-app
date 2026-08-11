@@ -4,6 +4,7 @@ export 'card/card_rating.dart';
 export 'card/card_review.dart';
 export 'card/card_schedule.dart';
 export 'card/cards_dashboard.dart';
+export 'card/learning_status.dart';
 export 'card/study_card.dart';
 export 'card/study_cue.dart';
 export 'card/study_prompt.dart';

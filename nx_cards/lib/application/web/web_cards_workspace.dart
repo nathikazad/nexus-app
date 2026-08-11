@@ -65,8 +65,8 @@ final class WebCardsWorkspace implements CardsWorkspace {
   Future<void> setSuspended(StudyCard card, bool suspended) =>
       _repository.setSuspended(card, suspended);
   @override
-  Future<void> setCurrentlyLearning(StudyCard card, bool currentlyLearning) =>
-      _repository.setCurrentlyLearning(card, currentlyLearning);
+  Future<void> setLearningStatus(StudyCard card, LearningStatus status) =>
+      _repository.setLearningStatus(card, status);
   @override
   Future<void> deleteCard(int id) => _repository.deleteCard(id);
   @override

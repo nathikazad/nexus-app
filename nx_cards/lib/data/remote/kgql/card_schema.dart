@@ -12,14 +12,6 @@ const bookModelType = 'Book';
 const wordPhrasesRelation = 'word_phrases';
 const verbPhraseConjugationRelation = 'verb_phrase_conjugation';
 const wordCategoryTagSystem = 'Word Category';
-const wordCategories = <String>[
-  'Noun',
-  'Verb',
-  'Adjective',
-  'Adverb',
-  'Postposition',
-  'Script',
-];
 
 bool isLanguageCardModelType(String? name) =>
     name == languageCardModelType ||
@@ -34,7 +26,7 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
-const attrCurrentlyLearning = 'currently_learning';
+const attrLearningStatus = 'learning_status';
 const attrFromLanguage = 'from_language';
 const attrToLanguage = 'to_language';
 const _legacyAttrLanguage = 'language';

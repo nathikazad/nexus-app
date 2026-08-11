@@ -9,8 +9,10 @@ import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
 import 'package:nx_cards/features/cards/card_editors.dart';
+import 'package:nx_cards/features/shell/word_category_order.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
+import 'package:nx_cards/features/shell/word_schedule_status.dart';
 import 'package:nx_db/riverpod.dart';
 
 class CardsHome extends ConsumerStatefulWidget {
@@ -345,11 +347,19 @@ class _WordCategoriesDashboard extends ConsumerWidget {
     final now = DateTime.now();
     final due = data.dueCount(now);
     final currentWords = data.cards
-        .where((card) => card.isWordCard && card.currentlyLearning)
+        .where(
+          (card) =>
+              card.isWordCard && card.learningStatus == LearningStatus.learning,
+        )
         .length;
     final categorizedWords = data.cards
-        .where((card) => card.wordCategory != null)
+        .where((card) => card.isWordCard && card.wordCategory != null)
         .length;
+    final categories = orderedWordCategories(
+      data.cards
+          .where((card) => card.isWordCard)
+          .map((card) => card.wordCategory),
+    );
     return RefreshIndicator(
       onRefresh: ref.read(cardsLibrarySyncProvider),
       child: ListView(
@@ -401,7 +411,7 @@ class _WordCategoriesDashboard extends ConsumerWidget {
                         child: _MetricCard(
                           label: 'Total words',
                           value: '$categorizedWords',
-                          detail: '${wordCategories.length} categories',
+                          detail: '${categories.length} categories',
                           accent: RecallColors.ink,
                         ),
                       ),
@@ -427,7 +437,7 @@ class _WordCategoriesDashboard extends ConsumerWidget {
                         spacing: 14,
                         runSpacing: 14,
                         children: [
-                          for (final category in wordCategories)
+                          for (final category in categories)
                             SizedBox(
                               width: width,
                               child: _WordCategoryCard(
@@ -460,7 +470,9 @@ class _WordCategoryCard extends StatelessWidget {
     final cards = data.cards
         .where((card) => card.wordCategory == category)
         .toList(growable: false);
-    final current = cards.where((card) => card.currentlyLearning).length;
+    final current = cards
+        .where((card) => card.learningStatus == LearningStatus.learning)
+        .length;
     final due = data.dueCount(DateTime.now(), wordCategory: category);
     return Card(
       child: InkWell(
@@ -546,68 +558,90 @@ class WordCategoryScreen extends ConsumerWidget {
           final cards = data.cards
               .where((card) => card.wordCategory == category)
               .toList(growable: false);
-          final current = cards
-              .where((card) => card.currentlyLearning)
+          final learning = cards
+              .where((card) => card.learningStatus == LearningStatus.learning)
               .toList(growable: false);
-          final available = cards
-              .where((card) => !card.currentlyLearning)
+          final learnt = cards
+              .where((card) => card.learningStatus == LearningStatus.learnt)
+              .toList(growable: false);
+          final notStarted = cards
+              .where((card) => card.learningStatus == LearningStatus.notStarted)
               .toList(growable: false);
           final queue = data.studyQueue(
             DateTime.now(),
             wordCategory: category,
-            newCardLimit: current.length * StudyCue.values.length,
+            newCardLimit:
+                (learning.length + learnt.length) * StudyCue.values.length,
           );
-          return RefreshIndicator(
-            onRefresh: ref.read(cardsLibrarySyncProvider),
-            child: ListView(
-              padding: const EdgeInsets.all(24),
+          return DefaultTabController(
+            length: LearningStatus.values.length,
+            child: Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${cards.length} words · ${learning.length} learning',
+                              style: const TextStyle(color: RecallColors.muted),
+                            ),
+                          ),
+                          _StudyLauncher(
+                            title: category,
+                            prompts: queue,
+                            studyCards: [...learning, ...learnt],
+                            languagePair: _languagesForCards(data, cards),
+                            builder: (onPressed) => FilledButton(
+                              onPressed: onPressed,
+                              child: const Text('Study'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 900),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${cards.length} words · ${current.length} currently learning',
-                                style: const TextStyle(
-                                  color: RecallColors.muted,
-                                ),
-                              ),
-                            ),
-                            _StudyLauncher(
-                              title: category,
-                              prompts: queue,
-                              studyCards: current,
-                              languagePair: _languagesForCards(data, current),
-                              builder: (onPressed) => FilledButton(
-                                onPressed: onPressed,
-                                child: const Text('Study'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 25),
-                        _LearningSection(
-                          title: 'Currently learning',
-                          detail: 'Swipe right to reveal −',
-                          cards: current,
-                          currentlyLearning: true,
-                          dashboard: data,
-                        ),
-                        const SizedBox(height: 30),
-                        _LearningSection(
-                          title: 'Not learning',
-                          detail: 'Swipe left to reveal +',
-                          cards: available,
-                          currentlyLearning: false,
-                          dashboard: data,
-                        ),
+                    child: TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      tabs: [
+                        Tab(text: 'Learning  ${learning.length}'),
+                        Tab(text: 'Learnt  ${learnt.length}'),
+                        Tab(text: 'Not started  ${notStarted.length}'),
                       ],
                     ),
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _LearningTab(
+                        cards: learning,
+                        emptyText: 'No words are currently being learned.',
+                        nextStatus: LearningStatus.learnt,
+                        actionLabel: '✓',
+                        dashboard: data,
+                      ),
+                      _LearningTab(
+                        cards: learnt,
+                        emptyText: 'No words have been marked learnt yet.',
+                        dashboard: data,
+                      ),
+                      _LearningTab(
+                        cards: notStarted,
+                        emptyText: 'Every word has been started.',
+                        nextStatus: LearningStatus.learning,
+                        actionLabel: '+',
+                        dashboard: data,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -619,90 +653,83 @@ class WordCategoryScreen extends ConsumerWidget {
   }
 }
 
-class _LearningSection extends StatelessWidget {
-  const _LearningSection({
-    required this.title,
-    required this.detail,
+class _LearningTab extends ConsumerWidget {
+  const _LearningTab({
     required this.cards,
-    required this.currentlyLearning,
+    required this.emptyText,
     required this.dashboard,
+    this.nextStatus,
+    this.actionLabel,
   });
 
-  final String title;
-  final String detail;
   final List<StudyCard> cards;
-  final bool currentlyLearning;
+  final String emptyText;
   final CardsDashboard dashboard;
+  final LearningStatus? nextStatus;
+  final String? actionLabel;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-            ),
+  Widget build(BuildContext context, WidgetRef ref) => RefreshIndicator(
+    onRefresh: ref.read(cardsLibrarySyncProvider),
+    child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: cards.isEmpty
+                ? Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: RecallColors.soft,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: RecallColors.line),
+                    ),
+                    child: Text(
+                      emptyText,
+                      style: const TextStyle(color: RecallColors.muted),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      for (final card in cards)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 9),
+                          child: _LearningStatusRow(
+                            key: ValueKey(
+                              '${card.learningStatus.storageValue}:${card.id}',
+                            ),
+                            card: card,
+                            deck: dashboard.decks
+                                .where((deck) => deck.id == card.deckId)
+                                .firstOrNull,
+                            nextStatus: nextStatus,
+                            actionLabel: actionLabel,
+                          ),
+                        ),
+                    ],
+                  ),
           ),
-          Text(
-            '${cards.length}',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: RecallColors.muted,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 3),
-      Text(
-        detail,
-        style: const TextStyle(fontSize: 11, color: RecallColors.faint),
-      ),
-      const SizedBox(height: 11),
-      if (cards.isEmpty)
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: RecallColors.soft,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: RecallColors.line),
-          ),
-          child: Text(
-            currentlyLearning
-                ? 'No words are currently selected.'
-                : 'Every word in this category is currently selected.',
-            style: const TextStyle(color: RecallColors.muted),
-          ),
-        )
-      else
-        for (final card in cards)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 9),
-            child: _LearningStatusRow(
-              card: card,
-              deck: dashboard.decks
-                  .where((deck) => deck.id == card.deckId)
-                  .firstOrNull,
-              currentlyLearning: currentlyLearning,
-            ),
-          ),
-    ],
+        ),
+      ],
+    ),
   );
 }
 
 class _LearningStatusRow extends ConsumerStatefulWidget {
   const _LearningStatusRow({
+    super.key,
     required this.card,
     required this.deck,
-    required this.currentlyLearning,
+    this.nextStatus,
+    this.actionLabel,
   });
 
   final StudyCard card;
   final CardDeck? deck;
-  final bool currentlyLearning;
+  final LearningStatus? nextStatus;
+  final String? actionLabel;
 
   @override
   ConsumerState<_LearningStatusRow> createState() => _LearningStatusRowState();
@@ -715,11 +742,12 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
   bool _working = false;
 
   void _drag(DragUpdateDetails details) {
+    if (widget.nextStatus == null) return;
     setState(() {
       _dragging = true;
-      _offset = widget.currentlyLearning
-          ? (_offset + details.delta.dx).clamp(0.0, _actionWidth).toDouble()
-          : (_offset + details.delta.dx).clamp(-_actionWidth, 0.0).toDouble();
+      _offset = (_offset + details.delta.dx)
+          .clamp(-_actionWidth, 0.0)
+          .toDouble();
     });
   }
 
@@ -727,29 +755,32 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final reveal = _offset.abs() >= _actionWidth * .42;
     setState(() {
       _dragging = false;
-      _offset = reveal
-          ? (widget.currentlyLearning ? _actionWidth : -_actionWidth)
-          : 0;
+      _offset = reveal ? -_actionWidth : 0;
     });
+    if (reveal) _changeStatus();
   }
 
   Future<void> _changeStatus() async {
-    if (_working) return;
+    final nextStatus = widget.nextStatus;
+    if (_working || nextStatus == null) return;
     setState(() => _working = true);
     try {
       await ref
           .read(cardsRepositoryProvider)
-          .setCurrentlyLearning(widget.card, !widget.currentlyLearning);
+          .setLearningStatus(widget.card, nextStatus);
       ref.invalidate(cardsDashboardProvider);
     } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update word: $error')),
+        );
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _working = false;
           _offset = 0;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update word: $error')),
-        );
       }
     }
   }
@@ -761,9 +792,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     }
     final deck = widget.deck;
     if (deck == null) return;
-    final edit = await showDialog<bool>(
-      context: context,
-      builder: (_) => CardDetailsDialog(deck: deck, card: widget.card),
+    final edit = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CardDetailsPage(deck: deck, card: widget.card),
+      ),
     );
     if (edit == true && mounted) {
       await showDialog<void>(
@@ -779,6 +811,9 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final transliteration = content is LanguageCardContent
         ? content.transliteration
         : '';
+    final scheduleStatus = widget.card.learningStatus == LearningStatus.learning
+        ? wordScheduleStatus(widget.card, DateTime.now().toUtc())
+        : null;
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),
       child: Stack(
@@ -787,9 +822,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
             child: ColoredBox(
               color: RecallColors.ink,
               child: Align(
-                alignment: widget.currentlyLearning
-                    ? Alignment.centerLeft
-                    : Alignment.centerRight,
+                alignment: Alignment.centerRight,
                 child: SizedBox(
                   width: _actionWidth,
                   child: InkWell(
@@ -804,7 +837,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                               ),
                             )
                           : Text(
-                              widget.currentlyLearning ? '−' : '+',
+                              widget.actionLabel ?? '',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 26,
@@ -825,8 +858,12 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
             transform: Matrix4.translationValues(_offset, 0, 0),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onHorizontalDragUpdate: _working ? null : _drag,
-              onHorizontalDragEnd: _working ? null : _finishDrag,
+              onHorizontalDragUpdate: _working || widget.nextStatus == null
+                  ? null
+                  : _drag,
+              onHorizontalDragEnd: _working || widget.nextStatus == null
+                  ? null
+                  : _finishDrag,
               onTap: _working ? null : _showDetails,
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -863,6 +900,48 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                               color: RecallColors.muted,
                             ),
                           ),
+                          if (scheduleStatus != null) ...[
+                            const SizedBox(height: 7),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  scheduleStatus.label.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: .7,
+                                    color: RecallColors.faint,
+                                  ),
+                                ),
+                                if (scheduleStatus.isDue) ...[
+                                  const SizedBox(width: 7),
+                                  Container(
+                                    key: ValueKey('word-schedule-due'),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: RecallColors.ink,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'DUE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'monospace',
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: .7,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1397,9 +1476,10 @@ class _CardRow extends ConsumerWidget {
   final CardDeck deck;
 
   Future<void> _showDetails(BuildContext context) async {
-    final edit = await showDialog<bool>(
-      context: context,
-      builder: (_) => CardDetailsDialog(deck: deck, card: card),
+    final edit = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CardDetailsPage(deck: deck, card: card),
+      ),
     );
     if (edit != true || !context.mounted) return;
     await showDialog<void>(

@@ -35,7 +35,7 @@ const _languageCardStruct = <String, dynamic>{
 
 const _wordCardStruct = <String, dynamic>{
   ..._languageCardStruct,
-  attrCurrentlyLearning: true,
+  attrLearningStatus: true,
 };
 
 class KgqlCardsRepository implements CardsRepository {
@@ -262,18 +262,15 @@ class KgqlCardsRepository implements CardsRepository {
   }
 
   @override
-  Future<void> setCurrentlyLearning(
-    StudyCard card,
-    bool currentlyLearning,
-  ) async {
+  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
         id: card.id,
         attributes: [
           SetModelAttribute(
-            key: attrCurrentlyLearning,
-            value: currentlyLearning,
+            key: attrLearningStatus,
+            value: status.storageValue,
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:nx_cards/domain/card/card_review.dart';
 import 'package:nx_cards/domain/card/card_schedule.dart';
 import 'package:nx_cards/domain/card/card_content.dart';
+import 'package:nx_cards/domain/card/learning_status.dart';
 import 'package:nx_cards/domain/card/study_cue.dart';
 import 'package:nx_cards/domain/card/study_prompt.dart';
 
@@ -13,7 +14,7 @@ class StudyCard {
     required Map<StudyCue, CardSchedule> schedules,
     required Map<StudyCue, List<CardReview>> reviewHistory,
     required this.suspended,
-    this.currentlyLearning = false,
+    this.learningStatus = LearningStatus.notStarted,
     Map<String, List<String>> tags = const <String, List<String>>{},
     this.modelTypeName,
     this.sourceBookId,
@@ -41,7 +42,8 @@ class StudyCard {
   final Map<StudyCue, CardSchedule> schedules;
   final Map<StudyCue, List<CardReview>> reviewHistory;
   final bool suspended;
-  final bool currentlyLearning;
+  final LearningStatus learningStatus;
+  bool get isRecallEligible => learningStatus.isRecallEligible;
   final Map<String, List<String>> tags;
   String? get wordCategory => tags['Word Category']?.firstOrNull;
   final String? modelTypeName;
@@ -95,7 +97,7 @@ class StudyCard {
     Map<StudyCue, CardSchedule>? schedules,
     Map<StudyCue, List<CardReview>>? reviewHistory,
     bool? suspended,
-    bool? currentlyLearning,
+    LearningStatus? learningStatus,
     DateTime? updatedAt,
   }) {
     return StudyCard(
@@ -106,7 +108,7 @@ class StudyCard {
       schedules: schedules ?? this.schedules,
       reviewHistory: reviewHistory ?? this.reviewHistory,
       suspended: suspended ?? this.suspended,
-      currentlyLearning: currentlyLearning ?? this.currentlyLearning,
+      learningStatus: learningStatus ?? this.learningStatus,
       tags: tags,
       modelTypeName: modelTypeName,
       sourceBookId: sourceBookId,

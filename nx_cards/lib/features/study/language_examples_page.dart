@@ -9,10 +9,12 @@ class LanguageExamplesPage extends StatelessWidget {
     super.key,
     required this.card,
     required this.audioRepository,
+    this.backLabel = 'Review',
   });
 
   final StudyCard card;
   final CardAudioRepository? audioRepository;
+  final String backLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class LanguageExamplesPage extends StatelessWidget {
         leading: TextButton.icon(
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back, size: 18),
-          label: const Text('Review'),
+          label: Text(backLabel),
         ),
         title: const Text('Examples'),
         centerTitle: true,

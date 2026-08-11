@@ -32,7 +32,7 @@ void main() {
     expect(dashboard.decks.single.name, 'Malayalam');
     expect(dashboard.cards.single.front, 'talent');
     expect(dashboard.cards.single.content, isA<LanguageCardContent>());
-    expect(dashboard.cards.single.currentlyLearning, isTrue);
+    expect(dashboard.cards.single.learningStatus, LearningStatus.learning);
     expect(dashboard.cards.single.tags, {
       'Language': <String>['Malayalam'],
       'Part of Speech': <String>['Noun'],
@@ -222,7 +222,7 @@ void main() {
     );
   });
 
-  test('schema v6 migrates deck languages and word learning state', () async {
+  test('older schema adds deck languages and word learning status', () async {
     await database.close();
     final directory = await Directory.systemTemp.createTemp(
       'nx-cards-migration-test-',
@@ -245,7 +245,7 @@ void main() {
       'ALTER TABLE local_card_decks DROP COLUMN to_language',
     );
     await oldDatabase.customStatement(
-      'ALTER TABLE local_study_cards DROP COLUMN currently_learning',
+      'ALTER TABLE local_study_cards DROP COLUMN learning_status',
     );
     await oldDatabase.customStatement('PRAGMA user_version = 3');
     await oldDatabase.close();
@@ -258,6 +258,107 @@ void main() {
     );
 
     expect((await upgradedStore.deckManifest()).single.serverHash, isNull);
+  });
+
+  test('schema v6 converts true to learning status', () async {
+    await database.close();
+    final directory = await Directory.systemTemp.createTemp(
+      'nx-cards-v6-migration-test-',
+    );
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final file = File('${directory.path}/cards.sqlite');
+
+    final oldDatabase = CardsDatabase(NativeDatabase(file));
+    final oldStore = DriftLocalCardsStore(
+      database: oldDatabase,
+      account: account,
+    );
+    await oldStore.applySyncBundle(_bundle(hash: 'v6-hash'));
+    await oldDatabase.customStatement(
+      'ALTER TABLE local_study_cards '
+      'RENAME COLUMN learning_status TO currently_learning',
+    );
+    await oldDatabase.customStatement(
+      'UPDATE local_study_cards SET currently_learning = 1',
+    );
+    await oldDatabase.customStatement('PRAGMA user_version = 6');
+    await oldDatabase.close();
+
+    final upgradedDatabase = CardsDatabase(NativeDatabase(file));
+    addTearDown(upgradedDatabase.close);
+    final upgradedStore = DriftLocalCardsStore(
+      database: upgradedDatabase,
+      account: account,
+    );
+
+    final card = (await upgradedStore.readDashboard()).cards.single;
+    expect(card.learningStatus, LearningStatus.learning);
+    expect((await upgradedStore.deckManifest()).single.serverHash, isNull);
+  });
+
+  test('schema v6 tolerates the enum column already being present', () async {
+    await database.close();
+    final directory = await Directory.systemTemp.createTemp(
+      'nx-cards-v6-enum-migration-test-',
+    );
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final file = File('${directory.path}/cards.sqlite');
+
+    final oldDatabase = CardsDatabase(NativeDatabase(file));
+    final oldStore = DriftLocalCardsStore(
+      database: oldDatabase,
+      account: account,
+    );
+    await oldStore.applySyncBundle(_bundle(hash: 'v6-enum-hash'));
+    await oldDatabase.customStatement('PRAGMA user_version = 6');
+    await oldDatabase.close();
+
+    final upgradedDatabase = CardsDatabase(NativeDatabase(file));
+    addTearDown(upgradedDatabase.close);
+    final upgradedStore = DriftLocalCardsStore(
+      database: upgradedDatabase,
+      account: account,
+    );
+
+    final card = (await upgradedStore.readDashboard()).cards.single;
+    expect(card.learningStatus, LearningStatus.learning);
+  });
+
+  test('schema v6 adds learning status when neither column exists', () async {
+    await database.close();
+    final directory = await Directory.systemTemp.createTemp(
+      'nx-cards-v6-missing-migration-test-',
+    );
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final file = File('${directory.path}/cards.sqlite');
+
+    final oldDatabase = CardsDatabase(NativeDatabase(file));
+    final oldStore = DriftLocalCardsStore(
+      database: oldDatabase,
+      account: account,
+    );
+    await oldStore.applySyncBundle(_bundle(hash: 'v6-missing-hash'));
+    await oldDatabase.customStatement(
+      'ALTER TABLE local_study_cards DROP COLUMN learning_status',
+    );
+    await oldDatabase.customStatement('PRAGMA user_version = 6');
+    await oldDatabase.close();
+
+    final upgradedDatabase = CardsDatabase(NativeDatabase(file));
+    addTearDown(upgradedDatabase.close);
+    final upgradedStore = DriftLocalCardsStore(
+      database: upgradedDatabase,
+      account: account,
+    );
+
+    final card = (await upgradedStore.readDashboard()).cards.single;
+    expect(card.learningStatus, LearningStatus.notStarted);
   });
 }
 
@@ -304,7 +405,7 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
               StudyCue.transliteration: <CardReview>[],
             },
             suspended: false,
-            currentlyLearning: true,
+            learningStatus: LearningStatus.learning,
             tags: const <String, List<String>>{
               'Language': <String>['Malayalam'],
               'Part of Speech': <String>['Noun'],

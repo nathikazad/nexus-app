@@ -14,7 +14,7 @@ class CardsDashboard {
             (deckId == null || card.deckId == deckId) &&
             (wordCategory == null || card.wordCategory == wordCategory) &&
             !card.isPhraseCard &&
-            (!card.isWordCard || card.currentlyLearning),
+            (!card.isWordCard || card.isRecallEligible),
       )
       .expand((card) => card.prompts);
 

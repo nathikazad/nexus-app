@@ -32,8 +32,8 @@ class LocalStudyCards extends Table {
   TextColumn get audioUrl => text().nullable()();
   TextColumn get examplesJson => text().withDefault(const Constant('[]'))();
   TextColumn get tagsJson => text()();
-  BoolColumn get currentlyLearning =>
-      boolean().withDefault(const Constant(false))();
+  TextColumn get learningStatus =>
+      text().withDefault(const Constant('not_started'))();
   DateTimeColumn get dueAt => dateTime().nullable()();
   TextColumn get scheduleJson => text()();
   TextColumn get reviewHistoryJson => text()();
@@ -54,7 +54,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -94,8 +94,39 @@ class CardsDatabase extends _$CardsDatabase {
       if (from < 6) {
         await migrator.addColumn(
           localStudyCards,
-          localStudyCards.currentlyLearning,
+          localStudyCards.learningStatus,
         );
+        await update(
+          localCardDecks,
+        ).write(const LocalCardDecksCompanion(serverHash: Value(null)));
+      }
+      if (from == 6) {
+        final columns = {
+          for (final row in await customSelect(
+            'PRAGMA table_info(local_study_cards)',
+          ).get())
+            row.read<String>('name'),
+        };
+        if (columns.contains('currently_learning')) {
+          await customStatement(
+            'ALTER TABLE local_study_cards '
+            'RENAME COLUMN currently_learning TO learning_status',
+          );
+        } else if (!columns.contains('learning_status')) {
+          await migrator.addColumn(
+            localStudyCards,
+            localStudyCards.learningStatus,
+          );
+        }
+        await customStatement(
+          "UPDATE local_study_cards SET learning_status = CASE "
+          "WHEN learning_status IN ('learning', 'learnt', 'not_started') "
+          "THEN learning_status "
+          "WHEN learning_status IN (1, '1', 'true') THEN 'learning' "
+          "ELSE 'not_started' END",
+        );
+      }
+      if (from < 7) {
         await update(
           localCardDecks,
         ).write(const LocalCardDecksCompanion(serverHash: Value(null)));

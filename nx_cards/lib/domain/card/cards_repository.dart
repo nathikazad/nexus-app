@@ -1,5 +1,6 @@
 import 'package:nx_cards/domain/book/related_book.dart';
 import 'package:nx_cards/domain/card/card_content.dart';
+import 'package:nx_cards/domain/card/learning_status.dart';
 import 'package:nx_cards/domain/card/study_card.dart';
 import 'package:nx_cards/domain/deck/card_deck.dart';
 
@@ -34,6 +35,6 @@ abstract class CardsRepository {
 
   Future<void> saveSchedule(StudyCard card);
   Future<void> setSuspended(StudyCard card, bool suspended);
-  Future<void> setCurrentlyLearning(StudyCard card, bool currentlyLearning);
+  Future<void> setLearningStatus(StudyCard card, LearningStatus status);
   Future<void> deleteCard(int id);
 }

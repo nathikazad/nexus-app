@@ -45,8 +45,8 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
           if (card.modelTypeName == wordCardModelType ||
               card.modelTypeName == verbCardModelType)
             SetModelAttribute(
-              key: attrCurrentlyLearning,
-              value: card.currentlyLearning,
+              key: attrLearningStatus,
+              value: card.learningStatus.storageValue,
             ),
         ],
       ),

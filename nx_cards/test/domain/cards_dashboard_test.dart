@@ -72,7 +72,7 @@ void main() {
     expect(queue.map((prompt) => prompt.cue).toSet(), StudyCue.values.toSet());
   });
 
-  test('word category queues include only currently learning words', () {
+  test('word queues include learning and learnt but not unstarted words', () {
     final dashboard = CardsDashboard(
       decks: const [deck],
       cards: [
@@ -80,14 +80,20 @@ void main() {
           1,
           modelTypeName: 'Word',
           wordCategory: 'Noun',
-          currentlyLearning: true,
+          learningStatus: LearningStatus.learning,
         ),
         _card(2, modelTypeName: 'Word', wordCategory: 'Noun'),
+        _card(
+          5,
+          modelTypeName: 'Word',
+          wordCategory: 'Noun',
+          learningStatus: LearningStatus.learnt,
+        ),
         _card(
           3,
           modelTypeName: 'Verb',
           wordCategory: 'Verb',
-          currentlyLearning: true,
+          learningStatus: LearningStatus.learning,
         ),
         _card(4, modelTypeName: 'Phrase'),
       ],
@@ -97,10 +103,10 @@ void main() {
       dashboard
           .studyQueue(now, wordCategory: 'Noun')
           .map((prompt) => prompt.cardId),
-      [1],
+      [1, 5],
     );
-    expect(dashboard.newCount(wordCategory: 'Noun'), 1);
-    expect(dashboard.studyQueue(now).map((prompt) => prompt.cardId), [1, 3]);
+    expect(dashboard.newCount(wordCategory: 'Noun'), 2);
+    expect(dashboard.studyQueue(now).map((prompt) => prompt.cardId), [1, 3, 5]);
   });
 }
 
@@ -110,7 +116,7 @@ StudyCard _card(
   DateTime? reviewed,
   bool suspended = false,
   bool enableAllCues = false,
-  bool currentlyLearning = false,
+  LearningStatus learningStatus = LearningStatus.notStarted,
   String? modelTypeName,
   String? wordCategory,
 }) {
@@ -144,7 +150,7 @@ StudyCard _card(
       StudyCue.transliteration: <CardReview>[],
     },
     suspended: suspended,
-    currentlyLearning: currentlyLearning,
+    learningStatus: learningStatus,
     modelTypeName: modelTypeName,
     tags: wordCategory == null
         ? const <String, List<String>>{}

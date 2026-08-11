@@ -62,7 +62,9 @@ StudyCard? studyCardFromModel(
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
-    currentlyLearning: model.attrBool(attrCurrentlyLearning) ?? false,
+    learningStatus: LearningStatus.fromStorage(
+      model.attributes?[attrLearningStatus],
+    ),
     tags: model.tags ?? const <String, List<String>>{},
     modelTypeName: modelTypeName,
     sourceBookId: book?.id,

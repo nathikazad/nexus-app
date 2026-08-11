@@ -25,6 +25,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   bool _saving = false;
   bool _ended = false;
   int _missCount = 0;
+  final Map<int, CardRating> _ratings = <int, CardRating>{};
   Map<CardRating, ScheduledOutcome>? _outcomes;
   late final Map<int, StudyCard> _latestCards;
 
@@ -59,6 +60,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     try {
       final updatedCard = _outcomes![rating]!.card;
       await ref.read(cardsRepositoryProvider).saveSchedule(updatedCard);
+      _ratings[_index] = rating;
       _latestCards[updatedCard.id] = updatedCard;
       if (rating == CardRating.again) _missCount++;
       ref.invalidate(cardsDashboardProvider);
@@ -93,6 +95,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
         reviewedCount: _index,
         totalCount: widget.prompts.length,
         missCount: _missCount,
+        entries: [
+          for (var index = 0; index < widget.prompts.length; index++)
+            _RecallRecapEntry(
+              card:
+                  _latestCards[widget.prompts[index].cardId] ??
+                  widget.prompts[index].card,
+              rating: _ratings[index],
+            ),
+        ],
       );
     }
     final audioRepository = ref.watch(cardAudioRepositoryProvider);
@@ -568,58 +579,172 @@ class _CompletedStudyScreen extends StatelessWidget {
     required this.reviewedCount,
     required this.totalCount,
     required this.missCount,
+    required this.entries,
   });
   final int reviewedCount;
   final int totalCount;
   final int missCount;
+  final List<_RecallRecapEntry> entries;
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 40, 24, 28),
         children: [
-          const Icon(
-            Icons.auto_awesome_outlined,
-            size: 48,
-            color: RecallColors.violet,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Session complete',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '$reviewedCount of $totalCount cards reviewed',
-            style: const TextStyle(color: RecallColors.muted),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 24,
-            runSpacing: 8,
-            children: [
-              _RecapStat(
-                value: '${reviewedCount - missCount}',
-                label: 'Recalled',
-                color: RecallColors.emerald,
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_outlined,
+                    size: 48,
+                    color: RecallColors.violet,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Session complete',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$reviewedCount of $totalCount cards reviewed',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: RecallColors.muted),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 24,
+                    runSpacing: 8,
+                    children: [
+                      _RecapStat(
+                        value: '${reviewedCount - missCount}',
+                        label: 'Recalled',
+                        color: RecallColors.emerald,
+                      ),
+                      _RecapStat(
+                        value: '$missCount',
+                        label: 'Not recalled',
+                        color: RecallColors.rose,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Text('WORDS', style: monoLabel),
+                  const SizedBox(height: 9),
+                  _RecallWordRecap(entries: entries),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Return to categories'),
+                  ),
+                ],
               ),
-              _RecapStat(
-                value: '$missCount',
-                label: 'Not recalled',
-                color: RecallColors.rose,
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Return to categories'),
+            ),
           ),
         ],
       ),
     ),
   );
+}
+
+class _RecallRecapEntry {
+  const _RecallRecapEntry({required this.card, required this.rating});
+
+  final StudyCard card;
+  final CardRating? rating;
+}
+
+class _RecallWordRecap extends StatelessWidget {
+  const _RecallWordRecap({required this.entries});
+
+  final List<_RecallRecapEntry> entries;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: RecallColors.line),
+    ),
+    child: Column(
+      children: [
+        for (var index = 0; index < entries.length; index++) ...[
+          if (index > 0) const Divider(height: 1),
+          _RecallWordRecapRow(entry: entries[index]),
+        ],
+      ],
+    ),
+  );
+}
+
+class _RecallWordRecapRow extends StatelessWidget {
+  const _RecallWordRecapRow({required this.entry});
+
+  final _RecallRecapEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (entry.rating) {
+      CardRating.again => ('INCORRECT', RecallColors.rose),
+      CardRating.good ||
+      CardRating.easy ||
+      CardRating.hard => ('CORRECT', RecallColors.emerald),
+      null => ('NOT REVIEWED', RecallColors.muted),
+    };
+    final content = entry.card.content;
+    final english = entry.card.front;
+    final malayalam = entry.card.back;
+    final transliteration = content is LanguageCardContent
+        ? content.transliteration
+        : '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  english,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(malayalam, style: const TextStyle(fontSize: 15)),
+                if (transliteration.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    transliteration,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: RecallColors.muted,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontFamily: 'monospace',
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RecapStat extends StatelessWidget {
