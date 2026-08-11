@@ -8,6 +8,7 @@ import 'package:nx_notes/data/document/nx_docs_state.dart';
 import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/composition/offline_providers.dart';
 import 'package:nx_notes/features/desktop/desktop_shell.dart';
+import 'package:nx_notes/features/live_conversation/note_live_conversation_coordinator.dart';
 import 'package:nx_notes/features/mobile/mobile_shell.dart';
 import 'package:nx_notes/features/shell/notes_state.dart';
 
@@ -27,6 +28,7 @@ class _NotesRootShellState extends ConsumerState<NotesRootShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(noteLiveConversationCoordinatorProvider);
     ref.listen<int?>(
       desktopWorkspaceProvider.select((state) => state.activeDocumentId),
       (_, next) => _handleActiveDocumentChange(next),

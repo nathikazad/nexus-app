@@ -1,23 +1,17 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
-import 'package:nx_notes/domain/ai/conversation_reference.dart';
-import 'package:nx_notes/domain/document/document.dart';
+import 'package:nx_notes/features/live_conversation/note_live_conversation_coordinator.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_controller.dart';
-import 'package:nx_notes/features/live_conversation/openai_api_key.dart';
 
 class NoteLiveConversationPanel extends StatefulWidget {
   const NoteLiveConversationPanel({
-    required this.document,
-    required this.references,
+    required this.coordinator,
     required this.onEnd,
     super.key,
   });
 
-  final NxDocument document;
-  final List<ConversationReference> references;
+  final NoteLiveConversationCoordinator coordinator;
   final VoidCallback onEnd;
 
   @override
@@ -26,110 +20,87 @@ class NoteLiveConversationPanel extends StatefulWidget {
 }
 
 class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
-  late final NoteLiveConversationController controller;
-  bool _ending = false;
-  bool _completed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    controller = NoteLiveConversationController(
-      session: LiveAgentSession(transport: OpenAiRealtimeTransport()),
-    );
-    unawaited(
-      controller.start(
-        document: widget.document,
-        references: widget.references,
-        credentialProvider: const StaticLiveAgentCredentialProvider(
-          openAiApiKey,
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
   Future<void> _end() async {
-    if (_ending) return;
-    setState(() => _ending = true);
-    await controller.end();
-    if (mounted) {
-      setState(() {
-        _ending = false;
-        _completed = true;
-      });
-    }
+    await widget.coordinator.stop();
   }
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: controller,
-    builder: (context, _) => Padding(
-      key: const ValueKey<String>('note-live-conversation-panel'),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.graphic_eq_rounded, size: 18),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Live conversation',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ),
-              Text(
-                _phaseLabel(controller.phase),
-                style: TextStyle(
-                  color: AppColors.faint,
-                  fontSize: 10,
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 24),
-          if (_completed)
-            Expanded(
-              child: _LiveConversationRecap(
-                controller: controller,
-                onReturnToChat: widget.onEnd,
-              ),
-            )
-          else ...[
-            Expanded(
-              child: Center(child: _LiveState(controller: controller)),
-            ),
-            const SizedBox(height: 12),
+    animation: widget.coordinator,
+    builder: (context, _) {
+      final controller = widget.coordinator.controller;
+      if (controller == null) return const SizedBox.shrink();
+      final sourceTitle = widget.coordinator.sourceDocument?.title;
+      return Padding(
+        key: const ValueKey<String>('note-live-conversation-panel'),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _LiveControls(controller: controller),
-                const SizedBox(width: 12),
-                FilledButton.tonalIcon(
-                  key: const ValueKey<String>('note-live-end-button'),
-                  onPressed: _ending ? null : _end,
-                  icon: const Icon(Icons.stop_rounded, size: 18),
-                  label: const Text('End'),
+                const Icon(Icons.graphic_eq_rounded, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    sourceTitle == null
+                        ? 'Live conversation'
+                        : 'Live · $sourceTitle',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  _phaseLabel(controller.phase),
+                  style: TextStyle(
+                    color: AppColors.faint,
+                    fontSize: 10,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            Text(
-              'Temporary conversation · latest four exchanges retained',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.faint, fontSize: 11),
-            ),
+            const Divider(height: 24),
+            if (widget.coordinator.hasRecap)
+              Expanded(
+                child: _LiveConversationRecap(
+                  controller: controller,
+                  onReturnToChat: widget.onEnd,
+                ),
+              )
+            else ...[
+              Expanded(
+                child: Center(child: _LiveState(controller: controller)),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _LiveControls(controller: controller),
+                  const SizedBox(width: 12),
+                  FilledButton.tonalIcon(
+                    key: const ValueKey<String>('note-live-end-button'),
+                    onPressed: widget.coordinator.isStopping ? null : _end,
+                    icon: const Icon(Icons.stop_rounded, size: 18),
+                    label: const Text('End'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Temporary conversation · latest four exchanges retained',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.faint, fontSize: 11),
+              ),
+            ],
           ],
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
 }
 

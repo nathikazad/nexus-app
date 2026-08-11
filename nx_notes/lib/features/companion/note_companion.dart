@@ -5,6 +5,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_live_agent/nx_live_agent.dart';
 import 'package:nx_notes/composition/book_context_providers.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
 import 'package:nx_notes/core/layout/is_desktop_layout.dart';
@@ -15,6 +16,7 @@ import 'package:nx_notes/domain/document/document_audio.dart';
 import 'package:nx_notes/domain/ai/conversation_reference.dart';
 import 'package:nx_notes/features/books/ai/book_chapter_conversation_picker.dart';
 import 'package:nx_notes/features/companion/note_companion_controller.dart';
+import 'package:nx_notes/features/live_conversation/note_live_conversation_coordinator.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -43,17 +45,17 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _textFocusNode = FocusNode();
   NoteCompanionController? _controller;
+  NoteLiveConversationCoordinator? _liveCoordinator;
   bool _chatExpanded = false;
   bool _audioExpanded = false;
-  bool _liveConversationActive = false;
   bool _bookChapterPickerActive = false;
-  List<ConversationReference> _liveConversationReferences = const [];
   bool _embeddedHistoryRequested = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _ensureController();
+    _ensureLiveCoordinator();
   }
 
   @override
@@ -63,11 +65,16 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       _replaceController();
       _chatExpanded = false;
       _audioExpanded = false;
-      _liveConversationActive = false;
       _bookChapterPickerActive = false;
-      _liveConversationReferences = const [];
       _embeddedHistoryRequested = false;
     }
+  }
+
+  void _ensureLiveCoordinator() {
+    if (_liveCoordinator != null) return;
+    final coordinator = ref.read(noteLiveConversationCoordinatorProvider);
+    coordinator.addListener(_onLiveCoordinatorChanged);
+    _liveCoordinator = coordinator;
   }
 
   void _ensureController() {
@@ -150,10 +157,15 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     if (mounted) setState(() {});
   }
 
+  void _onLiveCoordinatorChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     _controller?.removeListener(_onControllerChanged);
     _controller?.dispose();
+    _liveCoordinator?.removeListener(_onLiveCoordinatorChanged);
     _textController.dispose();
     _textFocusNode.dispose();
     super.dispose();
@@ -161,7 +173,9 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(noteLiveConversationCoordinatorProvider);
     final controller = _controller;
+    final liveCoordinator = _liveCoordinator;
     final Widget content;
     if (widget.embeddedChat) {
       _loadEmbeddedHistory();
@@ -220,26 +234,46 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                   const SizedBox(width: 8),
                   Semantics(
                     button: true,
-                    label: 'Open note AI',
+                    label: liveCoordinator?.isActive == true
+                        ? 'Stop live conversation'
+                        : 'Open note AI',
                     child: Tooltip(
-                      message: 'Ask AI about this note',
+                      message: liveCoordinator?.isActive == true
+                          ? 'Stop live conversation'
+                          : 'Ask AI about this note',
                       child: FloatingActionButton.small(
                         heroTag: 'note-companion-${widget.document.id}',
                         elevation: 2,
                         backgroundColor: AppColors.floating,
                         foregroundColor: AppColors.onFloating,
-                        onPressed: () {
-                          FocusScope.of(context).unfocus();
-                          final opening = !_chatExpanded;
-                          setState(() {
-                            _chatExpanded = opening;
-                            if (_chatExpanded) _audioExpanded = false;
-                          });
-                          if (opening && controller != null) {
-                            unawaited(controller.loadHistory());
-                          }
-                        },
-                        child: const Icon(Icons.auto_awesome_rounded, size: 18),
+                        onPressed: liveCoordinator?.isStopping == true
+                            ? null
+                            : liveCoordinator?.isActive == true
+                            ? () => unawaited(_stopLiveConversation())
+                            : () {
+                                FocusScope.of(context).unfocus();
+                                final opening = !_chatExpanded;
+                                setState(() {
+                                  _chatExpanded = opening;
+                                  if (_chatExpanded) _audioExpanded = false;
+                                });
+                                if (opening && controller != null) {
+                                  unawaited(controller.loadHistory());
+                                }
+                              },
+                        child: liveCoordinator?.isStopping == true
+                            ? const SizedBox.square(
+                                dimension: 17,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                liveCoordinator?.isActive == true
+                                    ? Icons.stop_rounded
+                                    : Icons.auto_awesome_rounded,
+                                size: 18,
+                              ),
                       ),
                     ),
                   ),
@@ -257,9 +291,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               FocusScope.of(context).unfocus();
               setState(() {
                 _chatExpanded = false;
-                _liveConversationActive = false;
                 _bookChapterPickerActive = false;
-                _liveConversationReferences = const [];
               });
             }
           : null,
@@ -284,13 +316,20 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               FocusScope.of(context).unfocus();
               setState(() {
                 _chatExpanded = false;
-                _liveConversationActive = false;
                 _bookChapterPickerActive = false;
-                _liveConversationReferences = const [];
               });
             },
           ),
-        if (controller == null)
+        if (_liveCoordinator?.hasConversation == true)
+          Expanded(
+            child: NoteLiveConversationPanel(
+              coordinator: _liveCoordinator!,
+              onEnd: () {
+                _liveCoordinator?.dismissRecap();
+              },
+            ),
+          )
+        else if (controller == null)
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -301,22 +340,6 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                   style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
               ),
-            ),
-          )
-        else if (_liveConversationActive)
-          Expanded(
-            child: NoteLiveConversationPanel(
-              key: ValueKey<int>(widget.document.id),
-              document: widget.document,
-              references: _liveConversationReferences,
-              onEnd: () {
-                if (mounted) {
-                  setState(() {
-                    _liveConversationActive = false;
-                    _liveConversationReferences = const [];
-                  });
-                }
-              },
             ),
           )
         else if (_bookChapterPickerActive)
@@ -331,11 +354,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
               },
               onStart: (references) {
                 if (mounted) {
-                  setState(() {
-                    _bookChapterPickerActive = false;
-                    _liveConversationReferences = references;
-                    _liveConversationActive = true;
-                  });
+                  unawaited(_beginLiveConversation(references));
                 }
               },
             ),
@@ -454,13 +473,42 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
 
   void _startLiveConversation() {
     FocusScope.of(context).unfocus();
-    setState(() {
-      _liveConversationReferences = const [];
-      if (widget.document.isBook) {
+    if (widget.document.isBook) {
+      setState(() {
         _bookChapterPickerActive = true;
-      } else {
-        _liveConversationActive = true;
-      }
+      });
+      return;
+    }
+    unawaited(_beginLiveConversation(const <ConversationReference>[]));
+  }
+
+  Future<void> _beginLiveConversation(
+    List<ConversationReference> references,
+  ) async {
+    final coordinator = _liveCoordinator;
+    if (coordinator == null || coordinator.hasConversation) return;
+    final started = coordinator.start(
+      document: widget.document,
+      references: references,
+    );
+    setState(() {
+      _bookChapterPickerActive = false;
+    });
+    await started;
+    if (!mounted || widget.embeddedChat) return;
+    setState(() {
+      _chatExpanded = coordinator.controller?.phase == LiveAgentPhase.error;
+    });
+  }
+
+  Future<void> _stopLiveConversation() async {
+    final coordinator = _liveCoordinator;
+    if (coordinator == null) return;
+    await coordinator.stop();
+    if (!mounted) return;
+    setState(() {
+      _chatExpanded = true;
+      _audioExpanded = false;
     });
   }
 }
