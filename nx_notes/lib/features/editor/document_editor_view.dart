@@ -1640,6 +1640,10 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       editorScrollController: _scrollController,
       editorStyle: editorStyle,
       blockComponentBuilders: nxBlockComponentBuilders(
+        // AppFlowy's editable table can reserve its stored height without
+        // painting imported cells on macOS. Keep the stable content renderer
+        // in both modes so switching to Edit cannot reintroduce a blank block.
+        useReadTable: true,
         deleteDocumentImage: widget.deleteDocumentImage,
         resolveDocumentImage: widget.resolveDocumentImage,
         documentImageBaseUrl: widget.documentImageBaseUrl,

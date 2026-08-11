@@ -9,9 +9,21 @@ import 'package:nx_notes/data/providers.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/editor/document_editor_view.dart';
 import 'package:nx_notes/features/editor/document_text_scale.dart';
+import 'package:nx_notes/features/editor/nx_appflowy_blocks.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('read mode replaces only the table presentation builder', () {
+    expect(
+      nxBlockComponentBuilders()[TableBlockKeys.type],
+      isA<TableBlockComponentBuilder>(),
+    );
+    expect(
+      nxBlockComponentBuilders(useReadTable: true)[TableBlockKeys.type],
+      isA<NxReadTableBlockComponentBuilder>(),
+    );
+  });
+
   testWidgets(
     'narrow read-only editor exposes no controls or software keyboard',
     (tester) async {
@@ -91,6 +103,79 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('title-display-1')), findsNothing);
     expect(find.byType(AppFlowyEditor), findsOneWidget);
+  });
+
+  for (final width in <double>[390, 1200]) {
+    testWidgets('reader renders stored table cells at ${width.toInt()}px', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            documentImageAssetServiceProvider.overrideWithValue(null),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: width,
+                height: 700,
+                child: DocumentEditorBody(
+                  document: _tableDocument(),
+                  readOnly: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey<String>('nx-read-table')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey<String>('nx-read-table')))
+            .height,
+        lessThan(328),
+      );
+      expect(find.text('More for personal use'), findsOneWidget);
+      expect(find.text('More for showing off'), findsOneWidget);
+      expect(find.text('Gasoline, insurance'), findsOneWidget);
+      expect(find.text('Restaurants, living-room furniture'), findsOneWidget);
+    });
+  }
+
+  testWidgets('editable desktop document also renders stored table cells', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [documentImageAssetServiceProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1200, 800)),
+            child: Scaffold(
+              body: DocumentEditorBody(document: _tableDocument()),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+    expect(editor.editable, isTrue);
+    expect(find.byKey(const ValueKey<String>('nx-read-table')), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey<String>('nx-read-table')))
+          .height,
+      lessThan(328),
+    );
+    expect(find.text('More for personal use'), findsOneWidget);
+    expect(find.text('Restaurants, living-room furniture'), findsOneWidget);
   });
 
   testWidgets('narrow long document shows a subtle scroll position dot', (
@@ -277,5 +362,119 @@ NxDocument _document() {
     versionNumber: 1,
     excerpt: 'Body text',
     links: const [],
+  );
+}
+
+NxDocument _tableDocument() {
+  return _document().copyWith(
+    document: 'Most goods mix functional and signaling value',
+    jsonDocument: const <String, dynamic>{
+      'format': 'appflowy_document',
+      'document': <String, dynamic>{
+        'type': 'page',
+        'children': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'type': 'paragraph',
+            'data': <String, dynamic>{
+              'delta': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'insert': 'Most goods mix functional and signaling value:',
+                },
+              ],
+            },
+          },
+          <String, dynamic>{
+            'type': 'table',
+            'data': <String, dynamic>{
+              'colsLen': 2,
+              'rowsLen': 2,
+              'colsHeight': 328,
+              'colDefaultWidth': 160,
+              'rowDefaultHeight': 40,
+            },
+            'children': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'type': 'table/cell',
+                'data': <String, dynamic>{
+                  'colPosition': 0,
+                  'rowPosition': 0,
+                  'width': 160,
+                  'height': 60,
+                },
+                'children': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'type': 'paragraph',
+                    'data': <String, dynamic>{
+                      'delta': <Map<String, dynamic>>[
+                        <String, dynamic>{'insert': 'More for personal use'},
+                      ],
+                    },
+                  },
+                ],
+              },
+              <String, dynamic>{
+                'type': 'table/cell',
+                'data': <String, dynamic>{
+                  'colPosition': 1,
+                  'rowPosition': 0,
+                  'width': 160,
+                  'height': 60,
+                },
+                'children': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'type': 'paragraph',
+                    'data': <String, dynamic>{
+                      'delta': <Map<String, dynamic>>[
+                        <String, dynamic>{'insert': 'More for showing off'},
+                      ],
+                    },
+                  },
+                ],
+              },
+              <String, dynamic>{
+                'type': 'table/cell',
+                'data': <String, dynamic>{
+                  'colPosition': 0,
+                  'rowPosition': 1,
+                  'width': 160,
+                  'height': 86,
+                },
+                'children': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'type': 'paragraph',
+                    'data': <String, dynamic>{
+                      'delta': <Map<String, dynamic>>[
+                        <String, dynamic>{'insert': 'Gasoline, insurance'},
+                      ],
+                    },
+                  },
+                ],
+              },
+              <String, dynamic>{
+                'type': 'table/cell',
+                'data': <String, dynamic>{
+                  'colPosition': 1,
+                  'rowPosition': 1,
+                  'width': 160,
+                  'height': 86,
+                },
+                'children': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'type': 'paragraph',
+                    'data': <String, dynamic>{
+                      'delta': <Map<String, dynamic>>[
+                        <String, dynamic>{
+                          'insert': 'Restaurants, living-room furniture',
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    },
   );
 }

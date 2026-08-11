@@ -20,18 +20,21 @@ part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
 part 'nx_excalidraw_block.dart';
 part 'nx_document_image_block.dart';
+part 'nx_read_table_block.dart';
 
 const String nxToggleBlockType = 'nx_toggle';
 const String nxBlogLinkBlockType = 'nx_blog_link';
 const String nxExcalidrawBlockType = 'nx_excalidraw';
 
 Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
+  bool useReadTable = false,
   Future<void> Function(String url)? deleteDocumentImage,
   String Function(String url)? resolveDocumentImage,
   String? documentImageBaseUrl,
 }) {
   final builders = <String, BlockComponentBuilder>{
     ...standardBlockComponentBuilderMap,
+    if (useReadTable) TableBlockKeys.type: NxReadTableBlockComponentBuilder(),
     HeadingBlockKeys.type: HeadingBlockComponentBuilder(
       configuration: standardBlockComponentConfiguration.copyWith(
         placeholderText: (node) =>
