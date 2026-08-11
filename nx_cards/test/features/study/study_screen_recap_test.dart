@@ -28,7 +28,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(const CardsDashboard(decks: [], cards: [])),
+          ),
+        ],
         child: MaterialApp(
           home: StudyScreen(
             title: 'Malayalam',

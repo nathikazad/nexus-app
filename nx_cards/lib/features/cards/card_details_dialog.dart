@@ -8,10 +8,16 @@ import 'package:nx_cards/features/study/language_audio_controls.dart';
 import 'package:nx_cards/features/study/language_examples_page.dart';
 
 class CardDetailsPage extends ConsumerStatefulWidget {
-  const CardDetailsPage({super.key, required this.deck, required this.card});
+  const CardDetailsPage({
+    super.key,
+    required this.deck,
+    required this.card,
+    this.allowEdit = true,
+  });
 
   final CardDeck deck;
   final StudyCard card;
+  final bool allowEdit;
 
   @override
   ConsumerState<CardDetailsPage> createState() => _CardDetailsPageState();
@@ -50,14 +56,16 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Card details'),
-        actions: [
-          IconButton(
-            tooltip: 'Edit card',
-            onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.edit_outlined),
-          ),
-          const SizedBox(width: 6),
-        ],
+        actions: widget.allowEdit
+            ? [
+                IconButton(
+                  tooltip: 'Edit card',
+                  onPressed: () => Navigator.of(context).pop(true),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                const SizedBox(width: 6),
+              ]
+            : null,
       ),
       body: SafeArea(
         child: Center(

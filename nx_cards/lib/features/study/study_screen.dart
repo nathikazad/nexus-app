@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +6,7 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/domain/scheduling/card_scheduler.dart';
 import 'package:nx_cards/domain/cards_models.dart';
-import 'package:nx_cards/features/cards/card_editors.dart';
+import 'package:nx_cards/features/cards/card_details_dialog.dart';
 import 'package:nx_cards/features/study/language_audio_controls.dart';
 import 'package:nx_cards/features/study/language_examples_page.dart';
 
@@ -87,8 +88,30 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   void _endReview() => setState(() => _ended = true);
 
+  Future<void> _openCardDetails() async {
+    final dashboard = ref.read(cardsDashboardProvider).value;
+    final deck = dashboard?.decks
+        .where((candidate) => candidate.id == _card.deckId)
+        .firstOrNull;
+    if (deck == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Card details are not available yet')),
+        );
+      }
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            CardDetailsPage(deck: deck, card: _card, allowEdit: false),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.watch(cardsDashboardProvider);
     if (widget.prompts.isEmpty) return const _EmptyStudyScreen();
     if (_ended || _index >= widget.prompts.length) {
       return _CompletedStudyScreen(
@@ -178,10 +201,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                               _card.deckName.toUpperCase(),
                                             ),
                                             const Spacer(),
-                                            const Icon(
-                                              Icons.refresh_rounded,
-                                              color: RecallColors.faint,
-                                            ),
+                                            if (_revealed)
+                                              IconButton(
+                                                onPressed: _openCardDetails,
+                                                tooltip: 'Card stats',
+                                                icon: const Icon(
+                                                  Icons.analytics_outlined,
+                                                  size: 20,
+                                                ),
+                                              ),
                                           ],
                                         ),
                                         Expanded(
@@ -332,6 +360,42 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                               audioRepository,
                                                         ),
                                                       ],
+                                                      if (_card.content
+                                                          case LanguageCardContent(
+                                                            examples: final examples,
+                                                          )
+                                                          when examples
+                                                              .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 14,
+                                                        ),
+                                                        TextButton.icon(
+                                                          onPressed: () =>
+                                                              Navigator.of(
+                                                                context,
+                                                              ).push(
+                                                                MaterialPageRoute<
+                                                                  void
+                                                                >(
+                                                                  builder: (_) =>
+                                                                      LanguageExamplesPage(
+                                                                        card:
+                                                                            _card,
+                                                                        audioRepository:
+                                                                            audioRepository,
+                                                                      ),
+                                                                ),
+                                                              ),
+                                                          icon: const Icon(
+                                                            Icons
+                                                                .menu_book_outlined,
+                                                            size: 17,
+                                                          ),
+                                                          label: const Text(
+                                                            'Examples',
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ],
                                                   ],
                                                 ),
@@ -365,55 +429,20 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                               Icons.visibility_outlined,
                               size: 18,
                             ),
-                            label: const Padding(
-                              padding: EdgeInsets.symmetric(
+                            label: Padding(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
                                 vertical: 12,
                               ),
-                              child: Text('Show answer   Space'),
+                              child: Text(
+                                _showsSpaceShortcut
+                                    ? 'Show answer   Space'
+                                    : 'Show answer',
+                              ),
                             ),
                           )
                         else
                           _RatingBar(enabled: !_saving, onRate: _answer),
-                        const SizedBox(height: 16),
-                        if (_revealed)
-                          if (_card.content case LanguageCardContent(
-                            examples: final examples,
-                          ) when examples.isNotEmpty)
-                            TextButton.icon(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => LanguageExamplesPage(
-                                    card: _card,
-                                    audioRepository: audioRepository,
-                                  ),
-                                ),
-                              ),
-                              icon: const Icon(
-                                Icons.menu_book_outlined,
-                                size: 17,
-                              ),
-                              label: const Text('Examples'),
-                            ),
-                        TextButton.icon(
-                          onPressed: () async {
-                            final dashboard = ref
-                                .read(cardsDashboardProvider)
-                                .value;
-                            final deck = dashboard?.decks
-                                .where((d) => d.id == _card.deckId)
-                                .firstOrNull;
-                            if (deck != null) {
-                              await showDialog<void>(
-                                context: context,
-                                builder: (_) =>
-                                    CardEditorDialog(deck: deck, card: _card),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.edit_outlined, size: 16),
-                          label: const Text('Edit card'),
-                        ),
                       ],
                     ),
                   ),
@@ -426,6 +455,13 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     );
   }
 }
+
+bool get _showsSpaceShortcut => switch (defaultTargetPlatform) {
+  TargetPlatform.macOS ||
+  TargetPlatform.windows ||
+  TargetPlatform.linux => true,
+  _ => false,
+};
 
 class _StudyHeader extends StatelessWidget {
   const _StudyHeader({
