@@ -48,9 +48,9 @@ final class DriftCardsMapper {
       accountKey: accountKey,
       remoteId: card.id,
       deckId: card.deckId,
-      modelType: content is LanguageCardContent
-          ? languageCardModelType
-          : cardModelType,
+      modelType:
+          card.modelTypeName ??
+          (content is LanguageCardContent ? wordCardModelType : cardModelType),
       front: card.front,
       back: card.back,
       transliteration: Value(
@@ -64,7 +64,8 @@ final class DriftCardsMapper {
               : const <Object?>[],
         ),
       ),
-      tagsJson: '[]',
+      tagsJson: jsonEncode(card.tags),
+      currentlyLearning: Value(card.currentlyLearning),
       dueAt: Value(card.nextDueAt),
       scheduleJson: jsonEncode(scheduleJson(card)),
       reviewHistoryJson: jsonEncode(reviewHistoryJson(card)),
@@ -82,7 +83,7 @@ final class DriftCardsMapper {
     final history = _jsonMap(row.reviewHistoryJson);
     return StudyCard(
       id: row.remoteId,
-      content: row.modelType == languageCardModelType
+      content: isLanguageCardModelType(row.modelType)
           ? LanguageCardContent(
               english: row.front,
               originalScript: row.back,
@@ -101,6 +102,9 @@ final class DriftCardsMapper {
         for (final cue in StudyCue.values) cue: _historyForCue(history, cue),
       },
       suspended: row.suspended,
+      currentlyLearning: row.currentlyLearning,
+      tags: _tagsMap(row.tagsJson),
+      modelTypeName: row.modelType,
       sourceBookId: row.sourceBookId,
       sourceBookName: row.sourceBookName,
       updatedAt: row.updatedAt?.toUtc(),
@@ -144,6 +148,18 @@ CardSchedule _scheduleFrom(Object? raw) {
 Map<String, dynamic> _jsonMap(String raw) {
   final value = jsonDecode(raw);
   return value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+}
+
+Map<String, List<String>> _tagsMap(String raw) {
+  final value = jsonDecode(raw);
+  if (value is! Map) return const <String, List<String>>{};
+  return <String, List<String>>{
+    for (final entry in value.entries)
+      if (entry.value is List)
+        entry.key.toString(): <String>[
+          for (final node in entry.value as List) node.toString(),
+        ],
+  };
 }
 
 DateTime? _dateTime(Object? value) =>

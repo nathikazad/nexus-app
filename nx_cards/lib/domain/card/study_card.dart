@@ -13,10 +13,17 @@ class StudyCard {
     required Map<StudyCue, CardSchedule> schedules,
     required Map<StudyCue, List<CardReview>> reviewHistory,
     required this.suspended,
+    this.currentlyLearning = false,
+    Map<String, List<String>> tags = const <String, List<String>>{},
+    this.modelTypeName,
     this.sourceBookId,
     this.sourceBookName,
     this.updatedAt,
   }) : schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
+       tags = Map<String, List<String>>.unmodifiable({
+         for (final entry in tags.entries)
+           entry.key: List<String>.unmodifiable(entry.value),
+       }),
        reviewHistory = Map<StudyCue, List<CardReview>>.unmodifiable({
          for (final entry in reviewHistory.entries)
            entry.key: List<CardReview>.unmodifiable(entry.value),
@@ -27,11 +34,17 @@ class StudyCard {
   String get front => content.front;
   String get back => content.back;
   bool get isLanguageCard => content is LanguageCardContent;
+  bool get isWordCard => modelTypeName == 'Word' || modelTypeName == 'Verb';
+  bool get isPhraseCard => modelTypeName == 'Phrase';
   final int deckId;
   final String deckName;
   final Map<StudyCue, CardSchedule> schedules;
   final Map<StudyCue, List<CardReview>> reviewHistory;
   final bool suspended;
+  final bool currentlyLearning;
+  final Map<String, List<String>> tags;
+  String? get wordCategory => tags['Word Category']?.firstOrNull;
+  final String? modelTypeName;
   final int? sourceBookId;
   final String? sourceBookName;
 
@@ -82,6 +95,7 @@ class StudyCard {
     Map<StudyCue, CardSchedule>? schedules,
     Map<StudyCue, List<CardReview>>? reviewHistory,
     bool? suspended,
+    bool? currentlyLearning,
     DateTime? updatedAt,
   }) {
     return StudyCard(
@@ -92,6 +106,9 @@ class StudyCard {
       schedules: schedules ?? this.schedules,
       reviewHistory: reviewHistory ?? this.reviewHistory,
       suspended: suspended ?? this.suspended,
+      currentlyLearning: currentlyLearning ?? this.currentlyLearning,
+      tags: tags,
+      modelTypeName: modelTypeName,
       sourceBookId: sourceBookId,
       sourceBookName: sourceBookName,
       updatedAt: updatedAt ?? this.updatedAt,

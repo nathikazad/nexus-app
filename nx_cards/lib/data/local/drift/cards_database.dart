@@ -32,6 +32,8 @@ class LocalStudyCards extends Table {
   TextColumn get audioUrl => text().nullable()();
   TextColumn get examplesJson => text().withDefault(const Constant('[]'))();
   TextColumn get tagsJson => text()();
+  BoolColumn get currentlyLearning =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get dueAt => dateTime().nullable()();
   TextColumn get scheduleJson => text()();
   TextColumn get reviewHistoryJson => text()();
@@ -52,7 +54,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,6 +87,15 @@ class CardsDatabase extends _$CardsDatabase {
       }
       if (from < 5) {
         // Cue-based schedule/history JSON must be reloaded canonically.
+        await update(
+          localCardDecks,
+        ).write(const LocalCardDecksCompanion(serverHash: Value(null)));
+      }
+      if (from < 6) {
+        await migrator.addColumn(
+          localStudyCards,
+          localStudyCards.currentlyLearning,
+        );
         await update(
           localCardDecks,
         ).write(const LocalCardDecksCompanion(serverHash: Value(null)));

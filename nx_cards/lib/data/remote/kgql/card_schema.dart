@@ -4,7 +4,28 @@ import 'package:nx_db/kgql.dart';
 const deckModelType = 'FlashcardDeck';
 const cardModelType = 'Flashcard';
 const languageCardModelType = 'LanguageFlashcard';
+const wordCardModelType = 'Word';
+const phraseCardModelType = 'Phrase';
+const verbCardModelType = 'Verb';
 const bookModelType = 'Book';
+
+const wordPhrasesRelation = 'word_phrases';
+const verbPhraseConjugationRelation = 'verb_phrase_conjugation';
+const wordCategoryTagSystem = 'Word Category';
+const wordCategories = <String>[
+  'Noun',
+  'Verb',
+  'Adjective',
+  'Adverb',
+  'Postposition',
+  'Script',
+];
+
+bool isLanguageCardModelType(String? name) =>
+    name == languageCardModelType ||
+    name == wordCardModelType ||
+    name == phraseCardModelType ||
+    name == verbCardModelType;
 
 const attrArchived = 'archived';
 const attrDueAt = 'due_at';
@@ -13,6 +34,7 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
+const attrCurrentlyLearning = 'currently_learning';
 const attrFromLanguage = 'from_language';
 const attrToLanguage = 'to_language';
 const _legacyAttrLanguage = 'language';

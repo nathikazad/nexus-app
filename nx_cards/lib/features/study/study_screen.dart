@@ -555,7 +555,7 @@ class _EmptyStudyScreen extends StatelessWidget {
           const SizedBox(height: 18),
           OutlinedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Back to decks'),
+            child: const Text('Back to categories'),
           ),
         ],
       ),
@@ -614,7 +614,7 @@ class _CompletedStudyScreen extends StatelessWidget {
           const SizedBox(height: 22),
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Return to decks'),
+            child: const Text('Return to categories'),
           ),
         ],
       ),

@@ -15,6 +15,7 @@ const _baseCardStruct = <String, dynamic>{
   attrSchedule: true,
   attrReviewHistory: true,
   attrCardDetails: true,
+  'tags': true,
   'model_type': {'id': true, 'name': true},
   deckModelType: {'id': true, 'name': true},
   bookModelType: {'id': true, 'name': true},
@@ -23,6 +24,18 @@ const _baseCardStruct = <String, dynamic>{
 const _languageCardStruct = <String, dynamic>{
   ..._baseCardStruct,
   attrLanguageDetails: true,
+  'relations': {
+    'relation_id': true,
+    'model_id': true,
+    'model_type': true,
+    'name': true,
+    'relation_name': true,
+  },
+};
+
+const _wordCardStruct = <String, dynamic>{
+  ..._languageCardStruct,
+  attrCurrentlyLearning: true,
 };
 
 class KgqlCardsRepository implements CardsRepository {
@@ -66,13 +79,18 @@ class KgqlCardsRepository implements CardsRepository {
         filter: const {'model_type': languageCardModelType},
         struct: _languageCardStruct,
       ),
+      fetchKgqlModels(
+        _client,
+        filter: const {'model_type': wordCardModelType},
+        struct: _wordCardStruct,
+      ),
     ]);
     final rowsById = <int, Model>{
-      for (final row in results.first) row.id: row,
-      for (final row in results.last) row.id: row,
+      for (final result in results)
+        for (final row in result) row.id: row,
     };
     return rowsById.values
-        .map(studyCardFromModel)
+        .map((row) => studyCardFromModel(row, relatedModels: rowsById))
         .whereType<StudyCard>()
         .toList();
   }
@@ -147,7 +165,7 @@ class KgqlCardsRepository implements CardsRepository {
       _client,
       SetModelRequest(
         modelType: content is LanguageCardContent
-            ? languageCardModelType
+            ? wordCardModelType
             : cardModelType,
         name: content.front,
         attributes: [
@@ -238,6 +256,26 @@ class KgqlCardsRepository implements CardsRepository {
       SetModelRequest(
         id: card.id,
         attributes: [SetModelAttribute(key: attrSuspended, value: suspended)],
+      ),
+      auditSourceKind: 'nx_cards',
+    );
+  }
+
+  @override
+  Future<void> setCurrentlyLearning(
+    StudyCard card,
+    bool currentlyLearning,
+  ) async {
+    await setKgqlModel(
+      _client,
+      SetModelRequest(
+        id: card.id,
+        attributes: [
+          SetModelAttribute(
+            key: attrCurrentlyLearning,
+            value: currentlyLearning,
+          ),
+        ],
       ),
       auditSourceKind: 'nx_cards',
     );

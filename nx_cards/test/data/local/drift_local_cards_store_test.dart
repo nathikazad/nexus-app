@@ -32,6 +32,11 @@ void main() {
     expect(dashboard.decks.single.name, 'Malayalam');
     expect(dashboard.cards.single.front, 'talent');
     expect(dashboard.cards.single.content, isA<LanguageCardContent>());
+    expect(dashboard.cards.single.currentlyLearning, isTrue);
+    expect(dashboard.cards.single.tags, {
+      'Language': <String>['Malayalam'],
+      'Part of Speech': <String>['Noun'],
+    });
     expect(
       (dashboard.cards.single.content as LanguageCardContent).audioUrl,
       '/cards/audio/1/11.mp3',
@@ -217,7 +222,7 @@ void main() {
     );
   });
 
-  test('schema v5 migrates deck languages and reloads cue schedules', () async {
+  test('schema v6 migrates deck languages and word learning state', () async {
     await database.close();
     final directory = await Directory.systemTemp.createTemp(
       'nx-cards-migration-test-',
@@ -238,6 +243,9 @@ void main() {
     );
     await oldDatabase.customStatement(
       'ALTER TABLE local_card_decks DROP COLUMN to_language',
+    );
+    await oldDatabase.customStatement(
+      'ALTER TABLE local_study_cards DROP COLUMN currently_learning',
     );
     await oldDatabase.customStatement('PRAGMA user_version = 3');
     await oldDatabase.close();
@@ -296,6 +304,11 @@ CardDeckSyncBundle _bundle({required String hash, String front = 'talent'}) {
               StudyCue.transliteration: <CardReview>[],
             },
             suspended: false,
+            currentlyLearning: true,
+            tags: const <String, List<String>>{
+              'Language': <String>['Malayalam'],
+              'Part of Speech': <String>['Noun'],
+            },
             updatedAt: updatedAt,
           ),
         ],

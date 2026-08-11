@@ -5,7 +5,7 @@ import 'package:nx_cards/data/remote/kgql/kgql_cards_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 
 void main() {
-  test('creates language content as a LanguageFlashcard', () async {
+  test('creates language content as a Word', () async {
     Request? captured;
     final repository = KgqlCardsRepository(
       _client((request) {
@@ -32,7 +32,7 @@ void main() {
     expect(id, 42);
     final input = captured!.variables['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
-    expect(data['model_type'], languageCardModelType);
+    expect(data['model_type'], wordCardModelType);
     expect(data['name'], 'talent');
     expect(data, isNot(contains('description')));
     final attributes = data['attributes'] as List<dynamic>;
@@ -83,7 +83,7 @@ void main() {
               'name': 'talent',
               'model_type_id': 67,
               'card_details': {'front': 'talent', 'back': 'കഴിവ്'},
-              if (requestedType == languageCardModelType)
+              if (requestedType != cardModelType)
                 'language_details': {
                   'transliteration': 'kazhivu',
                   'audio_url': null,
@@ -107,7 +107,12 @@ void main() {
                 },
               },
               'review_history': {'version': 3, 'items': <Object?>[]},
-              'model_type': {'id': 67, 'name': languageCardModelType},
+              'model_type': {
+                'id': 67,
+                'name': requestedType == wordCardModelType
+                    ? wordCardModelType
+                    : languageCardModelType,
+              },
               'FlashcardDeck': [
                 {'id': 7, 'name': 'Malayalam', 'model_type_id': 65},
               ],
@@ -129,7 +134,11 @@ void main() {
     expect(content.examples.single.translation, 'He has good talent.');
     expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
     expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
-    expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});
+    expect(requestedTypes.toSet(), {
+      cardModelType,
+      languageCardModelType,
+      wordCardModelType,
+    });
   });
 }
 

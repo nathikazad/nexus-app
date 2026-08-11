@@ -40,10 +40,7 @@ void main() {
                       'name': 'talent',
                       'model_type_id': 62,
                       'updated_at': '2026-08-04T10:00:00Z',
-                      'model_type': <String, Object?>{
-                        'id': 62,
-                        'name': 'LanguageFlashcard',
-                      },
+                      'model_type': <String, Object?>{'id': 62, 'name': 'Word'},
                       'attributes': <String, Object?>{
                         'suspended': false,
                         'card_details': <String, Object?>{
@@ -79,6 +76,23 @@ void main() {
                           'name': 'Malayalam',
                           'relation_name': 'in_deck',
                         },
+                        <String, Object?>{
+                          'model_id': 22,
+                          'model_type': 'Phrase',
+                          'name': 'He has good talent.',
+                          'relation_name': 'word_phrases',
+                          'related_attributes': <String, Object?>{
+                            'card_details': <String, Object?>{
+                              'front': 'He has good talent.',
+                              'back': 'അവന് നല്ല കഴിവുണ്ട്.',
+                            },
+                            'language_details': <String, Object?>{
+                              'transliteration': 'avan nalla kazhivundu',
+                              'audio_url': '/cards/audio/example.mp3',
+                              'examples': <Object?>[],
+                            },
+                          },
+                        },
                       ],
                     },
                   ],
@@ -107,6 +121,10 @@ void main() {
     expect(card.deckId, 7);
     expect(card.content, isA<LanguageCardContent>());
     expect((card.content as LanguageCardContent).transliteration, 'kazhivu');
+    expect(
+      (card.content as LanguageCardContent).examples.single.translation,
+      'He has good talent.',
+    );
   });
 
   test('mutateCard sends the complete JSON scheduling aggregate', () async {
@@ -154,6 +172,13 @@ void main() {
           as Map<String, dynamic>)['review_count'],
       0,
     );
+    final languageDetails = attributes.cast<Map<String, dynamic>>().singleWhere(
+      (value) => value['key'] == 'language_details',
+    );
+    expect(
+      (languageDetails['value'] as Map<String, dynamic>)['examples'],
+      isEmpty,
+    );
     expect(result.status, CardMutationStatus.applied);
     expect(result.deckHashes.single.serverHash, 'new-hash');
   });
@@ -179,6 +204,13 @@ StudyCard _card() => StudyCard(
     originalScript: 'കഴിവ്',
     transliteration: 'kazhivu',
     audioUrl: '/cards/audio/1/11.mp3',
+    examples: <LanguageExample>[
+      LanguageExample(
+        text: 'അവന് നല്ല കഴിവുണ്ട്.',
+        transliteration: 'avan nalla kazhivundu',
+        translation: 'He has good talent.',
+      ),
+    ],
   ),
   deckId: 7,
   deckName: 'Malayalam',

@@ -34,5 +34,6 @@ abstract class CardsRepository {
 
   Future<void> saveSchedule(StudyCard card);
   Future<void> setSuspended(StudyCard card, bool suspended);
+  Future<void> setCurrentlyLearning(StudyCard card, bool currentlyLearning);
   Future<void> deleteCard(int id);
 }

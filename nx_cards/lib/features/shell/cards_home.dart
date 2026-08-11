@@ -145,8 +145,9 @@ class _HomeScaffold extends ConsumerWidget {
         error: error,
         onRetry: () => ref.invalidate(cardsDashboardProvider),
       ),
-      data: (data) =>
-          tab == 0 ? _DecksDashboard(data: data) : _TodayView(data: data),
+      data: (data) => tab == 0
+          ? _WordCategoriesDashboard(data: data)
+          : _TodayView(data: data),
     );
     return Scaffold(
       appBar: AppBar(
@@ -164,19 +165,6 @@ class _HomeScaffold extends ConsumerWidget {
                   ),
                 ],
               ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 18),
-            child: FilledButton.icon(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => const CreateDeckDialog(),
-              ),
-              icon: const Icon(Icons.add_circle_outline, size: 18),
-              label: const Text('New deck'),
-            ),
-          ),
-        ],
       ),
       body: Row(
         children: [
@@ -198,7 +186,7 @@ class _HomeScaffold extends ConsumerWidget {
                 NavigationDestination(
                   icon: Icon(Icons.layers_outlined),
                   selectedIcon: Icon(Icons.layers),
-                  label: 'Your decks',
+                  label: 'Categories',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.calendar_today_outlined),
@@ -246,7 +234,7 @@ class _SideNav extends StatelessWidget {
           const SizedBox(height: 34),
           _NavTile(
             icon: Icons.layers_outlined,
-            label: 'Your decks',
+            label: 'Categories',
             selected: tab == 0,
             onTap: () => onSelect(0),
           ),
@@ -347,6 +335,567 @@ class _NavTile extends StatelessWidget {
   );
 }
 
+class _WordCategoriesDashboard extends ConsumerWidget {
+  const _WordCategoriesDashboard({required this.data});
+
+  final CardsDashboard data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final due = data.dueCount(now);
+    final currentWords = data.cards
+        .where((card) => card.isWordCard && card.currentlyLearning)
+        .length;
+    final categorizedWords = data.cards
+        .where((card) => card.wordCategory != null)
+        .length;
+    return RefreshIndicator(
+      onRefresh: ref.read(cardsLibrarySyncProvider),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1050),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(_dateLabel(now), style: monoLabel),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'What are you learning?',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Choose a word category to study or adjust your current list.',
+                    style: TextStyle(color: RecallColors.muted),
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MetricCard(
+                          label: 'Due now',
+                          value: '$due',
+                          detail: 'Current words only',
+                          accent: RecallColors.ink,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _MetricCard(
+                          label: 'Currently learning',
+                          value: '$currentWords',
+                          detail: 'Across all categories',
+                          accent: RecallColors.ink,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _MetricCard(
+                          label: 'Total words',
+                          value: '$categorizedWords',
+                          detail: '${wordCategories.length} categories',
+                          accent: RecallColors.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 34),
+                  const Text(
+                    'Word categories',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Categories are independent of the decks used for sync and language settings.',
+                    style: TextStyle(fontSize: 12, color: RecallColors.muted),
+                  ),
+                  const SizedBox(height: 15),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth >= 720
+                          ? (constraints.maxWidth - 14) / 2
+                          : constraints.maxWidth;
+                      return Wrap(
+                        spacing: 14,
+                        runSpacing: 14,
+                        children: [
+                          for (final category in wordCategories)
+                            SizedBox(
+                              width: width,
+                              child: _WordCategoryCard(
+                                category: category,
+                                data: data,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WordCategoryCard extends StatelessWidget {
+  const _WordCategoryCard({required this.category, required this.data});
+
+  final String category;
+  final CardsDashboard data;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = data.cards
+        .where((card) => card.wordCategory == category)
+        .toList(growable: false);
+    final current = cards.where((card) => card.currentlyLearning).length;
+    final due = data.dueCount(DateTime.now(), wordCategory: category);
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => WordCategoryScreen(category: category),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: RecallColors.soft,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: RecallColors.line),
+                ),
+                child: Icon(_categoryIcon(category), color: RecallColors.ink),
+              ),
+              const SizedBox(height: 17),
+              Text(
+                category,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '$current currently learning · ${cards.length - current} available',
+                style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+              ),
+              const SizedBox(height: 18),
+              const Divider(height: 1),
+              const SizedBox(height: 13),
+              Row(
+                children: [
+                  _SmallCount(
+                    value: due,
+                    label: 'Due',
+                    color: RecallColors.ink,
+                  ),
+                  const SizedBox(width: 24),
+                  _SmallCount(
+                    value: cards.length,
+                    label: 'Words',
+                    color: RecallColors.ink,
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.arrow_forward, size: 18),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class WordCategoryScreen extends ConsumerWidget {
+  const WordCategoryScreen({super.key, required this.category});
+
+  final String category;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboard = ref.watch(cardsDashboardProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(category)),
+      body: dashboard.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _LoadError(
+          error: error,
+          onRetry: () => ref.invalidate(cardsDashboardProvider),
+        ),
+        data: (data) {
+          final cards = data.cards
+              .where((card) => card.wordCategory == category)
+              .toList(growable: false);
+          final current = cards
+              .where((card) => card.currentlyLearning)
+              .toList(growable: false);
+          final available = cards
+              .where((card) => !card.currentlyLearning)
+              .toList(growable: false);
+          final queue = data.studyQueue(
+            DateTime.now(),
+            wordCategory: category,
+            newCardLimit: current.length * StudyCue.values.length,
+          );
+          return RefreshIndicator(
+            onRefresh: ref.read(cardsLibrarySyncProvider),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 900),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${cards.length} words · ${current.length} currently learning',
+                                style: const TextStyle(
+                                  color: RecallColors.muted,
+                                ),
+                              ),
+                            ),
+                            _StudyLauncher(
+                              title: category,
+                              prompts: queue,
+                              studyCards: current,
+                              languagePair: _languagesForCards(data, current),
+                              builder: (onPressed) => FilledButton(
+                                onPressed: onPressed,
+                                child: const Text('Study'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 25),
+                        _LearningSection(
+                          title: 'Currently learning',
+                          detail: 'Swipe right to reveal −',
+                          cards: current,
+                          currentlyLearning: true,
+                          dashboard: data,
+                        ),
+                        const SizedBox(height: 30),
+                        _LearningSection(
+                          title: 'Not learning',
+                          detail: 'Swipe left to reveal +',
+                          cards: available,
+                          currentlyLearning: false,
+                          dashboard: data,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LearningSection extends StatelessWidget {
+  const _LearningSection({
+    required this.title,
+    required this.detail,
+    required this.cards,
+    required this.currentlyLearning,
+    required this.dashboard,
+  });
+
+  final String title;
+  final String detail;
+  final List<StudyCard> cards;
+  final bool currentlyLearning;
+  final CardsDashboard dashboard;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            '${cards.length}',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: RecallColors.muted,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 3),
+      Text(
+        detail,
+        style: const TextStyle(fontSize: 11, color: RecallColors.faint),
+      ),
+      const SizedBox(height: 11),
+      if (cards.isEmpty)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: RecallColors.soft,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: RecallColors.line),
+          ),
+          child: Text(
+            currentlyLearning
+                ? 'No words are currently selected.'
+                : 'Every word in this category is currently selected.',
+            style: const TextStyle(color: RecallColors.muted),
+          ),
+        )
+      else
+        for (final card in cards)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 9),
+            child: _LearningStatusRow(
+              card: card,
+              deck: dashboard.decks
+                  .where((deck) => deck.id == card.deckId)
+                  .firstOrNull,
+              currentlyLearning: currentlyLearning,
+            ),
+          ),
+    ],
+  );
+}
+
+class _LearningStatusRow extends ConsumerStatefulWidget {
+  const _LearningStatusRow({
+    required this.card,
+    required this.deck,
+    required this.currentlyLearning,
+  });
+
+  final StudyCard card;
+  final CardDeck? deck;
+  final bool currentlyLearning;
+
+  @override
+  ConsumerState<_LearningStatusRow> createState() => _LearningStatusRowState();
+}
+
+class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
+  static const _actionWidth = 70.0;
+  double _offset = 0;
+  bool _dragging = false;
+  bool _working = false;
+
+  void _drag(DragUpdateDetails details) {
+    setState(() {
+      _dragging = true;
+      _offset = widget.currentlyLearning
+          ? (_offset + details.delta.dx).clamp(0.0, _actionWidth).toDouble()
+          : (_offset + details.delta.dx).clamp(-_actionWidth, 0.0).toDouble();
+    });
+  }
+
+  void _finishDrag(DragEndDetails details) {
+    final reveal = _offset.abs() >= _actionWidth * .42;
+    setState(() {
+      _dragging = false;
+      _offset = reveal
+          ? (widget.currentlyLearning ? _actionWidth : -_actionWidth)
+          : 0;
+    });
+  }
+
+  Future<void> _changeStatus() async {
+    if (_working) return;
+    setState(() => _working = true);
+    try {
+      await ref
+          .read(cardsRepositoryProvider)
+          .setCurrentlyLearning(widget.card, !widget.currentlyLearning);
+      ref.invalidate(cardsDashboardProvider);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _working = false;
+          _offset = 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update word: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showDetails() async {
+    if (_offset != 0) {
+      setState(() => _offset = 0);
+      return;
+    }
+    final deck = widget.deck;
+    if (deck == null) return;
+    final edit = await showDialog<bool>(
+      context: context,
+      builder: (_) => CardDetailsDialog(deck: deck, card: widget.card),
+    );
+    if (edit == true && mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => CardEditorDialog(deck: deck, card: widget.card),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = widget.card.content;
+    final transliteration = content is LanguageCardContent
+        ? content.transliteration
+        : '';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(13),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ColoredBox(
+              color: RecallColors.ink,
+              child: Align(
+                alignment: widget.currentlyLearning
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight,
+                child: SizedBox(
+                  width: _actionWidth,
+                  child: InkWell(
+                    onTap: _working ? null : _changeStatus,
+                    child: Center(
+                      child: _working
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              widget.currentlyLearning ? '−' : '+',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          AnimatedContainer(
+            duration: _dragging
+                ? Duration.zero
+                : const Duration(milliseconds: 170),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(_offset, 0, 0),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragUpdate: _working ? null : _drag,
+              onHorizontalDragEnd: _working ? null : _finishDrag,
+              onTap: _working ? null : _showDetails,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 17,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: RecallColors.line),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.card.front,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              widget.card.back,
+                              if (transliteration.isNotEmpty) transliteration,
+                            ].join('  ·  '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: RecallColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(
+                      Icons.drag_indicator,
+                      size: 17,
+                      color: RecallColors.faint,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _categoryIcon(String category) => switch (category) {
+  'Noun' => Icons.inventory_2_outlined,
+  'Verb' => Icons.directions_run_outlined,
+  'Adjective' => Icons.tune_outlined,
+  'Adverb' => Icons.speed_outlined,
+  'Postposition' => Icons.alt_route_outlined,
+  'Script' => Icons.gesture_outlined,
+  _ => Icons.text_fields_outlined,
+};
+
+// Kept as the deck-management surface while the primary library view is
+// category-based. Decks remain part of the storage and study model.
+// ignore: unused_element
 class _DecksDashboard extends ConsumerWidget {
   const _DecksDashboard({required this.data});
   final CardsDashboard data;
@@ -630,7 +1179,7 @@ class _TodayView extends StatelessWidget {
     final grouped = <String, int>{};
     for (final prompt in queue) {
       grouped.update(
-        prompt.card.deckName,
+        prompt.card.wordCategory ?? prompt.card.deckName,
         (count) => count + 1,
         ifAbsent: () => 1,
       );
@@ -656,7 +1205,7 @@ class _TodayView extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'A focused queue across all of your decks.',
+                  'A focused queue across all of your current words.',
                   style: TextStyle(color: RecallColors.muted),
                 ),
                 const SizedBox(height: 28),
@@ -990,6 +1539,22 @@ _LanguagePair? _languagesForPrompts(
   return pairs.length == 1 ? pairs.single : null;
 }
 
+_LanguagePair? _languagesForCards(
+  CardsDashboard dashboard,
+  Iterable<StudyCard> cards,
+) {
+  final deckIds = cards
+      .where((card) => card.isLanguageCard)
+      .map((card) => card.deckId)
+      .toSet();
+  final pairs = dashboard.decks
+      .where((deck) => deckIds.contains(deck.id))
+      .where((deck) => deck.isLanguageDeck)
+      .map((deck) => _LanguagePair(deck.fromLanguage!, deck.toLanguage!))
+      .toSet();
+  return pairs.length == 1 ? pairs.single : null;
+}
+
 class _LanguagePair {
   const _LanguagePair(this.from, this.to);
   final String from;
@@ -1164,7 +1729,7 @@ class _SearchPlaceholder extends StatelessWidget {
         Icon(Icons.search, size: 18, color: RecallColors.faint),
         SizedBox(width: 8),
         Text(
-          'Search cards and decks',
+          'Search words and categories',
           style: TextStyle(fontSize: 12, color: RecallColors.faint),
         ),
         Spacer(),

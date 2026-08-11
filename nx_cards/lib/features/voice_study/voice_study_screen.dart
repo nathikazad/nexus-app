@@ -207,7 +207,7 @@ class _SessionBody extends StatelessWidget {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Return to decks'),
+              child: const Text('Return to categories'),
             ),
           ],
         ),

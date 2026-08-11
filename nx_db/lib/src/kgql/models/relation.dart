@@ -17,6 +17,9 @@ class Relation {
   /// Flat key → value from `relation_attributes` on the `relations` struct node.
   final Map<String, dynamic>? relationAttributes;
 
+  /// Selected attributes from the related card in native sync payloads.
+  final Map<String, dynamic>? relatedAttributes;
+
   Relation({
     required this.relationId,
     required this.modelId,
@@ -27,6 +30,7 @@ class Relation {
     this.relationDescription,
     this.relation,
     this.relationAttributes,
+    this.relatedAttributes,
   });
 
   factory Relation.fromJson(Map<String, dynamic> json) {
@@ -49,6 +53,9 @@ class Relation {
       ),
       relation: parseOptionalStringField(json['relation']),
       relationAttributes: _parseRelationAttributes(json),
+      relatedAttributes: json['related_attributes'] is Map
+          ? Map<String, dynamic>.from(json['related_attributes'] as Map)
+          : null,
     );
   }
 
@@ -90,6 +97,7 @@ class Relation {
         'relation_description': relationDescription,
       if (relation != null) 'relation': relation,
       if (relationAttributes != null) 'relation_attributes': relationAttributes,
+      if (relatedAttributes != null) 'related_attributes': relatedAttributes,
     };
   }
 }

@@ -71,6 +71,37 @@ void main() {
     }
     expect(queue.map((prompt) => prompt.cue).toSet(), StudyCue.values.toSet());
   });
+
+  test('word category queues include only currently learning words', () {
+    final dashboard = CardsDashboard(
+      decks: const [deck],
+      cards: [
+        _card(
+          1,
+          modelTypeName: 'Word',
+          wordCategory: 'Noun',
+          currentlyLearning: true,
+        ),
+        _card(2, modelTypeName: 'Word', wordCategory: 'Noun'),
+        _card(
+          3,
+          modelTypeName: 'Verb',
+          wordCategory: 'Verb',
+          currentlyLearning: true,
+        ),
+        _card(4, modelTypeName: 'Phrase'),
+      ],
+    );
+
+    expect(
+      dashboard
+          .studyQueue(now, wordCategory: 'Noun')
+          .map((prompt) => prompt.cardId),
+      [1],
+    );
+    expect(dashboard.newCount(wordCategory: 'Noun'), 1);
+    expect(dashboard.studyQueue(now).map((prompt) => prompt.cardId), [1, 3]);
+  });
 }
 
 StudyCard _card(
@@ -79,6 +110,9 @@ StudyCard _card(
   DateTime? reviewed,
   bool suspended = false,
   bool enableAllCues = false,
+  bool currentlyLearning = false,
+  String? modelTypeName,
+  String? wordCategory,
 }) {
   return StudyCard(
     id: id,
@@ -110,5 +144,12 @@ StudyCard _card(
       StudyCue.transliteration: <CardReview>[],
     },
     suspended: suspended,
+    currentlyLearning: currentlyLearning,
+    modelTypeName: modelTypeName,
+    tags: wordCategory == null
+        ? const <String, List<String>>{}
+        : <String, List<String>>{
+            'Word Category': <String>[wordCategory],
+          },
   );
 }

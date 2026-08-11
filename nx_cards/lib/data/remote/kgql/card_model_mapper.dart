@@ -22,7 +22,10 @@ CardDeck cardDeckFromModel(Model model) {
   );
 }
 
-StudyCard? studyCardFromModel(Model model) {
+StudyCard? studyCardFromModel(
+  Model model, {
+  Map<int, Model> relatedModels = const <int, Model>{},
+}) {
   final deck = _relatedModels(model, deckModelType).firstOrNull;
   if (deck == null) return null;
   final book = _relatedModels(model, bookModelType).firstOrNull;
@@ -32,16 +35,23 @@ StudyCard? studyCardFromModel(Model model) {
   final front = cardDetails['front']?.toString().trim() ?? '';
   final back = cardDetails['back']?.toString().trim() ?? '';
   final languageDetails = _jsonMap(model.attributes?[attrLanguageDetails]);
+  final modelTypeName = model.modelType?.name;
+  final relatedExamples = _languageExamplesFromPhraseRelations(
+    model,
+    relatedModels,
+  );
   return StudyCard(
     id: model.id,
-    content: model.modelType?.name == languageCardModelType
+    content: isLanguageCardModelType(modelTypeName)
         ? LanguageCardContent(
             english: front,
             originalScript: back,
             transliteration:
                 languageDetails['transliteration']?.toString().trim() ?? '',
             audioUrl: languageDetails['audio_url']?.toString().trim(),
-            examples: languageExamplesFromJson(languageDetails['examples']),
+            examples: relatedExamples.isNotEmpty
+                ? relatedExamples
+                : languageExamplesFromJson(languageDetails['examples']),
           )
         : BasicCardContent(front: front, back: back),
     deckId: deck.id,
@@ -52,10 +62,51 @@ StudyCard? studyCardFromModel(Model model) {
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
+    currentlyLearning: model.attrBool(attrCurrentlyLearning) ?? false,
+    tags: model.tags ?? const <String, List<String>>{},
+    modelTypeName: modelTypeName,
     sourceBookId: book?.id,
     sourceBookName: book?.name,
     updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
   );
+}
+
+List<LanguageExample> _languageExamplesFromPhraseRelations(
+  Model model,
+  Map<int, Model> relatedModels,
+) {
+  if (model.modelType?.name != wordCardModelType &&
+      model.modelType?.name != verbCardModelType) {
+    return const <LanguageExample>[];
+  }
+  final examples = <LanguageExample>[];
+  for (final relation in model.relationsList ?? const <Relation>[]) {
+    if (relation.relationName != wordPhrasesRelation &&
+        relation.relationName != verbPhraseConjugationRelation) {
+      continue;
+    }
+    final relatedModel = relatedModels[relation.modelId];
+    final attributes = relatedModel?.attributes ?? relation.relatedAttributes;
+    if (attributes == null) continue;
+    final cardDetails = _jsonMap(attributes[attrCardDetails]);
+    final languageDetails = _jsonMap(attributes[attrLanguageDetails]);
+    final text = cardDetails['back']?.toString().trim() ?? '';
+    final translation = cardDetails['front']?.toString().trim() ?? '';
+    final transliteration =
+        languageDetails['transliteration']?.toString().trim() ?? '';
+    if (text.isEmpty || translation.isEmpty || transliteration.isEmpty) {
+      continue;
+    }
+    examples.add(
+      LanguageExample(
+        text: text,
+        transliteration: transliteration,
+        translation: translation,
+        audioUrl: languageDetails['audio_url']?.toString().trim(),
+      ),
+    );
+  }
+  return examples;
 }
 
 Map<String, Object?> cardDetailsJson(CardContent content) => <String, Object?>{
@@ -67,7 +118,9 @@ Map<String, Object?> languageDetailsJson(LanguageCardContent content) =>
     <String, Object?>{
       'transliteration': content.transliteration,
       'audio_url': content.audioUrl,
-      'examples': content.examples.map((example) => example.toJson()).toList(),
+      // Examples are derived from Word/Phrase relations. Never write that
+      // projection back into the language_details aggregate.
+      'examples': const <Object?>[],
     };
 
 extension on String {
