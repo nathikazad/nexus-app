@@ -206,7 +206,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                 onPressed: _openCardDetails,
                                                 tooltip: 'Card stats',
                                                 icon: const Icon(
-                                                  Icons.analytics_outlined,
+                                                  Icons.style_outlined,
                                                   size: 20,
                                                 ),
                                               ),
