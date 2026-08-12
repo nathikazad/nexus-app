@@ -27,7 +27,7 @@ class BookImporterTest(unittest.TestCase):
             plan = BookImporter(client).plan(manifest)
 
             self.assertEqual(plan.chapter_count, 2)
-            self.assertEqual(len(plan.create_documents), 2)
+            self.assertEqual(len(plan.create_chapters), 2)
             self.assertEqual(plan.append_chapters, (1, 2))
             self.assertEqual(client.mutations, [])
 
@@ -37,12 +37,24 @@ class BookImporterTest(unittest.TestCase):
             chapter_payload = BookImporter.chapter_create_payload(
                 manifest["chapters"][0]
             )
-            self.assertEqual(chapter_payload["model_type"], "Document")
+            self.assertEqual(chapter_payload["model_type"], "Book Chapter")
             self.assertNotIn("document", chapter_payload)
             self.assertEqual(
                 {item["key"] for item in chapter_payload["attributes"]},
-                {"document", "json_document", "pinned", "publish"},
+                {
+                    "document",
+                    "json_document",
+                    "pinned",
+                    "publish",
+                    "chapter_number",
+                },
             )
+            chapter_number = next(
+                item["value"]
+                for item in chapter_payload["attributes"]
+                if item["key"] == "chapter_number"
+            )
+            self.assertEqual(chapter_number, 1)
 
             book = FakeKgqlClient(77, "Sample Book").book
             wrapper = {
@@ -57,8 +69,8 @@ class BookImporterTest(unittest.TestCase):
                 book_payload["relations"],
                 [
                     {
-                        "model_type": "Document",
-                        "relation_name": "references_document",
+                        "model_type": "Book Chapter",
+                        "relation_name": "book_book_chapter",
                         "link": [9001, 9002],
                     }
                 ],
@@ -78,7 +90,7 @@ class BookImporterTest(unittest.TestCase):
             )
 
             self.assertEqual(backup.calls, 1)
-            self.assertEqual(len(client.documents), 2)
+            self.assertEqual(len(client.chapters), 2)
             self.assertEqual(client.book["tags"], {"Topic": ["People"]})
             self.assertEqual(client.book["reading_state"], "to_read")
             self.assertEqual(client.book["rank"], 4)
@@ -94,7 +106,7 @@ class BookImporterTest(unittest.TestCase):
             self.assertNotIn("model_type", book_mutation)
             self.assertIn("relations", book_mutation)
 
-    def test_resume_reuses_documents_and_does_not_duplicate_links(self) -> None:
+    def test_resume_reuses_chapters_and_does_not_duplicate_links(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             manifest_path, manifest = self._manifest(directory)
             client = FakeKgqlClient(77, "Sample Book")
@@ -102,11 +114,11 @@ class BookImporterTest(unittest.TestCase):
             receipt = manifest_path.with_name("receipt.json")
             importer = BookImporter(client, backup)
             importer.execute(manifest, receipt)
-            document_ids = set(client.documents)
+            chapter_ids = set(client.chapters)
 
             importer.execute(manifest, receipt, resume=True)
 
-            self.assertEqual(set(client.documents), document_ids)
+            self.assertEqual(set(client.chapters), chapter_ids)
             hrefs = []
             for block in client.book["json_document"]["document"]["children"]:
                 for part in (block.get("data") or {}).get("delta") or []:
@@ -115,7 +127,7 @@ class BookImporterTest(unittest.TestCase):
                         hrefs.append(href)
             self.assertEqual(len(hrefs), 2)
             self.assertEqual(len(set(hrefs)), 2)
-            self.assertEqual(len(client.book["Document"]), 2)
+            self.assertEqual(len(client.book["Book Chapter"]), 2)
             self.assertEqual(backup.calls, 2)
 
 

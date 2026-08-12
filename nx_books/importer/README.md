@@ -71,7 +71,7 @@ python3 importer/book_summaries.py import \
   --execute
 ```
 
-If an import stops after creating some Documents:
+If an import stops after creating some Book Chapters:
 
 ```bash
 python3 importer/book_summaries.py import \
@@ -82,12 +82,16 @@ python3 importer/book_summaries.py import \
 
 Execution always requires a validated production backup. The importer writes a
 local `kgql-import.receipt.json` containing the backup path, checksum, created
-Document IDs, and verification result.
+Book Chapter IDs, and verification result.
 
 ## Safety properties
 
 - `--dry-run` performs no writes and no backup.
 - Chapter titles and numbers come from `book.json`, not filename parsing.
+- Each detailed summary is stored as a `Book Chapter` with its
+  `chapter_number` attribute.
+- Books link chapters through `book_book_chapter`; editor links remain
+  `kgql://Document/<id>` because Book Chapter inherits Document.
 - Detailed KGQL bodies exclude only the generated matching H1.
 - KGQL attributes are always sent through the existing `attributes` array.
 - Relations are always sent through the existing `relations` array.

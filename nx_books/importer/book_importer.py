@@ -713,8 +713,8 @@ class ImportPlan:
     book_id: int
     book_name: str
     chapter_count: int
-    create_documents: tuple[str, ...]
-    reuse_documents: tuple[str, ...]
+    create_chapters: tuple[str, ...]
+    reuse_chapters: tuple[str, ...]
     append_chapters: tuple[int, ...]
     relation_count: int
 
@@ -729,6 +729,12 @@ _DOCUMENT_STRUCT = {
     "pinned": True,
     "tags": True,
 }
+_CHAPTER_MODEL_TYPE = "Book Chapter"
+_CHAPTER_RELATION_NAME = "book_book_chapter"
+_CHAPTER_STRUCT = {
+    **_DOCUMENT_STRUCT,
+    "chapter_number": True,
+}
 _BOOK_STRUCT = {
     **_DOCUMENT_STRUCT,
     "reading_state": True,
@@ -738,7 +744,12 @@ _BOOK_STRUCT = {
     "word_count": True,
     "author": True,
     "link": True,
-    "Document": {"id": True, "name": True, "description": True},
+    _CHAPTER_MODEL_TYPE: {
+        "id": True,
+        "name": True,
+        "description": True,
+        "chapter_number": True,
+    },
 }
 
 
@@ -786,15 +797,60 @@ class BookImporter:
         return manifest
 
     def plan(self, manifest: Mapping[str, Any]) -> ImportPlan:
-        schema = self.client.get_model_type("Book")
-        if not isinstance(schema, list) or not any(
-            isinstance(item, Mapping) and item.get("name") == "Book"
-            for item in schema
-        ):
+        book_schema = self.client.get_model_type("Book")
+        book_type = (
+            next(
+                (
+                    item
+                    for item in book_schema
+                    if isinstance(item, Mapping)
+                    and item.get("name") == "Book"
+                ),
+                None,
+            )
+            if isinstance(book_schema, list)
+            else None
+        )
+        if book_type is None:
             raise ImporterError("KGQL Book model type was not found")
+        chapter_schema = self.client.get_model_type(_CHAPTER_MODEL_TYPE)
+        chapter_type = (
+            next(
+                (
+                    item
+                    for item in chapter_schema
+                    if isinstance(item, Mapping)
+                    and item.get("name") == _CHAPTER_MODEL_TYPE
+                ),
+                None,
+            )
+            if isinstance(chapter_schema, list)
+            else None
+        )
+        if chapter_type is None:
+            raise ImporterError("KGQL Book Chapter model type was not found")
+        if not any(
+            isinstance(attribute, Mapping)
+            and attribute.get("key") == "chapter_number"
+            for attribute in chapter_type.get("attributes") or []
+        ):
+            raise ImporterError(
+                "KGQL Book Chapter.chapter_number attribute was not found"
+            )
+        if not any(
+            isinstance(relation, Mapping)
+            and relation.get("relation_name") == _CHAPTER_RELATION_NAME
+            and relation.get("target_model_type") == _CHAPTER_MODEL_TYPE
+            for relation in book_type.get("relations") or []
+        ):
+            raise ImporterError(
+                "KGQL Book.book_book_chapter relation was not found"
+            )
         book = self._get_book(manifest)
         related_ids = {
-            int(row["id"]) for row in book.get("Document") or [] if row.get("id")
+            int(row["id"])
+            for row in book.get(_CHAPTER_MODEL_TYPE) or []
+            if row.get("id")
         }
         wrapper = book.get("json_document") or {
             "format": APPFLOWY_FORMAT,
@@ -806,13 +862,13 @@ class BookImporter:
         append: list[int] = []
         target_relation_count = 0
         for chapter in manifest["chapters"]:
-            rows = self._exact_documents(chapter["document_name"])
+            rows = self._exact_chapters(chapter["document_name"])
             if len(rows) > 1:
                 raise ImporterError(
-                    f"Duplicate target Document: {chapter['document_name']}"
+                    f"Duplicate target Book Chapter: {chapter['document_name']}"
                 )
             if rows:
-                self._verify_document_row(rows[0], chapter)
+                self._verify_chapter_row(rows[0], chapter)
                 reuses.append(chapter["document_name"])
                 model_id = int(rows[0]["id"])
                 if model_id in related_ids:
@@ -827,8 +883,8 @@ class BookImporter:
             book_id=int(manifest["book"]["kgql_id"]),
             book_name=book["name"],
             chapter_count=len(manifest["chapters"]),
-            create_documents=tuple(creates),
-            reuse_documents=tuple(reuses),
+            create_chapters=tuple(creates),
+            reuse_chapters=tuple(reuses),
             append_chapters=tuple(append),
             relation_count=target_relation_count,
         )
@@ -857,28 +913,28 @@ class BookImporter:
             number = int(chapter["number"])
             model_id = ids.get(number)
             if model_id is not None:
-                row = self._document_by_id(model_id)
-                self._verify_document_row(row, chapter)
+                row = self._chapter_by_id(model_id)
+                self._verify_chapter_row(row, chapter)
                 continue
-            rows = self._exact_documents(chapter["document_name"])
+            rows = self._exact_chapters(chapter["document_name"])
             if rows:
                 row = rows[0]
-                self._verify_document_row(row, chapter)
+                self._verify_chapter_row(row, chapter)
                 model_id = int(row["id"])
             else:
                 result = self.client.set_model(
                     self.chapter_create_payload(chapter)
                 )
                 model_id = int(result["id"])
-                row = self._document_by_id(model_id)
-                self._verify_document_row(row, chapter)
+                row = self._chapter_by_id(model_id)
+                self._verify_chapter_row(row, chapter)
             ids[number] = model_id
             self._write_receipt(
                 receipt_path,
                 manifest,
                 ids,
                 backup,
-                status="documents_in_progress",
+                status="chapters_in_progress",
             )
         self._update_book(manifest, ids, resume=resume)
         verification = self.verify(manifest, ids)
@@ -899,7 +955,7 @@ class BookImporter:
     @staticmethod
     def chapter_create_payload(chapter: Mapping[str, Any]) -> dict[str, Any]:
         return {
-            "model_type": "Document",
+            "model_type": _CHAPTER_MODEL_TYPE,
             "name": chapter["document_name"],
             "description": chapter["description"],
             "attributes": _attributes(
@@ -908,6 +964,7 @@ class BookImporter:
                     "json_document": chapter["kgql_json_document"],
                     "pinned": False,
                     "publish": chapter["publish"],
+                    "chapter_number": int(chapter["number"]),
                 }
             ),
             "tags": [{"system": "Status", "nodes": ["Draft"]}],
@@ -940,8 +997,8 @@ class BookImporter:
             ),
             "relations": [
                 {
-                    "model_type": "Document",
-                    "relation_name": "references_document",
+                    "model_type": _CHAPTER_MODEL_TYPE,
+                    "relation_name": _CHAPTER_RELATION_NAME,
                     "link": list(chapter_ids),
                 }
             ],
@@ -953,8 +1010,8 @@ class BookImporter:
         ids: Mapping[int, int],
     ) -> dict[str, Any]:
         for chapter in manifest["chapters"]:
-            row = self._document_by_id(ids[int(chapter["number"])])
-            self._verify_document_row(row, chapter)
+            row = self._chapter_by_id(ids[int(chapter["number"])])
+            self._verify_chapter_row(row, chapter)
         book = self._get_book(manifest)
         wrapper = book.get("json_document")
         if not isinstance(wrapper, Mapping):
@@ -971,10 +1028,11 @@ class BookImporter:
                 )
             self._verify_overview_pair(children, chapter, href)
         relation_ids = {
-            int(item["id"]) for item in book.get("Document") or []
+            int(item["id"])
+            for item in book.get(_CHAPTER_MODEL_TYPE) or []
         }
         if not set(ids.values()).issubset(relation_ids):
-            raise ImporterError("Book references_document relations are incomplete")
+            raise ImporterError("Book book_book_chapter relations are incomplete")
         plain = appflowy_plain_text(wrapper)
         if _semantic_string(book.get("document")) != plain:
             raise ImporterError("Book plain-text mirror does not match AppFlowy")
@@ -1007,30 +1065,36 @@ class BookImporter:
             )
         return book
 
-    def _exact_documents(self, name: str) -> list[dict[str, Any]]:
+    def _exact_chapters(self, name: str) -> list[dict[str, Any]]:
         return self.client.get_models(
-            "Document",
+            _CHAPTER_MODEL_TYPE,
             [{"key": "name", "op": "=", "value": name}],
-            _DOCUMENT_STRUCT,
+            _CHAPTER_STRUCT,
         )
 
-    def _document_by_id(self, model_id: int) -> dict[str, Any]:
+    def _chapter_by_id(self, model_id: int) -> dict[str, Any]:
         rows = self.client.get_models(
-            "Document",
+            _CHAPTER_MODEL_TYPE,
             [{"key": "id", "op": "=", "value": model_id}],
-            _DOCUMENT_STRUCT,
+            _CHAPTER_STRUCT,
         )
         if len(rows) != 1:
-            raise ImporterError(f"Document {model_id} was not found uniquely")
+            raise ImporterError(
+                f"Book Chapter {model_id} was not found uniquely"
+            )
         return rows[0]
 
     @staticmethod
-    def _verify_document_row(
+    def _verify_chapter_row(
         row: Mapping[str, Any],
         chapter: Mapping[str, Any],
     ) -> None:
         if row.get("name") != chapter["document_name"]:
-            raise ImporterError("Chapter Document name mismatch")
+            raise ImporterError("Book Chapter name mismatch")
+        if row.get("chapter_number") != int(chapter["number"]):
+            raise ImporterError(
+                f"{chapter['document_name']}: chapter_number mismatch"
+            )
         if _canonical(row.get("json_document")) != _canonical(
             chapter["kgql_json_document"]
         ):

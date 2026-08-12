@@ -97,14 +97,33 @@ class FakeKgqlClient:
             "word_count": None,
             "author": "Test Author",
             "link": None,
-            "Document": [],
+            "Book Chapter": [],
         }
-        self.documents: dict[int, dict[str, Any]] = {}
+        self.chapters: dict[int, dict[str, Any]] = {}
         self.next_id = 9001
         self.mutations: list[dict[str, Any]] = []
 
     def get_model_type(self, model_type: str) -> Any:
-        return [{"name": model_type}]
+        if model_type == "Book":
+            return [
+                {
+                    "name": "Book",
+                    "relations": [
+                        {
+                            "relation_name": "book_book_chapter",
+                            "target_model_type": "Book Chapter",
+                        }
+                    ],
+                }
+            ]
+        if model_type == "Book Chapter":
+            return [
+                {
+                    "name": "Book Chapter",
+                    "attributes": [{"key": "chapter_number"}],
+                }
+            ]
+        return []
 
     def get_models(
         self,
@@ -113,11 +132,12 @@ class FakeKgqlClient:
         struct: Mapping[str, Any],
     ) -> list[dict[str, Any]]:
         del struct
-        models = (
-            [self.book]
-            if model_type == "Book"
-            else list(self.documents.values())
-        )
+        if model_type == "Book":
+            models = [self.book]
+        elif model_type == "Book Chapter":
+            models = list(self.chapters.values())
+        else:
+            models = []
         for condition in filters:
             key = condition["key"]
             value = condition["value"]
@@ -131,8 +151,8 @@ class FakeKgqlClient:
         self.mutations.append(payload)
         model_id = payload.get("id")
         if model_id is None:
-            if payload.get("model_type") != "Document":
-                raise AssertionError("Fake only creates Document models")
+            if payload.get("model_type") != "Book Chapter":
+                raise AssertionError("Fake only creates Book Chapter models")
             model_id = self.next_id
             self.next_id += 1
             row = {
@@ -146,10 +166,10 @@ class FakeKgqlClient:
                 "tags": self._tags(payload.get("tags") or []),
             }
             self._apply_attributes(row, payload.get("attributes") or [])
-            self.documents[model_id] = row
+            self.chapters[model_id] = row
             return {"id": model_id}
         if model_id != self.book["id"]:
-            row = self.documents[int(model_id)]
+            row = self.chapters[int(model_id)]
             if "description" in payload:
                 row["description"] = payload["description"]
             self._apply_attributes(row, payload.get("attributes") or [])
@@ -161,23 +181,25 @@ class FakeKgqlClient:
         self._apply_attributes(self.book, payload.get("attributes") or [])
         for relation in payload.get("relations") or []:
             if relation != {
-                "model_type": "Document",
-                "relation_name": "references_document",
+                "model_type": "Book Chapter",
+                "relation_name": "book_book_chapter",
                 "link": relation["link"],
             }:
                 raise AssertionError("Malformed relation payload")
             existing = {
-                int(item["id"]) for item in self.book.get("Document") or []
+                int(item["id"])
+                for item in self.book.get("Book Chapter") or []
             }
             for linked_id in relation["link"]:
                 if linked_id in existing:
                     continue
-                document = self.documents[int(linked_id)]
-                self.book["Document"].append(
+                chapter = self.chapters[int(linked_id)]
+                self.book["Book Chapter"].append(
                     {
                         "id": linked_id,
-                        "name": document["name"],
-                        "description": document["description"],
+                        "name": chapter["name"],
+                        "description": chapter["description"],
+                        "chapter_number": chapter["chapter_number"],
                     }
                 )
         return {"id": model_id}
