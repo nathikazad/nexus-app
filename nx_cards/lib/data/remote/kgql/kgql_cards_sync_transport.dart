@@ -42,12 +42,10 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
               key: attrLanguageDetails,
               value: languageDetailsJson(languageContent),
             ),
-          if (card.modelTypeName == wordCardModelType ||
-              card.modelTypeName == verbCardModelType)
-            SetModelAttribute(
-              key: attrLearningStatus,
-              value: card.learningStatus.storageValue,
-            ),
+          SetModelAttribute(
+            key: attrLearningStatus,
+            value: card.learningStatus.storageValue,
+          ),
         ],
       ),
       clientUpdatedAt,
@@ -101,6 +99,10 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
           value: cardDetailsJson(content),
         ),
         SetModelAttribute(key: attrSuspended, value: false),
+        SetModelAttribute(
+          key: attrLearningStatus,
+          value: LearningStatus.notStarted.storageValue,
+        ),
         SetModelAttribute(
           key: attrSchedule,
           value: emptyScheduleJson(

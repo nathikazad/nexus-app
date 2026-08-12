@@ -11,6 +11,7 @@ const _baseCardStruct = <String, dynamic>{
   'description': true,
   'updated_at': true,
   attrDueAt: true,
+  attrLearningStatus: true,
   attrSuspended: true,
   attrSchedule: true,
   attrReviewHistory: true,
@@ -31,11 +32,6 @@ const _languageCardStruct = <String, dynamic>{
     'name': true,
     'relation_name': true,
   },
-};
-
-const _wordCardStruct = <String, dynamic>{
-  ..._languageCardStruct,
-  attrLearningStatus: true,
 };
 
 class KgqlCardsRepository implements CardsRepository {
@@ -66,8 +62,8 @@ class KgqlCardsRepository implements CardsRepository {
   @override
   Future<List<StudyCard>> listCards() async {
     // A parent KGQL query returns child rows, but its struct can only project
-    // fields known to the parent type. Fetch the child projection separately
-    // so child-only attributes remain child-specific in the schema.
+    // fields known to that parent. Fetch LanguageFlashcard separately so all
+    // language descendants retain language details and lexical relations.
     final results = await Future.wait([
       fetchKgqlModels(
         _client,
@@ -78,11 +74,6 @@ class KgqlCardsRepository implements CardsRepository {
         _client,
         filter: const {'model_type': languageCardModelType},
         struct: _languageCardStruct,
-      ),
-      fetchKgqlModels(
-        _client,
-        filter: const {'model_type': wordCardModelType},
-        struct: _wordCardStruct,
       ),
     ]);
     final rowsById = <int, Model>{
@@ -174,6 +165,10 @@ class KgqlCardsRepository implements CardsRepository {
             value: cardDetailsJson(content),
           ),
           SetModelAttribute(key: attrSuspended, value: false),
+          SetModelAttribute(
+            key: attrLearningStatus,
+            value: LearningStatus.notStarted.storageValue,
+          ),
           SetModelAttribute(
             key: attrSchedule,
             value: emptyScheduleJson(

@@ -8,7 +8,7 @@ import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
 import 'package:nx_cards/features/cards/card_editors.dart';
-import 'package:nx_cards/features/shell/word_category_order.dart';
+import 'package:nx_cards/features/shell/language_category_order.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
 import 'package:nx_cards/features/shell/word_schedule_status.dart';
@@ -131,7 +131,7 @@ class _HomeScaffold extends ConsumerWidget {
         error: error,
         onRetry: () => ref.invalidate(cardsDashboardProvider),
       ),
-      data: (data) => _WordCategoriesDashboard(data: data),
+      data: (data) => _LanguageCategoriesDashboard(data: data),
     );
     return Scaffold(
       backgroundColor: RecallColors.soft,
@@ -162,17 +162,15 @@ class _HomeScaffold extends ConsumerWidget {
   }
 }
 
-class _WordCategoriesDashboard extends ConsumerWidget {
-  const _WordCategoriesDashboard({required this.data});
+class _LanguageCategoriesDashboard extends ConsumerWidget {
+  const _LanguageCategoriesDashboard({required this.data});
 
   final CardsDashboard data;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = orderedWordCategories(
-      data.cards
-          .where((card) => card.isWordCard)
-          .map((card) => card.wordCategory),
+    final categories = orderedLanguageCategories(
+      data.cards.map((card) => card.studyCategory),
     );
     return RefreshIndicator(
       onRefresh: ref.read(cardsLibrarySyncProvider),
@@ -197,7 +195,7 @@ class _WordCategoriesDashboard extends ConsumerWidget {
                           for (final category in categories)
                             SizedBox(
                               width: width,
-                              child: _WordCategoryCard(
+                              child: _LanguageCategoryCard(
                                 category: category,
                                 data: data,
                               ),
@@ -216,8 +214,8 @@ class _WordCategoriesDashboard extends ConsumerWidget {
   }
 }
 
-class _WordCategoryCard extends StatelessWidget {
-  const _WordCategoryCard({required this.category, required this.data});
+class _LanguageCategoryCard extends StatelessWidget {
+  const _LanguageCategoryCard({required this.category, required this.data});
 
   final String category;
   final CardsDashboard data;
@@ -225,18 +223,18 @@ class _WordCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cards = data.cards
-        .where((card) => card.wordCategory == category)
+        .where((card) => card.studyCategory == category)
         .toList(growable: false);
     final current = cards
         .where((card) => card.learningStatus == LearningStatus.learning)
         .length;
-    final due = data.dueCount(DateTime.now(), wordCategory: category);
+    final due = data.dueCount(DateTime.now(), studyCategory: category);
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => WordCategoryScreen(category: category),
+            builder: (_) => LanguageCategoryScreen(category: category),
           ),
         ),
         child: Padding(
@@ -280,7 +278,7 @@ class _WordCategoryCard extends StatelessWidget {
                   const SizedBox(width: 24),
                   _SmallCount(
                     value: cards.length,
-                    label: 'Words',
+                    label: category == 'Script' ? 'Letters' : 'Words',
                     color: RecallColors.ink,
                   ),
                   const Spacer(),
@@ -295,8 +293,8 @@ class _WordCategoryCard extends StatelessWidget {
   }
 }
 
-class WordCategoryScreen extends ConsumerWidget {
-  const WordCategoryScreen({super.key, required this.category});
+class LanguageCategoryScreen extends ConsumerWidget {
+  const LanguageCategoryScreen({super.key, required this.category});
 
   final String category;
 
@@ -315,7 +313,7 @@ class WordCategoryScreen extends ConsumerWidget {
         ),
         data: (data) {
           final cards = data.cards
-              .where((card) => card.wordCategory == category)
+              .where((card) => card.studyCategory == category)
               .toList(growable: false);
           final now = DateTime.now().toUtc();
           final learning = sortWordsByScheduleState(
@@ -339,7 +337,7 @@ class WordCategoryScreen extends ConsumerWidget {
           );
           final queue = data.studyQueue(
             DateTime.now(),
-            wordCategory: category,
+            studyCategory: category,
             newCardLimit:
                 (learning.length + learnt.length) * StudyCue.values.length,
           );
@@ -356,13 +354,13 @@ class WordCategoryScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              '${cards.length} words · ${learning.length} learning',
+                              '${cards.length} ${category == 'Script' ? 'letters' : 'words'} · ${learning.length} learning',
                               style: const TextStyle(color: RecallColors.muted),
                             ),
                           ),
                           _StudyLauncher(
                             title: category,
-                            preferenceKey: 'word-category:$category',
+                            preferenceKey: 'language-category:$category',
                             prompts: queue,
                             studyCards: [...learning, ...learnt],
                             languagePair: _languagesForCards(data, cards),
@@ -395,7 +393,9 @@ class WordCategoryScreen extends ConsumerWidget {
                     children: [
                       _LearningTab(
                         cards: learning,
-                        emptyText: 'No words are currently being learned.',
+                        emptyText: category == 'Script'
+                            ? 'No letters are currently being learned.'
+                            : 'No words are currently being learned.',
                         previousStatus: LearningStatus.notStarted,
                         previousActionLabel: '←',
                         nextStatus: LearningStatus.learnt,
@@ -404,14 +404,18 @@ class WordCategoryScreen extends ConsumerWidget {
                       ),
                       _LearningTab(
                         cards: learnt,
-                        emptyText: 'No words have been marked learnt yet.',
+                        emptyText: category == 'Script'
+                            ? 'No letters have been marked learnt yet.'
+                            : 'No words have been marked learnt yet.',
                         previousStatus: LearningStatus.learning,
                         previousActionLabel: '←',
                         dashboard: data,
                       ),
                       _LearningTab(
                         cards: notStarted,
-                        emptyText: 'Every word has been started.',
+                        emptyText: category == 'Script'
+                            ? 'Every letter has been started.'
+                            : 'Every word has been started.',
                         nextStatus: LearningStatus.learning,
                         actionLabel: '+',
                         dashboard: data,

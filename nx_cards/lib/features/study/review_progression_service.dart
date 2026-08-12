@@ -48,11 +48,11 @@ ReviewProgressionPlan planReviewProgression({
   final projectedStatus = <int, LearningStatus>{
     for (final card in allCards) card.id: card.learningStatus,
   };
-  final promotedByCategory = <String, int>{};
+  final promotedByCohort = <String, int>{};
 
   for (final card in reviewedById.values) {
-    final category = card.wordCategory;
-    if (!card.isWordCard || category == null) continue;
+    final cohort = card.studyCategory;
+    if (cohort == null) continue;
     final reviews = <CardReview>[
       for (final cue in StudyCue.values) ...card.reviewHistoryFor(cue),
     ]..sort((a, b) => a.reviewedAt.compareTo(b.reviewedAt));
@@ -72,8 +72,8 @@ ReviewProgressionPlan planReviewProgression({
       );
       projectedStatus[card.id] = LearningStatus.learnt;
       if (card.learningStatus == LearningStatus.learning) {
-        promotedByCategory.update(
-          category,
+        promotedByCohort.update(
+          cohort,
           (count) => count + 1,
           ifAbsent: () => 1,
         );
@@ -92,11 +92,10 @@ ReviewProgressionPlan planReviewProgression({
   }
 
   if (settings.autoReplacePromotedCards) {
-    for (final entry in promotedByCategory.entries) {
+    for (final entry in promotedByCohort.entries) {
       final candidates = allCards.where(
         (card) =>
-            card.isWordCard &&
-            card.wordCategory == entry.key &&
+            card.studyCategory == entry.key &&
             projectedStatus[card.id] == LearningStatus.notStarted,
       );
       for (final card in candidates.take(entry.value)) {

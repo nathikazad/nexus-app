@@ -43,6 +43,7 @@ void main() {
                       'model_type': <String, Object?>{'id': 62, 'name': 'Word'},
                       'attributes': <String, Object?>{
                         'suspended': false,
+                        'learning_status': 'learning',
                         'card_details': <String, Object?>{
                           'front': 'talent',
                           'back': 'കഴിവ്',
@@ -119,6 +120,7 @@ void main() {
     expect(bundle.decks.single.deck.toLanguage, 'Malayalam');
     final card = bundle.decks.single.cards.single;
     expect(card.deckId, 7);
+    expect(card.learningStatus, LearningStatus.learning);
     expect(card.content, isA<LanguageCardContent>());
     expect((card.content as LanguageCardContent).transliteration, 'kazhivu');
     expect(
@@ -178,6 +180,12 @@ void main() {
     expect(
       (languageDetails['value'] as Map<String, dynamic>)['examples'],
       isEmpty,
+    );
+    expect(
+      attributes.cast<Map<String, dynamic>>().singleWhere(
+        (value) => value['key'] == 'learning_status',
+      )['value'],
+      LearningStatus.notStarted.storageValue,
     );
     expect(result.status, CardMutationStatus.applied);
     expect(result.deckHashes.single.serverHash, 'new-hash');

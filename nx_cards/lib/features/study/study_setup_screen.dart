@@ -269,9 +269,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
 
   bool get _isScriptStudy =>
       widget.studyCards.isNotEmpty &&
-      widget.studyCards.every(
-        (card) => card.wordCategory?.trim().toLowerCase() == 'script',
-      );
+      widget.studyCards.every((card) => card.isScriptCard);
 
   String _cueLabel(StudyCue cue) => switch (cue) {
     StudyCue.fromLanguage => widget.fromLanguage,

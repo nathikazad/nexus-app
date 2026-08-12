@@ -1,4 +1,4 @@
-List<String> orderedWordCategories(Iterable<String?> values) {
+List<String> orderedLanguageCategories(Iterable<String?> values) {
   final categories = <String>{
     for (final value in values)
       if (value?.trim() case final category? when category.isNotEmpty) category,

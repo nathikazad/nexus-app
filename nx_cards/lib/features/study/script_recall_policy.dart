@@ -8,8 +8,7 @@ abstract final class ScriptRecallPolicy {
     StudyCue.toLanguage,
   ];
 
-  static bool appliesTo(StudyCard card) =>
-      card.wordCategory?.trim().toLowerCase() == 'script';
+  static bool appliesTo(StudyCard card) => card.isScriptCard;
 
   static RecallInteraction interactionFor(StudyPrompt prompt) =>
       appliesTo(prompt.card) && prompt.cue == StudyCue.fromLanguage

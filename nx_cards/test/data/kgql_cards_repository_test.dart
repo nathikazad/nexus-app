@@ -36,6 +36,12 @@ void main() {
     expect(data['name'], 'talent');
     expect(data, isNot(contains('description')));
     final attributes = data['attributes'] as List<dynamic>;
+    expect(
+      attributes.cast<Map<String, dynamic>>().singleWhere(
+        (row) => row['key'] == attrLearningStatus,
+      )['value'],
+      LearningStatus.notStarted.storageValue,
+    );
     final cardDetails =
         attributes.singleWhere(
               (row) => (row as Map<String, dynamic>)['key'] == attrCardDetails,
@@ -107,12 +113,8 @@ void main() {
                 },
               },
               'review_history': {'version': 3, 'items': <Object?>[]},
-              'model_type': {
-                'id': 67,
-                'name': requestedType == wordCardModelType
-                    ? wordCardModelType
-                    : languageCardModelType,
-              },
+              'learning_status': 'learning',
+              'model_type': {'id': 67, 'name': wordCardModelType},
               'FlashcardDeck': [
                 {'id': 7, 'name': 'Malayalam', 'model_type_id': 65},
               ],
@@ -134,11 +136,8 @@ void main() {
     expect(content.examples.single.translation, 'He has good talent.');
     expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
     expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
-    expect(requestedTypes.toSet(), {
-      cardModelType,
-      languageCardModelType,
-      wordCardModelType,
-    });
+    expect(cards.single.learningStatus, LearningStatus.learning);
+    expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});
   });
 }
 

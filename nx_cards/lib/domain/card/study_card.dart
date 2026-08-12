@@ -37,6 +37,7 @@ class StudyCard {
   bool get isLanguageCard => content is LanguageCardContent;
   bool get isWordCard => modelTypeName == 'Word' || modelTypeName == 'Verb';
   bool get isPhraseCard => modelTypeName == 'Phrase';
+  bool get isScriptCard => modelTypeName == 'Script';
   final int deckId;
   final String deckName;
   final Map<StudyCue, CardSchedule> schedules;
@@ -46,6 +47,11 @@ class StudyCard {
   bool get isRecallEligible => learningStatus.isRecallEligible;
   final Map<String, List<String>> tags;
   String? get wordCategory => tags['Word Category']?.firstOrNull;
+  String? get studyCategory => isScriptCard
+      ? 'Script'
+      : isWordCard
+      ? wordCategory
+      : null;
   final String? modelTypeName;
   final int? sourceBookId;
   final String? sourceBookName;

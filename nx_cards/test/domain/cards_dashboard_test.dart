@@ -101,11 +101,11 @@ void main() {
 
     expect(
       dashboard
-          .studyQueue(now, wordCategory: 'Noun')
+          .studyQueue(now, studyCategory: 'Noun')
           .map((prompt) => prompt.cardId),
       [1, 5],
     );
-    expect(dashboard.newCount(wordCategory: 'Noun'), 2);
+    expect(dashboard.newCount(studyCategory: 'Noun'), 2);
     expect(dashboard.studyQueue(now).map((prompt) => prompt.cardId), [1, 3, 5]);
   });
 }

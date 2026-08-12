@@ -7,6 +7,7 @@ const languageCardModelType = 'LanguageFlashcard';
 const wordCardModelType = 'Word';
 const phraseCardModelType = 'Phrase';
 const verbCardModelType = 'Verb';
+const scriptCardModelType = 'Script';
 const bookModelType = 'Book';
 
 const wordPhrasesRelation = 'word_phrases';
@@ -17,7 +18,8 @@ bool isLanguageCardModelType(String? name) =>
     name == languageCardModelType ||
     name == wordCardModelType ||
     name == phraseCardModelType ||
-    name == verbCardModelType;
+    name == verbCardModelType ||
+    name == scriptCardModelType;
 
 const attrArchived = 'archived';
 const attrDueAt = 'due_at';
@@ -505,6 +507,15 @@ SetModelTypeRequest buildCardSchemaRequest() {
         constraints: const {'json_schema': cardDetailsJsonSchema},
       ),
       AttributeDefinition(key: attrDueAt, valueType: 'datetime'),
+      AttributeDefinition(
+        key: attrLearningStatus,
+        valueType: 'string',
+        required: true,
+        constraints: const {
+          'default': 'not_started',
+          'enum': ['not_started', 'learning', 'learnt'],
+        },
+      ),
       AttributeDefinition(
         key: attrSuspended,
         valueType: 'boolean',

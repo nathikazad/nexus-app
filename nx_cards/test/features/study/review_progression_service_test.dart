@@ -97,12 +97,41 @@ void main() {
     expect(incomplete.changed, isFalse);
     expect(disabled.changed, isFalse);
   });
+
+  test('promotes and replaces Script cards as one model-type cohort', () {
+    final promoted = _card(
+      id: 1,
+      category: 'Script',
+      status: LearningStatus.learning,
+      script: true,
+      ratings: const {
+        StudyCue.fromLanguage: [3, 3, 3, 3, 3],
+      },
+    );
+    final replacement = _card(
+      id: 2,
+      category: 'Script',
+      status: LearningStatus.notStarted,
+      script: true,
+    );
+
+    final plan = planReviewProgression(
+      reviewedCards: [promoted],
+      allCards: [promoted, replacement],
+      settings: const ReviewProgressionSettings(),
+    );
+
+    expect(plan.changes.map((change) => change.card.id), [1, 2]);
+    expect(plan.movedToPast, 1);
+    expect(plan.replacements, 1);
+  });
 }
 
 StudyCard _card({
   required int id,
   required String category,
   required LearningStatus status,
+  bool script = false,
   Map<StudyCue, List<int>> ratings = const {},
 }) {
   var minute = 0;
@@ -134,9 +163,11 @@ StudyCard _card({
     reviewHistory: history,
     suspended: false,
     learningStatus: status,
-    modelTypeName: 'Word',
-    tags: {
-      'Word Category': [category],
-    },
+    modelTypeName: script ? 'Script' : 'Word',
+    tags: script
+        ? const <String, List<String>>{}
+        : <String, List<String>>{
+            'Word Category': [category],
+          },
   );
 }

@@ -79,7 +79,9 @@ void main() {
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
         ],
-        child: const MaterialApp(home: WordCategoryScreen(category: 'Noun')),
+        child: const MaterialApp(
+          home: LanguageCategoryScreen(category: 'Noun'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -120,7 +122,9 @@ void main() {
           cardsRepositoryProvider.overrideWithValue(repository),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
         ],
-        child: const MaterialApp(home: WordCategoryScreen(category: 'Noun')),
+        child: const MaterialApp(
+          home: LanguageCategoryScreen(category: 'Noun'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -186,7 +190,9 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: WordCategoryScreen(category: 'Noun')),
+        child: const MaterialApp(
+          home: LanguageCategoryScreen(category: 'Noun'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -301,10 +307,12 @@ StudyCard _word({
   },
   suspended: false,
   learningStatus: learningStatus,
-  tags: {
-    'Word Category': [category],
-  },
-  modelTypeName: 'Word',
+  tags: category == 'Script'
+      ? const <String, List<String>>{}
+      : <String, List<String>>{
+          'Word Category': [category],
+        },
+  modelTypeName: category == 'Script' ? 'Script' : 'Word',
 );
 
 CardSchedule _schedule(DateTime dueAt) => CardSchedule(

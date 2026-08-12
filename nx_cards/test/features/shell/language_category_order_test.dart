@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_cards/features/shell/word_category_order.dart';
+import 'package:nx_cards/features/shell/language_category_order.dart';
 
 void main() {
   test('orders present categories with Script and Noun first', () {
     expect(
-      orderedWordCategories([
+      orderedLanguageCategories([
         'Verb',
         'Noun',
         'Future category',
@@ -19,6 +19,6 @@ void main() {
   });
 
   test('does not create priority categories when they are absent', () {
-    expect(orderedWordCategories(['Verb', 'Adverb']), ['Verb', 'Adverb']);
+    expect(orderedLanguageCategories(['Verb', 'Adverb']), ['Verb', 'Adverb']);
   });
 }

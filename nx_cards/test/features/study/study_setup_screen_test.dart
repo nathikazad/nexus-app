@@ -731,10 +731,7 @@ StudyCard _scriptCard({
   },
   suspended: false,
   learningStatus: learningStatus,
-  tags: const <String, List<String>>{
-    'Word Category': <String>['Script'],
-  },
-  modelTypeName: 'Word',
+  modelTypeName: 'Script',
 );
 
 class _FakeAudioRepository implements CardAudioRepository {
