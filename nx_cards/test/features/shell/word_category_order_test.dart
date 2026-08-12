@@ -14,11 +14,11 @@ void main() {
         null,
         '',
       ]),
-      ['Script', 'Noun', 'Adjective', 'Future category', 'Verb'],
+      ['Script', 'Noun', 'Verb', 'Adjective', 'Future category'],
     );
   });
 
   test('does not create priority categories when they are absent', () {
-    expect(orderedWordCategories(['Verb', 'Adverb']), ['Adverb', 'Verb']);
+    expect(orderedWordCategories(['Verb', 'Adverb']), ['Verb', 'Adverb']);
   });
 }

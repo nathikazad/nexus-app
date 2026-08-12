@@ -137,9 +137,14 @@ void main() {
     await tester.tap(find.text('AI'));
     await tester.pumpAndSettle();
 
-    expect(find.text('What should AI ask you?'), findsOneWidget);
+    expect(find.text('What should be in front?'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Retained'), findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Due'), findsOneWidget);
     expect(find.text('How many cards?'), findsOneWidget);
-    expect(find.text('Choose the order'), findsOneWidget);
+    expect(find.text('Choose the order'), findsNothing);
     await tester.ensureVisible(find.text('English'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('English'));
@@ -206,7 +211,7 @@ void main() {
     expect(find.widgetWithText(FilterChip, 'Relearning'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Retained'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'New'), findsOneWidget);
-    expect(find.text('2 cards match these filters'), findsOneWidget);
+    expect(find.text('1 out of 2 cards are due now'), findsOneWidget);
 
     await tester.ensureVisible(find.widgetWithText(FilterChip, 'Past'));
     await tester.pumpAndSettle();
@@ -222,8 +227,66 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Due'));
     await tester.pump();
-    expect(find.text('2 of 3 are due now'), findsOneWidget);
+    expect(find.text('2 out of 3 cards are due now'), findsOneWidget);
     expect(find.text('2 available'), findsOneWidget);
+  });
+
+  testWidgets('retained filter uses a recent-recall upper bound', (
+    tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final cards = [
+      _recallFilterCard(
+        id: 1,
+        learningStatus: LearningStatus.learning,
+        state: 'review',
+        lastReviewedAt: now,
+        ratings: const [3, 3, 3, 1, 1],
+      ),
+      _recallFilterCard(
+        id: 2,
+        learningStatus: LearningStatus.learning,
+        state: 'review',
+        lastReviewedAt: now,
+        ratings: const [3, 3, 3, 3, 3],
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(decks: const [], cards: cards)),
+          ),
+        ],
+        child: MaterialApp(
+          home: StudySetupScreen(
+            title: 'Malayalam',
+            prompts: [for (final card in cards) ...card.prompts],
+            studyCards: cards,
+            fromLanguage: 'English',
+            toLanguage: 'Malayalam',
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    final slider = tester.widget<Slider>(
+      find.byKey(const ValueKey('retained-recall-slider')),
+    );
+    expect(slider.divisions, 5);
+    expect(find.text('0–100%'), findsOneWidget);
+    expect(find.text('2 available'), findsOneWidget);
+    expect(find.text('0 out of 2 cards are due now'), findsOneWidget);
+
+    slider.onChanged!(60);
+    await tester.pump();
+    expect(find.text('0–60%'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+    expect(find.text('0 out of 1 cards are due now'), findsOneWidget);
   });
 
   testWidgets('restores the last setup independently for a study source', (
@@ -603,6 +666,7 @@ StudyCard _recallFilterCard({
   required String state,
   DateTime? lastReviewedAt,
   bool due = false,
+  List<int> ratings = const <int>[],
 }) => StudyCard(
   id: id,
   content: LanguageCardContent(
@@ -627,7 +691,18 @@ StudyCard _recallFilterCard({
       lapseCount: 0,
     ),
   },
-  reviewHistory: const <StudyCue, List<CardReview>>{},
+  reviewHistory: <StudyCue, List<CardReview>>{
+    StudyCue.fromLanguage: [
+      for (final (index, rating) in ratings.indexed)
+        CardReview(
+          id: '$id-$index',
+          reviewedAt: DateTime.utc(2026, 8, 1, 12, index),
+          rating: rating,
+          elapsedSeconds: 1,
+          scheduledSeconds: 1,
+        ),
+    ],
+  },
   suspended: false,
   learningStatus: learningStatus,
 );

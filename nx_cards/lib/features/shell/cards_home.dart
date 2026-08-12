@@ -13,6 +13,7 @@ import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
 import 'package:nx_cards/features/shell/word_schedule_status.dart';
 import 'package:nx_cards/features/settings/review_progression_settings_page.dart';
+import 'package:nx_cards/features/settings/review_progression_settings.dart';
 import 'package:nx_db/riverpod.dart';
 
 class CardsHome extends ConsumerWidget {
@@ -302,6 +303,8 @@ class WordCategoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(cardsDashboardProvider);
+    final historyWindow =
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
     return Scaffold(
       appBar: AppBar(title: Text(category)),
       body: dashboard.when(
@@ -320,16 +323,19 @@ class WordCategoryScreen extends ConsumerWidget {
               (card) => card.learningStatus == LearningStatus.learning,
             ),
             now,
+            historyWindow: historyWindow,
           );
           final learnt = sortWordsByScheduleState(
             cards.where((card) => card.learningStatus == LearningStatus.learnt),
             now,
+            historyWindow: historyWindow,
           );
           final notStarted = sortWordsByScheduleState(
             cards.where(
               (card) => card.learningStatus == LearningStatus.notStarted,
             ),
             now,
+            historyWindow: historyWindow,
           );
           final queue = data.studyQueue(
             DateTime.now(),
@@ -598,6 +604,9 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final scheduleStatus = wordScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
+      historyWindow:
+          ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
+          5,
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),

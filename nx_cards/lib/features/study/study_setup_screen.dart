@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/settings/review_progression_settings.dart';
+import 'package:nx_cards/features/shell/word_schedule_status.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
 import 'package:nx_cards/features/study/language_fast_recall_page.dart';
 import 'package:nx_cards/features/study/script_draw_practice_page.dart';
@@ -59,6 +61,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   };
   final Set<RecallCardState> _recallStates = RecallCardState.values.toSet();
   RecallTiming _recallTiming = RecallTiming.allMatching;
+  int _retainedMaxPercentage = 100;
   StudyOrder _order = StudyOrder.normal;
   int _count = 1;
   bool _starting = false;
@@ -103,6 +106,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
         RecallTiming.values,
         saved['recallTiming'],
       );
+      final retainedMaxPercentage = saved['retainedMaxPercentage'];
       final statuses = saved['learningStatuses'] is List
           ? (saved['learningStatuses'] as List)
                 .map((value) => _enumByName(LearningStatus.values, value))
@@ -130,6 +134,9 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
             ..addAll(recallStates);
         }
         if (recallTiming != null) _recallTiming = recallTiming;
+        if (retainedMaxPercentage is int) {
+          _retainedMaxPercentage = retainedMaxPercentage.clamp(0, 100);
+        }
         if (_mode == StudyMode.recall &&
             _isScriptStudy &&
             !ScriptRecallPolicy.allowedCues.contains(_cue)) {
@@ -165,6 +172,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
         ],
         'recallStates': [for (final state in _recallStates) state.name],
         'recallTiming': _recallTiming.name,
+        'retainedMaxPercentage': _retainedMaxPercentage,
         'order': _order.name,
         'count': _count,
       }),
@@ -182,7 +190,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   List<StudyPrompt> get _candidates {
     final cue = _cue;
     if (cue == null) return const <StudyPrompt>[];
-    if (_mode == StudyMode.recall) {
+    if (_usesRecallFilters) {
       return _recallBaseCandidates
           .where(
             (prompt) =>
@@ -214,7 +222,13 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
 
   bool _matchesRecallBaseFilters(StudyCard card) =>
       _learningStatuses.contains(card.learningStatus) &&
-      _recallStates.contains(_recallState(card));
+      _recallStates.contains(_recallState(card)) &&
+      (_recallState(card) != RecallCardState.retained ||
+          frontToBackRecallPercentage(
+                card,
+                historyWindow: _reviewHistoryWindow,
+              ) <=
+              _retainedMaxPercentage);
 
   bool _matchesRecallFilters(StudyCard card) =>
       _matchesRecallBaseFilters(card) &&
@@ -246,6 +260,12 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
       ? _drawCandidates.length
       : _candidates.length;
+
+  bool get _usesRecallFilters =>
+      _mode == StudyMode.recall || _mode == StudyMode.ai;
+
+  int get _reviewHistoryWindow =>
+      ref.read(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
 
   bool get _isScriptStudy =>
       widget.studyCards.isNotEmpty &&
@@ -299,6 +319,14 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     _rememberPreferences();
   }
 
+  void _selectRetainedMaxPercentage(double percentage) {
+    setState(() {
+      _retainedMaxPercentage = percentage.round();
+      _resetCount();
+    });
+    _rememberPreferences();
+  }
+
   void _resetCount() {
     final available = _availableCount;
     _count = min(10, max(1, available));
@@ -307,7 +335,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   void _selectMode(StudyMode mode) {
     setState(() {
       _mode = mode;
-      if (mode == StudyMode.recall &&
+      if (_usesRecallFilters &&
           _isScriptStudy &&
           !ScriptRecallPolicy.allowedCues.contains(_cue)) {
         _cue = StudyCue.fromLanguage;
@@ -376,14 +404,14 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                 for (final queued in _candidates)
                   if (cardsById[queued.cardId] case final latestCard?
                       when !latestCard.suspended &&
-                          (_mode != StudyMode.recall ||
+                          (!_usesRecallFilters ||
                               _matchesRecallFilters(latestCard)) &&
                           latestCard.scheduleFor(queued.cue).enabled)
                     StudyPrompt(card: latestCard, cue: queued.cue),
               ]
               .where(
                 (prompt) =>
-                    _mode == StudyMode.recall ||
+                    _usesRecallFilters ||
                     prompt.isNew ||
                     prompt.isDueAt(DateTime.now().toUtc()),
               )
@@ -394,7 +422,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                _mode == StudyMode.recall
+                _usesRecallFilters
                     ? 'No cards match these filters'
                     : 'Nothing due right now',
               ),
@@ -404,7 +432,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
         return null;
       }
 
-      if (_mode == StudyMode.recall || _order == StudyOrder.shuffle) {
+      if (_usesRecallFilters || _order == StudyOrder.shuffle) {
         selected.shuffle(Random.secure());
       }
       return selected
@@ -504,6 +532,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   @override
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
+    ref.watch(reviewProgressionSettingsProvider);
     final maxCount =
         _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
         ? _drawCandidates.length
@@ -700,29 +729,20 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                   ] else ...[
                     _SetupCard(
                       number: '01',
-                      title: 'Which words?',
-                      child: _learningStatusChoices(),
+                      title: 'What should be in front?',
+                      child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: '02',
-                      title: 'What should AI ask you?',
-                      child: _cueChoices(),
+                      title: _isScriptStudy ? 'Which letters?' : 'Which words?',
+                      child: _recallFilterChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: '03',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
-                    ),
-                    const SizedBox(height: 14),
-                    _SetupCard(
-                      number: '04',
-                      title: 'Choose the order',
-                      child: _OrderControl(
-                        value: _order,
-                        onChanged: _selectOrder,
-                      ),
                     ),
                     const SizedBox(height: 22),
                     FilledButton.icon(
@@ -750,7 +770,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     runSpacing: 8,
     children: [
       for (final cue
-          in _mode == StudyMode.recall && _isScriptStudy
+          in _usesRecallFilters && _isScriptStudy
               ? ScriptRecallPolicy.allowedCues
               : StudyCue.values)
         ChoiceChip(
@@ -804,6 +824,33 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
             ),
         ],
       ),
+      if (_recallStates.contains(RecallCardState.retained)) ...[
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Text('RETAINED RECALL', style: monoLabel),
+            const Spacer(),
+            Text(
+              '0–$_retainedMaxPercentage%',
+              key: const ValueKey('retained-recall-range'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        Slider(
+          key: const ValueKey('retained-recall-slider'),
+          value: _retainedMaxPercentage.toDouble(),
+          min: 0,
+          max: 100,
+          divisions: _reviewHistoryWindow,
+          label: '0–$_retainedMaxPercentage%',
+          onChanged: _selectRetainedMaxPercentage,
+        ),
+        Text(
+          'Based on the last $_reviewHistoryWindow front-to-back reviews',
+          style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+        ),
+      ],
       const SizedBox(height: 16),
       Text('REVIEW TIMING', style: monoLabel),
       const SizedBox(height: 8),
@@ -829,9 +876,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     final due = _recallBaseCandidates
         .where((prompt) => _isDueForRecall(prompt.card))
         .length;
-    return _recallTiming == RecallTiming.dueNow
-        ? '$due of $matching are due now'
-        : '$matching cards match these filters';
+    return '$due out of $matching cards are due now';
   }
 
   Widget _countControl(int maxCount) => maxCount == 0

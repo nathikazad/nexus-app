@@ -14,7 +14,11 @@ class WordScheduleStatus {
   final int? recallPercentage;
 }
 
-WordScheduleStatus? wordScheduleStatus(StudyCard card, DateTime now) {
+WordScheduleStatus? wordScheduleStatus(
+  StudyCard card,
+  DateTime now, {
+  int historyWindow = 5,
+}) {
   if (card.suspended) {
     return const WordScheduleStatus(
       label: 'Suspended',
@@ -31,17 +35,17 @@ WordScheduleStatus? wordScheduleStatus(StudyCard card, DateTime now) {
     isDue: schedule.isDueAt(now),
     sortPriority: _statePriority(schedule),
     recallPercentage: schedule.schedulingState == 'review'
-        ? frontToBackRecallPercentage(card)
+        ? frontToBackRecallPercentage(card, historyWindow: historyWindow)
         : null,
   );
 }
 
-int frontToBackRecallPercentage(StudyCard card) {
+int frontToBackRecallPercentage(StudyCard card, {int historyWindow = 5}) {
   final reviews = card.reviewHistoryFor(StudyCue.fromLanguage).toList()
     ..sort((left, right) => left.reviewedAt.compareTo(right.reviewedAt));
   if (reviews.isEmpty) return 0;
   final recentReviews = reviews.skip(
-    (reviews.length - 5).clamp(0, reviews.length),
+    (reviews.length - historyWindow).clamp(0, reviews.length),
   );
   final recalled = recentReviews.where((review) => review.rating >= 3).length;
   return (recalled / recentReviews.length * 100).round();
@@ -67,17 +71,36 @@ int _statePriority(CardSchedule schedule) {
 
 List<StudyCard> sortWordsByScheduleState(
   Iterable<StudyCard> cards,
-  DateTime now,
-) {
+  DateTime now, {
+  int historyWindow = 5,
+}) {
   final sorted = cards.toList(growable: false);
   sorted.sort((left, right) {
-    final leftPriority = wordScheduleStatus(left, now)?.sortPriority ?? 5;
-    final rightPriority = wordScheduleStatus(right, now)?.sortPriority ?? 5;
+    final leftPriority =
+        wordScheduleStatus(
+          left,
+          now,
+          historyWindow: historyWindow,
+        )?.sortPriority ??
+        5;
+    final rightPriority =
+        wordScheduleStatus(
+          right,
+          now,
+          historyWindow: historyWindow,
+        )?.sortPriority ??
+        5;
     final byState = leftPriority.compareTo(rightPriority);
     if (byState != 0) return byState;
     if (leftPriority == 2) {
-      final leftRecall = frontToBackRecallPercentage(left);
-      final rightRecall = frontToBackRecallPercentage(right);
+      final leftRecall = frontToBackRecallPercentage(
+        left,
+        historyWindow: historyWindow,
+      );
+      final rightRecall = frontToBackRecallPercentage(
+        right,
+        historyWindow: historyWindow,
+      );
       final byRecall = leftRecall.compareTo(rightRecall);
       if (byRecall != 0) return byRecall;
     }

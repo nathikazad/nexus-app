@@ -77,6 +77,26 @@ void main() {
 
     expect(status?.recallPercentage, 40);
   });
+
+  test('recall percentage honors the configured history window', () {
+    final card = _card(
+      schedules: {
+        StudyCue.fromLanguage: _schedule(
+          state: 'review',
+          dueAt: DateTime.utc(2026, 8, 12),
+        ),
+      },
+      recallRatings: const [4, 4, 1, 1, 3],
+    );
+
+    final status = wordScheduleStatus(
+      card,
+      DateTime.utc(2026, 8, 11),
+      historyWindow: 3,
+    );
+
+    expect(status?.recallPercentage, 33);
+  });
 }
 
 StudyCard _card({

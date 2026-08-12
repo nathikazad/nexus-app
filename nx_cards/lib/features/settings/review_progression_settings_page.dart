@@ -80,6 +80,28 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ),
               const SizedBox(height: 18),
               _SettingsCard(
+                child: DropdownButtonFormField<int>(
+                  initialValue: _historyWindow,
+                  decoration: const InputDecoration(
+                    labelText: 'Recent answers to consider',
+                  ),
+                  items: const [3, 5, 7, 10]
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text('Last $value answers'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _historyWindow = value);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              _SettingsCard(
                 child: SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Automatic progression'),
@@ -97,26 +119,6 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                 _SettingsCard(
                   child: Column(
                     children: [
-                      DropdownButtonFormField<int>(
-                        initialValue: _historyWindow,
-                        decoration: const InputDecoration(
-                          labelText: 'Recent answers to consider',
-                        ),
-                        items: const [3, 5, 7, 10]
-                            .map(
-                              (value) => DropdownMenuItem(
-                                value: value,
-                                child: Text('Last $value answers'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _historyWindow = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 22),
                       _PercentageSetting(
                         title: 'Move to Past',
                         detail: 'when recall is at least',

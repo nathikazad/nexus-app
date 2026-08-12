@@ -15,5 +15,6 @@ List<String> orderedWordCategories(Iterable<String?> values) {
 int _priority(String category) => switch (category.toLowerCase()) {
   'script' => 0,
   'noun' => 1,
-  _ => 2,
+  'verb' => 2,
+  _ => 3,
 };
