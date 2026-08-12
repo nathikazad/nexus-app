@@ -9,6 +9,8 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
 import 'package:nx_cards/features/study/language_audio_controls.dart';
 import 'package:nx_cards/features/study/language_examples_page.dart';
+import 'package:nx_cards/features/study/script_recall_card.dart';
+import 'package:nx_cards/features/study/script_recall_policy.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.title, required this.prompts});
@@ -25,6 +27,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   bool _revealed = false;
   bool _saving = false;
   bool _ended = false;
+  bool _scriptDrawingReady = false;
   int _missCount = 0;
   final Map<int, CardRating> _ratings = <int, CardRating>{};
   Map<CardRating, ScheduledOutcome>? _outcomes;
@@ -36,6 +39,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   }
 
   StudyCard get _card => _prompt.card;
+  RecallInteraction get _interaction =>
+      ScriptRecallPolicy.interactionFor(_prompt);
 
   @override
   void initState() {
@@ -72,6 +77,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
         setState(() {
           _index++;
           _revealed = false;
+          _scriptDrawingReady = false;
           _outcomes = null;
         });
       }
@@ -187,7 +193,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                               ),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(18),
-                                onTap: _reveal,
+                                onTap:
+                                    _interaction == RecallInteraction.standard
+                                    ? _reveal
+                                    : null,
                                 child: Card(
                                   child: Padding(
                                     padding: const EdgeInsets.all(32),
@@ -213,195 +222,242 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                           ],
                                         ),
                                         Expanded(
-                                          child: LayoutBuilder(
-                                            builder: (context, constraints) => SingleChildScrollView(
-                                              child: ConstrainedBox(
-                                                constraints: BoxConstraints(
-                                                  minHeight:
-                                                      constraints.maxHeight,
-                                                ),
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Text(
-                                                      _prompt.prompt,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: TextStyle(
-                                                        fontSize: _revealed
-                                                            ? 22
-                                                            : 38,
-                                                        height: 1.2,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        letterSpacing: -0.8,
+                                          child:
+                                              _interaction ==
+                                                  RecallInteraction
+                                                      .scriptDrawing
+                                              ? SingleChildScrollView(
+                                                  physics: _revealed
+                                                      ? null
+                                                      : const NeverScrollableScrollPhysics(),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 14,
                                                       ),
+                                                  child: ScriptRecallCard(
+                                                    key: ValueKey<String>(
+                                                      'script-recall-${_prompt.cardId}-${_prompt.cue.storageKey}',
                                                     ),
-                                                    if (!_revealed)
-                                                      const Padding(
-                                                        padding:
-                                                            EdgeInsets.only(
-                                                              top: 14,
-                                                            ),
-                                                        child: Text(
-                                                          'Tap the card to reveal the answer',
-                                                          style: TextStyle(
-                                                            color: RecallColors
-                                                                .faint,
+                                                    prompt: _prompt,
+                                                    revealed: _revealed,
+                                                    onDrawingChanged: (ready) {
+                                                      if (_scriptDrawingReady !=
+                                                          ready) {
+                                                        setState(
+                                                          () =>
+                                                              _scriptDrawingReady =
+                                                                  ready,
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
+                                                )
+                                              : LayoutBuilder(
+                                                  builder: (context, constraints) => SingleChildScrollView(
+                                                    child: ConstrainedBox(
+                                                      constraints:
+                                                          BoxConstraints(
+                                                            minHeight:
+                                                                constraints
+                                                                    .maxHeight,
                                                           ),
-                                                        ),
-                                                      )
-                                                    else ...[
-                                                      const Padding(
-                                                        padding:
-                                                            EdgeInsets.symmetric(
-                                                              vertical: 22,
-                                                            ),
-                                                        child: SizedBox(
-                                                          width: 54,
-                                                          child: Divider(),
-                                                        ),
-                                                      ),
-                                                      if (_card.content
-                                                          case LanguageCardContent(
-                                                            :final english,
-                                                            :final originalScript,
-                                                            :final transliteration,
-                                                          )) ...[
-                                                        if (_prompt.cue !=
-                                                            StudyCue
-                                                                .fromLanguage) ...[
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        children: [
                                                           Text(
-                                                            english,
+                                                            _prompt.prompt,
                                                             textAlign: TextAlign
                                                                 .center,
-                                                            style:
-                                                                const TextStyle(
+                                                            style: TextStyle(
+                                                              fontSize:
+                                                                  _revealed
+                                                                  ? 22
+                                                                  : 38,
+                                                              height: 1.2,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              letterSpacing:
+                                                                  -0.8,
+                                                            ),
+                                                          ),
+                                                          if (!_revealed)
+                                                            const Padding(
+                                                              padding:
+                                                                  EdgeInsets.only(
+                                                                    top: 14,
+                                                                  ),
+                                                              child: Text(
+                                                                'Tap the card to reveal the answer',
+                                                                style: TextStyle(
+                                                                  color:
+                                                                      RecallColors
+                                                                          .faint,
+                                                                ),
+                                                              ),
+                                                            )
+                                                          else ...[
+                                                            const Padding(
+                                                              padding:
+                                                                  EdgeInsets.symmetric(
+                                                                    vertical:
+                                                                        22,
+                                                                  ),
+                                                              child: SizedBox(
+                                                                width: 54,
+                                                                child:
+                                                                    Divider(),
+                                                              ),
+                                                            ),
+                                                            if (_card.content
+                                                                case LanguageCardContent(
+                                                                  :final english,
+                                                                  :final originalScript,
+                                                                  :final transliteration,
+                                                                )) ...[
+                                                              if (_prompt.cue !=
+                                                                  StudyCue
+                                                                      .fromLanguage) ...[
+                                                                Text(
+                                                                  english,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        21,
+                                                                    height:
+                                                                        1.45,
+                                                                    color:
+                                                                        RecallColors
+                                                                            .ink,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 8,
+                                                                ),
+                                                              ],
+                                                              if (_prompt.cue !=
+                                                                  StudyCue
+                                                                      .toLanguage)
+                                                                Text(
+                                                                  originalScript,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        24,
+                                                                    height:
+                                                                        1.45,
+                                                                    color:
+                                                                        RecallColors
+                                                                            .ink,
+                                                                  ),
+                                                                ),
+                                                              if (_prompt.cue !=
+                                                                  StudyCue
+                                                                      .transliteration) ...[
+                                                                const SizedBox(
+                                                                  height: 10,
+                                                                ),
+                                                                Text(
+                                                                  transliteration,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    height:
+                                                                        1.35,
+                                                                    fontStyle:
+                                                                        FontStyle
+                                                                            .italic,
+                                                                    color: RecallColors
+                                                                        .faint,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ] else
+                                                              Text(
+                                                                _card.back,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style: const TextStyle(
                                                                   fontSize: 21,
                                                                   height: 1.45,
                                                                   color:
                                                                       RecallColors
-                                                                          .ink,
+                                                                          .muted,
                                                                 ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 8,
-                                                          ),
-                                                        ],
-                                                        if (_prompt.cue !=
-                                                            StudyCue.toLanguage)
-                                                          Text(
-                                                            originalScript,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 24,
-                                                                  height: 1.45,
-                                                                  color:
-                                                                      RecallColors
-                                                                          .ink,
-                                                                ),
-                                                          ),
-                                                        if (_prompt.cue !=
-                                                            StudyCue
-                                                                .transliteration) ...[
-                                                          const SizedBox(
-                                                            height: 10,
-                                                          ),
-                                                          Text(
-                                                            transliteration,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            style: const TextStyle(
-                                                              fontSize: 16,
-                                                              height: 1.35,
-                                                              fontStyle:
-                                                                  FontStyle
-                                                                      .italic,
-                                                              color:
-                                                                  RecallColors
-                                                                      .faint,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ] else
-                                                        Text(
-                                                          _card.back,
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 21,
-                                                                height: 1.45,
-                                                                color:
-                                                                    RecallColors
-                                                                        .muted,
                                                               ),
-                                                        ),
-                                                      if (_card.content
-                                                          case LanguageCardContent(
-                                                            audioUrl: final audioUrl?,
-                                                          )
-                                                          when audioUrl
-                                                                  .isNotEmpty &&
-                                                              audioRepository !=
-                                                                  null) ...[
-                                                        const SizedBox(
-                                                          height: 16,
-                                                        ),
-                                                        LanguageAudioControls(
-                                                          key: ValueKey(
-                                                            '${_card.id}:${_prompt.cue.storageKey}:$audioUrl',
-                                                          ),
-                                                          audioUrl: audioUrl,
-                                                          repository:
-                                                              audioRepository,
-                                                        ),
-                                                      ],
-                                                      if (_card.content
-                                                          case LanguageCardContent(
-                                                            examples: final examples,
-                                                          )
-                                                          when examples
-                                                              .isNotEmpty) ...[
-                                                        const SizedBox(
-                                                          height: 14,
-                                                        ),
-                                                        TextButton.icon(
-                                                          onPressed: () =>
-                                                              Navigator.of(
-                                                                context,
-                                                              ).push(
-                                                                MaterialPageRoute<
-                                                                  void
-                                                                >(
-                                                                  builder: (_) =>
-                                                                      LanguageExamplesPage(
-                                                                        card:
-                                                                            _card,
-                                                                        audioRepository:
-                                                                            audioRepository,
+                                                            if (_card.content
+                                                                case LanguageCardContent(
+                                                                  audioUrl: final audioUrl?,
+                                                                )
+                                                                when audioUrl
+                                                                        .isNotEmpty &&
+                                                                    audioRepository !=
+                                                                        null) ...[
+                                                              const SizedBox(
+                                                                height: 16,
+                                                              ),
+                                                              LanguageAudioControls(
+                                                                key: ValueKey(
+                                                                  '${_card.id}:${_prompt.cue.storageKey}:$audioUrl',
+                                                                ),
+                                                                audioUrl:
+                                                                    audioUrl,
+                                                                repository:
+                                                                    audioRepository,
+                                                              ),
+                                                            ],
+                                                            if (_card.content
+                                                                case LanguageCardContent(
+                                                                  examples: final examples,
+                                                                )
+                                                                when examples
+                                                                    .isNotEmpty) ...[
+                                                              const SizedBox(
+                                                                height: 14,
+                                                              ),
+                                                              TextButton.icon(
+                                                                onPressed: () =>
+                                                                    Navigator.of(
+                                                                      context,
+                                                                    ).push(
+                                                                      MaterialPageRoute<
+                                                                        void
+                                                                      >(
+                                                                        builder: (_) => LanguageExamplesPage(
+                                                                          card:
+                                                                              _card,
+                                                                          audioRepository:
+                                                                              audioRepository,
+                                                                        ),
                                                                       ),
+                                                                    ),
+                                                                icon: const Icon(
+                                                                  Icons
+                                                                      .menu_book_outlined,
+                                                                  size: 17,
                                                                 ),
+                                                                label:
+                                                                    const Text(
+                                                                      'Examples',
+                                                                    ),
                                                               ),
-                                                          icon: const Icon(
-                                                            Icons
-                                                                .menu_book_outlined,
-                                                            size: 17,
-                                                          ),
-                                                          label: const Text(
-                                                            'Examples',
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ],
-                                                  ],
+                                                            ],
+                                                          ],
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
-                                          ),
                                         ),
                                         Text(
                                           _revealed
@@ -424,7 +480,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                         const SizedBox(height: 18),
                         if (!_revealed)
                           FilledButton.icon(
-                            onPressed: _reveal,
+                            onPressed:
+                                _interaction ==
+                                        RecallInteraction.scriptDrawing &&
+                                    !_scriptDrawingReady
+                                ? null
+                                : _reveal,
                             icon: const Icon(
                               Icons.visibility_outlined,
                               size: 18,
@@ -441,7 +502,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                               ),
                             ),
                           )
-                        else
+                        else if (_revealed)
                           _RatingBar(enabled: !_saving, onRate: _answer),
                       ],
                     ),

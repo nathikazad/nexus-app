@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/study/script_drawing_canvas.dart';
 
 class ScriptDrawPracticePage extends StatefulWidget {
   const ScriptDrawPracticePage({
@@ -17,7 +18,7 @@ class ScriptDrawPracticePage extends StatefulWidget {
 }
 
 class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
-  final List<List<Offset>> _strokes = <List<Offset>>[];
+  final ScriptDrawingController _drawingController = ScriptDrawingController();
   int _index = 0;
 
   StudyCard get _card => widget.cards[_index];
@@ -32,26 +33,31 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
     return content is LanguageCardContent ? content.english : _card.front;
   }
 
-  void _startStroke(DragStartDetails details) {
-    setState(() => _strokes.add(<Offset>[details.localPosition]));
+  @override
+  void initState() {
+    super.initState();
+    _drawingController.addListener(_drawingChanged);
   }
 
-  void _extendStroke(DragUpdateDetails details) {
-    if (_strokes.isEmpty) return;
-    setState(() => _strokes.last.add(details.localPosition));
+  @override
+  void dispose() {
+    _drawingController
+      ..removeListener(_drawingChanged)
+      ..dispose();
+    super.dispose();
   }
 
-  void _erase() => setState(_strokes.clear);
+  void _drawingChanged() {
+    if (mounted) setState(() {});
+  }
 
   void _next() {
     if (_index == widget.cards.length - 1) {
       Navigator.of(context).pop();
       return;
     }
-    setState(() {
-      _index += 1;
-      _strokes.clear();
-    });
+    _drawingController.clear();
+    setState(() => _index += 1);
   }
 
   @override
@@ -144,29 +150,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                   Text('PRACTICE', style: monoLabel),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: Semantics(
-                      label: 'Drawing area for $_letter',
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: GestureDetector(
-                          key: const ValueKey<String>('script-drawing-canvas'),
-                          behavior: HitTestBehavior.opaque,
-                          onPanStart: _startStroke,
-                          onPanUpdate: _extendStroke,
-                          child: CustomPaint(
-                            key: const ValueKey<String>('script-drawing-paint'),
-                            foregroundPainter: _StrokePainter(_strokes),
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(color: RecallColors.line),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                        ),
-                      ),
+                    child: ScriptDrawingCanvas(
+                      controller: _drawingController,
+                      semanticsLabel: 'Drawing area for $_letter',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -174,7 +160,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _strokes.isEmpty ? null : _erase,
+                          onPressed: _drawingController.hasStrokes
+                              ? _drawingController.clear
+                              : null,
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             child: Text('Erase'),
@@ -206,39 +194,4 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
       ),
     );
   }
-}
-
-class _StrokePainter extends CustomPainter {
-  const _StrokePainter(this.strokes);
-
-  final List<List<Offset>> strokes;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = RecallColors.ink
-      ..strokeWidth = 7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-    for (final stroke in strokes) {
-      if (stroke.isEmpty) continue;
-      if (stroke.length == 1) {
-        canvas.drawLine(
-          stroke.first,
-          stroke.first + const Offset(0.01, 0.01),
-          paint,
-        );
-        continue;
-      }
-      final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
-      for (final point in stroke.skip(1)) {
-        path.lineTo(point.dx, point.dy);
-      }
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _StrokePainter oldDelegate) => true;
 }

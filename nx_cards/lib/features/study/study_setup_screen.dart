@@ -7,6 +7,7 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
 import 'package:nx_cards/features/study/script_draw_practice_page.dart';
+import 'package:nx_cards/features/study/script_recall_policy.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/voice_study/voice_study_screen.dart';
 
@@ -113,6 +114,11 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   void _selectMode(StudyMode mode) {
     setState(() {
       _mode = mode;
+      if (mode == StudyMode.recall &&
+          _isScriptStudy &&
+          !ScriptRecallPolicy.allowedCues.contains(_cue)) {
+        _cue = StudyCue.fromLanguage;
+      }
       _resetCount();
     });
   }
@@ -484,7 +490,10 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     spacing: 8,
     runSpacing: 8,
     children: [
-      for (final cue in StudyCue.values)
+      for (final cue
+          in _mode == StudyMode.recall && _isScriptStudy
+              ? ScriptRecallPolicy.allowedCues
+              : StudyCue.values)
         ChoiceChip(
           label: Text(_cueLabel(cue)),
           selected: _cue == cue,

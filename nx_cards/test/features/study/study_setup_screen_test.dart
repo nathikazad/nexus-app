@@ -214,6 +214,41 @@ void main() {
     expect(find.text('How do you want to study?'), findsOneWidget);
   });
 
+  testWidgets('script recall only offers English and Malayalam prompts', (
+    tester,
+  ) async {
+    final card = _scriptCard(
+      id: 1,
+      letter: 'ക',
+      learningStatus: LearningStatus.learning,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+          ),
+        ],
+        child: MaterialApp(
+          home: StudySetupScreen(
+            title: 'Script',
+            prompts: card.prompts.toList(),
+            studyCards: [card],
+            fromLanguage: 'English',
+            toLanguage: 'Malayalam',
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ChoiceChip, 'English'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Malayalam'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
+  });
+
   testWidgets('revalidates a stale setup queue before starting recall', (
     tester,
   ) async {
@@ -314,9 +349,11 @@ StudyCard _scriptCard({
   deckName: 'Malayalam script',
   schedules: const <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+    StudyCue.toLanguage: CardSchedule.initial(enabled: true),
   },
   reviewHistory: const <StudyCue, List<CardReview>>{
     StudyCue.fromLanguage: <CardReview>[],
+    StudyCue.toLanguage: <CardReview>[],
   },
   suspended: false,
   learningStatus: learningStatus,
