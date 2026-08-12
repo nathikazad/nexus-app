@@ -7,6 +7,47 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/shell/cards_home.dart';
 
 void main() {
+  testWidgets('home shows only the category cards', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final dashboard = CardsDashboard(
+      decks: const [_deck],
+      cards: [
+        _word(
+          id: 1,
+          category: 'Script',
+          learningStatus: LearningStatus.learning,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
+        _word(
+          id: 2,
+          learningStatus: LearningStatus.learning,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
+        ],
+        child: const MaterialApp(home: CardsHome()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Script'), findsOneWidget);
+    expect(find.text('Noun'), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.text('Categories'), findsNothing);
+    expect(find.text('Today'), findsNothing);
+    expect(find.text('What are you learning?'), findsNothing);
+    expect(find.text('Word categories'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows front-to-back state and one due marker on current words', (
     tester,
   ) async {
@@ -228,6 +269,7 @@ StudyCard _word({
   required int id,
   required LearningStatus learningStatus,
   required CardSchedule schedule,
+  String category = 'Noun',
   List<int> recallRatings = const <int>[],
 }) => StudyCard(
   id: id,
@@ -258,8 +300,8 @@ StudyCard _word({
   },
   suspended: false,
   learningStatus: learningStatus,
-  tags: const {
-    'Word Category': ['Noun'],
+  tags: {
+    'Word Category': [category],
   },
   modelTypeName: 'Word',
 );

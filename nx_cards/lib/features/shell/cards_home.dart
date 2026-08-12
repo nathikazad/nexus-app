@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/data/remote/kgql/card_schema.dart';
@@ -15,25 +14,11 @@ import 'package:nx_cards/features/study/study_setup_screen.dart';
 import 'package:nx_cards/features/shell/word_schedule_status.dart';
 import 'package:nx_db/riverpod.dart';
 
-class CardsHome extends ConsumerStatefulWidget {
-  const CardsHome({super.key, required this.initialTab});
-  final int initialTab;
+class CardsHome extends ConsumerWidget {
+  const CardsHome({super.key});
 
   @override
-  ConsumerState<CardsHome> createState() => _CardsHomeState();
-}
-
-class _CardsHomeState extends ConsumerState<CardsHome> {
-  late int _tab = widget.initialTab;
-
-  void _selectTab(int value) {
-    if (_tab == value) return;
-    setState(() => _tab = value);
-    context.go(value == 0 ? '/decks' : '/today');
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final schema = ref.watch(cardsSchemaStatusProvider);
     return schema.when(
       loading: () =>
@@ -44,7 +29,7 @@ class _CardsHomeState extends ConsumerState<CardsHome> {
       ),
       data: (status) {
         if (!status.ready) return _SchemaSetup(status: status);
-        return _HomeScaffold(tab: _tab, onSelectTab: _selectTab);
+        return const _HomeScaffold();
       },
     );
   }
@@ -133,13 +118,10 @@ class _SchemaSetupState extends ConsumerState<_SchemaSetup> {
 }
 
 class _HomeScaffold extends ConsumerWidget {
-  const _HomeScaffold({required this.tab, required this.onSelectTab});
-  final int tab;
-  final ValueChanged<int> onSelectTab;
+  const _HomeScaffold();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final wide = MediaQuery.sizeOf(context).width >= 900;
     final dashboard = ref.watch(cardsDashboardProvider);
     final body = dashboard.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -147,194 +129,10 @@ class _HomeScaffold extends ConsumerWidget {
         error: error,
         onRetry: () => ref.invalidate(cardsDashboardProvider),
       ),
-      data: (data) => tab == 0
-          ? _WordCategoriesDashboard(data: data)
-          : _TodayView(data: data),
+      data: (data) => _WordCategoriesDashboard(data: data),
     );
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        titleSpacing: 24,
-        title: wide
-            ? const _SearchPlaceholder()
-            : const Row(
-                children: [
-                  _RecallMark(),
-                  SizedBox(width: 10),
-                  Text(
-                    'recall',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-      ),
-      body: Row(
-        children: [
-          if (wide)
-            _SideNav(
-              tab: tab,
-              onSelect: onSelectTab,
-              dashboard: dashboard.value,
-            ),
-          Expanded(child: body),
-        ],
-      ),
-      bottomNavigationBar: wide
-          ? null
-          : NavigationBar(
-              selectedIndex: tab,
-              onDestinationSelected: onSelectTab,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.layers_outlined),
-                  selectedIcon: Icon(Icons.layers),
-                  label: 'Categories',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.calendar_today_outlined),
-                  selectedIcon: Icon(Icons.calendar_today),
-                  label: 'Today',
-                ),
-              ],
-            ),
-    );
+    return Scaffold(body: SafeArea(child: body));
   }
-}
-
-class _SideNav extends StatelessWidget {
-  const _SideNav({
-    required this.tab,
-    required this.onSelect,
-    required this.dashboard,
-  });
-  final int tab;
-  final ValueChanged<int> onSelect;
-  final CardsDashboard? dashboard;
-
-  @override
-  Widget build(BuildContext context) {
-    final due = dashboard?.dueCount(DateTime.now()) ?? 0;
-    return Container(
-      width: 252,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(right: BorderSide(color: RecallColors.line)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
-      child: Column(
-        children: [
-          const Row(
-            children: [
-              _RecallMark(),
-              SizedBox(width: 11),
-              Text(
-                'recall',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 34),
-          _NavTile(
-            icon: Icons.layers_outlined,
-            label: 'Categories',
-            selected: tab == 0,
-            onTap: () => onSelect(0),
-          ),
-          _NavTile(
-            icon: Icons.calendar_today_outlined,
-            label: 'Today',
-            selected: tab == 1,
-            badge: due,
-            onTap: () => onSelect(1),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: RecallColors.soft,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: RecallColors.line),
-            ),
-            child: const Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Color(0xffffe4e6),
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 17,
-                    color: RecallColors.rose,
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Nexus learner',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'FSRS · 90%',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: RecallColors.faint,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavTile extends StatelessWidget {
-  const _NavTile({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.badge,
-  });
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final int? badge;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: ListTile(
-      dense: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-      tileColor: selected ? RecallColors.soft : null,
-      leading: Icon(
-        icon,
-        size: 20,
-        color: selected ? RecallColors.ink : RecallColors.muted,
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          color: selected ? RecallColors.ink : RecallColors.muted,
-        ),
-      ),
-      trailing: badge == null || badge == 0 ? null : _CountBadge(badge!),
-      onTap: onTap,
-    ),
-  );
 }
 
 class _WordCategoriesDashboard extends ConsumerWidget {
@@ -344,17 +142,6 @@ class _WordCategoriesDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final due = data.dueCount(now);
-    final currentWords = data.cards
-        .where(
-          (card) =>
-              card.isWordCard && card.learningStatus == LearningStatus.learning,
-        )
-        .length;
-    final categorizedWords = data.cards
-        .where((card) => card.isWordCard && card.wordCategory != null)
-        .length;
     final categories = orderedWordCategories(
       data.cards
           .where((card) => card.isWordCard)
@@ -363,7 +150,7 @@ class _WordCategoriesDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: ref.read(cardsLibrarySyncProvider),
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
+        padding: const EdgeInsets.all(16),
         children: [
           Center(
             child: ConstrainedBox(
@@ -371,63 +158,6 @@ class _WordCategoriesDashboard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(_dateLabel(now), style: monoLabel),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'What are you learning?',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Choose a word category to study or adjust your current list.',
-                    style: TextStyle(color: RecallColors.muted),
-                  ),
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Due now',
-                          value: '$due',
-                          detail: 'Current words only',
-                          accent: RecallColors.ink,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Currently learning',
-                          value: '$currentWords',
-                          detail: 'Across all categories',
-                          accent: RecallColors.ink,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Total words',
-                          value: '$categorizedWords',
-                          detail: '${categories.length} categories',
-                          accent: RecallColors.ink,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 34),
-                  const Text(
-                    'Word categories',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Categories are independent of the decks used for sync and language settings.',
-                    style: TextStyle(fontSize: 12, color: RecallColors.muted),
-                  ),
-                  const SizedBox(height: 15),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final width = constraints.maxWidth >= 720
@@ -1333,115 +1063,6 @@ class _DeckCard extends StatelessWidget {
   }
 }
 
-class _TodayView extends StatelessWidget {
-  const _TodayView({required this.data});
-  final CardsDashboard data;
-
-  @override
-  Widget build(BuildContext context) {
-    final queue = data.studyQueue(DateTime.now());
-    final grouped = <String, int>{};
-    for (final prompt in queue) {
-      grouped.update(
-        prompt.card.wordCategory ?? prompt.card.deckName,
-        (count) => count + 1,
-        ifAbsent: () => 1,
-      );
-    }
-    return ListView(
-      padding: const EdgeInsets.all(28),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('YOUR QUEUE', style: monoLabel),
-                const SizedBox(height: 8),
-                const Text(
-                  "Today's review",
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -1,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'A focused queue across all of your current words.',
-                  style: TextStyle(color: RecallColors.muted),
-                ),
-                const SizedBox(height: 28),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: const Color(0xfffff7ed),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.schedule,
-                            color: RecallColors.orange,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                queue.isEmpty
-                                    ? 'All caught up'
-                                    : '${queue.length} cards awaiting you',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                grouped.entries
-                                    .map((e) => '${e.value} ${e.key}')
-                                    .join(' · '),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: RecallColors.muted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _StudyLauncher(
-                          title: "Today's review",
-                          preferenceKey: 'today-review',
-                          prompts: queue,
-                          studyCards: _studyCardsForPrompts(queue),
-                          languagePair: _languagesForPrompts(data, queue),
-                          builder: (onPressed) => FilledButton.icon(
-                            onPressed: onPressed,
-                            icon: const Icon(Icons.play_circle_outline),
-                            label: const Text('Begin session'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class DeckDetailScreen extends ConsumerStatefulWidget {
   const DeckDetailScreen({super.key, required this.deck});
   final CardDeck deck;
@@ -1841,78 +1462,6 @@ class _Pill extends StatelessWidget {
     child: Text(
       label,
       style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
-    ),
-  );
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge(this.value);
-  final int value;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: const Color(0xffffedd5),
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: Text(
-      '$value',
-      style: const TextStyle(
-        fontFamily: 'monospace',
-        fontSize: 10,
-        color: RecallColors.orange,
-      ),
-    ),
-  );
-}
-
-class _RecallMark extends StatelessWidget {
-  const _RecallMark();
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 32,
-    height: 32,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: RecallColors.ink,
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: const Text(
-      'r',
-      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-    ),
-  );
-}
-
-class _SearchPlaceholder extends StatelessWidget {
-  const _SearchPlaceholder();
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 300,
-    height: 36,
-    padding: const EdgeInsets.symmetric(horizontal: 12),
-    decoration: BoxDecoration(
-      color: RecallColors.soft,
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: const Row(
-      children: [
-        Icon(Icons.search, size: 18, color: RecallColors.faint),
-        SizedBox(width: 8),
-        Text(
-          'Search words and categories',
-          style: TextStyle(fontSize: 12, color: RecallColors.faint),
-        ),
-        Spacer(),
-        Text(
-          '⌘ K',
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 10,
-            color: RecallColors.faint,
-          ),
-        ),
-      ],
     ),
   );
 }

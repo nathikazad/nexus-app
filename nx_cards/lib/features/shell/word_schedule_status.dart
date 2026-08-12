@@ -37,10 +37,14 @@ WordScheduleStatus? wordScheduleStatus(StudyCard card, DateTime now) {
 }
 
 int frontToBackRecallPercentage(StudyCard card) {
-  final reviews = card.reviewHistoryFor(StudyCue.fromLanguage);
+  final reviews = card.reviewHistoryFor(StudyCue.fromLanguage).toList()
+    ..sort((left, right) => left.reviewedAt.compareTo(right.reviewedAt));
   if (reviews.isEmpty) return 0;
-  final recalled = reviews.where((review) => review.rating >= 3).length;
-  return (recalled / reviews.length * 100).round();
+  final recentReviews = reviews.skip(
+    (reviews.length - 5).clamp(0, reviews.length),
+  );
+  final recalled = recentReviews.where((review) => review.rating >= 3).length;
+  return (recalled / recentReviews.length * 100).round();
 }
 
 String _stateLabel(CardSchedule schedule) {

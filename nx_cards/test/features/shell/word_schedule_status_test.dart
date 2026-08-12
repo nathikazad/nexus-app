@@ -61,9 +61,28 @@ void main() {
     expect(status?.label, 'New');
     expect(status?.isDue, isFalse);
   });
+
+  test('recall percentage uses only the five most recent reviews', () {
+    final card = _card(
+      schedules: {
+        StudyCue.fromLanguage: _schedule(
+          state: 'review',
+          dueAt: DateTime.utc(2026, 8, 12),
+        ),
+      },
+      recallRatings: const [4, 1, 1, 1, 3, 3],
+    );
+
+    final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
+
+    expect(status?.recallPercentage, 40);
+  });
 }
 
-StudyCard _card({required Map<StudyCue, CardSchedule> schedules}) => StudyCard(
+StudyCard _card({
+  required Map<StudyCue, CardSchedule> schedules,
+  List<int> recallRatings = const <int>[],
+}) => StudyCard(
   id: 1,
   content: const LanguageCardContent(
     english: 'worry',
@@ -73,7 +92,19 @@ StudyCard _card({required Map<StudyCue, CardSchedule> schedules}) => StudyCard(
   deckId: 1,
   deckName: 'Malayalam nouns',
   schedules: schedules,
-  reviewHistory: const {},
+  reviewHistory: <StudyCue, List<CardReview>>{
+    if (recallRatings.isNotEmpty)
+      StudyCue.fromLanguage: <CardReview>[
+        for (var index = 0; index < recallRatings.length; index++)
+          CardReview(
+            id: 'review-$index',
+            reviewedAt: DateTime.utc(2026, 8, index + 1),
+            rating: recallRatings[index],
+            elapsedSeconds: 86400,
+            scheduledSeconds: 86400,
+          ),
+      ],
+  },
   suspended: false,
   learningStatus: LearningStatus.learning,
 );

@@ -36,14 +36,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (_, _) => const CardsLoginScreen()),
       GoRoute(path: '/', redirect: (_, _) => '/decks'),
-      GoRoute(
-        path: '/decks',
-        builder: (_, _) => const CardsHome(initialTab: 0),
-      ),
-      GoRoute(
-        path: '/today',
-        builder: (_, _) => const CardsHome(initialTab: 1),
-      ),
+      GoRoute(path: '/decks', builder: (_, _) => const CardsHome()),
+      GoRoute(path: '/today', redirect: (_, _) => '/decks'),
     ],
   );
 });
