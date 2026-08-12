@@ -7,8 +7,11 @@ import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
   testWidgets('configures a transliteration-cue session', (tester) async {
     final card = StudyCard(
       id: 1,
@@ -59,14 +62,21 @@ void main() {
     expect(find.text('Recall format'), findsOneWidget);
     expect(find.text('Standard'), findsOneWidget);
     expect(find.text('Fast'), findsOneWidget);
+    expect(find.text('Choose the order'), findsNothing);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Due'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('What should be in front?')).dy,
+      lessThan(tester.getTopLeft(find.text('Which words?')).dy),
+    );
     final english = tester.widget<ChoiceChip>(
       find.widgetWithText(ChoiceChip, 'English'),
     );
     final learning = tester.widget<FilterChip>(
-      find.widgetWithText(FilterChip, 'Learning'),
+      find.widgetWithText(FilterChip, 'Current'),
     );
     final learnt = tester.widget<FilterChip>(
-      find.widgetWithText(FilterChip, 'Learnt'),
+      find.widgetWithText(FilterChip, 'Past'),
     );
     expect(english.selected, isTrue);
     expect(learning.selected, isTrue);
@@ -137,6 +147,189 @@ void main() {
     expect(find.text('Start AI tutor'), findsOneWidget);
   });
 
+  testWidgets('recall filters current and past cards by memory state', (
+    tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final cards = <StudyCard>[
+      _recallFilterCard(
+        id: 1,
+        learningStatus: LearningStatus.learning,
+        state: 'learning',
+        lastReviewedAt: now,
+        due: true,
+      ),
+      _recallFilterCard(
+        id: 2,
+        learningStatus: LearningStatus.learning,
+        state: 'relearning',
+        lastReviewedAt: now,
+      ),
+      _recallFilterCard(
+        id: 3,
+        learningStatus: LearningStatus.learnt,
+        state: 'review',
+        lastReviewedAt: now,
+        due: true,
+      ),
+      _recallFilterCard(
+        id: 4,
+        learningStatus: LearningStatus.learnt,
+        state: 'learning',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(decks: const [], cards: cards)),
+          ),
+        ],
+        child: MaterialApp(
+          home: StudySetupScreen(
+            title: 'Malayalam',
+            prompts: [for (final card in cards) ...card.prompts],
+            studyCards: cards,
+            fromLanguage: 'English',
+            toLanguage: 'Malayalam',
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 available'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Learning'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Relearning'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Retained'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'New'), findsOneWidget);
+    expect(find.text('2 cards match these filters'), findsOneWidget);
+
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Past'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+    await tester.pump();
+    expect(find.text('4 available'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilterChip, 'New'));
+    await tester.pump();
+    expect(find.text('3 available'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Due'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Due'));
+    await tester.pump();
+    expect(find.text('2 of 3 are due now'), findsOneWidget);
+    expect(find.text('2 available'), findsOneWidget);
+  });
+
+  testWidgets('restores the last setup independently for a study source', (
+    tester,
+  ) async {
+    final card = StudyCard(
+      id: 1,
+      content: const LanguageCardContent(
+        english: 'talent',
+        originalScript: 'കഴിവ്',
+        transliteration: 'kazhivu',
+      ),
+      deckId: 7,
+      deckName: 'Malayalam',
+      schedules: const <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+        StudyCue.transliteration: CardSchedule.initial(enabled: true),
+      },
+      reviewHistory: const <StudyCue, List<CardReview>>{},
+      suspended: false,
+      learningStatus: LearningStatus.learning,
+    );
+
+    Widget setup(String preferenceKey) => ProviderScope(
+      overrides: [
+        cardAudioRepositoryProvider.overrideWithValue(null),
+        cardsDashboardProvider.overrideWith(
+          (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+        ),
+      ],
+      child: MaterialApp(
+        home: StudySetupScreen(
+          title: 'Nouns',
+          preferenceKey: preferenceKey,
+          prompts: card.prompts.toList(),
+          studyCards: [card],
+          fromLanguage: 'English',
+          toLanguage: 'Malayalam',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(setup('tag:nouns'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fast'));
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Past'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+    await tester.ensureVisible(find.text('Transliteration'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transliteration'));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(setup('tag:nouns'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SegmentedButton<StudyMode>>(
+            find.byType(SegmentedButton<StudyMode>),
+          )
+          .selected,
+      {StudyMode.recall},
+    );
+    expect(
+      tester
+          .widget<SegmentedButton<RecallPresentation>>(
+            find.byType(SegmentedButton<RecallPresentation>),
+          )
+          .selected,
+      {RecallPresentation.fast},
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'Past'))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.widgetWithText(ChoiceChip, 'Transliteration'),
+          )
+          .selected,
+      isTrue,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(setup('tag:verbs'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SegmentedButton<StudyMode>>(
+            find.byType(SegmentedButton<StudyMode>),
+          )
+          .selected,
+      {StudyMode.study},
+    );
+  });
+
   testWidgets('script study offers drawing practice by learning status', (
     tester,
   ) async {
@@ -181,7 +374,7 @@ void main() {
 
     expect(find.text('Which letters?'), findsOneWidget);
     expect(find.text('1 available'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilterChip, 'Learnt'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Past'));
     await tester.pumpAndSettle();
     expect(find.text('2 available'), findsOneWidget);
 
@@ -262,7 +455,7 @@ void main() {
     expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
   });
 
-  testWidgets('revalidates a stale setup queue before starting recall', (
+  testWidgets('recall includes matching cards even when they are not due', (
     tester,
   ) async {
     final now = DateTime.now().toUtc();
@@ -326,9 +519,64 @@ void main() {
     await tester.tap(find.text('Start recall'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nothing due right now'), findsOneWidget);
-    expect(find.text('talent'), findsNothing);
-    expect(find.text('How do you want to study?'), findsOneWidget);
+    expect(find.text('talent'), findsOneWidget);
+    expect(find.text('Nothing due right now'), findsNothing);
+  });
+
+  testWidgets('completed recall returns past setup to the category page', (
+    tester,
+  ) async {
+    final card = _recallFilterCard(
+      id: 1,
+      learningStatus: LearningStatus.learning,
+      state: 'learning',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => StudySetupScreen(
+                      title: 'Nouns',
+                      prompts: card.prompts.toList(),
+                      studyCards: [card],
+                      fromLanguage: 'English',
+                      toLanguage: 'Malayalam',
+                    ),
+                  ),
+                ),
+                child: const Text('Noun category'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Noun category'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Start recall'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start recall'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Return to categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Noun category'), findsOneWidget);
+    expect(find.text('How do you want to study?'), findsNothing);
   });
 }
 
@@ -347,6 +595,41 @@ StudyCard _languageCard({required CardSchedule schedule}) => StudyCard(
   },
   suspended: false,
   learningStatus: LearningStatus.learning,
+);
+
+StudyCard _recallFilterCard({
+  required int id,
+  required LearningStatus learningStatus,
+  required String state,
+  DateTime? lastReviewedAt,
+  bool due = false,
+}) => StudyCard(
+  id: id,
+  content: LanguageCardContent(
+    english: 'word $id',
+    originalScript: 'വാക്ക് $id',
+    transliteration: 'vākku $id',
+  ),
+  deckId: 7,
+  deckName: 'Malayalam',
+  schedules: <StudyCue, CardSchedule>{
+    StudyCue.fromLanguage: CardSchedule(
+      enabled: true,
+      dueAt: due
+          ? DateTime.now().toUtc().subtract(const Duration(minutes: 1))
+          : DateTime.now().toUtc().add(const Duration(days: 30)),
+      lastReviewedAt: lastReviewedAt,
+      stability: lastReviewedAt == null ? null : 1,
+      difficulty: lastReviewedAt == null ? null : 5,
+      schedulingState: state,
+      learningStep: state == 'review' ? null : 0,
+      reviewCount: lastReviewedAt == null ? 0 : 1,
+      lapseCount: 0,
+    ),
+  },
+  reviewHistory: const <StudyCue, List<CardReview>>{},
+  suspended: false,
+  learningStatus: learningStatus,
 );
 
 StudyCard _scriptCard({

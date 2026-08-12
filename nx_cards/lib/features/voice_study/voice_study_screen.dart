@@ -206,7 +206,7 @@ class _SessionBody extends StatelessWidget {
             _UsageRecap(controller: controller),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Return to categories'),
             ),
           ],

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ import 'package:nx_cards/features/study/script_draw_practice_page.dart';
 import 'package:nx_cards/features/study/script_recall_policy.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/voice_study/voice_study_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum StudyOrder { normal, shuffle }
 
@@ -20,6 +23,10 @@ enum StudyPresentation { sheet, draw }
 
 enum RecallPresentation { standard, fast }
 
+enum RecallCardState { learning, relearning, retained, newCard }
+
+enum RecallTiming { allMatching, dueNow }
+
 class StudySetupScreen extends ConsumerStatefulWidget {
   const StudySetupScreen({
     super.key,
@@ -28,6 +35,7 @@ class StudySetupScreen extends ConsumerStatefulWidget {
     required this.studyCards,
     required this.fromLanguage,
     required this.toLanguage,
+    this.preferenceKey,
   });
 
   final String title;
@@ -35,6 +43,7 @@ class StudySetupScreen extends ConsumerStatefulWidget {
   final List<StudyCard> studyCards;
   final String fromLanguage;
   final String toLanguage;
+  final String? preferenceKey;
 
   @override
   ConsumerState<StudySetupScreen> createState() => _StudySetupScreenState();
@@ -48,25 +57,181 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   final Set<LearningStatus> _learningStatuses = <LearningStatus>{
     LearningStatus.learning,
   };
+  final Set<RecallCardState> _recallStates = RecallCardState.values.toSet();
+  RecallTiming _recallTiming = RecallTiming.allMatching;
   StudyOrder _order = StudyOrder.normal;
   int _count = 1;
   bool _starting = false;
+  int _preferenceRevision = 0;
+
+  String get _storedPreferenceKey =>
+      'study_setup.v1.${widget.preferenceKey ?? widget.title}';
 
   @override
   void initState() {
     super.initState();
     _resetCount();
+    unawaited(_restorePreferences());
   }
 
-  List<StudyPrompt> get _candidates => _cue == null
-      ? const <StudyPrompt>[]
-      : widget.prompts
-            .where(
-              (prompt) =>
-                  prompt.cue == _cue &&
-                  _learningStatuses.contains(prompt.card.learningStatus),
-            )
-            .toList();
+  Future<void> _restorePreferences() async {
+    final revision = _preferenceRevision;
+    final preferences = await SharedPreferences.getInstance();
+    final raw = preferences.getString(_storedPreferenceKey);
+    if (raw == null || !mounted || revision != _preferenceRevision) return;
+    try {
+      final saved = jsonDecode(raw);
+      if (saved is! Map<String, dynamic>) return;
+      final mode = _enumByName(StudyMode.values, saved['mode']);
+      final studyPresentation = _enumByName(
+        StudyPresentation.values,
+        saved['studyPresentation'],
+      );
+      final recallPresentation = _enumByName(
+        RecallPresentation.values,
+        saved['recallPresentation'],
+      );
+      final cue = _enumByName(StudyCue.values, saved['cue']);
+      final order = _enumByName(StudyOrder.values, saved['order']);
+      final recallStates = saved['recallStates'] is List
+          ? (saved['recallStates'] as List)
+                .map((value) => _enumByName(RecallCardState.values, value))
+                .whereType<RecallCardState>()
+                .toSet()
+          : const <RecallCardState>{};
+      final recallTiming = _enumByName(
+        RecallTiming.values,
+        saved['recallTiming'],
+      );
+      final statuses = saved['learningStatuses'] is List
+          ? (saved['learningStatuses'] as List)
+                .map((value) => _enumByName(LearningStatus.values, value))
+                .whereType<LearningStatus>()
+                .toSet()
+          : const <LearningStatus>{};
+      setState(() {
+        if (mode != null) _mode = mode;
+        if (studyPresentation != null) {
+          _studyPresentation = studyPresentation;
+        }
+        if (recallPresentation != null) {
+          _recallPresentation = recallPresentation;
+        }
+        if (cue != null) _cue = cue;
+        if (order != null) _order = order;
+        if (statuses.isNotEmpty) {
+          _learningStatuses
+            ..clear()
+            ..addAll(statuses);
+        }
+        if (recallStates.isNotEmpty) {
+          _recallStates
+            ..clear()
+            ..addAll(recallStates);
+        }
+        if (recallTiming != null) _recallTiming = recallTiming;
+        if (_mode == StudyMode.recall &&
+            _isScriptStudy &&
+            !ScriptRecallPolicy.allowedCues.contains(_cue)) {
+          _cue = StudyCue.fromLanguage;
+        }
+        final available = _availableCount;
+        final savedCount = saved['count'];
+        _count = savedCount is int
+            ? savedCount.clamp(1, max(1, available))
+            : min(10, max(1, available));
+      });
+    } on Object {
+      // Ignore malformed local preferences and retain the safe defaults.
+    }
+  }
+
+  void _rememberPreferences() {
+    _preferenceRevision += 1;
+    unawaited(_savePreferences());
+  }
+
+  Future<void> _savePreferences() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _storedPreferenceKey,
+      jsonEncode(<String, Object?>{
+        'mode': _mode.name,
+        'studyPresentation': _studyPresentation.name,
+        'recallPresentation': _recallPresentation.name,
+        'cue': _cue?.name,
+        'learningStatuses': [
+          for (final status in _learningStatuses) status.name,
+        ],
+        'recallStates': [for (final state in _recallStates) state.name],
+        'recallTiming': _recallTiming.name,
+        'order': _order.name,
+        'count': _count,
+      }),
+    );
+  }
+
+  T? _enumByName<T extends Enum>(List<T> values, Object? name) {
+    if (name is! String) return null;
+    for (final value in values) {
+      if (value.name == name) return value;
+    }
+    return null;
+  }
+
+  List<StudyPrompt> get _candidates {
+    final cue = _cue;
+    if (cue == null) return const <StudyPrompt>[];
+    if (_mode == StudyMode.recall) {
+      return _recallBaseCandidates
+          .where(
+            (prompt) =>
+                _recallTiming == RecallTiming.allMatching ||
+                _isDueForRecall(prompt.card),
+          )
+          .toList(growable: false);
+    }
+    return widget.prompts
+        .where(
+          (prompt) =>
+              prompt.cue == cue &&
+              _learningStatuses.contains(prompt.card.learningStatus),
+        )
+        .toList();
+  }
+
+  List<StudyPrompt> get _recallBaseCandidates {
+    final cue = _cue;
+    if (cue == null) return const <StudyPrompt>[];
+    return <StudyPrompt>[
+      for (final card in widget.studyCards)
+        if (!card.suspended &&
+            card.scheduleFor(cue).enabled &&
+            _matchesRecallBaseFilters(card))
+          StudyPrompt(card: card, cue: cue),
+    ];
+  }
+
+  bool _matchesRecallBaseFilters(StudyCard card) =>
+      _learningStatuses.contains(card.learningStatus) &&
+      _recallStates.contains(_recallState(card));
+
+  bool _matchesRecallFilters(StudyCard card) =>
+      _matchesRecallBaseFilters(card) &&
+      (_recallTiming == RecallTiming.allMatching || _isDueForRecall(card));
+
+  bool _isDueForRecall(StudyCard card) =>
+      card.scheduleFor(StudyCue.fromLanguage).isDueAt(DateTime.now().toUtc());
+
+  RecallCardState _recallState(StudyCard card) {
+    final schedule = card.scheduleFor(StudyCue.fromLanguage);
+    if (schedule.lastReviewedAt == null) return RecallCardState.newCard;
+    return switch (schedule.schedulingState) {
+      'learning' => RecallCardState.learning,
+      'relearning' => RecallCardState.relearning,
+      _ => RecallCardState.retained,
+    };
+  }
 
   List<StudyCard> get _drawCandidates => widget.studyCards
       .where(
@@ -76,6 +241,11 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
             _learningStatuses.contains(card.learningStatus),
       )
       .toList(growable: false);
+
+  int get _availableCount =>
+      _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
+      ? _drawCandidates.length
+      : _candidates.length;
 
   bool get _isScriptStudy =>
       widget.studyCards.isNotEmpty &&
@@ -94,6 +264,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       _cue = cue;
       _resetCount();
     });
+    _rememberPreferences();
   }
 
   void _toggleLearningStatus(LearningStatus status) {
@@ -105,13 +276,31 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       }
       _resetCount();
     });
+    _rememberPreferences();
+  }
+
+  void _toggleRecallState(RecallCardState state) {
+    setState(() {
+      if (_recallStates.contains(state)) {
+        if (_recallStates.length > 1) _recallStates.remove(state);
+      } else {
+        _recallStates.add(state);
+      }
+      _resetCount();
+    });
+    _rememberPreferences();
+  }
+
+  void _selectRecallTiming(RecallTiming timing) {
+    setState(() {
+      _recallTiming = timing;
+      _resetCount();
+    });
+    _rememberPreferences();
   }
 
   void _resetCount() {
-    final available =
-        _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
-        ? _drawCandidates.length
-        : _candidates.length;
+    final available = _availableCount;
     _count = min(10, max(1, available));
   }
 
@@ -125,6 +314,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       }
       _resetCount();
     });
+    _rememberPreferences();
   }
 
   void _selectStudyPresentation(StudyPresentation presentation) {
@@ -132,27 +322,45 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       _studyPresentation = presentation;
       _resetCount();
     });
+    _rememberPreferences();
+  }
+
+  void _selectRecallPresentation(RecallPresentation presentation) {
+    setState(() => _recallPresentation = presentation);
+    _rememberPreferences();
+  }
+
+  void _selectOrder(StudyOrder order) {
+    setState(() => _order = order);
+    _rememberPreferences();
+  }
+
+  void _selectCount(double count) {
+    setState(() => _count = count.round());
+    _rememberPreferences();
   }
 
   Future<void> _start() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => StudyScreen(title: widget.title, prompts: prompts),
       ),
     );
+    if (completed == true && mounted) Navigator.of(context).pop();
   }
 
   Future<void> _startFastRecall() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) =>
             LanguageFastRecallPage(title: widget.title, prompts: prompts),
       ),
     );
+    if (completed == true && mounted) Navigator.of(context).pop();
   }
 
   Future<List<StudyPrompt>?> _latestSelectedPrompts() async {
@@ -163,32 +371,42 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       final cardsById = <int, StudyCard>{
         for (final card in dashboard.cards) card.id: card,
       };
-      final now = DateTime.now().toUtc();
       final selected =
           <StudyPrompt>[
                 for (final queued in _candidates)
                   if (cardsById[queued.cardId] case final latestCard?
                       when !latestCard.suspended &&
-                          _learningStatuses.contains(latestCard.learningStatus))
+                          (_mode != StudyMode.recall ||
+                              _matchesRecallFilters(latestCard)) &&
+                          latestCard.scheduleFor(queued.cue).enabled)
                     StudyPrompt(card: latestCard, cue: queued.cue),
               ]
               .where(
                 (prompt) =>
-                    prompt.schedule.enabled &&
-                    (prompt.isNew || prompt.isDueAt(now)),
+                    _mode == StudyMode.recall ||
+                    prompt.isNew ||
+                    prompt.isDueAt(DateTime.now().toUtc()),
               )
               .toList();
 
       if (selected.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Nothing due right now')),
+            SnackBar(
+              content: Text(
+                _mode == StudyMode.recall
+                    ? 'No cards match these filters'
+                    : 'Nothing due right now',
+              ),
+            ),
           );
         }
         return null;
       }
 
-      if (_order == StudyOrder.shuffle) selected.shuffle(Random.secure());
+      if (_mode == StudyMode.recall || _order == StudyOrder.shuffle) {
+        selected.shuffle(Random.secure());
+      }
       return selected
           .take(min(_count, selected.length))
           .toList(growable: false);
@@ -244,8 +462,8 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
         return;
       }
       if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
+      final completed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
           builder: (_) => ScriptDrawPracticePage(
             title: widget.title,
             cards: selected,
@@ -253,6 +471,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
           ),
         ),
       );
+      if (completed == true && mounted) Navigator.of(context).pop();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -267,8 +486,8 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   Future<void> _startAiTutor() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => VoiceStudyScreen(
           title: widget.title,
           prompts: prompts,
@@ -279,6 +498,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
         ),
       ),
     );
+    if (completed == true && mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -371,7 +591,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                         title: 'Choose the order',
                         child: _OrderControl(
                           value: _order,
-                          onChanged: (value) => setState(() => _order = value),
+                          onChanged: _selectOrder,
                         ),
                       ),
                       const SizedBox(height: 22),
@@ -403,7 +623,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                         title: 'Choose the order',
                         child: _OrderControl(
                           value: _order,
-                          onChanged: (value) => setState(() => _order = value),
+                          onChanged: _selectOrder,
                         ),
                       ),
                       const SizedBox(height: 22),
@@ -435,38 +655,28 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                             ),
                           ],
                           selected: {_recallPresentation},
-                          onSelectionChanged: (value) => setState(
-                            () => _recallPresentation = value.single,
-                          ),
+                          onSelectionChanged: (value) =>
+                              _selectRecallPresentation(value.single),
                         ),
                       ),
                       const SizedBox(height: 14),
                     ],
                     _SetupCard(
                       number: _isScriptStudy ? '01' : '02',
-                      title: _isScriptStudy ? 'Which letters?' : 'Which words?',
-                      child: _learningStatusChoices(),
+                      title: 'What should be in front?',
+                      child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: _isScriptStudy ? '02' : '03',
-                      title: 'What should be in front?',
-                      child: _cueChoices(),
+                      title: _isScriptStudy ? 'Which letters?' : 'Which words?',
+                      child: _recallFilterChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: _isScriptStudy ? '03' : '04',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
-                    ),
-                    const SizedBox(height: 14),
-                    _SetupCard(
-                      number: _isScriptStudy ? '04' : '05',
-                      title: 'Choose the order',
-                      child: _OrderControl(
-                        value: _order,
-                        onChanged: (value) => setState(() => _order = value),
-                      ),
                     ),
                     const SizedBox(height: 22),
                     FilledButton.icon(
@@ -511,7 +721,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                       title: 'Choose the order',
                       child: _OrderControl(
                         value: _order,
-                        onChanged: (value) => setState(() => _order = value),
+                        onChanged: _selectOrder,
                       ),
                     ),
                     const SizedBox(height: 22),
@@ -556,17 +766,73 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     runSpacing: 8,
     children: [
       FilterChip(
-        label: const Text('Learning'),
+        label: const Text('Current'),
         selected: _learningStatuses.contains(LearningStatus.learning),
         onSelected: (_) => _toggleLearningStatus(LearningStatus.learning),
       ),
       FilterChip(
-        label: const Text('Learnt'),
+        label: const Text('Past'),
         selected: _learningStatuses.contains(LearningStatus.learnt),
         onSelected: (_) => _toggleLearningStatus(LearningStatus.learnt),
       ),
     ],
   );
+
+  Widget _recallFilterChoices() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('TIME', style: monoLabel),
+      const SizedBox(height: 8),
+      _learningStatusChoices(),
+      const SizedBox(height: 16),
+      Text('MEMORY STATE', style: monoLabel),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final state in RecallCardState.values)
+            FilterChip(
+              label: Text(switch (state) {
+                RecallCardState.learning => 'Learning',
+                RecallCardState.relearning => 'Relearning',
+                RecallCardState.retained => 'Retained',
+                RecallCardState.newCard => 'New',
+              }),
+              selected: _recallStates.contains(state),
+              onSelected: (_) => _toggleRecallState(state),
+            ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Text('REVIEW TIMING', style: monoLabel),
+      const SizedBox(height: 8),
+      SegmentedButton<RecallTiming>(
+        segments: const [
+          ButtonSegment(value: RecallTiming.allMatching, label: Text('All')),
+          ButtonSegment(value: RecallTiming.dueNow, label: Text('Due')),
+        ],
+        selected: {_recallTiming},
+        onSelectionChanged: (selection) =>
+            _selectRecallTiming(selection.single),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        _recallTimingSummary(),
+        style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+      ),
+    ],
+  );
+
+  String _recallTimingSummary() {
+    final matching = _recallBaseCandidates.length;
+    final due = _recallBaseCandidates
+        .where((prompt) => _isDueForRecall(prompt.card))
+        .length;
+    return _recallTiming == RecallTiming.dueNow
+        ? '$due of $matching are due now'
+        : '$matching cards match these filters';
+  }
 
   Widget _countControl(int maxCount) => maxCount == 0
       ? const Text(
@@ -596,7 +862,7 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
               min: 1,
               max: maxCount.toDouble(),
               divisions: maxCount > 1 ? maxCount - 1 : null,
-              onChanged: (value) => setState(() => _count = value.round()),
+              onChanged: _selectCount,
             ),
           ],
         );

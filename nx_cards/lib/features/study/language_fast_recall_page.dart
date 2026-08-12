@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
+import 'package:nx_cards/features/study/recall_recap_page.dart';
 
 class LanguageFastRecallPage extends ConsumerStatefulWidget {
   const LanguageFastRecallPage({
@@ -110,6 +112,23 @@ class _LanguageFastRecallPageState
   @override
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
+    if (_ratings.length == widget.prompts.length) {
+      final missCount = _ratings.values
+          .where((rating) => rating == CardRating.again)
+          .length;
+      return RecallRecapPage(
+        reviewedCount: _ratings.length,
+        totalCount: widget.prompts.length,
+        missCount: missCount,
+        entries: [
+          for (final prompt in widget.prompts)
+            RecallRecapEntry(
+              card: _latestCards[prompt.cardId] ?? prompt.card,
+              rating: _ratings[prompt.cardId],
+            ),
+        ],
+      );
+    }
     final prompts = _visiblePrompts;
     return Scaffold(
       appBar: AppBar(title: Text('${widget.title} · Fast recall')),
@@ -224,8 +243,16 @@ class _FastRecallRow extends StatefulWidget {
 }
 
 class _FastRecallRowState extends State<_FastRecallRow> {
+  static const _swipeThreshold = 72.0;
+  static const _maximumDrag = 104.0;
+
   bool _revealed = false;
   bool _hidden = false;
+  bool _revealedBeforeDrag = false;
+  bool _thresholdHapticSent = false;
+  bool _swipeCommitted = false;
+  bool _swipeRecalled = false;
+  double _dragOffset = 0;
 
   @override
   void didUpdateWidget(covariant _FastRecallRow oldWidget) {
@@ -235,6 +262,68 @@ class _FastRecallRowState extends State<_FastRecallRow> {
     }
   }
 
+  bool get _canSwipe =>
+      !widget.saving && widget.rating == null && !_swipeCommitted;
+
+  void _startSwipe(DragStartDetails details) {
+    if (!_canSwipe) return;
+    setState(() {
+      _revealedBeforeDrag = _revealed;
+      _revealed = true;
+      _thresholdHapticSent = false;
+      _dragOffset = 0;
+    });
+  }
+
+  void _updateSwipe(DragUpdateDetails details) {
+    if (!_canSwipe) return;
+    final next = (_dragOffset + details.delta.dx).clamp(
+      -_maximumDrag,
+      _maximumDrag,
+    );
+    final crossed = next.abs() >= _swipeThreshold;
+    if (crossed && !_thresholdHapticSent) {
+      _thresholdHapticSent = true;
+      HapticFeedback.selectionClick();
+    } else if (!crossed) {
+      _thresholdHapticSent = false;
+    }
+    setState(() => _dragOffset = next.toDouble());
+  }
+
+  void _endSwipe(DragEndDetails details) {
+    if (!_canSwipe) return;
+    if (_dragOffset.abs() < _swipeThreshold) {
+      setState(() {
+        _dragOffset = 0;
+        _revealed = _revealedBeforeDrag;
+      });
+      return;
+    }
+    final recalled = _dragOffset > 0;
+    setState(() {
+      _dragOffset = 0;
+      _swipeCommitted = true;
+      _swipeRecalled = recalled;
+    });
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      if (recalled) {
+        widget.onYes();
+      } else {
+        widget.onNo();
+      }
+    });
+  }
+
+  void _cancelSwipe() {
+    if (!_canSwipe) return;
+    setState(() {
+      _dragOffset = 0;
+      _revealed = _revealedBeforeDrag;
+    });
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedSize(
     duration: const Duration(milliseconds: 300),
@@ -242,143 +331,209 @@ class _FastRecallRowState extends State<_FastRecallRow> {
     alignment: Alignment.topCenter,
     child: _hidden
         ? const SizedBox.shrink()
-        : Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        : ClipRect(
+            child: Stack(
               children: [
-                SizedBox(
-                  width: 30,
-                  child: Text(
-                    widget.number.toString().padLeft(2, '0'),
-                    style: monoLabel,
-                  ),
+                Positioned.fill(
+                  child: _FastSwipeBackground(offset: _dragOffset),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: _revealed ? widget.onOpenCard : null,
+                AnimatedContainer(
+                  duration: _dragOffset == 0
+                      ? const Duration(milliseconds: 170)
+                      : Duration.zero,
+                  curve: Curves.easeOutCubic,
+                  transform: Matrix4.translationValues(_dragOffset, 0, 0),
+                  color: Colors.white,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragStart: _canSwipe ? _startSwipe : null,
+                    onHorizontalDragUpdate: _canSwipe ? _updateSwipe : null,
+                    onHorizontalDragEnd: _canSwipe ? _endSwipe : null,
+                    onHorizontalDragCancel: _canSwipe ? _cancelSwipe : null,
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        widget.prompt.prompt,
-                        key: ValueKey<String>(
-                          'fast-prompt-${widget.prompt.cardId}',
-                        ),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          height: 1.35,
-                          color: RecallColors.muted,
-                        ),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 30,
+                            child: Text(
+                              widget.number.toString().padLeft(2, '0'),
+                              style: monoLabel,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: _revealed ? widget.onOpenCard : null,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  widget.prompt.prompt,
+                                  key: ValueKey<String>(
+                                    'fast-prompt-${widget.prompt.cardId}',
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    height: 1.35,
+                                    color: RecallColors.muted,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 4,
+                            child: _revealed
+                                ? InkWell(
+                                    key: ValueKey<String>(
+                                      'fast-answer-${widget.prompt.cardId}',
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: widget.onOpenCard,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
+                                      child: _FastAnswer(
+                                        prompt: widget.prompt,
+                                        content: widget.content,
+                                      ),
+                                    ),
+                                  )
+                                : InkWell(
+                                    key: ValueKey<String>(
+                                      'fast-hidden-${widget.prompt.cardId}',
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: () =>
+                                        setState(() => _revealed = true),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 3,
+                                      ),
+                                      child: Text(
+                                        'Tap to reveal',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: RecallColors.faint,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            width: 84,
+                            child: !_revealed
+                                ? null
+                                : _swipeCommitted
+                                ? Icon(
+                                    _swipeRecalled
+                                        ? Icons.thumb_up_alt_outlined
+                                        : Icons.thumb_down_alt_outlined,
+                                    size: 18,
+                                    color: RecallColors.muted,
+                                  )
+                                : widget.saving
+                                ? const Center(
+                                    child: SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                : widget.rating != null
+                                ? Icon(
+                                    widget.rating == CardRating.good
+                                        ? Icons.thumb_up_alt_outlined
+                                        : Icons.thumb_down_alt_outlined,
+                                    size: 18,
+                                    color: RecallColors.muted,
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        key: ValueKey<String>(
+                                          'fast-yes-${widget.prompt.cardId}',
+                                        ),
+                                        tooltip: 'Recalled',
+                                        visualDensity: VisualDensity.compact,
+                                        constraints:
+                                            const BoxConstraints.tightFor(
+                                              width: 36,
+                                              height: 36,
+                                            ),
+                                        padding: const EdgeInsets.all(7),
+                                        onPressed: widget.onYes,
+                                        icon: const Icon(
+                                          Icons.thumb_up_alt_outlined,
+                                          size: 19,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        key: ValueKey<String>(
+                                          'fast-no-${widget.prompt.cardId}',
+                                        ),
+                                        tooltip: 'Did not recall',
+                                        visualDensity: VisualDensity.compact,
+                                        constraints:
+                                            const BoxConstraints.tightFor(
+                                              width: 36,
+                                              height: 36,
+                                            ),
+                                        padding: const EdgeInsets.all(7),
+                                        onPressed: widget.onNo,
+                                        icon: const Icon(
+                                          Icons.thumb_down_alt_outlined,
+                                          size: 19,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 4,
-                  child: _revealed
-                      ? InkWell(
-                          key: ValueKey<String>(
-                            'fast-answer-${widget.prompt.cardId}',
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: widget.onOpenCard,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
-                            ),
-                            child: _FastAnswer(
-                              prompt: widget.prompt,
-                              content: widget.content,
-                            ),
-                          ),
-                        )
-                      : InkWell(
-                          key: ValueKey<String>(
-                            'fast-hidden-${widget.prompt.cardId}',
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: () => setState(() => _revealed = true),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 3),
-                            child: Text(
-                              'Tap to reveal',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: RecallColors.faint,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 84,
-                  child: !_revealed
-                      ? null
-                      : widget.saving
-                      ? const Center(
-                          child: SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      : widget.rating != null
-                      ? Icon(
-                          widget.rating == CardRating.good
-                              ? Icons.thumb_up_alt_outlined
-                              : Icons.thumb_down_alt_outlined,
-                          size: 18,
-                          color: RecallColors.muted,
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            IconButton(
-                              key: ValueKey<String>(
-                                'fast-no-${widget.prompt.cardId}',
-                              ),
-                              tooltip: 'Did not recall',
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 36,
-                                height: 36,
-                              ),
-                              padding: const EdgeInsets.all(7),
-                              onPressed: widget.onNo,
-                              icon: const Icon(
-                                Icons.thumb_down_alt_outlined,
-                                size: 19,
-                              ),
-                            ),
-                            IconButton(
-                              key: ValueKey<String>(
-                                'fast-yes-${widget.prompt.cardId}',
-                              ),
-                              tooltip: 'Recalled',
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 36,
-                                height: 36,
-                              ),
-                              padding: const EdgeInsets.all(7),
-                              onPressed: widget.onYes,
-                              icon: const Icon(
-                                Icons.thumb_up_alt_outlined,
-                                size: 19,
-                              ),
-                            ),
-                          ],
-                        ),
                 ),
               ],
             ),
           ),
   );
+}
+
+class _FastSwipeBackground extends StatelessWidget {
+  const _FastSwipeBackground({required this.offset});
+
+  final double offset;
+
+  @override
+  Widget build(BuildContext context) {
+    final recalled = offset >= 0;
+    return ColoredBox(
+      color: recalled ? const Color(0xffecfdf5) : const Color(0xfffff1f2),
+      child: Align(
+        alignment: recalled ? Alignment.centerLeft : Alignment.centerRight,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Icon(
+            recalled
+                ? Icons.thumb_up_alt_outlined
+                : Icons.thumb_down_alt_outlined,
+            color: recalled ? RecallColors.emerald : RecallColors.rose,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _FastAnswer extends StatelessWidget {

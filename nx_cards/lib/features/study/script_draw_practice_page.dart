@@ -64,7 +64,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
 
   void _next() {
     if (_index == widget.cards.length - 1) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
       return;
     }
     _drawingController.clear();

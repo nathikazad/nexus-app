@@ -558,15 +558,23 @@ class WordCategoryScreen extends ConsumerWidget {
           final cards = data.cards
               .where((card) => card.wordCategory == category)
               .toList(growable: false);
-          final learning = cards
-              .where((card) => card.learningStatus == LearningStatus.learning)
-              .toList(growable: false);
-          final learnt = cards
-              .where((card) => card.learningStatus == LearningStatus.learnt)
-              .toList(growable: false);
-          final notStarted = cards
-              .where((card) => card.learningStatus == LearningStatus.notStarted)
-              .toList(growable: false);
+          final now = DateTime.now().toUtc();
+          final learning = sortWordsByScheduleState(
+            cards.where(
+              (card) => card.learningStatus == LearningStatus.learning,
+            ),
+            now,
+          );
+          final learnt = sortWordsByScheduleState(
+            cards.where((card) => card.learningStatus == LearningStatus.learnt),
+            now,
+          );
+          final notStarted = sortWordsByScheduleState(
+            cards.where(
+              (card) => card.learningStatus == LearningStatus.notStarted,
+            ),
+            now,
+          );
           final queue = data.studyQueue(
             DateTime.now(),
             wordCategory: category,
@@ -592,6 +600,7 @@ class WordCategoryScreen extends ConsumerWidget {
                           ),
                           _StudyLauncher(
                             title: category,
+                            preferenceKey: 'word-category:$category',
                             prompts: queue,
                             studyCards: [...learning, ...learnt],
                             languagePair: _languagesForCards(data, cards),
@@ -612,9 +621,9 @@ class WordCategoryScreen extends ConsumerWidget {
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        Tab(text: 'Learning  ${learning.length}'),
-                        Tab(text: 'Learnt  ${learnt.length}'),
-                        Tab(text: 'Not started  ${notStarted.length}'),
+                        Tab(text: 'Current  ${learning.length}'),
+                        Tab(text: 'Past  ${learnt.length}'),
+                        Tab(text: 'Future  ${notStarted.length}'),
                       ],
                     ),
                   ),
@@ -830,9 +839,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final transliteration = content is LanguageCardContent
         ? content.transliteration
         : '';
-    final scheduleStatus = widget.card.learningStatus == LearningStatus.learning
-        ? wordScheduleStatus(widget.card, DateTime.now().toUtc())
-        : null;
+    final scheduleStatus = wordScheduleStatus(
+      widget.card,
+      DateTime.now().toUtc(),
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),
       child: Stack(
@@ -885,11 +895,24 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.card.front,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  widget.card.front,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              if (scheduleStatus != null &&
+                                  scheduleStatus.label != 'New') ...[
+                                const SizedBox(width: 9),
+                                _ScheduleStatePill(status: scheduleStatus),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -904,45 +927,32 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                               color: RecallColors.muted,
                             ),
                           ),
-                          if (scheduleStatus != null) ...[
+                          if (scheduleStatus?.isDue == true) ...[
                             const SizedBox(height: 7),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  scheduleStatus.label.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: .7,
-                                    color: RecallColors.faint,
+                                Container(
+                                  key: ValueKey('word-schedule-due'),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: RecallColors.ink,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'DUE',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontFamily: 'monospace',
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: .7,
+                                    ),
                                   ),
                                 ),
-                                if (scheduleStatus.isDue) ...[
-                                  const SizedBox(width: 7),
-                                  Container(
-                                    key: ValueKey('word-schedule-due'),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: RecallColors.ink,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'DUE',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'monospace',
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: .7,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ],
@@ -996,6 +1006,43 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
       ),
     ),
   );
+}
+
+class _ScheduleStatePill extends StatelessWidget {
+  const _ScheduleStatePill({required this.status});
+
+  final WordScheduleStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, foreground) = switch (status.label) {
+      'Learning' => (const Color(0xfffff7ed), RecallColors.orange),
+      'Relearning' => (const Color(0xfffff1f2), RecallColors.rose),
+      'Retained' => (const Color(0xffecfdf5), RecallColors.emerald),
+      'New' => (const Color(0xfff0f9ff), RecallColors.sky),
+      _ => (RecallColors.soft, RecallColors.muted),
+    };
+    return Container(
+      key: ValueKey<String>('word-state-${status.label.toLowerCase()}'),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        status.recallPercentage == null
+            ? status.label.toUpperCase()
+            : '${status.label.toUpperCase()}  ${status.recallPercentage}%',
+        style: TextStyle(
+          color: foreground,
+          fontFamily: 'monospace',
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          letterSpacing: .55,
+        ),
+      ),
+    );
+  }
 }
 
 IconData _categoryIcon(String category) => switch (category) {
@@ -1059,6 +1106,7 @@ class _DecksDashboard extends ConsumerWidget {
                       ),
                       _StudyLauncher(
                         title: "Today's review",
+                        preferenceKey: 'today-review',
                         prompts: queue,
                         studyCards: _studyCardsForPrompts(queue),
                         languagePair: _languagesForPrompts(data, queue),
@@ -1246,6 +1294,7 @@ class _DeckCard extends StatelessWidget {
                   if (queue.isNotEmpty)
                     _StudyLauncher(
                       title: deck.name,
+                      preferenceKey: 'deck:${deck.id}',
                       prompts: queue,
                       studyCards: data.cards
                           .where((card) => card.deckId == deck.id)
@@ -1370,6 +1419,7 @@ class _TodayView extends StatelessWidget {
                         ),
                         _StudyLauncher(
                           title: "Today's review",
+                          preferenceKey: 'today-review',
                           prompts: queue,
                           studyCards: _studyCardsForPrompts(queue),
                           languagePair: _languagesForPrompts(data, queue),
@@ -1468,6 +1518,7 @@ class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
                           ),
                           _StudyLauncher(
                             title: deck.name,
+                            preferenceKey: 'deck:${deck.id}',
                             prompts: queue,
                             studyCards: allCards,
                             languagePair: deck.isLanguageDeck
@@ -1597,6 +1648,7 @@ class _StudyLauncher extends StatelessWidget {
     required this.title,
     required this.prompts,
     required this.studyCards,
+    required this.preferenceKey,
     required this.builder,
     this.languagePair,
   });
@@ -1604,6 +1656,7 @@ class _StudyLauncher extends StatelessWidget {
   final String title;
   final List<StudyPrompt> prompts;
   final List<StudyCard> studyCards;
+  final String preferenceKey;
   final _StudyButtonBuilder builder;
   final _LanguagePair? languagePair;
 
@@ -1624,6 +1677,8 @@ class _StudyLauncher extends StatelessWidget {
             studyCards: studyCards,
             fromLanguage: languagePair!.from,
             toLanguage: languagePair!.to,
+            preferenceKey:
+                '$preferenceKey:${languagePair!.from}:${languagePair!.to}',
           ),
         ),
       ),

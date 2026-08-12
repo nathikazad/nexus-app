@@ -45,9 +45,9 @@ void main() {
     expect(find.text('LEARNING'), findsOneWidget);
     expect(find.text('DUE'), findsOneWidget);
     expect(find.byKey(const ValueKey('word-schedule-due')), findsOneWidget);
-    expect(find.text('Learning  1'), findsOneWidget);
-    expect(find.text('Learnt  1'), findsOneWidget);
-    expect(find.text('Not started  1'), findsOneWidget);
+    expect(find.text('Current  1'), findsOneWidget);
+    expect(find.text('Past  1'), findsOneWidget);
+    expect(find.text('Future  1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -90,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.changes.last, (1, LearningStatus.notStarted));
 
-    await tester.tap(find.text('Learnt  1'));
+    await tester.tap(find.text('Past  1'));
     await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('learnt:3')),
@@ -98,6 +98,108 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(repository.changes.last, (3, LearningStatus.learning));
+  });
+
+  testWidgets('shows subtle state pills beside fronts and sorts by state', (
+    tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final cards = [
+      _word(
+        id: 4,
+        learningStatus: LearningStatus.learning,
+        schedule: _stateSchedule(now, state: 'learning', isNew: true),
+      ),
+      _word(
+        id: 3,
+        learningStatus: LearningStatus.learning,
+        schedule: _stateSchedule(now, state: 'review'),
+        recallRatings: const [3, 3, 3, 3],
+      ),
+      _word(
+        id: 5,
+        learningStatus: LearningStatus.learning,
+        schedule: _stateSchedule(now, state: 'review'),
+        recallRatings: const [1, 1, 1, 3],
+      ),
+      _word(
+        id: 2,
+        learningStatus: LearningStatus.learning,
+        schedule: _stateSchedule(now, state: 'relearning'),
+      ),
+      _word(
+        id: 1,
+        learningStatus: LearningStatus.learning,
+        schedule: _stateSchedule(now, state: 'learning'),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(
+              CardsDashboard(decks: const [_deck], cards: cards),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: WordCategoryScreen(category: 'Noun')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('LEARNING'), findsOneWidget);
+    expect(find.text('RELEARNING'), findsOneWidget);
+    expect(find.text('RETAINED  25%'), findsOneWidget);
+    expect(find.text('RETAINED  100%'), findsOneWidget);
+    expect(find.text('REVIEW'), findsNothing);
+    expect(find.text('NEW'), findsNothing);
+    expect(find.byKey(const ValueKey<String>('word-state-new')), findsNothing);
+    expect(
+      (tester
+                  .widget<Container>(
+                    find.byKey(const ValueKey<String>('word-state-learning')),
+                  )
+                  .decoration
+              as BoxDecoration)
+          .color,
+      const Color(0xfffff7ed),
+    );
+    expect(
+      (tester
+                  .widget<Container>(
+                    find.byKey(const ValueKey<String>('word-state-relearning')),
+                  )
+                  .decoration
+              as BoxDecoration)
+          .color,
+      const Color(0xfffff1f2),
+    );
+    expect(
+      (tester
+                  .widget<Container>(
+                    find
+                        .byKey(const ValueKey<String>('word-state-retained'))
+                        .first,
+                  )
+                  .decoration
+              as BoxDecoration)
+          .color,
+      const Color(0xffecfdf5),
+    );
+    expect(
+      tester.getCenter(find.text('word 1')).dx,
+      lessThan(tester.getCenter(find.text('LEARNING')).dx),
+    );
+    final stateOrder = [
+      'word 1',
+      'word 2',
+      'word 5',
+      'word 3',
+      'word 4',
+    ].map((label) => tester.getCenter(find.text(label)).dy).toList();
+    expect(stateOrder, orderedEquals([...stateOrder]..sort()));
   });
 }
 
@@ -126,10 +228,11 @@ StudyCard _word({
   required int id,
   required LearningStatus learningStatus,
   required CardSchedule schedule,
+  List<int> recallRatings = const <int>[],
 }) => StudyCard(
   id: id,
   content: LanguageCardContent(
-    english: id == 1 ? 'worry' : 'responsibility',
+    english: 'word $id',
     originalScript: id == 1 ? 'ആശങ്ക' : 'ഉത്തരവാദിത്വം',
     transliteration: id == 1 ? 'aashanka' : 'utharavaadithvam',
   ),
@@ -140,7 +243,19 @@ StudyCard _word({
     StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
     StudyCue.transliteration: const CardSchedule.initial(enabled: true),
   },
-  reviewHistory: const {},
+  reviewHistory: <StudyCue, List<CardReview>>{
+    if (recallRatings.isNotEmpty)
+      StudyCue.fromLanguage: [
+        for (var index = 0; index < recallRatings.length; index++)
+          CardReview(
+            id: 'review-$id-$index',
+            reviewedAt: DateTime.utc(2026, 8, index + 1),
+            rating: recallRatings[index],
+            elapsedSeconds: 86400,
+            scheduledSeconds: 86400,
+          ),
+      ],
+  },
   suspended: false,
   learningStatus: learningStatus,
   tags: const {
@@ -158,5 +273,21 @@ CardSchedule _schedule(DateTime dueAt) => CardSchedule(
   schedulingState: 'learning',
   learningStep: 0,
   reviewCount: 1,
+  lapseCount: 0,
+);
+
+CardSchedule _stateSchedule(
+  DateTime now, {
+  required String state,
+  bool isNew = false,
+}) => CardSchedule(
+  enabled: true,
+  dueAt: now.add(const Duration(days: 1)),
+  lastReviewedAt: isNew ? null : now.subtract(const Duration(days: 1)),
+  stability: isNew ? null : 1,
+  difficulty: isNew ? null : 5,
+  schedulingState: state,
+  learningStep: state == 'review' ? null : 0,
+  reviewCount: isNew ? 0 : 1,
   lapseCount: 0,
 );

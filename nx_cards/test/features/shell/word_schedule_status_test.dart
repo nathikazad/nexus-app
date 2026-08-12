@@ -45,7 +45,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Review');
+    expect(status?.label, 'Retained');
     expect(status?.isDue, isFalse);
   });
 
