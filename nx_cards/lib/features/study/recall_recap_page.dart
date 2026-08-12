@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/study/review_progression_service.dart';
 
 class RecallRecapEntry {
   const RecallRecapEntry({required this.card, required this.rating});
@@ -9,7 +11,7 @@ class RecallRecapEntry {
   final CardRating? rating;
 }
 
-class RecallRecapPage extends StatelessWidget {
+class RecallRecapPage extends ConsumerStatefulWidget {
   const RecallRecapPage({
     super.key,
     required this.reviewedCount,
@@ -22,6 +24,33 @@ class RecallRecapPage extends StatelessWidget {
   final int totalCount;
   final int missCount;
   final List<RecallRecapEntry> entries;
+
+  @override
+  ConsumerState<RecallRecapPage> createState() => _RecallRecapPageState();
+}
+
+class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
+  ReviewProgressionPlan? _progression;
+  Object? _progressionError;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_applyProgression);
+  }
+
+  Future<void> _applyProgression() async {
+    try {
+      final result = await ref.read(reviewProgressionRunnerProvider)(
+        widget.entries
+            .where((entry) => entry.rating != null)
+            .map((entry) => entry.card),
+      );
+      if (mounted) setState(() => _progression = result);
+    } catch (error) {
+      if (mounted) setState(() => _progressionError = error);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -48,7 +77,7 @@ class RecallRecapPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '$reviewedCount of $totalCount cards reviewed',
+                    '${widget.reviewedCount} of ${widget.totalCount} cards reviewed',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: RecallColors.muted),
                   ),
@@ -59,21 +88,40 @@ class RecallRecapPage extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _RecapStat(
-                        value: '${reviewedCount - missCount}',
+                        value: '${widget.reviewedCount - widget.missCount}',
                         label: 'Recalled',
                         color: RecallColors.emerald,
                       ),
                       _RecapStat(
-                        value: '$missCount',
+                        value: '${widget.missCount}',
                         label: 'Not recalled',
                         color: RecallColors.rose,
                       ),
                     ],
                   ),
+                  if (_progression case final progression?
+                      when progression.changed) ...[
+                    const SizedBox(height: 17),
+                    Text(
+                      _progressionSummary(progression),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: RecallColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ] else if (_progressionError != null) ...[
+                    const SizedBox(height: 17),
+                    const Text(
+                      'Learning lists could not be updated.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: RecallColors.rose, fontSize: 12),
+                    ),
+                  ],
                   const SizedBox(height: 28),
                   Text('WORDS', style: monoLabel),
                   const SizedBox(height: 9),
-                  _RecallWordRecap(entries: entries),
+                  _RecallWordRecap(entries: widget.entries),
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () => Navigator.pop(context, true),
@@ -87,6 +135,20 @@ class RecallRecapPage extends StatelessWidget {
       ),
     ),
   );
+
+  String _progressionSummary(ReviewProgressionPlan progression) {
+    final parts = <String>[];
+    if (progression.movedToPast > 0) {
+      parts.add('${progression.movedToPast} moved to Past');
+    }
+    if (progression.movedToCurrent > 0) {
+      parts.add('${progression.movedToCurrent} moved to Current');
+    }
+    if (progression.replacements > 0) {
+      parts.add('${progression.replacements} Future added to Current');
+    }
+    return parts.join(' · ');
+  }
 }
 
 class _RecallWordRecap extends StatelessWidget {

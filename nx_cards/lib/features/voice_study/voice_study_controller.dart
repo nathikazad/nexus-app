@@ -133,6 +133,14 @@ class VoiceStudyController extends ChangeNotifier {
           (_tokensByPromptIndex[promptIndex] ?? 0) > 0)
         _recapEntry(promptIndex),
   ];
+  List<StudyCard> get reviewedCards {
+    final cards = <int, StudyCard>{};
+    for (final entry in _ratingsByPromptIndex.entries) {
+      cards[_prompts[entry.key].card.id] = _prompts[entry.key].card;
+    }
+    return List<StudyCard>.unmodifiable(cards.values);
+  }
+
   String? get error => _session.error;
   StudyPrompt? get currentPrompt =>
       _index < _prompts.length ? _prompts[_index] : null;
@@ -443,7 +451,7 @@ Keep spoken responses short unless the learner asks for more detail.
     }
   }
 
-  Future<void> toggleMuted() => _session.toggleMuted();
+  Future<void> toggleMuted() => _session.activateMicrophone();
 
   Future<void> stop() => _session.stop();
 

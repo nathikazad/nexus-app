@@ -12,6 +12,7 @@ import 'package:nx_cards/features/shell/word_category_order.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
 import 'package:nx_cards/features/shell/word_schedule_status.dart';
+import 'package:nx_cards/features/settings/review_progression_settings_page.dart';
 import 'package:nx_db/riverpod.dart';
 
 class CardsHome extends ConsumerWidget {
@@ -131,7 +132,32 @@ class _HomeScaffold extends ConsumerWidget {
       ),
       data: (data) => _WordCategoriesDashboard(data: data),
     );
-    return Scaffold(body: SafeArea(child: body));
+    return Scaffold(
+      backgroundColor: RecallColors.soft,
+      appBar: AppBar(
+        title: const Text(
+          'Categories',
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Review settings',
+            icon: const Icon(Icons.tune_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ReviewProgressionSettingsPage(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
+        ),
+      ),
+      body: body,
+    );
   }
 }
 

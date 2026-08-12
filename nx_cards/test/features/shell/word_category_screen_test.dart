@@ -39,9 +39,10 @@ void main() {
 
     expect(find.text('Script'), findsOneWidget);
     expect(find.text('Noun'), findsOneWidget);
-    expect(find.byType(AppBar), findsNothing);
+    expect(find.byType(AppBar), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
-    expect(find.text('Categories'), findsNothing);
+    expect(find.text('Categories'), findsOneWidget);
+    expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
     expect(find.text('Today'), findsNothing);
     expect(find.text('What are you learning?'), findsNothing);
     expect(find.text('Word categories'), findsNothing);

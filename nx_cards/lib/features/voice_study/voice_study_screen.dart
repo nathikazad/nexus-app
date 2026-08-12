@@ -7,6 +7,7 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/voice_study/openai_api_key.dart';
 import 'package:nx_cards/features/voice_study/voice_study_controller.dart';
+import 'package:nx_cards/features/study/review_progression_service.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 
 class VoiceStudyScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,9 @@ class VoiceStudyScreen extends ConsumerStatefulWidget {
 
 class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
   late final VoiceStudyController controller;
+  bool _progressionStarted = false;
+  ReviewProgressionPlan? _progression;
+  Object? _progressionError;
 
   @override
   void initState() {
@@ -39,6 +43,7 @@ class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
       deckLanguages: widget.deckLanguages,
       onScheduleSaved: () => ref.invalidate(cardsDashboardProvider),
     );
+    controller.addListener(_handleControllerChange);
     unawaited(
       controller.start(StaticLiveAgentCredentialProvider(openAiApiKey)),
     );
@@ -46,8 +51,28 @@ class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
 
   @override
   void dispose() {
+    controller.removeListener(_handleControllerChange);
     controller.dispose();
     super.dispose();
+  }
+
+  void _handleControllerChange() {
+    if (controller.phase != VoiceStudyPhase.completed || _progressionStarted) {
+      return;
+    }
+    _progressionStarted = true;
+    unawaited(_applyProgression());
+  }
+
+  Future<void> _applyProgression() async {
+    try {
+      final result = await ref.read(reviewProgressionRunnerProvider)(
+        controller.reviewedCards,
+      );
+      if (mounted) setState(() => _progression = result);
+    } catch (error) {
+      if (mounted) setState(() => _progressionError = error);
+    }
   }
 
   @override
@@ -94,7 +119,13 @@ class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
                         ),
                       ),
                       if (controller.phase == VoiceStudyPhase.completed)
-                        Expanded(child: _SessionBody(controller: controller))
+                        Expanded(
+                          child: _SessionBody(
+                            controller: controller,
+                            progression: _progression,
+                            progressionError: _progressionError,
+                          ),
+                        )
                       else ...[
                         const Spacer(),
                         _SessionBody(controller: controller),
@@ -123,9 +154,15 @@ class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
 }
 
 class _SessionBody extends StatelessWidget {
-  const _SessionBody({required this.controller});
+  const _SessionBody({
+    required this.controller,
+    this.progression,
+    this.progressionError,
+  });
 
   final VoiceStudyController controller;
+  final ReviewProgressionPlan? progression;
+  final Object? progressionError;
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +235,20 @@ class _SessionBody extends StatelessWidget {
                 ),
               ],
             ),
+            if (progression case final result? when result.changed) ...[
+              const SizedBox(height: 16),
+              Text(
+                _progressionSummary(result),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: RecallColors.muted, fontSize: 12),
+              ),
+            ] else if (progressionError != null) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Learning lists could not be updated.',
+                style: TextStyle(color: RecallColors.rose, fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 26),
             if (controller.recapEntries.isNotEmpty) ...[
               _WordRecap(entries: controller.recapEntries),
@@ -260,6 +311,20 @@ class _SessionBody extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  String _progressionSummary(ReviewProgressionPlan result) {
+    final parts = <String>[];
+    if (result.movedToPast > 0) {
+      parts.add('${result.movedToPast} moved to Past');
+    }
+    if (result.movedToCurrent > 0) {
+      parts.add('${result.movedToCurrent} moved to Current');
+    }
+    if (result.replacements > 0) {
+      parts.add('${result.replacements} Future added to Current');
+    }
+    return parts.join(' · ');
   }
 }
 

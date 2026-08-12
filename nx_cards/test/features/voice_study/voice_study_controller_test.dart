@@ -72,9 +72,6 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
   Future<void> cancelResponse() async {}
 
   @override
-  Future<void> setMuted(bool muted) async {}
-
-  @override
   Future<void> close() async => closeRequests += 1;
 
   @override
