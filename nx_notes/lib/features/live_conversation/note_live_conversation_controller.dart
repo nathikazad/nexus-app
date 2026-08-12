@@ -20,6 +20,16 @@ class NoteLiveConversationController extends ChangeNotifier {
 
   LiveAgentPhase get phase => _session.phase;
   bool get muted => _session.muted;
+  LiveAgentTurnDetectionMode get turnDetectionMode =>
+      _session.inputController.turnDetection;
+  LiveAgentInputState get inputState => _session.inputController.inputState;
+  bool get changingInputMode => _session.inputController.busy;
+  bool get automaticVad =>
+      turnDetectionMode == LiveAgentTurnDetectionMode.automatic;
+  bool get manualRecording => inputState == LiveAgentInputState.recording;
+  bool get manualSubmitting => inputState == LiveAgentInputState.submitting;
+  LiveAgentPlaybackState get playbackState => _session.playbackState;
+  bool get playbackPaused => playbackState == LiveAgentPlaybackState.paused;
   String? get error => _session.error;
   LiveAgentUsage get usage => _session.usage;
   double get inputCost => _gptRealtimeInputCost(usage);
@@ -51,7 +61,11 @@ class NoteLiveConversationController extends ChangeNotifier {
     );
   }
 
-  Future<void> toggleMuted() => _session.toggleMuted();
+  Future<void> activateMicrophone() => _session.activateMicrophone();
+
+  Future<void> togglePlayback() => _session.setPaused(!playbackPaused);
+
+  Future<void> toggleTurnDetection() => _session.toggleTurnDetection();
 
   Future<void> end() => _session.stop();
 

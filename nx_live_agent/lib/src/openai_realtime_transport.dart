@@ -12,7 +12,11 @@ void initializeLiveAgentPlatform() {
   FlutterForegroundTask.initCommunicationPort();
 }
 
-final class OpenAiRealtimeTransport implements LiveAgentTransport {
+final class OpenAiRealtimeTransport
+    implements
+        LiveAgentTransport,
+        LiveAgentInputControlTransport,
+        LiveAgentPlaybackControlTransport {
   OpenAiRealtimeTransport({http.Client? httpClient})
     : _http = httpClient ?? http.Client(),
       _ownsHttpClient = httpClient == null;
@@ -25,6 +29,7 @@ final class OpenAiRealtimeTransport implements LiveAgentTransport {
   RTCPeerConnection? _peerConnection;
   RTCDataChannel? _dataChannel;
   MediaStream? _localStream;
+  final List<MediaStreamTrack> _remoteAudioTracks = <MediaStreamTrack>[];
   Completer<void>? _dataChannelReady;
   bool _closed = false;
   final Set<String> _conversationItemIds = <String>{};
@@ -48,6 +53,7 @@ final class OpenAiRealtimeTransport implements LiveAgentTransport {
     _closed = false;
     _conversationItemIds.clear();
     _conversationMessages.clear();
+    _remoteAudioTracks.clear();
     _emitTranscripts = spec.emitTranscripts;
     _maxConversationPairs = spec.maxConversationPairs;
     await _configureAudioSession();
@@ -69,7 +75,10 @@ final class OpenAiRealtimeTransport implements LiveAgentTransport {
       }
     };
     peer.onTrack = (event) {
-      if (event.track.kind == 'audio') event.track.enabled = true;
+      if (event.track.kind == 'audio') {
+        event.track.enabled = true;
+        _remoteAudioTracks.add(event.track);
+      }
     };
 
     final stream = await navigator.mediaDevices.getUserMedia({
@@ -176,10 +185,28 @@ final class OpenAiRealtimeTransport implements LiveAgentTransport {
   Future<void> cancelResponse() => _send({'type': 'response.cancel'});
 
   @override
-  Future<void> setMuted(bool muted) async {
+  Future<void> setAutomaticTurnDetection(bool enabled) =>
+      _send(openAiTurnDetectionUpdate(enabled));
+
+  @override
+  Future<void> clearInputAudio() => _send({'type': 'input_audio_buffer.clear'});
+
+  @override
+  Future<void> commitInputAudio() =>
+      _send({'type': 'input_audio_buffer.commit'});
+
+  @override
+  Future<void> setInputEnabled(bool enabled) async {
     for (final track
         in _localStream?.getAudioTracks() ?? <MediaStreamTrack>[]) {
-      track.enabled = !muted;
+      track.enabled = enabled;
+    }
+  }
+
+  @override
+  Future<void> setPlaybackPaused(bool paused) async {
+    for (final track in _remoteAudioTracks) {
+      track.enabled = !paused;
     }
   }
 
@@ -273,6 +300,7 @@ final class OpenAiRealtimeTransport implements LiveAgentTransport {
     await _peerConnection?.close();
     _peerConnection = null;
     _dataChannelReady = null;
+    _remoteAudioTracks.clear();
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       await FlutterForegroundTask.stopService();
     }
@@ -320,18 +348,31 @@ Map<String, Object?> openAiRealtimeSession({
       'noise_reduction': {'type': 'near_field'},
       if (spec.enableInputTranscription)
         'transcription': {'model': 'gpt-4o-mini-transcribe'},
-      'turn_detection': {
-        'type': 'semantic_vad',
-        'eagerness': 'medium',
-        'create_response': true,
-        'interrupt_response': true,
-      },
+      'turn_detection': {...openAiSemanticVad()},
     },
     'output': {'voice': spec.voice},
   },
   'tools': [for (final tool in tools) tool.toJson()],
   'tool_choice': 'auto',
 };
+
+Map<String, Object?> openAiSemanticVad() => const <String, Object?>{
+  'type': 'semantic_vad',
+  'eagerness': 'medium',
+  'create_response': true,
+  'interrupt_response': true,
+};
+
+Map<String, Object?> openAiTurnDetectionUpdate(bool enabled) =>
+    <String, Object?>{
+      'type': 'session.update',
+      'session': {
+        'type': 'realtime',
+        'audio': {
+          'input': {'turn_detection': enabled ? openAiSemanticVad() : null},
+        },
+      },
+    };
 
 List<String> conversationItemIdsOutsideRecentPairs(
   List<({String id, String role})> messages,

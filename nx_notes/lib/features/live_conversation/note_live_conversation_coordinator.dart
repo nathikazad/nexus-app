@@ -7,6 +7,8 @@ import 'package:nx_notes/domain/ai/conversation_reference.dart';
 import 'package:nx_notes/domain/document/document.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_controller.dart';
 import 'package:nx_notes/features/live_conversation/openai_api_key.dart';
+import 'package:nx_notes/features/live_conversation/audio/mac_live_audio_player.dart';
+import 'package:nx_notes/features/live_conversation/live_conversation_platform_policy.dart';
 
 typedef NoteLiveConversationControllerFactory =
     NoteLiveConversationController Function();
@@ -15,7 +17,17 @@ final noteLiveConversationControllerFactoryProvider =
     Provider<NoteLiveConversationControllerFactory>(
       (_) =>
           () => NoteLiveConversationController(
-            session: LiveAgentSession(transport: OpenAiRealtimeTransport()),
+            session: LiveAgentSession(
+              transport:
+                  LiveConversationPlatformPolicy.useBufferedRealtimeTransport(
+                    isWeb: kIsWeb,
+                    platform: defaultTargetPlatform,
+                  )
+                  ? OpenAiRealtimeWebSocketTransport(
+                      audioDevice: MacLiveAudioPlayer(),
+                    )
+                  : OpenAiRealtimeTransport(),
+            ),
           ),
     );
 

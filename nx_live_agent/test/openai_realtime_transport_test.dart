@@ -44,6 +44,32 @@ void main() {
     expect((session['tools'] as List).single, tool.toJson());
   });
 
+  test('defines one reusable semantic VAD configuration', () {
+    expect(openAiSemanticVad(), {
+      'type': 'semantic_vad',
+      'eagerness': 'medium',
+      'create_response': true,
+      'interrupt_response': true,
+    });
+  });
+
+  test('GA turn-detection updates retain the realtime session type', () {
+    final manual = openAiTurnDetectionUpdate(false);
+    final automatic = openAiTurnDetectionUpdate(true);
+
+    expect((manual['session']! as Map)['type'], 'realtime');
+    expect(
+      (((manual['session']! as Map)['audio']! as Map)['input']!
+          as Map)['turn_detection'],
+      isNull,
+    );
+    expect(
+      (((automatic['session']! as Map)['audio']! as Map)['input']!
+          as Map)['turn_detection'],
+      openAiSemanticVad(),
+    );
+  });
+
   test('can disable input transcription for audio-only clients', () {
     final session = openAiRealtimeSession(
       spec: const LiveAgentSpec(

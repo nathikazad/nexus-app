@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +18,9 @@ import 'package:nx_notes/domain/ai/conversation_reference.dart';
 import 'package:nx_notes/features/books/ai/book_chapter_conversation_picker.dart';
 import 'package:nx_notes/features/companion/note_companion_controller.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_coordinator.dart';
+import 'package:nx_notes/features/live_conversation/live_conversation_platform_policy.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_screen.dart';
+import 'package:nx_notes/features/live_conversation/widgets/live_conversation_floating_controls.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const notePlaybackSpeeds = <double>[0.75, 1, 1.25, 1.5, 2];
@@ -202,66 +205,36 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                   onClose: () => setState(() => _audioExpanded = false),
                 ),
               if (_chatExpanded || _audioExpanded) const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Tooltip(
-                    message: controller?.hasAudio == true
-                        ? 'Open note playback'
-                        : 'Create note audio',
-                    child: FloatingActionButton.small(
-                      heroTag: 'note-audio-${widget.document.id}',
-                      elevation: 2,
-                      backgroundColor: AppColors.floating,
-                      foregroundColor: AppColors.onFloating,
-                      onPressed:
-                          controller == null || controller.generatingAudio
-                          ? null
-                          : () => unawaited(_toggleAudio(controller)),
-                      child: controller?.generatingAudio == true
-                          ? const SizedBox.square(
-                              dimension: 17,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              controller?.noteAudioPlaying == true
-                                  ? Icons.pause_rounded
-                                  : Icons.headphones_rounded,
-                              size: 18,
-                            ),
-                    ),
+              if (!_chatExpanded &&
+                  liveCoordinator?.isActive == true &&
+                  liveCoordinator?.controller != null)
+                LiveConversationFloatingControls(
+                  controller: liveCoordinator!.controller!,
+                  layout: LiveConversationPlatformPolicy.controlsFor(
+                    defaultTargetPlatform,
                   ),
-                  const SizedBox(width: 8),
-                  Semantics(
-                    button: true,
-                    label: liveCoordinator?.isActive == true
-                        ? 'Stop live conversation'
-                        : 'Open note AI',
-                    child: Tooltip(
-                      message: liveCoordinator?.isActive == true
-                          ? 'Stop live conversation'
-                          : 'Ask AI about this note',
+                  stopping: liveCoordinator.isStopping,
+                  onStop: _stopLiveConversation,
+                  heroPrefix: 'note-live-${widget.document.id}',
+                )
+              else if (liveCoordinator?.isActive != true)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Tooltip(
+                      message: controller?.hasAudio == true
+                          ? 'Open note playback'
+                          : 'Create note audio',
                       child: FloatingActionButton.small(
-                        heroTag: 'note-companion-${widget.document.id}',
+                        heroTag: 'note-audio-${widget.document.id}',
                         elevation: 2,
                         backgroundColor: AppColors.floating,
                         foregroundColor: AppColors.onFloating,
-                        onPressed: liveCoordinator?.isStopping == true
+                        onPressed:
+                            controller == null || controller.generatingAudio
                             ? null
-                            : liveCoordinator?.isActive == true
-                            ? () => unawaited(_stopLiveConversation())
-                            : () {
-                                FocusScope.of(context).unfocus();
-                                final opening = !_chatExpanded;
-                                setState(() {
-                                  _chatExpanded = opening;
-                                  if (_chatExpanded) _audioExpanded = false;
-                                });
-                                if (opening && controller != null) {
-                                  unawaited(controller.loadHistory());
-                                }
-                              },
-                        child: liveCoordinator?.isStopping == true
+                            : () => unawaited(_toggleAudio(controller)),
+                        child: controller?.generatingAudio == true
                             ? const SizedBox.square(
                                 dimension: 17,
                                 child: CircularProgressIndicator(
@@ -269,16 +242,44 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                                 ),
                               )
                             : Icon(
-                                liveCoordinator?.isActive == true
-                                    ? Icons.stop_rounded
-                                    : Icons.auto_awesome_rounded,
+                                controller?.noteAudioPlaying == true
+                                    ? Icons.pause_rounded
+                                    : Icons.headphones_rounded,
                                 size: 18,
                               ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 8),
+                    Semantics(
+                      button: true,
+                      label: 'Open note AI',
+                      child: Tooltip(
+                        message: 'Ask AI about this note',
+                        child: FloatingActionButton.small(
+                          heroTag: 'note-companion-${widget.document.id}',
+                          elevation: 2,
+                          backgroundColor: AppColors.floating,
+                          foregroundColor: AppColors.onFloating,
+                          onPressed: () {
+                            FocusScope.of(context).unfocus();
+                            final opening = !_chatExpanded;
+                            setState(() {
+                              _chatExpanded = opening;
+                              if (_chatExpanded) _audioExpanded = false;
+                            });
+                            if (opening && controller != null) {
+                              unawaited(controller.loadHistory());
+                            }
+                          },
+                          child: const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           );
         },

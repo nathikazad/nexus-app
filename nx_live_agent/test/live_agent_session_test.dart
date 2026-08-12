@@ -3,14 +3,22 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 
-class _FakeTransport implements LiveAgentTransport {
+class _FakeTransport
+    implements
+        LiveAgentTransport,
+        LiveAgentInputControlTransport,
+        LiveAgentPlaybackControlTransport {
   final controller = StreamController<LiveAgentEvent>.broadcast();
   final results = <String, Object?>{};
   int responseRequests = 0;
   int cancelRequests = 0;
   int closeRequests = 0;
-  final mutedValues = <bool>[];
+  final inputEnabledValues = <bool>[];
+  final automaticVadValues = <bool>[];
   final discardedKeepItemIds = <Set<String>>[];
+  final playbackPausedValues = <bool>[];
+  int clearInputRequests = 0;
+  int commitInputRequests = 0;
 
   @override
   Stream<LiveAgentEvent> get events => controller.stream;
@@ -45,7 +53,22 @@ class _FakeTransport implements LiveAgentTransport {
   Future<void> cancelResponse() async => cancelRequests += 1;
 
   @override
-  Future<void> setMuted(bool muted) async => mutedValues.add(muted);
+  Future<void> setAutomaticTurnDetection(bool enabled) async =>
+      automaticVadValues.add(enabled);
+
+  @override
+  Future<void> clearInputAudio() async => clearInputRequests += 1;
+
+  @override
+  Future<void> commitInputAudio() async => commitInputRequests += 1;
+
+  @override
+  Future<void> setInputEnabled(bool enabled) async =>
+      inputEnabledValues.add(enabled);
+
+  @override
+  Future<void> setPlaybackPaused(bool paused) async =>
+      playbackPausedValues.add(paused);
 
   @override
   Future<void> close() async => closeRequests += 1;
@@ -281,8 +304,135 @@ void main() {
       await session.setPaused(true);
 
       expect(transport.cancelRequests, 0);
-      expect(transport.mutedValues, [true]);
+      expect(transport.inputEnabledValues, [false]);
+      expect(transport.playbackPausedValues, [true]);
       expect(session.phase, LiveAgentPhase.paused);
+      session.dispose();
+    },
+  );
+
+  test(
+    'pause preserves prior mic state and resumes the current phase',
+    () async {
+      final transport = _FakeTransport();
+      final session = LiveAgentSession(transport: transport);
+      await session.start(
+        credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+        spec: const LiveAgentSpec(instructions: 'Test'),
+        tools: const [],
+      );
+      transport.controller.add(
+        const LiveAgentEvent(LiveAgentEventType.speaking),
+      );
+      await pumpEventQueue();
+      await session.activateMicrophone();
+
+      await session.setPaused(true);
+      await session.setPaused(false);
+
+      expect(transport.playbackPausedValues, [true, false]);
+      expect(transport.inputEnabledValues, [false, false, false]);
+      expect(session.muted, isTrue);
+      expect(session.phase, LiveAgentPhase.speaking);
+      session.dispose();
+    },
+  );
+
+  test('manual recording sends while leaving VAD disabled', () async {
+    final transport = _FakeTransport();
+    final session = LiveAgentSession(transport: transport);
+    await session.start(
+      credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+      spec: const LiveAgentSpec(instructions: 'Test'),
+      tools: const [],
+    );
+    transport.controller.add(
+      const LiveAgentEvent(LiveAgentEventType.listening),
+    );
+    await pumpEventQueue();
+
+    await session.toggleTurnDetection();
+    expect(
+      session.inputController.turnDetection,
+      LiveAgentTurnDetectionMode.manual,
+    );
+    expect(transport.automaticVadValues, [false]);
+
+    await session.activateMicrophone();
+    expect(session.inputController.inputState, LiveAgentInputState.recording);
+    await session.activateMicrophone();
+    expect(session.inputController.inputState, LiveAgentInputState.inactive);
+    expect(
+      session.inputController.turnDetection,
+      LiveAgentTurnDetectionMode.manual,
+    );
+    expect(transport.commitInputRequests, 1);
+    expect(transport.responseRequests, 1);
+    expect(session.phase, LiveAgentPhase.thinking);
+    session.dispose();
+  });
+
+  for (final activePhase in <LiveAgentEventType>[
+    LiveAgentEventType.thinking,
+    LiveAgentEventType.speaking,
+  ]) {
+    test(
+      'disabling VAD does not interrupt AI while ${activePhase.name}',
+      () async {
+        final transport = _FakeTransport();
+        final session = LiveAgentSession(transport: transport);
+        await session.start(
+          credentialProvider: const StaticLiveAgentCredentialProvider(
+            'test-key',
+          ),
+          spec: const LiveAgentSpec(instructions: 'Test'),
+          tools: const [],
+        );
+        transport.controller.add(LiveAgentEvent(activePhase));
+        await pumpEventQueue();
+
+        await session.toggleTurnDetection();
+
+        expect(
+          session.inputController.turnDetection,
+          LiveAgentTurnDetectionMode.manual,
+        );
+        expect(session.phase.name, activePhase.name);
+        expect(transport.automaticVadValues, [false]);
+        expect(transport.cancelRequests, 0);
+
+        session.dispose();
+      },
+    );
+  }
+
+  test(
+    'an error remains visible when later connection events arrive',
+    () async {
+      final transport = _FakeTransport();
+      final session = LiveAgentSession(transport: transport);
+      await session.start(
+        credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+        spec: const LiveAgentSpec(instructions: 'Test'),
+        tools: const [],
+      );
+
+      transport.controller.add(
+        const LiveAgentEvent(
+          LiveAgentEventType.error,
+          text: 'Session configuration failed',
+        ),
+      );
+      transport.controller.add(
+        const LiveAgentEvent(LiveAgentEventType.connected),
+      );
+      transport.controller.add(
+        const LiveAgentEvent(LiveAgentEventType.listening),
+      );
+      await pumpEventQueue();
+
+      expect(session.phase, LiveAgentPhase.error);
+      expect(session.error, 'Session configuration failed');
       session.dispose();
     },
   );

@@ -1,0 +1,1 @@
+enum LiveAgentPlaybackState { playing, paused }

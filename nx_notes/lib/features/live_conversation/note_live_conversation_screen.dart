@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 import 'package:nx_notes/core/theme/app_theme.dart';
+import 'package:nx_notes/features/live_conversation/live_conversation_platform_policy.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_coordinator.dart';
 import 'package:nx_notes/features/live_conversation/note_live_conversation_controller.dart';
+import 'package:nx_notes/features/live_conversation/widgets/live_conversation_floating_controls.dart';
 
 class NoteLiveConversationPanel extends StatefulWidget {
   const NoteLiveConversationPanel({
@@ -77,18 +80,15 @@ class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
                 child: Center(child: _LiveState(controller: controller)),
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _LiveControls(controller: controller),
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
-                    key: const ValueKey<String>('note-live-end-button'),
-                    onPressed: widget.coordinator.isStopping ? null : _end,
-                    icon: const Icon(Icons.stop_rounded, size: 18),
-                    label: const Text('End'),
-                  ),
-                ],
+              LiveConversationFloatingControls(
+                controller: controller,
+                layout: LiveConversationPlatformPolicy.controlsFor(
+                  defaultTargetPlatform,
+                ),
+                stopping: widget.coordinator.isStopping,
+                onStop: _end,
+                heroPrefix:
+                    'note-live-panel-${widget.coordinator.sourceDocument?.id ?? 0}',
               ),
               const SizedBox(height: 14),
               Text(
@@ -315,37 +315,6 @@ class _StatusOrb extends StatelessWidget {
       ),
     );
   }
-}
-
-class _LiveControls extends StatelessWidget {
-  const _LiveControls({required this.controller});
-
-  final NoteLiveConversationController controller;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Semantics(
-      button: true,
-      label: controller.muted ? 'Unmute microphone' : 'Mute microphone',
-      child: IconButton.filled(
-        key: const ValueKey('note-live-mute-button'),
-        onPressed: controller.phase == LiveAgentPhase.error
-            ? null
-            : controller.toggleMuted,
-        style: IconButton.styleFrom(
-          backgroundColor: AppColors.floating,
-          foregroundColor: AppColors.onFloating,
-          disabledBackgroundColor: AppColors.subtle,
-          disabledForegroundColor: AppColors.faint,
-          minimumSize: const Size.square(58),
-        ),
-        icon: Icon(
-          controller.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
-          size: 24,
-        ),
-      ),
-    ),
-  );
 }
 
 String _phaseLabel(LiveAgentPhase phase) => switch (phase) {

@@ -49,9 +49,6 @@ class _FakeTransport implements LiveAgentTransport {
 
   @override
   Future<void> sendToolResult(String callId, Object? output) async {}
-
-  @override
-  Future<void> setMuted(bool muted) async {}
 }
 
 void main() {

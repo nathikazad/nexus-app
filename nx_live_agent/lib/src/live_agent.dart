@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'input/live_agent_input_controller.dart';
+import 'session/live_agent_control_state.dart';
+
 enum LiveAgentPhase {
   idle,
   connecting,
@@ -218,27 +221,54 @@ abstract interface class LiveAgentTransport {
 
   Future<void> cancelResponse();
 
-  Future<void> setMuted(bool muted);
-
   Future<void> close();
 
   Future<void> dispose();
 }
 
+/// Input operations are intentionally separate from assistant playback.
+abstract interface class LiveAgentInputControlTransport {
+  Future<void> setAutomaticTurnDetection(bool enabled);
+  Future<void> clearInputAudio();
+  Future<void> commitInputAudio();
+  Future<void> setInputEnabled(bool enabled);
+}
+
+/// Optional transport capability for pausing output without ending a response.
+abstract interface class LiveAgentPlaybackControlTransport {
+  Future<void> setPlaybackPaused(bool paused);
+}
+
 final class LiveAgentSession extends ChangeNotifier {
   LiveAgentSession({required LiveAgentTransport transport})
-    : _transport = transport;
+    : _transport = transport,
+      inputController = LiveAgentInputController(
+        setInputEnabled: (enabled) =>
+            _requireInputControl(transport).setInputEnabled(enabled),
+        setAutomaticTurnDetection: (enabled) =>
+            _requireInputControl(transport).setAutomaticTurnDetection(enabled),
+        clearInputAudio: () =>
+            _requireInputControl(transport).clearInputAudio(),
+        commitInputAudio: () =>
+            _requireInputControl(transport).commitInputAudio(),
+        requestResponse: transport.requestResponse,
+      ) {
+    inputController.addListener(_notify);
+  }
 
   final LiveAgentTransport _transport;
+  final LiveAgentInputController inputController;
   final Set<String> _handledCallIds = <String>{};
   StreamSubscription<LiveAgentEvent>? _subscription;
   Map<String, LiveAgentTool> _tools = const <String, LiveAgentTool>{};
   bool _disposed = false;
   bool _closeAfterNextPlayback = false;
   bool _expectsInitialResponse = false;
+  LiveAgentPhase _phaseBeforePause = LiveAgentPhase.listening;
 
   LiveAgentPhase phase = LiveAgentPhase.idle;
-  bool muted = false;
+  bool get muted => inputController.automaticMuted;
+  LiveAgentPlaybackState playbackState = LiveAgentPlaybackState.playing;
   String transcript = '';
   String latestUserTranscript = '';
   String latestAssistantTranscript = '';
@@ -266,7 +296,9 @@ final class LiveAgentSession extends ChangeNotifier {
     usage = const LiveAgentUsage();
     _closeAfterNextPlayback = false;
     _expectsInitialResponse = spec.initialContext?.trim().isNotEmpty == true;
-    muted = false;
+    _phaseBeforePause = LiveAgentPhase.listening;
+    playbackState = LiveAgentPlaybackState.playing;
+    inputController.reset();
     phase = LiveAgentPhase.connecting;
     _notify();
     _subscription = _transport.events.listen(
@@ -292,6 +324,10 @@ final class LiveAgentSession extends ChangeNotifier {
 
   Future<void> _handleEvent(LiveAgentEvent event) async {
     if (_disposed) return;
+    if (phase == LiveAgentPhase.error &&
+        event.type != LiveAgentEventType.error) {
+      return;
+    }
     switch (event.type) {
       case LiveAgentEventType.connected:
         phase = _expectsInitialResponse
@@ -302,14 +338,28 @@ final class LiveAgentSession extends ChangeNotifier {
         latestAssistantTranscript = '';
         if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.listening;
       case LiveAgentEventType.listening:
-        if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.listening;
+        if (phase != LiveAgentPhase.paused) {
+          phase = LiveAgentPhase.listening;
+        }
       case LiveAgentEventType.thinking:
-        if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.thinking;
+        if (phase == LiveAgentPhase.paused) {
+          _phaseBeforePause = LiveAgentPhase.thinking;
+        } else {
+          phase = LiveAgentPhase.thinking;
+        }
       case LiveAgentEventType.speaking:
-        if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.speaking;
+        if (phase == LiveAgentPhase.paused) {
+          _phaseBeforePause = LiveAgentPhase.speaking;
+        } else {
+          phase = LiveAgentPhase.speaking;
+        }
       case LiveAgentEventType.playbackStopped:
         playbackCompletionCount += 1;
-        if (phase != LiveAgentPhase.paused) phase = LiveAgentPhase.listening;
+        if (phase == LiveAgentPhase.paused) {
+          _phaseBeforePause = LiveAgentPhase.listening;
+        } else {
+          phase = LiveAgentPhase.listening;
+        }
         if (_closeAfterNextPlayback) {
           _closeAfterNextPlayback = false;
           await stop();
@@ -387,27 +437,48 @@ final class LiveAgentSession extends ChangeNotifier {
   Future<void> interruptResponse() => _transport.cancelResponse();
 
   Future<void> setPaused(bool paused) async {
-    if (paused) {
-      if (phase == LiveAgentPhase.thinking ||
-          phase == LiveAgentPhase.speaking) {
-        await _transport.cancelResponse();
+    try {
+      if (paused) {
+        if (playbackState == LiveAgentPlaybackState.paused) return;
+        _phaseBeforePause = phase;
+        await _requirePlaybackControl(_transport).setPlaybackPaused(true);
+        await inputController.setSuspended(true);
+        playbackState = LiveAgentPlaybackState.paused;
+        phase = LiveAgentPhase.paused;
+      } else {
+        if (playbackState == LiveAgentPlaybackState.playing) return;
+        await _requirePlaybackControl(_transport).setPlaybackPaused(false);
+        await inputController.setSuspended(false);
+        playbackState = LiveAgentPlaybackState.playing;
+        phase = _phaseBeforePause;
       }
-      await _transport.setMuted(true);
-      muted = true;
-      phase = LiveAgentPhase.paused;
-    } else {
-      await _transport.setMuted(false);
-      muted = false;
-      phase = LiveAgentPhase.listening;
+    } catch (caught) {
+      _fail(caught);
+      return;
     }
     _notify();
   }
 
-  Future<void> toggleMuted() async {
-    final next = !muted;
-    await _transport.setMuted(next);
-    muted = next;
-    _notify();
+  Future<void> toggleTurnDetection() async {
+    try {
+      await inputController.toggleTurnDetection();
+    } catch (caught) {
+      _fail(caught);
+    }
+  }
+
+  Future<void> activateMicrophone() async {
+    try {
+      await inputController.activateMicrophone();
+    } catch (caught) {
+      _fail(caught);
+      return;
+    }
+    if (inputController.turnDetection == LiveAgentTurnDetectionMode.manual &&
+        inputController.inputState == LiveAgentInputState.inactive) {
+      phase = LiveAgentPhase.thinking;
+      _notify();
+    }
   }
 
   Future<void> stop() async {
@@ -432,8 +503,30 @@ final class LiveAgentSession extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    inputController.removeListener(_notify);
+    inputController.dispose();
     unawaited(_subscription?.cancel());
     unawaited(_transport.dispose());
     super.dispose();
   }
+}
+
+LiveAgentInputControlTransport _requireInputControl(
+  LiveAgentTransport transport,
+) {
+  if (transport case final LiveAgentInputControlTransport capable) {
+    return capable;
+  }
+  throw UnsupportedError(
+    'This live-agent transport cannot control audio input.',
+  );
+}
+
+LiveAgentPlaybackControlTransport _requirePlaybackControl(
+  LiveAgentTransport transport,
+) {
+  if (transport case final LiveAgentPlaybackControlTransport capable) {
+    return capable;
+  }
+  throw UnsupportedError('This live-agent transport cannot pause playback.');
 }
