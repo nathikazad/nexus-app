@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/study/language_audio_controls.dart';
 import 'package:nx_cards/features/study/script_drawing_canvas.dart';
 
 class ScriptRecallCard extends StatefulWidget {
@@ -9,11 +11,13 @@ class ScriptRecallCard extends StatefulWidget {
     required this.prompt,
     required this.revealed,
     required this.onDrawingChanged,
+    this.audioRepository,
   });
 
   final StudyPrompt prompt;
   final bool revealed;
   final ValueChanged<bool> onDrawingChanged;
+  final CardAudioRepository? audioRepository;
 
   @override
   State<ScriptRecallCard> createState() => _ScriptRecallCardState();
@@ -24,6 +28,16 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
 
   LanguageCardContent get _content =>
       widget.prompt.card.content as LanguageCardContent;
+
+  String get _sound => _content.english.replaceFirst(
+    RegExp(r'^letter\s+', caseSensitive: false),
+    '',
+  );
+
+  String? get _audioUrl {
+    final value = _content.audioUrl?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
 
   @override
   void initState() {
@@ -48,16 +62,35 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Text(
-        widget.prompt.prompt,
-        key: const ValueKey<String>('script-recall-sound'),
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 30,
-          height: 1.2,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.6,
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              widget.revealed ? _content.originalScript : _sound,
+              key: ValueKey<String>(
+                widget.revealed
+                    ? 'script-recall-answer'
+                    : 'script-recall-sound',
+              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 38,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.6,
+              ),
+            ),
+          ),
+          if (_audioUrl case final audioUrl?
+              when widget.audioRepository != null) ...[
+            const SizedBox(width: 8),
+            PronunciationButton(
+              audioUrl: audioUrl,
+              repository: widget.audioRepository!,
+            ),
+          ],
+        ],
       ),
       const SizedBox(height: 8),
       Text(
@@ -86,34 +119,6 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
           label: const Text('Erase'),
         ),
       ),
-      if (widget.revealed) ...[
-        const SizedBox(height: 8),
-        Container(
-          key: const ValueKey<String>('script-recall-answer'),
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          decoration: BoxDecoration(
-            color: RecallColors.soft,
-            border: Border.all(color: RecallColors.line),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              Text('CORRECT LETTER', style: monoLabel),
-              const SizedBox(height: 6),
-              Text(
-                _content.originalScript,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 54,
-                  height: 1.1,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     ],
   );
 }

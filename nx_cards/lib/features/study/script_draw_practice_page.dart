@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
+import 'package:nx_cards/features/study/language_audio_controls.dart';
 import 'package:nx_cards/features/study/script_drawing_canvas.dart';
 
 class ScriptDrawPracticePage extends StatefulWidget {
@@ -8,10 +10,12 @@ class ScriptDrawPracticePage extends StatefulWidget {
     super.key,
     required this.title,
     required this.cards,
+    this.audioRepository,
   }) : assert(cards.length > 0);
 
   final String title;
   final List<StudyCard> cards;
+  final CardAudioRepository? audioRepository;
 
   @override
   State<ScriptDrawPracticePage> createState() => _ScriptDrawPracticePageState();
@@ -31,6 +35,13 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   String get _sound {
     final content = _card.content;
     return content is LanguageCardContent ? content.english : _card.front;
+  }
+
+  String? get _audioUrl {
+    final content = _card.content;
+    if (content is! LanguageCardContent) return null;
+    final value = content.audioUrl?.trim();
+    return value == null || value.isEmpty ? null : value;
   }
 
   @override
@@ -109,39 +120,58 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                         horizontal: 24,
                         vertical: 12,
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                _letter,
-                                key: const ValueKey<String>(
-                                  'draw-practice-letter',
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 82,
-                                  height: 1,
-                                  fontWeight: FontWeight.w500,
-                                  color: RecallColors.ink,
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _letter,
+                                    key: const ValueKey<String>(
+                                      'draw-practice-letter',
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 82,
+                                      height: 1,
+                                      fontWeight: FontWeight.w500,
+                                      color: RecallColors.ink,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _sound,
+                                key: const ValueKey<String>(
+                                  'draw-practice-sound',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: RecallColors.muted,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _sound,
-                            key: const ValueKey<String>('draw-practice-sound'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: RecallColors.muted,
-                              letterSpacing: 0.2,
+                          if (_audioUrl case final audioUrl?
+                              when widget.audioRepository != null)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: PronunciationButton(
+                                key: ValueKey<String>(
+                                  'draw-practice-audio-${_card.id}',
+                                ),
+                                audioUrl: audioUrl,
+                                repository: widget.audioRepository!,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

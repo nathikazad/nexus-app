@@ -6,7 +6,7 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
 
 void main() {
-  testWidgets('opens card details as a page and keeps examples separate', (
+  testWidgets('shows examples inline and hides empty stats navigation', (
     tester,
   ) async {
     final card = _card();
@@ -26,8 +26,8 @@ void main() {
     expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
     expect(find.text('thattippu'), findsOneWidget);
     expect(find.text('Examples (1)'), findsOneWidget);
-    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
-    expect(find.text('Not reviewed yet'), findsOneWidget);
+    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
+    expect(find.text('Stats'), findsNothing);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
       findsNothing,
@@ -64,6 +64,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Examples (1)'), findsOneWidget);
+    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
       findsOneWidget,

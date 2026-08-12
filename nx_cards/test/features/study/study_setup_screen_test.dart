@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
 
@@ -53,6 +56,9 @@ void main() {
     expect(find.text('How do you want to study?'), findsOneWidget);
     await tester.tap(find.text('Recall'));
     await tester.pumpAndSettle();
+    expect(find.text('Recall format'), findsOneWidget);
+    expect(find.text('Standard'), findsOneWidget);
+    expect(find.text('Fast'), findsOneWidget);
     final english = tester.widget<ChoiceChip>(
       find.widgetWithText(ChoiceChip, 'English'),
     );
@@ -66,6 +72,8 @@ void main() {
     expect(learning.selected, isTrue);
     expect(learnt.selected, isFalse);
     expect(find.text('What should be in back?'), findsNothing);
+    await tester.ensureVisible(find.text('Transliteration'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Transliteration'));
     await tester.pump();
     await tester.drag(find.byType(ListView), const Offset(0, -700));
@@ -122,6 +130,8 @@ void main() {
     expect(find.text('What should AI ask you?'), findsOneWidget);
     expect(find.text('How many cards?'), findsOneWidget);
     expect(find.text('Choose the order'), findsOneWidget);
+    await tester.ensureVisible(find.text('English'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('English'));
     await tester.pump();
     expect(find.text('Start AI tutor'), findsOneWidget);
@@ -144,7 +154,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardAudioRepositoryProvider.overrideWithValue(_FakeAudioRepository()),
           cardsDashboardProvider.overrideWith(
             (_) => Stream.value(
               CardsDashboard(decks: const [], cards: [learning, learnt]),
@@ -182,6 +192,7 @@ void main() {
 
     expect(find.text('ക'), findsOneWidget);
     expect(find.text('Letter 1'), findsOneWidget);
+    expect(find.byTooltip('Play pronunciation'), findsOneWidget);
     expect(find.text('LETTER 1 OF 2'), findsOneWidget);
     final erase = tester.widget<OutlinedButton>(
       find.widgetWithText(OutlinedButton, 'Erase'),
@@ -244,6 +255,8 @@ void main() {
 
     await tester.tap(find.text('Recall'));
     await tester.pumpAndSettle();
+    expect(find.text('Recall format'), findsNothing);
+    expect(find.text('Fast'), findsNothing);
     expect(find.widgetWithText(ChoiceChip, 'English'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'Malayalam'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
@@ -304,6 +317,8 @@ void main() {
 
     await tester.tap(find.text('Recall'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('English'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('English'));
     await tester.pump();
     await tester.drag(find.byType(ListView), const Offset(0, -700));
@@ -344,6 +359,7 @@ StudyCard _scriptCard({
     english: 'Letter $id',
     originalScript: letter,
     transliteration: 'letter$id',
+    audioUrl: '/audio/letter$id.mp3',
   ),
   deckId: 8,
   deckName: 'Malayalam script',
@@ -362,3 +378,8 @@ StudyCard _scriptCard({
   },
   modelTypeName: 'Word',
 );
+
+class _FakeAudioRepository implements CardAudioRepository {
+  @override
+  Future<Uint8List> fetch(String audioUrl) async => Uint8List(0);
+}

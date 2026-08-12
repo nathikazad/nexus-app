@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
+import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 
@@ -12,7 +15,8 @@ void main() {
       final card = _scriptCard();
       await _pumpRecall(tester, card, StudyCue.fromLanguage);
 
-      expect(find.text('Letter ka'), findsOneWidget);
+      expect(find.text('ka'), findsOneWidget);
+      expect(find.byTooltip('Play pronunciation'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('script-drawing-canvas')),
         findsOneWidget,
@@ -51,6 +55,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('ക'), findsOneWidget);
+      expect(find.text('ka'), findsNothing);
       expect(find.text('Compare your drawing with the answer'), findsOneWidget);
       expect(find.text('No'), findsOneWidget);
       expect(find.text('Yes'), findsOneWidget);
@@ -89,7 +94,9 @@ Future<void> _pumpRecall(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        cardAudioRepositoryProvider.overrideWithValue(null),
+        cardAudioRepositoryProvider.overrideWithValue(
+          cue == StudyCue.fromLanguage ? _FakeAudioRepository() : null,
+        ),
         cardsDashboardProvider.overrideWith(
           (_) => Stream.value(const CardsDashboard(decks: [], cards: [])),
         ),
@@ -111,6 +118,7 @@ StudyCard _scriptCard() => StudyCard(
     english: 'Letter ka',
     originalScript: 'ക',
     transliteration: 'ka',
+    audioUrl: '/audio/ka.mp3',
   ),
   deckId: 8,
   deckName: 'Malayalam script',
@@ -129,3 +137,8 @@ StudyCard _scriptCard() => StudyCard(
   },
   modelTypeName: 'Word',
 );
+
+class _FakeAudioRepository implements CardAudioRepository {
+  @override
+  Future<Uint8List> fetch(String audioUrl) async => Uint8List(0);
+}

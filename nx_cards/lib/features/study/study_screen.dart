@@ -240,6 +240,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                                     ),
                                                     prompt: _prompt,
                                                     revealed: _revealed,
+                                                    audioRepository:
+                                                        audioRepository,
                                                     onDrawingChanged: (ready) {
                                                       if (_scriptDrawingReady !=
                                                           ready) {

@@ -5,7 +5,9 @@ import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_audio_controls.dart';
-import 'package:nx_cards/features/study/language_examples_page.dart';
+import 'package:nx_cards/features/study/language_examples.dart';
+
+enum CardDetailsTab { stats, examples }
 
 class CardDetailsPage extends ConsumerStatefulWidget {
   const CardDetailsPage({
@@ -13,11 +15,13 @@ class CardDetailsPage extends ConsumerStatefulWidget {
     required this.deck,
     required this.card,
     this.allowEdit = true,
+    this.initialTab = CardDetailsTab.stats,
   });
 
   final CardDeck deck;
   final StudyCard card;
   final bool allowEdit;
+  final CardDetailsTab initialTab;
 
   @override
   ConsumerState<CardDetailsPage> createState() => _CardDetailsPageState();
@@ -25,6 +29,13 @@ class CardDetailsPage extends ConsumerStatefulWidget {
 
 class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   StudyCue? _selectedCue;
+  late CardDetailsTab _selectedTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab;
+  }
 
   List<StudyCue> get _reviewedCues => [
     for (final cue in StudyCue.values)
@@ -52,6 +63,15 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     final audioUrl = languageContent?.audioUrl;
     final reviewedCues = _reviewedCues;
     final visibleCue = _visibleCue;
+    final hasStats = reviewedCues.isNotEmpty;
+    final hasExamples = languageContent?.examples.isNotEmpty == true;
+    final availableTabs = <CardDetailsTab>[
+      if (hasStats) CardDetailsTab.stats,
+      if (hasExamples) CardDetailsTab.examples,
+    ];
+    final visibleTab = availableTabs.contains(_selectedTab)
+        ? _selectedTab
+        : availableTabs.firstOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,60 +122,60 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     autoPlay: false,
                   ),
                 ],
-                if (languageContent?.examples.isNotEmpty == true) ...[
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () => Navigator.of(context).push<void>(
-                        MaterialPageRoute(
-                          builder: (_) => LanguageExamplesPage(
-                            card: card,
-                            audioRepository: audioRepository,
-                            backLabel: 'Card',
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.menu_book_outlined, size: 17),
-                      label: Text(
-                        'Examples (${languageContent!.examples.length})',
-                      ),
-                    ),
-                  ),
-                ],
                 if (card.sourceBookName case final sourceBook?) ...[
                   const SizedBox(height: 14),
                   _CardField(label: 'Source book', value: sourceBook),
                 ],
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 26),
-                  child: Divider(),
-                ),
-                Text('RECALL', style: monoLabel),
-                const SizedBox(height: 7),
-                const Text(
-                  'How well you know this card',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 16),
-                if (reviewedCues.isEmpty)
-                  const _NoReviewHistory()
-                else ...[
-                  if (reviewedCues.length == 1)
-                    _DirectionHeading(
-                      label: _cueLabel(reviewedCues.single, deck),
-                    )
-                  else
-                    _DirectionSelector(
-                      cues: reviewedCues,
-                      selected: visibleCue!,
-                      labelFor: (cue) => _cueLabel(cue, deck),
-                      onSelected: (cue) => setState(() => _selectedCue = cue),
+                if (visibleTab != null) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 26),
+                    child: Divider(),
+                  ),
+                  SegmentedButton<CardDetailsTab>(
+                    segments: [
+                      if (hasStats)
+                        const ButtonSegment(
+                          value: CardDetailsTab.stats,
+                          label: Text('Stats'),
+                          icon: Icon(Icons.insights_outlined),
+                        ),
+                      if (hasExamples)
+                        ButtonSegment(
+                          value: CardDetailsTab.examples,
+                          label: Text(
+                            'Examples (${languageContent!.examples.length})',
+                          ),
+                          icon: const Icon(Icons.menu_book_outlined),
+                        ),
+                    ],
+                    selected: {visibleTab},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (selection) =>
+                        setState(() => _selectedTab = selection.single),
+                  ),
+                  const SizedBox(height: 20),
+                  if (visibleTab == CardDetailsTab.stats) ...[
+                    if (reviewedCues.length == 1)
+                      _DirectionHeading(
+                        label: _cueLabel(reviewedCues.single, deck),
+                      )
+                    else
+                      _DirectionSelector(
+                        cues: reviewedCues,
+                        selected: visibleCue!,
+                        labelFor: (cue) => _cueLabel(cue, deck),
+                        onSelected: (cue) => setState(() => _selectedCue = cue),
+                      ),
+                    const SizedBox(height: 16),
+                    _RecallSummary(card: card, cue: visibleCue!),
+                    const SizedBox(height: 24),
+                    _ReviewHistory(reviews: card.reviewHistoryFor(visibleCue)),
+                  ] else if (languageContent != null)
+                    LanguageExamples(
+                      examples: languageContent.examples,
+                      audioRepository: audioRepository,
+                      audioKeyPrefix: '${card.id}:details-examples',
                     ),
-                  const SizedBox(height: 16),
-                  _RecallSummary(card: card, cue: visibleCue!),
-                  const SizedBox(height: 24),
-                  _ReviewHistory(reviews: card.reviewHistoryFor(visibleCue)),
                 ],
               ],
             ),
@@ -797,36 +817,6 @@ class _SelectedReview extends StatelessWidget {
       ],
     );
   }
-}
-
-class _NoReviewHistory extends StatelessWidget {
-  const _NoReviewHistory();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(
-      color: RecallColors.soft,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: RecallColors.line),
-    ),
-    child: const Column(
-      children: [
-        Icon(Icons.style_outlined, color: RecallColors.faint),
-        SizedBox(height: 8),
-        Text(
-          'Not reviewed yet',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        SizedBox(height: 3),
-        Text(
-          'Recall statistics will appear after the first review.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: RecallColors.muted),
-        ),
-      ],
-    ),
-  );
 }
 
 class _CardField extends StatelessWidget {

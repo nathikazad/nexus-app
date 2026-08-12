@@ -6,6 +6,7 @@ import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/study/language_study_page.dart';
+import 'package:nx_cards/features/study/language_fast_recall_page.dart';
 import 'package:nx_cards/features/study/script_draw_practice_page.dart';
 import 'package:nx_cards/features/study/script_recall_policy.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
@@ -16,6 +17,8 @@ enum StudyOrder { normal, shuffle }
 enum StudyMode { study, recall, ai }
 
 enum StudyPresentation { sheet, draw }
+
+enum RecallPresentation { standard, fast }
 
 class StudySetupScreen extends ConsumerStatefulWidget {
   const StudySetupScreen({
@@ -40,6 +43,7 @@ class StudySetupScreen extends ConsumerStatefulWidget {
 class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
   StudyMode _mode = StudyMode.study;
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
+  RecallPresentation _recallPresentation = RecallPresentation.standard;
   StudyCue? _cue = StudyCue.fromLanguage;
   final Set<LearningStatus> _learningStatuses = <LearningStatus>{
     LearningStatus.learning,
@@ -140,6 +144,17 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
     );
   }
 
+  Future<void> _startFastRecall() async {
+    final prompts = await _latestSelectedPrompts();
+    if (!mounted || prompts == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            LanguageFastRecallPage(title: widget.title, prompts: prompts),
+      ),
+    );
+  }
+
   Future<List<StudyPrompt>?> _latestSelectedPrompts() async {
     if (_starting || _cue == null) return null;
     setState(() => _starting = true);
@@ -231,8 +246,11 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) =>
-              ScriptDrawPracticePage(title: widget.title, cards: selected),
+          builder: (_) => ScriptDrawPracticePage(
+            title: widget.title,
+            cards: selected,
+            audioRepository: ref.read(cardAudioRepositoryProvider),
+          ),
         ),
       );
     } catch (error) {
@@ -401,26 +419,49 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                       ),
                     ],
                   ] else if (_mode == StudyMode.recall) ...[
+                    if (!_isScriptStudy) ...[
+                      _SetupCard(
+                        number: '01',
+                        title: 'Recall format',
+                        child: SegmentedButton<RecallPresentation>(
+                          segments: const [
+                            ButtonSegment(
+                              value: RecallPresentation.standard,
+                              label: Text('Standard'),
+                            ),
+                            ButtonSegment(
+                              value: RecallPresentation.fast,
+                              label: Text('Fast'),
+                            ),
+                          ],
+                          selected: {_recallPresentation},
+                          onSelectionChanged: (value) => setState(
+                            () => _recallPresentation = value.single,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     _SetupCard(
-                      number: '01',
-                      title: 'Which words?',
+                      number: _isScriptStudy ? '01' : '02',
+                      title: _isScriptStudy ? 'Which letters?' : 'Which words?',
                       child: _learningStatusChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '02',
+                      number: _isScriptStudy ? '02' : '03',
                       title: 'What should be in front?',
                       child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '03',
+                      number: _isScriptStudy ? '03' : '04',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '04',
+                      number: _isScriptStudy ? '04' : '05',
                       title: 'Choose the order',
                       child: _OrderControl(
                         value: _order,
@@ -431,11 +472,19 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
                     FilledButton.icon(
                       onPressed: _cue == null || maxCount == 0 || _starting
                           ? null
+                          : _recallPresentation == RecallPresentation.fast &&
+                                !_isScriptStudy
+                          ? _startFastRecall
                           : _start,
                       icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 13),
-                        child: Text('Start recall'),
+                      label: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        child: Text(
+                          _recallPresentation == RecallPresentation.fast &&
+                                  !_isScriptStudy
+                              ? 'Start fast recall'
+                              : 'Start recall',
+                        ),
                       ),
                     ),
                   ] else ...[
