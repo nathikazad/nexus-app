@@ -322,6 +322,71 @@ void main() {
     expect(find.text('2 available'), findsOneWidget);
   });
 
+  testWidgets('recall due count follows the selected front cue', (
+    tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final future = now.add(const Duration(days: 1));
+    final past = now.subtract(const Duration(minutes: 1));
+    CardSchedule schedule(DateTime dueAt) => CardSchedule(
+      enabled: true,
+      dueAt: dueAt,
+      lastReviewedAt: now.subtract(const Duration(days: 1)),
+      stability: 1,
+      difficulty: 5,
+      schedulingState: 'learning',
+      learningStep: 0,
+      reviewCount: 1,
+      lapseCount: 0,
+    );
+    final card = StudyCard(
+      id: 1,
+      content: const LanguageCardContent(
+        english: 'talent',
+        originalScript: 'കഴിവ്',
+        transliteration: 'kazhivu',
+      ),
+      schedules: <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: schedule(future),
+        StudyCue.toLanguage: schedule(past),
+      },
+      reviewHistory: const <StudyCue, List<CardReview>>{},
+      suspended: false,
+      learningStatus: LearningStatus.learning,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(cards: [card])),
+          ),
+        ],
+        child: MaterialApp(
+          home: StudySetupPage(
+            title: 'Malayalam',
+            prompts: card.prompts.toList(),
+            studyCards: [card],
+            fromLanguage: 'English',
+            toLanguage: 'Malayalam',
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    expect(find.text('0 out of 1 cards are due now'), findsOneWidget);
+
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Malayalam'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Malayalam'));
+    await tester.pump();
+
+    expect(find.text('1 out of 1 cards are due now'), findsOneWidget);
+  });
+
   testWidgets('retained filter uses a recent-recall upper bound', (
     tester,
   ) async {

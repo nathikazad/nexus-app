@@ -40,8 +40,16 @@ CardScheduleStatus? cardScheduleStatus(
 }
 
 int cardRecallPercentage(StudyCard card, {int historyWindow = 5}) {
+  return cueRecallPercentage(
+    card,
+    StudyCue.fromLanguage,
+    historyWindow: historyWindow,
+  );
+}
+
+int cueRecallPercentage(StudyCard card, StudyCue cue, {int historyWindow = 5}) {
   if (historyWindow <= 0) return 0;
-  final reviews = card.reviewHistoryFor(StudyCue.fromLanguage).toList()
+  final reviews = card.reviewHistoryFor(cue).toList()
     ..sort((left, right) => left.reviewedAt.compareTo(right.reviewedAt));
   final recentReviews = reviews.skip(
     (reviews.length - historyWindow).clamp(0, reviews.length),

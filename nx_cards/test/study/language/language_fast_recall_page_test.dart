@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -162,9 +164,6 @@ void main() {
     await tester.pump();
     expect(find.text('ആശ്വാസം'), findsWidgets);
     await firstGesture.up();
-    await tester.pump(const Duration(milliseconds: 699));
-    expect(repository.saved, isEmpty);
-    await tester.pump(const Duration(milliseconds: 2));
     await tester.pumpAndSettle();
     expect(repository.saved, hasLength(1));
     expect(
@@ -191,13 +190,75 @@ void main() {
       1,
     );
   });
+
+  testWidgets('swipe hides immediately and restores after a save timeout', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final first = _card();
+    final second = _card(id: 2);
+    final saveGate = Completer<void>();
+    final repository = _RecordingCardLibrary(saveGate: saveGate);
+    final dashboard = CardsDashboard(cards: [first, second]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardLibraryProvider.overrideWithValue(repository),
+          cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
+        ],
+        child: MaterialApp(
+          home: LanguageFastRecallPage(
+            title: 'Malayalam nouns',
+            prompts: [
+              StudyPrompt(card: first, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: second, cue: StudyCue.fromLanguage),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const ValueKey<String>('fast-row-1'));
+    final gesture = await tester.startGesture(tester.getCenter(row));
+    await gesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(100, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(tester.getSize(row).height, 0);
+    expect(repository.saved, isEmpty);
+
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(row).height, greaterThan(0));
+    expect(
+      find.text('Could not save the review. The card was restored.'),
+      findsOneWidget,
+    );
+    saveGate.complete();
+    await tester.pump();
+  });
 }
 
 final class _RecordingCardLibrary implements CardLibrary {
+  _RecordingCardLibrary({this.saveGate});
+
   final List<StudyCard> saved = <StudyCard>[];
+  final Completer<void>? saveGate;
 
   @override
-  Future<void> saveSchedule(StudyCard card) async => saved.add(card);
+  Future<void> saveSchedule(StudyCard card) async {
+    await saveGate?.future;
+    saved.add(card);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

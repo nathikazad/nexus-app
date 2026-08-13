@@ -9,7 +9,7 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_study_page.dart';
 
 void main() {
-  testWidgets('shows and searches all words on one study sheet', (
+  testWidgets('shows all words on one study sheet without search', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -37,11 +37,8 @@ void main() {
     expect(find.text('relief'), findsOneWidget);
     expect(find.text('talent'), findsOneWidget);
     expect(find.text('Examples'), findsNWidgets(2));
-    await tester.enterText(find.byType(TextField), 'talent');
-    await tester.pump();
-
-    expect(find.text('1 of 2 words'), findsOneWidget);
-    expect(find.text('relief'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('relief'), findsOneWidget);
     expect(find.text('കഴിവ്'), findsOneWidget);
   });
 

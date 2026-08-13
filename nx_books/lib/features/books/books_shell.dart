@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_books/core/theme/app_theme.dart';
@@ -30,7 +32,8 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
       data: (rows) {
         _syncSelection(rows);
         final query = ref.watch(searchQueryProvider);
-        final filtered = _filterBooks(rows, query);
+        final topicTag = ref.watch(selectedTopicTagProvider);
+        final filtered = _filterBooks(rows, query, topicTag);
         final selectedId = ref.watch(selectedBookIdProvider);
         final selected = _bookById(rows, selectedId);
         return Scaffold(
@@ -82,14 +85,21 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
     return books.first;
   }
 
-  List<NxBook> _filterBooks(List<NxBook> books, String query) {
+  List<NxBook> _filterBooks(
+    List<NxBook> books,
+    String query,
+    String? topicTag,
+  ) {
     final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return books;
+    final normalizedTag = topicTag?.trim().toLowerCase();
     return [
       for (final book in books)
-        if ('${book.title} ${book.author} ${book.description} ${book.readingState.label} ${book.tags.join(' ')}'
-            .toLowerCase()
-            .contains(normalized))
+        if ((normalizedTag == null ||
+                book.tags.any((tag) => tag.toLowerCase() == normalizedTag)) &&
+            (normalized.isEmpty ||
+                '${book.title} ${book.author} ${book.description} ${book.readingState.label} ${book.tags.join(' ')}'
+                    .toLowerCase()
+                    .contains(normalized)))
           book,
     ];
   }
@@ -126,8 +136,17 @@ class _DesktopBookshelf extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final collectionState = ref.watch(bookCollectionStateProvider);
-    final reading = sortedBooksForState(books, BookReadingState.reading);
-    final collection = sortedBooksForState(books, collectionState);
+    final optimisticOrders = ref.watch(optimisticBookOrdersProvider);
+    final reading = booksInLaneOrder(
+      books,
+      BookReadingState.reading,
+      optimisticOrders[BookReadingState.reading]?.bookIds,
+    );
+    final collection = booksInLaneOrder(
+      books,
+      collectionState,
+      optimisticOrders[collectionState]?.bookIds,
+    );
     return Row(
       children: [
         Expanded(
@@ -185,7 +204,7 @@ class _DesktopBookshelf extends ConsumerWidget {
   }
 }
 
-class _MobileBookshelf extends ConsumerWidget {
+class _MobileBookshelf extends ConsumerStatefulWidget {
   const _MobileBookshelf({
     required this.books,
     required this.selected,
@@ -197,98 +216,199 @@ class _MobileBookshelf extends ConsumerWidget {
   final Future<void> Function(NxBook book) onOpenInNotes;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MobileBookshelf> createState() => _MobileBookshelfState();
+}
+
+class _MobileBookshelfState extends ConsumerState<_MobileBookshelf> {
+  static const _autoScrollExtent = 120.0;
+  static const _maximumAutoScrollSpeed = 900.0;
+
+  final _scrollController = ScrollController();
+  final _scrollViewportKey = GlobalKey();
+  Timer? _autoScrollTimer;
+  double _autoScrollVelocity = 0;
+
+  @override
+  void dispose() {
+    _stopAutoScroll();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final collectionState = ref.watch(bookCollectionStateProvider);
-    final reading = sortedBooksForState(books, BookReadingState.reading);
-    final collection = sortedBooksForState(books, collectionState);
+    final optimisticOrders = ref.watch(optimisticBookOrdersProvider);
+    final reading = booksInLaneOrder(
+      widget.books,
+      BookReadingState.reading,
+      optimisticOrders[BookReadingState.reading]?.bookIds,
+    );
+    final collection = booksInLaneOrder(
+      widget.books,
+      collectionState,
+      optimisticOrders[collectionState]?.bookIds,
+    );
     return Column(
       children: [
-        _MobileTopBar(totalCount: books.length),
+        _MobileTopBar(totalCount: widget.books.length),
         Expanded(
-          child: ListView(
-            key: const ValueKey('mobile-books-sections'),
-            padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
-            children: [
-              _SectionHeader(
-                title: 'Currently Reading',
-                subtitle: 'Books currently in motion',
-                state: BookReadingState.reading,
-                count: reading.length,
-              ),
-              const SizedBox(height: 10),
-              for (final book in reading)
-                _BookCard(
-                  key: ValueKey('book-card-${book.id}'),
-                  book: book,
-                  selected: selected?.id == book.id,
-                  compact: true,
+          child: KeyedSubtree(
+            key: _scrollViewportKey,
+            child: ListView(
+              key: const ValueKey('mobile-books-sections'),
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
+              children: [
+                _SectionHeader(
+                  title: 'Currently Reading',
+                  subtitle: 'Books currently in motion',
+                  state: BookReadingState.reading,
+                  count: reading.length,
                 ),
-              if (reading.isEmpty)
-                const _MobileEmptySection(message: 'No books in progress'),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SectionHeader(
-                      title: 'Library',
-                      subtitle: collectionState == BookReadingState.toRead
-                          ? 'Books waiting to be read'
-                          : 'Finished books',
-                      state: collectionState,
-                      count: collection.length,
+                const SizedBox(height: 10),
+                for (final book in reading)
+                  _ReorderableBookCard(
+                    key: ValueKey('book-card-${book.id}'),
+                    book: book,
+                    selected: widget.selected?.id == book.id,
+                    compact: true,
+                    onTap: () => _openBookDetails(
+                      context,
+                      ref,
+                      book,
+                      widget.onOpenInNotes,
                     ),
+                    onDragStart: _stopAutoScroll,
+                    onDragUpdate: _updateAutoScroll,
+                    onDragEnd: _stopAutoScroll,
                   ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 184,
-                    child: _CollectionSwitch(
-                      state: collectionState,
-                      onChanged: (state) => ref
-                          .read(bookCollectionStateProvider.notifier)
-                          .set(state),
+                if (reading.isEmpty)
+                  const _MobileEmptySection(message: 'No books in progress'),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SectionHeader(
+                        title: 'Library',
+                        subtitle: collectionState == BookReadingState.toRead
+                            ? 'Books waiting to be read'
+                            : 'Finished books',
+                        state: collectionState,
+                        count: collection.length,
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 184,
+                      child: _CollectionSwitch(
+                        state: collectionState,
+                        onChanged: (state) => ref
+                            .read(bookCollectionStateProvider.notifier)
+                            .set(state),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                for (final book in collection)
+                  _ReorderableBookCard(
+                    key: ValueKey('book-card-${book.id}'),
+                    book: book,
+                    selected: widget.selected?.id == book.id,
+                    compact: true,
+                    onTap: () => _openBookDetails(
+                      context,
+                      ref,
+                      book,
+                      widget.onOpenInNotes,
+                    ),
+                    onDragStart: _stopAutoScroll,
+                    onDragUpdate: _updateAutoScroll,
+                    onDragEnd: _stopAutoScroll,
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              for (final book in collection)
-                _BookCard(
-                  key: ValueKey('book-card-${book.id}'),
-                  book: book,
-                  selected: selected?.id == book.id,
-                  compact: true,
-                ),
-              if (collection.isEmpty)
-                _MobileEmptySection(
-                  message: collectionState == BookReadingState.toRead
-                      ? 'No books waiting'
-                      : 'No finished books',
-                ),
-            ],
-          ),
-        ),
-        DecoratedBox(
-          decoration: const BoxDecoration(
-            color: AppColors.panel,
-            border: Border(top: BorderSide(color: AppColors.line)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: selected == null
-                  ? const Text(
-                      'Select a book',
-                      style: TextStyle(color: AppColors.muted),
-                    )
-                  : _MobileDetail(
-                      book: selected!,
-                      onOpenInNotes: onOpenInNotes,
-                    ),
+                if (collection.isEmpty)
+                  _MobileEmptySection(
+                    message: collectionState == BookReadingState.toRead
+                        ? 'No books waiting'
+                        : 'No finished books',
+                  ),
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  void _updateAutoScroll(Offset globalPosition) {
+    final viewport =
+        _scrollViewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (viewport == null || !_scrollController.hasClients) {
+      _stopAutoScroll();
+      return;
+    }
+    final top = viewport.localToGlobal(Offset.zero).dy;
+    final bottom = top + viewport.size.height;
+    final distanceFromTop = globalPosition.dy - top;
+    final distanceFromBottom = bottom - globalPosition.dy;
+    if (distanceFromTop < _autoScrollExtent) {
+      final penetration = (1 - distanceFromTop / _autoScrollExtent).clamp(
+        0.0,
+        1.0,
+      );
+      _autoScrollVelocity =
+          -_maximumAutoScrollSpeed * penetration * penetration;
+    } else if (distanceFromBottom < _autoScrollExtent) {
+      final penetration = (1 - distanceFromBottom / _autoScrollExtent).clamp(
+        0.0,
+        1.0,
+      );
+      _autoScrollVelocity = _maximumAutoScrollSpeed * penetration * penetration;
+    } else {
+      _stopAutoScroll();
+      return;
+    }
+    _autoScrollTimer ??= Timer.periodic(
+      const Duration(milliseconds: 16),
+      (_) => _performAutoScroll(),
+    );
+  }
+
+  void _performAutoScroll() {
+    if (!_scrollController.hasClients || _autoScrollVelocity == 0) return;
+    final position = _scrollController.position;
+    final next = (position.pixels + _autoScrollVelocity * 0.016).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if (next == position.pixels) {
+      _stopAutoScroll();
+      return;
+    }
+    _scrollController.jumpTo(next);
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollVelocity = 0;
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+  }
+
+  void _openBookDetails(
+    BuildContext context,
+    WidgetRef ref,
+    NxBook book,
+    Future<void> Function(NxBook book) onOpenInNotes,
+  ) {
+    ref.read(selectedBookIdProvider.notifier).select(book.id);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _MobileBookDetailPage(
+          bookId: book.id,
+          onOpenInNotes: onOpenInNotes,
+        ),
+      ),
     );
   }
 }
@@ -319,6 +439,7 @@ class _MobileTopBar extends ConsumerWidget {
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
+            const _MobileTopicFilterButton(),
             IconButton(
               tooltip: 'Add book',
               onPressed: () => _showCreateBookDialog(context, ref),
@@ -367,6 +488,8 @@ class _MainHeader extends ConsumerWidget {
                   ],
                 ),
               ),
+              const _DesktopTopicFilter(),
+              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () => ref.invalidate(booksProvider),
                 icon: const Icon(Icons.refresh, size: 17),
@@ -382,6 +505,201 @@ class _MainHeader extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DesktopTopicFilter extends ConsumerWidget {
+  const _DesktopTopicFilter();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(selectedTopicTagProvider);
+    final tags = ref.watch(availableBookTagsProvider);
+    return PopupMenuButton<String>(
+      key: const ValueKey('desktop-topic-filter'),
+      tooltip: 'Filter by topic',
+      initialValue: selected ?? '__all__',
+      onSelected: (tag) => ref
+          .read(selectedTopicTagProvider.notifier)
+          .select(tag == '__all__' ? null : tag),
+      itemBuilder: (context) => [
+        _topicFilterMenuItem('__all__', 'All topics', selected),
+        for (final tag in tags) _topicFilterMenuItem(tag, tag, selected),
+      ],
+      child: Container(
+        height: 40,
+        constraints: const BoxConstraints(minWidth: 128, maxWidth: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected == null ? AppColors.surface : AppColors.accentSoft,
+          border: Border.all(
+            color: selected == null ? AppColors.line : const Color(0xffbdd8d3),
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_alt_outlined,
+              size: 17,
+              color: selected == null ? AppColors.muted : AppColors.accent,
+            ),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                selected ?? 'All topics',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected == null ? AppColors.text : AppColors.accent,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 5),
+            const Icon(Icons.expand_more, size: 16, color: AppColors.muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+PopupMenuItem<String> _topicFilterMenuItem(
+  String value,
+  String label,
+  String? selected,
+) {
+  final active = value == '__all__' ? selected == null : value == selected;
+  return PopupMenuItem<String>(
+    key: ValueKey('topic-filter-${value == '__all__' ? 'all' : value}'),
+    value: value,
+    child: Row(
+      children: [
+        Expanded(child: Text(label)),
+        if (active) const Icon(Icons.check, size: 17, color: AppColors.accent),
+      ],
+    ),
+  );
+}
+
+class _MobileTopicFilterButton extends ConsumerWidget {
+  const _MobileTopicFilterButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(selectedTopicTagProvider);
+    return IconButton(
+      key: const ValueKey('mobile-topic-filter'),
+      tooltip: selected == null ? 'Filter by topic' : 'Topic: $selected',
+      onPressed: () => _showMobileTopicFilter(context, ref),
+      icon: Badge(
+        isLabelVisible: selected != null,
+        backgroundColor: AppColors.accent,
+        smallSize: 7,
+        child: Icon(
+          Icons.filter_alt_outlined,
+          size: 19,
+          color: selected == null ? AppColors.text : AppColors.accent,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showMobileTopicFilter(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final selected = ref.read(selectedTopicTagProvider);
+    final tags = ref.read(availableBookTagsProvider);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Text(
+                    'Filter by topic',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      _MobileTopicChoice(
+                        label: 'All topics',
+                        selected: selected == null,
+                        onTap: () => Navigator.of(sheetContext).pop('__all__'),
+                      ),
+                      for (final tag in tags)
+                        _MobileTopicChoice(
+                          label: tag,
+                          selected:
+                              tag.toLowerCase() == selected?.toLowerCase(),
+                          onTap: () => Navigator.of(sheetContext).pop(tag),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (choice == null) return;
+    ref
+        .read(selectedTopicTagProvider.notifier)
+        .select(choice == '__all__' ? null : choice);
+  }
+}
+
+class _MobileTopicChoice extends StatelessWidget {
+  const _MobileTopicChoice({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      key: ValueKey('mobile-topic-choice-$label'),
+      minTileHeight: 44,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      selected: selected,
+      selectedTileColor: AppColors.accentSoft,
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+        ),
+      ),
+      trailing: selected
+          ? const Icon(Icons.check, size: 18, color: AppColors.accent)
+          : null,
+      onTap: onTap,
     );
   }
 }
@@ -451,7 +769,7 @@ class _BookSection extends StatelessWidget {
                         itemCount: books.length,
                         itemBuilder: (context, index) {
                           final book = books[index];
-                          return _BookCard(
+                          return _ReorderableBookCard(
                             key: ValueKey('book-card-${book.id}'),
                             book: book,
                             selected: selectedId == book.id,
@@ -556,15 +874,16 @@ class _MobileEmptySection extends StatelessWidget {
 
 class _BookCard extends ConsumerWidget {
   const _BookCard({
-    super.key,
     required this.book,
     required this.selected,
     this.compact = false,
+    this.onTap,
   });
 
   final NxBook book;
   final bool selected;
   final bool compact;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -580,8 +899,9 @@ class _BookCard extends ConsumerWidget {
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () =>
-              ref.read(selectedBookIdProvider.notifier).select(book.id),
+          onTap:
+              onTap ??
+              () => ref.read(selectedBookIdProvider.notifier).select(book.id),
           child: Padding(
             padding: EdgeInsets.all(compact ? 11 : 10),
             child: Row(
@@ -639,6 +959,162 @@ class _BookCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _ReorderableBookCard extends ConsumerStatefulWidget {
+  const _ReorderableBookCard({
+    super.key,
+    required this.book,
+    required this.selected,
+    this.compact = false,
+    this.onTap,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
+  });
+
+  final NxBook book;
+  final bool selected;
+  final bool compact;
+  final VoidCallback? onTap;
+  final VoidCallback? onDragStart;
+  final ValueChanged<Offset>? onDragUpdate;
+  final VoidCallback? onDragEnd;
+
+  @override
+  ConsumerState<_ReorderableBookCard> createState() =>
+      _ReorderableBookCardState();
+}
+
+class _ReorderableBookCardState extends ConsumerState<_ReorderableBookCard> {
+  bool? _placeAfter;
+  bool _dragActive = false;
+
+  @override
+  void dispose() {
+    _finishDrag();
+    super.dispose();
+  }
+
+  void _startDrag() {
+    _dragActive = true;
+    widget.onDragStart?.call();
+  }
+
+  void _finishDrag() {
+    if (!_dragActive) return;
+    _dragActive = false;
+    widget.onDragEnd?.call();
+  }
+
+  bool _isBelowCenter(Offset globalOffset) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return false;
+    return box.globalToLocal(globalOffset).dy > box.size.height / 2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final card = _BookCard(
+      book: widget.book,
+      selected: widget.selected,
+      compact: widget.compact,
+      onTap: widget.onTap,
+    );
+    return DragTarget<NxBook>(
+      onWillAcceptWithDetails: (details) =>
+          details.data.id != widget.book.id &&
+          details.data.readingState == widget.book.readingState,
+      onMove: (details) {
+        final after = _isBelowCenter(details.offset);
+        if (_placeAfter != after) setState(() => _placeAfter = after);
+      },
+      onLeave: (_) => setState(() => _placeAfter = null),
+      onAcceptWithDetails: (details) {
+        final placeAfter = _isBelowCenter(details.offset);
+        setState(() => _placeAfter = null);
+        unawaited(
+          _saveReorder(
+            book: details.data,
+            target: widget.book,
+            placeAfter: placeAfter,
+          ),
+        );
+      },
+      builder: (context, candidates, _) {
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            LongPressDraggable<NxBook>(
+              data: widget.book,
+              delay: const Duration(seconds: 2),
+              dragAnchorStrategy: pointerDragAnchorStrategy,
+              onDragStarted: _startDrag,
+              onDragUpdate: (details) =>
+                  widget.onDragUpdate?.call(details.globalPosition),
+              onDragEnd: (_) => _finishDrag(),
+              onDraggableCanceled: (_, _) => _finishDrag(),
+              onDragCompleted: _finishDrag,
+              feedback: Material(
+                elevation: 8,
+                color: Colors.transparent,
+                child: SizedBox(
+                  width: widget.compact ? 330 : 260,
+                  child: Opacity(opacity: 0.92, child: card),
+                ),
+              ),
+              childWhenDragging: Opacity(opacity: 0.35, child: card),
+              child: card,
+            ),
+            if (candidates.isNotEmpty && _placeAfter != null)
+              Positioned(
+                left: 4,
+                right: 4,
+                top: _placeAfter! ? null : -2,
+                bottom: _placeAfter! ? 7 : null,
+                child: Container(
+                  key: ValueKey(
+                    'book-drop-${widget.book.id}-${_placeAfter! ? 'after' : 'before'}',
+                  ),
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _saveReorder({
+    required NxBook book,
+    required NxBook target,
+    required bool placeAfter,
+  }) async {
+    try {
+      await ref
+          .read(bookMutationControllerProvider)
+          .reorderWithinLane(
+            book: book,
+            target: target,
+            placeAfter: placeAfter,
+          );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not save the new order. The book was moved back.',
+            ),
+          ),
+        );
+    }
   }
 }
 
@@ -887,48 +1363,41 @@ class _DeleteBookButton extends ConsumerWidget {
   }
 }
 
-class _MobileDetail extends StatelessWidget {
-  const _MobileDetail({required this.book, required this.onOpenInNotes});
+class _MobileBookDetailPage extends ConsumerWidget {
+  const _MobileBookDetailPage({
+    required this.bookId,
+    required this.onOpenInNotes,
+  });
 
-  final NxBook book;
+  final int bookId;
   final Future<void> Function(NxBook book) onOpenInNotes;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                book.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                book.author.isEmpty
-                    ? book.readingState.label
-                    : '${book.author} · ${book.readingState.label}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final books = ref.watch(booksProvider);
+    final book = switch (books) {
+      AsyncData(:final value) =>
+        value.where((book) => book.id == bookId).firstOrNull,
+      _ => null,
+    };
+    return Scaffold(
+      key: ValueKey('mobile-book-detail-$bookId'),
+      appBar: AppBar(
+        title: Text(book?.title ?? 'Book information'),
+        backgroundColor: AppColors.panel,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: switch (books) {
+        AsyncLoading() => const Center(child: CircularProgressIndicator()),
+        AsyncError(:final error) => _ErrorState(
+          message: error.toString(),
+          onRetry: () => ref.invalidate(booksProvider),
         ),
-        const SizedBox(width: 8),
-        if (book.link.isNotEmpty) ...[
-          _BookLinkButton(book: book),
-          const SizedBox(width: 8),
-        ],
-        FilledButton.icon(
-          onPressed: () => onOpenInNotes(book),
-          icon: const Icon(Icons.open_in_new, size: 16),
-          label: const Text('Notes'),
+        AsyncData() when book == null => const Center(
+          child: Text('This book is no longer available'),
         ),
-      ],
+        _ => _BookDetail(book: book, onOpenInNotes: onOpenInNotes),
+      },
     );
   }
 }

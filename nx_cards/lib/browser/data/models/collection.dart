@@ -79,9 +79,13 @@ class CardsDashboard {
     String? studyCategory,
     String? language,
     int? bookId,
+    StudyCue? cue,
   }) =>
       _prompts(studyCategory: studyCategory, language: language, bookId: bookId)
-          .where((prompt) => prompt.isDueAt(now))
+          .where(
+            (prompt) =>
+                (cue == null || prompt.cue == cue) && prompt.isDueAt(now),
+          )
           .map((prompt) => prompt.cardId)
           .toSet()
           .length;

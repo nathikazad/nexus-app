@@ -25,6 +25,9 @@ void main() {
           id: 2,
           learningStatus: LearningStatus.learnt,
           schedule: const CardSchedule.initial(enabled: true),
+          toLanguageSchedule: _schedule(
+            DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
+          ),
         ),
         _word(
           id: 3,
@@ -89,6 +92,13 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('language-category-noun-due')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('language-category-noun-due')),
+        matching: find.text('0'),
+      ),
       findsOneWidget,
     );
     await tester.binding.setSurfaceSize(const Size(280, 844));
@@ -389,6 +399,7 @@ StudyCard _word({
   required int id,
   required LearningStatus learningStatus,
   required CardSchedule schedule,
+  CardSchedule? toLanguageSchedule,
   String category = 'Noun',
   String? modelTypeName,
   List<int> recallRatings = const <int>[],
@@ -401,7 +412,8 @@ StudyCard _word({
   ),
   schedules: {
     StudyCue.fromLanguage: schedule,
-    StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
+    StudyCue.toLanguage:
+        toLanguageSchedule ?? const CardSchedule.initial(enabled: true),
     StudyCue.transliteration: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: <StudyCue, List<CardReview>>{

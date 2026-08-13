@@ -192,7 +192,11 @@ class _SourcesDashboard extends StatelessWidget {
                         icon: Icons.translate_outlined,
                         color: RecallColors.violet,
                         total: data.cardsForLanguage(language).length,
-                        due: data.dueCount(DateTime.now(), language: language),
+                        due: data.dueCount(
+                          DateTime.now(),
+                          language: language,
+                          cue: StudyCue.fromLanguage,
+                        ),
                         current: data
                             .cardsForLanguage(language)
                             .where(

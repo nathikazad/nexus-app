@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,6 +156,294 @@ void main() {
     expect(find.text('Completed book'), findsOneWidget);
   });
 
+  testWidgets('desktop topic dropdown filters one tag at a time', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      _book(
+        1,
+        'Product book',
+        BookReadingState.reading,
+        rank: 0,
+        tags: const ['Product'],
+      ),
+      _book(
+        2,
+        'Business book',
+        BookReadingState.reading,
+        rank: 1,
+        tags: const ['Business'],
+      ),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('desktop-topic-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('topic-filter-Product')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('book-card-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-card-2')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-topic-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('topic-filter-Business')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('book-card-1')), findsNothing);
+    expect(find.byKey(const ValueKey('book-card-2')), findsOneWidget);
+  });
+
+  testWidgets('mobile topic button opens a single-select filter sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      _book(
+        1,
+        'Product book',
+        BookReadingState.reading,
+        rank: 0,
+        tags: const ['Product'],
+      ),
+      _book(
+        2,
+        'Business book',
+        BookReadingState.reading,
+        rank: 1,
+        tags: const ['Business'],
+      ),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-topic-filter')));
+    await tester.pumpAndSettle();
+    expect(find.text('Filter by topic'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mobile-topic-choice-Product')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('book-card-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-card-2')), findsNothing);
+  });
+
+  testWidgets('tapping a mobile book opens its full information page', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      _book(
+        1,
+        'Book with information',
+        BookReadingState.reading,
+        rank: 0,
+        author: 'An Author',
+      ),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('book-card-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('mobile-book-detail-1')), findsOneWidget);
+    expect(find.text('Book with information'), findsWidgets);
+    expect(find.text('An Author'), findsWidgets);
+  });
+
+  for (final layout in <String, Size>{
+    'mobile': const Size(390, 820),
+    'desktop': const Size(1280, 820),
+  }.entries) {
+    testWidgets(
+      '${layout.key} cards reorder after a two-second hold and drag',
+      (tester) async {
+        tester.view.physicalSize = layout.value;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final repo = _FakeBookRepository([
+          _book(1, 'Drag me', BookReadingState.reading, rank: 0),
+          _book(2, 'Middle book', BookReadingState.reading, rank: 1),
+          _book(3, 'Drop target', BookReadingState.reading, rank: 2),
+        ]);
+
+        await tester.pumpWidget(_testApp(repo));
+        await tester.pumpAndSettle();
+        final source = find.byKey(const ValueKey('book-card-1'));
+        final target = find.byKey(const ValueKey('book-card-3'));
+        final gesture = await tester.startGesture(tester.getCenter(source));
+        await tester.pump(const Duration(milliseconds: 1999));
+        await tester.pump(const Duration(milliseconds: 2));
+        final targetRect = tester.getRect(target);
+        await gesture.moveTo(
+          Offset(targetRect.center.dx, targetRect.bottom - 3),
+        );
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        final ordered = [...repo.rows]
+          ..sort((a, b) => a.rank!.compareTo(b.rank!));
+        expect(ordered.map((book) => book.id), [2, 3, 1]);
+      },
+    );
+  }
+
+  testWidgets('mobile drag auto-scrolls faster near the top edge', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      for (var id = 1; id <= 20; id++)
+        _book(id, 'Book $id', BookReadingState.reading, rank: id - 1),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+    final list = find.byKey(const ValueKey('mobile-books-sections'));
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: list, matching: find.byType(Scrollable)),
+    );
+    scrollable.position.jumpTo(700);
+    await tester.pump();
+    final viewport = tester.getRect(list);
+
+    Future<double> scrollFor(Offset edgePosition) async {
+      final source = find
+          .byType(LongPressDraggable<NxBook>)
+          .hitTestable()
+          .first;
+      final gesture = await tester.startGesture(tester.getCenter(source));
+      await tester.pump(const Duration(seconds: 2));
+      final before = scrollable.position.pixels;
+      await gesture.moveTo(edgePosition);
+      await tester.pump(const Duration(milliseconds: 480));
+      final distance = before - scrollable.position.pixels;
+      await gesture.up();
+      await tester.pumpAndSettle();
+      return distance;
+    }
+
+    final shallowDistance = await scrollFor(
+      Offset(viewport.center.dx, viewport.top + 100),
+    );
+    scrollable.position.jumpTo(700);
+    await tester.pump();
+    final deepDistance = await scrollFor(
+      Offset(viewport.center.dx, viewport.top + 5),
+    );
+
+    expect(shallowDistance, greaterThan(0));
+    expect(deepDistance, greaterThan(shallowDistance * 2));
+  });
+
+  testWidgets('mobile drag auto-scrolls faster near the bottom edge', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      for (var id = 1; id <= 20; id++)
+        _book(id, 'Book $id', BookReadingState.reading, rank: id - 1),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+    final list = find.byKey(const ValueKey('mobile-books-sections'));
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: list, matching: find.byType(Scrollable)),
+    );
+    scrollable.position.jumpTo(300);
+    await tester.pump();
+    final viewport = tester.getRect(list);
+
+    Future<double> scrollFor(Offset edgePosition) async {
+      final source = find
+          .byType(LongPressDraggable<NxBook>)
+          .hitTestable()
+          .first;
+      final gesture = await tester.startGesture(tester.getCenter(source));
+      await tester.pump(const Duration(seconds: 2));
+      final before = scrollable.position.pixels;
+      await gesture.moveTo(edgePosition);
+      await tester.pump(const Duration(milliseconds: 480));
+      final distance = scrollable.position.pixels - before;
+      await gesture.up();
+      await tester.pumpAndSettle();
+      return distance;
+    }
+
+    final shallowDistance = await scrollFor(
+      Offset(viewport.center.dx, viewport.bottom - 100),
+    );
+    scrollable.position.jumpTo(300);
+    await tester.pump();
+    final deepDistance = await scrollFor(
+      Offset(viewport.center.dx, viewport.bottom - 5),
+    );
+
+    expect(shallowDistance, greaterThan(0));
+    expect(deepDistance, greaterThan(shallowDistance * 2));
+  });
+
+  testWidgets('mobile supports consecutive long-press reorders', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      _book(1, 'One', BookReadingState.reading, rank: 0),
+      _book(2, 'Two', BookReadingState.reading, rank: 1),
+      _book(3, 'Three', BookReadingState.reading, rank: 2),
+      _book(4, 'Four', BookReadingState.reading, rank: 3),
+    ]);
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+
+    Future<void> reorder(
+      int sourceId,
+      int targetId, {
+      required bool after,
+    }) async {
+      final source = find.byKey(ValueKey('book-card-$sourceId'));
+      final target = find.byKey(ValueKey('book-card-$targetId'));
+      final gesture = await tester.startGesture(tester.getCenter(source));
+      await tester.pump(const Duration(seconds: 2));
+      final rect = tester.getRect(target);
+      await gesture.moveTo(
+        Offset(rect.center.dx, after ? rect.bottom - 3 : rect.top + 3),
+      );
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+    }
+
+    await reorder(1, 3, after: true);
+    await reorder(1, 2, after: false);
+
+    final ordered = [...repo.rows]..sort((a, b) => a.rank!.compareTo(b.rank!));
+    expect(ordered.map((book) => book.id), [1, 2, 3, 4]);
+  });
+
   test('changing state appends the book to the target lane', () async {
     final repo = _FakeBookRepository([
       _book(1, 'One', BookReadingState.reading, rank: 0),
@@ -194,6 +484,79 @@ void main() {
     expect(repo.rows.singleWhere((book) => book.id == 2).rank, 0);
     expect(repo.rows.singleWhere((book) => book.id == 1).rank, 1);
     expect(repo.rows.singleWhere((book) => book.id == 3).rank, 2);
+  });
+
+  test('drag reorder inserts a book before or after its target', () async {
+    final repo = _FakeBookRepository([
+      _book(1, 'One', BookReadingState.reading, rank: 0),
+      _book(2, 'Two', BookReadingState.reading, rank: 1),
+      _book(3, 'Three', BookReadingState.reading, rank: 2),
+    ]);
+    final container = ProviderContainer(
+      overrides: [bookRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(container.dispose);
+    await container.read(booksProvider.future);
+
+    await container
+        .read(bookMutationControllerProvider)
+        .reorderWithinLane(
+          book: repo.rows.first,
+          target: repo.rows.last,
+          placeAfter: true,
+        );
+
+    final ordered = [...repo.rows]..sort((a, b) => a.rank!.compareTo(b.rank!));
+    expect(ordered.map((book) => book.id), [2, 3, 1]);
+  });
+
+  testWidgets('drag order updates immediately and rolls back after timeout', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final rankGate = Completer<void>();
+    final repo = _FakeBookRepository([
+      _book(1, 'One', BookReadingState.reading, rank: 0),
+      _book(2, 'Two', BookReadingState.reading, rank: 1),
+      _book(3, 'Three', BookReadingState.reading, rank: 2),
+    ], rankUpdateGate: rankGate);
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+
+    final source = find.byKey(const ValueKey('book-card-1'));
+    final target = find.byKey(const ValueKey('book-card-3'));
+    final gesture = await tester.startGesture(tester.getCenter(source));
+    await tester.pump(const Duration(seconds: 2));
+    final targetRect = tester.getRect(target);
+    await gesture.moveTo(Offset(targetRect.center.dx, targetRect.bottom - 3));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('book-card-1'))).dy,
+      greaterThan(
+        tester.getTopLeft(find.byKey(const ValueKey('book-card-3'))).dy,
+      ),
+    );
+
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pump();
+
+    expect(
+      find.text('Could not save the new order. The book was moved back.'),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('book-card-1'))).dy,
+      lessThan(tester.getTopLeft(find.byKey(const ValueKey('book-card-2'))).dy),
+    );
+    rankGate.complete();
+    await tester.pump();
   });
 
   test('updating chapter progress clamps and clears values', () async {
@@ -332,9 +695,11 @@ NxBook _book(
 }
 
 class _FakeBookRepository implements BookRepository {
-  _FakeBookRepository(List<NxBook> rows) : rows = [...rows];
+  _FakeBookRepository(List<NxBook> rows, {this.rankUpdateGate})
+    : rows = [...rows];
 
   final List<NxBook> rows;
+  final Completer<void>? rankUpdateGate;
   int _nextId = 1000;
 
   @override
@@ -372,6 +737,7 @@ class _FakeBookRepository implements BookRepository {
 
   @override
   Future<void> updateBookRank({required int id, required int rank}) async {
+    await rankUpdateGate?.future;
     final index = rows.indexWhere((book) => book.id == id);
     rows[index] = rows[index].copyWith(rank: rank);
   }

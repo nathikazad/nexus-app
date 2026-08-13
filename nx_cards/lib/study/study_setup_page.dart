@@ -237,25 +237,32 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     ];
   }
 
-  bool _matchesRecallBaseFilters(StudyCard card) =>
-      _learningStatuses.contains(card.learningStatus) &&
-      _recallStates.contains(_recallState(card)) &&
-      (_recallState(card) != RecallCardState.retained ||
-          frontToBackRecallPercentage(
-                card,
-                historyWindow: _reviewHistoryWindow,
-              ) <=
-              _retainedMaxPercentage);
+  bool _matchesRecallBaseFilters(StudyCard card) {
+    final cue = _cue;
+    if (cue == null) return false;
+    final state = _recallState(card, cue);
+    return _learningStatuses.contains(card.learningStatus) &&
+        _recallStates.contains(state) &&
+        (state != RecallCardState.retained ||
+            cueRecallPercentage(
+                  card,
+                  cue,
+                  historyWindow: _reviewHistoryWindow,
+                ) <=
+                _retainedMaxPercentage);
+  }
 
   bool _matchesRecallFilters(StudyCard card) =>
       _matchesRecallBaseFilters(card) &&
       (_recallTiming == RecallTiming.allMatching || _isDueForRecall(card));
 
-  bool _isDueForRecall(StudyCard card) =>
-      card.scheduleFor(StudyCue.fromLanguage).isDueAt(DateTime.now().toUtc());
+  bool _isDueForRecall(StudyCard card) {
+    final cue = _cue;
+    return cue != null && card.scheduleFor(cue).isDueAt(DateTime.now().toUtc());
+  }
 
-  RecallCardState _recallState(StudyCard card) {
-    final schedule = card.scheduleFor(StudyCue.fromLanguage);
+  RecallCardState _recallState(StudyCard card, StudyCue cue) {
+    final schedule = card.scheduleFor(cue);
     if (schedule.lastReviewedAt == null) return RecallCardState.newCard;
     return switch (schedule.schedulingState) {
       'learning' => RecallCardState.learning,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,24 +63,37 @@ class _LanguageFastRecallPageState
         _ratings.containsKey(queued.cardId)) {
       return;
     }
-    setState(() => _saving.add(queued.cardId));
+    final prompt = _latestPrompt(queued);
+    final previousCard = prompt.card;
+    final outcome = ref
+        .read(cardSchedulerProvider)
+        .preview(prompt, DateTime.now().toUtc())[rating]!;
+    setState(() {
+      _saving.add(queued.cardId);
+      _latestCards[queued.cardId] = outcome.card;
+      _ratings[queued.cardId] = rating;
+    });
     try {
-      final prompt = _latestPrompt(queued);
-      final outcome = ref
-          .read(cardSchedulerProvider)
-          .preview(prompt, DateTime.now().toUtc())[rating]!;
-      await ref.read(cardLibraryProvider).saveSchedule(outcome.card);
-      if (!mounted) return;
-      setState(() {
-        _latestCards[queued.cardId] = outcome.card;
-        _ratings[queued.cardId] = rating;
-      });
+      await ref
+          .read(cardLibraryProvider)
+          .saveSchedule(outcome.card)
+          .timeout(const Duration(seconds: 20));
       ref.invalidate(cardsDashboardProvider);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save review: $error')),
-        );
+        setState(() {
+          _latestCards[queued.cardId] = previousCard;
+          _ratings.remove(queued.cardId);
+        });
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Could not save the review. The card was restored.',
+              ),
+            ),
+          );
       }
     } finally {
       if (mounted) setState(() => _saving.remove(queued.cardId));
@@ -100,7 +115,7 @@ class _LanguageFastRecallPageState
   @override
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
-    if (_ratings.length == widget.prompts.length) {
+    if (_ratings.length == widget.prompts.length && _saving.isEmpty) {
       final missCount = _ratings.values
           .where((rating) => rating == CardRating.again)
           .length;
@@ -247,6 +262,12 @@ class _FastRecallRowState extends State<_FastRecallRow> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.rating == null && widget.rating != null) {
       setState(() => _hidden = true);
+    } else if (oldWidget.rating != null && widget.rating == null) {
+      setState(() {
+        _hidden = false;
+        _swipeCommitted = false;
+        _swipeRecalled = false;
+      });
     }
   }
 
@@ -294,14 +315,11 @@ class _FastRecallRowState extends State<_FastRecallRow> {
       _swipeCommitted = true;
       _swipeRecalled = recalled;
     });
-    Future<void>.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      if (recalled) {
-        widget.onYes();
-      } else {
-        widget.onNo();
-      }
-    });
+    if (recalled) {
+      widget.onYes();
+    } else {
+      widget.onNo();
+    }
   }
 
   void _cancelSwipe() {

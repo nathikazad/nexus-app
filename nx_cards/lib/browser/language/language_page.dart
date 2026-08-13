@@ -123,6 +123,7 @@ class _LanguageCategoryCard extends StatelessWidget {
       DateTime.now(),
       studyCategory: category,
       language: language,
+      cue: StudyCue.fromLanguage,
     );
     Widget metric(int value, String label, double width) => SizedBox(
       key: ValueKey(

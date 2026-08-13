@@ -28,7 +28,6 @@ class LanguageStudyPage extends ConsumerStatefulWidget {
 class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
   final AudioPlayer _player = AudioPlayer();
   final List<StreamSubscription<Object?>> _subscriptions = [];
-  String _query = '';
   int? _activeCardId;
   int? _loadingCardId;
   bool _playing = false;
@@ -49,20 +48,6 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
         });
       }),
     ]);
-  }
-
-  List<StudyCard> get _visibleCards {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return widget.cards;
-    return widget.cards
-        .where((card) {
-          final content = card.content;
-          return content.front.toLowerCase().contains(query) ||
-              content.back.toLowerCase().contains(query) ||
-              (content is LanguageCardContent &&
-                  content.transliteration.toLowerCase().contains(query));
-        })
-        .toList(growable: false);
   }
 
   Future<void> _toggleAudio(
@@ -113,7 +98,7 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
   @override
   Widget build(BuildContext context) {
     final audioRepository = ref.watch(cardAudioRepositoryProvider);
-    final cards = _visibleCards;
+    final cards = widget.cards;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: Center(
@@ -129,9 +114,7 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
               if (index == 0) {
                 return _StudySheetHeader(
                   total: widget.cards.length,
-                  visible: cards.length,
                   itemLabel: widget.itemLabel ?? 'words',
-                  onSearch: (value) => setState(() => _query = value),
                 );
               }
               final card = cards[index - 1];
@@ -163,17 +146,10 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
 }
 
 class _StudySheetHeader extends StatelessWidget {
-  const _StudySheetHeader({
-    required this.total,
-    required this.visible,
-    required this.itemLabel,
-    required this.onSearch,
-  });
+  const _StudySheetHeader({required this.total, required this.itemLabel});
 
   final int total;
-  final int visible;
   final String itemLabel;
-  final ValueChanged<String> onSearch;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -182,22 +158,11 @@ class _StudySheetHeader extends StatelessWidget {
       Text('STUDY SHEET', style: monoLabel),
       const SizedBox(height: 7),
       Text(
-        visible == total
-            ? '$total $itemLabel'
-            : '$visible of $total $itemLabel',
+        '$total $itemLabel',
         style: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.6,
-        ),
-      ),
-      const SizedBox(height: 16),
-      TextField(
-        onChanged: onSearch,
-        textInputAction: TextInputAction.search,
-        decoration: const InputDecoration(
-          hintText: 'Search',
-          prefixIcon: Icon(Icons.search, size: 20),
         ),
       ),
       const SizedBox(height: 12),
