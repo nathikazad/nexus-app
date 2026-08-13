@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:nexus_voice_assistant/data/voice/voice_socket_session.dart';
 import 'package:nexus_voice_assistant/data/watch/watch_bridge_service.dart';
-import 'package:nx_utils/nx_utils.dart';
+import 'package:nx_voice/nx_voice.dart';
 
 class WatchVoiceRelay {
   WatchVoiceRelay({

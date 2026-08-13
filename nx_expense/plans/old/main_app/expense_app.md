@@ -26,7 +26,7 @@ dependencies:
   intl: ^0.20.2
   fl_chart: ^1.2.0
   nx_db:
-    path: ../nx_db
+    path: ../nx_modules/nx_db
 ```
 
 No need to add `graphql_flutter`, `shared_preferences`, etc. directly — `nx_db` pulls them transitively.
@@ -542,7 +542,7 @@ After save, invalidate `expenseSchemaProvider` so the entire app picks up the ne
 
 ### Phase 3 — Riverpod providers + minimal app shell
 
-11. Create `nx_expense` project (`pubspec` → `path: ../nx_db`).
+11. Create `nx_expense` project (`pubspec` → `path: ../nx_modules/nx_db`).
 12. Implement `expenseSchemaProvider`, `expenseStructProvider`, `expenseListProvider`, `expenseDetailProvider`, `expenseSummaryProvider`, `spendByDayProvider`, `spendByTagSystemProvider`, `spendByRelationProvider`, `relatedModelsProvider`.
 13. Minimal `main.dart` + `router.dart`: login route + one **debug** screen or placeholder that reads a provider and prints / asserts (optional: integration test with `TestAuthController` like `nx_main/test/`).
 14. **Tests:** mock GraphQL or provider overrides — **P*** cases; optional **I*** integration against live API.

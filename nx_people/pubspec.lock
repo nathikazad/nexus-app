@@ -491,7 +491,7 @@ packages:
   nx_db:
     dependency: "direct main"
     description:
-      path: "../nx_db"
+      path: "../nx_modules/nx_db"
       relative: true
     source: path
     version: "1.0.0"

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:nx_db/auth.dart';
-import 'package:nx_utils/nx_utils.dart';
+import 'package:nx_voice/nx_voice.dart';
 
 class VoiceSocketSessionConfig {
   const VoiceSocketSessionConfig({

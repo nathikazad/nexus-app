@@ -4,7 +4,6 @@ import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/browser_error.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
-import 'package:nx_cards/browser/card_list/card_metric.dart';
 import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/browser/card_list/learning_cards.dart';
 import 'package:nx_cards/browser/card_list/study_launcher.dart';
@@ -119,6 +118,28 @@ class _LanguageCategoryCard extends StatelessWidget {
       studyCategory: category,
       language: language,
     );
+    Widget metric(int value, String label) => SizedBox(
+      width: 40,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$value',
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: RecallColors.ink,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: RecallColors.faint),
+          ),
+        ],
+      ),
+    );
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -129,61 +150,56 @@ class _LanguageCategoryCard extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+          child: Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: RecallColors.soft,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: RecallColors.line),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: RecallColors.soft,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: RecallColors.line),
+                      ),
+                      child: Icon(
+                        categoryIcon(category),
+                        size: 20,
+                        color: RecallColors.ink,
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Icon(categoryIcon(category), color: RecallColors.ink),
               ),
-              const SizedBox(height: 17),
-              Text(
-                category,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 44,
+                child: VerticalDivider(
+                  key: ValueKey('language-category-divider-$category'),
+                  width: 1,
+                  thickness: 1,
                 ),
               ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 13),
-              Row(
-                children: [
-                  Expanded(
-                    child: CardMetric(
-                      icon: Icons.style_outlined,
-                      value: cards.length,
-                      label: 'Total',
-                      stacked: true,
-                    ),
-                  ),
-                  Expanded(
-                    child: CardMetric(
-                      icon: Icons.schedule_outlined,
-                      value: due,
-                      label: 'Due',
-                      stacked: true,
-                    ),
-                  ),
-                  Expanded(
-                    child: CardMetric(
-                      icon: Icons.school_outlined,
-                      value: current,
-                      label: 'Current',
-                      stacked: true,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward, size: 18),
-                ],
-              ),
+              const SizedBox(width: 12),
+              metric(cards.length, 'Total'),
+              const SizedBox(width: 8),
+              metric(due, 'Due'),
+              const SizedBox(width: 8),
+              metric(current, 'Current'),
             ],
           ),
         ),

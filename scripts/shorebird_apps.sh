@@ -16,10 +16,10 @@ Usage:
 
 Examples:
   scripts/shorebird_apps.sh release nx_cards
-  scripts/shorebird_apps.sh init nx_notes
-  scripts/shorebird_apps.sh release nx_notes
-  scripts/shorebird_apps.sh patch nx_notes
-  scripts/shorebird_apps.sh preview nx_notes
+  scripts/shorebird_apps.sh init nx_docs
+  scripts/shorebird_apps.sh release nx_docs
+  scripts/shorebird_apps.sh patch nx_docs
+  scripts/shorebird_apps.sh preview nx_docs
   scripts/shorebird_apps.sh affected HEAD~1
   scripts/shorebird_apps.sh patch changed --allow-asset-diffs
 
@@ -41,7 +41,7 @@ apps=(
   nx_cooking
   nx_expense
   nx_main
-  nx_notes
+  nx_docs
   nx_people
   nx_post
   nx_projects
@@ -55,7 +55,7 @@ display_name_for() {
     nx_cooking) printf 'Nexus Cooking' ;;
     nx_expense) printf 'Nexus Expense' ;;
     nx_main) printf 'Nexus' ;;
-    nx_notes) printf 'Nexus Notes' ;;
+    nx_docs) printf 'Nexus Docs' ;;
     nx_people) printf 'Nexus People' ;;
     nx_post) printf 'Nexus Post' ;;
     nx_projects) printf 'Nexus Projects' ;;
@@ -106,13 +106,13 @@ require_initialized() {
 
 requires_openai_key() {
   case "$1" in
-    nx_cards|nx_notes) return 0 ;;
+    nx_cards|nx_docs) return 0 ;;
     *) return 1 ;;
   esac
 }
 
 require_openai_env() {
-  local env_file="$mobile_root/nx_live_agent/.env"
+  local env_file="$mobile_root/nx_modules/nx_live_agent/.env"
   local api_key
 
   if [[ ! -f "$env_file" ]]; then
@@ -233,17 +233,26 @@ affected_apps() {
   while IFS= read -r file; do
     [[ -n "$file" ]] || continue
     case "$file" in
-      nx_db/*)
+      nx_modules/nx_db/*)
         affected=("${apps[@]}")
         break
         ;;
-      nx_utils/*|nx_views/*)
+      nx_modules/nx_views/*)
         affected+=(nx_main nx_time)
         ;;
-      appflowy-editor/*)
-        affected+=(nx_notes)
+      nx_modules/nx_voice/*)
+        affected+=(nx_main nx_docs nx_time)
         ;;
-      nx_books/*|nx_cards/*|nx_cooking/*|nx_expense/*|nx_main/*|nx_notes/*|nx_people/*|nx_post/*|nx_projects/*|nx_time/*)
+      nx_modules/nx_observability/*)
+        affected+=(nx_main nx_time)
+        ;;
+      nx_modules/nx_live_agent/*|nx_modules/nx_offline/*)
+        affected+=(nx_cards nx_docs)
+        ;;
+      third_party/appflowy-editor/*)
+        affected+=(nx_docs)
+        ;;
+      nx_books/*|nx_cards/*|nx_cooking/*|nx_docs/*|nx_expense/*|nx_main/*|nx_people/*|nx_post/*|nx_projects/*|nx_time/*)
         app="${file%%/*}"
         affected+=("$app")
         ;;
@@ -279,7 +288,7 @@ run_release() {
   require_initialized "$app"
   if requires_openai_key "$app"; then
     require_openai_env
-    credential_args=(--dart-define-from-file=../nx_live_agent/.env)
+    credential_args=(--dart-define-from-file=../nx_modules/nx_live_agent/.env)
   fi
   (
     cd "$mobile_root/$app"
@@ -295,7 +304,7 @@ run_patch() {
   require_initialized "$app"
   if requires_openai_key "$app"; then
     require_openai_env
-    credential_args=(--dart-define-from-file=../nx_live_agent/.env)
+    credential_args=(--dart-define-from-file=../nx_modules/nx_live_agent/.env)
   fi
   (
     cd "$mobile_root/$app"

@@ -36,7 +36,7 @@ dependencies:
   fl_chart: ^1.2.0
   google_fonts: ^6.2.1
   nx_db:
-    path: ../nx_db
+    path: ../nx_modules/nx_db
   graphql_flutter: ^5.1.2
   http: ^1.2.2
   http_parser: ^4.1.0

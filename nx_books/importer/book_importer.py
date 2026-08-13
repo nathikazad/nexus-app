@@ -286,18 +286,18 @@ class FlutterMarkdownConverter:
         self.flutter = selected_flutter.expanduser().resolve()
 
     def convert(self, markdown_directory: Path) -> None:
-        nx_notes = self.nexus_mobile / "nx_notes"
+        nx_docs = self.nexus_mobile / "nx_docs"
         converter = (
             self.nexus_mobile
-            / "appflowy-editor/lib/src/plugins/markdown/document_markdown.dart"
+            / "third_party/appflowy-editor/lib/src/plugins/markdown/document_markdown.dart"
         )
-        if not (nx_notes / "pubspec.yaml").is_file():
-            raise ImporterError(f"nx_notes package not found: {nx_notes}")
+        if not (nx_docs / "pubspec.yaml").is_file():
+            raise ImporterError(f"nx_docs package not found: {nx_docs}")
         if not converter.is_file():
             raise ImporterError(f"AppFlowy Markdown converter not found: {converter}")
         if not self.flutter.is_file():
             raise ImporterError(f"Flutter executable not found: {self.flutter}")
-        test_dir = nx_notes / "test"
+        test_dir = nx_docs / "test"
         test_dir.mkdir(parents=True, exist_ok=True)
         test_path = test_dir / f"_nx_books_import_{uuid.uuid4().hex}_test.dart"
         test_path.write_text(_DART_CONVERTER_TEST, encoding="utf-8")
@@ -308,11 +308,11 @@ class FlutterMarkdownConverter:
                 [
                     str(self.flutter),
                     "test",
-                    str(test_path.relative_to(nx_notes)),
+                    str(test_path.relative_to(nx_docs)),
                     "--reporter",
                     "expanded",
                 ],
-                cwd=nx_notes,
+                cwd=nx_docs,
                 env=environment,
                 text=True,
                 check=False,

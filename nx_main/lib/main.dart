@@ -8,7 +8,7 @@ import 'package:nexus_voice_assistant/data/background/background_service.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/data/watch/watch_bridge_service.dart';
 import 'package:nx_db/riverpod.dart';
-import 'package:nx_utils/nx_utils.dart';
+import 'package:nx_voice/nx_voice.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'dart:ui';
 

@@ -41,11 +41,11 @@ dependencies:
   http: ^1.6.0
   fsrs: ^2.0.1
   nx_db:
-    path: ../nx_db
+    path: ../nx_modules/nx_db
   nx_offline:
-    path: ../nx_offline
+    path: ../nx_modules/nx_offline
   nx_live_agent:
-    path: ../nx_live_agent
+    path: ../nx_modules/nx_live_agent
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.8
 

@@ -63,7 +63,7 @@ queued through the outbox. Web builds use the remote KGQL library directly.
 ## OpenAI build configuration
 
 AI study requires `OPENAI_API_KEY` from the Git-ignored
-`../nx_live_agent/.env`. Release compilation fails when the Dart define is
+`../nx_modules/nx_live_agent/.env`. Release compilation fails when the Dart define is
 missing. The shared Shorebird release and patch commands validate that file
 and pass it automatically:
 
@@ -74,7 +74,7 @@ scripts/shorebird_apps.sh patch nx_cards
 ```
 
 For a direct local Flutter run, pass
-`--dart-define-from-file=../nx_live_agent/.env` explicitly.
+`--dart-define-from-file=../nx_modules/nx_live_agent/.env` explicitly.
 
 ## Boundaries
 

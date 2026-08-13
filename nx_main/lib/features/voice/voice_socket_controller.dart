@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/data/voice/voice_socket_session.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_utils/nx_utils.dart';
+import 'package:nx_observability/nx_observability.dart';
+import 'package:nx_voice/nx_voice.dart';
 
 enum VoiceSocketPhase {
   idle,

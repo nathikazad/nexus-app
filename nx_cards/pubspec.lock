@@ -755,21 +755,21 @@ packages:
   nx_db:
     dependency: "direct main"
     description:
-      path: "../nx_db"
+      path: "../nx_modules/nx_db"
       relative: true
     source: path
     version: "1.0.0"
   nx_live_agent:
     dependency: "direct main"
     description:
-      path: "../nx_live_agent"
+      path: "../nx_modules/nx_live_agent"
       relative: true
     source: path
     version: "0.1.0"
   nx_offline:
     dependency: "direct main"
     description:
-      path: "../nx_offline"
+      path: "../nx_modules/nx_offline"
       relative: true
     source: path
     version: "0.1.0"

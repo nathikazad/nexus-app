@@ -5,7 +5,7 @@ final class OpenAiBuildConfiguration {
   }) : assert(
          !requiredForBuild || apiKey != '',
          'OPENAI_API_KEY is required for nx_cards release builds. Pass '
-         '--dart-define-from-file=../nx_live_agent/.env.',
+         '--dart-define-from-file=../nx_modules/nx_live_agent/.env.',
        );
 
   final String apiKey;

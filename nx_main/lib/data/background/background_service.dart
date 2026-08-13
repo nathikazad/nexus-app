@@ -14,7 +14,7 @@ import 'package:nexus_voice_assistant/data/hardware/camera_command.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.dart';
 import 'package:nexus_voice_assistant/domain/ble/ble_connection_state.dart';
-import 'package:nx_utils/nx_utils.dart';
+import 'package:nx_observability/nx_observability.dart';
 import 'package:http/http.dart' as http;
 
 int _opusBytesFromNrfAudioPayload(Uint8List data) {

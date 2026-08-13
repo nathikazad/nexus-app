@@ -7,12 +7,12 @@ the world) and **view layer** (how it shows it to the user), with a
 This layout is also the **prototype for future apps**. The per-entity folders
 under `domain/<x>/` and `data/<x>/` are intentionally shaped to mirror
 `nx_db/src/kgql/shared/<x>/`, so that promoting an entity into `nx_db` (when
-a second app needs it — see `mobile/nx_db/plans/current/nx_db_app_boundary.md`)
+a second app needs it — see `mobile/nx_modules/nx_db/plans/current/nx_db_app_boundary.md`)
 is a file move plus an import rewrite, not a refactor.
 
-> Assumes `nx_db` is reorganized per `mobile/nx_db/plans/current/nx_db_reorg.md`
+> Assumes `nx_db` is reorganized per `mobile/nx_modules/nx_db/plans/current/nx_db_reorg.md`
 > and exposes the sub-libraries described in
-> `mobile/nx_db/plans/current/nx_db_app_boundary.md`
+> `mobile/nx_modules/nx_db/plans/current/nx_db_app_boundary.md`
 > (`package:nx_db/auth.dart`, `package:nx_db/kgql.dart`,
 > `package:nx_db/riverpod.dart`, `package:nx_db/<entity>.dart`).
 

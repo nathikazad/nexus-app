@@ -15,7 +15,7 @@ dependencies:
   intl: ^0.20.2
   graphql_flutter: ^5.1.2
   nx_db:
-    path: ../nx_db
+    path: ../nx_modules/nx_db
   solar_icon_pack: ^0.3.0
   http: ^1.6.0
 

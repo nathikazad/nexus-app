@@ -7,12 +7,12 @@ description: Deploy Nexus Flutter web apps served through the remote nexus-mcp D
 
 Use this when deploying a Flutter web app under `nexus.nathikazad.com` through the Raspberry Pi `cloudflared` tunnel.
 
-## nx_notes
+## nx_docs
 
 Work from:
 
 ```bash
-cd /Users/nathikazad/Projects/Nexus/mobile/nx_notes
+cd /Users/nathikazad/Projects/Nexus/mobile/nx_docs
 ```
 
 Build with the `/docs/` base href:

@@ -18,7 +18,7 @@ dependencies:
   image_picker: ^1.1.2
   intl: ^0.20.2
   nx_db:
-    path: ../nx_db
+    path: ../nx_modules/nx_db
 
 dev_dependencies:
   flutter_test:

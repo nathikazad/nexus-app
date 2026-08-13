@@ -2,7 +2,7 @@
 
 Flutter implementation of the People reference prototype.
 
-The app mirrors the `nx_notes` shape where it is useful: app/router entry
+The app mirrors the `nx_docs` shape where it is useful: app/router entry
 points, a small domain/data layer, Riverpod shell state, desktop/mobile shells,
 and focused widget plus layering tests.
 

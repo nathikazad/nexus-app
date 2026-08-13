@@ -3,9 +3,9 @@
 This is the entry-point doc for anyone who's never opened `nx_time`
 before. Read it once, then keep it open while you make your first
 change. Its companion is
-[`nx_db/docs/structure.md`](../../nx_db/docs/structure.md), which
+[`nx_db/docs/structure.md`](../../nx_modules/nx_db/docs/structure.md), which
 explains the shared package this app sits on top of, and
-[`nx_db/docs/app_creation.md`](../../nx_db/docs/app_creation.md), which
+[`nx_db/docs/app_creation.md`](../../nx_modules/nx_db/docs/app_creation.md), which
 generalizes this layout into a recipe for new apps. For the **Riverpod
 provider map** (dependencies, invalidation, and which views watch
 which provider), see [`docs/providers.md`](./providers.md).
@@ -131,12 +131,12 @@ anywhere under `nx_db/lib/`.
 
 When something in `nx_time` becomes a candidate for **generic** cross-app
 promotion, the recipe in
-[`nx_db_app_boundary.md`](../../nx_db/plans/current/nx_db_app_boundary.md)
+[`nx_db_app_boundary.md`](../../nx_modules/nx_db/plans/current/nx_db_app_boundary.md)
 is essentially "`git mv` the four files for that entity into
 `nx_db/lib/src/kgql/shared/<entity>/`, add a `lib/<entity>.dart`
 re-export, swap imports." **Current-user–scoped** shared types (e.g. `Person`,
 `Transcript`) live under `nx_db/lib/src/user/<entity>/` instead — see
-[`nx_db/docs/structure.md`](../../nx_db/docs/structure.md) § *User-scoped
+[`nx_db/docs/structure.md`](../../nx_modules/nx_db/docs/structure.md) § *User-scoped
 entities*. The same mechanical rule applies: `data/<e>/` repositories take
 `GraphQLClient` (not `Ref`); `domain/<e>/` stays pure Dart for app-only
 entities.
@@ -448,7 +448,7 @@ When you're unsure where something belongs, ask in this order:
 1. **Does it touch `Model`, `ModelType`, `SetModelRequest`, or
    `GraphQLClient`?** If yes, it's `data/`. (Or it's a candidate for
    a `nx_db/kgql/helpers/` promotion — see
-   [`nx_db_app_boundary.md`](../../nx_db/plans/current/nx_db_app_boundary.md).)
+   [`nx_db_app_boundary.md`](../../nx_modules/nx_db/plans/current/nx_db_app_boundary.md).)
 2. **Is it pure Dart with no Flutter, no Riverpod, no `nx_db`?** That's
    `domain/`.
 3. **Does it render pixels or hold UI state for a specific screen?**

@@ -61,6 +61,12 @@ void main() {
     expect(find.text('Noun'), findsOneWidget);
     expect(find.text('Adjective'), findsOneWidget);
     expect(find.text('Verb'), findsOneWidget);
+    expect(find.byType(VerticalDivider), findsNWidgets(4));
+    final nounTitle = tester.getCenter(find.text('Noun'));
+    final nounDivider = tester.getCenter(
+      find.byKey(const ValueKey('language-category-divider-Noun')),
+    );
+    expect(nounDivider.dx, greaterThan(nounTitle.dx));
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.text('Library'), findsNothing);

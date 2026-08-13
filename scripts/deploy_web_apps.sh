@@ -9,7 +9,7 @@ Usage:
   scripts/deploy_web_apps.sh [all|APP ...] [options]
 
 Apps:
-  nx_notes     aliases: notes, docs
+  nx_docs      aliases: notes, docs, nx_notes
   nx_books     aliases: books
   nx_expense   aliases: expense, expenses
   nx_people    aliases: people
@@ -57,11 +57,11 @@ skip_restart=0
 skip_verify=0
 requested_apps=()
 
-app_order=(nx_notes nx_books nx_expense nx_people nx_projects nx_cards)
+app_order=(nx_docs nx_books nx_expense nx_people nx_projects nx_cards)
 
 base_href_for() {
   case "$1" in
-    nx_notes) printf '/docs/' ;;
+    nx_docs) printf '/docs/' ;;
     nx_books) printf '/books/' ;;
     nx_expense) printf '/expenses/' ;;
     nx_people) printf '/people/' ;;
@@ -73,7 +73,8 @@ base_href_for() {
 
 static_dir_for() {
   case "$1" in
-    nx_notes|nx_books|nx_expense|nx_people|nx_projects|nx_cards) printf '%s' "$1" ;;
+    nx_docs) printf 'nx_notes' ;;
+    nx_books|nx_expense|nx_people|nx_projects|nx_cards) printf '%s' "$1" ;;
     *) return 1 ;;
   esac
 }
@@ -81,7 +82,7 @@ static_dir_for() {
 normalize_app() {
   case "$1" in
     all) printf 'all' ;;
-    nx_notes|notes|docs) printf 'nx_notes' ;;
+    nx_docs|nx_notes|notes|docs) printf 'nx_docs' ;;
     nx_books|books) printf 'nx_books' ;;
     nx_expense|expense|expenses) printf 'nx_expense' ;;
     nx_people|people) printf 'nx_people' ;;

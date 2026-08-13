@@ -8,7 +8,7 @@ import 'package:nx_books/domain/book/book_repository.dart';
 import 'package:nx_books/features/books/books_shell.dart';
 
 void main() {
-  test('notesUriForBook opens the matching document in nx_notes', () {
+  test('notesUriForBook opens the matching document in nx_docs', () {
     final uri = notesUriForBook(
       4195,
       Uri.parse('https://nexus.example.com/books/'),
