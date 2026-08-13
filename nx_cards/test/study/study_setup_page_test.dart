@@ -584,6 +584,11 @@ void main() {
 
     expect(find.text('Study sheet'), findsOneWidget);
     expect(find.text('Draw'), findsOneWidget);
+    expect(find.text('Which letters?'), findsOneWidget);
+    expect(find.text('How many cards?'), findsOneWidget);
+    expect(find.text('All letters on one page'), findsNothing);
+    expect(find.text('Choose the order'), findsNothing);
+    expect(find.text('1 available'), findsOneWidget);
     await tester.tap(find.text('Draw'));
     await tester.pumpAndSettle();
 

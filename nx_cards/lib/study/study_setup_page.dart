@@ -285,7 +285,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         (card) =>
             card.content is LanguageCardContent &&
             !card.suspended &&
-            (_isScriptStudy || _matchesRecallFilters(card)),
+            _matchesRecallFilters(card),
       )
       .toList(growable: false);
 
@@ -522,9 +522,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 : _studySheetCandidates)
             .toList(growable: true);
     if (_order == StudyOrder.shuffle) cards.shuffle(Random.secure());
-    final selected = _isScriptStudy
-        ? cards
-        : cards.take(min(_count, cards.length)).toList(growable: false);
+    final selected = cards
+        .take(min(_count, cards.length))
+        .toList(growable: false);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LanguageStudyPage(
@@ -714,37 +714,19 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ],
                     if (!_isScriptStudy ||
                         _studyPresentation == StudyPresentation.sheet) ...[
-                      if (_isScriptStudy) ...[
-                        _SetupCard(
-                          number: '02',
-                          title: 'All letters on one page',
-                          child: Text(
-                            '${widget.studyCards.length} cards with both languages, transliteration and audio',
-                            style: const TextStyle(color: RecallColors.muted),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _SetupCard(
-                          number: '03',
-                          title: 'Choose the order',
-                          child: _OrderControl(
-                            value: _order,
-                            onChanged: _selectOrder,
-                          ),
-                        ),
-                      ] else ...[
-                        _SetupCard(
-                          number: '01',
-                          title: 'Which words?',
-                          child: _recallFilterChoices(),
-                        ),
-                        const SizedBox(height: 14),
-                        _SetupCard(
-                          number: '02',
-                          title: 'How many cards?',
-                          child: _countControl(maxCount),
-                        ),
-                      ],
+                      _SetupCard(
+                        number: _isScriptStudy ? '02' : '01',
+                        title: _isScriptStudy
+                            ? 'Which letters?'
+                            : 'Which words?',
+                        child: _recallFilterChoices(),
+                      ),
+                      const SizedBox(height: 14),
+                      _SetupCard(
+                        number: _isScriptStudy ? '03' : '02',
+                        title: 'How many cards?',
+                        child: _countControl(maxCount),
+                      ),
                       const SizedBox(height: 22),
                       FilledButton.icon(
                         onPressed: maxCount == 0 ? null : _openStudySheet,
