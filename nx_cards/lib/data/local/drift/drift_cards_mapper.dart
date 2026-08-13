@@ -78,7 +78,7 @@ final class DriftCardsMapper {
     );
   }
 
-  StudyCard cardFromRow(LocalStudyCardRow row, CardDeck deck) {
+  StudyCard cardFromRow(LocalStudyCardRow row, [CardDeck? deck]) {
     final schedule = _jsonMap(row.scheduleJson);
     final history = _jsonMap(row.reviewHistoryJson);
     return StudyCard(
@@ -93,7 +93,7 @@ final class DriftCardsMapper {
             )
           : BasicCardContent(front: row.front, back: row.back),
       deckId: row.deckId,
-      deckName: deck.name,
+      deckName: deck?.name ?? unassignedDeckName,
       schedules: <StudyCue, CardSchedule>{
         for (final cue in StudyCue.values)
           cue: _scheduleFrom(_cueNode(schedule, cue)),

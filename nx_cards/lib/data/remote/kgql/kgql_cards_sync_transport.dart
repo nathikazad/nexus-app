@@ -2,6 +2,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_cards/application/ports/cards_sync_transport.dart';
 import 'package:nx_cards/data/remote/kgql/card_model_mapper.dart';
 import 'package:nx_cards/data/remote/kgql/card_schema.dart';
+import 'package:nx_cards/data/remote/kgql/kgql_cards_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_db/cards.dart' as cards_api;
 import 'package:nx_db/kgql.dart';
@@ -84,7 +85,7 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
   @override
   Future<CardMutationResult> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   }) => _mutate(
@@ -120,13 +121,17 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
           ),
       ],
       relations: <ModelRelation>[
-        ModelRelation(modelType: deckModelType, link: <int>[deckId]),
+        if (deckId != null)
+          ModelRelation(modelType: deckModelType, link: <int>[deckId]),
         if (sourceBookId != null)
           ModelRelation(modelType: bookModelType, link: <int>[sourceBookId]),
       ],
     ),
     clientUpdatedAt,
   );
+
+  @override
+  Future<List<StudyCard>> syncCards() => fetchKgqlCards(_client);
 
   Future<CardMutationResult> _mutate(
     SetModelRequest request,

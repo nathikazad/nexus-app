@@ -66,15 +66,7 @@ final class CardMutationHandler implements offline.MutationHandler {
           ),
         ),
     });
-    final deckIds = <int>{
-      card.deckId,
-      for (final revision in result.deckHashes) revision.deckId,
-    };
-    final manifest = await localStore.deckManifest(deckIds: deckIds);
-    final bundle = await transport.syncDecks(
-      manifest: manifest,
-      deckIds: deckIds,
-    );
+    final snapshot = await transport.syncCards();
     return offline.MutationReceipt(
       operationId: mutation.operationId,
       entityKey: mutation.entityKey,
@@ -84,7 +76,7 @@ final class CardMutationHandler implements offline.MutationHandler {
       metadata: <String, Object?>{
         cardMutationStatusMetadataKey: result.status.name,
         cardDeckHashesMetadataKey: result.deckHashes,
-        cardSyncBundleMetadataKey: bundle,
+        cardSnapshotMetadataKey: snapshot,
       },
     );
   }

@@ -45,6 +45,46 @@ void main() {
     expect(find.text('relief'), findsNothing);
     expect(find.text('കഴിവ്'), findsOneWidget);
   });
+
+  testWidgets('uses the shared study sheet for book cards', (tester) async {
+    final card = StudyCard(
+      id: 3,
+      content: const BasicCardContent(
+        front: 'What is customer discovery?',
+        back: 'Testing hypotheses outside the building.',
+      ),
+      deckId: 0,
+      deckName: '',
+      schedules: const {
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      },
+      reviewHistory: const {},
+      suspended: false,
+      sourceBookId: 4195,
+      sourceBookName: 'The Four Steps to the Epiphany',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          home: LanguageStudyPage(
+            title: 'The Four Steps to the Epiphany',
+            cards: [card],
+            itemLabel: 'cards',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('1 cards'), findsOneWidget);
+    expect(find.text('What is customer discovery?'), findsOneWidget);
+    expect(
+      find.text('Testing hypotheses outside the building.'),
+      findsOneWidget,
+    );
+    expect(find.text('Examples'), findsNothing);
+  });
 }
 
 StudyCard _card(int id, String english, String script, String transliteration) {

@@ -24,7 +24,7 @@ abstract class CardsRepository {
 
   Future<int> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
   });
 

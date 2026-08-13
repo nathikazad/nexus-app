@@ -5,7 +5,7 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/domain/card/cards_repository.dart';
 import 'package:nx_db/kgql.dart';
 
-const _baseCardStruct = <String, dynamic>{
+const baseCardStruct = <String, dynamic>{
   'id': true,
   'name': true,
   'description': true,
@@ -22,8 +22,8 @@ const _baseCardStruct = <String, dynamic>{
   bookModelType: {'id': true, 'name': true},
 };
 
-const _languageCardStruct = <String, dynamic>{
-  ..._baseCardStruct,
+const languageCardStruct = <String, dynamic>{
+  ...baseCardStruct,
   attrLanguageDetails: true,
   'relations': {
     'relation_id': true,
@@ -33,6 +33,42 @@ const _languageCardStruct = <String, dynamic>{
     'relation_name': true,
   },
 };
+
+Future<List<StudyCard>> fetchKgqlCards(GraphQLClient client) async {
+  final results = await Future.wait([
+    fetchKgqlModels(
+      client,
+      filter: const {'model_type': cardModelType},
+      struct: baseCardStruct,
+    ),
+    fetchKgqlModels(
+      client,
+      // KGQL projects tag systems from the filter type. Query lexical families
+      // at their concrete roots so Word Category is not lost by filtering at
+      // the LanguageFlashcard ancestor.
+      filter: const {'model_type': wordCardModelType},
+      struct: languageCardStruct,
+    ),
+    fetchKgqlModels(
+      client,
+      filter: const {'model_type': phraseCardModelType},
+      struct: languageCardStruct,
+    ),
+    fetchKgqlModels(
+      client,
+      filter: const {'model_type': scriptCardModelType},
+      struct: languageCardStruct,
+    ),
+  ]);
+  final rowsById = <int, Model>{
+    for (final result in results)
+      for (final row in result) row.id: row,
+  };
+  return rowsById.values
+      .map((row) => studyCardFromModel(row, relatedModels: rowsById))
+      .whereType<StudyCard>()
+      .toList(growable: false);
+}
 
 class KgqlCardsRepository implements CardsRepository {
   KgqlCardsRepository(this._client);
@@ -60,31 +96,7 @@ class KgqlCardsRepository implements CardsRepository {
   }
 
   @override
-  Future<List<StudyCard>> listCards() async {
-    // A parent KGQL query returns child rows, but its struct can only project
-    // fields known to that parent. Fetch LanguageFlashcard separately so all
-    // language descendants retain language details and lexical relations.
-    final results = await Future.wait([
-      fetchKgqlModels(
-        _client,
-        filter: const {'model_type': cardModelType},
-        struct: _baseCardStruct,
-      ),
-      fetchKgqlModels(
-        _client,
-        filter: const {'model_type': languageCardModelType},
-        struct: _languageCardStruct,
-      ),
-    ]);
-    final rowsById = <int, Model>{
-      for (final result in results)
-        for (final row in result) row.id: row,
-    };
-    return rowsById.values
-        .map((row) => studyCardFromModel(row, relatedModels: rowsById))
-        .whereType<StudyCard>()
-        .toList();
-  }
+  Future<List<StudyCard>> listCards() => fetchKgqlCards(_client);
 
   @override
   Future<List<String>> listLanguages() async {
@@ -149,7 +161,7 @@ class KgqlCardsRepository implements CardsRepository {
   @override
   Future<int> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
   }) {
     return setKgqlModel(
@@ -186,7 +198,8 @@ class KgqlCardsRepository implements CardsRepository {
             ),
         ],
         relations: [
-          ModelRelation(modelType: deckModelType, link: [deckId]),
+          if (deckId != null)
+            ModelRelation(modelType: deckModelType, link: [deckId]),
           if (sourceBookId != null)
             ModelRelation(modelType: bookModelType, link: [sourceBookId]),
         ],

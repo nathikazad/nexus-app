@@ -97,6 +97,26 @@ void main() {
 
     expect(status?.recallPercentage, 33);
   });
+
+  test('recall percentage keeps the full window as denominator', () {
+    final oneOfTwo = _card(
+      schedules: {
+        StudyCue.fromLanguage: _schedule(
+          state: 'review',
+          dueAt: DateTime.utc(2026, 8, 12),
+        ),
+      },
+      recallRatings: const [3, 1],
+    );
+    final neverReviewed = _card(
+      schedules: const {
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      },
+    );
+
+    expect(frontToBackRecallPercentage(oneOfTwo), 20);
+    expect(frontToBackRecallPercentage(neverReviewed), 0);
+  });
 }
 
 StudyCard _card({

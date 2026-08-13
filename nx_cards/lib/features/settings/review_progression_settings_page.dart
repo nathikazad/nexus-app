@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/core/theme/app_theme.dart';
 import 'package:nx_cards/features/settings/review_progression_settings.dart';
 
@@ -37,6 +38,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late int _currentPercentage = widget.initial.moveToCurrentPercentage;
   late bool _autoReplace = widget.initial.autoReplacePromotedCards;
   bool _saving = false;
+  bool _syncing = false;
+  String? _syncMessage;
+  bool _syncFailed = false;
 
   bool get _valid => _currentPercentage < _pastPercentage;
 
@@ -56,6 +60,30 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _fullSync() async {
+    if (_syncing) return;
+    setState(() {
+      _syncing = true;
+      _syncMessage = null;
+      _syncFailed = false;
+    });
+    try {
+      final count = await ref.read(cardsFullSyncProvider)();
+      if (!mounted) return;
+      setState(
+        () => _syncMessage = 'Full sync complete. $count cards downloaded.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _syncFailed = true;
+        _syncMessage = 'Full sync failed: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _syncing = false);
     }
   }
 
@@ -164,6 +192,51 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                 ),
               ],
               const SizedBox(height: 22),
+              const Divider(),
+              const SizedBox(height: 18),
+              const Text(
+                'Offline library',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 7),
+              const Text(
+                'Upload pending reviews, then download a fresh snapshot of every card from the server.',
+                style: TextStyle(color: RecallColors.muted, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              _SettingsCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.tonalIcon(
+                      key: const Key('full-sync-button'),
+                      onPressed: _syncing ? null : _fullSync,
+                      icon: _syncing
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync),
+                      label: Text(
+                        _syncing ? 'Synchronizing…' : 'Full sync now',
+                      ),
+                    ),
+                    if (_syncMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        _syncMessage!,
+                        key: const Key('full-sync-result'),
+                        style: TextStyle(
+                          color: _syncFailed
+                              ? Theme.of(context).colorScheme.error
+                              : RecallColors.emerald,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
               FilledButton(
                 onPressed: _valid && !_saving ? _save : null,
                 child: Text(_saving ? 'Saving…' : 'Save settings'),
@@ -239,13 +312,13 @@ class _SettingsCard extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white,
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: RecallColors.line),
+      side: const BorderSide(color: RecallColors.line),
     ),
-    child: child,
+    clipBehavior: Clip.antiAlias,
+    child: Padding(padding: const EdgeInsets.all(18), child: child),
   );
 }

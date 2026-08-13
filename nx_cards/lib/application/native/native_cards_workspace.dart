@@ -75,7 +75,7 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   @override
   Future<int> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
   }) async {
     final result = await _requireTransport().createCard(
@@ -84,7 +84,11 @@ final class NativeCardsWorkspace implements CardsWorkspace {
       sourceBookId: sourceBookId,
       clientUpdatedAt: _clock.now(),
     );
-    await _synchronizer.syncDeck(deckId);
+    if (deckId == null) {
+      await _synchronizer.syncLibrary();
+    } else {
+      await _synchronizer.syncDeck(deckId);
+    }
     return result.entityId;
   }
 

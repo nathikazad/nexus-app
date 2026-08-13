@@ -47,7 +47,7 @@ final class WebCardsWorkspace implements CardsWorkspace {
   @override
   Future<int> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
   }) => _repository.createCard(
     content: content,

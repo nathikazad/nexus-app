@@ -8,25 +8,78 @@ class CardsDashboard {
   final List<CardDeck> decks;
   final List<StudyCard> cards;
 
-  Iterable<StudyPrompt> _prompts({int? deckId, String? studyCategory}) => cards
+  String? languageFor(StudyCard card) {
+    if (card.language case final language? when language.isNotEmpty) {
+      return language;
+    }
+    return decks
+        .where((deck) => deck.id == card.deckId && deck.isLanguageDeck)
+        .map((deck) => deck.toLanguage)
+        .firstOrNull;
+  }
+
+  List<String> get languages => <String>{
+    for (final card in cards)
+      if (languageFor(card) case final language? when language.isNotEmpty)
+        language,
+  }.toList()..sort((left, right) => left.compareTo(right));
+
+  List<StudyCard> cardsForLanguage(String language) => cards
+      .where((card) => languageFor(card) == language)
+      .toList(growable: false);
+
+  List<StudyCard> cardsForBook(int bookId) => cards
+      .where((card) => card.sourceBookId == bookId)
+      .toList(growable: false);
+
+  Iterable<StudyPrompt> _prompts({
+    int? deckId,
+    String? studyCategory,
+    String? language,
+    int? bookId,
+  }) => cards
       .where(
         (card) =>
             (deckId == null || card.deckId == deckId) &&
-            (studyCategory == null || card.studyCategory == studyCategory) &&
+            (studyCategory == null ||
+                card.belongsToStudyCategory(studyCategory)) &&
+            (language == null || languageFor(card) == language) &&
+            (bookId == null || card.sourceBookId == bookId) &&
             !card.isPhraseCard &&
-            (card.studyCategory == null || card.isRecallEligible),
+            (card.studyCategories.isEmpty || card.isRecallEligible),
       )
       .expand((card) => card.prompts);
 
-  int dueCount(DateTime now, {int? deckId, String? studyCategory}) =>
-      _prompts(deckId: deckId, studyCategory: studyCategory)
+  int dueCount(
+    DateTime now, {
+    int? deckId,
+    String? studyCategory,
+    String? language,
+    int? bookId,
+  }) =>
+      _prompts(
+            deckId: deckId,
+            studyCategory: studyCategory,
+            language: language,
+            bookId: bookId,
+          )
           .where((prompt) => prompt.isDueAt(now))
           .map((prompt) => prompt.cardId)
           .toSet()
           .length;
 
-  int newCount({int? deckId, String? studyCategory}) =>
-      _prompts(deckId: deckId, studyCategory: studyCategory)
+  int newCount({
+    int? deckId,
+    String? studyCategory,
+    String? language,
+    int? bookId,
+  }) =>
+      _prompts(
+            deckId: deckId,
+            studyCategory: studyCategory,
+            language: language,
+            bookId: bookId,
+          )
           .where((prompt) => prompt.isNew)
           .map((prompt) => prompt.cardId)
           .toSet()
@@ -40,8 +93,15 @@ class CardsDashboard {
     int? deckId,
     int newCardLimit = 20,
     String? studyCategory,
+    String? language,
+    int? bookId,
   }) {
-    final eligible = _prompts(deckId: deckId, studyCategory: studyCategory);
+    final eligible = _prompts(
+      deckId: deckId,
+      studyCategory: studyCategory,
+      language: language,
+      bookId: bookId,
+    );
     final due = eligible.where((prompt) => prompt.isDueAt(now)).toList()
       ..sort(
         (a, b) => (a.schedule.dueAt ?? now).compareTo(b.schedule.dueAt ?? now),

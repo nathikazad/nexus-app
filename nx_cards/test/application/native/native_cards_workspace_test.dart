@@ -67,7 +67,7 @@ void main() {
   });
 
   test(
-    'reconnect uploads pending edit then reconciles the deck aggregate',
+    'reconnect uploads pending edit then reconciles the card library',
     () async {
       final offlineWorkspace = NativeCardsWorkspace(
         localStore: store,
@@ -111,13 +111,8 @@ void main() {
       expect(transport.mutatedCards.single.front, 'ability');
       expect(await store.pendingMutations(), isEmpty);
       expect((await store.readDashboard()).cards.single.front, 'ability');
-      expect((await store.deckManifest()).single.serverHash, 'hash-2');
-      expect(
-        transport.targetedDeckIds.whereType<Set<int>>(),
-        contains(
-          predicate<Set<int>>((ids) => ids.length == 1 && ids.first == 7),
-        ),
-      );
+      expect(transport.targetedDeckIds, isEmpty);
+      expect(transport.syncCardsCalls, greaterThanOrEqualTo(1));
     },
   );
 
@@ -246,6 +241,7 @@ final class _FakeTransport implements CardsSyncTransport {
   final List<StudyCard> mutatedCards = <StudyCard>[];
   final List<int> deletedCardIds = <int>[];
   final List<Set<int>?> targetedDeckIds = <Set<int>?>[];
+  int syncCardsCalls = 0;
 
   @override
   Future<CardMutationResult> mutateCard(
@@ -290,6 +286,12 @@ final class _FakeTransport implements CardsSyncTransport {
   }
 
   @override
+  Future<List<StudyCard>> syncCards() async {
+    syncCardsCalls += 1;
+    return [for (final remote in serverBundle.decks) ...remote.cards];
+  }
+
+  @override
   Future<CardMutationResult> deleteCard(
     int cardId, {
     required DateTime clientUpdatedAt,
@@ -312,7 +314,7 @@ final class _FakeTransport implements CardsSyncTransport {
   @override
   Future<CardMutationResult> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   }) => throw UnimplementedError();

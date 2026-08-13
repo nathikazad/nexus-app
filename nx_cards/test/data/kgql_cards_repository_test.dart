@@ -81,6 +81,10 @@ void main() {
         final filter = request.variables['filter'] as Map<String, dynamic>;
         final requestedType = filter['model_type']! as String;
         requestedTypes.add(requestedType);
+        if (requestedType == phraseCardModelType ||
+            requestedType == scriptCardModelType) {
+          return {'__typename': 'Query', 'getKgqlModels': <Object?>[]};
+        }
         return {
           '__typename': 'Query',
           'getKgqlModels': [
@@ -118,7 +122,11 @@ void main() {
               'FlashcardDeck': [
                 {'id': 7, 'name': 'Malayalam', 'model_type_id': 65},
               ],
-              'tags': <String, dynamic>{},
+              'tags': <String, dynamic>{
+                'Language': <String>['Malayalam'],
+                if (requestedType == wordCardModelType)
+                  'Word Category': <String>['Noun'],
+              },
             },
           ],
         };
@@ -137,7 +145,13 @@ void main() {
     expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
     expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
     expect(cards.single.learningStatus, LearningStatus.learning);
-    expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});
+    expect(cards.single.tags['Word Category'], ['Noun']);
+    expect(requestedTypes.toSet(), {
+      cardModelType,
+      wordCardModelType,
+      phraseCardModelType,
+      scriptCardModelType,
+    });
   });
 }
 

@@ -38,6 +38,7 @@ class StudyCard {
   bool get isWordCard => modelTypeName == 'Word' || modelTypeName == 'Verb';
   bool get isPhraseCard => modelTypeName == 'Phrase';
   bool get isScriptCard => modelTypeName == 'Script';
+  String? get language => tags['Language']?.firstOrNull;
   final int deckId;
   final String deckName;
   final Map<StudyCue, CardSchedule> schedules;
@@ -46,12 +47,34 @@ class StudyCard {
   final LearningStatus learningStatus;
   bool get isRecallEligible => learningStatus.isRecallEligible;
   final Map<String, List<String>> tags;
-  String? get wordCategory => tags['Word Category']?.firstOrNull;
-  String? get studyCategory => isScriptCard
-      ? 'Script'
-      : isWordCard
-      ? wordCategory
-      : null;
+  List<String> get wordCategories => <String>{
+    for (final category in tags['Word Category'] ?? const <String>[])
+      if (category.trim().isNotEmpty) category.trim(),
+    for (final category in tags['Part of Speech'] ?? const <String>[])
+      if (category.trim().isNotEmpty) category.trim(),
+  }.toList(growable: false);
+  String? get wordCategory => wordCategories.firstOrNull;
+  List<String> get studyCategories => isScriptCard
+      ? const <String>['Script']
+      : isPhraseCard
+      ? const <String>['Phrase']
+      : modelTypeName == 'Verb'
+      ? const <String>['Verb']
+      : modelTypeName == 'Word'
+      ? wordCategories
+      : const <String>[];
+  String? get studyCategory => studyCategories.firstOrNull;
+  bool belongsToStudyCategory(String category) =>
+      studyCategories.contains(category);
+  String? get progressionCohort {
+    final category = studyCategory;
+    if (category != null) {
+      return 'language:${language ?? deckName}:$category';
+    }
+    final bookId = sourceBookId;
+    return bookId == null ? null : 'book:$bookId';
+  }
+
   final String? modelTypeName;
   final int? sourceBookId;
   final String? sourceBookName;

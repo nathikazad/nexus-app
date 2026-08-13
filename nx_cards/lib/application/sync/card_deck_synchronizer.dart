@@ -32,9 +32,7 @@ final class CardDeckSynchronizer {
   Future<void> _syncLibraryOnce() async {
     final transport = _requireTransport();
     await _uploader?.uploadPending();
-    final manifest = await _localStore.deckManifest();
-    final bundle = await transport.syncDecks(manifest: manifest);
-    await _localStore.applySyncBundle(bundle);
+    await _localStore.applyCardSnapshot(await transport.syncCards());
     unawaited(prefetchAudio());
   }
 

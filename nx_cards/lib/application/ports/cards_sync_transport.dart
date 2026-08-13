@@ -21,10 +21,12 @@ abstract interface class CardsSyncTransport {
 
   Future<CardMutationResult> createCard({
     required CardContent content,
-    required int deckId,
+    int? deckId,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   });
+
+  Future<List<StudyCard>> syncCards();
 
   Future<CardDeckSyncBundle> syncDecks({
     required List<CardDeckManifestEntry> manifest,

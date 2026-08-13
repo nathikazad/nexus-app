@@ -27,7 +27,6 @@ StudyCard? studyCardFromModel(
   Map<int, Model> relatedModels = const <int, Model>{},
 }) {
   final deck = _relatedModels(model, deckModelType).firstOrNull;
-  if (deck == null) return null;
   final book = _relatedModels(model, bookModelType).firstOrNull;
   final schedule = _jsonMap(model.attributes?[attrSchedule]);
   final history = _reviewHistoryByCueFrom(model.attributes?[attrReviewHistory]);
@@ -54,8 +53,8 @@ StudyCard? studyCardFromModel(
                 : languageExamplesFromJson(languageDetails['examples']),
           )
         : BasicCardContent(front: front, back: back),
-    deckId: deck.id,
-    deckName: deck.name,
+    deckId: deck?.id ?? unassignedDeckId,
+    deckName: deck?.name ?? unassignedDeckName,
     schedules: <StudyCue, CardSchedule>{
       for (final cue in StudyCue.values)
         cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),

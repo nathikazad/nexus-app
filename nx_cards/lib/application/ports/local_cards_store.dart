@@ -16,6 +16,8 @@ abstract interface class LocalCardsStore implements OutboxStore {
 
   Future<void> applySyncBundle(CardDeckSyncBundle bundle);
 
+  Future<void> applyCardSnapshot(List<StudyCard> cards);
+
   Future<void> saveCardAndEnqueue(
     StudyCard card, {
     required String operationId,

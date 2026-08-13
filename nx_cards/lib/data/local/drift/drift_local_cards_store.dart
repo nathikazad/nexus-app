@@ -93,8 +93,10 @@ final class DriftLocalCardsStore implements LocalCardsStore {
     final row = await _cardQuery(cardId).getSingleOrNull();
     if (row == null) return null;
     final deckRow = await _deckQuery(row.deckId).getSingleOrNull();
-    if (deckRow == null) return null;
-    return mapper.cardFromRow(row, mapper.deckFromRow(deckRow));
+    return mapper.cardFromRow(
+      row,
+      deckRow == null ? null : mapper.deckFromRow(deckRow),
+    );
   }
 
   @override
@@ -135,6 +137,37 @@ final class DriftLocalCardsStore implements LocalCardsStore {
   @override
   Future<void> applySyncBundle(CardDeckSyncBundle bundle) {
     return database.transaction(() => _applySyncBundle(bundle));
+  }
+
+  @override
+  Future<void> applyCardSnapshot(List<StudyCard> cards) {
+    return database.transaction(() => _applyCardSnapshot(cards));
+  }
+
+  Future<void> _applyCardSnapshot(List<StudyCard> cards) async {
+    final remoteIds = <int>{for (final card in cards) card.id};
+    for (final card in cards) {
+      if (await _hasPendingCard(card.id)) continue;
+      await database
+          .into(database.localStudyCards)
+          .insertOnConflictUpdate(
+            mapper.cardToCompanion(
+              card,
+              accountKey: _accountKey,
+              syncState: CardLocalSyncState.synced,
+            ),
+          );
+    }
+    final existing = await (database.select(
+      database.localStudyCards,
+    )..where((table) => table.accountKey.equals(_accountKey))).get();
+    for (final row in existing) {
+      if (remoteIds.contains(row.remoteId) ||
+          await _hasPendingCard(row.remoteId)) {
+        continue;
+      }
+      await _deleteCard(row.remoteId);
+    }
   }
 
   Future<void> _applySyncBundle(CardDeckSyncBundle bundle) async {
@@ -259,6 +292,8 @@ final class DriftLocalCardsStore implements LocalCardsStore {
 
       final bundle = receipt.metadata[cardSyncBundleMetadataKey];
       if (bundle is CardDeckSyncBundle) await _applySyncBundle(bundle);
+      final snapshot = receipt.metadata[cardSnapshotMetadataKey];
+      if (snapshot is List<StudyCard>) await _applyCardSnapshot(snapshot);
 
       final remoteId = operation.entityKey.remoteId;
       if (remoteId == null) return;
@@ -326,9 +361,7 @@ final class DriftLocalCardsStore implements LocalCardsStore {
     ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final deckById = <int, CardDeck>{for (final deck in decks) deck.id: deck};
     final cards = <StudyCard>[
-      for (final row in cardRows)
-        if (deckById[row.deckId] case final deck?)
-          mapper.cardFromRow(row, deck),
+      for (final row in cardRows) mapper.cardFromRow(row, deckById[row.deckId]),
     ];
     return CardsDashboard(decks: decks, cards: cards);
   }

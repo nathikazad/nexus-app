@@ -51,13 +51,15 @@ ReviewProgressionPlan planReviewProgression({
   final promotedByCohort = <String, int>{};
 
   for (final card in reviewedById.values) {
-    final cohort = card.studyCategory;
+    final cohort = card.progressionCohort;
     if (cohort == null) continue;
     final reviews = <CardReview>[
       for (final cue in StudyCue.values) ...card.reviewHistoryFor(cue),
     ]..sort((a, b) => a.reviewedAt.compareTo(b.reviewedAt));
-    if (reviews.length < settings.historyWindow) continue;
-    final recent = reviews.sublist(reviews.length - settings.historyWindow);
+    if (reviews.isEmpty) continue;
+    final recent = reviews.skip(
+      (reviews.length - settings.historyWindow).clamp(0, reviews.length),
+    );
     final recalled = recent.where((review) => review.rating >= 3).length;
     final percentage = recalled * 100 / settings.historyWindow;
 
@@ -95,7 +97,7 @@ ReviewProgressionPlan planReviewProgression({
     for (final entry in promotedByCohort.entries) {
       final candidates = allCards.where(
         (card) =>
-            card.studyCategory == entry.key &&
+            card.progressionCohort == entry.key &&
             projectedStatus[card.id] == LearningStatus.notStarted,
       );
       for (final card in candidates.take(entry.value)) {

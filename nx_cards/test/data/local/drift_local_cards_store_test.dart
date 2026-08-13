@@ -52,6 +52,34 @@ void main() {
     expect((await store.deckManifest()).single.serverHash, 'hash-1');
   });
 
+  test('imports and reads a deckless book-card snapshot', () async {
+    final card = StudyCard(
+      id: 5385,
+      content: const BasicCardContent(
+        front: 'Why validate demand?',
+        back: 'To avoid scaling an unproven model.',
+      ),
+      deckId: 0,
+      deckName: '',
+      schedules: const <StudyCue, CardSchedule>{
+        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      },
+      reviewHistory: const <StudyCue, List<CardReview>>{},
+      suspended: false,
+      sourceBookId: 4195,
+      sourceBookName: 'The Four Steps to the Epiphany',
+      modelTypeName: 'Flashcard',
+    );
+
+    await store.applyCardSnapshot([card]);
+
+    final dashboard = await store.readDashboard();
+    expect(dashboard.cards, hasLength(1));
+    expect(dashboard.cards.single.deckId, 0);
+    expect(dashboard.cards.single.sourceBookId, 4195);
+    expect((await store.getCard(5385))?.front, 'Why validate demand?');
+  });
+
   test('domain update and durable outbox enqueue commit atomically', () async {
     await store.applySyncBundle(_bundle(hash: 'hash-1'));
     final original = (await store.readDashboard()).cards.single;

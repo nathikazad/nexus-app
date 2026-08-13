@@ -92,7 +92,6 @@ void main() {
         _card(
           3,
           modelTypeName: 'Verb',
-          wordCategory: 'Verb',
           learningStatus: LearningStatus.learning,
         ),
         _card(4, modelTypeName: 'Phrase'),
@@ -108,6 +107,37 @@ void main() {
     expect(dashboard.newCount(studyCategory: 'Noun'), 2);
     expect(dashboard.studyQueue(now).map((prompt) => prompt.cardId), [1, 3, 5]);
   });
+
+  test('groups cards by Language tag and Book relation without decks', () {
+    final malayalam = _card(1, language: 'Malayalam');
+    final spanish = _card(2, language: 'Spanish');
+    final book = _card(3, deckId: 0, bookId: 4195, bookName: 'Four Steps');
+    final dashboard = CardsDashboard(
+      decks: const [deck],
+      cards: [malayalam, spanish, book],
+    );
+
+    expect(dashboard.languages, ['Malayalam', 'Spanish']);
+    expect(dashboard.cardsForLanguage('Malayalam'), [malayalam]);
+    expect(dashboard.cardsForBook(4195), [book]);
+    expect(
+      dashboard.studyQueue(now, bookId: 4195).map((prompt) => prompt.cardId),
+      [3],
+    );
+  });
+
+  test('exposes every Word category and a category for untagged Verbs', () {
+    final word = _card(
+      1,
+      modelTypeName: 'Word',
+      wordCategories: const ['Noun', 'Adjective'],
+    );
+    final verb = _card(2, modelTypeName: 'Verb');
+
+    expect(word.studyCategories, ['Noun', 'Adjective']);
+    expect(word.belongsToStudyCategory('Adjective'), isTrue);
+    expect(verb.studyCategories, ['Verb']);
+  });
 }
 
 StudyCard _card(
@@ -119,6 +149,11 @@ StudyCard _card(
   LearningStatus learningStatus = LearningStatus.notStarted,
   String? modelTypeName,
   String? wordCategory,
+  List<String>? wordCategories,
+  String? language,
+  int deckId = 1,
+  int? bookId,
+  String? bookName,
 }) {
   return StudyCard(
     id: id,
@@ -127,8 +162,8 @@ StudyCard _card(
       originalScript: 'back $id',
       transliteration: 'sound $id',
     ),
-    deckId: 1,
-    deckName: 'French',
+    deckId: deckId,
+    deckName: deckId == 0 ? '' : 'French',
     schedules: <StudyCue, CardSchedule>{
       StudyCue.fromLanguage: CardSchedule(
         enabled: true,
@@ -152,10 +187,25 @@ StudyCard _card(
     suspended: suspended,
     learningStatus: learningStatus,
     modelTypeName: modelTypeName,
-    tags: wordCategory == null
-        ? const <String, List<String>>{}
-        : <String, List<String>>{
-            'Word Category': <String>[wordCategory],
-          },
+    tags: _tags(
+      wordCategories: wordCategories,
+      wordCategory: wordCategory,
+      language: language,
+    ),
+    sourceBookId: bookId,
+    sourceBookName: bookName,
   );
+}
+
+Map<String, List<String>> _tags({
+  List<String>? wordCategories,
+  String? wordCategory,
+  String? language,
+}) {
+  final tags = <String, List<String>>{};
+  final categories =
+      wordCategories ?? (wordCategory == null ? null : <String>[wordCategory]);
+  if (categories != null) tags['Word Category'] = categories;
+  if (language != null) tags['Language'] = <String>[language];
+  return tags;
 }

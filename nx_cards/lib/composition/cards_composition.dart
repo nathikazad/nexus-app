@@ -242,6 +242,7 @@ final relatedBooksProvider = FutureProvider<List<RelatedBook>>((ref) {
 });
 
 typedef CardsLibrarySync = Future<void> Function();
+typedef CardsFullSync = Future<int> Function();
 typedef CardDeckSync = Future<void> Function(int deckId);
 
 final cardsLibrarySyncProvider = Provider<CardsLibrarySync>((ref) {
@@ -253,6 +254,18 @@ final cardsLibrarySyncProvider = Provider<CardsLibrarySync>((ref) {
     } else {
       ref.invalidate(cardsDashboardProvider);
     }
+  };
+});
+
+/// Forces a network-backed library snapshot and reports the resulting local
+/// card count. Unlike lifecycle sync, callers receive any error so they can
+/// surface it to the user.
+final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
+  return () async {
+    final workspace = ref.read(cardsWorkspaceProvider);
+    if (workspace == null) throw StateError('Cards are not ready yet.');
+    await workspace.syncLibrary();
+    return (await workspace.listCards()).length;
   };
 });
 

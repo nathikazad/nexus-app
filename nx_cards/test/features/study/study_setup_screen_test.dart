@@ -152,6 +152,99 @@ void main() {
     expect(find.text('Start AI tutor'), findsOneWidget);
   });
 
+  testWidgets('study mode reuses word filters and card count from recall', (
+    tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final cards = <StudyCard>[
+      _recallFilterCard(
+        id: 1,
+        learningStatus: LearningStatus.learning,
+        state: 'learning',
+        lastReviewedAt: now,
+      ),
+      _recallFilterCard(
+        id: 2,
+        learningStatus: LearningStatus.learning,
+        state: 'relearning',
+        lastReviewedAt: now,
+      ),
+      _recallFilterCard(
+        id: 3,
+        learningStatus: LearningStatus.learnt,
+        state: 'review',
+        lastReviewedAt: now,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(decks: const [], cards: cards)),
+          ),
+        ],
+        child: MaterialApp(
+          home: StudySetupScreen(
+            title: 'Malayalam',
+            prompts: [for (final card in cards) ...card.prompts],
+            studyCards: cards,
+            fromLanguage: 'English',
+            toLanguage: 'Malayalam',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Which words?'), findsOneWidget);
+    expect(find.text('How many cards?'), findsOneWidget);
+    expect(find.text('All words on one page'), findsNothing);
+    expect(find.text('Choose the order'), findsNothing);
+    expect(find.text('2 available'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Which words?')).dy,
+      lessThan(tester.getTopLeft(find.text('How many cards?')).dy),
+    );
+
+    final setupCards = tester.widgetList<Card>(find.byType(Card)).toList();
+    expect(setupCards, hasLength(2));
+    expect(
+      find.descendant(
+        of: find.byWidget(setupCards[0]),
+        matching: find.text('01'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byWidget(setupCards[1]),
+        matching: find.text('02'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Past'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+    await tester.pump();
+    expect(find.text('3 available'), findsOneWidget);
+
+    final countSlider = tester.widget<Slider>(find.byType(Slider).last);
+    countSlider.onChanged!(2);
+    await tester.pump();
+    await tester.ensureVisible(find.text('Open study sheet'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open study sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 words'), findsOneWidget);
+    expect(find.text('word 1'), findsOneWidget);
+    expect(find.text('word 2'), findsOneWidget);
+    expect(find.text('word 3'), findsNothing);
+  });
+
   testWidgets('recall filters current and past cards by memory state', (
     tester,
   ) async {

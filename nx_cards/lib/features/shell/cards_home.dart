@@ -97,7 +97,7 @@ class _SchemaSetupState extends ConsumerState<_SchemaSetup> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Create the FlashcardDeck, Flashcard, and LanguageFlashcard KGQL model types, including deck language and card topics.',
+                    'Create the Flashcard and LanguageFlashcard KGQL model types used by Recall.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: RecallColors.muted, height: 1.45),
                   ),
@@ -131,13 +131,13 @@ class _HomeScaffold extends ConsumerWidget {
         error: error,
         onRetry: () => ref.invalidate(cardsDashboardProvider),
       ),
-      data: (data) => _LanguageCategoriesDashboard(data: data),
+      data: (data) => _SourcesDashboard(data: data),
     );
     return Scaffold(
       backgroundColor: RecallColors.soft,
       appBar: AppBar(
         title: const Text(
-          'Categories',
+          'Library',
           style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
         ),
         actions: [
@@ -162,15 +162,241 @@ class _HomeScaffold extends ConsumerWidget {
   }
 }
 
-class _LanguageCategoriesDashboard extends ConsumerWidget {
-  const _LanguageCategoriesDashboard({required this.data});
+class _SourcesDashboard extends StatelessWidget {
+  const _SourcesDashboard({required this.data});
 
   final CardsDashboard data;
 
   @override
+  Widget build(BuildContext context) {
+    final booksById = <int, String>{};
+    for (final card in data.cards) {
+      final id = card.sourceBookId;
+      if (id != null) booksById[id] = card.sourceBookName ?? 'Book $id';
+    }
+    final books = booksById.entries.toList()
+      ..sort((left, right) => left.value.compareTo(right.value));
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1050),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _LibrarySectionTitle(
+                  title: 'Languages',
+                  subtitle:
+                      'Choose a language, then script, words, or phrases.',
+                ),
+                const SizedBox(height: 12),
+                _SourceGrid(
+                  children: [
+                    for (final language in data.languages)
+                      _SourceCard(
+                        title: language,
+                        subtitle:
+                            '${data.cardsForLanguage(language).length} cards',
+                        icon: Icons.translate_outlined,
+                        color: RecallColors.violet,
+                        due: data.dueCount(DateTime.now(), language: language),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                LanguageHomeScreen(language: language),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (books.isNotEmpty) ...[
+                  const SizedBox(height: 30),
+                  const _LibrarySectionTitle(
+                    title: 'Books',
+                    subtitle: 'Open a book to browse all of its flashcards.',
+                  ),
+                  const SizedBox(height: 12),
+                  _SourceGrid(
+                    children: [
+                      for (final book in books)
+                        _SourceCard(
+                          title: book.value,
+                          subtitle:
+                              '${data.cardsForBook(book.key).length} cards',
+                          icon: Icons.menu_book_outlined,
+                          color: RecallColors.sky,
+                          due: data.dueCount(DateTime.now(), bookId: book.key),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => BookCardsScreen(
+                                bookId: book.key,
+                                bookName: book.value,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LibrarySectionTitle extends StatelessWidget {
+  const _LibrarySectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+      ),
+    ],
+  );
+}
+
+class _SourceGrid extends StatelessWidget {
+  const _SourceGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final width = constraints.maxWidth >= 720
+          ? (constraints.maxWidth - 14) / 2
+          : constraints.maxWidth;
+      return Wrap(
+        spacing: 14,
+        runSpacing: 14,
+        children: [
+          for (final child in children) SizedBox(width: width, child: child),
+        ],
+      );
+    },
+  );
+}
+
+class _SourceCard extends StatelessWidget {
+  const _SourceCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.due,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final int due;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$subtitle · $due due',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: RecallColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward, size: 18),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class LanguageHomeScreen extends ConsumerWidget {
+  const LanguageHomeScreen({super.key, required this.language});
+
+  final String language;
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dashboard = ref.watch(cardsDashboardProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(language)),
+      body: dashboard.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _LoadError(
+          error: error,
+          onRetry: () => ref.invalidate(cardsDashboardProvider),
+        ),
+        data: (data) =>
+            _LanguageCategoriesDashboard(data: data, language: language),
+      ),
+    );
+  }
+}
+
+class _LanguageCategoriesDashboard extends ConsumerWidget {
+  const _LanguageCategoriesDashboard({required this.data, this.language});
+
+  final CardsDashboard data;
+  final String? language;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sourceCards = language == null
+        ? data.cards
+        : data.cardsForLanguage(language!);
     final categories = orderedLanguageCategories(
-      data.cards.map((card) => card.studyCategory),
+      sourceCards.expand((card) => card.studyCategories),
     );
     return RefreshIndicator(
       onRefresh: ref.read(cardsLibrarySyncProvider),
@@ -198,6 +424,7 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                               child: _LanguageCategoryCard(
                                 category: category,
                                 data: data,
+                                language: language,
                               ),
                             ),
                         ],
@@ -215,26 +442,40 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
 }
 
 class _LanguageCategoryCard extends StatelessWidget {
-  const _LanguageCategoryCard({required this.category, required this.data});
+  const _LanguageCategoryCard({
+    required this.category,
+    required this.data,
+    this.language,
+  });
 
   final String category;
   final CardsDashboard data;
+  final String? language;
 
   @override
   Widget build(BuildContext context) {
     final cards = data.cards
-        .where((card) => card.studyCategory == category)
+        .where(
+          (card) =>
+              card.belongsToStudyCategory(category) &&
+              (language == null || data.languageFor(card) == language),
+        )
         .toList(growable: false);
     final current = cards
         .where((card) => card.learningStatus == LearningStatus.learning)
         .length;
-    final due = data.dueCount(DateTime.now(), studyCategory: category);
+    final due = data.dueCount(
+      DateTime.now(),
+      studyCategory: category,
+      language: language,
+    );
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => LanguageCategoryScreen(category: category),
+            builder: (_) =>
+                LanguageCategoryScreen(category: category, language: language),
           ),
         ),
         child: Padding(
@@ -294,9 +535,14 @@ class _LanguageCategoryCard extends StatelessWidget {
 }
 
 class LanguageCategoryScreen extends ConsumerWidget {
-  const LanguageCategoryScreen({super.key, required this.category});
+  const LanguageCategoryScreen({
+    super.key,
+    required this.category,
+    this.language,
+  });
 
   final String category;
+  final String? language;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -313,7 +559,11 @@ class LanguageCategoryScreen extends ConsumerWidget {
         ),
         data: (data) {
           final cards = data.cards
-              .where((card) => card.studyCategory == category)
+              .where(
+                (card) =>
+                    card.belongsToStudyCategory(category) &&
+                    (language == null || data.languageFor(card) == language),
+              )
               .toList(growable: false);
           final now = DateTime.now().toUtc();
           final learning = sortWordsByScheduleState(
@@ -338,6 +588,7 @@ class LanguageCategoryScreen extends ConsumerWidget {
           final queue = data.studyQueue(
             DateTime.now(),
             studyCategory: category,
+            language: language,
             newCardLimit:
                 (learning.length + learnt.length) * StudyCue.values.length,
           );
@@ -359,11 +610,16 @@ class LanguageCategoryScreen extends ConsumerWidget {
                             ),
                           ),
                           _StudyLauncher(
-                            title: category,
-                            preferenceKey: 'language-category:$category',
+                            title: language == null
+                                ? category
+                                : '$language · $category',
+                            preferenceKey:
+                                'language-category:${language ?? 'all'}:$category',
                             prompts: queue,
                             studyCards: [...learning, ...learnt],
-                            languagePair: _languagesForCards(data, cards),
+                            languagePair: language == null
+                                ? _languagesForCards(data, cards)
+                                : _LanguagePair('English', language!),
                             builder: (onPressed) => FilledButton(
                               onPressed: onPressed,
                               child: const Text('Study'),
@@ -393,6 +649,7 @@ class LanguageCategoryScreen extends ConsumerWidget {
                     children: [
                       _LearningTab(
                         cards: learning,
+                        showScheduleStatus: true,
                         emptyText: category == 'Script'
                             ? 'No letters are currently being learned.'
                             : 'No words are currently being learned.',
@@ -432,11 +689,149 @@ class LanguageCategoryScreen extends ConsumerWidget {
   }
 }
 
+class BookCardsScreen extends ConsumerWidget {
+  const BookCardsScreen({
+    super.key,
+    required this.bookId,
+    required this.bookName,
+  });
+
+  final int bookId;
+  final String bookName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboard = ref.watch(cardsDashboardProvider);
+    final historyWindow =
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
+    return Scaffold(
+      appBar: AppBar(title: Text(bookName)),
+      body: dashboard.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _LoadError(
+          error: error,
+          onRetry: () => ref.invalidate(cardsDashboardProvider),
+        ),
+        data: (data) {
+          final cards = data.cardsForBook(bookId);
+          final now = DateTime.now().toUtc();
+          final learning = sortCardsByScheduleState(
+            cards.where(
+              (card) => card.learningStatus == LearningStatus.learning,
+            ),
+            now,
+            historyWindow: historyWindow,
+          );
+          final learnt = sortCardsByScheduleState(
+            cards.where((card) => card.learningStatus == LearningStatus.learnt),
+            now,
+            historyWindow: historyWindow,
+          );
+          final notStarted = sortCardsByScheduleState(
+            cards.where(
+              (card) => card.learningStatus == LearningStatus.notStarted,
+            ),
+            now,
+            historyWindow: historyWindow,
+          );
+          return DefaultTabController(
+            length: LearningStatus.values.length,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${cards.length} cards · ${learning.length} current',
+                              style: const TextStyle(color: RecallColors.muted),
+                            ),
+                          ),
+                          _StudyLauncher(
+                            title: bookName,
+                            preferenceKey: 'book:$bookId',
+                            prompts: [
+                              for (final card in cards)
+                                StudyPrompt(
+                                  card: card,
+                                  cue: StudyCue.fromLanguage,
+                                ),
+                            ],
+                            studyCards: cards,
+                            sourceKind: StudySourceKind.book,
+                            builder: (onPressed) => FilledButton(
+                              onPressed: onPressed,
+                              child: const Text('Study'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 900),
+                    child: TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      tabs: [
+                        Tab(text: 'Current  ${learning.length}'),
+                        Tab(text: 'Past  ${learnt.length}'),
+                        Tab(text: 'Future  ${notStarted.length}'),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _LearningTab(
+                        cards: learning,
+                        showScheduleStatus: true,
+                        emptyText: 'No cards are currently being learned.',
+                        previousStatus: LearningStatus.notStarted,
+                        previousActionLabel: '←',
+                        nextStatus: LearningStatus.learnt,
+                        actionLabel: '✓',
+                        dashboard: data,
+                      ),
+                      _LearningTab(
+                        cards: learnt,
+                        emptyText: 'No cards have been moved to Past yet.',
+                        previousStatus: LearningStatus.learning,
+                        previousActionLabel: '←',
+                        dashboard: data,
+                      ),
+                      _LearningTab(
+                        cards: notStarted,
+                        emptyText: 'Every card has been started.',
+                        nextStatus: LearningStatus.learning,
+                        actionLabel: '+',
+                        dashboard: data,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _LearningTab extends ConsumerWidget {
   const _LearningTab({
     required this.cards,
     required this.emptyText,
     required this.dashboard,
+    this.showScheduleStatus = false,
     this.previousStatus,
     this.previousActionLabel,
     this.nextStatus,
@@ -446,6 +841,7 @@ class _LearningTab extends ConsumerWidget {
   final List<StudyCard> cards;
   final String emptyText;
   final CardsDashboard dashboard;
+  final bool showScheduleStatus;
   final LearningStatus? previousStatus;
   final String? previousActionLabel;
   final LearningStatus? nextStatus;
@@ -484,6 +880,7 @@ class _LearningTab extends ConsumerWidget {
                               '${card.learningStatus.storageValue}:${card.id}',
                             ),
                             card: card,
+                            showScheduleStatus: showScheduleStatus,
                             deck: dashboard.decks
                                 .where((deck) => deck.id == card.deckId)
                                 .firstOrNull,
@@ -507,6 +904,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
     super.key,
     required this.card,
     required this.deck,
+    required this.showScheduleStatus,
     this.previousStatus,
     this.previousActionLabel,
     this.nextStatus,
@@ -515,6 +913,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
 
   final StudyCard card;
   final CardDeck? deck;
+  final bool showScheduleStatus;
   final LearningStatus? previousStatus;
   final String? previousActionLabel;
   final LearningStatus? nextStatus;
@@ -605,7 +1004,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final transliteration = content is LanguageCardContent
         ? content.transliteration
         : '';
-    final scheduleStatus = wordScheduleStatus(
+    final scheduleStatus = cardScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
       historyWindow:
@@ -676,8 +1075,8 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                                   ),
                                 ),
                               ),
-                              if (scheduleStatus != null &&
-                                  scheduleStatus.label != 'New') ...[
+                              if (widget.showScheduleStatus &&
+                                  scheduleStatus != null) ...[
                                 const SizedBox(width: 9),
                                 _ScheduleStatePill(status: scheduleStatus),
                               ],
@@ -780,7 +1179,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
 class _ScheduleStatePill extends StatelessWidget {
   const _ScheduleStatePill({required this.status});
 
-  final WordScheduleStatus status;
+  final CardScheduleStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -799,8 +1198,8 @@ class _ScheduleStatePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        status.recallPercentage == null
-            ? status.label.toUpperCase()
+        status.label == 'New'
+            ? 'NEW'
             : '${status.label.toUpperCase()}  ${status.recallPercentage}%',
         style: TextStyle(
           color: foreground,
@@ -824,8 +1223,8 @@ IconData _categoryIcon(String category) => switch (category) {
   _ => Icons.text_fields_outlined,
 };
 
-// Kept as the deck-management surface while the primary library view is
-// category-based. Decks remain part of the storage and study model.
+// Legacy deck management kept temporarily for compatibility with existing
+// routes and editors. It is not reachable from the library navigation.
 // ignore: unused_element
 class _DecksDashboard extends ConsumerWidget {
   const _DecksDashboard({required this.data});
@@ -1311,6 +1710,7 @@ class _StudyLauncher extends StatelessWidget {
     required this.preferenceKey,
     required this.builder,
     this.languagePair,
+    this.sourceKind = StudySourceKind.language,
   });
 
   final String title;
@@ -1319,12 +1719,14 @@ class _StudyLauncher extends StatelessWidget {
   final String preferenceKey;
   final _StudyButtonBuilder builder;
   final _LanguagePair? languagePair;
+  final StudySourceKind sourceKind;
 
   @override
   Widget build(BuildContext context) {
     final hasLanguageCards = studyCards.any((card) => card.isLanguageCard);
-    if (prompts.isEmpty && !hasLanguageCards) return builder(null);
-    if (languagePair == null || !hasLanguageCards) {
+    if (prompts.isEmpty && studyCards.isEmpty) return builder(null);
+    if (sourceKind == StudySourceKind.language &&
+        (languagePair == null || !hasLanguageCards)) {
       if (prompts.isEmpty) return builder(null);
       return builder(() => _openStudy(context, title, prompts));
     }
@@ -1335,10 +1737,12 @@ class _StudyLauncher extends StatelessWidget {
             title: title,
             prompts: prompts,
             studyCards: studyCards,
-            fromLanguage: languagePair!.from,
-            toLanguage: languagePair!.to,
-            preferenceKey:
-                '$preferenceKey:${languagePair!.from}:${languagePair!.to}',
+            fromLanguage: languagePair?.from ?? 'Question',
+            toLanguage: languagePair?.to ?? 'Answer',
+            sourceKind: sourceKind,
+            preferenceKey: sourceKind == StudySourceKind.book
+                ? preferenceKey
+                : '$preferenceKey:${languagePair!.from}:${languagePair!.to}',
           ),
         ),
       ),
@@ -1358,14 +1762,11 @@ _LanguagePair? _languagesForPrompts(
   CardsDashboard dashboard,
   List<StudyPrompt> prompts,
 ) {
-  final deckIds = prompts
+  final pairs = prompts
       .where((prompt) => prompt.card.isLanguageCard)
-      .map((prompt) => prompt.card.deckId)
-      .toSet();
-  final pairs = dashboard.decks
-      .where((deck) => deckIds.contains(deck.id))
-      .where((deck) => deck.isLanguageDeck)
-      .map((deck) => _LanguagePair(deck.fromLanguage!, deck.toLanguage!))
+      .map((prompt) => dashboard.languageFor(prompt.card))
+      .whereType<String>()
+      .map((language) => _LanguagePair('English', language))
       .toSet();
   return pairs.length == 1 ? pairs.single : null;
 }
@@ -1374,14 +1775,11 @@ _LanguagePair? _languagesForCards(
   CardsDashboard dashboard,
   Iterable<StudyCard> cards,
 ) {
-  final deckIds = cards
+  final pairs = cards
       .where((card) => card.isLanguageCard)
-      .map((card) => card.deckId)
-      .toSet();
-  final pairs = dashboard.decks
-      .where((deck) => deckIds.contains(deck.id))
-      .where((deck) => deck.isLanguageDeck)
-      .map((deck) => _LanguagePair(deck.fromLanguage!, deck.toLanguage!))
+      .map(dashboard.languageFor)
+      .whereType<String>()
+      .map((language) => _LanguagePair('English', language))
       .toSet();
   return pairs.length == 1 ? pairs.single : null;
 }

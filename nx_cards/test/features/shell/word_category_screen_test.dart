@@ -7,7 +7,9 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/shell/cards_home.dart';
 
 void main() {
-  testWidgets('home shows only the category cards', (tester) async {
+  testWidgets('home shows languages first and opens their category cards', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final dashboard = CardsDashboard(
@@ -24,6 +26,18 @@ void main() {
           learningStatus: LearningStatus.learning,
           schedule: const CardSchedule.initial(enabled: true),
         ),
+        _word(
+          id: 3,
+          category: 'Adjective',
+          learningStatus: LearningStatus.learning,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
+        _word(
+          id: 4,
+          modelTypeName: 'Verb',
+          learningStatus: LearningStatus.learning,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
       ],
     );
 
@@ -37,15 +51,83 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Languages'), findsOneWidget);
+    expect(find.text('Malayalam'), findsOneWidget);
+    expect(find.text('Script'), findsNothing);
+    expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
+    await tester.tap(find.text('Malayalam'));
+    await tester.pumpAndSettle();
     expect(find.text('Script'), findsOneWidget);
     expect(find.text('Noun'), findsOneWidget);
+    expect(find.text('Adjective'), findsOneWidget);
+    expect(find.text('Verb'), findsOneWidget);
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
-    expect(find.text('Categories'), findsOneWidget);
-    expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
+    expect(find.text('Library'), findsNothing);
     expect(find.text('Today'), findsNothing);
     expect(find.text('What are you learning?'), findsNothing);
     expect(find.text('Word categories'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('home lists linked books below languages and opens all cards', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final dashboard = CardsDashboard(
+      decks: const [_deck],
+      cards: [
+        _word(
+          id: 1,
+          learningStatus: LearningStatus.learning,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
+        _bookCard(2),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
+        ],
+        child: const MaterialApp(home: CardsHome()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Languages'), findsOneWidget);
+    expect(find.text('Books'), findsOneWidget);
+    expect(find.text('The Four Steps to the Epiphany'), findsOneWidget);
+    await tester.tap(find.text('The Four Steps to the Epiphany'));
+    await tester.pumpAndSettle();
+    expect(find.text('Current  0'), findsOneWidget);
+    expect(find.text('Past  0'), findsOneWidget);
+    expect(find.text('Future  1'), findsOneWidget);
+    await tester.tap(find.text('Future  1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Why validate demand?'), findsOneWidget);
+    expect(find.text('To avoid scaling an unproven model.'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('word-state-new')), findsNothing);
+    expect(find.text('1 cards · 0 current'), findsOneWidget);
+
+    await tester.tap(find.text('Study'));
+    await tester.pumpAndSettle();
+    expect(find.text('Study'), findsWidgets);
+    expect(find.text('Recall'), findsOneWidget);
+    expect(find.text('AI'), findsOneWidget);
+    expect(find.text('Recall percentage'), findsOneWidget);
+    expect(find.text('How many cards?'), findsOneWidget);
+    expect(find.text('What should be in front?'), findsNothing);
+    await tester.tap(find.text('Recall'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start recall'), findsOneWidget);
+    expect(find.text('Recall percentage'), findsOneWidget);
+    await tester.tap(find.text('AI'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start AI tutor'), findsOneWidget);
+    expect(find.text('Recall percentage'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -86,12 +168,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('LEARNING'), findsOneWidget);
+    expect(find.text('LEARNING  0%'), findsOneWidget);
     expect(find.text('DUE'), findsOneWidget);
     expect(find.byKey(const ValueKey('word-schedule-due')), findsOneWidget);
     expect(find.text('Current  1'), findsOneWidget);
     expect(find.text('Past  1'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
+    await tester.tap(find.text('Past  1'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('word-state-learning')),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -197,13 +285,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('LEARNING'), findsOneWidget);
-    expect(find.text('RELEARNING'), findsOneWidget);
-    expect(find.text('RETAINED  25%'), findsOneWidget);
-    expect(find.text('RETAINED  100%'), findsOneWidget);
+    expect(find.text('LEARNING  0%'), findsOneWidget);
+    expect(find.text('RELEARNING  0%'), findsOneWidget);
+    expect(find.text('RETAINED  20%'), findsOneWidget);
+    expect(find.text('RETAINED  80%'), findsOneWidget);
     expect(find.text('REVIEW'), findsNothing);
-    expect(find.text('NEW'), findsNothing);
-    expect(find.byKey(const ValueKey<String>('word-state-new')), findsNothing);
+    expect(find.text('NEW'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('word-state-new')),
+      findsOneWidget,
+    );
     expect(
       (tester
                   .widget<Container>(
@@ -238,7 +329,7 @@ void main() {
     );
     expect(
       tester.getCenter(find.text('word 1')).dx,
-      lessThan(tester.getCenter(find.text('LEARNING')).dx),
+      lessThan(tester.getCenter(find.text('LEARNING  0%')).dx),
     );
     final stateOrder = [
       'word 1',
@@ -277,6 +368,7 @@ StudyCard _word({
   required LearningStatus learningStatus,
   required CardSchedule schedule,
   String category = 'Noun',
+  String? modelTypeName,
   List<int> recallRatings = const <int>[],
 }) => StudyCard(
   id: id,
@@ -312,7 +404,23 @@ StudyCard _word({
       : <String, List<String>>{
           'Word Category': [category],
         },
-  modelTypeName: category == 'Script' ? 'Script' : 'Word',
+  modelTypeName: modelTypeName ?? (category == 'Script' ? 'Script' : 'Word'),
+);
+
+StudyCard _bookCard(int id) => StudyCard(
+  id: id,
+  content: const BasicCardContent(
+    front: 'Why validate demand?',
+    back: 'To avoid scaling an unproven model.',
+  ),
+  deckId: 0,
+  deckName: '',
+  schedules: const {StudyCue.fromLanguage: CardSchedule.initial(enabled: true)},
+  reviewHistory: const {},
+  suspended: false,
+  sourceBookId: 4195,
+  sourceBookName: 'The Four Steps to the Epiphany',
+  modelTypeName: 'Flashcard',
 );
 
 CardSchedule _schedule(DateTime dueAt) => CardSchedule(

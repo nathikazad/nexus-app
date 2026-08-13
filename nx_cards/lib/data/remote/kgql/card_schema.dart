@@ -10,6 +10,11 @@ const verbCardModelType = 'Verb';
 const scriptCardModelType = 'Script';
 const bookModelType = 'Book';
 
+// Decks are legacy metadata. New cards are grouped by Language tags or Book
+// relations; zero keeps older local rows readable without inventing a deck.
+const unassignedDeckId = 0;
+const unassignedDeckName = '';
+
 const wordPhrasesRelation = 'word_phrases';
 const verbPhraseConjugationRelation = 'verb_phrase_conjugation';
 const wordCategoryTagSystem = 'Word Category';
@@ -31,7 +36,6 @@ const attrLanguageDetails = 'language_details';
 const attrLearningStatus = 'learning_status';
 const attrFromLanguage = 'from_language';
 const attrToLanguage = 'to_language';
-const _legacyAttrLanguage = 'language';
 
 const cardDetailsJsonSchema = <String, dynamic>{
   'type': 'object',
@@ -185,23 +189,12 @@ class CardsSchemaStatus {
 }
 
 Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
-  final deck = await _modelTypeOrNull(client, deckModelType);
   final card = await _modelTypeOrNull(client, cardModelType);
   final languageCard = await _modelTypeOrNull(client, languageCardModelType);
   return CardsSchemaStatus(
-    deckReady:
-        deck != null &&
-        _hasAttributes(deck, const {
-          attrArchived: 'boolean',
-          attrFromLanguage: 'string',
-          attrToLanguage: 'string',
-        }) &&
-        !(deck.attributes ?? const []).any(
-          (attribute) => attribute.key == _legacyAttrLanguage,
-        ) &&
-        !(deck.tagSystems ?? const []).any(
-          (system) => system.name == 'Language',
-        ),
+    // Kept on the status object for source compatibility with older clients.
+    // Decks are no longer part of Recall's required schema.
+    deckReady: true,
     cardReady:
         card != null &&
         _hasAttributeDefinitions(
@@ -227,15 +220,6 @@ Future<ModelType?> _modelTypeOrNull(GraphQLClient client, String name) async {
   }
 }
 
-bool _hasAttributes(ModelType modelType, Map<String, String> expected) {
-  final actual = {
-    for (final definition
-        in modelType.attributes ?? const <AttributeDefinition>[])
-      if (definition.key != null) definition.key!: definition.valueType,
-  };
-  return expected.entries.every((entry) => actual[entry.key] == entry.value);
-}
-
 bool _hasAttributeDefinitions(
   ModelType modelType,
   List<AttributeDefinition> expected,
@@ -255,29 +239,6 @@ bool _hasAttributeDefinitions(
 }
 
 Future<void> bootstrapCardsSchema(GraphQLClient client) async {
-  final deck = await _modelTypeOrNull(client, deckModelType);
-  if (deck == null) {
-    await setKgqlModelType(
-      client,
-      buildDeckSchemaRequest(),
-      auditSourceKind: 'nx_cards',
-    );
-  } else {
-    await _syncAttributeDefinitions(
-      client,
-      deck,
-      buildDeckSchemaRequest().attributeDefinitions!,
-    );
-    await _migrateDeckLanguageTags(
-      client,
-      hasLegacyLanguageAttribute: (deck.attributes ?? const []).any(
-        (attribute) => attribute.key == _legacyAttrLanguage,
-      ),
-    );
-    await _removeLegacyDeckLanguageAttribute(client, deck);
-    await _removeDeckLanguageTagSystem(client, deck);
-  }
-
   final card = await _modelTypeOrNull(client, cardModelType);
   if (card == null) {
     await setKgqlModelType(
@@ -308,91 +269,6 @@ Future<void> bootstrapCardsSchema(GraphQLClient client) async {
       buildLanguageCardSchemaRequest().attributeDefinitions!,
     );
   }
-}
-
-Future<void> _migrateDeckLanguageTags(
-  GraphQLClient client, {
-  required bool hasLegacyLanguageAttribute,
-}) async {
-  final decks = await fetchKgqlModels(
-    client,
-    filter: const {'model_type': deckModelType},
-    struct: {
-      'id': true,
-      'name': true,
-      if (hasLegacyLanguageAttribute) _legacyAttrLanguage: true,
-      attrFromLanguage: true,
-      attrToLanguage: true,
-      'tags': true,
-    },
-  );
-  for (final deck in decks) {
-    final existingFrom =
-        deck.attributes?[attrFromLanguage]?.toString().trim() ?? '';
-    final existingTo =
-        deck.attributes?[attrToLanguage]?.toString().trim() ?? '';
-    if (existingFrom.isNotEmpty && existingTo.isNotEmpty) continue;
-    final legacy =
-        deck.attributes?[_legacyAttrLanguage]?.toString().trim() ?? '';
-    final tagged = deck.tags?['Language']?.firstOrNull?.trim() ?? '';
-    final target = legacy.isNotEmpty ? legacy : tagged;
-    if (target.isEmpty) continue;
-    await setKgqlModel(
-      client,
-      SetModelRequest(
-        id: deck.id,
-        attributes: [
-          if (existingFrom.isEmpty)
-            SetModelAttribute(key: attrFromLanguage, value: 'English'),
-          if (existingTo.isEmpty)
-            SetModelAttribute(key: attrToLanguage, value: target),
-        ],
-      ),
-      auditSourceKind: 'nx_cards',
-    );
-  }
-}
-
-Future<void> _removeLegacyDeckLanguageAttribute(
-  GraphQLClient client,
-  ModelType deck,
-) async {
-  final attribute = (deck.attributes ?? const [])
-      .where((value) => value.key == _legacyAttrLanguage)
-      .firstOrNull;
-  if (attribute == null) return;
-  await setKgqlModelType(
-    client,
-    SetModelTypeRequest(
-      id: deck.id,
-      name: deck.name,
-      typeKind: deck.typeKind ?? 'base',
-      attributeDefinitions: [
-        AttributeDefinition(id: attribute.id, delete: true),
-      ],
-    ),
-    auditSourceKind: 'nx_cards',
-  );
-}
-
-Future<void> _removeDeckLanguageTagSystem(
-  GraphQLClient client,
-  ModelType deck,
-) async {
-  final system = (deck.tagSystems ?? const [])
-      .where((value) => value.name == 'Language')
-      .firstOrNull;
-  if (system == null) return;
-  await setKgqlModelType(
-    client,
-    SetModelTypeRequest(
-      id: deck.id,
-      name: deck.name,
-      typeKind: deck.typeKind ?? 'base',
-      tagSystems: [SetTagSystemRequest(id: system.id, delete: true)],
-    ),
-    auditSourceKind: 'nx_cards',
-  );
 }
 
 Future<void> _removeCardTagSystem(GraphQLClient client, ModelType card) async {

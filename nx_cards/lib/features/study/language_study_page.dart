@@ -15,10 +15,12 @@ class LanguageStudyPage extends ConsumerStatefulWidget {
     super.key,
     required this.title,
     required this.cards,
+    this.itemLabel,
   });
 
   final String title;
   final List<StudyCard> cards;
+  final String? itemLabel;
 
   @override
   ConsumerState<LanguageStudyPage> createState() => _LanguageStudyPageState();
@@ -56,10 +58,10 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
     return widget.cards
         .where((card) {
           final content = card.content;
-          if (content is! LanguageCardContent) return false;
-          return content.english.toLowerCase().contains(query) ||
-              content.originalScript.toLowerCase().contains(query) ||
-              content.transliteration.toLowerCase().contains(query);
+          return content.front.toLowerCase().contains(query) ||
+              content.back.toLowerCase().contains(query) ||
+              (content is LanguageCardContent &&
+                  content.transliteration.toLowerCase().contains(query));
         })
         .toList(growable: false);
   }
@@ -129,14 +131,12 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
                 return _StudySheetHeader(
                   total: widget.cards.length,
                   visible: cards.length,
+                  itemLabel: widget.itemLabel ?? 'words',
                   onSearch: (value) => setState(() => _query = value),
                 );
               }
               final card = cards[index - 1];
               final content = card.content;
-              if (content is! LanguageCardContent) {
-                return const SizedBox.shrink();
-              }
               return _StudySheetRow(
                 number: index,
                 card: card,
@@ -145,7 +145,8 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
                 loading: _loadingCardId == card.id,
                 playing: _activeCardId == card.id && _playing,
                 onAudio:
-                    audioRepository == null ||
+                    content is! LanguageCardContent ||
+                        audioRepository == null ||
                         content.audioUrl?.isNotEmpty != true
                     ? null
                     : () => _toggleAudio(
@@ -166,11 +167,13 @@ class _StudySheetHeader extends StatelessWidget {
   const _StudySheetHeader({
     required this.total,
     required this.visible,
+    required this.itemLabel,
     required this.onSearch,
   });
 
   final int total;
   final int visible;
+  final String itemLabel;
   final ValueChanged<String> onSearch;
 
   @override
@@ -180,7 +183,9 @@ class _StudySheetHeader extends StatelessWidget {
       Text('STUDY SHEET', style: monoLabel),
       const SizedBox(height: 7),
       Text(
-        visible == total ? '$total words' : '$visible of $total words',
+        visible == total
+            ? '$total $itemLabel'
+            : '$visible of $total $itemLabel',
         style: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.w600,
@@ -192,7 +197,7 @@ class _StudySheetHeader extends StatelessWidget {
         onChanged: onSearch,
         textInputAction: TextInputAction.search,
         decoration: const InputDecoration(
-          hintText: 'Search words',
+          hintText: 'Search',
           prefixIcon: Icon(Icons.search, size: 20),
         ),
       ),
@@ -214,11 +219,13 @@ class _StudySheetRow extends StatelessWidget {
 
   final int number;
   final StudyCard card;
-  final LanguageCardContent content;
+  final CardContent content;
   final CardAudioRepository? audioRepository;
   final bool loading;
   final bool playing;
   final VoidCallback? onAudio;
+  LanguageCardContent? get languageContent =>
+      content is LanguageCardContent ? content as LanguageCardContent : null;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -235,7 +242,7 @@ class _StudySheetRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              content.english,
+              content.front,
               style: const TextStyle(
                 fontSize: 16,
                 height: 1.35,
@@ -251,7 +258,7 @@ class _StudySheetRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                content.originalScript,
+                content.back,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -260,16 +267,18 @@ class _StudySheetRow extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                content.transliteration,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.35,
-                  fontStyle: FontStyle.italic,
-                  color: RecallColors.faint,
+              if (languageContent case final languageContent?) ...[
+                const SizedBox(height: 3),
+                Text(
+                  languageContent.transliteration,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.35,
+                    fontStyle: FontStyle.italic,
+                    color: RecallColors.faint,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -313,7 +322,8 @@ class _StudySheetRow extends StatelessWidget {
               const SizedBox(height: 2),
               SizedBox(
                 height: 24,
-                child: content.examples.isEmpty
+                child:
+                    languageContent == null || languageContent!.examples.isEmpty
                     ? null
                     : TextButton(
                         style: TextButton.styleFrom(

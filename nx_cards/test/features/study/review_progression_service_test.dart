@@ -125,7 +125,55 @@ void main() {
     expect(plan.movedToPast, 1);
     expect(plan.replacements, 1);
   });
+
+  test('uses the fixed window and Book relation as a progression cohort', () {
+    final reviewed = _bookCard(
+      id: 1,
+      status: LearningStatus.learnt,
+      ratings: const [3, 1],
+    );
+    final future = _bookCard(id: 2, status: LearningStatus.notStarted);
+
+    final plan = planReviewProgression(
+      reviewedCards: [reviewed],
+      allCards: [reviewed, future],
+      settings: const ReviewProgressionSettings(),
+    );
+
+    expect(plan.changes, hasLength(1));
+    expect(plan.changes.single.card.id, 1);
+    expect(plan.changes.single.status, LearningStatus.learning);
+  });
 }
+
+StudyCard _bookCard({
+  required int id,
+  required LearningStatus status,
+  List<int> ratings = const [],
+}) => StudyCard(
+  id: id,
+  content: BasicCardContent(front: 'question $id', back: 'answer $id'),
+  deckId: 0,
+  deckName: '',
+  schedules: const {StudyCue.fromLanguage: CardSchedule.initial(enabled: true)},
+  reviewHistory: {
+    StudyCue.fromLanguage: [
+      for (final (index, rating) in ratings.indexed)
+        CardReview(
+          id: 'book-$id-$index',
+          reviewedAt: DateTime.utc(2026, 8, index + 1),
+          rating: rating,
+          elapsedSeconds: 1,
+          scheduledSeconds: 1,
+        ),
+    ],
+  },
+  suspended: false,
+  learningStatus: status,
+  sourceBookId: 4195,
+  sourceBookName: 'The Four Steps to the Epiphany',
+  modelTypeName: 'Flashcard',
+);
 
 StudyCard _card({
   required int id,
