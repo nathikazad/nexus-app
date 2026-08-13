@@ -15,6 +15,7 @@ Usage:
   scripts/shorebird_apps.sh affected [git base]
 
 Examples:
+  scripts/shorebird_apps.sh release nx_cards
   scripts/shorebird_apps.sh init nx_notes
   scripts/shorebird_apps.sh release nx_notes
   scripts/shorebird_apps.sh patch nx_notes
@@ -36,6 +37,7 @@ mobile_root="$(cd "$script_dir/.." && pwd)"
 
 apps=(
   nx_books
+  nx_cards
   nx_cooking
   nx_expense
   nx_main
@@ -49,6 +51,7 @@ apps=(
 display_name_for() {
   case "$1" in
     nx_books) printf 'Nexus Books' ;;
+    nx_cards) printf 'Nexus Cards' ;;
     nx_cooking) printf 'Nexus Cooking' ;;
     nx_expense) printf 'Nexus Expense' ;;
     nx_main) printf 'Nexus' ;;
@@ -99,6 +102,40 @@ require_initialized() {
     printf '%s is not initialized. Run: scripts/shorebird_apps.sh init %s\n' "$app" "$app" >&2
     exit 1
   fi
+}
+
+requires_openai_key() {
+  case "$1" in
+    nx_cards|nx_notes) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+require_openai_env() {
+  local env_file="$mobile_root/nx_live_agent/.env"
+  local api_key
+
+  if [[ ! -f "$env_file" ]]; then
+    printf 'Missing OpenAI build configuration: %s\n' "$env_file" >&2
+    exit 1
+  fi
+
+  api_key="$(awk '
+    /^[[:space:]]*OPENAI_API_KEY[[:space:]]*=/ {
+      value = $0
+      sub(/^[^=]*=[[:space:]]*/, "", value)
+      sub(/[[:space:]]*$/, "", value)
+      print value
+      exit
+    }
+  ' "$env_file")"
+
+  case "$api_key" in
+    ''|'""'|"''"|'PASTE_OPENAI_API_KEY_HERE')
+      printf 'OPENAI_API_KEY is missing or empty in %s\n' "$env_file" >&2
+      exit 1
+      ;;
+  esac
 }
 
 add_shorebird_asset() {
@@ -206,7 +243,7 @@ affected_apps() {
       appflowy-editor/*)
         affected+=(nx_notes)
         ;;
-      nx_books/*|nx_cooking/*|nx_expense/*|nx_main/*|nx_notes/*|nx_people/*|nx_post/*|nx_projects/*|nx_time/*)
+      nx_books/*|nx_cards/*|nx_cooking/*|nx_expense/*|nx_main/*|nx_notes/*|nx_people/*|nx_post/*|nx_projects/*|nx_time/*)
         app="${file%%/*}"
         affected+=("$app")
         ;;
@@ -236,23 +273,33 @@ list_apps() {
 
 run_release() {
   local app="$1"
+  local credential_args=()
   shift
   require_app "$app"
   require_initialized "$app"
+  if requires_openai_key "$app"; then
+    require_openai_env
+    credential_args=(--dart-define-from-file=../nx_live_agent/.env)
+  fi
   (
     cd "$mobile_root/$app"
-    "$shorebird_bin" release ios "$@"
+    "$shorebird_bin" release ios "${credential_args[@]}" "$@"
   )
 }
 
 run_patch() {
   local app="$1"
+  local credential_args=()
   shift
   require_app "$app"
   require_initialized "$app"
+  if requires_openai_key "$app"; then
+    require_openai_env
+    credential_args=(--dart-define-from-file=../nx_live_agent/.env)
+  fi
   (
     cd "$mobile_root/$app"
-    "$shorebird_bin" patch ios "$@"
+    "$shorebird_bin" patch ios "${credential_args[@]}" "$@"
   )
 }
 

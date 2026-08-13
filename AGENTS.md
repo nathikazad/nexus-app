@@ -6,7 +6,7 @@
 - For Dart-only changes against an installed compatible Shorebird base, use `shorebird patch ios`.
 - Before patching, verify the installed build number has a corresponding Shorebird release.
 - Native dependency, entitlement, plist, Pod, or engine changes require a new Shorebird release rather than a patch.
-- `nx_notes` live conversations require `OPENAI_API_KEY` at compile time. Use the Git-ignored `nx_live_agent/.env` with `--dart-define-from-file=../nx_live_agent/.env` for every Shorebird release or patch; verify the key exists and never commit it.
+- `nx_cards` AI study and `nx_notes` live conversations require `OPENAI_API_KEY` at compile time. The Shorebird wrapper validates the Git-ignored `nx_live_agent/.env` and passes `--dart-define-from-file=../nx_live_agent/.env` automatically for every release or patch; verify the key exists and never commit it.
 
 ## macOS installation policy
 
