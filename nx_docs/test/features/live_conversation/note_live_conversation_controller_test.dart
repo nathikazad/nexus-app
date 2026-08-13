@@ -143,6 +143,45 @@ void main() {
       controller.dispose();
     },
   );
+
+  test('desktop conversations request and expose transcripts', () async {
+    final transport = _FakeTransport();
+    final controller = NoteLiveConversationController(
+      session: LiveAgentSession(transport: transport),
+      transcribeConversation: true,
+    );
+
+    await controller.start(
+      document: _document(),
+      credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+    );
+    await pumpEventQueue();
+
+    expect(transport.connectedSpec!.enableInputTranscription, isTrue);
+    expect(transport.connectedSpec!.emitTranscripts, isTrue);
+
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.transcript,
+        role: 'user',
+        text: 'What is this chapter about?',
+      ),
+    );
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.transcript,
+        role: 'assistant',
+        text: 'It explains the central idea.',
+      ),
+    );
+    await pumpEventQueue();
+
+    expect(controller.transcriptMessages.map((message) => message.text), [
+      'What is this chapter about?',
+      'It explains the central idea.',
+    ]);
+    controller.dispose();
+  });
 }
 
 NxDocument _document() => NxDocument(

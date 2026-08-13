@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
+import 'package:nx_live_agent/src/input/live_agent_input_controller.dart';
 import 'package:nx_live_agent/src/live_agent.dart';
 
 void initializeLiveAgentPlatform() {
@@ -56,6 +57,8 @@ final class OpenAiRealtimeTransport
     _remoteAudioTracks.clear();
     _emitTranscripts = spec.emitTranscripts;
     _maxConversationPairs = spec.maxConversationPairs;
+    final inputEnabled =
+        spec.turnDetectionMode == LiveAgentTurnDetectionMode.automatic;
     await _configureAudioSession();
     await _startAndroidForegroundService();
 
@@ -91,6 +94,7 @@ final class OpenAiRealtimeTransport
     });
     _localStream = stream;
     for (final track in stream.getAudioTracks()) {
+      track.enabled = inputEnabled;
       await peer.addTrack(track, stream);
     }
 
@@ -348,7 +352,10 @@ Map<String, Object?> openAiRealtimeSession({
       'noise_reduction': {'type': 'near_field'},
       if (spec.enableInputTranscription)
         'transcription': {'model': 'gpt-4o-mini-transcribe'},
-      'turn_detection': {...openAiSemanticVad()},
+      'turn_detection':
+          spec.turnDetectionMode == LiveAgentTurnDetectionMode.automatic
+          ? {...openAiSemanticVad()}
+          : null,
     },
     'output': {'voice': spec.voice},
   },

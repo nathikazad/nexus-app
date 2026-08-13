@@ -28,11 +28,19 @@ class IosLiveConversationControls extends StatelessWidget {
       children: [
         IconButton(
           key: const ValueKey<String>('ios-live-mute-button'),
-          tooltip: controller.muted ? 'Unmute microphone' : 'Mute microphone',
+          tooltip: controller.automaticVad
+              ? (controller.muted ? 'Unmute microphone' : 'Mute microphone')
+              : (controller.manualRecording
+                    ? 'Send recording'
+                    : 'Start recording'),
           onPressed: () => unawaited(controller.activateMicrophone()),
           color: AppColors.onFloating,
           icon: Icon(
-            controller.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+            controller.automaticVad && controller.muted
+                ? Icons.mic_off_rounded
+                : controller.manualRecording
+                ? Icons.send_rounded
+                : Icons.mic_rounded,
           ),
         ),
         Container(width: 1, height: 24, color: AppColors.line),

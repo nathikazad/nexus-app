@@ -43,6 +43,9 @@ touch the output player.
 
 Manual Send deliberately leaves VAD off. Turning VAD on during a recording
 discards that recording. All operations are serialized by the input controller.
+Starting a manual recording while the assistant is speaking or paused first
+cancels the active response, restores playback readiness for the next response,
+then opens the input gate.
 
 Pause is an explicit cross-domain user action: it pauses output and suspends
 the input gate; resume restores the gate implied by the existing input state.

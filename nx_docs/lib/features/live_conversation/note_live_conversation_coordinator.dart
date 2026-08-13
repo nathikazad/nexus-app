@@ -17,6 +17,8 @@ final noteLiveConversationControllerFactoryProvider =
     Provider<NoteLiveConversationControllerFactory>(
       (_) =>
           () => NoteLiveConversationController(
+            transcribeConversation:
+                !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS,
             session: LiveAgentSession(
               transport:
                   LiveConversationPlatformPolicy.useBufferedRealtimeTransport(

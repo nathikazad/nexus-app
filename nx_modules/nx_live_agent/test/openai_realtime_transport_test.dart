@@ -86,6 +86,20 @@ void main() {
     expect(input, isNot(contains('transcription')));
   });
 
+  test('can start with automatic turn detection disabled', () {
+    final session = openAiRealtimeSession(
+      spec: const LiveAgentSpec(
+        instructions: 'Wait for manual input.',
+        turnDetectionMode: LiveAgentTurnDetectionMode.manual,
+      ),
+      tools: const [],
+    );
+
+    final audio = session['audio'] as Map;
+    final input = audio['input'] as Map;
+    expect(input['turn_detection'], isNull);
+  });
+
   test('keeps only the requested number of complete conversation pairs', () {
     final obsolete = conversationItemIdsOutsideRecentPairs(const [
       (id: 'user-1', role: 'user'),

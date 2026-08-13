@@ -34,6 +34,9 @@ class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
       final controller = widget.coordinator.controller;
       if (controller == null) return const SizedBox.shrink();
       final sourceTitle = widget.coordinator.sourceDocument?.title;
+      final controlLayout = LiveConversationPlatformPolicy.controlsFor(
+        defaultTargetPlatform,
+      );
       return Padding(
         key: const ValueKey<String>('note-live-conversation-panel'),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -65,6 +68,12 @@ class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (!widget.coordinator.hasRecap &&
+                    controlLayout ==
+                        LiveConversationControlLayout.macDesktop) ...[
+                  const SizedBox(width: 8),
+                  _VadToggle(controller: controller),
+                ],
               ],
             ),
             const Divider(height: 24),
@@ -77,14 +86,14 @@ class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
               )
             else ...[
               Expanded(
-                child: Center(child: _LiveState(controller: controller)),
+                child: controlLayout == LiveConversationControlLayout.macDesktop
+                    ? _DesktopLiveConversation(controller: controller)
+                    : Center(child: _LiveState(controller: controller)),
               ),
               const SizedBox(height: 12),
               LiveConversationFloatingControls(
                 controller: controller,
-                layout: LiveConversationPlatformPolicy.controlsFor(
-                  defaultTargetPlatform,
-                ),
+                layout: controlLayout,
                 stopping: widget.coordinator.isStopping,
                 onStop: _end,
                 heroPrefix:
@@ -102,6 +111,46 @@ class _NoteLiveConversationPanelState extends State<NoteLiveConversationPanel> {
       );
     },
   );
+}
+
+class _VadToggle extends StatelessWidget {
+  const _VadToggle({required this.controller});
+
+  final NoteLiveConversationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = controller.automaticVad;
+    return Tooltip(
+      message: enabled ? 'Turn off automatic VAD' : 'Turn on automatic VAD',
+      child: InkWell(
+        key: const ValueKey<String>('desktop-live-vad-toggle'),
+        borderRadius: BorderRadius.circular(6),
+        onTap:
+            controller.phase == LiveAgentPhase.error ||
+                controller.changingInputMode
+            ? null
+            : () => controller.toggleTurnDetection(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: enabled ? AppColors.accentSoft : Colors.transparent,
+            border: Border.all(color: AppColors.line),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            enabled ? 'VAD ON' : 'VAD OFF',
+            style: TextStyle(
+              color: enabled ? AppColors.text : AppColors.faint,
+              fontSize: 9,
+              letterSpacing: 0.7,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _LiveConversationRecap extends StatelessWidget {
@@ -280,6 +329,181 @@ class _LiveState extends StatelessWidget {
     );
   }
 }
+
+class _DesktopLiveConversation extends StatelessWidget {
+  const _DesktopLiveConversation({required this.controller});
+
+  final NoteLiveConversationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller.phase == LiveAgentPhase.error) {
+      return Center(child: _LiveState(controller: controller));
+    }
+    return Column(
+      children: [
+        _StatusOrb(phase: controller.phase),
+        const SizedBox(height: 10),
+        Text(
+          _phaseLabel(controller.phase),
+          style: TextStyle(
+            color: AppColors.muted,
+            fontSize: 11,
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: _DesktopTranscript(messages: controller.transcriptMessages),
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopTranscript extends StatefulWidget {
+  const _DesktopTranscript({required this.messages});
+
+  final List<LiveAgentTranscriptMessage> messages;
+
+  @override
+  State<_DesktopTranscript> createState() => _DesktopTranscriptState();
+}
+
+class _DesktopTranscriptState extends State<_DesktopTranscript> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void didUpdateWidget(covariant _DesktopTranscript oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_transcriptSignature(oldWidget.messages) ==
+        _transcriptSignature(widget.messages)) {
+      return;
+    }
+    final followLatest =
+        !_scrollController.hasClients ||
+        _scrollController.position.maxScrollExtent -
+                _scrollController.position.pixels <
+            48;
+    if (followLatest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey<String>('desktop-live-transcript'),
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: AppColors.panel,
+      border: Border.all(color: AppColors.line),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: SelectionArea(
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: widget.messages.length > 2,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(10),
+          child: widget.messages.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 18,
+                  ),
+                  child: Text(
+                    'Your conversation will appear here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.faint,
+                      fontSize: 12,
+                      height: 1.45,
+                    ),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (
+                      var index = 0;
+                      index < widget.messages.length;
+                      index += 1
+                    ) ...[
+                      _TranscriptMessage(message: widget.messages[index]),
+                      if (index != widget.messages.length - 1)
+                        const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _TranscriptMessage extends StatelessWidget {
+  const _TranscriptMessage({required this.message});
+
+  final LiveAgentTranscriptMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.role == LiveAgentTranscriptRole.user;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isUser ? AppColors.subtle : AppColors.bg,
+        border: Border.all(color: isUser ? AppColors.subtle : AppColors.line),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isUser ? 'YOU' : 'AGENT',
+            style: TextStyle(
+              color: AppColors.faint,
+              fontSize: 9,
+              height: 1,
+              letterSpacing: 0.9,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            message.text,
+            style: TextStyle(
+              color: AppColors.editorText,
+              fontSize: 13,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _transcriptSignature(List<LiveAgentTranscriptMessage> messages) =>
+    messages
+        .map((message) => '${message.role.index}:${message.text}')
+        .join('|');
 
 class _StatusOrb extends StatelessWidget {
   const _StatusOrb({required this.phase});

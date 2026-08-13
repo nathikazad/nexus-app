@@ -268,6 +268,16 @@ void main() {
 
     expect(session.latestUserTranscript, 'First answer');
     expect(session.latestAssistantTranscript, 'That is correct.');
+    expect(session.transcriptMessages.map((message) => message.text), [
+      'First question?',
+      'First answer',
+      'That is correct.',
+    ]);
+    expect(session.transcriptMessages.map((message) => message.role), [
+      LiveAgentTranscriptRole.assistant,
+      LiveAgentTranscriptRole.user,
+      LiveAgentTranscriptRole.assistant,
+    ]);
 
     transport.controller.add(
       const LiveAgentEvent(LiveAgentEventType.userSpeechStarted),
@@ -283,6 +293,7 @@ void main() {
 
     expect(session.latestUserTranscript, 'Next question');
     expect(session.latestAssistantTranscript, isEmpty);
+    expect(session.transcriptMessages.last.text, 'Next question');
     session.dispose();
   });
 
@@ -369,6 +380,56 @@ void main() {
     expect(transport.commitInputRequests, 1);
     expect(transport.responseRequests, 1);
     expect(session.phase, LiveAgentPhase.thinking);
+    session.dispose();
+  });
+
+  test('manual mic start interrupts an assistant that is speaking', () async {
+    final transport = _FakeTransport();
+    final session = LiveAgentSession(transport: transport);
+    await session.start(
+      credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+      spec: const LiveAgentSpec(
+        instructions: 'Test',
+        turnDetectionMode: LiveAgentTurnDetectionMode.manual,
+      ),
+      tools: const [],
+    );
+    transport.controller.add(const LiveAgentEvent(LiveAgentEventType.speaking));
+    await pumpEventQueue();
+
+    await session.activateMicrophone();
+
+    expect(transport.cancelRequests, 1);
+    expect(session.interruptionCount, 1);
+    expect(session.phase, LiveAgentPhase.listening);
+    expect(session.inputController.inputState, LiveAgentInputState.recording);
+    expect(transport.inputEnabledValues, [true]);
+    session.dispose();
+  });
+
+  test('manual mic start cancels paused playback before recording', () async {
+    final transport = _FakeTransport();
+    final session = LiveAgentSession(transport: transport);
+    await session.start(
+      credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
+      spec: const LiveAgentSpec(
+        instructions: 'Test',
+        turnDetectionMode: LiveAgentTurnDetectionMode.manual,
+      ),
+      tools: const [],
+    );
+    transport.controller.add(const LiveAgentEvent(LiveAgentEventType.speaking));
+    await pumpEventQueue();
+    await session.setPaused(true);
+
+    await session.activateMicrophone();
+
+    expect(transport.cancelRequests, 1);
+    expect(transport.playbackPausedValues, [true, false]);
+    expect(transport.inputEnabledValues, [false, false, true]);
+    expect(session.playbackState, LiveAgentPlaybackState.playing);
+    expect(session.phase, LiveAgentPhase.listening);
+    expect(session.inputController.inputState, LiveAgentInputState.recording);
     session.dispose();
   });
 

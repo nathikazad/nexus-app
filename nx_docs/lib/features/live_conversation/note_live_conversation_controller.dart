@@ -10,12 +10,15 @@ const _maxDocumentContextCharacters = 72000;
 const _maxReferenceContextCharacters = 240000;
 
 class NoteLiveConversationController extends ChangeNotifier {
-  NoteLiveConversationController({required LiveAgentSession session})
-    : _session = session {
+  NoteLiveConversationController({
+    required LiveAgentSession session,
+    this.transcribeConversation = false,
+  }) : _session = session {
     _session.addListener(_syncSession);
   }
 
   final LiveAgentSession _session;
+  final bool transcribeConversation;
   bool _disposed = false;
 
   LiveAgentPhase get phase => _session.phase;
@@ -30,6 +33,8 @@ class NoteLiveConversationController extends ChangeNotifier {
   bool get manualSubmitting => inputState == LiveAgentInputState.submitting;
   LiveAgentPlaybackState get playbackState => _session.playbackState;
   bool get playbackPaused => playbackState == LiveAgentPlaybackState.paused;
+  List<LiveAgentTranscriptMessage> get transcriptMessages =>
+      _session.transcriptMessages;
   String? get error => _session.error;
   LiveAgentUsage get usage => _session.usage;
   double get inputCost => _gptRealtimeInputCost(usage);
@@ -53,9 +58,10 @@ class NoteLiveConversationController extends ChangeNotifier {
       spec: LiveAgentSpec(
         instructions: _instructionsFor(document, snapshot, referenceSnapshot),
         model: 'gpt-realtime-2.1-mini',
-        enableInputTranscription: false,
-        emitTranscripts: false,
+        enableInputTranscription: transcribeConversation,
+        emitTranscripts: transcribeConversation,
         maxConversationPairs: noteLiveConversationPairLimit,
+        turnDetectionMode: LiveAgentTurnDetectionMode.manual,
       ),
       tools: const [],
     );

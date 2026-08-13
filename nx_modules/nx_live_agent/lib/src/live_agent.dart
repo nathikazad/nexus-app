@@ -30,6 +30,18 @@ enum LiveAgentEventType {
   error,
 }
 
+enum LiveAgentTranscriptRole { user, assistant }
+
+final class LiveAgentTranscriptMessage {
+  const LiveAgentTranscriptMessage({required this.role, required this.text});
+
+  final LiveAgentTranscriptRole role;
+  final String text;
+
+  LiveAgentTranscriptMessage append(String delta) =>
+      LiveAgentTranscriptMessage(role: role, text: '$text$delta');
+}
+
 final class LiveAgentUsage {
   const LiveAgentUsage({
     this.inputTokens = 0,
@@ -171,6 +183,7 @@ final class LiveAgentSpec {
     this.enableInputTranscription = true,
     this.emitTranscripts = true,
     this.maxConversationPairs,
+    this.turnDetectionMode = LiveAgentTurnDetectionMode.automatic,
   }) : assert(maxConversationPairs == null || maxConversationPairs > 0);
 
   final String instructions;
@@ -180,6 +193,7 @@ final class LiveAgentSpec {
   final bool enableInputTranscription;
   final bool emitTranscripts;
   final int? maxConversationPairs;
+  final LiveAgentTurnDetectionMode turnDetectionMode;
 }
 
 abstract interface class LiveAgentCredentialProvider {
@@ -272,6 +286,9 @@ final class LiveAgentSession extends ChangeNotifier {
   String transcript = '';
   String latestUserTranscript = '';
   String latestAssistantTranscript = '';
+  final List<LiveAgentTranscriptMessage> _transcriptMessages = [];
+  List<LiveAgentTranscriptMessage> get transcriptMessages =>
+      List<LiveAgentTranscriptMessage>.unmodifiable(_transcriptMessages);
   String? error;
   int interruptionCount = 0;
   int playbackCompletionCount = 0;
@@ -290,6 +307,7 @@ final class LiveAgentSession extends ChangeNotifier {
     transcript = '';
     latestUserTranscript = '';
     latestAssistantTranscript = '';
+    _transcriptMessages.clear();
     error = null;
     interruptionCount = 0;
     playbackCompletionCount = 0;
@@ -298,7 +316,7 @@ final class LiveAgentSession extends ChangeNotifier {
     _expectsInitialResponse = spec.initialContext?.trim().isNotEmpty == true;
     _phaseBeforePause = LiveAgentPhase.listening;
     playbackState = LiveAgentPlaybackState.playing;
-    inputController.reset();
+    inputController.reset(turnDetection: spec.turnDetectionMode);
     phase = LiveAgentPhase.connecting;
     _notify();
     _subscription = _transport.events.listen(
@@ -371,12 +389,32 @@ final class LiveAgentSession extends ChangeNotifier {
           if (event.role == 'user') {
             latestUserTranscript = text!;
             latestAssistantTranscript = '';
+            _transcriptMessages.add(
+              LiveAgentTranscriptMessage(
+                role: LiveAgentTranscriptRole.user,
+                text: text,
+              ),
+            );
             if (transcript.isNotEmpty && !transcript.endsWith('\n')) {
               transcript += '\n';
             }
             transcript += 'You: $text\n';
           } else {
             latestAssistantTranscript += text!;
+            if (_transcriptMessages.isNotEmpty &&
+                _transcriptMessages.last.role ==
+                    LiveAgentTranscriptRole.assistant) {
+              final lastIndex = _transcriptMessages.length - 1;
+              _transcriptMessages[lastIndex] = _transcriptMessages[lastIndex]
+                  .append(text);
+            } else {
+              _transcriptMessages.add(
+                LiveAgentTranscriptMessage(
+                  role: LiveAgentTranscriptRole.assistant,
+                  text: text,
+                ),
+              );
+            }
             transcript += text;
           }
         }
@@ -469,6 +507,27 @@ final class LiveAgentSession extends ChangeNotifier {
 
   Future<void> activateMicrophone() async {
     try {
+      final interruptsPausedAssistant =
+          inputController.turnDetection == LiveAgentTurnDetectionMode.manual &&
+          inputController.inputState == LiveAgentInputState.inactive &&
+          phase == LiveAgentPhase.paused &&
+          _phaseBeforePause == LiveAgentPhase.speaking;
+      final interruptsAssistant =
+          inputController.turnDetection == LiveAgentTurnDetectionMode.manual &&
+          inputController.inputState == LiveAgentInputState.inactive &&
+          (phase == LiveAgentPhase.speaking || interruptsPausedAssistant);
+      if (interruptsAssistant) {
+        await _transport.cancelResponse();
+        if (interruptsPausedAssistant) {
+          await _requirePlaybackControl(_transport).setPlaybackPaused(false);
+          await inputController.setSuspended(false);
+          playbackState = LiveAgentPlaybackState.playing;
+        }
+        interruptionCount += 1;
+        latestAssistantTranscript = '';
+        phase = LiveAgentPhase.listening;
+        _notify();
+      }
       await inputController.activateMicrophone();
     } catch (caught) {
       _fail(caught);

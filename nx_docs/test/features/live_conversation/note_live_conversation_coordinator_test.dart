@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
+import 'package:nx_docs/core/theme/app_theme.dart';
 import 'package:nx_docs/domain/document/document.dart';
 import 'package:nx_docs/features/companion/note_companion.dart';
 import 'package:nx_docs/features/live_conversation/note_live_conversation_controller.dart';
@@ -166,61 +167,83 @@ void main() {
         find.byKey(const ValueKey<String>('mac-live-conversation-controls')),
         findsOneWidget,
       );
-      expect(find.byTooltip('Pause live playback'), findsOneWidget);
-      expect(find.byTooltip('Mute microphone'), findsOneWidget);
-      expect(find.byTooltip('Turn off automatic VAD'), findsOneWidget);
+      expect(find.byTooltip('Pause live playback'), findsNothing);
+      expect(find.byTooltip('Start recording'), findsOneWidget);
       expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
       expect(find.byIcon(Icons.headphones_rounded), findsNothing);
 
-      await tester.tap(find.byTooltip('Pause live playback'));
-      await tester.pump();
-      expect(transport.playbackPausedValues, [true]);
-      expect(transport.inputEnabledValues, [false]);
-      expect(find.byTooltip('Resume live playback'), findsOneWidget);
+      final micX = tester.getCenter(find.byTooltip('Start recording')).dx;
+      final stopX = tester
+          .getCenter(find.byTooltip('Stop live conversation'))
+          .dx;
+      expect(micX, lessThan(stopX));
 
-      await tester.tap(find.byTooltip('Resume live playback'));
+      await tester.tap(find.byTooltip('Start recording'));
       await tester.pump();
-      expect(transport.playbackPausedValues, [true, false]);
-      expect(transport.inputEnabledValues, [false, true]);
+      final recordingButton = tester.widget<FloatingActionButton>(
+        find.descendant(
+          of: find.byTooltip('Send recording'),
+          matching: find.byType(FloatingActionButton),
+        ),
+      );
+      expect(recordingButton.backgroundColor, AppColors.red);
+
+      await tester.tap(find.byTooltip('Send recording'));
+      await tester.pump();
+      final waitingMic = tester.widget<FloatingActionButton>(
+        find.descendant(
+          of: find.byTooltip('Start recording'),
+          matching: find.byType(FloatingActionButton),
+        ),
+      );
+      expect(waitingMic.onPressed, isNull);
+      expect(transport.commitInputRequests, 1);
+      expect(transport.responseRequests, 1);
 
       transport.eventsController.add(
         const LiveAgentEvent(LiveAgentEventType.speaking),
       );
       await tester.pump();
 
-      await tester.tap(find.byTooltip('Mute microphone'));
-      await tester.pump();
-      expect(transport.inputEnabledValues, [false, true, false]);
-      expect(coordinator.controller?.phase, LiveAgentPhase.speaking);
-      expect(transport.cancelRequests, 0);
-      expect(find.byTooltip('Unmute microphone'), findsOneWidget);
+      expect(find.byTooltip('Interrupt and start recording'), findsOneWidget);
+      expect(find.byTooltip('Pause live playback'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Unmute microphone'));
+      await tester.tap(find.byTooltip('Pause live playback'));
       await tester.pump();
-      expect(transport.inputEnabledValues, [false, true, false, true]);
+      expect(transport.playbackPausedValues, [true]);
+      expect(find.byTooltip('Resume live playback'), findsOneWidget);
+      expect(find.byTooltip('Interrupt and start recording'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Turn off automatic VAD'));
+      await tester.tap(find.byTooltip('Resume live playback'));
       await tester.pump();
-      expect(transport.automaticVadValues, [false]);
-      expect(transport.cancelRequests, 0);
-      expect(find.byTooltip('Turn on automatic VAD'), findsOneWidget);
-      expect(find.byTooltip('Start recording'), findsOneWidget);
+      expect(transport.playbackPausedValues, [true, false]);
 
-      await tester.tap(find.byTooltip('Start recording'));
+      await tester.tap(find.byTooltip('Interrupt and start recording'));
       await tester.pump();
+      expect(coordinator.controller?.phase, LiveAgentPhase.listening);
+      expect(transport.cancelRequests, 1);
       expect(find.byTooltip('Send recording'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Send recording'));
+      await coordinator.controller!.toggleTurnDetection();
       await tester.pump();
-      expect(transport.commitInputRequests, 1);
-      expect(transport.responseRequests, 1);
-      expect(transport.automaticVadValues, [false]);
-      expect(find.byTooltip('Start recording'), findsOneWidget);
+      expect(transport.automaticVadValues, [true]);
+      expect(find.byTooltip('Start recording'), findsNothing);
+      expect(find.byTooltip('Send recording'), findsNothing);
+      expect(find.byTooltip('Pause live playback'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey<String>('mac-live-conversation-controls'),
+          ),
+          matching: find.byType(FloatingActionButton),
+        ),
+        findsOneWidget,
+      );
 
-      await tester.tap(find.byTooltip('Turn on automatic VAD'));
+      await coordinator.controller!.toggleTurnDetection();
       await tester.pump();
-      expect(transport.automaticVadValues, [false, true]);
-      expect(find.byTooltip('Turn off automatic VAD'), findsOneWidget);
+      expect(transport.automaticVadValues, [true, false]);
+      expect(find.byTooltip('Start recording'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('note-companion-chat-panel')),
         findsNothing,
@@ -283,20 +306,20 @@ void main() {
       find.byKey(const ValueKey<String>('ios-live-conversation-bottom-bar')),
       findsOneWidget,
     );
-    expect(find.byTooltip('Mute microphone'), findsOneWidget);
+    expect(find.byTooltip('Start recording'), findsOneWidget);
     expect(find.byTooltip('Stop live conversation'), findsOneWidget);
     expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
     expect(find.byIcon(Icons.headphones_rounded), findsNothing);
 
-    await tester.tap(find.byTooltip('Mute microphone'));
+    await tester.tap(find.byTooltip('Start recording'));
     await tester.pump();
 
-    expect(transport.inputEnabledValues, [false]);
-    expect(find.byTooltip('Unmute microphone'), findsOneWidget);
+    expect(transport.inputEnabledValues, [true]);
+    expect(find.byTooltip('Send recording'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('expanded Mac panel uses the same four live controls', (
+  testWidgets('expanded Mac panel uses contextual live controls', (
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
@@ -305,6 +328,7 @@ void main() {
     final coordinator = NoteLiveConversationCoordinator(
       createController: () => NoteLiveConversationController(
         session: LiveAgentSession(transport: transport),
+        transcribeConversation: true,
       ),
       credentialProvider: const StaticLiveAgentCredentialProvider('test-key'),
     );
@@ -330,10 +354,85 @@ void main() {
       find.byKey(const ValueKey<String>('mac-live-conversation-controls')),
       findsOneWidget,
     );
-    expect(find.byTooltip('Pause live playback'), findsOneWidget);
-    expect(find.byTooltip('Mute microphone'), findsOneWidget);
+    expect(find.byTooltip('Pause live playback'), findsNothing);
+    expect(find.byTooltip('Start recording'), findsOneWidget);
     expect(find.byTooltip('Stop live conversation'), findsOneWidget);
-    expect(find.byTooltip('Turn off automatic VAD'), findsOneWidget);
+    expect(find.byTooltip('Turn on automatic VAD'), findsOneWidget);
+    expect(find.text('VAD OFF'), findsOneWidget);
+    await tester.tap(find.byTooltip('Turn on automatic VAD'));
+    await tester.pump();
+    expect(find.text('VAD ON'), findsOneWidget);
+    expect(find.byTooltip('Start recording'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(
+          const ValueKey<String>('mac-live-conversation-controls'),
+        ),
+        matching: find.byType(FloatingActionButton),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byTooltip('Turn off automatic VAD'));
+    await tester.pump();
+    expect(find.text('VAD OFF'), findsOneWidget);
+    expect(find.byTooltip('Start recording'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('desktop-live-transcript')),
+      findsOneWidget,
+    );
+    expect(find.text('Talk naturally about this document.'), findsNothing);
+
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.transcript,
+        role: 'user',
+        text: 'What is the main point?',
+      ),
+    );
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.transcript,
+        role: 'assistant',
+        text: 'The main point is ',
+      ),
+    );
+    transport.eventsController.add(
+      const LiveAgentEvent(
+        LiveAgentEventType.transcript,
+        role: 'assistant',
+        text: 'shown in the opening.',
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('What is the main point?'), findsOneWidget);
+    expect(
+      find.text('The main point is shown in the opening.'),
+      findsOneWidget,
+    );
+    final selectionArea = find.ancestor(
+      of: find.text('What is the main point?'),
+      matching: find.byType(SelectionArea),
+    );
+    expect(selectionArea, findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.text('The main point is shown in the opening.'),
+        matching: find.byType(SelectionArea),
+      ),
+      findsOneWidget,
+    );
+    final transcriptRect = tester.getRect(
+      find.byKey(const ValueKey<String>('desktop-live-transcript')),
+    );
+    final controlsRect = tester.getRect(
+      find.byKey(const ValueKey<String>('mac-live-conversation-controls')),
+    );
+    expect(
+      transcriptRect.top,
+      greaterThan(tester.getRect(find.text('LISTENING').last).bottom),
+    );
+    expect(transcriptRect.bottom, lessThan(controlsRect.top));
     expect(
       find.byKey(const ValueKey<String>('note-live-end-button')),
       findsNothing,

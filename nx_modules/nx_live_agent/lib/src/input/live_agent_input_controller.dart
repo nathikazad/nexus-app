@@ -131,9 +131,14 @@ final class LiveAgentInputController extends ChangeNotifier {
     return completion.future;
   }
 
-  void reset() {
-    _turnDetection = LiveAgentTurnDetectionMode.automatic;
-    _inputState = LiveAgentInputState.active;
+  void reset({
+    LiveAgentTurnDetectionMode turnDetection =
+        LiveAgentTurnDetectionMode.automatic,
+  }) {
+    _turnDetection = turnDetection;
+    _inputState = turnDetection == LiveAgentTurnDetectionMode.automatic
+        ? LiveAgentInputState.active
+        : LiveAgentInputState.inactive;
     _automaticMuted = false;
     _suspended = false;
     _busy = false;

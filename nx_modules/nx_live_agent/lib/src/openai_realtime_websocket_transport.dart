@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'audio/live_audio_player.dart';
+import 'input/live_agent_input_controller.dart';
 import 'live_agent.dart';
 import 'openai_realtime_transport.dart';
 import 'transport/realtime_websocket_connector.dart';
@@ -37,10 +38,12 @@ final class OpenAiRealtimeWebSocketTransport
   Completer<void>? _sessionReady;
   StreamSubscription<Object?>? _socketSubscription;
   Future<void> _sendChain = Future<void>.value();
+  Future<void> _outputChain = Future<void>.value();
   bool _closed = true;
   bool _inputEnabled = true;
   bool _emitTranscripts = true;
   bool _responseActive = false;
+  bool _responseHadAudio = false;
   bool _discardResponseAudio = false;
   int? _maxConversationPairs;
   final Set<String> _conversationItemIds = <String>{};
@@ -60,7 +63,8 @@ final class OpenAiRealtimeWebSocketTransport
     }
     await close();
     _closed = false;
-    _inputEnabled = true;
+    _inputEnabled =
+        spec.turnDetectionMode == LiveAgentTurnDetectionMode.automatic;
     _emitTranscripts = spec.emitTranscripts;
     _maxConversationPairs = spec.maxConversationPairs;
     _conversationItemIds.clear();
@@ -191,6 +195,10 @@ final class OpenAiRealtimeWebSocketTransport
   @override
   Future<void> cancelResponse() async {
     _discardResponseAudio = true;
+    // Socket callbacks can overlap while PCM method-channel calls are still
+    // in flight. Drain every accepted chunk before the final stop so none can
+    // reach the native player after its queue has been cleared.
+    await _outputChain;
     await _audioDevice.stop();
     if (_responseActive) await _send({'type': 'response.cancel'});
   }
@@ -261,20 +269,32 @@ final class OpenAiRealtimeWebSocketTransport
       switch (event['type']) {
         case 'response.created':
           _responseActive = true;
+          _responseHadAudio = false;
           _discardResponseAudio = false;
         case 'response.output_audio.delta':
           final delta = event['delta'];
+          if (delta is String && delta.isNotEmpty) _responseHadAudio = true;
           if (!_discardResponseAudio && delta is String && delta.isNotEmpty) {
-            await _audioDevice.addPcm16(base64Decode(delta));
+            _enqueueOutput(() => _audioDevice.addPcm16(base64Decode(delta)));
           }
         case 'response.output_audio.done':
-          if (!_discardResponseAudio) await _audioDevice.finishResponse();
+          if (!_discardResponseAudio) {
+            _enqueueOutput(_audioDevice.finishResponse);
+          }
         case 'response.done':
           _responseActive = false;
           await _pruneConversationPairs();
       }
       for (final parsed in parseOpenAiRealtimeEvent(event)) {
         if (parsed.type == LiveAgentEventType.speaking) continue;
+        // The server can finish generating long before the native PCM queue
+        // finishes playing. Keep the session in speaking/paused until the
+        // audio device reports playbackStopped.
+        if (event['type'] == 'response.done' &&
+            _responseHadAudio &&
+            parsed.type == LiveAgentEventType.listening) {
+          continue;
+        }
         if (_emitTranscripts || parsed.type != LiveAgentEventType.transcript) {
           _emit(parsed);
         }
@@ -332,6 +352,19 @@ final class OpenAiRealtimeWebSocketTransport
     if (!_events.isClosed) _events.add(event);
   }
 
+  void _enqueueOutput(Future<void> Function() operation) {
+    _outputChain = _outputChain.then((_) => operation()).catchError((
+      Object error,
+    ) {
+      _emit(
+        LiveAgentEvent(
+          LiveAgentEventType.error,
+          text: 'Could not play assistant audio: $error',
+        ),
+      );
+    });
+  }
+
   @override
   Future<void> close() async {
     _closed = true;
@@ -346,6 +379,7 @@ final class OpenAiRealtimeWebSocketTransport
     }
     _channel = null;
     _sessionReady = null;
+    await _outputChain;
     await _audioDevice.stop();
   }
 
