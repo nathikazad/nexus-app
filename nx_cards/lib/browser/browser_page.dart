@@ -375,7 +375,6 @@ class _SourceCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward, size: 18),
           ],
         ),
       ),

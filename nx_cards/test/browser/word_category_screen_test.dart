@@ -23,7 +23,7 @@ void main() {
         ),
         _word(
           id: 2,
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.learnt,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
@@ -54,6 +54,7 @@ void main() {
     expect(find.text('Languages'), findsOneWidget);
     expect(find.text('Malayalam'), findsOneWidget);
     expect(find.text('Script'), findsNothing);
+    expect(find.byIcon(Icons.arrow_forward), findsNothing);
     expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
     await tester.tap(find.text('Malayalam'));
     await tester.pumpAndSettle();
@@ -67,6 +68,45 @@ void main() {
       find.byKey(const ValueKey('language-category-divider-Noun')),
     );
     expect(nounDivider.dx, greaterThan(nounTitle.dx));
+    final nounLearnt = find.byKey(
+      const ValueKey('language-category-noun-learnt'),
+    );
+    final nounLearning = find.byKey(
+      const ValueKey('language-category-noun-learning'),
+    );
+    expect(find.descendant(of: nounLearnt, matching: find.text('1')), findsOne);
+    expect(
+      find.descendant(of: nounLearning, matching: find.text('0')),
+      findsOne,
+    );
+    expect(
+      tester.getCenter(nounLearnt).dx,
+      lessThan(tester.getCenter(nounLearning).dx),
+    );
+    expect(
+      find.byKey(const ValueKey('language-category-noun-remaining')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('language-category-noun-due')),
+      findsOneWidget,
+    );
+    await tester.binding.setSurfaceSize(const Size(280, 844));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('language-category-noun-total')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('language-category-noun-learnt')),
+      findsNothing,
+    );
+    await tester.binding.setSurfaceSize(const Size(1100, 844));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('language-category-noun-remaining')),
+      findsOneWidget,
+    );
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.text('Library'), findsNothing);

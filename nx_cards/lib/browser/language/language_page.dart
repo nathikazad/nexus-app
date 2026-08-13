@@ -113,13 +113,22 @@ class _LanguageCategoryCard extends StatelessWidget {
     final current = cards
         .where((card) => card.learningStatus == LearningStatus.learning)
         .length;
+    final learnt = cards
+        .where((card) => card.learningStatus == LearningStatus.learnt)
+        .length;
+    final remaining = cards
+        .where((card) => card.learningStatus == LearningStatus.notStarted)
+        .length;
     final due = data.dueCount(
       DateTime.now(),
       studyCategory: category,
       language: language,
     );
-    Widget metric(int value, String label) => SizedBox(
-      width: 40,
+    Widget metric(int value, String label, double width) => SizedBox(
+      key: ValueKey(
+        'language-category-${category.toLowerCase()}-${label.toLowerCase()}',
+      ),
+      width: width,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -151,56 +160,81 @@ class _LanguageCategoryCard extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-          child: Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: RecallColors.soft,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: RecallColors.line),
-                      ),
-                      child: Icon(
-                        categoryIcon(category),
-                        size: 20,
-                        color: RecallColors.ink,
-                      ),
-                    ),
-                    const SizedBox(width: 11),
-                    Expanded(
-                      child: Text(
-                        category,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Reserve a readable icon/title area, then admit metrics from
+              // left to right. As space shrinks, the rightmost metric drops.
+              const identityAndDividerWidth = 135.0;
+              final metricWidth =
+                  constraints.maxWidth - identityAndDividerWidth;
+              final showLearnt = metricWidth >= 76;
+              final showLearning = metricWidth >= 126;
+              final showDue = metricWidth >= 160;
+              final showRemaining = metricWidth >= 212;
+              return Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: RecallColors.soft,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: RecallColors.line),
+                          ),
+                          child: Icon(
+                            categoryIcon(category),
+                            size: 20,
+                            color: RecallColors.ink,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Text(
+                            category,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 44,
+                    child: VerticalDivider(
+                      key: ValueKey('language-category-divider-$category'),
+                      width: 1,
+                      thickness: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  metric(cards.length, 'Total', 34),
+                  if (showLearnt) ...[
+                    const SizedBox(width: 4),
+                    metric(learnt, 'Learnt', 38),
                   ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 44,
-                child: VerticalDivider(
-                  key: ValueKey('language-category-divider-$category'),
-                  width: 1,
-                  thickness: 1,
-                ),
-              ),
-              const SizedBox(width: 12),
-              metric(cards.length, 'Total'),
-              const SizedBox(width: 8),
-              metric(due, 'Due'),
-              const SizedBox(width: 8),
-              metric(current, 'Current'),
-            ],
+                  if (showLearning) ...[
+                    const SizedBox(width: 4),
+                    metric(current, 'Learning', 46),
+                  ],
+                  if (showDue) ...[
+                    const SizedBox(width: 4),
+                    metric(due, 'Due', 30),
+                  ],
+                  if (showRemaining) ...[
+                    const SizedBox(width: 4),
+                    metric(remaining, 'Remaining', 48),
+                  ],
+                ],
+              );
+            },
           ),
         ),
       ),
