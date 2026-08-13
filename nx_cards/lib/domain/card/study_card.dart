@@ -9,8 +9,6 @@ class StudyCard {
   StudyCard({
     required this.id,
     required this.content,
-    required this.deckId,
-    required this.deckName,
     required Map<StudyCue, CardSchedule> schedules,
     required Map<StudyCue, List<CardReview>> reviewHistory,
     required this.suspended,
@@ -39,8 +37,6 @@ class StudyCard {
   bool get isPhraseCard => modelTypeName == 'Phrase';
   bool get isScriptCard => modelTypeName == 'Script';
   String? get language => tags['Language']?.firstOrNull;
-  final int deckId;
-  final String deckName;
   final Map<StudyCue, CardSchedule> schedules;
   final Map<StudyCue, List<CardReview>> reviewHistory;
   final bool suspended;
@@ -69,7 +65,7 @@ class StudyCard {
   String? get progressionCohort {
     final category = studyCategory;
     if (category != null) {
-      return 'language:${language ?? deckName}:$category';
+      return language == null ? null : 'language:$language:$category';
     }
     final bookId = sourceBookId;
     return bookId == null ? null : 'book:$bookId';
@@ -132,8 +128,6 @@ class StudyCard {
     return StudyCard(
       id: id,
       content: content ?? this.content,
-      deckId: deckId,
-      deckName: deckName,
       schedules: schedules ?? this.schedules,
       reviewHistory: reviewHistory ?? this.reviewHistory,
       suspended: suspended ?? this.suspended,

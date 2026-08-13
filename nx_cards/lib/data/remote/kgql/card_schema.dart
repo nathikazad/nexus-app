@@ -1,7 +1,6 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 
-const deckModelType = 'FlashcardDeck';
 const cardModelType = 'Flashcard';
 const languageCardModelType = 'LanguageFlashcard';
 const wordCardModelType = 'Word';
@@ -9,11 +8,6 @@ const phraseCardModelType = 'Phrase';
 const verbCardModelType = 'Verb';
 const scriptCardModelType = 'Script';
 const bookModelType = 'Book';
-
-// Decks are legacy metadata. New cards are grouped by Language tags or Book
-// relations; zero keeps older local rows readable without inventing a deck.
-const unassignedDeckId = 0;
-const unassignedDeckName = '';
 
 const wordPhrasesRelation = 'word_phrases';
 const verbPhraseConjugationRelation = 'verb_phrase_conjugation';
@@ -26,7 +20,6 @@ bool isLanguageCardModelType(String? name) =>
     name == verbCardModelType ||
     name == scriptCardModelType;
 
-const attrArchived = 'archived';
 const attrDueAt = 'due_at';
 const attrSuspended = 'suspended';
 const attrSchedule = 'schedule';
@@ -34,8 +27,6 @@ const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
 const attrLearningStatus = 'learning_status';
-const attrFromLanguage = 'from_language';
-const attrToLanguage = 'to_language';
 
 const cardDetailsJsonSchema = <String, dynamic>{
   'type': 'object',
@@ -177,24 +168,19 @@ const reviewHistoryJsonSchema = <String, dynamic>{
 
 class CardsSchemaStatus {
   const CardsSchemaStatus({
-    required this.deckReady,
     required this.cardReady,
     required this.languageCardReady,
   });
 
-  final bool deckReady;
   final bool cardReady;
   final bool languageCardReady;
-  bool get ready => deckReady && cardReady && languageCardReady;
+  bool get ready => cardReady && languageCardReady;
 }
 
 Future<CardsSchemaStatus> inspectCardsSchema(GraphQLClient client) async {
   final card = await _modelTypeOrNull(client, cardModelType);
   final languageCard = await _modelTypeOrNull(client, languageCardModelType);
   return CardsSchemaStatus(
-    // Kept on the status object for source compatibility with older clients.
-    // Decks are no longer part of Recall's required schema.
-    deckReady: true,
     cardReady:
         card != null &&
         _hasAttributeDefinitions(
@@ -352,23 +338,6 @@ bool _deepEquals(Object? left, Object? right) {
   return left == right;
 }
 
-SetModelTypeRequest buildDeckSchemaRequest() {
-  return SetModelTypeRequest(
-    name: deckModelType,
-    typeKind: 'base',
-    description: 'A collection of cue-based spaced-repetition cards.',
-    attributeDefinitions: [
-      AttributeDefinition(
-        key: attrArchived,
-        valueType: 'boolean',
-        required: true,
-      ),
-      AttributeDefinition(key: attrFromLanguage, valueType: 'string'),
-      AttributeDefinition(key: attrToLanguage, valueType: 'string'),
-    ],
-  );
-}
-
 SetModelTypeRequest buildCardSchemaRequest() {
   return SetModelTypeRequest(
     name: cardModelType,
@@ -409,11 +378,6 @@ SetModelTypeRequest buildCardSchemaRequest() {
       ),
     ],
     relationshipTypes: [
-      RelationshipType.fromName(
-        deckModelType,
-        multiplicity: 'one',
-        relationName: 'in_deck',
-      ),
       RelationshipType.fromName(
         bookModelType,
         multiplicity: 'one',

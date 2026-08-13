@@ -26,8 +26,6 @@ void main() {
           ),
         ],
       ),
-      deckId: 10,
-      deckName: 'Malayalam words',
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: true),
@@ -40,23 +38,13 @@ void main() {
       },
       suspended: false,
     );
-    const deck = CardDeck(
-      id: 10,
-      name: 'Malayalam words',
-      description: '',
-      fromLanguage: 'English',
-      toLanguage: 'Malayalam',
-      archived: false,
-    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(
-              CardsDashboard(decks: const [deck], cards: [card]),
-            ),
+            (_) => Stream.value(CardsDashboard(cards: [card])),
           ),
         ],
         child: MaterialApp(
@@ -115,8 +103,6 @@ void main() {
           originalScript: 'കഴിവ്',
           transliteration: 'kazhivu',
         ),
-        deckId: 10,
-        deckName: 'Malayalam words',
         schedules: const {
           StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         },
@@ -129,7 +115,7 @@ void main() {
           overrides: [
             cardAudioRepositoryProvider.overrideWithValue(null),
             cardsDashboardProvider.overrideWith(
-              (_) => Stream.value(const CardsDashboard(decks: [], cards: [])),
+              (_) => Stream.value(const CardsDashboard(cards: [])),
             ),
           ],
           child: MaterialApp(

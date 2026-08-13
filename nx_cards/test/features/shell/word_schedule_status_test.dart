@@ -129,8 +129,6 @@ StudyCard _card({
     originalScript: 'ആശങ്ക',
     transliteration: 'aashanka',
   ),
-  deckId: 1,
-  deckName: 'Malayalam nouns',
   schedules: schedules,
   reviewHistory: <StudyCue, List<CardReview>>{
     if (recallRatings.isNotEmpty)

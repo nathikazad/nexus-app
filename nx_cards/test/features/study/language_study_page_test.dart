@@ -53,8 +53,6 @@ void main() {
         front: 'What is customer discovery?',
         back: 'Testing hypotheses outside the building.',
       ),
-      deckId: 0,
-      deckName: '',
       schedules: const {
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       },
@@ -103,8 +101,6 @@ StudyCard _card(int id, String english, String script, String transliteration) {
         ),
       ],
     ),
-    deckId: 7,
-    deckName: 'Malayalam',
     schedules: const <StudyCue, CardSchedule>{
       StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       StudyCue.toLanguage: CardSchedule.initial(enabled: true),

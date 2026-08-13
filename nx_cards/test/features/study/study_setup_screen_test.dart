@@ -20,8 +20,6 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      deckId: 7,
-      deckName: 'Malayalam',
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: true),
@@ -41,7 +39,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+            (_) => Stream.value(CardsDashboard(cards: [card])),
           ),
         ],
         child: MaterialApp(
@@ -102,8 +100,6 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      deckId: 7,
-      deckName: 'Malayalam',
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       },
@@ -119,7 +115,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+            (_) => Stream.value(CardsDashboard(cards: [card])),
           ),
         ],
         child: MaterialApp(
@@ -182,7 +178,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: cards)),
+            (_) => Stream.value(CardsDashboard(cards: cards)),
           ),
         ],
         child: MaterialApp(
@@ -282,7 +278,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: cards)),
+            (_) => Stream.value(CardsDashboard(cards: cards)),
           ),
         ],
         child: MaterialApp(
@@ -350,7 +346,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: cards)),
+            (_) => Stream.value(CardsDashboard(cards: cards)),
           ),
         ],
         child: MaterialApp(
@@ -392,8 +388,6 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      deckId: 7,
-      deckName: 'Malayalam',
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: true),
@@ -408,7 +402,7 @@ void main() {
       overrides: [
         cardAudioRepositoryProvider.overrideWithValue(null),
         cardsDashboardProvider.overrideWith(
-          (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+          (_) => Stream.value(CardsDashboard(cards: [card])),
         ),
       ],
       child: MaterialApp(
@@ -505,9 +499,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(_FakeAudioRepository()),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(
-              CardsDashboard(decks: const [], cards: [learning, learnt]),
-            ),
+            (_) => Stream.value(CardsDashboard(cards: [learning, learnt])),
           ),
         ],
         child: MaterialApp(
@@ -587,7 +579,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+            (_) => Stream.value(CardsDashboard(cards: [card])),
           ),
         ],
         child: MaterialApp(
@@ -647,9 +639,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(
-              CardsDashboard(decks: const [], cards: [latestCard]),
-            ),
+            (_) => Stream.value(CardsDashboard(cards: [latestCard])),
           ),
         ],
         child: MaterialApp(
@@ -692,7 +682,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(decks: const [], cards: [card])),
+            (_) => Stream.value(CardsDashboard(cards: [card])),
           ),
         ],
         child: MaterialApp(
@@ -743,8 +733,6 @@ StudyCard _languageCard({required CardSchedule schedule}) => StudyCard(
     originalScript: 'കഴിവ്',
     transliteration: 'kazhivu',
   ),
-  deckId: 7,
-  deckName: 'Malayalam',
   schedules: <StudyCue, CardSchedule>{StudyCue.fromLanguage: schedule},
   reviewHistory: const <StudyCue, List<CardReview>>{
     StudyCue.fromLanguage: <CardReview>[],
@@ -767,8 +755,6 @@ StudyCard _recallFilterCard({
     originalScript: 'വാക്ക് $id',
     transliteration: 'vākku $id',
   ),
-  deckId: 7,
-  deckName: 'Malayalam',
   schedules: <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule(
       enabled: true,
@@ -812,8 +798,6 @@ StudyCard _scriptCard({
     transliteration: 'letter$id',
     audioUrl: '/audio/letter$id.mp3',
   ),
-  deckId: 8,
-  deckName: 'Malayalam script',
   schedules: const <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
     StudyCue.toLanguage: CardSchedule.initial(enabled: true),

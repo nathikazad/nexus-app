@@ -153,8 +153,6 @@ StudyCard _bookCard({
 }) => StudyCard(
   id: id,
   content: BasicCardContent(front: 'question $id', back: 'answer $id'),
-  deckId: 0,
-  deckName: '',
   schedules: const {StudyCue.fromLanguage: CardSchedule.initial(enabled: true)},
   reviewHistory: {
     StudyCue.fromLanguage: [
@@ -203,8 +201,6 @@ StudyCard _card({
       originalScript: 'വാക്ക് $id',
       transliteration: 'vākku $id',
     ),
-    deckId: 1,
-    deckName: 'Malayalam',
     schedules: const {
       StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
     },
@@ -213,8 +209,11 @@ StudyCard _card({
     learningStatus: status,
     modelTypeName: script ? 'Script' : 'Word',
     tags: script
-        ? const <String, List<String>>{}
+        ? const <String, List<String>>{
+            'Language': ['Malayalam'],
+          }
         : <String, List<String>>{
+            'Language': ['Malayalam'],
             'Word Category': [category],
           },
   );

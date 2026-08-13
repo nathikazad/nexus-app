@@ -6,7 +6,5 @@ abstract interface class CardsWorkspace implements CardsRepository {
 
   Future<void> syncLibrary();
 
-  Future<void> syncDeck(int deckId);
-
   Future<void> close();
 }

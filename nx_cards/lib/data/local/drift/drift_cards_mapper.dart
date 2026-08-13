@@ -9,34 +9,6 @@ import 'package:nx_cards/domain/cards_models.dart';
 final class DriftCardsMapper {
   const DriftCardsMapper();
 
-  LocalCardDecksCompanion deckToCompanion(
-    CardDeck deck, {
-    required String accountKey,
-    required String? serverHash,
-  }) {
-    return LocalCardDecksCompanion.insert(
-      accountKey: accountKey,
-      remoteId: deck.id,
-      name: deck.name,
-      description: deck.description,
-      fromLanguage: Value(deck.fromLanguage),
-      toLanguage: Value(deck.toLanguage),
-      archived: deck.archived,
-      updatedAt: Value(deck.updatedAt),
-      serverHash: Value(serverHash),
-    );
-  }
-
-  CardDeck deckFromRow(LocalCardDeckRow row) => CardDeck(
-    id: row.remoteId,
-    name: row.name,
-    description: row.description,
-    fromLanguage: row.fromLanguage,
-    toLanguage: row.toLanguage,
-    archived: row.archived,
-    updatedAt: row.updatedAt?.toUtc(),
-  );
-
   LocalStudyCardsCompanion cardToCompanion(
     StudyCard card, {
     required String accountKey,
@@ -47,7 +19,6 @@ final class DriftCardsMapper {
     return LocalStudyCardsCompanion.insert(
       accountKey: accountKey,
       remoteId: card.id,
-      deckId: card.deckId,
       modelType:
           card.modelTypeName ??
           (content is LanguageCardContent ? wordCardModelType : cardModelType),
@@ -78,7 +49,7 @@ final class DriftCardsMapper {
     );
   }
 
-  StudyCard cardFromRow(LocalStudyCardRow row, [CardDeck? deck]) {
+  StudyCard cardFromRow(LocalStudyCardRow row) {
     final schedule = _jsonMap(row.scheduleJson);
     final history = _jsonMap(row.reviewHistoryJson);
     return StudyCard(
@@ -92,8 +63,6 @@ final class DriftCardsMapper {
               examples: languageExamplesFromJson(jsonDecode(row.examplesJson)),
             )
           : BasicCardContent(front: row.front, back: row.back),
-      deckId: row.deckId,
-      deckName: deck?.name ?? unassignedDeckName,
       schedules: <StudyCue, CardSchedule>{
         for (final cue in StudyCue.values)
           cue: _scheduleFrom(_cueNode(schedule, cue)),

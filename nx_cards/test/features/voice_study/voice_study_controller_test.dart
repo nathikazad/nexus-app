@@ -102,7 +102,7 @@ void main() {
         StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
         StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
       ],
-      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
       now: () => DateTime.utc(2026, 8, 7, 12),
     );
@@ -179,7 +179,7 @@ void main() {
           StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
           StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
         ],
-        deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+        languages: (from: 'English', to: 'Malayalam'),
         onScheduleSaved: () {},
       );
       await controller.start(
@@ -226,7 +226,7 @@ void main() {
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
       prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
-      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
     await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
@@ -270,7 +270,7 @@ void main() {
         StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
         StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
       ],
-      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
     await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
@@ -332,7 +332,7 @@ void main() {
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
       prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
-      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
     await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
@@ -357,7 +357,7 @@ void main() {
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
       prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
-      deckLanguages: const {7: (from: 'English', to: 'Malayalam')},
+      languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
     await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
@@ -418,8 +418,6 @@ StudyCard _card(int id) => StudyCard(
       ),
     ],
   ),
-  deckId: 7,
-  deckName: 'Malayalam basics',
   schedules: const {
     StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
     StudyCue.toLanguage: CardSchedule.initial(enabled: false),

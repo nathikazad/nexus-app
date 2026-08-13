@@ -7,7 +7,6 @@ import 'package:nx_cards/composition/cards_composition.dart';
 import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/features/cards/card_details_dialog.dart';
-import 'package:nx_cards/features/cards/card_editors.dart';
 import 'package:nx_cards/features/shell/language_category_order.dart';
 import 'package:nx_cards/features/study/study_screen.dart';
 import 'package:nx_cards/features/study/study_setup_screen.dart';
@@ -196,11 +195,18 @@ class _SourcesDashboard extends StatelessWidget {
                     for (final language in data.languages)
                       _SourceCard(
                         title: language,
-                        subtitle:
-                            '${data.cardsForLanguage(language).length} cards',
                         icon: Icons.translate_outlined,
                         color: RecallColors.violet,
+                        total: data.cardsForLanguage(language).length,
                         due: data.dueCount(DateTime.now(), language: language),
+                        current: data
+                            .cardsForLanguage(language)
+                            .where(
+                              (card) =>
+                                  card.learningStatus ==
+                                  LearningStatus.learning,
+                            )
+                            .length,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) =>
@@ -222,11 +228,18 @@ class _SourcesDashboard extends StatelessWidget {
                       for (final book in books)
                         _SourceCard(
                           title: book.value,
-                          subtitle:
-                              '${data.cardsForBook(book.key).length} cards',
                           icon: Icons.menu_book_outlined,
                           color: RecallColors.sky,
+                          total: data.cardsForBook(book.key).length,
                           due: data.dueCount(DateTime.now(), bookId: book.key),
+                          current: data
+                              .cardsForBook(book.key)
+                              .where(
+                                (card) =>
+                                    card.learningStatus ==
+                                    LearningStatus.learning,
+                              )
+                              .length,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => BookCardsScreen(
@@ -296,18 +309,20 @@ class _SourceGrid extends StatelessWidget {
 class _SourceCard extends StatelessWidget {
   const _SourceCard({
     required this.title,
-    required this.subtitle,
     required this.icon,
     required this.color,
+    required this.total,
     required this.due,
+    required this.current,
     required this.onTap,
   });
 
   final String title;
-  final String subtitle;
   final IconData icon;
   final Color color;
+  final int total;
   final int due;
+  final int current;
   final VoidCallback onTap;
 
   @override
@@ -342,13 +357,27 @@ class _SourceCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$subtitle · $due due',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: RecallColors.muted,
-                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 6,
+                    children: [
+                      _SourceMetric(
+                        icon: Icons.style_outlined,
+                        value: total,
+                        label: 'Total',
+                      ),
+                      _SourceMetric(
+                        icon: Icons.schedule_outlined,
+                        value: due,
+                        label: 'Due',
+                      ),
+                      _SourceMetric(
+                        icon: Icons.school_outlined,
+                        value: current,
+                        label: 'Current',
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -359,6 +388,63 @@ class _SourceCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _SourceMetric extends StatelessWidget {
+  const _SourceMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.stacked = false,
+  });
+
+  final IconData icon;
+  final int value;
+  final String label;
+  final bool stacked;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: RecallColors.muted),
+              const SizedBox(width: 5),
+              Text(
+                '$value',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: RecallColors.ink,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: RecallColors.faint),
+          ),
+        ],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: RecallColors.muted),
+        const SizedBox(width: 4),
+        Text(
+          '$value $label',
+          style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+        ),
+      ],
+    );
+  }
 }
 
 class LanguageHomeScreen extends ConsumerWidget {
@@ -501,28 +587,36 @@ class _LanguageCategoryCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 5),
-              Text(
-                '$current currently learning · ${cards.length - current} available',
-                style: const TextStyle(fontSize: 12, color: RecallColors.muted),
-              ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               const Divider(height: 1),
               const SizedBox(height: 13),
               Row(
                 children: [
-                  _SmallCount(
-                    value: due,
-                    label: 'Due',
-                    color: RecallColors.ink,
+                  Expanded(
+                    child: _SourceMetric(
+                      icon: Icons.style_outlined,
+                      value: cards.length,
+                      label: 'Total',
+                      stacked: true,
+                    ),
                   ),
-                  const SizedBox(width: 24),
-                  _SmallCount(
-                    value: cards.length,
-                    label: category == 'Script' ? 'Letters' : 'Words',
-                    color: RecallColors.ink,
+                  Expanded(
+                    child: _SourceMetric(
+                      icon: Icons.schedule_outlined,
+                      value: due,
+                      label: 'Due',
+                      stacked: true,
+                    ),
                   ),
-                  const Spacer(),
+                  Expanded(
+                    child: _SourceMetric(
+                      icon: Icons.school_outlined,
+                      value: current,
+                      label: 'Current',
+                      stacked: true,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   const Icon(Icons.arrow_forward, size: 18),
                 ],
               ),
@@ -619,7 +713,7 @@ class LanguageCategoryScreen extends ConsumerWidget {
                             studyCards: [...learning, ...learnt],
                             languagePair: language == null
                                 ? _languagesForCards(data, cards)
-                                : _LanguagePair('English', language!),
+                                : _LanguagePair('Front', language!),
                             builder: (onPressed) => FilledButton(
                               onPressed: onPressed,
                               child: const Text('Study'),
@@ -881,9 +975,6 @@ class _LearningTab extends ConsumerWidget {
                             ),
                             card: card,
                             showScheduleStatus: showScheduleStatus,
-                            deck: dashboard.decks
-                                .where((deck) => deck.id == card.deckId)
-                                .firstOrNull,
                             previousStatus: previousStatus,
                             previousActionLabel: previousActionLabel,
                             nextStatus: nextStatus,
@@ -903,7 +994,6 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
   const _LearningStatusRow({
     super.key,
     required this.card,
-    required this.deck,
     required this.showScheduleStatus,
     this.previousStatus,
     this.previousActionLabel,
@@ -912,7 +1002,6 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
   });
 
   final StudyCard card;
-  final CardDeck? deck;
   final bool showScheduleStatus;
   final LearningStatus? previousStatus;
   final String? previousActionLabel;
@@ -983,19 +1072,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
       setState(() => _offset = 0);
       return;
     }
-    final deck = widget.deck;
-    if (deck == null) return;
     final edit = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => CardDetailsPage(deck: deck, card: widget.card),
-      ),
+      MaterialPageRoute(builder: (_) => CardDetailsPage(card: widget.card)),
     );
-    if (edit == true && mounted) {
-      await showDialog<void>(
-        context: context,
-        builder: (_) => CardEditorDialog(deck: deck, card: widget.card),
-      );
-    }
+    if (edit == true && mounted) ref.invalidate(cardsDashboardProvider);
   }
 
   @override
@@ -1223,470 +1303,6 @@ IconData _categoryIcon(String category) => switch (category) {
   _ => Icons.text_fields_outlined,
 };
 
-// Legacy deck management kept temporarily for compatibility with existing
-// routes and editors. It is not reachable from the library navigation.
-// ignore: unused_element
-class _DecksDashboard extends ConsumerWidget {
-  const _DecksDashboard({required this.data});
-  final CardsDashboard data;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final due = data.dueCount(now);
-    final fresh = data.newCount();
-    final queue = data.studyQueue(now);
-    return RefreshIndicator(
-      onRefresh: ref.read(cardsLibrarySyncProvider),
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1050),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.end,
-                    runSpacing: 18,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_dateLabel(now), style: monoLabel),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Ready to remember?',
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '$due cards due · $fresh new',
-                            style: const TextStyle(color: RecallColors.muted),
-                          ),
-                        ],
-                      ),
-                      _StudyLauncher(
-                        title: "Today's review",
-                        preferenceKey: 'today-review',
-                        prompts: queue,
-                        studyCards: _studyCardsForPrompts(queue),
-                        languagePair: _languagesForPrompts(data, queue),
-                        builder: (onPressed) => FilledButton.icon(
-                          onPressed: onPressed,
-                          icon: const Icon(Icons.play_circle_outline),
-                          label: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            child: Text('Start review'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Due now',
-                          value: '$due',
-                          detail: 'Ready for review',
-                          accent: RecallColors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'New cards',
-                          value: '$fresh',
-                          detail: 'Up to 20 per session',
-                          accent: RecallColors.violet,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Total cards',
-                          value: '${data.cards.length}',
-                          detail: '${data.decks.length} decks',
-                          accent: RecallColors.emerald,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 34),
-                  const Text(
-                    'Your decks',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Choose a deck to study or manage its cards.',
-                    style: TextStyle(fontSize: 12, color: RecallColors.muted),
-                  ),
-                  const SizedBox(height: 15),
-                  if (data.decks.isEmpty)
-                    _EmptyDecks(
-                      onCreate: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => const CreateDeckDialog(),
-                      ),
-                    )
-                  else
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final width = constraints.maxWidth >= 720
-                            ? (constraints.maxWidth - 14) / 2
-                            : constraints.maxWidth;
-                        return Wrap(
-                          spacing: 14,
-                          runSpacing: 14,
-                          children: [
-                            for (final deck in data.decks.where(
-                              (d) => !d.archived,
-                            ))
-                              SizedBox(
-                                width: width,
-                                child: _DeckCard(deck: deck, data: data),
-                              ),
-                            SizedBox(
-                              width: width,
-                              child: _AddDeckCard(
-                                onTap: () => showDialog<void>(
-                                  context: context,
-                                  builder: (_) => const CreateDeckDialog(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeckCard extends StatelessWidget {
-  const _DeckCard({required this.deck, required this.data});
-  final CardDeck deck;
-  final CardsDashboard data;
-
-  @override
-  Widget build(BuildContext context) {
-    final due = data.dueCount(DateTime.now(), deckId: deck.id);
-    final queue = data.studyQueue(DateTime.now(), deckId: deck.id);
-    final color = !deck.isLanguageDeck ? RecallColors.sky : RecallColors.violet;
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => Navigator.push<void>(
-          context,
-          MaterialPageRoute(builder: (_) => DeckDetailScreen(deck: deck)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  !deck.isLanguageDeck
-                      ? Icons.menu_book_outlined
-                      : Icons.translate_outlined,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      deck.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  if (deck.isLanguageDeck)
-                    _Pill(
-                      '${deck.fromLanguage} → ${deck.toLanguage}',
-                      color: color,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              Text(
-                deck.description.isEmpty ? 'No description' : deck.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: RecallColors.muted),
-              ),
-              const SizedBox(height: 18),
-              const Divider(height: 1),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _SmallCount(
-                    value: due,
-                    label: 'Due',
-                    color: due == 0
-                        ? RecallColors.emerald
-                        : RecallColors.orange,
-                  ),
-                  const SizedBox(width: 24),
-                  _SmallCount(
-                    value: data.cardCount(deck.id),
-                    label: 'Cards',
-                    color: RecallColors.ink,
-                  ),
-                  const Spacer(),
-                  if (queue.isNotEmpty)
-                    _StudyLauncher(
-                      title: deck.name,
-                      preferenceKey: 'deck:${deck.id}',
-                      prompts: queue,
-                      studyCards: data.cards
-                          .where((card) => card.deckId == deck.id)
-                          .toList(growable: false),
-                      languagePair: deck.isLanguageDeck
-                          ? _LanguagePair(deck.fromLanguage!, deck.toLanguage!)
-                          : null,
-                      builder: (onPressed) => FilledButton(
-                        onPressed: onPressed,
-                        child: const Text(
-                          'Study  →',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    )
-                  else
-                    OutlinedButton(
-                      onPressed: () => Navigator.push<void>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DeckDetailScreen(deck: deck),
-                        ),
-                      ),
-                      child: const Text(
-                        'Browse',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class DeckDetailScreen extends ConsumerStatefulWidget {
-  const DeckDetailScreen({super.key, required this.deck});
-  final CardDeck deck;
-
-  @override
-  ConsumerState<DeckDetailScreen> createState() => _DeckDetailScreenState();
-}
-
-class _DeckDetailScreenState extends ConsumerState<DeckDetailScreen> {
-  CardDeck get deck => widget.deck;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(ref.read(cardDeckSyncProvider)(deck.id).catchError((_) {}));
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dashboard = ref.watch(cardsDashboardProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(deck.name),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: FilledButton.icon(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => CardEditorDialog(deck: deck),
-              ),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('New card'),
-            ),
-          ),
-        ],
-      ),
-      body: dashboard.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _LoadError(
-          error: error,
-          onRetry: () => ref.invalidate(cardsDashboardProvider),
-        ),
-        data: (data) {
-          final allCards = data.cards
-              .where((card) => card.deckId == deck.id)
-              .toList();
-          final cards = allCards;
-          final queue = data.studyQueue(
-            DateTime.now(),
-            deckId: deck.id,
-            newCardLimit: allCards.length * StudyCue.values.length,
-          );
-          return ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              deck.description.isEmpty
-                                  ? '${cards.length} cards'
-                                  : deck.description,
-                              style: const TextStyle(color: RecallColors.muted),
-                            ),
-                          ),
-                          _StudyLauncher(
-                            title: deck.name,
-                            preferenceKey: 'deck:${deck.id}',
-                            prompts: queue,
-                            studyCards: allCards,
-                            languagePair: deck.isLanguageDeck
-                                ? _LanguagePair(
-                                    deck.fromLanguage!,
-                                    deck.toLanguage!,
-                                  )
-                                : null,
-                            builder: (onPressed) => FilledButton(
-                              onPressed: onPressed,
-                              child: const Text('Study'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 22),
-                      if (cards.isEmpty)
-                        _EmptyCards(
-                          onCreate: () => showDialog<void>(
-                            context: context,
-                            builder: (_) => CardEditorDialog(deck: deck),
-                          ),
-                        )
-                      else
-                        for (final card in cards)
-                          _CardRow(card: card, deck: deck),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _CardRow extends ConsumerWidget {
-  const _CardRow({required this.card, required this.deck});
-  final StudyCard card;
-  final CardDeck deck;
-
-  Future<void> _showDetails(BuildContext context) async {
-    final edit = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => CardDetailsPage(deck: deck, card: card),
-      ),
-    );
-    if (edit != true || !context.mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) => CardEditorDialog(deck: deck, card: card),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: () => _showDetails(context),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: Icon(
-          card.suspended ? Icons.pause_circle_outline : Icons.style_outlined,
-          color: card.suspended ? RecallColors.faint : RecallColors.violet,
-        ),
-        title: Text(card.front, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 5),
-          child: Text(
-            [
-              card.back,
-              if (card.sourceBookName != null) card.sourceBookName!,
-            ].join('  •  '),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (action) async {
-            final repository = ref.read(cardsRepositoryProvider);
-            if (action == 'edit') {
-              await showDialog<void>(
-                context: context,
-                builder: (_) => CardEditorDialog(deck: deck, card: card),
-              );
-            } else if (action == 'suspend') {
-              await repository.setSuspended(card, !card.suspended);
-              ref.invalidate(cardsDashboardProvider);
-            } else if (action == 'delete') {
-              await repository.deleteCard(card.id);
-              ref.invalidate(cardsDashboardProvider);
-            }
-          },
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-            PopupMenuItem(
-              value: 'suspend',
-              child: Text(card.suspended ? 'Unsuspend' : 'Suspend'),
-            ),
-            const PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 Future<void> _openStudy(
   BuildContext context,
   String title,
@@ -1766,7 +1382,7 @@ _LanguagePair? _languagesForPrompts(
       .where((prompt) => prompt.card.isLanguageCard)
       .map((prompt) => dashboard.languageFor(prompt.card))
       .whereType<String>()
-      .map((language) => _LanguagePair('English', language))
+      .map((language) => _LanguagePair('Front', language))
       .toSet();
   return pairs.length == 1 ? pairs.single : null;
 }
@@ -1779,7 +1395,7 @@ _LanguagePair? _languagesForCards(
       .where((card) => card.isLanguageCard)
       .map(dashboard.languageFor)
       .whereType<String>()
-      .map((language) => _LanguagePair('English', language))
+      .map((language) => _LanguagePair('Front', language))
       .toSet();
   return pairs.length == 1 ? pairs.single : null;
 }
@@ -1900,56 +1516,6 @@ class _Pill extends StatelessWidget {
       label,
       style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
     ),
-  );
-}
-
-class _AddDeckCard extends StatelessWidget {
-  const _AddDeckCard({required this.onTap});
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(14),
-    child: Container(
-      height: 225,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .6),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: RecallColors.line),
-      ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            backgroundColor: RecallColors.soft,
-            child: Icon(Icons.add, color: RecallColors.muted),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Create a new deck',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Start collecting what matters',
-            style: TextStyle(fontSize: 11, color: RecallColors.faint),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _EmptyDecks extends StatelessWidget {
-  const _EmptyDecks({required this.onCreate});
-  final VoidCallback onCreate;
-  @override
-  Widget build(BuildContext context) => _EmptyPanel(
-    icon: Icons.layers_outlined,
-    title: 'No decks yet',
-    detail: 'Create a deck, then add your first card.',
-    action: 'Create deck',
-    onAction: onCreate,
   );
 }
 

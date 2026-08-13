@@ -60,32 +60,8 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
   }) => _mutate(SetModelRequest(id: cardId, delete: true), clientUpdatedAt);
 
   @override
-  Future<CardMutationResult> createDeck({
-    required String name,
-    required String description,
-    String? fromLanguage,
-    String? toLanguage,
-    required DateTime clientUpdatedAt,
-  }) => _mutate(
-    SetModelRequest(
-      modelType: deckModelType,
-      name: name,
-      description: description,
-      attributes: <SetModelAttribute>[
-        SetModelAttribute(key: attrArchived, value: false),
-        if (fromLanguage != null)
-          SetModelAttribute(key: attrFromLanguage, value: fromLanguage),
-        if (toLanguage != null)
-          SetModelAttribute(key: attrToLanguage, value: toLanguage),
-      ],
-    ),
-    clientUpdatedAt,
-  );
-
-  @override
   Future<CardMutationResult> createCard({
     required CardContent content,
-    int? deckId,
     int? sourceBookId,
     required DateTime clientUpdatedAt,
   }) => _mutate(
@@ -121,8 +97,6 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
           ),
       ],
       relations: <ModelRelation>[
-        if (deckId != null)
-          ModelRelation(modelType: deckModelType, link: <int>[deckId]),
         if (sourceBookId != null)
           ModelRelation(modelType: bookModelType, link: <int>[sourceBookId]),
       ],
@@ -146,51 +120,6 @@ final class KgqlCardsSyncTransport implements CardsSyncTransport {
       status: CardMutationStatus.values.byName(result.status.name),
       entityId: result.entityId,
       updatedAt: result.updatedAt,
-      deckHashes: <DeckHashRevision>[
-        for (final value in result.deckHashes)
-          DeckHashRevision(deckId: value.deckId, serverHash: value.syncHash),
-      ],
-      deletedDeckIds: result.deletedDeckIds,
     );
-  }
-
-  @override
-  Future<CardDeckSyncBundle> syncDecks({
-    required List<CardDeckManifestEntry> manifest,
-    Set<int>? deckIds,
-  }) async {
-    final response = await cards_api.syncCardDecks(
-      _client,
-      manifest: <Map<String, Object?>>[
-        for (final entry in manifest) entry.toJson(),
-      ],
-      deckIds: deckIds,
-    );
-    return CardDeckSyncBundle(
-      decks: <RemoteCardDeck>[
-        for (final entry in response.decks) _remoteDeck(entry),
-      ],
-      deletedDeckIds: response.deletedIds,
-    );
-  }
-
-  RemoteCardDeck _remoteDeck(cards_api.CardDeckSyncEntry entry) {
-    final rawDeck = entry.bundle['deck'];
-    final rawCards = entry.bundle['cards'];
-    if (rawDeck is! Map || rawCards is! List) {
-      throw StateError('Invalid Card deck bundle: ${entry.bundle}');
-    }
-    final deck = cardDeckFromModel(
-      Model.fromJson(Map<String, dynamic>.from(rawDeck)),
-    );
-    final cards = <StudyCard>[];
-    for (final raw in rawCards) {
-      if (raw is! Map) continue;
-      final card = studyCardFromModel(
-        Model.fromJson(Map<String, dynamic>.from(raw)),
-      );
-      if (card != null) cards.add(card);
-    }
-    return RemoteCardDeck(deck: deck, cards: cards, serverHash: entry.syncHash);
   }
 }

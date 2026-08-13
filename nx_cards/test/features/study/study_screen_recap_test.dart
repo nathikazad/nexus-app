@@ -16,8 +16,6 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      deckId: 7,
-      deckName: 'Malayalam',
       schedules: const {
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       },
@@ -31,7 +29,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(const CardsDashboard(decks: [], cards: [])),
+            (_) => Stream.value(const CardsDashboard(cards: [])),
           ),
         ],
         child: MaterialApp(

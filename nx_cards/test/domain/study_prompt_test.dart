@@ -10,8 +10,6 @@ void main() {
       transliteration: 'kazhivu',
       audioUrl: '/cards/audio/talent.mp3',
     ),
-    deckId: 7,
-    deckName: 'Malayalam',
     schedules: const <StudyCue, CardSchedule>{
       StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
       StudyCue.toLanguage: CardSchedule.initial(enabled: true),

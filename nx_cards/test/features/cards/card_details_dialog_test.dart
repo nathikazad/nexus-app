@@ -14,9 +14,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(
-          home: CardDetailsPage(deck: _deck, card: card),
-        ),
+        child: MaterialApp(home: CardDetailsPage(card: card)),
       ),
     );
     await tester.pumpAndSettle();
@@ -57,9 +55,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(
-          home: CardDetailsPage(deck: _deck, card: card),
-        ),
+        child: MaterialApp(home: CardDetailsPage(card: card)),
       ),
     );
     await tester.pumpAndSettle();
@@ -71,12 +67,12 @@ void main() {
       find.byKey(const ValueKey('review-direction-selector')),
       findsOneWidget,
     );
-    expect(find.text('English → Malayalam'), findsOneWidget);
-    expect(find.text('Malayalam → English'), findsOneWidget);
+    expect(find.text('Front → Malayalam'), findsOneWidget);
+    expect(find.text('Malayalam → Front'), findsOneWidget);
     expect(find.text('Transliteration → English'), findsNothing);
     expect(find.text('1 yes · 1 no'), findsOneWidget);
 
-    await tester.tap(find.text('Malayalam → English'));
+    await tester.tap(find.text('Malayalam → Front'));
     await tester.pumpAndSettle();
 
     expect(find.text('1 yes · 0 no'), findsOneWidget);
@@ -106,9 +102,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(
-          home: CardDetailsPage(deck: _deck, card: card),
-        ),
+        child: MaterialApp(home: CardDetailsPage(card: card)),
       ),
     );
     await tester.pumpAndSettle();
@@ -117,7 +111,7 @@ void main() {
       find.byKey(const ValueKey('single-review-direction')),
       findsOneWidget,
     );
-    expect(find.text('English → Malayalam'), findsOneWidget);
+    expect(find.text('Front → Malayalam'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
       findsNothing,
@@ -159,9 +153,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(
-          home: CardDetailsPage(deck: _deck, card: card),
-        ),
+        child: MaterialApp(home: CardDetailsPage(card: card)),
       ),
     );
     await tester.pumpAndSettle();
@@ -175,15 +167,6 @@ void main() {
     expect(find.text('estimated recall'), findsNothing);
   });
 }
-
-const _deck = CardDeck(
-  id: 10,
-  name: 'Malayalam words',
-  description: '',
-  fromLanguage: 'English',
-  toLanguage: 'Malayalam',
-  archived: false,
-);
 
 StudyCard _card({
   Map<StudyCue, CardSchedule>? schedules,
@@ -202,8 +185,6 @@ StudyCard _card({
       ),
     ],
   ),
-  deckId: 10,
-  deckName: 'Malayalam words',
   schedules:
       schedules ??
       const <StudyCue, CardSchedule>{
@@ -218,6 +199,9 @@ StudyCard _card({
         StudyCue.toLanguage: <CardReview>[],
         StudyCue.transliteration: <CardReview>[],
       },
+  tags: const <String, List<String>>{
+    'Language': ['Malayalam'],
+  },
   suspended: false,
 );
 

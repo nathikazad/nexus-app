@@ -5,130 +5,6 @@ import 'package:nx_cards/data/remote/kgql/kgql_cards_sync_transport.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 
 void main() {
-  test('maps a canonical language-card deck bundle', () async {
-    Request? captured;
-    final transport = KgqlCardsSyncTransport(
-      _client((request) {
-        captured = request;
-        return <String, Object?>{
-          '__typename': 'Query',
-          'syncCardDecks': <String, Object?>{
-            'decks': <Object?>[
-              <String, Object?>{
-                'id': 7,
-                'hash': 'deck-hash',
-                'bundle': <String, Object?>{
-                  'deck': <String, Object?>{
-                    'id': 7,
-                    'name': 'Malayalam',
-                    'description': 'Basic words',
-                    'model_type_id': 60,
-                    'updated_at': '2026-08-04T10:00:00Z',
-                    'model_type': <String, Object?>{
-                      'id': 60,
-                      'name': 'FlashcardDeck',
-                    },
-                    'attributes': <String, Object?>{
-                      'archived': false,
-                      'from_language': 'English',
-                      'to_language': 'Malayalam',
-                    },
-                  },
-                  'cards': <Object?>[
-                    <String, Object?>{
-                      'id': 11,
-                      'name': 'talent',
-                      'model_type_id': 62,
-                      'updated_at': '2026-08-04T10:00:00Z',
-                      'model_type': <String, Object?>{'id': 62, 'name': 'Word'},
-                      'attributes': <String, Object?>{
-                        'suspended': false,
-                        'learning_status': 'learning',
-                        'card_details': <String, Object?>{
-                          'front': 'talent',
-                          'back': 'കഴിവ്',
-                        },
-                        'language_details': <String, Object?>{
-                          'transliteration': 'kazhivu',
-                          'audio_url': '/cards/audio/1/11.mp3',
-                          'examples': <Object?>[],
-                        },
-                        'schedule': <String, Object?>{
-                          'version': 3,
-                          'algorithm': 'fsrs',
-                          'cues': <String, Object?>{
-                            'from_language': _emptySchedule(enabled: true),
-                            'to_language': _emptySchedule(enabled: true),
-                            'transliteration': _emptySchedule(enabled: true),
-                          },
-                        },
-                        'review_history': <String, Object?>{
-                          'version': 3,
-                          'items': <Object?>[],
-                        },
-                      },
-                      'tags': <String, Object?>{
-                        'Tags': <String>['Vocabulary'],
-                      },
-                      'relations': <Object?>[
-                        <String, Object?>{
-                          'model_id': 7,
-                          'model_type': 'FlashcardDeck',
-                          'name': 'Malayalam',
-                          'relation_name': 'in_deck',
-                        },
-                        <String, Object?>{
-                          'model_id': 22,
-                          'model_type': 'Phrase',
-                          'name': 'He has good talent.',
-                          'relation_name': 'word_phrases',
-                          'related_attributes': <String, Object?>{
-                            'card_details': <String, Object?>{
-                              'front': 'He has good talent.',
-                              'back': 'അവന് നല്ല കഴിവുണ്ട്.',
-                            },
-                            'language_details': <String, Object?>{
-                              'transliteration': 'avan nalla kazhivundu',
-                              'audio_url': '/cards/audio/example.mp3',
-                              'examples': <Object?>[],
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  ],
-                },
-              },
-            ],
-            'deleted_ids': <Object?>[],
-          },
-        };
-      }),
-    );
-
-    final bundle = await transport.syncDecks(
-      manifest: const <CardDeckManifestEntry>[
-        CardDeckManifestEntry(deckId: 7, serverHash: 'old-hash'),
-      ],
-      deckIds: <int>{7},
-    );
-
-    expect(printNode(captured!.operation.document), contains('syncCardDecks'));
-    expect(captured!.variables['deckIds'], <int>[7]);
-    expect(bundle.decks.single.serverHash, 'deck-hash');
-    expect(bundle.decks.single.deck.fromLanguage, 'English');
-    expect(bundle.decks.single.deck.toLanguage, 'Malayalam');
-    final card = bundle.decks.single.cards.single;
-    expect(card.deckId, 7);
-    expect(card.learningStatus, LearningStatus.learning);
-    expect(card.content, isA<LanguageCardContent>());
-    expect((card.content as LanguageCardContent).transliteration, 'kazhivu');
-    expect(
-      (card.content as LanguageCardContent).examples.single.translation,
-      'He has good talent.',
-    );
-  });
-
   test('mutateCard sends the complete JSON scheduling aggregate', () async {
     Request? captured;
     final transport = KgqlCardsSyncTransport(
@@ -140,10 +16,6 @@ void main() {
             'status': 'APPLIED',
             'id': 11,
             'updated_at': '2026-08-04T12:00:00Z',
-            'deck_hashes': <Object?>[
-              <String, Object?>{'id': 7, 'hash': 'new-hash'},
-            ],
-            'deleted_deck_ids': <Object?>[],
           },
         };
       }),
@@ -188,7 +60,7 @@ void main() {
       LearningStatus.notStarted.storageValue,
     );
     expect(result.status, CardMutationStatus.applied);
-    expect(result.deckHashes.single.serverHash, 'new-hash');
+    expect(result.status, CardMutationStatus.applied);
   });
 }
 
@@ -220,8 +92,6 @@ StudyCard _card() => StudyCard(
       ),
     ],
   ),
-  deckId: 7,
-  deckName: 'Malayalam',
   schedules: <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule(
       enabled: true,

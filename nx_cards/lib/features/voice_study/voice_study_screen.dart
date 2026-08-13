@@ -15,12 +15,12 @@ class VoiceStudyScreen extends ConsumerStatefulWidget {
     super.key,
     required this.title,
     required this.prompts,
-    required this.deckLanguages,
+    this.languages,
   });
 
   final String title;
   final List<StudyPrompt> prompts;
-  final Map<int, VoiceStudyDeckLanguages> deckLanguages;
+  final VoiceStudyLanguages? languages;
 
   @override
   ConsumerState<VoiceStudyScreen> createState() => _VoiceStudyScreenState();
@@ -40,7 +40,7 @@ class _VoiceStudyScreenState extends ConsumerState<VoiceStudyScreen> {
       repository: ref.read(cardsRepositoryProvider),
       scheduler: ref.read(cardSchedulerProvider),
       prompts: widget.prompts,
-      deckLanguages: widget.deckLanguages,
+      languages: widget.languages,
       onScheduleSaved: () => ref.invalidate(cardsDashboardProvider),
     );
     controller.addListener(_handleControllerChange);

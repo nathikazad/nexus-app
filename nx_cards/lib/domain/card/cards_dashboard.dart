@@ -1,22 +1,12 @@
 import 'package:nx_cards/domain/card/study_card.dart';
 import 'package:nx_cards/domain/card/study_prompt.dart';
-import 'package:nx_cards/domain/deck/card_deck.dart';
 
 class CardsDashboard {
-  const CardsDashboard({required this.decks, required this.cards});
+  const CardsDashboard({required this.cards});
 
-  final List<CardDeck> decks;
   final List<StudyCard> cards;
 
-  String? languageFor(StudyCard card) {
-    if (card.language case final language? when language.isNotEmpty) {
-      return language;
-    }
-    return decks
-        .where((deck) => deck.id == card.deckId && deck.isLanguageDeck)
-        .map((deck) => deck.toLanguage)
-        .firstOrNull;
-  }
+  String? languageFor(StudyCard card) => card.language;
 
   List<String> get languages => <String>{
     for (final card in cards)
@@ -33,14 +23,12 @@ class CardsDashboard {
       .toList(growable: false);
 
   Iterable<StudyPrompt> _prompts({
-    int? deckId,
     String? studyCategory,
     String? language,
     int? bookId,
   }) => cards
       .where(
         (card) =>
-            (deckId == null || card.deckId == deckId) &&
             (studyCategory == null ||
                 card.belongsToStudyCategory(studyCategory)) &&
             (language == null || languageFor(card) == language) &&
@@ -52,52 +40,31 @@ class CardsDashboard {
 
   int dueCount(
     DateTime now, {
-    int? deckId,
     String? studyCategory,
     String? language,
     int? bookId,
   }) =>
-      _prompts(
-            deckId: deckId,
-            studyCategory: studyCategory,
-            language: language,
-            bookId: bookId,
-          )
+      _prompts(studyCategory: studyCategory, language: language, bookId: bookId)
           .where((prompt) => prompt.isDueAt(now))
           .map((prompt) => prompt.cardId)
           .toSet()
           .length;
 
-  int newCount({
-    int? deckId,
-    String? studyCategory,
-    String? language,
-    int? bookId,
-  }) =>
-      _prompts(
-            deckId: deckId,
-            studyCategory: studyCategory,
-            language: language,
-            bookId: bookId,
-          )
+  int newCount({String? studyCategory, String? language, int? bookId}) =>
+      _prompts(studyCategory: studyCategory, language: language, bookId: bookId)
           .where((prompt) => prompt.isNew)
           .map((prompt) => prompt.cardId)
           .toSet()
           .length;
 
-  int cardCount(int deckId) =>
-      cards.where((card) => card.deckId == deckId).length;
-
   List<StudyPrompt> studyQueue(
     DateTime now, {
-    int? deckId,
     int newCardLimit = 20,
     String? studyCategory,
     String? language,
     int? bookId,
   }) {
     final eligible = _prompts(
-      deckId: deckId,
       studyCategory: studyCategory,
       language: language,
       bookId: bookId,

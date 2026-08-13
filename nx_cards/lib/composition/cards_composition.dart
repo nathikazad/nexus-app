@@ -13,7 +13,7 @@ import 'package:nx_cards/application/ports/cards_sync_transport.dart';
 import 'package:nx_cards/application/ports/clock.dart';
 import 'package:nx_cards/application/ports/local_cards_store.dart';
 import 'package:nx_cards/application/study/study_queue_service.dart';
-import 'package:nx_cards/application/sync/card_deck_synchronizer.dart';
+import 'package:nx_cards/application/sync/card_library_synchronizer.dart';
 import 'package:nx_cards/application/web/web_cards_workspace.dart';
 import 'package:nx_cards/data/audio/http_card_audio_repository.dart';
 import 'package:nx_cards/data/audio/cached_card_audio_repository.dart';
@@ -136,11 +136,13 @@ final cardsUploaderProvider = Provider<CardsUploader?>((ref) {
   return uploader;
 });
 
-final cardDeckSynchronizerProvider = Provider<CardDeckSynchronizer?>((ref) {
+final cardLibrarySynchronizerProvider = Provider<CardLibrarySynchronizer?>((
+  ref,
+) {
   if (!ref.watch(cardsOfflineEnabledProvider)) return null;
   final local = ref.watch(localCardsStoreProvider);
   if (local == null) return null;
-  return CardDeckSynchronizer(
+  return CardLibrarySynchronizer(
     localStore: local,
     transport: ref.watch(cardsSyncTransportProvider),
     uploader: ref.watch(cardsUploaderProvider),
@@ -152,7 +154,7 @@ final cardsWorkspaceProvider = Provider<CardsWorkspace?>((ref) {
   final CardsWorkspace? workspace;
   if (ref.watch(cardsOfflineEnabledProvider)) {
     final local = ref.watch(localCardsStoreProvider);
-    final synchronizer = ref.watch(cardDeckSynchronizerProvider);
+    final synchronizer = ref.watch(cardLibrarySynchronizerProvider);
     if (local == null || synchronizer == null) return null;
     workspace = NativeCardsWorkspace(
       localStore: local,
@@ -211,11 +213,7 @@ final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
 final cardsSchemaStatusProvider = FutureProvider<CardsSchemaStatus>((ref) {
   if (ref.watch(cardsOfflineEnabledProvider)) {
     return Future<CardsSchemaStatus>.value(
-      const CardsSchemaStatus(
-        deckReady: true,
-        cardReady: true,
-        languageCardReady: true,
-      ),
+      const CardsSchemaStatus(cardReady: true, languageCardReady: true),
     );
   }
   return inspectCardsSchema(ref.watch(graphqlClientProvider));
@@ -225,7 +223,7 @@ final cardsDashboardProvider = StreamProvider<CardsDashboard>((ref) {
   final workspace = ref.watch(cardsWorkspaceProvider);
   if (workspace == null) {
     return Stream<CardsDashboard>.value(
-      const CardsDashboard(decks: <CardDeck>[], cards: <StudyCard>[]),
+      const CardsDashboard(cards: <StudyCard>[]),
     );
   }
   return workspace.watchDashboard();
@@ -243,7 +241,6 @@ final relatedBooksProvider = FutureProvider<List<RelatedBook>>((ref) {
 
 typedef CardsLibrarySync = Future<void> Function();
 typedef CardsFullSync = Future<int> Function();
-typedef CardDeckSync = Future<void> Function(int deckId);
 
 final cardsLibrarySyncProvider = Provider<CardsLibrarySync>((ref) {
   return () async {
@@ -266,14 +263,6 @@ final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
     if (workspace == null) throw StateError('Cards are not ready yet.');
     await workspace.syncLibrary();
     return (await workspace.listCards()).length;
-  };
-});
-
-final cardDeckSyncProvider = Provider<CardDeckSync>((ref) {
-  return (deckId) async {
-    if (!ref.read(cardsOfflineEnabledProvider)) return;
-    final workspace = ref.read(cardsWorkspaceProvider);
-    if (workspace != null) await workspace.syncDeck(deckId);
   };
 });
 

@@ -33,9 +33,8 @@ void main() {
     final card = studyCardFromModel(model);
 
     expect(card, isNotNull);
-    expect(card!.deckId, unassignedDeckId);
-    expect(card.deckName, isEmpty);
-    expect(card.sourceBookId, 4195);
+    expect(card, isNotNull);
+    expect(card!.sourceBookId, 4195);
     expect(card.sourceBookName, 'The Four Steps to the Epiphany');
   });
 
@@ -76,12 +75,6 @@ void main() {
         'Part of Speech': <String>['Noun'],
       },
       relationsList: <Relation>[
-        Relation(
-          relationId: 1,
-          modelId: 7,
-          modelType: deckModelType,
-          name: 'Malayalam Nouns',
-        ),
         Relation(
           relationId: 2,
           modelId: 22,
@@ -125,12 +118,6 @@ void main() {
       },
       relationsList: <Relation>[
         Relation(
-          relationId: 1,
-          modelId: 7,
-          modelType: deckModelType,
-          name: 'Malayalam Nouns',
-        ),
-        Relation(
           relationId: 2,
           modelId: 22,
           modelType: phraseCardModelType,
@@ -173,12 +160,6 @@ void main() {
         },
       },
       relationsList: <Relation>[
-        Relation(
-          relationId: 1,
-          modelId: 8,
-          modelType: deckModelType,
-          name: 'Phrases 1',
-        ),
         Relation(
           relationId: 2,
           modelId: 11,

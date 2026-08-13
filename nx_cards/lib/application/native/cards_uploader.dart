@@ -75,7 +75,6 @@ final class CardMutationHandler implements offline.MutationHandler {
       ),
       metadata: <String, Object?>{
         cardMutationStatusMetadataKey: result.status.name,
-        cardDeckHashesMetadataKey: result.deckHashes,
         cardSnapshotMetadataKey: snapshot,
       },
     );

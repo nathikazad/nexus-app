@@ -9,8 +9,8 @@ import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_cards/domain/card/card_audio_repository.dart';
 import 'package:nx_offline/nx_offline.dart';
 
-final class CardDeckSynchronizer {
-  CardDeckSynchronizer({
+final class CardLibrarySynchronizer {
+  CardLibrarySynchronizer({
     required LocalCardsStore localStore,
     required CardsSyncTransport? transport,
     required CardsUploader? uploader,
@@ -24,8 +24,8 @@ final class CardDeckSynchronizer {
   final CardsSyncTransport? _transport;
   final CardsUploader? _uploader;
   final CardAudioRepository? _audioRepository;
-  final ReconciliationCoordinator<int, CardDeck?> _runs =
-      ReconciliationCoordinator<int, CardDeck?>();
+  final ReconciliationCoordinator<int, void> _runs =
+      ReconciliationCoordinator<int, void>();
 
   Future<void> syncLibrary() => _runs.runFull(_syncLibraryOnce);
 
@@ -34,24 +34,6 @@ final class CardDeckSynchronizer {
     await _uploader?.uploadPending();
     await _localStore.applyCardSnapshot(await transport.syncCards());
     unawaited(prefetchAudio());
-  }
-
-  Future<CardDeck?> syncDeck(int deckId) => _runs.runItem(
-    deckId,
-    reconcile: () => _syncDeckOnce(deckId),
-    readAfterFull: () => _localStore.getDeck(deckId),
-  );
-
-  Future<CardDeck?> _syncDeckOnce(int deckId) async {
-    final transport = _requireTransport();
-    await _uploader?.uploadPending();
-    final bundle = await transport.syncDecks(
-      manifest: await _localStore.deckManifest(deckIds: <int>{deckId}),
-      deckIds: <int>{deckId},
-    );
-    await _localStore.applySyncBundle(bundle);
-    unawaited(prefetchAudio(deckId: deckId));
-    return _localStore.getDeck(deckId);
   }
 
   CardsSyncTransport _requireTransport() {
@@ -68,13 +50,11 @@ final class CardDeckSynchronizer {
   ///
   /// This deliberately reads the local store instead of only inspecting the
   /// latest sync bundle. A transient download failure must be retried by the
-  /// next sync even when the deck hashes have not changed.
-  Future<void> prefetchAudio({int? deckId}) async {
+  /// next sync even when the card snapshot has not changed.
+  Future<void> prefetchAudio() async {
     final repository = _audioRepository;
     if (repository == null) return;
-    final cards = deckId == null
-        ? (await _localStore.readDashboard()).cards
-        : await _localStore.cardsForDeck(deckId);
+    final cards = (await _localStore.readDashboard()).cards;
     final urls = <String>{
       for (final card in cards)
         if (card.content case final LanguageCardContent content) ...<String>{
@@ -94,7 +74,7 @@ final class CardDeckSynchronizer {
       try {
         await repository.fetch(url);
       } catch (_) {
-        // Audio is opportunistic; deck data remains usable without it.
+        // Audio is opportunistic; card data remains usable without it.
       }
     }
   }

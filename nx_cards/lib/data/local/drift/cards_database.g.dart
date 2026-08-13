@@ -3,642 +3,6 @@
 part of 'cards_database.dart';
 
 // ignore_for_file: type=lint
-class $LocalCardDecksTable extends LocalCardDecks
-    with TableInfo<$LocalCardDecksTable, LocalCardDeckRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $LocalCardDecksTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _accountKeyMeta = const VerificationMeta(
-    'accountKey',
-  );
-  @override
-  late final GeneratedColumn<String> accountKey = GeneratedColumn<String>(
-    'account_key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
-    'remoteId',
-  );
-  @override
-  late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
-    'remote_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
-  @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-    'name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _descriptionMeta = const VerificationMeta(
-    'description',
-  );
-  @override
-  late final GeneratedColumn<String> description = GeneratedColumn<String>(
-    'description',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _languageMeta = const VerificationMeta(
-    'language',
-  );
-  @override
-  late final GeneratedColumn<String> language = GeneratedColumn<String>(
-    'language',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _fromLanguageMeta = const VerificationMeta(
-    'fromLanguage',
-  );
-  @override
-  late final GeneratedColumn<String> fromLanguage = GeneratedColumn<String>(
-    'from_language',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _toLanguageMeta = const VerificationMeta(
-    'toLanguage',
-  );
-  @override
-  late final GeneratedColumn<String> toLanguage = GeneratedColumn<String>(
-    'to_language',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _archivedMeta = const VerificationMeta(
-    'archived',
-  );
-  @override
-  late final GeneratedColumn<bool> archived = GeneratedColumn<bool>(
-    'archived',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("archived" IN (0, 1))',
-    ),
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _serverHashMeta = const VerificationMeta(
-    'serverHash',
-  );
-  @override
-  late final GeneratedColumn<String> serverHash = GeneratedColumn<String>(
-    'server_hash',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    accountKey,
-    remoteId,
-    name,
-    description,
-    language,
-    fromLanguage,
-    toLanguage,
-    archived,
-    updatedAt,
-    serverHash,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'local_card_decks';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<LocalCardDeckRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('account_key')) {
-      context.handle(
-        _accountKeyMeta,
-        accountKey.isAcceptableOrUnknown(data['account_key']!, _accountKeyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_accountKeyMeta);
-    }
-    if (data.containsKey('remote_id')) {
-      context.handle(
-        _remoteIdMeta,
-        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_remoteIdMeta);
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-        _nameMeta,
-        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    if (data.containsKey('description')) {
-      context.handle(
-        _descriptionMeta,
-        description.isAcceptableOrUnknown(
-          data['description']!,
-          _descriptionMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_descriptionMeta);
-    }
-    if (data.containsKey('language')) {
-      context.handle(
-        _languageMeta,
-        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
-      );
-    }
-    if (data.containsKey('from_language')) {
-      context.handle(
-        _fromLanguageMeta,
-        fromLanguage.isAcceptableOrUnknown(
-          data['from_language']!,
-          _fromLanguageMeta,
-        ),
-      );
-    }
-    if (data.containsKey('to_language')) {
-      context.handle(
-        _toLanguageMeta,
-        toLanguage.isAcceptableOrUnknown(data['to_language']!, _toLanguageMeta),
-      );
-    }
-    if (data.containsKey('archived')) {
-      context.handle(
-        _archivedMeta,
-        archived.isAcceptableOrUnknown(data['archived']!, _archivedMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_archivedMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    }
-    if (data.containsKey('server_hash')) {
-      context.handle(
-        _serverHashMeta,
-        serverHash.isAcceptableOrUnknown(data['server_hash']!, _serverHashMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {accountKey, remoteId};
-  @override
-  LocalCardDeckRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LocalCardDeckRow(
-      accountKey: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}account_key'],
-      )!,
-      remoteId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}remote_id'],
-      )!,
-      name: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}name'],
-      )!,
-      description: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}description'],
-      )!,
-      language: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}language'],
-      ),
-      fromLanguage: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}from_language'],
-      ),
-      toLanguage: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}to_language'],
-      ),
-      archived: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}archived'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      ),
-      serverHash: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}server_hash'],
-      ),
-    );
-  }
-
-  @override
-  $LocalCardDecksTable createAlias(String alias) {
-    return $LocalCardDecksTable(attachedDatabase, alias);
-  }
-}
-
-class LocalCardDeckRow extends DataClass
-    implements Insertable<LocalCardDeckRow> {
-  final String accountKey;
-  final int remoteId;
-  final String name;
-  final String description;
-  final String? language;
-  final String? fromLanguage;
-  final String? toLanguage;
-  final bool archived;
-  final DateTime? updatedAt;
-  final String? serverHash;
-  const LocalCardDeckRow({
-    required this.accountKey,
-    required this.remoteId,
-    required this.name,
-    required this.description,
-    this.language,
-    this.fromLanguage,
-    this.toLanguage,
-    required this.archived,
-    this.updatedAt,
-    this.serverHash,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['account_key'] = Variable<String>(accountKey);
-    map['remote_id'] = Variable<int>(remoteId);
-    map['name'] = Variable<String>(name);
-    map['description'] = Variable<String>(description);
-    if (!nullToAbsent || language != null) {
-      map['language'] = Variable<String>(language);
-    }
-    if (!nullToAbsent || fromLanguage != null) {
-      map['from_language'] = Variable<String>(fromLanguage);
-    }
-    if (!nullToAbsent || toLanguage != null) {
-      map['to_language'] = Variable<String>(toLanguage);
-    }
-    map['archived'] = Variable<bool>(archived);
-    if (!nullToAbsent || updatedAt != null) {
-      map['updated_at'] = Variable<DateTime>(updatedAt);
-    }
-    if (!nullToAbsent || serverHash != null) {
-      map['server_hash'] = Variable<String>(serverHash);
-    }
-    return map;
-  }
-
-  LocalCardDecksCompanion toCompanion(bool nullToAbsent) {
-    return LocalCardDecksCompanion(
-      accountKey: Value(accountKey),
-      remoteId: Value(remoteId),
-      name: Value(name),
-      description: Value(description),
-      language: language == null && nullToAbsent
-          ? const Value.absent()
-          : Value(language),
-      fromLanguage: fromLanguage == null && nullToAbsent
-          ? const Value.absent()
-          : Value(fromLanguage),
-      toLanguage: toLanguage == null && nullToAbsent
-          ? const Value.absent()
-          : Value(toLanguage),
-      archived: Value(archived),
-      updatedAt: updatedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(updatedAt),
-      serverHash: serverHash == null && nullToAbsent
-          ? const Value.absent()
-          : Value(serverHash),
-    );
-  }
-
-  factory LocalCardDeckRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LocalCardDeckRow(
-      accountKey: serializer.fromJson<String>(json['accountKey']),
-      remoteId: serializer.fromJson<int>(json['remoteId']),
-      name: serializer.fromJson<String>(json['name']),
-      description: serializer.fromJson<String>(json['description']),
-      language: serializer.fromJson<String?>(json['language']),
-      fromLanguage: serializer.fromJson<String?>(json['fromLanguage']),
-      toLanguage: serializer.fromJson<String?>(json['toLanguage']),
-      archived: serializer.fromJson<bool>(json['archived']),
-      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
-      serverHash: serializer.fromJson<String?>(json['serverHash']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'accountKey': serializer.toJson<String>(accountKey),
-      'remoteId': serializer.toJson<int>(remoteId),
-      'name': serializer.toJson<String>(name),
-      'description': serializer.toJson<String>(description),
-      'language': serializer.toJson<String?>(language),
-      'fromLanguage': serializer.toJson<String?>(fromLanguage),
-      'toLanguage': serializer.toJson<String?>(toLanguage),
-      'archived': serializer.toJson<bool>(archived),
-      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
-      'serverHash': serializer.toJson<String?>(serverHash),
-    };
-  }
-
-  LocalCardDeckRow copyWith({
-    String? accountKey,
-    int? remoteId,
-    String? name,
-    String? description,
-    Value<String?> language = const Value.absent(),
-    Value<String?> fromLanguage = const Value.absent(),
-    Value<String?> toLanguage = const Value.absent(),
-    bool? archived,
-    Value<DateTime?> updatedAt = const Value.absent(),
-    Value<String?> serverHash = const Value.absent(),
-  }) => LocalCardDeckRow(
-    accountKey: accountKey ?? this.accountKey,
-    remoteId: remoteId ?? this.remoteId,
-    name: name ?? this.name,
-    description: description ?? this.description,
-    language: language.present ? language.value : this.language,
-    fromLanguage: fromLanguage.present ? fromLanguage.value : this.fromLanguage,
-    toLanguage: toLanguage.present ? toLanguage.value : this.toLanguage,
-    archived: archived ?? this.archived,
-    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
-    serverHash: serverHash.present ? serverHash.value : this.serverHash,
-  );
-  LocalCardDeckRow copyWithCompanion(LocalCardDecksCompanion data) {
-    return LocalCardDeckRow(
-      accountKey: data.accountKey.present
-          ? data.accountKey.value
-          : this.accountKey,
-      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
-      name: data.name.present ? data.name.value : this.name,
-      description: data.description.present
-          ? data.description.value
-          : this.description,
-      language: data.language.present ? data.language.value : this.language,
-      fromLanguage: data.fromLanguage.present
-          ? data.fromLanguage.value
-          : this.fromLanguage,
-      toLanguage: data.toLanguage.present
-          ? data.toLanguage.value
-          : this.toLanguage,
-      archived: data.archived.present ? data.archived.value : this.archived,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      serverHash: data.serverHash.present
-          ? data.serverHash.value
-          : this.serverHash,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LocalCardDeckRow(')
-          ..write('accountKey: $accountKey, ')
-          ..write('remoteId: $remoteId, ')
-          ..write('name: $name, ')
-          ..write('description: $description, ')
-          ..write('language: $language, ')
-          ..write('fromLanguage: $fromLanguage, ')
-          ..write('toLanguage: $toLanguage, ')
-          ..write('archived: $archived, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('serverHash: $serverHash')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    accountKey,
-    remoteId,
-    name,
-    description,
-    language,
-    fromLanguage,
-    toLanguage,
-    archived,
-    updatedAt,
-    serverHash,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is LocalCardDeckRow &&
-          other.accountKey == this.accountKey &&
-          other.remoteId == this.remoteId &&
-          other.name == this.name &&
-          other.description == this.description &&
-          other.language == this.language &&
-          other.fromLanguage == this.fromLanguage &&
-          other.toLanguage == this.toLanguage &&
-          other.archived == this.archived &&
-          other.updatedAt == this.updatedAt &&
-          other.serverHash == this.serverHash);
-}
-
-class LocalCardDecksCompanion extends UpdateCompanion<LocalCardDeckRow> {
-  final Value<String> accountKey;
-  final Value<int> remoteId;
-  final Value<String> name;
-  final Value<String> description;
-  final Value<String?> language;
-  final Value<String?> fromLanguage;
-  final Value<String?> toLanguage;
-  final Value<bool> archived;
-  final Value<DateTime?> updatedAt;
-  final Value<String?> serverHash;
-  final Value<int> rowid;
-  const LocalCardDecksCompanion({
-    this.accountKey = const Value.absent(),
-    this.remoteId = const Value.absent(),
-    this.name = const Value.absent(),
-    this.description = const Value.absent(),
-    this.language = const Value.absent(),
-    this.fromLanguage = const Value.absent(),
-    this.toLanguage = const Value.absent(),
-    this.archived = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.serverHash = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  LocalCardDecksCompanion.insert({
-    required String accountKey,
-    required int remoteId,
-    required String name,
-    required String description,
-    this.language = const Value.absent(),
-    this.fromLanguage = const Value.absent(),
-    this.toLanguage = const Value.absent(),
-    required bool archived,
-    this.updatedAt = const Value.absent(),
-    this.serverHash = const Value.absent(),
-    this.rowid = const Value.absent(),
-  }) : accountKey = Value(accountKey),
-       remoteId = Value(remoteId),
-       name = Value(name),
-       description = Value(description),
-       archived = Value(archived);
-  static Insertable<LocalCardDeckRow> custom({
-    Expression<String>? accountKey,
-    Expression<int>? remoteId,
-    Expression<String>? name,
-    Expression<String>? description,
-    Expression<String>? language,
-    Expression<String>? fromLanguage,
-    Expression<String>? toLanguage,
-    Expression<bool>? archived,
-    Expression<DateTime>? updatedAt,
-    Expression<String>? serverHash,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (accountKey != null) 'account_key': accountKey,
-      if (remoteId != null) 'remote_id': remoteId,
-      if (name != null) 'name': name,
-      if (description != null) 'description': description,
-      if (language != null) 'language': language,
-      if (fromLanguage != null) 'from_language': fromLanguage,
-      if (toLanguage != null) 'to_language': toLanguage,
-      if (archived != null) 'archived': archived,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (serverHash != null) 'server_hash': serverHash,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  LocalCardDecksCompanion copyWith({
-    Value<String>? accountKey,
-    Value<int>? remoteId,
-    Value<String>? name,
-    Value<String>? description,
-    Value<String?>? language,
-    Value<String?>? fromLanguage,
-    Value<String?>? toLanguage,
-    Value<bool>? archived,
-    Value<DateTime?>? updatedAt,
-    Value<String?>? serverHash,
-    Value<int>? rowid,
-  }) {
-    return LocalCardDecksCompanion(
-      accountKey: accountKey ?? this.accountKey,
-      remoteId: remoteId ?? this.remoteId,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      language: language ?? this.language,
-      fromLanguage: fromLanguage ?? this.fromLanguage,
-      toLanguage: toLanguage ?? this.toLanguage,
-      archived: archived ?? this.archived,
-      updatedAt: updatedAt ?? this.updatedAt,
-      serverHash: serverHash ?? this.serverHash,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (accountKey.present) {
-      map['account_key'] = Variable<String>(accountKey.value);
-    }
-    if (remoteId.present) {
-      map['remote_id'] = Variable<int>(remoteId.value);
-    }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
-    }
-    if (description.present) {
-      map['description'] = Variable<String>(description.value);
-    }
-    if (language.present) {
-      map['language'] = Variable<String>(language.value);
-    }
-    if (fromLanguage.present) {
-      map['from_language'] = Variable<String>(fromLanguage.value);
-    }
-    if (toLanguage.present) {
-      map['to_language'] = Variable<String>(toLanguage.value);
-    }
-    if (archived.present) {
-      map['archived'] = Variable<bool>(archived.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (serverHash.present) {
-      map['server_hash'] = Variable<String>(serverHash.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LocalCardDecksCompanion(')
-          ..write('accountKey: $accountKey, ')
-          ..write('remoteId: $remoteId, ')
-          ..write('name: $name, ')
-          ..write('description: $description, ')
-          ..write('language: $language, ')
-          ..write('fromLanguage: $fromLanguage, ')
-          ..write('toLanguage: $toLanguage, ')
-          ..write('archived: $archived, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('serverHash: $serverHash, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $LocalStudyCardsTable extends LocalStudyCards
     with TableInfo<$LocalStudyCardsTable, LocalStudyCardRow> {
   @override
@@ -662,15 +26,6 @@ class $LocalStudyCardsTable extends LocalStudyCards
   @override
   late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
     'remote_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deckIdMeta = const VerificationMeta('deckId');
-  @override
-  late final GeneratedColumn<int> deckId = GeneratedColumn<int>(
-    'deck_id',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -871,7 +226,6 @@ class $LocalStudyCardsTable extends LocalStudyCards
   List<GeneratedColumn> get $columns => [
     accountKey,
     remoteId,
-    deckId,
     modelType,
     front,
     back,
@@ -917,14 +271,6 @@ class $LocalStudyCardsTable extends LocalStudyCards
       );
     } else if (isInserting) {
       context.missing(_remoteIdMeta);
-    }
-    if (data.containsKey('deck_id')) {
-      context.handle(
-        _deckIdMeta,
-        deckId.isAcceptableOrUnknown(data['deck_id']!, _deckIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_deckIdMeta);
     }
     if (data.containsKey('model_type')) {
       context.handle(
@@ -1085,10 +431,6 @@ class $LocalStudyCardsTable extends LocalStudyCards
         DriftSqlType.int,
         data['${effectivePrefix}remote_id'],
       )!,
-      deckId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}deck_id'],
-      )!,
       modelType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}model_type'],
@@ -1170,7 +512,6 @@ class LocalStudyCardRow extends DataClass
     implements Insertable<LocalStudyCardRow> {
   final String accountKey;
   final int remoteId;
-  final int deckId;
   final String modelType;
   final String front;
   final String back;
@@ -1191,7 +532,6 @@ class LocalStudyCardRow extends DataClass
   const LocalStudyCardRow({
     required this.accountKey,
     required this.remoteId,
-    required this.deckId,
     required this.modelType,
     required this.front,
     required this.back,
@@ -1215,7 +555,6 @@ class LocalStudyCardRow extends DataClass
     final map = <String, Expression>{};
     map['account_key'] = Variable<String>(accountKey);
     map['remote_id'] = Variable<int>(remoteId);
-    map['deck_id'] = Variable<int>(deckId);
     map['model_type'] = Variable<String>(modelType);
     map['front'] = Variable<String>(front);
     map['back'] = Variable<String>(back);
@@ -1252,7 +591,6 @@ class LocalStudyCardRow extends DataClass
     return LocalStudyCardsCompanion(
       accountKey: Value(accountKey),
       remoteId: Value(remoteId),
-      deckId: Value(deckId),
       modelType: Value(modelType),
       front: Value(front),
       back: Value(back),
@@ -1293,7 +631,6 @@ class LocalStudyCardRow extends DataClass
     return LocalStudyCardRow(
       accountKey: serializer.fromJson<String>(json['accountKey']),
       remoteId: serializer.fromJson<int>(json['remoteId']),
-      deckId: serializer.fromJson<int>(json['deckId']),
       modelType: serializer.fromJson<String>(json['modelType']),
       front: serializer.fromJson<String>(json['front']),
       back: serializer.fromJson<String>(json['back']),
@@ -1319,7 +656,6 @@ class LocalStudyCardRow extends DataClass
     return <String, dynamic>{
       'accountKey': serializer.toJson<String>(accountKey),
       'remoteId': serializer.toJson<int>(remoteId),
-      'deckId': serializer.toJson<int>(deckId),
       'modelType': serializer.toJson<String>(modelType),
       'front': serializer.toJson<String>(front),
       'back': serializer.toJson<String>(back),
@@ -1343,7 +679,6 @@ class LocalStudyCardRow extends DataClass
   LocalStudyCardRow copyWith({
     String? accountKey,
     int? remoteId,
-    int? deckId,
     String? modelType,
     String? front,
     String? back,
@@ -1364,7 +699,6 @@ class LocalStudyCardRow extends DataClass
   }) => LocalStudyCardRow(
     accountKey: accountKey ?? this.accountKey,
     remoteId: remoteId ?? this.remoteId,
-    deckId: deckId ?? this.deckId,
     modelType: modelType ?? this.modelType,
     front: front ?? this.front,
     back: back ?? this.back,
@@ -1393,7 +727,6 @@ class LocalStudyCardRow extends DataClass
           ? data.accountKey.value
           : this.accountKey,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
-      deckId: data.deckId.present ? data.deckId.value : this.deckId,
       modelType: data.modelType.present ? data.modelType.value : this.modelType,
       front: data.front.present ? data.front.value : this.front,
       back: data.back.present ? data.back.value : this.back,
@@ -1435,7 +768,6 @@ class LocalStudyCardRow extends DataClass
     return (StringBuffer('LocalStudyCardRow(')
           ..write('accountKey: $accountKey, ')
           ..write('remoteId: $remoteId, ')
-          ..write('deckId: $deckId, ')
           ..write('modelType: $modelType, ')
           ..write('front: $front, ')
           ..write('back: $back, ')
@@ -1461,7 +793,6 @@ class LocalStudyCardRow extends DataClass
   int get hashCode => Object.hash(
     accountKey,
     remoteId,
-    deckId,
     modelType,
     front,
     back,
@@ -1486,7 +817,6 @@ class LocalStudyCardRow extends DataClass
       (other is LocalStudyCardRow &&
           other.accountKey == this.accountKey &&
           other.remoteId == this.remoteId &&
-          other.deckId == this.deckId &&
           other.modelType == this.modelType &&
           other.front == this.front &&
           other.back == this.back &&
@@ -1509,7 +839,6 @@ class LocalStudyCardRow extends DataClass
 class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<String> accountKey;
   final Value<int> remoteId;
-  final Value<int> deckId;
   final Value<String> modelType;
   final Value<String> front;
   final Value<String> back;
@@ -1531,7 +860,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   const LocalStudyCardsCompanion({
     this.accountKey = const Value.absent(),
     this.remoteId = const Value.absent(),
-    this.deckId = const Value.absent(),
     this.modelType = const Value.absent(),
     this.front = const Value.absent(),
     this.back = const Value.absent(),
@@ -1554,7 +882,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   LocalStudyCardsCompanion.insert({
     required String accountKey,
     required int remoteId,
-    required int deckId,
     required String modelType,
     required String front,
     required String back,
@@ -1575,7 +902,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.rowid = const Value.absent(),
   }) : accountKey = Value(accountKey),
        remoteId = Value(remoteId),
-       deckId = Value(deckId),
        modelType = Value(modelType),
        front = Value(front),
        back = Value(back),
@@ -1587,7 +913,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   static Insertable<LocalStudyCardRow> custom({
     Expression<String>? accountKey,
     Expression<int>? remoteId,
-    Expression<int>? deckId,
     Expression<String>? modelType,
     Expression<String>? front,
     Expression<String>? back,
@@ -1610,7 +935,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     return RawValuesInsertable({
       if (accountKey != null) 'account_key': accountKey,
       if (remoteId != null) 'remote_id': remoteId,
-      if (deckId != null) 'deck_id': deckId,
       if (modelType != null) 'model_type': modelType,
       if (front != null) 'front': front,
       if (back != null) 'back': back,
@@ -1635,7 +959,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   LocalStudyCardsCompanion copyWith({
     Value<String>? accountKey,
     Value<int>? remoteId,
-    Value<int>? deckId,
     Value<String>? modelType,
     Value<String>? front,
     Value<String>? back,
@@ -1658,7 +981,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     return LocalStudyCardsCompanion(
       accountKey: accountKey ?? this.accountKey,
       remoteId: remoteId ?? this.remoteId,
-      deckId: deckId ?? this.deckId,
       modelType: modelType ?? this.modelType,
       front: front ?? this.front,
       back: back ?? this.back,
@@ -1688,9 +1010,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     }
     if (remoteId.present) {
       map['remote_id'] = Variable<int>(remoteId.value);
-    }
-    if (deckId.present) {
-      map['deck_id'] = Variable<int>(deckId.value);
     }
     if (modelType.present) {
       map['model_type'] = Variable<String>(modelType.value);
@@ -1754,7 +1073,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     return (StringBuffer('LocalStudyCardsCompanion(')
           ..write('accountKey: $accountKey, ')
           ..write('remoteId: $remoteId, ')
-          ..write('deckId: $deckId, ')
           ..write('modelType: $modelType, ')
           ..write('front: $front, ')
           ..write('back: $back, ')
@@ -1781,7 +1099,6 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
 abstract class _$CardsDatabase extends GeneratedDatabase {
   _$CardsDatabase(QueryExecutor e) : super(e);
   $CardsDatabaseManager get managers => $CardsDatabaseManager(this);
-  late final $LocalCardDecksTable localCardDecks = $LocalCardDecksTable(this);
   late final $LocalStudyCardsTable localStudyCards = $LocalStudyCardsTable(
     this,
   );
@@ -1789,328 +1106,13 @@ abstract class _$CardsDatabase extends GeneratedDatabase {
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [
-    localCardDecks,
-    localStudyCards,
-  ];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [localStudyCards];
 }
 
-typedef $$LocalCardDecksTableCreateCompanionBuilder =
-    LocalCardDecksCompanion Function({
-      required String accountKey,
-      required int remoteId,
-      required String name,
-      required String description,
-      Value<String?> language,
-      Value<String?> fromLanguage,
-      Value<String?> toLanguage,
-      required bool archived,
-      Value<DateTime?> updatedAt,
-      Value<String?> serverHash,
-      Value<int> rowid,
-    });
-typedef $$LocalCardDecksTableUpdateCompanionBuilder =
-    LocalCardDecksCompanion Function({
-      Value<String> accountKey,
-      Value<int> remoteId,
-      Value<String> name,
-      Value<String> description,
-      Value<String?> language,
-      Value<String?> fromLanguage,
-      Value<String?> toLanguage,
-      Value<bool> archived,
-      Value<DateTime?> updatedAt,
-      Value<String?> serverHash,
-      Value<int> rowid,
-    });
-
-class $$LocalCardDecksTableFilterComposer
-    extends Composer<_$CardsDatabase, $LocalCardDecksTable> {
-  $$LocalCardDecksTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get accountKey => $composableBuilder(
-    column: $table.accountKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get remoteId => $composableBuilder(
-    column: $table.remoteId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get language => $composableBuilder(
-    column: $table.language,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get fromLanguage => $composableBuilder(
-    column: $table.fromLanguage,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get toLanguage => $composableBuilder(
-    column: $table.toLanguage,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get archived => $composableBuilder(
-    column: $table.archived,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get serverHash => $composableBuilder(
-    column: $table.serverHash,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$LocalCardDecksTableOrderingComposer
-    extends Composer<_$CardsDatabase, $LocalCardDecksTable> {
-  $$LocalCardDecksTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get accountKey => $composableBuilder(
-    column: $table.accountKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get remoteId => $composableBuilder(
-    column: $table.remoteId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get language => $composableBuilder(
-    column: $table.language,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get fromLanguage => $composableBuilder(
-    column: $table.fromLanguage,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get toLanguage => $composableBuilder(
-    column: $table.toLanguage,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get archived => $composableBuilder(
-    column: $table.archived,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get serverHash => $composableBuilder(
-    column: $table.serverHash,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$LocalCardDecksTableAnnotationComposer
-    extends Composer<_$CardsDatabase, $LocalCardDecksTable> {
-  $$LocalCardDecksTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get accountKey => $composableBuilder(
-    column: $table.accountKey,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get remoteId =>
-      $composableBuilder(column: $table.remoteId, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get language =>
-      $composableBuilder(column: $table.language, builder: (column) => column);
-
-  GeneratedColumn<String> get fromLanguage => $composableBuilder(
-    column: $table.fromLanguage,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get toLanguage => $composableBuilder(
-    column: $table.toLanguage,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<bool> get archived =>
-      $composableBuilder(column: $table.archived, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<String> get serverHash => $composableBuilder(
-    column: $table.serverHash,
-    builder: (column) => column,
-  );
-}
-
-class $$LocalCardDecksTableTableManager
-    extends
-        RootTableManager<
-          _$CardsDatabase,
-          $LocalCardDecksTable,
-          LocalCardDeckRow,
-          $$LocalCardDecksTableFilterComposer,
-          $$LocalCardDecksTableOrderingComposer,
-          $$LocalCardDecksTableAnnotationComposer,
-          $$LocalCardDecksTableCreateCompanionBuilder,
-          $$LocalCardDecksTableUpdateCompanionBuilder,
-          (
-            LocalCardDeckRow,
-            BaseReferences<
-              _$CardsDatabase,
-              $LocalCardDecksTable,
-              LocalCardDeckRow
-            >,
-          ),
-          LocalCardDeckRow,
-          PrefetchHooks Function()
-        > {
-  $$LocalCardDecksTableTableManager(
-    _$CardsDatabase db,
-    $LocalCardDecksTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$LocalCardDecksTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$LocalCardDecksTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$LocalCardDecksTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> accountKey = const Value.absent(),
-                Value<int> remoteId = const Value.absent(),
-                Value<String> name = const Value.absent(),
-                Value<String> description = const Value.absent(),
-                Value<String?> language = const Value.absent(),
-                Value<String?> fromLanguage = const Value.absent(),
-                Value<String?> toLanguage = const Value.absent(),
-                Value<bool> archived = const Value.absent(),
-                Value<DateTime?> updatedAt = const Value.absent(),
-                Value<String?> serverHash = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => LocalCardDecksCompanion(
-                accountKey: accountKey,
-                remoteId: remoteId,
-                name: name,
-                description: description,
-                language: language,
-                fromLanguage: fromLanguage,
-                toLanguage: toLanguage,
-                archived: archived,
-                updatedAt: updatedAt,
-                serverHash: serverHash,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String accountKey,
-                required int remoteId,
-                required String name,
-                required String description,
-                Value<String?> language = const Value.absent(),
-                Value<String?> fromLanguage = const Value.absent(),
-                Value<String?> toLanguage = const Value.absent(),
-                required bool archived,
-                Value<DateTime?> updatedAt = const Value.absent(),
-                Value<String?> serverHash = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => LocalCardDecksCompanion.insert(
-                accountKey: accountKey,
-                remoteId: remoteId,
-                name: name,
-                description: description,
-                language: language,
-                fromLanguage: fromLanguage,
-                toLanguage: toLanguage,
-                archived: archived,
-                updatedAt: updatedAt,
-                serverHash: serverHash,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$LocalCardDecksTableProcessedTableManager =
-    ProcessedTableManager<
-      _$CardsDatabase,
-      $LocalCardDecksTable,
-      LocalCardDeckRow,
-      $$LocalCardDecksTableFilterComposer,
-      $$LocalCardDecksTableOrderingComposer,
-      $$LocalCardDecksTableAnnotationComposer,
-      $$LocalCardDecksTableCreateCompanionBuilder,
-      $$LocalCardDecksTableUpdateCompanionBuilder,
-      (
-        LocalCardDeckRow,
-        BaseReferences<_$CardsDatabase, $LocalCardDecksTable, LocalCardDeckRow>,
-      ),
-      LocalCardDeckRow,
-      PrefetchHooks Function()
-    >;
 typedef $$LocalStudyCardsTableCreateCompanionBuilder =
     LocalStudyCardsCompanion Function({
       required String accountKey,
       required int remoteId,
-      required int deckId,
       required String modelType,
       required String front,
       required String back,
@@ -2134,7 +1136,6 @@ typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
     LocalStudyCardsCompanion Function({
       Value<String> accountKey,
       Value<int> remoteId,
-      Value<int> deckId,
       Value<String> modelType,
       Value<String> front,
       Value<String> back,
@@ -2171,11 +1172,6 @@ class $$LocalStudyCardsTableFilterComposer
 
   ColumnFilters<int> get remoteId => $composableBuilder(
     column: $table.remoteId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get deckId => $composableBuilder(
-    column: $table.deckId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2284,11 +1280,6 @@ class $$LocalStudyCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get deckId => $composableBuilder(
-    column: $table.deckId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get modelType => $composableBuilder(
     column: $table.modelType,
     builder: (column) => ColumnOrderings(column),
@@ -2391,9 +1382,6 @@ class $$LocalStudyCardsTableAnnotationComposer
 
   GeneratedColumn<int> get remoteId =>
       $composableBuilder(column: $table.remoteId, builder: (column) => column);
-
-  GeneratedColumn<int> get deckId =>
-      $composableBuilder(column: $table.deckId, builder: (column) => column);
 
   GeneratedColumn<String> get modelType =>
       $composableBuilder(column: $table.modelType, builder: (column) => column);
@@ -2502,7 +1490,6 @@ class $$LocalStudyCardsTableTableManager
               ({
                 Value<String> accountKey = const Value.absent(),
                 Value<int> remoteId = const Value.absent(),
-                Value<int> deckId = const Value.absent(),
                 Value<String> modelType = const Value.absent(),
                 Value<String> front = const Value.absent(),
                 Value<String> back = const Value.absent(),
@@ -2524,7 +1511,6 @@ class $$LocalStudyCardsTableTableManager
               }) => LocalStudyCardsCompanion(
                 accountKey: accountKey,
                 remoteId: remoteId,
-                deckId: deckId,
                 modelType: modelType,
                 front: front,
                 back: back,
@@ -2548,7 +1534,6 @@ class $$LocalStudyCardsTableTableManager
               ({
                 required String accountKey,
                 required int remoteId,
-                required int deckId,
                 required String modelType,
                 required String front,
                 required String back,
@@ -2570,7 +1555,6 @@ class $$LocalStudyCardsTableTableManager
               }) => LocalStudyCardsCompanion.insert(
                 accountKey: accountKey,
                 remoteId: remoteId,
-                deckId: deckId,
                 modelType: modelType,
                 front: front,
                 back: back,
@@ -2623,8 +1607,6 @@ typedef $$LocalStudyCardsTableProcessedTableManager =
 class $CardsDatabaseManager {
   final _$CardsDatabase _db;
   $CardsDatabaseManager(this._db);
-  $$LocalCardDecksTableTableManager get localCardDecks =>
-      $$LocalCardDecksTableTableManager(_db, _db.localCardDecks);
   $$LocalStudyCardsTableTableManager get localStudyCards =>
       $$LocalStudyCardsTableTableManager(_db, _db.localStudyCards);
 }

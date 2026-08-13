@@ -2,21 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 
 void main() {
-  test('deck schema stores both study languages as attributes', () {
-    final json = buildDeckSchemaRequest().toJson();
-    final definitions = json['attribute_definitions'] as List<dynamic>;
-
-    expect(json['name'], deckModelType);
-    expect(json['tag_systems'], isNull);
-    for (final key in [attrFromLanguage, attrToLanguage]) {
-      expect(definitions.singleWhere((row) => row['key'] == key), {
-        'key': key,
-        'value_type': 'string',
-        'required': false,
-      });
-    }
-  });
-
   test('card schema keeps only query fields outside versioned JSON', () {
     final json = buildCardSchemaRequest().toJson();
     final attributes = (json['attribute_definitions'] as List<dynamic>)
@@ -59,10 +44,8 @@ void main() {
       'to_language',
       'transliteration',
     ]);
-    expect(
-      relations.map((row) => row['link']),
-      containsAll([deckModelType, bookModelType]),
-    );
+    expect(relations.map((row) => row['link']), contains(bookModelType));
+    expect(relations, hasLength(1));
     expect(json['tag_systems'], isNull);
   });
 

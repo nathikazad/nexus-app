@@ -8,5 +8,4 @@ export 'card/learning_status.dart';
 export 'card/study_card.dart';
 export 'card/study_cue.dart';
 export 'card/study_prompt.dart';
-export 'deck/card_deck.dart';
 export 'sync/card_sync.dart';

@@ -96,22 +96,9 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   void _endReview() => setState(() => _ended = true);
 
   Future<void> _openCardDetails() async {
-    final dashboard = ref.read(cardsDashboardProvider).value;
-    final deck = dashboard?.decks
-        .where((candidate) => candidate.id == _card.deckId)
-        .firstOrNull;
-    if (deck == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Card details are not available yet')),
-        );
-      }
-      return;
-    }
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            CardDetailsPage(deck: deck, card: _card, allowEdit: false),
+        builder: (_) => CardDetailsPage(card: _card, allowEdit: false),
       ),
     );
   }
@@ -208,7 +195,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                                         Row(
                                           children: [
                                             _Label(
-                                              _card.deckName.toUpperCase(),
+                                              (_card.sourceBookName ??
+                                                      _card.language ??
+                                                      'Flashcard')
+                                                  .toUpperCase(),
                                             ),
                                             const Spacer(),
                                             if (_revealed)

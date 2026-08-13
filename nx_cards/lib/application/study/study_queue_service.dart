@@ -7,15 +7,7 @@ class StudyQueueService {
 
   final Clock _clock;
 
-  List<StudyPrompt> build(
-    CardsDashboard dashboard, {
-    int? deckId,
-    int newCardLimit = 20,
-  }) {
-    return dashboard.studyQueue(
-      _clock.now(),
-      deckId: deckId,
-      newCardLimit: newCardLimit,
-    );
+  List<StudyPrompt> build(CardsDashboard dashboard, {int newCardLimit = 20}) {
+    return dashboard.studyQueue(_clock.now(), newCardLimit: newCardLimit);
   }
 }

@@ -13,7 +13,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(activeCardsSessionProvider, (_, _) => refresh.value++);
   return GoRouter(
     refreshListenable: refresh,
-    initialLocation: '/decks',
+    initialLocation: '/library',
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final session = ref.read(activeCardsSessionProvider);
@@ -24,7 +24,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!loggedIn && state.uri.path != '/login') return '/login';
       if (loggedIn &&
           (state.uri.path == '/login' || state.uri.path == '/loading')) {
-        return '/decks';
+        return '/library';
       }
       return null;
     },
@@ -35,9 +35,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Scaffold(body: Center(child: CircularProgressIndicator())),
       ),
       GoRoute(path: '/login', builder: (_, _) => const CardsLoginScreen()),
-      GoRoute(path: '/', redirect: (_, _) => '/decks'),
-      GoRoute(path: '/decks', builder: (_, _) => const CardsHome()),
-      GoRoute(path: '/today', redirect: (_, _) => '/decks'),
+      GoRoute(path: '/', redirect: (_, _) => '/library'),
+      GoRoute(path: '/library', builder: (_, _) => const CardsHome()),
+      GoRoute(path: '/today', redirect: (_, _) => '/library'),
     ],
   );
 });

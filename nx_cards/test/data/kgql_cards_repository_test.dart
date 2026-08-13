@@ -26,7 +26,6 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      deckId: 7,
     );
 
     expect(id, 42);
@@ -119,9 +118,6 @@ void main() {
               'review_history': {'version': 3, 'items': <Object?>[]},
               'learning_status': 'learning',
               'model_type': {'id': 67, 'name': wordCardModelType},
-              'FlashcardDeck': [
-                {'id': 7, 'name': 'Malayalam', 'model_type_id': 65},
-              ],
               'tags': <String, dynamic>{
                 'Language': <String>['Malayalam'],
                 if (requestedType == wordCardModelType)

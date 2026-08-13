@@ -3,7 +3,7 @@ import 'package:nx_cards/application/native/cards_uploader.dart';
 import 'package:nx_cards/application/ports/cards_sync_transport.dart';
 import 'package:nx_cards/application/ports/clock.dart';
 import 'package:nx_cards/application/ports/local_cards_store.dart';
-import 'package:nx_cards/application/sync/card_deck_synchronizer.dart';
+import 'package:nx_cards/application/sync/card_library_synchronizer.dart';
 import 'package:nx_cards/domain/card/cards_repository.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
@@ -14,7 +14,7 @@ final class NativeCardsWorkspace implements CardsWorkspace {
     required CardsRepository? remoteRepository,
     required CardsSyncTransport? transport,
     required CardsUploader? uploader,
-    required CardDeckSynchronizer synchronizer,
+    required CardLibrarySynchronizer synchronizer,
     required Clock clock,
     required String Function() newOperationId,
   }) : _localStore = localStore,
@@ -29,16 +29,12 @@ final class NativeCardsWorkspace implements CardsWorkspace {
   final CardsRepository? _remoteRepository;
   final CardsSyncTransport? _transport;
   final CardsUploader? _uploader;
-  final CardDeckSynchronizer _synchronizer;
+  final CardLibrarySynchronizer _synchronizer;
   final Clock _clock;
   final String Function() _newOperationId;
 
   @override
   Stream<CardsDashboard> watchDashboard() => _localStore.watchDashboard();
-
-  @override
-  Future<List<CardDeck>> listDecks() async =>
-      (await _localStore.readDashboard()).decks;
 
   @override
   Future<List<StudyCard>> listCards() async =>
@@ -55,40 +51,16 @@ final class NativeCardsWorkspace implements CardsWorkspace {
       _requireRepository().addLanguage(name);
 
   @override
-  Future<int> createDeck({
-    required String name,
-    required String description,
-    String? fromLanguage,
-    String? toLanguage,
-  }) async {
-    final result = await _requireTransport().createDeck(
-      name: name,
-      description: description,
-      fromLanguage: fromLanguage,
-      toLanguage: toLanguage,
-      clientUpdatedAt: _clock.now(),
-    );
-    await _synchronizer.syncDeck(result.entityId);
-    return result.entityId;
-  }
-
-  @override
   Future<int> createCard({
     required CardContent content,
-    int? deckId,
     int? sourceBookId,
   }) async {
     final result = await _requireTransport().createCard(
       content: content,
-      deckId: deckId,
       sourceBookId: sourceBookId,
       clientUpdatedAt: _clock.now(),
     );
-    if (deckId == null) {
-      await _synchronizer.syncLibrary();
-    } else {
-      await _synchronizer.syncDeck(deckId);
-    }
+    await _synchronizer.syncLibrary();
     return result.entityId;
   }
 
@@ -196,11 +168,6 @@ final class NativeCardsWorkspace implements CardsWorkspace {
 
   @override
   Future<void> syncLibrary() => _synchronizer.syncLibrary();
-
-  @override
-  Future<void> syncDeck(int deckId) async {
-    await _synchronizer.syncDeck(deckId);
-  }
 
   @override
   Future<void> close() async {}

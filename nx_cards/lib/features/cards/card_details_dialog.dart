@@ -12,13 +12,11 @@ enum CardDetailsTab { stats, examples }
 class CardDetailsPage extends ConsumerStatefulWidget {
   const CardDetailsPage({
     super.key,
-    required this.deck,
     required this.card,
     this.allowEdit = true,
     this.initialTab = CardDetailsTab.stats,
   });
 
-  final CardDeck deck;
   final StudyCard card;
   final bool allowEdit;
   final CardDetailsTab initialTab;
@@ -54,7 +52,6 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final card = widget.card;
-    final deck = widget.deck;
     final languageContent = switch (card.content) {
       final LanguageCardContent content => content,
       _ => null,
@@ -97,7 +94,10 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(deck.name.toUpperCase(), style: monoLabel),
+                      child: Text(
+                        _cardSource(card).toUpperCase(),
+                        style: monoLabel,
+                      ),
                     ),
                     if (card.suspended)
                       const _StatusPill(
@@ -107,11 +107,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _CardContent(
-                  deck: deck,
-                  card: card,
-                  languageContent: languageContent,
-                ),
+                _CardContent(card: card, languageContent: languageContent),
                 if (audioUrl?.isNotEmpty == true &&
                     audioRepository != null) ...[
                   const SizedBox(height: 14),
@@ -157,13 +153,13 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                   if (visibleTab == CardDetailsTab.stats) ...[
                     if (reviewedCues.length == 1)
                       _DirectionHeading(
-                        label: _cueLabel(reviewedCues.single, deck),
+                        label: _cueLabel(reviewedCues.single, card),
                       )
                     else
                       _DirectionSelector(
                         cues: reviewedCues,
                         selected: visibleCue!,
-                        labelFor: (cue) => _cueLabel(cue, deck),
+                        labelFor: (cue) => _cueLabel(cue, card),
                         onSelected: (cue) => setState(() => _selectedCue = cue),
                       ),
                     const SizedBox(height: 16),
@@ -187,13 +183,8 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
 }
 
 class _CardContent extends StatelessWidget {
-  const _CardContent({
-    required this.deck,
-    required this.card,
-    required this.languageContent,
-  });
+  const _CardContent({required this.card, required this.languageContent});
 
-  final CardDeck deck;
   final StudyCard card;
   final LanguageCardContent? languageContent;
 
@@ -209,18 +200,13 @@ class _CardContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PlainField(
-            label: languageContent == null
-                ? 'Front'
-                : deck.fromLanguage ?? 'Front',
-            value: card.front,
-          ),
+          _PlainField(label: 'Front', value: card.front),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 15),
             child: Divider(height: 1),
           ),
           _PlainField(
-            label: languageContent == null ? 'Back' : deck.toLanguage ?? 'Back',
+            label: languageContent == null ? 'Back' : card.language ?? 'Back',
             value: card.back,
             style: languageContent == null
                 ? null
@@ -866,14 +852,14 @@ class _StatusPill extends StatelessWidget {
   );
 }
 
-String _cueLabel(StudyCue cue, CardDeck deck) => switch (cue) {
-  StudyCue.fromLanguage =>
-    '${deck.fromLanguage ?? 'Front'} → ${deck.toLanguage ?? 'Back'}',
-  StudyCue.toLanguage =>
-    '${deck.toLanguage ?? 'Back'} → ${deck.fromLanguage ?? 'Front'}',
-  StudyCue.transliteration =>
-    'Transliteration → ${deck.fromLanguage ?? 'Front'}',
+String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {
+  StudyCue.fromLanguage => 'Front → ${card.language ?? 'Back'}',
+  StudyCue.toLanguage => '${card.language ?? 'Back'} → Front',
+  StudyCue.transliteration => 'Transliteration → Front',
 };
+
+String _cardSource(StudyCard card) =>
+    card.sourceBookName ?? card.language ?? card.studyCategory ?? 'Flashcard';
 
 String _knowledgeStatus(CardSchedule schedule, DateTime now) {
   final due = schedule.dueAt;

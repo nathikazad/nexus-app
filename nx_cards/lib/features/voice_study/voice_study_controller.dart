@@ -19,7 +19,7 @@ enum VoiceStudyPhase {
   error,
 }
 
-typedef VoiceStudyDeckLanguages = ({String? from, String? to});
+typedef VoiceStudyLanguages = ({String? from, String? to});
 
 final class VoiceStudyAnswerReveal {
   const VoiceStudyAnswerReveal({
@@ -59,7 +59,7 @@ class VoiceStudyController extends ChangeNotifier {
     required CardsRepository repository,
     required CardScheduler scheduler,
     required List<StudyPrompt> prompts,
-    required Map<int, VoiceStudyDeckLanguages> deckLanguages,
+    VoiceStudyLanguages? languages,
     required VoidCallback onScheduleSaved,
     DateTime Function()? now,
   }) => VoiceStudyController._(
@@ -67,7 +67,7 @@ class VoiceStudyController extends ChangeNotifier {
     repository,
     scheduler,
     prompts,
-    deckLanguages,
+    languages,
     onScheduleSaved,
     now ?? DateTime.now,
   );
@@ -77,11 +77,10 @@ class VoiceStudyController extends ChangeNotifier {
     this._repository,
     this._scheduler,
     List<StudyPrompt> prompts,
-    Map<int, VoiceStudyDeckLanguages> deckLanguages,
+    this._languages,
     this._onScheduleSaved,
     this._now,
-  ) : _prompts = List<StudyPrompt>.of(prompts),
-      _deckLanguages = Map<int, VoiceStudyDeckLanguages>.of(deckLanguages) {
+  ) : _prompts = List<StudyPrompt>.of(prompts) {
     _session.addListener(_syncSession);
   }
 
@@ -89,7 +88,7 @@ class VoiceStudyController extends ChangeNotifier {
   final CardsRepository _repository;
   final CardScheduler _scheduler;
   final List<StudyPrompt> _prompts;
-  final Map<int, VoiceStudyDeckLanguages> _deckLanguages;
+  final VoiceStudyLanguages? _languages;
   final VoidCallback _onScheduleSaved;
   final DateTime Function() _now;
 
@@ -250,12 +249,12 @@ class VoiceStudyController extends ChangeNotifier {
 
   String get _instructions => '''
 You are a concise, encouraging spoken language flashcard tutor.
-The current card context supplies the deck and language.
+The current card context supplies its source and language.
 
 For every card:
 1. Ask the supplied question without revealing the answer first. Follow the
    supplied question_instruction, which accounts for the selected cue and the
-   deck's source and target languages.
+   selected source and target languages.
 2. Listen to the learner. If they answer, say they do not know, or give up, call
    assess_current_card exactly once. Use again for unknown/wrong, hard for a
    partially correct or hesitant answer, and good for a confident correct one.
@@ -264,7 +263,7 @@ For every card:
    the tool advances automatically: briefly confirm it and immediately ask the
    supplied next card question. Do not call advance_card for a good answer.
    Say the answer only once. Treat pronunciation_hint and stored example
-   transliterations as silent pronunciation aids. Never read a Malayalam word
+   transliterations as silent pronunciation aids. Never read a target-language word
    and then repeat its transliteration unless the learner explicitly asks for
    the transliteration.
 4. After an again or hard assessment, stay anchored to the same card for
@@ -472,10 +471,10 @@ Keep spoken responses short unless the learner asks for more detail.
   }
 
   Map<String, Object?> _contextMap(StudyPrompt prompt) {
-    final languages = _deckLanguages[prompt.card.deckId];
+    final languages = _languages;
     return {
       'card_id': prompt.card.id,
-      'deck': prompt.card.deckName,
+      'source': prompt.card.sourceBookName ?? prompt.card.language,
       'from_language': languages?.from,
       'to_language': languages?.to,
       'question': prompt.prompt,
@@ -500,7 +499,7 @@ Keep spoken responses short unless the learner asks for more detail.
 
   String _questionInstruction(
     StudyPrompt prompt,
-    VoiceStudyDeckLanguages? languages,
+    VoiceStudyLanguages? languages,
   ) {
     final from = languages?.from;
     final to = languages?.to;

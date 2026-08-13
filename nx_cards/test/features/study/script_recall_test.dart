@@ -98,7 +98,7 @@ Future<void> _pumpRecall(
           cue == StudyCue.fromLanguage ? _FakeAudioRepository() : null,
         ),
         cardsDashboardProvider.overrideWith(
-          (_) => Stream.value(const CardsDashboard(decks: [], cards: [])),
+          (_) => Stream.value(const CardsDashboard(cards: [])),
         ),
       ],
       child: MaterialApp(
@@ -120,8 +120,6 @@ StudyCard _scriptCard() => StudyCard(
     transliteration: 'ka',
     audioUrl: '/audio/ka.mp3',
   ),
-  deckId: 8,
-  deckName: 'Malayalam script',
   schedules: const <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
     StudyCue.toLanguage: CardSchedule.initial(enabled: true),

@@ -6,15 +6,7 @@ abstract interface class LocalCardsStore implements OutboxStore {
 
   Future<CardsDashboard> readDashboard();
 
-  Future<CardDeck?> getDeck(int deckId);
-
   Future<StudyCard?> getCard(int cardId);
-
-  Future<List<StudyCard>> cardsForDeck(int deckId);
-
-  Future<List<CardDeckManifestEntry>> deckManifest({Set<int>? deckIds});
-
-  Future<void> applySyncBundle(CardDeckSyncBundle bundle);
 
   Future<void> applyCardSnapshot(List<StudyCard> cards);
 

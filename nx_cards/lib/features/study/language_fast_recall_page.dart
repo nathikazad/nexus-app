@@ -85,22 +85,9 @@ class _LanguageFastRecallPageState
   }
 
   Future<void> _openCard(StudyCard card) async {
-    final dashboard = ref.read(cardsDashboardProvider).value;
-    final deck = dashboard?.decks
-        .where((candidate) => candidate.id == card.deckId)
-        .firstOrNull;
-    if (deck == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Card details are not available yet')),
-        );
-      }
-      return;
-    }
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => CardDetailsPage(
-          deck: deck,
           card: card,
           allowEdit: false,
           initialTab: CardDetailsTab.examples,

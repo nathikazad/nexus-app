@@ -13,7 +13,6 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final dashboard = CardsDashboard(
-      decks: const [_deck],
       cards: [
         _word(
           id: 1,
@@ -76,7 +75,6 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final dashboard = CardsDashboard(
-      decks: const [_deck],
       cards: [
         _word(
           id: 1,
@@ -150,10 +148,7 @@ void main() {
       learningStatus: LearningStatus.learnt,
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
-    final dashboard = CardsDashboard(
-      decks: const [_deck],
-      cards: [current, available, learnt],
-    );
+    final dashboard = CardsDashboard(cards: [current, available, learnt]);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -198,10 +193,7 @@ void main() {
       learningStatus: LearningStatus.learnt,
       schedule: _schedule(now),
     );
-    final dashboard = CardsDashboard(
-      decks: const [_deck],
-      cards: [learning, learnt],
-    );
+    final dashboard = CardsDashboard(cards: [learning, learnt]);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -273,9 +265,7 @@ void main() {
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(
-              CardsDashboard(decks: const [_deck], cards: cards),
-            ),
+            (_) => Stream.value(CardsDashboard(cards: cards)),
           ),
         ],
         child: const MaterialApp(
@@ -354,15 +344,6 @@ final class _RecordingCardsRepository implements CardsRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-const _deck = CardDeck(
-  id: 10,
-  name: 'Malayalam nouns',
-  description: '',
-  fromLanguage: 'English',
-  toLanguage: 'Malayalam',
-  archived: false,
-);
-
 StudyCard _word({
   required int id,
   required LearningStatus learningStatus,
@@ -377,8 +358,6 @@ StudyCard _word({
     originalScript: id == 1 ? 'ആശങ്ക' : 'ഉത്തരവാദിത്വം',
     transliteration: id == 1 ? 'aashanka' : 'utharavaadithvam',
   ),
-  deckId: _deck.id,
-  deckName: _deck.name,
   schedules: {
     StudyCue.fromLanguage: schedule,
     StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
@@ -400,8 +379,11 @@ StudyCard _word({
   suspended: false,
   learningStatus: learningStatus,
   tags: category == 'Script'
-      ? const <String, List<String>>{}
+      ? const <String, List<String>>{
+          'Language': ['Malayalam'],
+        }
       : <String, List<String>>{
+          'Language': ['Malayalam'],
           'Word Category': [category],
         },
   modelTypeName: modelTypeName ?? (category == 'Script' ? 'Script' : 'Word'),
@@ -413,8 +395,6 @@ StudyCard _bookCard(int id) => StudyCard(
     front: 'Why validate demand?',
     back: 'To avoid scaling an unproven model.',
   ),
-  deckId: 0,
-  deckName: '',
   schedules: const {StudyCue.fromLanguage: CardSchedule.initial(enabled: true)},
   reviewHistory: const {},
   suspended: false,

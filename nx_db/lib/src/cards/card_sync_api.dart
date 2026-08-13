@@ -17,35 +17,12 @@ mutation MutateCardLibrary(
 }
 ''';
 
-const String _syncCardDecksQuery = r'''
-query SyncCardDecks(
-  $manifest: JSON!
-  $deckIds: [Int!]
-  $domainId: Int
-) {
-  syncCardDecks(
-    manifest: $manifest
-    deckIds: $deckIds
-    domainId: $domainId
-  )
-}
-''';
-
 enum CardLibraryMutationStatus { applied, stale, deleted }
-
-final class CardDeckHash {
-  const CardDeckHash({required this.deckId, required this.syncHash});
-
-  final int deckId;
-  final String syncHash;
-}
 
 final class CardLibraryMutationResult {
   const CardLibraryMutationResult({
     required this.status,
     required this.entityId,
-    required this.deckHashes,
-    required this.deletedDeckIds,
     this.updatedAt,
     this.entity,
   });
@@ -53,31 +30,7 @@ final class CardLibraryMutationResult {
   final CardLibraryMutationStatus status;
   final int entityId;
   final DateTime? updatedAt;
-  final List<CardDeckHash> deckHashes;
-  final List<int> deletedDeckIds;
   final Map<String, dynamic>? entity;
-}
-
-final class CardDeckSyncEntry {
-  const CardDeckSyncEntry({
-    required this.deckId,
-    required this.syncHash,
-    required this.bundle,
-  });
-
-  final int deckId;
-  final String syncHash;
-  final Map<String, dynamic> bundle;
-}
-
-final class CardDeckSyncResponse {
-  const CardDeckSyncResponse({
-    required this.decks,
-    required this.deletedIds,
-  });
-
-  final List<CardDeckSyncEntry> decks;
-  final List<int> deletedIds;
 }
 
 Future<CardLibraryMutationResult> mutateCardLibrary(
@@ -125,84 +78,9 @@ Future<CardLibraryMutationResult> mutateCardLibrary(
       status: status,
       entityId: id,
       updatedAt: _parseTimestamp(payload['updated_at']),
-      deckHashes: _deckHashes(payload['deck_hashes']),
-      deletedDeckIds: _integerList(payload['deleted_deck_ids']),
       entity: _optionalJsonMap(payload['entity']),
     );
   });
-}
-
-Future<CardDeckSyncResponse> syncCardDecks(
-  GraphQLClient client, {
-  required List<Map<String, Object?>> manifest,
-  Set<int>? deckIds,
-  int? domainId,
-}) async {
-  final sortedDeckIds = deckIds == null ? null : (deckIds.toList()..sort());
-  final result = await client.query(
-    QueryOptions(
-      document: gql(_syncCardDecksQuery),
-      variables: <String, dynamic>{
-        'manifest': manifest,
-        'deckIds': sortedDeckIds,
-        if (domainId != null) 'domainId': domainId,
-      },
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
-  );
-  if (result.hasException) throw result.exception!;
-
-  final payload = _jsonMap(result.data?['syncCardDecks']);
-  final rawDecks = payload['decks'];
-  final rawDeletedIds = payload['deleted_ids'];
-  if (rawDecks is! List || rawDeletedIds is! List) {
-    throw StateError('Invalid syncCardDecks response: $payload');
-  }
-  return CardDeckSyncResponse(
-    decks: <CardDeckSyncEntry>[
-      for (final raw in rawDecks)
-        if (raw is Map) _syncEntry(Map<String, dynamic>.from(raw)),
-    ],
-    deletedIds: _integerList(rawDeletedIds),
-  );
-}
-
-CardDeckSyncEntry _syncEntry(Map<String, dynamic> json) {
-  final id = json['id'];
-  final hash = json['hash'];
-  final bundle = json['bundle'];
-  if (id is! int || hash is! String || bundle is! Map) {
-    throw StateError('Invalid synchronized card deck: $json');
-  }
-  return CardDeckSyncEntry(
-    deckId: id,
-    syncHash: hash,
-    bundle: Map<String, dynamic>.from(bundle),
-  );
-}
-
-List<CardDeckHash> _deckHashes(Object? raw) {
-  if (raw == null) return const <CardDeckHash>[];
-  if (raw is! List) throw StateError('Invalid deck_hashes: $raw');
-  return <CardDeckHash>[
-    for (final value in raw)
-      if (value is Map)
-        switch (Map<String, dynamic>.from(value)) {
-          {'id': final int id, 'hash': final String hash} =>
-            CardDeckHash(deckId: id, syncHash: hash),
-          final Map<String, dynamic> value =>
-            throw StateError('Invalid deck hash: $value'),
-        },
-  ];
-}
-
-List<int> _integerList(Object? raw) {
-  if (raw == null) return const <int>[];
-  if (raw is! List) throw StateError('Expected integer list, received $raw');
-  return <int>[
-    for (final value in raw)
-      if (value is int) value
-  ];
 }
 
 Map<String, dynamic> _jsonMap(Object? value) {

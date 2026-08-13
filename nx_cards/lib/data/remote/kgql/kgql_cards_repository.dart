@@ -18,7 +18,6 @@ const baseCardStruct = <String, dynamic>{
   attrCardDetails: true,
   'tags': true,
   'model_type': {'id': true, 'name': true},
-  deckModelType: {'id': true, 'name': true},
   bookModelType: {'id': true, 'name': true},
 };
 
@@ -76,40 +75,14 @@ class KgqlCardsRepository implements CardsRepository {
   final GraphQLClient _client;
 
   @override
-  Future<List<CardDeck>> listDecks() async {
-    final rows = await fetchKgqlModels(
-      _client,
-      filter: const {'model_type': deckModelType},
-      struct: const {
-        'id': true,
-        'name': true,
-        'description': true,
-        'updated_at': true,
-        attrArchived: true,
-        attrFromLanguage: true,
-        attrToLanguage: true,
-      },
-    );
-    final decks = rows.map(cardDeckFromModel).toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    return decks;
-  }
-
-  @override
   Future<List<StudyCard>> listCards() => fetchKgqlCards(_client);
 
   @override
   Future<List<String>> listLanguages() async {
     final values = <String>{
-      'French',
-      'Hindi',
-      'Japanese',
-      'Malayalam',
-      'Spanish',
-      for (final deck in await listDecks()) ...[
-        ?deck.fromLanguage,
-        ?deck.toLanguage,
-      ],
+      for (final card in await listCards())
+        if (card.language case final language? when language.isNotEmpty)
+          language,
     }.toList()..sort();
     return values;
   }
@@ -134,36 +107,7 @@ class KgqlCardsRepository implements CardsRepository {
   }
 
   @override
-  Future<int> createDeck({
-    required String name,
-    required String description,
-    String? fromLanguage,
-    String? toLanguage,
-  }) {
-    return setKgqlModel(
-      _client,
-      SetModelRequest(
-        modelType: deckModelType,
-        name: name,
-        description: description,
-        attributes: [
-          SetModelAttribute(key: attrArchived, value: false),
-          if (fromLanguage != null)
-            SetModelAttribute(key: attrFromLanguage, value: fromLanguage),
-          if (toLanguage != null)
-            SetModelAttribute(key: attrToLanguage, value: toLanguage),
-        ],
-      ),
-      auditSourceKind: 'nx_cards',
-    );
-  }
-
-  @override
-  Future<int> createCard({
-    required CardContent content,
-    int? deckId,
-    int? sourceBookId,
-  }) {
+  Future<int> createCard({required CardContent content, int? sourceBookId}) {
     return setKgqlModel(
       _client,
       SetModelRequest(
@@ -198,8 +142,6 @@ class KgqlCardsRepository implements CardsRepository {
             ),
         ],
         relations: [
-          if (deckId != null)
-            ModelRelation(modelType: deckModelType, link: [deckId]),
           if (sourceBookId != null)
             ModelRelation(modelType: bookModelType, link: [sourceBookId]),
         ],

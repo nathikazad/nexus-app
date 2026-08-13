@@ -8,8 +8,6 @@ void main() {
     final card = StudyCard(
       id: 42,
       content: const BasicCardContent(front: 'bonjour', back: 'hello'),
-      deckId: 1,
-      deckName: 'French',
       schedules: const <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
         StudyCue.toLanguage: CardSchedule.initial(enabled: false),
@@ -55,8 +53,6 @@ void main() {
     final card = StudyCard(
       id: 42,
       content: const BasicCardContent(front: 'bonjour', back: 'hello'),
-      deckId: 1,
-      deckName: 'French',
       schedules: <StudyCue, CardSchedule>{
         StudyCue.fromLanguage: CardSchedule(
           enabled: true,

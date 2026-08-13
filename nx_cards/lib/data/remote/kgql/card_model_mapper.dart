@@ -4,29 +4,10 @@ import 'package:nx_cards/data/remote/kgql/card_schema.dart';
 import 'package:nx_cards/domain/cards_models.dart';
 import 'package:nx_db/kgql.dart';
 
-CardDeck cardDeckFromModel(Model model) {
-  return CardDeck(
-    id: model.id,
-    name: model.name,
-    description: model.description?.trim() ?? '',
-    fromLanguage: model.attributes?[attrFromLanguage]
-        ?.toString()
-        .trim()
-        .nullIfEmpty,
-    toLanguage: model.attributes?[attrToLanguage]
-        ?.toString()
-        .trim()
-        .nullIfEmpty,
-    archived: model.attrBool(attrArchived) ?? false,
-    updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
-  );
-}
-
 StudyCard? studyCardFromModel(
   Model model, {
   Map<int, Model> relatedModels = const <int, Model>{},
 }) {
-  final deck = _relatedModels(model, deckModelType).firstOrNull;
   final book = _relatedModels(model, bookModelType).firstOrNull;
   final schedule = _jsonMap(model.attributes?[attrSchedule]);
   final history = _reviewHistoryByCueFrom(model.attributes?[attrReviewHistory]);
@@ -53,8 +34,6 @@ StudyCard? studyCardFromModel(
                 : languageExamplesFromJson(languageDetails['examples']),
           )
         : BasicCardContent(front: front, back: back),
-    deckId: deck?.id ?? unassignedDeckId,
-    deckName: deck?.name ?? unassignedDeckName,
     schedules: <StudyCue, CardSchedule>{
       for (final cue in StudyCue.values)
         cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
@@ -123,10 +102,6 @@ Map<String, Object?> languageDetailsJson(LanguageCardContent content) =>
       // projection back into the language_details aggregate.
       'examples': const <Object?>[],
     };
-
-extension on String {
-  String? get nullIfEmpty => isEmpty ? null : this;
-}
 
 List<LanguageExample> languageExamplesFromJson(Object? raw) {
   if (raw is! List) return const <LanguageExample>[];

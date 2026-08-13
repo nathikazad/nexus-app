@@ -14,7 +14,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final card = _card();
     final repository = _RecordingCardsRepository();
-    final dashboard = CardsDashboard(decks: const [_deck], cards: [card]);
+    final dashboard = CardsDashboard(cards: [card]);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -90,10 +90,7 @@ void main() {
     final card = _card();
     final secondCard = _card(id: 2);
     final repository = _RecordingCardsRepository();
-    final dashboard = CardsDashboard(
-      decks: const [_deck],
-      cards: [card, secondCard],
-    );
+    final dashboard = CardsDashboard(cards: [card, secondCard]);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -134,10 +131,7 @@ void main() {
     final first = _card();
     final second = _card(id: 2);
     final repository = _RecordingCardsRepository();
-    final dashboard = CardsDashboard(
-      decks: const [_deck],
-      cards: [first, second],
-    );
+    final dashboard = CardsDashboard(cards: [first, second]);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -209,15 +203,6 @@ final class _RecordingCardsRepository implements CardsRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-const _deck = CardDeck(
-  id: 7,
-  name: 'Malayalam nouns',
-  description: '',
-  fromLanguage: 'English',
-  toLanguage: 'Malayalam',
-  archived: false,
-);
-
 StudyCard _card({int id = 1}) => StudyCard(
   id: id,
   content: const LanguageCardContent(
@@ -233,8 +218,6 @@ StudyCard _card({int id = 1}) => StudyCard(
       ),
     ],
   ),
-  deckId: 7,
-  deckName: 'Malayalam nouns',
   schedules: const <StudyCue, CardSchedule>{
     StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
   },

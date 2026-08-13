@@ -585,11 +585,9 @@ class _StudySetupScreenState extends ConsumerState<StudySetupScreen> {
         builder: (_) => VoiceStudyScreen(
           title: widget.title,
           prompts: prompts,
-          deckLanguages: {
-            if (!_isBookStudy)
-              for (final deckId in widget.studyCards.map((card) => card.deckId))
-                deckId: (from: widget.fromLanguage, to: widget.toLanguage),
-          },
+          languages: _isBookStudy
+              ? null
+              : (from: widget.fromLanguage, to: widget.toLanguage),
         ),
       ),
     );

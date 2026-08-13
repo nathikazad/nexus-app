@@ -41,7 +41,11 @@ class LanguageExamplesPage extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
               children: [
-                Text(card.deckName.toUpperCase(), style: monoLabel),
+                Text(
+                  (card.language ?? card.studyCategory ?? 'Language')
+                      .toUpperCase(),
+                  style: monoLabel,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   content.originalScript,

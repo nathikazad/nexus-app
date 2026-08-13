@@ -96,7 +96,7 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
       Text(
         widget.revealed
             ? 'Compare your drawing with the answer'
-            : 'Draw the Malayalam letter',
+            : 'Draw the letter',
         style: const TextStyle(color: RecallColors.faint, fontSize: 12),
       ),
       const SizedBox(height: 14),
@@ -104,8 +104,7 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
         height: 230,
         child: ScriptDrawingCanvas(
           controller: _drawingController,
-          semanticsLabel:
-              'Draw the Malayalam letter for ${widget.prompt.prompt}',
+          semanticsLabel: 'Draw the letter for ${widget.prompt.prompt}',
         ),
       ),
       const SizedBox(height: 10),
