@@ -1,7 +1,82 @@
 part of 'document_editor_view.dart';
 
-class NxSelectionFormattingToolbar extends StatefulWidget {
-  const NxSelectionFormattingToolbar({
+bool canPersistDocumentTransaction(
+  DocumentInteractionMode interactionMode,
+  Transaction transaction,
+) {
+  if (interactionMode == DocumentInteractionMode.edit) return true;
+  if (interactionMode != DocumentInteractionMode.highlightOnly) return false;
+  return transaction.operations.every(_operationOnlyChangesHighlight);
+}
+
+bool _operationOnlyChangesHighlight(Operation operation) {
+  if (operation is! UpdateOperation ||
+      operation.attributes.length != 1 ||
+      !operation.attributes.containsKey(blockComponentDelta)) {
+    return false;
+  }
+  final beforeJson = operation.oldAttributes[blockComponentDelta];
+  final afterJson = operation.attributes[blockComponentDelta];
+  if (beforeJson is! List || afterJson is! List) return false;
+  final before = Delta.fromJson(beforeJson);
+  final after = Delta.fromJson(afterJson);
+  final beforeWithoutHighlight = _canonicalTextRuns(
+    before,
+    removeHighlight: true,
+  );
+  final afterWithoutHighlight = _canonicalTextRuns(
+    after,
+    removeHighlight: true,
+  );
+  if (beforeWithoutHighlight == null ||
+      afterWithoutHighlight == null ||
+      !_sameTextRuns(beforeWithoutHighlight, afterWithoutHighlight)) {
+    return false;
+  }
+  final beforeWithHighlight = _canonicalTextRuns(before);
+  final afterWithHighlight = _canonicalTextRuns(after);
+  return beforeWithHighlight != null &&
+      afterWithHighlight != null &&
+      !_sameTextRuns(beforeWithHighlight, afterWithHighlight);
+}
+
+List<({String text, Attributes attributes})>? _canonicalTextRuns(
+  Delta delta, {
+  bool removeHighlight = false,
+}) {
+  final runs = <({String text, Attributes attributes})>[];
+  for (final operation in delta) {
+    if (operation is! TextInsert) return null;
+    final attributes = <String, dynamic>{...?operation.attributes};
+    if (removeHighlight) {
+      attributes.remove(AppFlowyRichTextKeys.backgroundColor);
+    }
+    if (runs.isNotEmpty && mapEquals(runs.last.attributes, attributes)) {
+      final previous = runs.removeLast();
+      runs.add((text: previous.text + operation.text, attributes: attributes));
+    } else {
+      runs.add((text: operation.text, attributes: attributes));
+    }
+  }
+  return runs;
+}
+
+bool _sameTextRuns(
+  List<({String text, Attributes attributes})> left,
+  List<({String text, Attributes attributes})> right,
+) {
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index += 1) {
+    if (left[index].text != right[index].text ||
+        !mapEquals(left[index].attributes, right[index].attributes)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+class NxReaderHighlightToolbar extends StatefulWidget {
+  const NxReaderHighlightToolbar({
     required this.editorState,
     required this.editorScrollController,
     required this.child,
@@ -13,13 +88,13 @@ class NxSelectionFormattingToolbar extends StatefulWidget {
   final Widget child;
 
   @override
-  State<NxSelectionFormattingToolbar> createState() =>
-      _NxSelectionFormattingToolbarState();
+  State<NxReaderHighlightToolbar> createState() =>
+      _NxReaderHighlightToolbarState();
 }
 
-class _NxSelectionFormattingToolbarState
-    extends State<NxSelectionFormattingToolbar> {
-  static const _toolbarHeight = 34.0;
+class _NxReaderHighlightToolbarState extends State<NxReaderHighlightToolbar> {
+  static const _toolbarHeight = 42.0;
+  static const _toolbarWidth = 152.0;
   OverlayEntry? _overlayEntry;
   Selection? _toolbarSelection;
   Timer? _showTimer;
@@ -34,7 +109,7 @@ class _NxSelectionFormattingToolbarState
   }
 
   @override
-  void didUpdateWidget(covariant NxSelectionFormattingToolbar oldWidget) {
+  void didUpdateWidget(covariant NxReaderHighlightToolbar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.editorState != widget.editorState) {
       oldWidget.editorState.selectionNotifier.removeListener(
@@ -97,15 +172,19 @@ class _NxSelectionFormattingToolbarState
 
     final rect = rects.reduce((a, b) => a.top <= b.top ? a : b);
     final overlay = Overlay.of(context, rootOverlay: true);
-    final left = rect.center.dx - 95;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final left = (rect.center.dx - _toolbarWidth / 2).clamp(
+      8.0,
+      screenWidth - _toolbarWidth - 8,
+    );
     final top = rect.top - _toolbarHeight - 8;
 
     _overlayEntry?.remove();
     _overlayEntry = OverlayEntry(
       builder: (_) => Positioned(
-        left: left < 8 ? 8 : left,
+        left: left,
         top: top < 8 ? rect.bottom + 8 : top,
-        child: _NxFormattingToolbarSurface(
+        child: _NxReaderHighlightToolbarSurface(
           selection: selection,
           editorState: _editorState,
           onClose: _hideToolbar,
@@ -122,8 +201,8 @@ class _NxSelectionFormattingToolbarState
   }
 }
 
-class _NxFormattingToolbarSurface extends StatelessWidget {
-  const _NxFormattingToolbarSurface({
+class _NxReaderHighlightToolbarSurface extends StatelessWidget {
+  const _NxReaderHighlightToolbarSurface({
     required this.selection,
     required this.editorState,
     required this.onClose,
@@ -154,11 +233,9 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _formatButton('B', 'bold', FontWeight.w700),
-              _formatButton('I', 'italic', FontWeight.w500),
-              _formatButton('U', 'underline', FontWeight.w500),
-              _formatButton('S', 'strikethrough', FontWeight.w500),
-              _formatButton('</>', 'code', FontWeight.w600, wide: true),
+              _clearButton(),
+              for (final option in nxReaderHighlightColorOptions())
+                _highlightButton(option),
             ],
           ),
         ),
@@ -166,35 +243,46 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
     );
   }
 
-  Widget _formatButton(
-    String label,
-    String attribute,
-    FontWeight fontWeight, {
-    bool wide = false,
-  }) {
+  Widget _clearButton() {
     return Tooltip(
-      message: attribute,
+      message: 'Remove highlight',
       preferBelow: false,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _toggle(attribute),
+        onTapDown: (_) => _apply(null),
         child: SizedBox(
-          width: wide ? 38 : 28,
-          height: 28,
+          key: const ValueKey<String>('reader-highlight-clear'),
+          width: 36,
+          height: 36,
+          child: Icon(
+            Icons.format_color_reset_rounded,
+            size: 19,
+            color: AppColors.onFloating,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _highlightButton(ColorOption option) {
+    return Tooltip(
+      message: option.name,
+      preferBelow: false,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => _apply(option.colorHex),
+        child: SizedBox(
+          key: ValueKey<String>('reader-highlight-${option.colorHex}'),
+          width: 36,
+          height: 36,
           child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: AppColors.onFloating,
-                fontSize: wide ? 11 : 13,
-                fontWeight: fontWeight,
-                fontStyle: attribute == 'italic' ? FontStyle.italic : null,
-                decoration: attribute == 'underline'
-                    ? TextDecoration.underline
-                    : attribute == 'strikethrough'
-                    ? TextDecoration.lineThrough
-                    : null,
-                decorationColor: AppColors.onFloating,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: option.colorHex.tryToColor(),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.onFloating, width: 1),
               ),
             ),
           ),
@@ -203,20 +291,58 @@ class _NxFormattingToolbarSurface extends StatelessWidget {
     );
   }
 
-  void _toggle(String attribute) {
-    editorState.toggleAttribute(attribute, selection: selection);
+  void _apply(String? colorHex) {
+    unawaited(
+      applyNxHighlightColor(
+        editorState: editorState,
+        selection: selection,
+        colorHex: colorHex,
+      ),
+    );
+    onClose();
   }
 }
 
 EditorStyle _editorStyle(
   _DocumentEditorMode mode, {
   required double textScaleFactor,
+  required bool useMobileSelectionHandles,
 }) {
   final readMode = mode == _DocumentEditorMode.read;
   final bodyStyle = readMode
       ? TextStyle(color: _readModeTextColor(), fontSize: 18, height: 1.6)
       : TextStyle(color: AppColors.editorText, fontSize: 16, height: 1.62);
   final lineHeight = readMode ? 1.6 : 1.62;
+  final textStyleConfiguration = TextStyleConfiguration(
+    text: bodyStyle,
+    bold: const TextStyle(fontWeight: FontWeight.w700),
+    italic: const TextStyle(fontStyle: FontStyle.italic),
+    underline: const TextStyle(decoration: TextDecoration.underline),
+    strikethrough: const TextStyle(decoration: TextDecoration.lineThrough),
+    href: TextStyle(
+      foreground: Paint()..color = AppColors.blue,
+      decoration: TextDecoration.underline,
+      decorationColor: AppColors.blue,
+    ),
+    code: TextStyle(
+      color: AppColors.text,
+      backgroundColor: AppColors.subtle,
+      fontFamily: 'monospace',
+    ),
+    lineHeight: lineHeight,
+  );
+  if (useMobileSelectionHandles) {
+    return EditorStyle.mobile(
+      textScaleFactor: textScaleFactor,
+      cursorColor: AppColors.text,
+      dragHandleColor: AppColors.blue,
+      selectionColor: const Color(0x333B82F6),
+      padding: EdgeInsets.zero,
+      textSpanDecorator: nxHighlightNoteTextSpanDecorator,
+      textSpanOverlayBuilder: nxHighlightNoteOverlayBuilder,
+      textStyleConfiguration: textStyleConfiguration,
+    );
+  }
   return EditorStyle.desktop(
     textScaleFactor: textScaleFactor,
     cursorColor: AppColors.text,
@@ -224,24 +350,7 @@ EditorStyle _editorStyle(
     padding: EdgeInsets.zero,
     textSpanDecorator: nxHighlightNoteTextSpanDecorator,
     textSpanOverlayBuilder: nxHighlightNoteOverlayBuilder,
-    textStyleConfiguration: TextStyleConfiguration(
-      text: bodyStyle,
-      bold: const TextStyle(fontWeight: FontWeight.w700),
-      italic: const TextStyle(fontStyle: FontStyle.italic),
-      underline: const TextStyle(decoration: TextDecoration.underline),
-      strikethrough: const TextStyle(decoration: TextDecoration.lineThrough),
-      href: TextStyle(
-        foreground: Paint()..color = AppColors.blue,
-        decoration: TextDecoration.underline,
-        decorationColor: AppColors.blue,
-      ),
-      code: TextStyle(
-        color: AppColors.text,
-        backgroundColor: AppColors.subtle,
-        fontFamily: 'monospace',
-      ),
-      lineHeight: lineHeight,
-    ),
+    textStyleConfiguration: textStyleConfiguration,
   );
 }
 

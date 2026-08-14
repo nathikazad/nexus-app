@@ -1,7 +1,12 @@
 ## iOS installation policy
 
-- All physical iOS installations must be Shorebird-enabled.
+- Physical iOS installations must be Shorebird-enabled by default. The only
+  exception is when the user explicitly asks for a debug installation for
+  quick edits, hot reload, or rapid visual iteration; in that case, use
+  `flutter run` on the requested physical device and keep the session alive.
 - Never install an iOS release using `flutter run --release` or `flutter install`.
+  The explicit debug/hot-reload exception above permits debug `flutter run`
+  only; it does not permit a non-Shorebird release installation.
 - If the device does not already have a compatible Shorebird base, create one with `shorebird release ios` and install that build.
 - For Dart-only changes against an installed compatible Shorebird base, use `shorebird patch ios`.
 - Before patching, verify the installed build number has a corresponding Shorebird release.

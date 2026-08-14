@@ -6,7 +6,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
     required this.changeOrigin,
     required this.textScaleFactor,
     required this.editorMode,
-    required this.readOnly,
+    required this.interactionMode,
     required this.onFindBarChanged,
     required this.searchLinkableModels,
     this.onChanged,
@@ -23,7 +23,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
   final DocumentChangeOrigin changeOrigin;
   final double textScaleFactor;
   final _DocumentEditorMode editorMode;
-  final bool readOnly;
+  final DocumentInteractionMode interactionMode;
   final bool active;
   final Future<void> Function(NxDocument document, DraftSavePolicy policy)?
   onChanged;
@@ -121,7 +121,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       unawaited(_applyExternalDocument(widget.document));
     }
     if (oldWidget.editorMode != widget.editorMode ||
-        oldWidget.readOnly != widget.readOnly) {
+        oldWidget.interactionMode != widget.interactionMode) {
       _handleEditorModeChanged();
     }
     if (oldWidget.active != widget.active) {
@@ -154,7 +154,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     _editorState = EditorState(
       document: _documentFromDocument(widget.document),
     );
-    _editorState.editable = !widget.readOnly;
+    _editorState.editable = widget.interactionMode.canEditContent;
     _scrollController = EditorScrollController(
       editorState: _editorState,
       shrinkWrap: false,
@@ -173,7 +173,8 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
           !options.inMemoryUpdate &&
-          transaction.operations.isNotEmpty) {
+          transaction.operations.isNotEmpty &&
+          canPersistDocumentTransaction(widget.interactionMode, transaction)) {
         _scheduleSave(_savePolicyForTransaction(transaction));
         _scheduleActiveHeadingPublish();
       }
@@ -348,7 +349,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
 
   void _saveCurrentDraft(DraftSavePolicy policy) {
     final onChanged = widget.onChanged;
-    if (widget.readOnly || onChanged == null) return;
+    if (!widget.interactionMode.canPersistChanges || onChanged == null) return;
     unawaited(onChanged(_currentDraftDocument(), policy));
   }
 
@@ -451,7 +452,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         return KeyEventResult.handled;
       },
     );
-    if (widget.readOnly) {
+    if (!widget.interactionMode.canEditContent) {
       return <CommandShortcutEvent>[findInDocument];
     }
     return <CommandShortcutEvent>[
@@ -584,7 +585,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     final onChanged = widget.onChanged;
     if (!mounted ||
         !widget.active ||
-        widget.readOnly ||
+        !widget.interactionMode.canEditContent ||
         onChanged == null ||
         !_scrollAnchorSaveEnabled) {
       return;
@@ -609,9 +610,9 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   void _handleEditorModeChanged() {
-    _editorState.editable = !widget.readOnly;
+    _editorState.editable = widget.interactionMode.canEditContent;
     final onChanged = widget.onChanged;
-    if (widget.readOnly || onChanged == null) return;
+    if (!widget.interactionMode.canPersistChanges || onChanged == null) return;
     final anchor = _currentScrollAnchor();
     if (anchor != null) {
       _lastSavedScrollAnchor = anchor;
@@ -829,13 +830,15 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   @override
   Widget build(BuildContext context) {
     final showsCaret = widget.editorMode.showsCaret;
-    final disableReaderKeyboard = widget.readOnly && !isDesktopLayout(context);
+    final disableReaderKeyboard =
+        widget.interactionMode.isReader && !isDesktopLayout(context);
     final editorStyle = _editorStyle(
       widget.editorMode,
       textScaleFactor: widget.textScaleFactor,
+      useMobileSelectionHandles: !isDesktopLayout(context),
     ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
     final editor = AppFlowyEditor(
-      editable: !widget.readOnly,
+      editable: widget.interactionMode.canEditContent,
       disableKeyboardService: disableReaderKeyboard,
       editorState: _editorState,
       editorScrollController: _scrollController,
@@ -849,7 +852,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         resolveDocumentImage: widget.resolveDocumentImage,
         documentImageBaseUrl: widget.documentImageBaseUrl,
       ),
-      characterShortcutEvents: widget.readOnly
+      characterShortcutEvents: widget.interactionMode.isReader
           ? const <CharacterShortcutEvent>[]
           : <CharacterShortcutEvent>[
               ...standardCharacterShortcutEvents.where(
@@ -863,11 +866,18 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
               ),
             ],
       commandShortcutEvents: _commandShortcutEvents(),
-      footer: SizedBox(height: widget.readOnly ? 24 : 120),
+      footer: SizedBox(height: widget.interactionMode.isReader ? 24 : 120),
     );
     final Widget editorSurface;
-    if (widget.readOnly) {
+    if (widget.interactionMode == DocumentInteractionMode.readOnly) {
       editorSurface = editor;
+    } else if (widget.interactionMode ==
+        DocumentInteractionMode.highlightOnly) {
+      editorSurface = NxReaderHighlightToolbar(
+        editorState: _editorState,
+        editorScrollController: _scrollController,
+        child: editor,
+      );
     } else {
       editorSurface = FloatingToolbar(
         editorState: _editorState,

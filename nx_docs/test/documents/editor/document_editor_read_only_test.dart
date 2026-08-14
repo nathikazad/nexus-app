@@ -34,7 +34,10 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: DocumentEditorBody(document: _document(), readOnly: true),
+              body: DocumentEditorBody(
+                document: _document(),
+                interactionMode: DocumentInteractionMode.readOnly,
+              ),
             ),
           ),
         ),
@@ -44,6 +47,8 @@ void main() {
       final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
       expect(editor.editable, isFalse);
       expect(editor.disableKeyboardService, isTrue);
+      expect(editor.editorStyle.mobileDragHandleBallSize, const Size(8, 8));
+      expect(editor.editorStyle.mobileDragHandleWidth, 2);
       expect(find.byType(FloatingToolbar), findsNothing);
       expect(find.byKey(const ValueKey<String>('mode-toggle')), findsNothing);
 
@@ -59,6 +64,90 @@ void main() {
     },
   );
 
+  testWidgets(
+    'highlight-only reader exposes three colors and persists only highlights',
+    (tester) async {
+      final workspace = FakeDocumentWorkspace(
+        documents: <NxDocument>[_document()],
+      );
+      addTearDown(workspace.close);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            documentImageAssetServiceProvider.overrideWithValue(null),
+            documentWorkspaceProvider.overrideWithValue(workspace),
+          ],
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(size: Size(390, 700)),
+              child: Scaffold(
+                body: DocumentEditorBody(
+                  document: _document(),
+                  interactionMode: DocumentInteractionMode.highlightOnly,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+      expect(editor.editable, isFalse);
+      expect(editor.disableKeyboardService, isTrue);
+      expect(find.byType(FloatingToolbar), findsNothing);
+
+      final selection = Selection.single(
+        path: const <int>[1],
+        startOffset: 0,
+        endOffset: 4,
+      );
+      editor.editorState.selection = selection;
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.byKey(const ValueKey<String>('reader-highlight-clear')),
+        findsOneWidget,
+      );
+      for (final colorHex in <String>[
+        '0x4cffeb3b',
+        '0x4c4caf50',
+        '0x4ce91e63',
+      ]) {
+        expect(
+          find.byKey(ValueKey<String>('reader-highlight-$colorHex')),
+          findsOneWidget,
+        );
+      }
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('reader-highlight-0x4cffeb3b')),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final session = workspace.sessionFor(1);
+      expect(session, isNotNull);
+      expect(session!.saveCount, 1);
+      expect(workspace.uploadCount, 1);
+      expect(_bodyTextBackgroundColor(session.state.document!), '0x4cffeb3b');
+
+      editor.editorState.selection = selection;
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('reader-highlight-clear')),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(session.saveCount, 2);
+      expect(workspace.uploadCount, 2);
+      expect(_bodyTextBackgroundColor(session.state.document!), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 300));
+    },
+  );
+
   testWidgets('wide read-only editor retains desktop keyboard service', (
     tester,
   ) async {
@@ -69,7 +158,10 @@ void main() {
           home: MediaQuery(
             data: const MediaQueryData(size: Size(1200, 800)),
             child: Scaffold(
-              body: DocumentEditorBody(document: _document(), readOnly: true),
+              body: DocumentEditorBody(
+                document: _document(),
+                interactionMode: DocumentInteractionMode.readOnly,
+              ),
             ),
           ),
         ),
@@ -90,7 +182,7 @@ void main() {
           home: Scaffold(
             body: DocumentEditorBody(
               document: _document(),
-              readOnly: true,
+              interactionMode: DocumentInteractionMode.readOnly,
               showDocumentTitle: false,
               horizontalPadding: 16,
               contentTopPadding: 12,
@@ -121,7 +213,7 @@ void main() {
                 height: 700,
                 child: DocumentEditorBody(
                   document: _tableDocument(),
-                  readOnly: true,
+                  interactionMode: DocumentInteractionMode.readOnly,
                 ),
               ),
             ),
@@ -195,7 +287,10 @@ void main() {
             body: SizedBox(
               width: 390,
               height: 700,
-              child: DocumentEditorBody(document: longDocument, readOnly: true),
+              child: DocumentEditorBody(
+                document: longDocument,
+                interactionMode: DocumentInteractionMode.readOnly,
+              ),
             ),
           ),
         ),
@@ -223,7 +318,10 @@ void main() {
           home: MediaQuery(
             data: const MediaQueryData(size: Size(1200, 800)),
             child: Scaffold(
-              body: DocumentEditorBody(document: _document(), readOnly: true),
+              body: DocumentEditorBody(
+                document: _document(),
+                interactionMode: DocumentInteractionMode.readOnly,
+              ),
             ),
           ),
         ),
@@ -263,7 +361,7 @@ void main() {
               Expanded(
                 child: DocumentEditorBody(
                   document: _document(),
-                  readOnly: true,
+                  interactionMode: DocumentInteractionMode.readOnly,
                 ),
               ),
               ValueListenableBuilder<DocumentActiveHeading?>(
@@ -479,4 +577,14 @@ NxDocument _tableDocument() {
       },
     },
   );
+}
+
+String? _bodyTextBackgroundColor(NxDocument document) {
+  final storedDocument = document.jsonDocument['document'];
+  final appFlowyDocument = Document.fromJson(<String, dynamic>{
+    'document': storedDocument,
+  });
+  final body = appFlowyDocument.nodeAtPath(const <int>[1]);
+  return body?.delta?.first.attributes?[AppFlowyRichTextKeys.backgroundColor]
+      as String?;
 }

@@ -26,6 +26,17 @@ part 'editor_canvas.dart';
 part 'editor_navigation.dart';
 part 'editor_toolbar.dart';
 
+enum DocumentInteractionMode {
+  readOnly,
+  highlightOnly,
+  edit;
+
+  bool get isReader => this != DocumentInteractionMode.edit;
+  bool get canEditContent => this == DocumentInteractionMode.edit;
+  bool get canHighlight => this != DocumentInteractionMode.readOnly;
+  bool get canPersistChanges => this != DocumentInteractionMode.readOnly;
+}
+
 class DocumentEditorView extends ConsumerWidget {
   const DocumentEditorView({
     required this.documentId,
@@ -38,7 +49,7 @@ class DocumentEditorView extends ConsumerWidget {
     this.contentTopPadding = 54,
     this.showDocumentTitle = true,
     this.active = true,
-    this.readOnly = false,
+    this.interactionMode = DocumentInteractionMode.edit,
     this.showCompanion = true,
     super.key,
   });
@@ -53,7 +64,7 @@ class DocumentEditorView extends ConsumerWidget {
   final double contentTopPadding;
   final bool showDocumentTitle;
   final bool active;
-  final bool readOnly;
+  final DocumentInteractionMode interactionMode;
   final bool showCompanion;
 
   @override
@@ -95,7 +106,7 @@ class DocumentEditorView extends ConsumerWidget {
                 contentTopPadding: contentTopPadding,
                 showDocumentTitle: showDocumentTitle,
                 active: active,
-                readOnly: readOnly,
+                interactionMode: interactionMode,
               ),
             ),
             if (active && showCompanion)
@@ -141,7 +152,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
     this.contentTopPadding = 54,
     this.showDocumentTitle = true,
     this.active = true,
-    this.readOnly = false,
+    this.interactionMode = DocumentInteractionMode.edit,
     super.key,
   });
 
@@ -156,7 +167,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
   final double contentTopPadding;
   final bool showDocumentTitle;
   final bool active;
-  final bool readOnly;
+  final DocumentInteractionMode interactionMode;
 
   @override
   ConsumerState<DocumentEditorBody> createState() => _DocumentEditorBodyState();
@@ -246,7 +257,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     }
     _draftDocument = widget.document;
     _titleText = widget.document.title;
-    _editorMode = widget.readOnly
+    _editorMode = widget.interactionMode.isReader
         ? _DocumentEditorMode.read
         : _editorModeFromJsonDocument(widget.document.jsonDocument);
     _titleController = TextEditingController(text: _titleText);
@@ -270,7 +281,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
       _titleSaveDebounce?.cancel();
       _draftDocument = widget.document;
       _replaceTitleText(widget.document.title);
-      _editorMode = widget.readOnly
+      _editorMode = widget.interactionMode.isReader
           ? _DocumentEditorMode.read
           : _editorModeFromJsonDocument(widget.document.jsonDocument);
       _findBarPresentation = null;
@@ -296,7 +307,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     if (oldWidget.active && !widget.active) {
       _findBarPresentation = null;
     }
-    if (!oldWidget.readOnly && widget.readOnly) {
+    if (oldWidget.interactionMode != widget.interactionMode &&
+        widget.interactionMode.isReader) {
       _editorMode = _DocumentEditorMode.read;
       _titleFocusNode.unfocus();
     }
@@ -355,7 +367,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   }
 
   void _scheduleTitleSave(String title) {
-    if (widget.readOnly) return;
+    if (!widget.interactionMode.canEditContent) return;
     setState(() => _titleText = title);
     widget.onTitleChanged?.call(title);
     _draftDocument = _draftDocument.copyWith(title: title);
@@ -366,7 +378,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   }
 
   void _setEditorMode(_DocumentEditorMode mode) {
-    if (widget.readOnly) return;
+    if (!widget.interactionMode.canEditContent) return;
     if (_editorMode == mode) {
       return;
     }
@@ -389,7 +401,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     final readMode = _editorMode == _DocumentEditorMode.read;
     final showEditorHeader =
         (widget.canNavigateBack && widget.onNavigateBack != null) ||
-        !widget.readOnly ||
+        widget.interactionMode.canEditContent ||
         _findBarPresentation != null;
     return Focus(
       onKeyEvent: _handleShellKeyEvent,
@@ -455,7 +467,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                     switchInCurve: Curves.easeOut,
                                     switchOutCurve: Curves.easeIn,
                                     child: _findBarPresentation == null
-                                        ? widget.readOnly
+                                        ? widget.interactionMode.isReader
                                               ? const SizedBox.shrink()
                                               : _ReadEditModeToggle(
                                                   key: const ValueKey<String>(
@@ -498,7 +510,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                 height: titleSize * 1.26,
                                 child: AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 90),
-                                  child: _editingTitle && !widget.readOnly
+                                  child:
+                                      _editingTitle &&
+                                          widget.interactionMode.canEditContent
                                       ? TextField(
                                           key: ValueKey<String>(
                                             'title-editor-${widget.document.id}',
@@ -530,12 +544,14 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                           key: ValueKey<String>(
                                             'title-display-${widget.document.id}',
                                           ),
-                                          cursor: widget.readOnly
+                                          cursor:
+                                              widget.interactionMode.isReader
                                               ? MouseCursor.defer
                                               : SystemMouseCursors.text,
                                           child: GestureDetector(
                                             behavior: HitTestBehavior.opaque,
-                                            onTap: widget.readOnly
+                                            onTap:
+                                                widget.interactionMode.isReader
                                                 ? null
                                                 : () {
                                                     setState(
@@ -586,7 +602,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                             changeOrigin: widget.changeOrigin,
                             textScaleFactor: documentTextScale,
                             editorMode: _editorMode,
-                            readOnly: widget.readOnly,
+                            interactionMode: widget.interactionMode,
                             active: widget.active,
                             searchLinkableModels:
                                 ({required modelType, required query}) {
@@ -601,7 +617,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                     query: query,
                                   );
                                 },
-                            onLinkableModelSelected: widget.readOnly
+                            onLinkableModelSelected:
+                                !widget.interactionMode.canEditContent
                                 ? null
                                 : (modelType, model) async {
                                     await ref
@@ -615,7 +632,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                           model: model,
                                         );
                                   },
-                            createLinkedDocument: widget.readOnly
+                            createLinkedDocument:
+                                !widget.interactionMode.canEditContent
                                 ? null
                                 : (title) async {
                                     final document = await ref
@@ -631,7 +649,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                     );
                                   },
                             uploadDocumentImage:
-                                widget.readOnly || imageAssetService == null
+                                !widget.interactionMode.canEditContent ||
+                                    imageAssetService == null
                                 ? null
                                 : (source) {
                                     return imageAssetService.storeImageSource(
@@ -640,7 +659,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                     );
                                   },
                             deleteDocumentImage:
-                                widget.readOnly || imageAssetService == null
+                                !widget.interactionMode.canEditContent ||
+                                    imageAssetService == null
                                 ? null
                                 : (url) async {
                                     await imageAssetService.deleteImageUrl(url);
@@ -650,7 +670,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                             documentImageBaseUrl:
                                 imageAssetService?.imageBaseUrl,
                             onFindBarChanged: _setFindBarPresentation,
-                            onChanged: widget.readOnly
+                            onChanged: !widget.interactionMode.canPersistChanges
                                 ? null
                                 : (updated, policy) async {
                                     _draftDocument = _draftDocument.copyWith(

@@ -100,6 +100,9 @@ class DragHandle extends _IDragHandle {
     super.onDragging,
   });
 
+  /// Lets a range handle claim the drag before the surrounding scroll view.
+  static const double iOSRangeHandleTouchSlop = 2.0;
+
   @override
   Widget build(BuildContext context) {
     Widget child;
@@ -141,15 +144,9 @@ class DragHandle extends _IDragHandle {
         clipBehavior: Clip.none,
         children: [
           if (handleType == HandleType.left)
-            Positioned(
-              left: offset,
-              child: child,
-            ),
+            Positioned(left: offset, child: child),
           if (handleType == HandleType.right)
-            Positioned(
-              right: offset,
-              child: child,
-            ),
+            Positioned(right: offset, child: child),
         ],
       );
     }
@@ -193,10 +190,7 @@ class _IOSDragHandle extends _IDragHandle {
               ),
             ),
           if (handleType == HandleType.right)
-            SizedBox(
-              width: handleBallWidth,
-              height: handleBallWidth,
-            ),
+            SizedBox(width: handleBallWidth, height: handleBallWidth),
           Container(
             width: handleWidth,
             color: handleColor,
@@ -212,10 +206,7 @@ class _IOSDragHandle extends _IDragHandle {
               ),
             ),
           if (handleType == HandleType.left)
-            SizedBox(
-              width: handleBallWidth,
-              height: handleBallWidth,
-            ),
+            SizedBox(width: handleBallWidth, height: handleBallWidth),
         ],
       );
     }
@@ -229,29 +220,41 @@ class _IOSDragHandle extends _IDragHandle {
       offset = -ballWidth;
     }
 
-    child = GestureDetector(
+    child = RawGestureDetector(
       behavior: HitTestBehavior.opaque,
-      dragStartBehavior: DragStartBehavior.down,
-      onPanStart: (details) {
-        editorState.service.selectionService.onPanStart(
-          details.translate(0, offset),
-          handleType.dragMode,
-        );
-        onDragging?.call(true);
-      },
-      onPanUpdate: (details) {
-        editorState.service.selectionService.onPanUpdate(
-          details.translate(0, offset),
-          handleType.dragMode,
-        );
-        onDragging?.call(true);
-      },
-      onPanEnd: (details) {
-        editorState.service.selectionService.onPanEnd(
-          details,
-          handleType.dragMode,
-        );
-        onDragging?.call(false);
+      gestures: {
+        PanGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
+          () => PanGestureRecognizer(debugOwner: this),
+          (recognizer) {
+            recognizer
+              ..dragStartBehavior = DragStartBehavior.down
+              ..gestureSettings = const DeviceGestureSettings(
+                touchSlop: DragHandle.iOSRangeHandleTouchSlop,
+              )
+              ..onStart = (details) {
+                editorState.service.selectionService.onPanStart(
+                  details.translate(0, offset),
+                  handleType.dragMode,
+                );
+                onDragging?.call(true);
+              }
+              ..onUpdate = (details) {
+                editorState.service.selectionService.onPanUpdate(
+                  details.translate(0, offset),
+                  handleType.dragMode,
+                );
+                onDragging?.call(true);
+              }
+              ..onEnd = (details) {
+                editorState.service.selectionService.onPanEnd(
+                  details,
+                  handleType.dragMode,
+                );
+                onDragging?.call(false);
+              };
+          },
+        ),
       },
       child: child,
     );

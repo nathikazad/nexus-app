@@ -715,7 +715,7 @@ class _MobileEditor extends ConsumerWidget {
       ),
       body: DocumentEditorView(
         documentId: documentId,
-        readOnly: true,
+        interactionMode: DocumentInteractionMode.highlightOnly,
         showDocumentTitle: false,
         horizontalPadding: 16,
         contentTopPadding: 12,
