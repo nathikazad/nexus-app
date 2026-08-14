@@ -1,11 +1,11 @@
-# Nexus Docs native offline refactor
+# Nx Docs native offline refactor
 
 ## Status
 
 Implemented and validated in phases through 2026-08-03.
 
 The refactor separates reusable offline mechanics into `nx_offline` while
-keeping all document semantics in Nexus Docs. It preserves installed native
+keeping all document semantics in Nx Docs. It preserves installed native
 caches and leaves the web application online-only.
 
 ## The architecture in one sentence
@@ -128,13 +128,13 @@ after it completes cannot remove the queued edit.
 
 Document conflict semantics are still application-owned. The server accepts a
 mutation only when the client `updated_at` is later. If the server reports the
-operation stale, Nexus Docs fetches and imports the remote document and discards
+operation stale, Nx Docs fetches and imports the remote document and discards
 the stale local operation. This matches the requirement to prefer later phone
 edits over an old laptop edit that resumes later.
 
 ## Full library synchronization
 
-Nexus Docs owns its hash protocol:
+Nx Docs owns its hash protocol:
 
 ```text
 local [{documentId, serverHash}]
@@ -164,7 +164,7 @@ user         = authenticated user ID
 LAN, WAN, and Tailscale are routes to that same server. Changing the route does
 not select a different cache.
 
-Nexus Docs still reads and writes the original preference keys and still names
+Nx Docs still reads and writes the original preference keys and still names
 the physical partition `user:<id>`. Consequently this refactor does not make
 an installed application appear empty or require a data migration.
 
@@ -184,7 +184,7 @@ explicit erase policy is chosen.
 - full/keyed reconciliation coordination;
 - embeddable Drift outbox/metadata/conflict declarations.
 
-### Kept in Nexus Docs
+### Kept in Nx Docs
 
 - `NxDocument`, Books, catalogs, tags, and editor behavior;
 - `NotesDatabase` and its migrations;

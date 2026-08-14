@@ -1,7 +1,7 @@
 name: nx_docs
 description: Internal document and essay editor for Nexus.
 publish_to: "none"
-version: 0.1.0+5
+version: 0.1.0+6
 
 environment:
   sdk: ^3.9.2
@@ -52,7 +52,7 @@ dev_dependencies:
 
 dependency_overrides:
   connectivity_plus: 6.1.5
-  # flutter_sound 9.30 advertises a broken macOS plugin. Nexus Docs uses its
+  # flutter_sound 9.30 advertises a broken macOS plugin. Nx Docs uses its
   # unchanged mobile implementation but intentionally omits desktop voice.
   flutter_sound:
     path: ../third_party/flutter_sound

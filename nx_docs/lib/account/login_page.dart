@@ -65,7 +65,7 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
                     ),
                     const SizedBox(height: 22),
                     Text(
-                      'Nexus Docs',
+                      'Nx Docs',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,

@@ -2,8 +2,8 @@
 
 ## Objective
 
-Extract reusable offline mechanics from Nexus Docs without turning document
-semantics into a generic framework. Migrate Nexus Docs incrementally, validating
+Extract reusable offline mechanics from Nx Docs without turning document
+semantics into a generic framework. Migrate Nx Docs incrementally, validating
 each phase before starting the next one.
 
 ## Completed phases
@@ -14,7 +14,7 @@ each phase before starting the next one.
   behavior with tests.
 - Added explicit coverage for Books and concurrent library synchronization.
 
-Gate: the original Nexus Docs suite passed before production changes began.
+Gate: the original Nx Docs suite passed before production changes began.
 
 ### Phase 2: identity and public boundary
 
@@ -42,13 +42,13 @@ Gate: persistence and UTC retry behavior pass independently.
 
 Gate: success, concurrency, retry wake-up, and blocked-work tests pass.
 
-### Phase 5: Nexus Docs upload migration
+### Phase 5: Nx Docs upload migration
 
 - Added a Notes `OutboxStore` adapter and document mutation handler.
 - Replaced the Notes upload loop with a thin facade over `OutboxProcessor`.
 - Preserved create, update, delete, stale-write, retry, and on-disk behavior.
 
-Gate: focused upload tests and the complete Nexus Docs suite pass.
+Gate: focused upload tests and the complete Nx Docs suite pass.
 
 ### Phase 6: session and lifecycle migration
 
@@ -77,7 +77,7 @@ suites pass.
 - Narrowed `nx_offline.dart` to stable mechanics.
 - Kept `nx_offline_drift.dart` limited to embeddable table declarations.
 
-Gate: no application referenced removed APIs; Nexus Docs and nx_offline passed
+Gate: no application referenced removed APIs; Nx Docs and nx_offline passed
 their complete suites and analyzers.
 
 ### Phase 9: independent reuse proof
@@ -91,7 +91,7 @@ Gate: the Expense proof and the complete nx_offline suite pass.
 
 ### Phase 10: documentation and final verification
 
-- Updated Nexus Docs and nx_offline documents to match the implemented code.
+- Updated Nx Docs and nx_offline documents to match the implemented code.
 - Audited the diff, public exports, generated sources, and unchanged cache
   identity.
 - Ran formatting, package analyzers, package tests, and repository diff checks.
@@ -100,8 +100,8 @@ Gate: the Expense proof and the complete nx_offline suite pass.
 
 - Replaced keyed concurrent reconciliation with `SyncSupervisor<K>`.
 - Enforced one active pull per account and batched different keys.
-- Migrated Nexus Docs and Nexus Cards lifecycle/manual synchronization.
-- Made Nexus Docs sessions local-only and catalogs local projections.
+- Migrated Nx Docs and Nexus Cards lifecycle/manual synchronization.
+- Made Nx Docs sessions local-only and catalogs local projections.
 
 ## Resulting public story
 
@@ -115,5 +115,5 @@ application-owned typed database
   + nx_offline session/lifecycle policy
 ```
 
-There are no server changes in this refactor. Nexus Docs continues to use its
+There are no server changes in this refactor. Nx Docs continues to use its
 existing `mutateDocument` and `syncDocuments` protocol.

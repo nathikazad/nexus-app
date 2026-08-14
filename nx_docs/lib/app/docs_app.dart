@@ -15,7 +15,7 @@ class NexusDocsApp extends ConsumerWidget {
     AppColors.isDark = isDark;
     return MaterialApp.router(
       key: ValueKey<bool>(isDark),
-      title: 'Nexus Docs',
+      title: 'Nx Docs',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       localizationsDelegates: const [

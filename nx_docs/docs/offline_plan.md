@@ -83,7 +83,7 @@ the web, iOS, and Android applications.
 - Generated the macOS Flutter target with the `com.nexus.nxnotes` application
   identity, sandboxed network/file entitlements, and desktop window defaults.
 - Verified 112 non-integration tests, a clean `flutter analyze` run, and a
-  successful release build at `Nexus Docs.app`.
+  successful release build at `Nx Docs.app`.
 - Phase 8 and phase 11 gates are complete. The live-backend portions of phases 9
   and 10 remain gated on server-provided durable idempotency, atomic revision
   preconditions, deletion reconciliation, and a real change cursor. The local

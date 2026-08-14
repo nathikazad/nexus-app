@@ -1,6 +1,6 @@
-# Nexus Docs
+# Nx Docs
 
-Nexus Docs is a local-first document workspace for writing, organizing,
+Nx Docs is a local-first document workspace for writing, organizing,
 linking, publishing, and discussing long-form documents. Its source tree is a
 table of contents for that product:
 

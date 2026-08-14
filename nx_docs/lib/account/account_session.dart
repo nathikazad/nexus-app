@@ -23,7 +23,7 @@ class CachedSession {
 
   factory CachedSession.fromShared(offline.CachedSession session) {
     if (session.serverId != serverId || session.application != application) {
-      throw StateError('Cached session does not belong to Nexus Docs');
+      throw StateError('Cached session does not belong to Nx Docs');
     }
     return CachedSession(userId: session.userId, backendPreset: session.route);
   }
@@ -95,7 +95,7 @@ class OfflineLogout {
   }
 }
 
-/// Preserves the installed Nexus Docs preference keys while sharing the generic
+/// Preserves the installed Nx Docs preference keys while sharing the generic
 /// session restoration policy with nx_offline.
 final class _SharedSessionStore implements offline.CachedSessionStore {
   const _SharedSessionStore(this.store);

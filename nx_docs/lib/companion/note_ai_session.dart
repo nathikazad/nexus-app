@@ -145,7 +145,7 @@ class NoteAiSession {
       headers: config.headers,
     );
     if (!connected) {
-      throw StateError('Could not connect to the Nexus Docs AI socket.');
+      throw StateError('Could not connect to the Nx Docs AI socket.');
     }
     _sessionKey = config.key;
   }
@@ -167,7 +167,7 @@ class NoteAiSession {
   void sendAudioPacket(Uint8List opus) {
     final turn = _activeAudioTurn;
     if (turn == null) {
-      throw StateError('No active Nexus Docs audio turn.');
+      throw StateError('No active Nx Docs audio turn.');
     }
     _socket.sendAudioChunk(
       opus,

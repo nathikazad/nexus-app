@@ -108,7 +108,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        'Nexus Docs',
+                        'Nx Docs',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,
@@ -468,7 +468,7 @@ class _CollapsedSidebar extends ConsumerWidget {
             RotatedBox(
               quarterTurns: 1,
               child: Text(
-                'Nexus Docs',
+                'Nx Docs',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppColors.faint,

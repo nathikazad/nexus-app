@@ -52,7 +52,7 @@ class _MobileSectionPage extends ConsumerWidget {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: _MobileTopChrome(
-          title: 'Nexus Docs',
+          title: 'Nx Docs',
           trailingWidth: 76,
           trailing: Row(
             mainAxisAlignment: MainAxisAlignment.end,

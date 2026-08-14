@@ -38,7 +38,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Nexus Docs'), findsWidgets);
+      expect(find.text('Nx Docs'), findsWidgets);
     },
   );
 }

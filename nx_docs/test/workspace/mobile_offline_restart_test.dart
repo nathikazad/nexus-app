@@ -99,7 +99,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
-    expect(find.text('Nexus Docs'), findsOneWidget);
+    expect(find.text('Nx Docs'), findsOneWidget);
     expect(find.text('Docs'), findsOneWidget);
     expect(find.text('Search documents...'), findsOneWidget);
     expect(find.text('Restarted offline'), findsOneWidget);

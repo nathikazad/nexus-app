@@ -55,7 +55,7 @@ display_name_for() {
     nx_cooking) printf 'Nexus Cooking' ;;
     nx_expense) printf 'Nexus Expense' ;;
     nx_main) printf 'Nexus' ;;
-    nx_docs) printf 'Nexus Docs' ;;
+    nx_docs) printf 'Nx Docs' ;;
     nx_people) printf 'Nexus People' ;;
     nx_post) printf 'Nexus Post' ;;
     nx_projects) printf 'Nexus Projects' ;;

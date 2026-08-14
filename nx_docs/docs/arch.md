@@ -1,4 +1,4 @@
-# Nexus Docs architecture
+# Nx Docs architecture
 
 The canonical architecture overview lives in the project
 [`README.md`](../README.md). This document records the dependency direction in

@@ -54,7 +54,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     mediaItem.add(
       MediaItem(
         id: mediaId,
-        album: 'Nexus Docs',
+        album: 'Nx Docs',
         title: 'Note audio',
         duration: duration,
       ),

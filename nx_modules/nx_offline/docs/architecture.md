@@ -11,13 +11,13 @@ The boundary is deliberate:
 > The application owns what its data means. `nx_offline` owns how durable work
 > is claimed, retried, scheduled, coordinated, and triggered.
 
-This lets Nexus Docs synchronize documents by content hash while a future Nx
+This lets Nx Docs synchronize documents by content hash while a future Nx
 Expense implementation can synchronize date partitions. Neither policy is
 forced into a universal JSON repository.
 
 ## Supported platforms
 
-The package supports native Flutter applications. Nexus Docs enables it on iOS
+The package supports native Flutter applications. Nx Docs enables it on iOS
 and macOS and does not construct any offline services on web. Web continues to
 read and write KGQL directly.
 
@@ -107,7 +107,7 @@ const account = AccountIdentity(
 presets are routes to the same server and therefore produce the same account.
 Changing a route cannot select a different cache or outbox.
 
-Nexus Docs retains its historical physical partition name, `user:<id>`, so an
+Nx Docs retains its historical physical partition name, `user:<id>`, so an
 installed application continues to open the existing `nx_notes_user_<id>`
 database. This is an application compatibility detail, not part of shared
 identity semantics.
@@ -146,7 +146,7 @@ Pull semantics remain application-owned. The account-scoped
 - An application-owned preparation callback drains durable mutations before
   each pull.
 
-For Nexus Docs, `K` is a document ID and the full request is a document hash
+For Nx Docs, `K` is a document ID and the full request is a document hash
 manifest. For Nx Expense, `K` can be a UTC day and the full request can compare
 date-level summaries.
 
@@ -163,7 +163,7 @@ date-level summaries.
 interface as proof that the backend is reachable, and it absorbs background
 errors so lifecycle callbacks cannot produce unhandled futures.
 
-Applications pass `null` to disable lifecycle synchronization. Nexus Docs does
+Applications pass `null` to disable lifecycle synchronization. Nx Docs does
 this on web.
 
 ## Drift integration

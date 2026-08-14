@@ -6,7 +6,7 @@ render derived state; transports own OpenAI wire details and platform I/O.
 ## Dependency direction
 
 ```text
-Nexus Docs widgets
+Nx Docs widgets
   -> NoteLiveConversationController (presentation adapter)
     -> LiveAgentSession (session/response lifecycle)
       -> LiveAgentInputController (VAD and input gate)
