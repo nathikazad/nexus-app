@@ -118,11 +118,3 @@ int compareBooksInLane(NxBook a, NxBook b) {
   if (title != 0) return title;
   return a.id.compareTo(b.id);
 }
-
-Uri notesUriForBook(int bookId, Uri base) {
-  final path = '/docs/$bookId';
-  if (base.scheme == 'http' || base.scheme == 'https') {
-    return Uri.parse('${base.scheme}://${base.authority}$path');
-  }
-  return Uri(path: path);
-}

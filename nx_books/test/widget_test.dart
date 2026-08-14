@@ -3,20 +3,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nx_books/core/theme/app_theme.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
 import 'package:nx_books/features/books/books_shell.dart';
+import 'package:nx_books/features/books/notes/book_notes_page.dart';
+import 'package:nx_documents/nx_documents.dart';
 
 void main() {
-  test('notesUriForBook opens the matching document in nx_docs', () {
-    final uri = notesUriForBook(
-      4195,
-      Uri.parse('https://nexus.example.com/books/'),
-    );
-
-    expect(uri.toString(), 'https://nexus.example.com/docs/4195');
+  test('book notes stay inside the nx_books route tree', () {
+    expect(bookNotesPath(4195), '/books/4195/notes');
+    expect(bookDetailsPath(4195), '/books/4195/details');
+    expect(notesPathForHref('kgql://Document/4209'), '/documents/4209/notes');
+    expect(notesPathForHref('kgql://Essay/4210'), '/documents/4210/notes');
+    expect(notesPathForHref('https://example.com'), isNull);
   });
 
   test('sortedBooksForState sorts by rank, updated_at desc, then title', () {
@@ -106,8 +108,6 @@ void main() {
     expect(find.text('startup'), findsWidgets);
     expect(find.text('strategy'), findsWidgets);
     expect(find.text('Example Author'), findsWidgets);
-    await _scrollDetailDown(tester);
-    expect(find.text('Amazon'), findsOneWidget);
     expect(find.text('25%'), findsWidgets);
 
     final first = tester.getTopLeft(find.byKey(const ValueKey('book-card-2')));
@@ -235,7 +235,7 @@ void main() {
     expect(find.byKey(const ValueKey('book-card-2')), findsNothing);
   });
 
-  testWidgets('tapping a mobile book opens its full information page', (
+  testWidgets('a book opens its document and the gear opens details', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 820);
@@ -257,9 +257,41 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('book-card-1')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('mobile-book-detail-1')), findsOneWidget);
+    expect(find.byType(BookNotesPage), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('book-details-button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey<String>('book-details-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('book-detail-1')), findsOneWidget);
     expect(find.text('Book with information'), findsWidgets);
     expect(find.text('An Author'), findsWidgets);
+    expect(find.text('Open document'), findsNothing);
+    expect(find.byIcon(Icons.delete_outline), findsNothing);
+  });
+
+  testWidgets('a desktop book also opens its document first', (tester) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = _FakeBookRepository([
+      _book(1, 'Desktop document', BookReadingState.reading, rank: 0),
+    ]);
+
+    await tester.pumpWidget(_testApp(repo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('book-card-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookNotesPage), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('book-details-button')),
+      findsOneWidget,
+    );
   });
 
   for (final layout in <String, Size>{
@@ -620,49 +652,52 @@ void main() {
     expect(repo.rows.map((book) => book.id), [2]);
     expect(container.read(selectedBookIdProvider), isNull);
   });
-
-  testWidgets('detail panel delete button confirms before deleting', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1280, 820);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final repo = _FakeBookRepository([
-      _book(1, 'Delete me', BookReadingState.reading, rank: 0),
-      _book(2, 'Keep me', BookReadingState.reading, rank: 1),
-    ]);
-
-    await tester.pumpWidget(_testApp(repo));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Delete me'), findsWidgets);
-    await _scrollDetailDown(tester);
-    await tester.tap(find.byKey(const ValueKey('delete-book-1')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Delete book?'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
-    await tester.pumpAndSettle();
-
-    expect(repo.rows.map((book) => book.title), ['Keep me']);
-    expect(find.text('Delete me'), findsNothing);
-    expect(find.text('Keep me'), findsWidgets);
-  });
-}
-
-Future<void> _scrollDetailDown(WidgetTester tester) async {
-  final detailList = find.byType(ListView).last;
-  await tester.drag(detailList, const Offset(0, -520));
-  await tester.pumpAndSettle();
 }
 
 Widget _testApp(BookRepository repo) {
-  return ProviderScope(
-    overrides: [bookRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp(theme: buildAppTheme(), home: const BooksRootShell()),
+  final router = GoRouter(
+    initialLocation: '/books',
+    routes: <RouteBase>[
+      GoRoute(
+        path: '/books',
+        builder: (context, state) => const BooksRootShell(),
+      ),
+      GoRoute(
+        path: '/books/:bookId/notes',
+        builder: (context, state) =>
+            BookNotesPage(bookId: int.parse(state.pathParameters['bookId']!)),
+      ),
+      GoRoute(
+        path: '/books/:bookId/details',
+        builder: (context, state) =>
+            BookDetailPage(bookId: int.parse(state.pathParameters['bookId']!)),
+      ),
+    ],
   );
+  return ProviderScope(
+    overrides: [
+      bookRepositoryProvider.overrideWithValue(repo),
+      bookNotesRepositoryProvider.overrideWithValue(_FakeDocumentRepository()),
+      bookNotesImageBaseProvider.overrideWithValue(null),
+    ],
+    child: MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
+  );
+}
+
+class _FakeDocumentRepository implements DocumentContentRepository {
+  @override
+  Future<DocumentContent?> load(DocumentIdentity identity) async {
+    return DocumentContent(
+      identity: identity,
+      title: 'Book document',
+      plainText: '# Book document\nSummary content.',
+      jsonDocument: const <String, dynamic>{},
+      updatedAt: DateTime.utc(2026),
+    );
+  }
+
+  @override
+  Future<DocumentContent> save(DocumentContent content) async => content;
 }
 
 NxBook _book(

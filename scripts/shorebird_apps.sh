@@ -249,8 +249,8 @@ affected_apps() {
       nx_modules/nx_live_agent/*|nx_modules/nx_offline/*)
         affected+=(nx_cards nx_docs)
         ;;
-      third_party/appflowy-editor/*)
-        affected+=(nx_docs)
+      nx_modules/nx_documents/*|third_party/appflowy-editor/*)
+        affected+=(nx_books nx_docs)
         ;;
       nx_books/*|nx_cards/*|nx_cooking/*|nx_docs/*|nx_expense/*|nx_main/*|nx_people/*|nx_post/*|nx_projects/*|nx_time/*)
         app="${file%%/*}"
@@ -292,7 +292,11 @@ run_release() {
   fi
   (
     cd "$mobile_root/$app"
-    "$shorebird_bin" release ios "${credential_args[@]}" "$@"
+    if ((${#credential_args[@]} > 0)); then
+      "$shorebird_bin" release ios "${credential_args[@]}" "$@"
+    else
+      "$shorebird_bin" release ios "$@"
+    fi
   )
 }
 
@@ -308,7 +312,11 @@ run_patch() {
   fi
   (
     cd "$mobile_root/$app"
-    "$shorebird_bin" patch ios "${credential_args[@]}" "$@"
+    if ((${#credential_args[@]} > 0)); then
+      "$shorebird_bin" patch ios "${credential_args[@]}" "$@"
+    else
+      "$shorebird_bin" patch ios "$@"
+    fi
   )
 }
 

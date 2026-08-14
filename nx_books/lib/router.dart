@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_books/features/auth/books_login_screen.dart';
 import 'package:nx_books/features/books/books_shell.dart';
+import 'package:nx_books/features/books/notes/book_notes_page.dart';
 import 'package:nx_db/auth.dart';
 
 class BooksInitializingScreen extends StatelessWidget {
@@ -57,6 +58,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/books',
         builder: (context, state) => const BooksRootShell(),
+      ),
+      GoRoute(
+        path: '/books/:bookId/notes',
+        builder: (context, state) {
+          final bookId = int.tryParse(state.pathParameters['bookId'] ?? '');
+          if (bookId == null) return const BooksRootShell();
+          return BookNotesPage(bookId: bookId);
+        },
+      ),
+      GoRoute(
+        path: '/books/:bookId/details',
+        builder: (context, state) {
+          final bookId = int.tryParse(state.pathParameters['bookId'] ?? '');
+          if (bookId == null) return const BooksRootShell();
+          return BookDetailPage(bookId: bookId);
+        },
+      ),
+      GoRoute(
+        path: '/documents/:documentId/notes',
+        builder: (context, state) {
+          final documentId = int.tryParse(
+            state.pathParameters['documentId'] ?? '',
+          );
+          if (documentId == null) return const BooksRootShell();
+          return DocumentNotesPage(documentId: documentId);
+        },
       ),
     ],
   );

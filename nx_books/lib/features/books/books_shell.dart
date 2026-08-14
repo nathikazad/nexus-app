@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nx_books/core/theme/app_theme.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_books/domain/book/book.dart';
+import 'package:nx_books/features/books/notes/book_notes_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class BooksRootShell extends ConsumerStatefulWidget {
@@ -113,12 +115,8 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
   }
 
   Future<void> _openInNotes(NxBook book) async {
-    final uri = notesUriForBook(book.id, Uri.base);
-    final ok = await launchUrl(uri, webOnlyWindowName: '_self');
-    if (ok || !mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Could not open ${uri.toString()}')));
+    ref.read(selectedBookIdProvider.notifier).select(book.id);
+    await context.push<void>(bookNotesPath(book.id));
   }
 }
 
@@ -166,6 +164,7 @@ class _DesktopBookshelf extends ConsumerWidget {
                           state: BookReadingState.reading,
                           books: reading,
                           selectedId: selected?.id,
+                          onOpenBook: onOpenInNotes,
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -179,6 +178,7 @@ class _DesktopBookshelf extends ConsumerWidget {
                           state: collectionState,
                           books: collection,
                           selectedId: selected?.id,
+                          onOpenBook: onOpenInNotes,
                           trailing: _CollectionSwitch(
                             state: collectionState,
                             onChanged: (state) => ref
@@ -193,11 +193,6 @@ class _DesktopBookshelf extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-        const VerticalDivider(width: 1),
-        SizedBox(
-          width: 316,
-          child: _BookDetail(book: selected, onOpenInNotes: onOpenInNotes),
         ),
       ],
     );
@@ -273,12 +268,7 @@ class _MobileBookshelfState extends ConsumerState<_MobileBookshelf> {
                     book: book,
                     selected: widget.selected?.id == book.id,
                     compact: true,
-                    onTap: () => _openBookDetails(
-                      context,
-                      ref,
-                      book,
-                      widget.onOpenInNotes,
-                    ),
+                    onTap: () => _openBookDocument(ref, book),
                     onDragStart: _stopAutoScroll,
                     onDragUpdate: _updateAutoScroll,
                     onDragEnd: _stopAutoScroll,
@@ -317,12 +307,7 @@ class _MobileBookshelfState extends ConsumerState<_MobileBookshelf> {
                     book: book,
                     selected: widget.selected?.id == book.id,
                     compact: true,
-                    onTap: () => _openBookDetails(
-                      context,
-                      ref,
-                      book,
-                      widget.onOpenInNotes,
-                    ),
+                    onTap: () => _openBookDocument(ref, book),
                     onDragStart: _stopAutoScroll,
                     onDragUpdate: _updateAutoScroll,
                     onDragEnd: _stopAutoScroll,
@@ -395,21 +380,9 @@ class _MobileBookshelfState extends ConsumerState<_MobileBookshelf> {
     _autoScrollTimer = null;
   }
 
-  void _openBookDetails(
-    BuildContext context,
-    WidgetRef ref,
-    NxBook book,
-    Future<void> Function(NxBook book) onOpenInNotes,
-  ) {
+  void _openBookDocument(WidgetRef ref, NxBook book) {
     ref.read(selectedBookIdProvider.notifier).select(book.id);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _MobileBookDetailPage(
-          bookId: book.id,
-          onOpenInNotes: onOpenInNotes,
-        ),
-      ),
-    );
+    unawaited(widget.onOpenInNotes(book));
   }
 }
 
@@ -712,6 +685,7 @@ class _BookSection extends StatelessWidget {
     required this.state,
     required this.books,
     required this.selectedId,
+    required this.onOpenBook,
     this.trailing,
   });
 
@@ -720,6 +694,7 @@ class _BookSection extends StatelessWidget {
   final BookReadingState state;
   final List<NxBook> books;
   final int? selectedId;
+  final Future<void> Function(NxBook book) onOpenBook;
   final Widget? trailing;
 
   @override
@@ -773,6 +748,7 @@ class _BookSection extends StatelessWidget {
                             key: ValueKey('book-card-${book.id}'),
                             book: book,
                             selected: selectedId == book.id,
+                            onTap: () => unawaited(onOpenBook(book)),
                           );
                         },
                       );
@@ -1145,10 +1121,9 @@ class _LaneMoveButtons extends ConsumerWidget {
 }
 
 class _BookDetail extends ConsumerWidget {
-  const _BookDetail({required this.book, required this.onOpenInNotes});
+  const _BookDetail({required this.book});
 
   final NxBook? book;
-  final Future<void> Function(NxBook book) onOpenInNotes;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1245,43 +1220,15 @@ class _BookDetail extends ConsumerWidget {
                       ),
                       _MetaRow(label: 'Updated', value: row.updatedLabel),
                       _MetaRow(label: 'Words', value: '${row.wordCount}'),
-                      const SizedBox(height: 10),
-                      _BookDetailActions(
-                        book: row,
-                        onOpenInNotes: onOpenInNotes,
-                      ),
+                      if (row.link.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _BookLinkButton(book: row),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
-    );
-  }
-}
-
-class _BookDetailActions extends StatelessWidget {
-  const _BookDetailActions({required this.book, required this.onOpenInNotes});
-
-  final NxBook book;
-  final Future<void> Function(NxBook book) onOpenInNotes;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        FilledButton.icon(
-          onPressed: () => onOpenInNotes(book),
-          icon: const Icon(Icons.open_in_new, size: 17),
-          label: const Text('Open in Notes'),
-        ),
-        if (book.link.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _BookLinkButton(book: book),
-        ],
-        const SizedBox(height: 8),
-        _DeleteBookButton(book: book),
-      ],
     );
   }
 }
@@ -1311,66 +1258,10 @@ class _BookLinkButton extends StatelessWidget {
   }
 }
 
-class _DeleteBookButton extends ConsumerWidget {
-  const _DeleteBookButton({required this.book});
-
-  final NxBook book;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return OutlinedButton.icon(
-      key: ValueKey('delete-book-${book.id}'),
-      onPressed: () => _confirmDelete(context, ref),
-      icon: const Icon(Icons.delete_outline, size: 17),
-      label: const Text('Delete'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.red,
-        side: const BorderSide(color: AppColors.line),
-      ),
-    );
-  }
-
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete book?'),
-          content: Text(
-            'Delete "${book.title}" from nx_books and notes. This cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    await ref.read(bookMutationControllerProvider).deleteBook(book);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Deleted ${book.title}')));
-  }
-}
-
-class _MobileBookDetailPage extends ConsumerWidget {
-  const _MobileBookDetailPage({
-    required this.bookId,
-    required this.onOpenInNotes,
-  });
+class BookDetailPage extends ConsumerWidget {
+  const BookDetailPage({required this.bookId, super.key});
 
   final int bookId;
-  final Future<void> Function(NxBook book) onOpenInNotes;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1381,7 +1272,7 @@ class _MobileBookDetailPage extends ConsumerWidget {
       _ => null,
     };
     return Scaffold(
-      key: ValueKey('mobile-book-detail-$bookId'),
+      key: ValueKey('book-detail-$bookId'),
       appBar: AppBar(
         title: Text(book?.title ?? 'Book information'),
         backgroundColor: AppColors.panel,
@@ -1396,7 +1287,13 @@ class _MobileBookDetailPage extends ConsumerWidget {
         AsyncData() when book == null => const Center(
           child: Text('This book is no longer available'),
         ),
-        _ => _BookDetail(book: book, onOpenInNotes: onOpenInNotes),
+        _ => Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: _BookDetail(book: book),
+          ),
+        ),
       },
     );
   }

@@ -28,6 +28,8 @@ dependencies:
   intl: ^0.20.2
   nx_db:
     path: ../nx_modules/nx_db
+  nx_documents:
+    path: ../nx_modules/nx_documents
   nx_live_agent:
     path: ../nx_modules/nx_live_agent
   nx_offline:

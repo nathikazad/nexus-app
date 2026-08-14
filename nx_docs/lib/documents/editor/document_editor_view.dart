@@ -20,6 +20,7 @@ import 'package:nx_docs/documents/editor/nx_appflowy_blocks.dart';
 import 'package:nx_docs/documents/editor/nx_color_toolbar.dart';
 import 'package:nx_docs/documents/editor/nx_document_link.dart';
 import 'package:nx_docs/documents/editor/nx_highlight_notes.dart';
+import 'package:nx_documents/nx_documents.dart' as shared_documents;
 // import 'package:nx_docs/documents/editor/offline_sync_status_label.dart';
 
 part 'editor_canvas.dart';
@@ -597,94 +598,141 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                         if (widget.showDocumentTitle)
                           const SizedBox(height: 28),
                         Expanded(
-                          child: _NxAppFlowyEditor(
-                            document: widget.document,
-                            changeOrigin: widget.changeOrigin,
-                            textScaleFactor: documentTextScale,
-                            editorMode: _editorMode,
-                            interactionMode: widget.interactionMode,
-                            active: widget.active,
-                            searchLinkableModels:
-                                ({required modelType, required query}) {
-                                  final service = ref.read(
-                                    documentLinkServiceProvider,
-                                  );
-                                  if (service == null) {
-                                    return Future.value(const <LinkedModel>[]);
-                                  }
-                                  return service.search(
-                                    modelType: modelType,
-                                    query: query,
-                                  );
-                                },
-                            onLinkableModelSelected:
-                                !widget.interactionMode.canEditContent
-                                ? null
-                                : (modelType, model) async {
-                                    await ref
-                                        .read(
-                                          documentMutationControllerProvider,
-                                        )
-                                        .attachLinkedModel(
-                                          documentId: widget.document.id,
-                                          modelType: modelType,
-                                          modelId: model.id,
-                                          model: model,
-                                        );
-                                  },
-                            createLinkedDocument:
-                                !widget.interactionMode.canEditContent
-                                ? null
-                                : (title) async {
-                                    final document = await ref
-                                        .read(
-                                          documentMutationControllerProvider,
-                                        )
-                                        .createDocument(title: title);
-                                    return LinkedModel(
-                                      id: document.id,
-                                      name: document.title,
+                          child:
+                              widget.interactionMode ==
+                                  DocumentInteractionMode.highlightOnly
+                              ? shared_documents.DocumentReader(
+                                  content: shared_documents.DocumentContent(
+                                    identity: shared_documents.DocumentIdentity(
+                                      id: widget.document.id,
                                       modelType:
-                                          LinkableModelType.document.kgqlName,
-                                    );
+                                          widget.document.modelTypeName
+                                              .trim()
+                                              .isEmpty
+                                          ? 'Document'
+                                          : widget.document.modelTypeName,
+                                    ),
+                                    title: widget.document.title,
+                                    plainText: widget.document.document,
+                                    jsonDocument: widget.document.jsonDocument,
+                                    updatedAt: widget.document.updatedAt,
+                                  ),
+                                  textScaleFactor: documentTextScale,
+                                  imageUrlResolver:
+                                      imageAssetService?.resolveImageUrl,
+                                  onOpenLink: (href) async {
+                                    if (await _handleDocumentLinkLaunch(href)) {
+                                      return true;
+                                    }
+                                    return safeLaunchUrl(href);
                                   },
-                            uploadDocumentImage:
-                                !widget.interactionMode.canEditContent ||
-                                    imageAssetService == null
-                                ? null
-                                : (source) {
-                                    return imageAssetService.storeImageSource(
-                                      documentId: widget.document.id,
-                                      source: source,
-                                    );
-                                  },
-                            deleteDocumentImage:
-                                !widget.interactionMode.canEditContent ||
-                                    imageAssetService == null
-                                ? null
-                                : (url) async {
-                                    await imageAssetService.deleteImageUrl(url);
-                                  },
-                            resolveDocumentImage:
-                                imageAssetService?.resolveImageUrl,
-                            documentImageBaseUrl:
-                                imageAssetService?.imageBaseUrl,
-                            onFindBarChanged: _setFindBarPresentation,
-                            onChanged: !widget.interactionMode.canPersistChanges
-                                ? null
-                                : (updated, policy) async {
+                                  onChanged: (content) async {
                                     _draftDocument = _draftDocument.copyWith(
-                                      document: updated.document,
-                                      jsonDocument: updated.jsonDocument,
-                                      wordCount: updated.wordCount,
-                                      excerpt: updated.excerpt,
+                                      document: content.plainText,
+                                      jsonDocument: content.jsonDocument,
                                     );
                                     await mutationController.saveDraft(
                                       _draftDocument,
-                                      policy: policy,
+                                      policy: DraftSavePolicy.immediate,
                                     );
                                   },
-                          ),
+                                )
+                              : _NxAppFlowyEditor(
+                                  document: widget.document,
+                                  changeOrigin: widget.changeOrigin,
+                                  textScaleFactor: documentTextScale,
+                                  editorMode: _editorMode,
+                                  interactionMode: widget.interactionMode,
+                                  active: widget.active,
+                                  searchLinkableModels:
+                                      ({required modelType, required query}) {
+                                        final service = ref.read(
+                                          documentLinkServiceProvider,
+                                        );
+                                        if (service == null) {
+                                          return Future.value(
+                                            const <LinkedModel>[],
+                                          );
+                                        }
+                                        return service.search(
+                                          modelType: modelType,
+                                          query: query,
+                                        );
+                                      },
+                                  onLinkableModelSelected:
+                                      !widget.interactionMode.canEditContent
+                                      ? null
+                                      : (modelType, model) async {
+                                          await ref
+                                              .read(
+                                                documentMutationControllerProvider,
+                                              )
+                                              .attachLinkedModel(
+                                                documentId: widget.document.id,
+                                                modelType: modelType,
+                                                modelId: model.id,
+                                                model: model,
+                                              );
+                                        },
+                                  createLinkedDocument:
+                                      !widget.interactionMode.canEditContent
+                                      ? null
+                                      : (title) async {
+                                          final document = await ref
+                                              .read(
+                                                documentMutationControllerProvider,
+                                              )
+                                              .createDocument(title: title);
+                                          return LinkedModel(
+                                            id: document.id,
+                                            name: document.title,
+                                            modelType: LinkableModelType
+                                                .document
+                                                .kgqlName,
+                                          );
+                                        },
+                                  uploadDocumentImage:
+                                      !widget.interactionMode.canEditContent ||
+                                          imageAssetService == null
+                                      ? null
+                                      : (source) {
+                                          return imageAssetService
+                                              .storeImageSource(
+                                                documentId: widget.document.id,
+                                                source: source,
+                                              );
+                                        },
+                                  deleteDocumentImage:
+                                      !widget.interactionMode.canEditContent ||
+                                          imageAssetService == null
+                                      ? null
+                                      : (url) async {
+                                          await imageAssetService
+                                              .deleteImageUrl(url);
+                                        },
+                                  resolveDocumentImage:
+                                      imageAssetService?.resolveImageUrl,
+                                  documentImageBaseUrl:
+                                      imageAssetService?.imageBaseUrl,
+                                  onFindBarChanged: _setFindBarPresentation,
+                                  onChanged:
+                                      !widget.interactionMode.canPersistChanges
+                                      ? null
+                                      : (updated, policy) async {
+                                          _draftDocument = _draftDocument
+                                              .copyWith(
+                                                document: updated.document,
+                                                jsonDocument:
+                                                    updated.jsonDocument,
+                                                wordCount: updated.wordCount,
+                                                excerpt: updated.excerpt,
+                                              );
+                                          await mutationController.saveDraft(
+                                            _draftDocument,
+                                            policy: policy,
+                                          );
+                                        },
+                                ),
                         ),
                       ],
                     ),

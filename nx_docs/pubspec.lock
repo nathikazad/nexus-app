@@ -977,6 +977,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  nx_documents:
+    dependency: "direct main"
+    description:
+      path: "../nx_modules/nx_documents"
+      relative: true
+    source: path
+    version: "0.1.0"
   nx_live_agent:
     dependency: "direct main"
     description:

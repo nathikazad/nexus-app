@@ -1,19 +1,13 @@
-part of 'nx_appflowy_blocks.dart';
+import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-/// A stable, content-first table presentation for stored document tables.
-///
-/// AppFlowy's editable table widget owns row sizing and editing controls. Those
-/// can leave a sized, empty surface when an imported table is opened on macOS.
-/// This renderer derives its size from cell content in both document modes;
-/// table cells remain presentation-only while the rest of the document can
-/// still be edited.
 class NxReadTableBlockComponentBuilder extends BlockComponentBuilder {
   @override
-  BlockComponentWidget build(BlockComponentContext blockComponentContext) {
-    final node = blockComponentContext.node;
-    return NxReadTableBlockComponentWidget(
-      key: node.key,
-      node: node,
+  BlockComponentWidget build(BlockComponentContext context) {
+    return _NxReadTableBlockComponentWidget(
+      key: context.node.key,
+      node: context.node,
       configuration: configuration,
     );
   }
@@ -30,20 +24,20 @@ class NxReadTableBlockComponentBuilder extends BlockComponentBuilder {
   };
 }
 
-class NxReadTableBlockComponentWidget extends BlockComponentStatefulWidget {
-  const NxReadTableBlockComponentWidget({
+class _NxReadTableBlockComponentWidget extends BlockComponentStatefulWidget {
+  const _NxReadTableBlockComponentWidget({
     required super.node,
     required super.configuration,
     super.key,
   });
 
   @override
-  State<NxReadTableBlockComponentWidget> createState() =>
+  State<_NxReadTableBlockComponentWidget> createState() =>
       _NxReadTableBlockComponentWidgetState();
 }
 
 class _NxReadTableBlockComponentWidgetState
-    extends State<NxReadTableBlockComponentWidget>
+    extends State<_NxReadTableBlockComponentWidget>
     with SelectableMixin, BlockComponentConfigurable {
   final _tableKey = GlobalKey(debugLabel: 'nx_read_table');
 
@@ -58,10 +52,10 @@ class _NxReadTableBlockComponentWidgetState
   @override
   Widget build(BuildContext context) {
     final editorState = context.read<EditorState>();
-    final columns = widget.node.attributes[TableBlockKeys.colsLen] as int;
-    final rows = widget.node.attributes[TableBlockKeys.rowsLen] as int;
+    final columns = node.attributes[TableBlockKeys.colsLen] as int;
+    final rows = node.attributes[TableBlockKeys.rowsLen] as int;
     final cells = <(int, int), Node>{
-      for (final cell in widget.node.children)
+      for (final cell in node.children)
         if (cell.attributes[TableCellBlockKeys.colPosition] is int &&
             cell.attributes[TableCellBlockKeys.rowPosition] is int)
           (
@@ -70,9 +64,9 @@ class _NxReadTableBlockComponentWidgetState
           ): cell,
     };
     final baseStyle = editorState.editorStyle.textStyleConfiguration.text;
-    final textScale = editorState.editorStyle.textScaleFactor;
     final tableTextStyle = baseStyle.copyWith(
-      fontSize: (baseStyle.fontSize ?? 16) * textScale,
+      fontSize:
+          (baseStyle.fontSize ?? 16) * editorState.editorStyle.textScaleFactor,
       height: 1.35,
     );
 
@@ -86,7 +80,7 @@ class _NxReadTableBlockComponentWidgetState
             column: const FlexColumnWidth(),
         },
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        border: TableBorder.all(color: AppColors.line, width: 0.8),
+        border: TableBorder.all(color: Theme.of(context).dividerColor),
         children: <TableRow>[
           for (var row = 0; row < rows; row++)
             TableRow(
@@ -98,7 +92,7 @@ class _NxReadTableBlockComponentWidgetState
                       vertical: 10,
                     ),
                     child: Text(
-                      _nxReadTableCellText(cells[(column, row)]),
+                      _cellText(cells[(column, row)]),
                       style: row == 0
                           ? tableTextStyle.copyWith(fontWeight: FontWeight.w700)
                           : tableTextStyle,
@@ -109,7 +103,6 @@ class _NxReadTableBlockComponentWidgetState
         ],
       ),
     );
-
     child = BlockSelectionContainer(
       node: node,
       delegate: this,
@@ -123,22 +116,22 @@ class _NxReadTableBlockComponentWidgetState
   }
 
   @override
-  Position start() => Position(path: widget.node.path, offset: 0);
+  Position start() => Position(path: node.path, offset: 0);
 
   @override
-  Position end() => Position(path: widget.node.path, offset: 1);
+  Position end() => Position(path: node.path, offset: 1);
 
   @override
-  Position getPositionInOffset(Offset start) => end();
+  Position getPositionInOffset(Offset offset) => end();
 
   @override
   List<Rect> getRectsInSelection(
     Selection selection, {
     bool shiftWithBaseOffset = false,
   }) {
-    final parentBox = context.findRenderObject();
+    final parentBox = _renderBox;
     final tableBox = _tableKey.currentContext?.findRenderObject();
-    if (parentBox is RenderBox && tableBox is RenderBox) {
+    if (parentBox != null && tableBox is RenderBox) {
       return <Rect>[
         (shiftWithBaseOffset
                 ? tableBox.localToGlobal(Offset.zero, ancestor: parentBox)
@@ -146,13 +139,13 @@ class _NxReadTableBlockComponentWidgetState
             tableBox.size,
       ];
     }
-    final renderBox = _renderBox;
-    return <Rect>[Offset.zero & (renderBox?.size ?? Size.zero)];
+    return <Rect>[Offset.zero & (parentBox?.size ?? Size.zero)];
   }
 
   @override
-  Selection getSelectionInRange(Offset start, Offset end) =>
-      Selection.single(path: widget.node.path, startOffset: 0, endOffset: 1);
+  Selection getSelectionInRange(Offset start, Offset end) {
+    return Selection.single(path: node.path, startOffset: 0, endOffset: 1);
+  }
 
   @override
   bool get shouldCursorBlink => false;
@@ -161,12 +154,14 @@ class _NxReadTableBlockComponentWidgetState
   CursorStyle get cursorStyle => CursorStyle.cover;
 
   @override
-  Offset localToGlobal(Offset offset, {bool shiftWithBaseOffset = false}) =>
-      _renderBox?.localToGlobal(offset) ?? offset;
+  Offset localToGlobal(Offset offset, {bool shiftWithBaseOffset = false}) {
+    return _renderBox?.localToGlobal(offset) ?? offset;
+  }
 
   @override
-  Rect getBlockRect({bool shiftWithBaseOffset = false}) =>
-      getRectsInSelection(Selection.invalid()).first;
+  Rect getBlockRect({bool shiftWithBaseOffset = false}) {
+    return getRectsInSelection(Selection.invalid()).first;
+  }
 
   @override
   Rect? getCursorRectInPosition(
@@ -174,23 +169,19 @@ class _NxReadTableBlockComponentWidgetState
     bool shiftWithBaseOffset = false,
   }) {
     final size = _renderBox?.size;
-    if (size == null) return null;
-    return Rect.fromLTWH(-size.width / 2, 0, size.width, size.height);
+    return size == null
+        ? null
+        : Rect.fromLTWH(-size.width / 2, 0, size.width, size.height);
   }
 }
 
-String _nxReadTableCellText(Node? cell) {
+String _cellText(Node? cell) {
   if (cell == null) return '';
   final parts = <String>[];
 
   void collect(Node node) {
     final text = node.delta?.toPlainText().trim() ?? '';
-    if (text.isNotEmpty) {
-      parts.add(text);
-    } else {
-      final customText = nxPlainTextForCustomNode(node).trim();
-      if (customText.isNotEmpty) parts.add(customText);
-    }
+    if (text.isNotEmpty) parts.add(text);
     for (final child in node.children) {
       collect(child);
     }

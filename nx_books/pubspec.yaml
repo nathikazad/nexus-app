@@ -35,6 +35,8 @@ dependencies:
   graphql_flutter: ^5.1.2
   nx_db:
     path: ../nx_modules/nx_db
+  nx_documents:
+    path: ../nx_modules/nx_documents
   url_launcher: ^6.3.2
   cupertino_icons: ^1.0.8
 

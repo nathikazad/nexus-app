@@ -869,15 +869,8 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       footer: SizedBox(height: widget.interactionMode.isReader ? 24 : 120),
     );
     final Widget editorSurface;
-    if (widget.interactionMode == DocumentInteractionMode.readOnly) {
+    if (widget.interactionMode.isReader) {
       editorSurface = editor;
-    } else if (widget.interactionMode ==
-        DocumentInteractionMode.highlightOnly) {
-      editorSurface = NxReaderHighlightToolbar(
-        editorState: _editorState,
-        editorScrollController: _scrollController,
-        child: editor,
-      );
     } else {
       editorSurface = FloatingToolbar(
         editorState: _editorState,

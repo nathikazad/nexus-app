@@ -10,6 +10,7 @@ import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/documents/editor/document_editor_view.dart';
 import 'package:nx_docs/documents/editor/document_text_scale.dart';
 import 'package:nx_docs/documents/editor/nx_appflowy_blocks.dart';
+import 'package:nx_documents/nx_documents.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

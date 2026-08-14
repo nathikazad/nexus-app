@@ -1,0 +1,25 @@
+name: nx_documents
+description: Shared native document reading and highlighting capability for Nexus apps.
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  appflowy_editor:
+    path: ../../third_party/appflowy-editor
+  flutter:
+    sdk: flutter
+  graphql_flutter: ^5.1.2
+  nx_db:
+    path: ../nx_db
+  provider: ^6.1.5+1
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

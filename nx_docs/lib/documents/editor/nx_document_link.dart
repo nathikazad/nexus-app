@@ -4,6 +4,7 @@ import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_docs/app/theme.dart';
 import 'package:nx_docs/documents/document_models.dart';
+import 'package:nx_documents/nx_documents.dart';
 
 typedef NxSearchLinkableModels =
     Future<List<LinkedModel>> Function({
@@ -23,16 +24,13 @@ String nxKgqlHrefForModel(LinkableModelType modelType, LinkedModel model) {
 bool nxIsDocumentHref(String? href) => nxDocumentIdFromHref(href) != null;
 
 int? nxDocumentIdFromHref(String? href) {
-  if (href == null || href.trim().isEmpty) return null;
-  final uri = Uri.tryParse(href.trim());
-  if (uri == null || uri.scheme.toLowerCase() != 'kgql') return null;
-  final modelType = uri.host.toLowerCase();
+  final identity = documentIdentityFromKgqlHref(href);
+  final modelType = identity?.modelType.toLowerCase();
   if (modelType != LinkableModelType.document.kgqlName.toLowerCase() &&
       modelType != 'essay') {
     return null;
   }
-  final idText = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
-  return int.tryParse(idText ?? '');
+  return identity!.id;
 }
 
 ToolbarItem buildNxDocumentLinkToolbarItem({

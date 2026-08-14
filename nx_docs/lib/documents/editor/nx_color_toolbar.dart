@@ -7,40 +7,6 @@ import 'package:nx_docs/app/theme.dart';
 const _nxTextColorItemId = 'nx.textColor';
 const _nxHighlightColorItemId = 'nx.highlightColor';
 
-List<ColorOption> nxReaderHighlightColorOptions() => <ColorOption>[
-  ColorOption(
-    colorHex: '0x4cffeb3b',
-    name: AppFlowyEditorL10n.current.backgroundColorYellow,
-  ),
-  ColorOption(
-    colorHex: '0x4c4caf50',
-    name: AppFlowyEditorL10n.current.backgroundColorGreen,
-  ),
-  ColorOption(
-    colorHex: '0x4ce91e63',
-    name: AppFlowyEditorL10n.current.backgroundColorPink,
-  ),
-];
-
-Future<void> applyNxHighlightColor({
-  required EditorState editorState,
-  required Selection selection,
-  required String? colorHex,
-}) async {
-  final wasEditable = editorState.editable;
-  if (!wasEditable) editorState.editable = true;
-  try {
-    await _applyColorAndDismissToolbar(
-      editorState: editorState,
-      selection: selection,
-      colorHex: colorHex,
-      isTextColor: false,
-    );
-  } finally {
-    if (!wasEditable) editorState.editable = false;
-  }
-}
-
 ToolbarItem buildNxTextColorItem({List<ColorOption>? colorOptions}) {
   return _buildNxColorItem(
     id: _nxTextColorItemId,

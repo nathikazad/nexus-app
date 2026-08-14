@@ -12,6 +12,7 @@ import 'package:nx_docs/app/theme.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/documents/editor/nx_document_link.dart';
 import 'package:nx_docs/documents/editor/nx_excalidraw_frame.dart';
+import 'package:nx_documents/nx_documents.dart';
 import 'package:provider/provider.dart';
 
 part 'nx_slash_menu.dart';
@@ -24,7 +25,6 @@ part 'nx_excalidraw_block.dart';
 part 'excalidraw_dialog.dart';
 part 'excalidraw_preview.dart';
 part 'nx_document_image_block.dart';
-part 'nx_read_table_block.dart';
 
 const String nxToggleBlockType = 'nx_toggle';
 const String nxBlogLinkBlockType = 'nx_blog_link';
