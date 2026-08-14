@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_docs/application/ports/document_asset_store.dart';
+import 'package:nx_docs/documents/assets/document_asset_store.dart';
 
 typedef AssetStoreFactory = Future<DocumentAssetStore> Function();
 

@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
-import 'package:nx_docs/app.dart';
-import 'package:nx_docs/features/shell/offline_sync_lifecycle.dart';
+import 'package:nx_docs/app/app.dart';
+import 'package:nx_docs/sync/sync.dart';
 import 'package:nx_voice/stored_audio.dart';
 
 Future<void> main() async {
@@ -22,7 +22,7 @@ Future<void> main() async {
         dbAuditSourceKindProvider.overrideWithValue('nx_notes'),
         retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
       ],
-      child: const OfflineSyncLifecycle(child: NexusNotesApp()),
+      child: const OfflineSyncLifecycle(child: NexusDocsApp()),
     ),
   );
 }

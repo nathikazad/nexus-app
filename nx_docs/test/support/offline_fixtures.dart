@@ -1,9 +1,5 @@
-import 'package:nx_docs/domain/document/document.dart';
-import 'package:nx_docs/domain/document/document_identity.dart';
-import 'package:nx_docs/domain/sync/document_revision.dart';
-import 'package:nx_docs/domain/sync/local_document.dart';
-import 'package:nx_docs/domain/sync/pending_operation.dart';
-import 'package:nx_docs/domain/sync/sync_state.dart';
+import 'package:nx_docs/documents/document_models.dart';
+import 'package:nx_docs/sync/sync_models.dart';
 
 NxDocument offlineTestDocument({
   int id = 1,

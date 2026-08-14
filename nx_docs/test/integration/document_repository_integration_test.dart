@@ -4,10 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:nx_docs/data/document/document_attr_keys.dart';
-import 'package:nx_docs/data/document/kgql_document_repository.dart';
-import 'package:nx_docs/domain/document/document_query.dart';
-import 'package:nx_docs/domain/links/linked_model.dart';
+import 'package:nx_docs/documents/data/kgql/document_attr_keys.dart';
+import 'package:nx_docs/documents/data/kgql/kgql_document_repository.dart';
+import 'package:nx_docs/documents/document_models.dart';
 
 void main() {
   test(

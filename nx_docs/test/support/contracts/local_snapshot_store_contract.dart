@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_docs/application/ports/local_snapshot_store.dart';
-import 'package:nx_docs/domain/document/document_identity.dart';
-import 'package:nx_docs/domain/sync/local_snapshot.dart';
+import 'package:nx_docs/sync/native/local_snapshot_store.dart';
+import 'package:nx_docs/documents/document_models.dart';
+import 'package:nx_docs/sync/sync_models.dart';
 
 import '../offline_fixtures.dart';
 

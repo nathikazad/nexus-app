@@ -1,14 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_docs/application/ports/local_notes_store.dart';
-import 'package:nx_docs/domain/catalog/catalog_query.dart';
-import 'package:nx_docs/domain/document/document_identity.dart';
-import 'package:nx_docs/domain/document/document_summary.dart';
-import 'package:nx_docs/domain/sync/document_revision.dart';
-import 'package:nx_docs/domain/sync/document_sync.dart';
-import 'package:nx_docs/domain/sync/pending_operation.dart';
-import 'package:nx_docs/domain/sync/remote_document.dart';
-import 'package:nx_docs/domain/sync/sync_failure.dart';
-import 'package:nx_docs/domain/sync/sync_state.dart';
+import 'package:nx_docs/sync/native/local_notes_store.dart';
+import 'package:nx_docs/library/models/catalog_query.dart';
+import 'package:nx_docs/documents/document_models.dart';
+import 'package:nx_docs/sync/sync_models.dart';
 
 import '../offline_fixtures.dart';
 

@@ -1048,3 +1048,6 @@ The immediate work order is:
 This ordering intentionally delays UI integration. It ensures that when the
 editor is connected, local durability, retries, idempotency, conflict handling,
 and restart recovery have already been proven independently.
+> Historical implementation plan. The layer-based paths below describe the
+> migration as originally executed and are not the current architecture. See
+> `README.md` and `docs/arch.md` for the capability-first source tree.

@@ -28,43 +28,43 @@ caches and leaves the web application online-only.
 
 ### Web
 
-- Construct `WebNotesWorkspace`.
+- Construct `WebDocumentWorkspace`.
 - Read and write KGQL directly.
 - Do not open Drift.
 - Do not construct an outbox, retry scheduler, or offline lifecycle callback.
 
-The platform decision lives in composition, not in feature widgets.
+The platform decision lives in capability-owned providers, not in widgets.
 
 ## Main application interfaces
 
 Presentation depends on four understandable interfaces:
 
-- `NotesWorkspace`: catalogs, document sessions, create/delete, upload, and
+- `DocumentWorkspace`: catalogs, document sessions, create/delete, upload, and
   library sync.
 - `DocumentSession`: one opened document and its refresh/edit state.
 - `LocalNotesStore`: typed native projection and durable document outbox.
-- `NotesRemoteApi`: Notes-specific catalog, document, mutation, and hash-sync
+- `DocumentRemoteApi`: Notes-specific catalog, document, mutation, and hash-sync
   operations.
 
 Riverpod constructs these objects, selects native versus web implementations,
 and disposes them. Business logic remains in plain Dart services.
 
-## Native composition
+## Native assembly
 
 ```text
 activeOfflineSessionProvider
   -> existing user:<id> partition
   -> NotesDatabase + DriftLocalNotesStore
-  -> NotesOutboxStoreAdapter
+  -> DocumentOutboxStoreAdapter
   -> DocumentMutationHandler
   -> nx_offline OutboxProcessor
   -> BackgroundUploader compatibility facade
   -> DocumentSynchronizer
-  -> NativeNotesWorkspace
+  -> NativeDocumentWorkspace
 ```
 
 `BackgroundUploader` no longer contains an upload loop. It preserves the
-existing Notes-facing API while delegating claims, retries, scheduling, and
+existing Documents-facing API while delegating claims, retries, scheduling, and
 status to `OutboxProcessor`.
 
 ## Startup and lifecycle
@@ -75,7 +75,7 @@ status to `OutboxProcessor`.
 ```text
 application starts / resumes / connectivity returns
   -> stable lifecycle callback
-  -> NativeNotesWorkspace.syncLibrary()
+  -> NativeDocumentWorkspace.syncLibrary()
   -> upload pending edits
   -> compare local manifest with server
   -> apply changed documents and deletions locally
@@ -102,8 +102,8 @@ open document ID
 If the document is not cached, the same keyed request is foreground work. If
 the device is offline, the session reports `unavailableOffline`.
 
-The shared `ReconciliationCoordinator<int, LocalDocument?>` prevents duplicate
-network work:
+The shared `SyncSupervisor<int>` prevents duplicate network work and serializes
+library and document reconciliation:
 
 - two opens of the same ID share one request;
 - two library triggers share one request;
@@ -119,7 +119,7 @@ editor save
        -> insert/coalesce PendingOperations row
   -> local stream updates the editor
   -> OutboxProcessor claims the operation
-  -> DocumentMutationHandler calls NotesRemoteApi
+  -> DocumentMutationHandler calls DocumentRemoteApi
   -> store adapter completes, retries, blocks, or imports stale remote data
 ```
 
@@ -138,7 +138,7 @@ Nexus Docs owns its hash protocol:
 
 ```text
 local [{documentId, serverHash}]
-  -> NotesRemoteApi.syncDocuments
+  -> DocumentRemoteApi.syncDocuments
   -> changed Documents and Books + deleted IDs
   -> one local applySyncBundle transaction
 ```
@@ -197,16 +197,17 @@ explicit erase policy is chosen.
 ## Key files
 
 ```text
-nx_docs/lib/application/native/
+nx_docs/lib/sync/native/
   background_uploader.dart
-  document_outbox_adapter.dart
+  document_outbox.dart
   native_document_session.dart
-  native_notes_workspace.dart
+  native_document_workspace.dart
 
-nx_docs/lib/application/sync/document_synchronizer.dart
-nx_docs/lib/data/local/drift/drift_local_notes_store.dart
-nx_docs/lib/composition/notes_composition.dart
-nx_docs/lib/features/shell/offline_sync_lifecycle.dart
+nx_docs/lib/sync/document_synchronizer.dart
+nx_docs/lib/sync/native/drift_local_notes_store.dart
+nx_docs/lib/sync/sync_providers.dart
+nx_docs/lib/workspace/workspace_providers.dart
+nx_docs/lib/sync/lifecycle.dart
 
 nx_offline/lib/src/outbox/
 nx_offline/lib/src/reconciliation/
