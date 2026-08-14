@@ -15,7 +15,6 @@ import 'package:nx_cards/sync/native/local_cards_store.dart';
 import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:nx_cards/sync/remote/kgql_sync_transport.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_offline/nx_offline.dart' as offline;
 
 final cardsOperationIdProvider = Provider<String Function()>((ref) {
   final random = Random.secure();
@@ -100,8 +99,3 @@ final cardsConnectivityChangesProvider = Provider<Stream<bool>?>((ref) {
       )
       .distinct();
 });
-
-offline.OfflineSynchronize synchronizeWorkspace(
-  Future<void> Function() synchronize,
-) =>
-    (_) => synchronize();

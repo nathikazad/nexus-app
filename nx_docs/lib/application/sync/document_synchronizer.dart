@@ -15,49 +15,84 @@ final class DocumentSynchronizer {
     required LocalNotesStore localStore,
     required NotesRemoteApi remoteApi,
     required BackgroundUploader uploader,
+  }) : _localStore = localStore {
+    _supervisor = offline.SyncSupervisor<int>(
+      reconciler: _DocumentPullReconciler(
+        localStore: localStore,
+        remoteApi: remoteApi,
+      ),
+      prepare: uploader.uploadPending,
+      coalescingWindow: Duration.zero,
+    );
+  }
+
+  final LocalNotesStore _localStore;
+  late final offline.SyncSupervisor<int> _supervisor;
+
+  offline.SyncStatusSource get status => _supervisor;
+
+  Future<void> syncLibrary({
+    offline.SyncReason reason = offline.SyncReason.manual,
+  }) {
+    return _supervisor.requestFull(reason);
+  }
+
+  Future<void> requestDocuments(
+    Iterable<int> documentIds, {
+    offline.SyncReason reason = offline.SyncReason.foregroundDemand,
+  }) {
+    return _supervisor.requestKeys(documentIds, reason);
+  }
+
+  Future<LocalDocument?> refreshDocument(int documentId) async {
+    await requestDocuments(<int>{documentId});
+    return _localStore.getDocumentByRemoteId(documentId);
+  }
+
+  Future<void> close() => _supervisor.close();
+}
+
+final class _DocumentPullReconciler implements offline.PullReconciler<int> {
+  const _DocumentPullReconciler({
+    required LocalNotesStore localStore,
+    required NotesRemoteApi remoteApi,
   }) : _localStore = localStore,
-       _remoteApi = remoteApi,
-       _uploader = uploader;
+       _remoteApi = remoteApi;
 
   final LocalNotesStore _localStore;
   final NotesRemoteApi _remoteApi;
-  final BackgroundUploader _uploader;
-  final offline.ReconciliationCoordinator<int, LocalDocument?> _runs =
-      offline.ReconciliationCoordinator<int, LocalDocument?>();
 
-  Future<void> syncLibrary() => _runs.runFull(_syncLibraryOnce);
-
-  Future<void> _syncLibraryOnce() async {
-    await _uploader.uploadPending();
+  @override
+  Future<void> pullAll() async {
     final manifest = await _localStore.documentManifest();
     final bundle = await _remoteApi.syncDocuments(manifest: manifest);
     await _localStore.applySyncBundle(bundle);
   }
 
-  Future<LocalDocument?> refreshDocument(int documentId) => _runs.runItem(
-    documentId,
-    reconcile: () => _refreshDocumentOnce(documentId),
-    readAfterFull: () => _localStore.getDocumentByRemoteId(documentId),
-  );
-
-  Future<LocalDocument?> _refreshDocumentOnce(int documentId) async {
-    await _uploader.uploadPending();
-    final local = await _localStore.getDocumentByRemoteId(documentId);
-    if (local != null && local.syncState != DocumentSyncState.synced) {
-      return local;
+  @override
+  Future<void> pullKeys(Set<int> keys) async {
+    final eligibleIds = <int>{};
+    final manifest = <DocumentManifestEntry>[];
+    for (final documentId in keys) {
+      final local = await _localStore.getDocumentByRemoteId(documentId);
+      if (local != null && local.syncState != DocumentSyncState.synced) {
+        continue;
+      }
+      eligibleIds.add(documentId);
+      if (local != null) {
+        manifest.add(
+          DocumentManifestEntry(
+            documentId: documentId,
+            serverHash: local.serverHash,
+          ),
+        );
+      }
     }
+    if (eligibleIds.isEmpty) return;
     final bundle = await _remoteApi.syncDocuments(
-      manifest: local == null
-          ? const <DocumentManifestEntry>[]
-          : <DocumentManifestEntry>[
-              DocumentManifestEntry(
-                documentId: documentId,
-                serverHash: local.serverHash,
-              ),
-            ],
-      documentIds: <int>{documentId},
+      manifest: manifest,
+      documentIds: eligibleIds,
     );
     await _localStore.applySyncBundle(bundle);
-    return _localStore.getDocumentByRemoteId(documentId);
   }
 }

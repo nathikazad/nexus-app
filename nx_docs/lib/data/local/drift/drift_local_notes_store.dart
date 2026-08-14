@@ -166,6 +166,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
           deletedLocally: remote.deleted,
         );
       }
+      await _rebuildDefaultCatalogs();
     });
   }
 
@@ -388,6 +389,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
             .into(database.syncOutbox)
             .insertOnConflictUpdate(mapper.toOperationCompanion(next));
       }
+      await _rebuildDefaultCatalogs();
     });
   }
 

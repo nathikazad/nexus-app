@@ -32,7 +32,7 @@ read and write KGQL directly.
 - Operation claims, leases, retry classification, exponential backoff, and one
   persistent retry wake-up.
 - Observable synchronization status.
-- Coordination between full and keyed reconciliation requests.
+- Account-scoped serialization, coalescing, and batching of pull requests.
 - Startup, resume, and restored-connectivity lifecycle triggers.
 - A shared Drift outbox schema and persistence adapter for app-owned databases.
 
@@ -55,7 +55,7 @@ read and write KGQL directly.
 
 ```text
 package:nx_offline/nx_offline.dart
-  Stable model, session, lifecycle, outbox, retry, and reconciliation APIs.
+  Stable model, session, lifecycle, outbox, retry, and sync-supervision APIs.
 
 package:nx_offline/nx_offline_drift.dart
   Optional Drift table declarations plus DriftOutboxPersistence.
@@ -77,7 +77,6 @@ nx_offline/lib/
     outbox/
       outbox_processor.dart
       retry_scheduler.dart
-    reconciliation/reconciliation_coordinator.dart
     session/
       cached_session.dart
       session_restorer.dart
@@ -88,10 +87,11 @@ nx_offline/lib/
     sync/
       policies.dart
       sync_ports.dart
+      sync_supervisor.dart
 ```
 
-There is intentionally no generic entity database, generic KGQL transport, or
-push-before-pull mega-coordinator.
+There is intentionally no generic entity database or generic KGQL transport.
+`SyncSupervisor` coordinates work but never interprets application data.
 
 ## Stable account identity
 
@@ -134,16 +134,17 @@ and arms `RetryScheduler` at the earliest durable retry timestamp.
 
 ## Pull and reconciliation flow
 
-Pull semantics remain application-owned. The shared
-`ReconciliationCoordinator<K, V>` only coordinates concurrency:
+Pull semantics remain application-owned. The account-scoped
+`SyncSupervisor<K>` owns scheduling:
 
+- Only one pull runs at a time.
 - Concurrent full requests share one full run.
-- Concurrent requests for the same key share one keyed run.
-- A keyed request arriving during a full run waits and reads the new local
-  state instead of issuing duplicate network work.
-- A full request waits for keyed work that was already running.
-- If a full request fails, a waiting keyed request may attempt its narrower
-  reconciliation.
+- Full requests subsume pending keyed requests.
+- Different keyed requests are unioned into one batch.
+- Equivalent requests arriving during an active run share that run.
+- Narrower work arriving during a run produces at most one follow-up batch.
+- An application-owned preparation callback drains durable mutations before
+  each pull.
 
 For Nexus Docs, `K` is a document ID and the full request is a document hash
 manifest. For Nx Expense, `K` can be a UTC day and the full request can compare
@@ -219,10 +220,10 @@ target and can cause repeated refreshes.
 5. Implement one `MutationHandler` per remote collection.
 6. Define full and keyed pull functions using the application's natural
    partition or manifest.
-7. Wrap them in `ReconciliationCoordinator`.
+7. Register them with one account-scoped `SyncSupervisor`.
 8. Compose the processor, sessions, and lifecycle in Riverpod for native only.
-9. Test restart, offline reads, retry, stale writes, account isolation, and
-   overlapping reconciliation requests.
+9. Test restart, offline reads, retry, stale writes, account isolation,
+   coalescing, batching, and the one-active-pull invariant.
 
 The Expense reuse test in `test/reuse/expense_domain_example_test.dart` is a
 small executable example of this boundary.

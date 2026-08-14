@@ -60,29 +60,26 @@ void main() {
     await local.dispose();
   });
 
-  test(
-    'cached catalog is emitted while the network request is pending',
-    () async {
-      final cached = offlineTestDocument(id: 7, title: 'Cached recent');
-      await local.replaceCatalog(const CatalogQuery.recent(), <DocumentSummary>[
-        DocumentSummary.fromDocument(cached),
-      ]);
-      final network = Completer<void>();
-      remote
-        ..catalogBarrier = network.future
-        ..replaceRemote(offlineTestDocument(id: 8, title: 'Remote recent'));
+  test('cached catalog is emitted without a network request', () async {
+    final cached = offlineTestDocument(id: 7, title: 'Cached recent');
+    await local.replaceCatalog(const CatalogQuery.recent(), <DocumentSummary>[
+      DocumentSummary.fromDocument(cached),
+    ]);
+    final network = Completer<void>();
+    remote
+      ..catalogBarrier = network.future
+      ..replaceRemote(offlineTestDocument(id: 8, title: 'Remote recent'));
 
-      final state = await workspace
-          .watchCatalog(const CatalogQuery.recent())
-          .firstWhere((state) => state.items.isNotEmpty);
+    final state = await workspace
+        .watchCatalog(const CatalogQuery.recent())
+        .firstWhere((state) => state.items.isNotEmpty);
 
-      expect(state.items.single.title, 'Cached recent');
-      expect(state.isRefreshing, isTrue);
-      expect(remote.catalogFetchCount, 1);
-      expect(network.isCompleted, isFalse);
-      network.complete();
-    },
-  );
+    expect(state.items.single.title, 'Cached recent');
+    expect(state.isRefreshing, isFalse);
+    expect(remote.catalogFetchCount, 0);
+    expect(network.isCompleted, isFalse);
+    network.complete();
+  });
 
   test(
     'library sync refreshes catalogs when document hashes are unchanged',
@@ -97,7 +94,10 @@ void main() {
       await local.replaceCatalog(const CatalogQuery.books(), <DocumentSummary>[
         DocumentSummary.fromDocument(initialBook),
       ]);
-      final book = initialBook.copyWith(readingState: 'read');
+      final book = initialBook.copyWith(
+        readingState: 'read',
+        updatedAt: initialBook.updatedAt.add(const Duration(minutes: 1)),
+      );
       remote.replaceRemote(book);
 
       expect(
@@ -110,7 +110,7 @@ void main() {
       await workspace.syncLibrary();
 
       expect(remote.syncCount, 2);
-      expect(remote.catalogFetchCount, libraryCatalogQueries.length);
+      expect(remote.catalogFetchCount, 0);
       expect(
         (await local.readCatalog(
           const CatalogQuery.books(),
@@ -121,7 +121,7 @@ void main() {
   );
 
   test(
-    'opening returns cached body immediately and fetches remote once',
+    'opening is local-only and foreground demand fetches remote once',
     () async {
       final cached = offlineTestDocument(id: 7, title: 'Cached body');
       await _import(local, cached);
@@ -138,10 +138,13 @@ void main() {
 
       expect(identical(first, second), isTrue);
       expect(ready.document!.title, 'Cached body');
+      expect(remote.syncCount, 0);
+
+      final demand = workspace.ensureDocumentAvailable(7);
       await Future<void>.delayed(Duration.zero);
-      expect(first.state.isRefreshing, isTrue);
       expect(remote.syncCount, 1);
       network.complete();
+      await demand;
     },
   );
 
@@ -151,9 +154,11 @@ void main() {
       remote.error = StateError('offline');
 
       final session = workspace.openDocument(99);
+      final demand = workspace.ensureDocumentAvailable(99);
       final state = await session.states.firstWhere(
         (state) => state.phase == DocumentPhase.unavailableOffline,
       );
+      await demand;
 
       expect(state.document, isNull);
       expect(state.error, isA<StateError>());

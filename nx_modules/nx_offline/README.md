@@ -8,24 +8,23 @@ The package currently provides:
 - Pure-Dart identity, revision, mutation, failure, conflict, cursor, and status
   values.
 - Outbox coalescing and retry policies.
-- A push-before-pull synchronization coordinator with durable leases,
-  concurrent-run collapse, per-collection cursors, and conflict handoff.
-- A Drift reference store with account-scoped local JSON entities, atomic
-  entity/outbox writes, retries, cursors, and conflicts.
-- A schema-aware KGQL transport boundary with explicit backend capability
-  reporting.
+- An account-scoped sync supervisor that serializes pulls, batches keyed
+  demand, collapses lifecycle/manual triggers, and runs durable uploads first.
+- Embeddable Drift outbox tables for atomic domain writes, leases, retries,
+  and conflicts.
 - Cached-session restoration, preferences persistence, HTTP probing, and
   explicit logout data-retention policy.
 - Flutter startup, resume, connectivity, and sync-status components.
 
 Applications continue to own their domain repositories, optimized projection
 tables, KGQL codecs, hydration rules, and conflict policies. They implement
-`SyncCollectionAdapter` and use `SyncCoordinator` for shared synchronization.
+`MutationHandler` and `PullReconciler<K>` and compose them with
+`OutboxProcessor` and `SyncSupervisor<K>`.
 
 ## Status
 
-The package foundation is implemented and tested independently. It is not yet
-wired into `nx_docs`, `nx_time`, or `nx_expense`.
+The package is used by `nx_docs` and `nx_cards`; other applications can supply
+their own typed stores, mutation handlers, and pull reconcilers.
 
 The current KGQL compatibility boundary cannot itself provide durable server
 idempotency, atomic revision preconditions, deletion tombstones, or a true

@@ -110,7 +110,7 @@ final offlineLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((
   if (!ref.watch(offlineEnabledProvider)) return null;
   final workspace = ref.watch(notesWorkspaceProvider);
   if (workspace == null) return null;
-  return (reason) => workspace.syncLibrary();
+  return (reason) => workspace.syncLibrary(reason: reason);
 });
 
 final offlineConnectivityChangesProvider = Provider<Stream<bool>?>((ref) {
@@ -181,6 +181,17 @@ final documentSynchronizerProvider = Provider<DocumentSynchronizer?>((ref) {
     remoteApi: ref.watch(notesRemoteApiProvider),
     uploader: uploader,
   );
+});
+
+final documentSyncStatusProvider = StreamProvider<offline.SyncStatus>((ref) {
+  final source = ref.watch(documentSynchronizerProvider)?.status;
+  if (source == null) {
+    return Stream<offline.SyncStatus>.value(const offline.SyncStatus.idle());
+  }
+  return (() async* {
+    yield source.status;
+    yield* source.statusChanges;
+  })();
 });
 
 final notesWorkspaceProvider = Provider<NotesWorkspace?>((ref) {
@@ -261,6 +272,15 @@ final documentSessionStateProvider = StreamProvider.autoDispose
       }
       yield* _sessionStates(session);
     });
+
+final documentDemandProvider = FutureProvider.autoDispose.family<void, int>((
+  ref,
+  documentId,
+) async {
+  final workspace = ref.watch(notesWorkspaceProvider);
+  if (workspace == null) return;
+  await workspace.ensureDocumentAvailable(documentId);
+});
 
 typedef NotesLibraryRefresh = Future<void> Function();
 

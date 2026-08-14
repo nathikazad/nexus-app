@@ -35,6 +35,7 @@ final class FakeNotesRemoteApi
   final Map<int, int> documentFetchCounts = <int, int>{};
   int saveCount = 0;
   int syncCount = 0;
+  final List<Set<int>?> syncScopes = <Set<int>?>[];
   int _nextId = 10000;
 
   List<NxDocument> get documents => _documents.values.toList(growable: false);
@@ -131,6 +132,7 @@ final class FakeNotesRemoteApi
     Set<int>? documentIds,
   }) async {
     syncCount += 1;
+    syncScopes.add(documentIds == null ? null : Set<int>.of(documentIds));
     await syncBarrier;
     _throwIfConfigured();
     final clientHashes = <int, String?>{

@@ -52,24 +52,41 @@ void main() {
         _Expense(id: 'lunch', cents: 900, category: 'food'),
       ],
     });
-    final coordinator = ReconciliationCoordinator<DateTime, List<_Expense>>();
+    final supervisor = SyncSupervisor<DateTime>(
+      reconciler: _ExpensePullReconciler(remote),
+      coalescingWindow: Duration.zero,
+    );
+    addTearDown(supervisor.close);
     final fullBarrier = Completer<void>();
     remote.fullBarrier = fullBarrier.future;
 
-    final full = coordinator.runFull(remote.syncAll);
-    final openedDay = coordinator.runItem(
-      day,
-      reconcile: () => remote.syncDay(day),
-      readAfterFull: () async => remote.local[day] ?? const <_Expense>[],
-    );
+    final full = supervisor.requestFull(SyncReason.appStarted);
+    await Future<void>.delayed(Duration.zero);
+    final openedDay = supervisor.requestKey(day, SyncReason.foregroundDemand);
 
     expect(remote.fullFetches, 1);
     expect(remote.dayFetches, 0);
     fullBarrier.complete();
-    await full;
-    expect(await openedDay, remote.remote[day]);
+    await Future.wait(<Future<void>>[full, openedDay]);
+    expect(remote.local[day], remote.remote[day]);
     expect(remote.dayFetches, 0);
   });
+}
+
+final class _ExpensePullReconciler implements PullReconciler<DateTime> {
+  const _ExpensePullReconciler(this.remote);
+
+  final _ExpenseLibrary remote;
+
+  @override
+  Future<void> pullAll() => remote.syncAll();
+
+  @override
+  Future<void> pullKeys(Set<DateTime> keys) async {
+    for (final day in keys) {
+      await remote.syncDay(day);
+    }
+  }
 }
 
 final class _Expense {

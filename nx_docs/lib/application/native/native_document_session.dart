@@ -28,7 +28,8 @@ final class NativeDocumentSession implements DocumentSession {
        _clock = clock,
        _idGenerator = idGenerator,
        _onClosed = onClosed {
-    unawaited(_start());
+    _initialization = _start();
+    unawaited(_initialization);
   }
 
   @override
@@ -44,6 +45,7 @@ final class NativeDocumentSession implements DocumentSession {
 
   DocumentSessionState _state = const DocumentSessionState();
   StreamSubscription<LocalDocument?>? _localSubscription;
+  late final Future<void> _initialization;
   Future<void>? _activeRefresh;
   DocumentChangeOrigin _nextLocalOrigin = DocumentChangeOrigin.localCache;
   bool _closed = false;
@@ -69,7 +71,6 @@ final class NativeDocumentSession implements DocumentSession {
             _emit(_state.copyWith(error: error));
           },
         );
-    await refresh();
   }
 
   void _applyLocal(LocalDocument? local) {
@@ -89,12 +90,13 @@ final class NativeDocumentSession implements DocumentSession {
   }
 
   @override
-  Future<void> refresh() {
+  Future<void> refresh() async {
+    await _initialization;
     final active = _activeRefresh;
     if (active != null) return active;
     final run = _refreshOnce();
     _activeRefresh = run;
-    return run.whenComplete(() {
+    await run.whenComplete(() {
       if (identical(_activeRefresh, run)) _activeRefresh = null;
     });
   }

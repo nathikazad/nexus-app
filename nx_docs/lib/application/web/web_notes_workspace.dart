@@ -7,6 +7,7 @@ import 'package:nx_docs/application/web/web_document_session.dart';
 import 'package:nx_docs/domain/catalog/catalog_query.dart';
 import 'package:nx_docs/domain/catalog/catalog_state.dart';
 import 'package:nx_docs/domain/document/document.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 final class WebNotesWorkspace implements NotesWorkspace {
   WebNotesWorkspace({required NotesRemoteApi remoteApi})
@@ -52,6 +53,11 @@ final class WebNotesWorkspace implements NotesWorkspace {
   }
 
   @override
+  Future<void> ensureDocumentAvailable(int documentId) {
+    return openDocument(documentId).refresh();
+  }
+
+  @override
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
@@ -77,7 +83,9 @@ final class WebNotesWorkspace implements NotesWorkspace {
   Future<void> uploadPending() async {}
 
   @override
-  Future<void> syncLibrary() {
+  Future<void> syncLibrary({
+    offline.SyncReason reason = offline.SyncReason.manual,
+  }) {
     return Future.wait(<Future<void>>[
       for (final query in libraryCatalogQueries) refreshCatalog(query),
     ]);

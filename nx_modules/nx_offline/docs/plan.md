@@ -96,6 +96,13 @@ Gate: the Expense proof and the complete nx_offline suite pass.
   identity.
 - Ran formatting, package analyzers, package tests, and repository diff checks.
 
+### Phase 11: account-scoped sync supervision
+
+- Replaced keyed concurrent reconciliation with `SyncSupervisor<K>`.
+- Enforced one active pull per account and batched different keys.
+- Migrated Nexus Docs and Nexus Cards lifecycle/manual synchronization.
+- Made Nexus Docs sessions local-only and catalogs local projections.
+
 ## Resulting public story
 
 ```text
@@ -104,7 +111,7 @@ application-owned typed database
   + application-owned MutationHandler
   + application-owned full/keyed pull functions
   + nx_offline OutboxProcessor
-  + nx_offline ReconciliationCoordinator
+  + nx_offline SyncSupervisor
   + nx_offline session/lifecycle policy
 ```
 

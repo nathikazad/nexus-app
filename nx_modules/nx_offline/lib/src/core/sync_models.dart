@@ -16,7 +16,14 @@ enum SyncActivity { idle, syncing, retryWaiting, blocked }
 ///
 /// The lifecycle layer reports intent only. Applications decide whether a
 /// reason should upload an outbox, reconcile a library, or do both.
-enum SyncReason { manual, appStarted, appResumed, connectivityRestored, timer }
+enum SyncReason {
+  manual,
+  foregroundDemand,
+  appStarted,
+  appResumed,
+  connectivityRestored,
+  timer,
+}
 
 /// Stable identity for one application's data partition.
 ///

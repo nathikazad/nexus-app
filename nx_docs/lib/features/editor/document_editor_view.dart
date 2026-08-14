@@ -60,6 +60,9 @@ class DocumentEditorView extends ConsumerWidget {
     if (kDebugMode) {
       debugPrint('[nx_docs editor lifecycle] view-build document=$documentId');
     }
+    final demand = active
+        ? ref.watch(documentDemandProvider(documentId))
+        : const AsyncValue<void>.data(null);
     final asyncState = ref.watch(documentSessionStateProvider(documentId));
     return asyncState.when(
       data: (sessionState) {
@@ -67,7 +70,8 @@ class DocumentEditorView extends ConsumerWidget {
         if (document == null) {
           return Center(
             child: Text(
-              sessionState.phase == DocumentPhase.unavailableOffline
+              demand.hasError ||
+                      sessionState.phase == DocumentPhase.unavailableOffline
                   ? 'This document has not been downloaded on this device.'
                   : sessionState.phase == DocumentPhase.notFound
                   ? 'Document not found'

@@ -17,6 +17,7 @@ import 'package:nx_docs/domain/sync/document_revision.dart';
 import 'package:nx_docs/domain/sync/pending_operation.dart';
 import 'package:nx_docs/domain/sync/remote_document.dart';
 import 'package:nx_docs/domain/sync/sync_state.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 final class NativeNotesWorkspace implements NotesWorkspace {
   NativeNotesWorkspace({
@@ -51,11 +52,7 @@ final class NativeNotesWorkspace implements NotesWorkspace {
     return _catalogs
         .putIfAbsent(
           query,
-          () => _NativeCatalogFeed(
-            query: query,
-            localStore: _localStore,
-            remoteApi: _remoteApi,
-          ),
+          () => _NativeCatalogFeed(query: query, localStore: _localStore),
         )
         .watch();
   }
@@ -63,16 +60,7 @@ final class NativeNotesWorkspace implements NotesWorkspace {
   @override
   Future<void> refreshCatalog(CatalogQuery query) {
     if (_closed) return Future<void>.value();
-    return _catalogs
-        .putIfAbsent(
-          query,
-          () => _NativeCatalogFeed(
-            query: query,
-            localStore: _localStore,
-            remoteApi: _remoteApi,
-          ),
-        )
-        .refresh();
+    return syncLibrary();
   }
 
   @override
@@ -93,6 +81,11 @@ final class NativeNotesWorkspace implements NotesWorkspace {
   }
 
   @override
+  Future<void> ensureDocumentAvailable(int documentId) {
+    return openDocument(documentId).refresh();
+  }
+
+  @override
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
@@ -108,7 +101,6 @@ final class NativeNotesWorkspace implements NotesWorkspace {
         revision: RemoteRevision(document.updatedAt.toUtc().toIso8601String()),
       ),
     ]);
-    await _refreshVisibleCatalogs();
     return document;
   }
 
@@ -117,7 +109,6 @@ final class NativeNotesWorkspace implements NotesWorkspace {
     final existing = await _localStore.getDocumentByRemoteId(documentId);
     if (existing == null) {
       await _remoteApi.deleteDocument(documentId);
-      await _refreshVisibleCatalogs();
       return;
     }
     final now = _clock.now();
@@ -140,26 +131,14 @@ final class NativeNotesWorkspace implements NotesWorkspace {
     _uploader.schedule();
   }
 
-  Future<void> _refreshVisibleCatalogs() async {
-    await Future.wait(<Future<void>>[
-      for (final feed in _catalogs.values) feed.refresh(),
-    ]);
-  }
-
   @override
   Future<void> uploadPending() => _uploader.uploadPending();
 
   @override
-  Future<void> syncLibrary() async {
-    await _synchronizer.syncLibrary();
-    await Future.wait(<Future<void>>[
-      for (final query in libraryCatalogQueries) _refreshCatalogForSync(query),
-    ]);
-  }
-
-  Future<void> _refreshCatalogForSync(CatalogQuery query) async {
-    final summaries = await _remoteApi.fetchCatalog(query);
-    await _localStore.replaceCatalog(query, summaries);
+  Future<void> syncLibrary({
+    offline.SyncReason reason = offline.SyncReason.manual,
+  }) {
+    return _synchronizer.syncLibrary(reason: reason);
   }
 
   @override
@@ -170,27 +149,22 @@ final class NativeNotesWorkspace implements NotesWorkspace {
       for (final session in _sessions.values.toList()) session.close(),
       for (final feed in _catalogs.values) feed.close(),
     ]);
+    await _synchronizer.close();
     _sessions.clear();
     _catalogs.clear();
   }
 }
 
 final class _NativeCatalogFeed {
-  _NativeCatalogFeed({
-    required this.query,
-    required LocalNotesStore localStore,
-    required NotesRemoteApi remoteApi,
-  }) : _localStore = localStore,
-       _remoteApi = remoteApi;
+  _NativeCatalogFeed({required this.query, required LocalNotesStore localStore})
+    : _localStore = localStore;
 
   final CatalogQuery query;
   final LocalNotesStore _localStore;
-  final NotesRemoteApi _remoteApi;
   final StreamController<CatalogState> _states =
       StreamController<CatalogState>.broadcast(sync: true);
   CatalogState _state = const CatalogState();
   StreamSubscription? _localSubscription;
-  Future<void>? _activeRefresh;
   bool _started = false;
   bool _closed = false;
 
@@ -200,8 +174,8 @@ final class _NativeCatalogFeed {
       final cached = await _localStore.readCatalog(query);
       _state = CatalogState(
         items: cached,
-        isInitialLoading: cached.isEmpty,
-        isRefreshing: true,
+        isInitialLoading: false,
+        isRefreshing: false,
       );
       _localSubscription = _localStore
           .watchCatalog(query)
@@ -210,7 +184,8 @@ final class _NativeCatalogFeed {
               _emit(
                 _state.copyWith(
                   items: items,
-                  isInitialLoading: items.isEmpty && _state.isInitialLoading,
+                  isInitialLoading: false,
+                  isRefreshing: false,
                   clearError: true,
                 ),
               );
@@ -219,56 +194,13 @@ final class _NativeCatalogFeed {
               _emit(_state.copyWith(error: error, isInitialLoading: false));
             },
           );
-      unawaited(refresh());
     }
     yield _state;
     yield* _states.stream;
   }
 
   Future<void> refresh() {
-    final active = _activeRefresh;
-    if (active != null) return active;
-    final run = _refresh();
-    _activeRefresh = run;
-    return run.whenComplete(() {
-      if (identical(_activeRefresh, run)) _activeRefresh = null;
-    });
-  }
-
-  Future<void> _refresh() async {
-    if (_closed) return;
-    _emit(_state.copyWith(isRefreshing: true, clearError: true));
-    try {
-      final summaries = await _remoteApi.fetchCatalog(query);
-      if (_closed) return;
-      if (query.persistsMembership) {
-        await _localStore.replaceCatalog(query, summaries);
-        _emit(
-          _state.copyWith(
-            isInitialLoading: false,
-            isRefreshing: false,
-            clearError: true,
-          ),
-        );
-      } else {
-        _emit(
-          CatalogState(
-            items: summaries,
-            isInitialLoading: false,
-            isRefreshing: false,
-          ),
-        );
-      }
-    } catch (error) {
-      if (_closed) return;
-      _emit(
-        _state.copyWith(
-          isInitialLoading: false,
-          isRefreshing: false,
-          error: error,
-        ),
-      );
-    }
+    return Future<void>.value();
   }
 
   void _emit(CatalogState next) {

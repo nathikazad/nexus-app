@@ -127,7 +127,10 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       _storeSummary(remote.document, deleted: remote.deleted);
       changed = true;
     }
-    if (changed) _notify();
+    if (changed) {
+      _rebuildDefaultCatalogs();
+      _notify();
+    }
   }
 
   @override
@@ -259,6 +262,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     if (saved.key.remoteId != null) {
       _storeSummary(saved.document, deleted: saved.deletedLocally);
     }
+    _rebuildDefaultCatalogs();
     if (existingOperation != null) {
       _operations.remove(existingOperation.operationId);
     }

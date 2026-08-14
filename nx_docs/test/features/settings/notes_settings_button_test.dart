@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +14,7 @@ import 'package:nx_docs/data/remote/fake/fake_notes_remote_api.dart';
 import 'package:nx_docs/domain/document/document.dart';
 import 'package:nx_docs/features/editor/document_text_scale.dart';
 import 'package:nx_docs/features/settings/notes_settings_button.dart';
+import 'package:nx_offline/nx_offline.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -114,6 +117,49 @@ void main() {
 
     expect(refreshes, 1);
     expect(find.text('Library refreshed.'), findsOneWidget);
+  });
+
+  testWidgets('sync button is disabled while another sync is running', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      AppDarkModeNotifier.preferenceKey: false,
+    });
+    final statuses = StreamController<SyncStatus>(sync: true);
+    addTearDown(statuses.close);
+    var refetches = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          documentSyncStatusProvider.overrideWith((ref) => statuses.stream),
+          appVersionInfoProvider.overrideWith(
+            (ref) async => const AppVersionInfo(shorebirdAvailable: false),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: _SettingsHarness(onSyncNow: () async => refetches++),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('notes-settings-button')));
+    await tester.pumpAndSettle();
+    statuses.add(
+      const SyncStatus(activity: SyncActivity.syncing, pendingCount: 1),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('sync-now-button')));
+
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('sync-now-button')),
+    );
+    expect(button.onPressed, isNull);
+    expect(find.text('Synchronizing…'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('sync-now-button')));
+    await tester.pump();
+    expect(refetches, 0);
   });
 
   testWidgets('default web refresh reads the server repository', (

@@ -125,6 +125,27 @@ void main() {
   });
 
   test(
+    'different document demands are batched into one remote request',
+    () async {
+      for (var id = 3; id <= 15; id++) {
+        remote.replaceRemote(
+          offlineTestDocument(id: id, title: 'Document $id'),
+        );
+      }
+
+      await Future.wait(<Future<void>>[
+        for (var id = 1; id <= 15; id++)
+          synchronizer.requestDocuments(<int>{id}),
+      ]);
+
+      expect(remote.syncCount, 1);
+      expect(remote.syncScopes.single, <int>{
+        for (var id = 1; id <= 15; id++) id,
+      });
+    },
+  );
+
+  test(
     'document opened during library sync reuses the library result',
     () async {
       final barrier = Completer<void>();

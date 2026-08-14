@@ -5,6 +5,7 @@ import 'package:nx_docs/composition/offline_providers.dart';
 import 'package:nx_docs/core/version/app_version_info.dart';
 import 'package:nx_docs/core/theme/app_theme.dart';
 import 'package:nx_docs/features/editor/document_text_scale.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 typedef LibrarySyncCallback = Future<void> Function();
 
@@ -64,7 +65,8 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
   var _failed = false;
 
   Future<void> _syncNow() async {
-    if (_refetching) return;
+    final status = ref.read(documentSyncStatusProvider).value;
+    if (_refetching || status?.activity == offline.SyncActivity.syncing) return;
     setState(() {
       _refetching = true;
       _resultMessage = null;
@@ -98,6 +100,9 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
     final isDark = ref.watch(appDarkModeProvider);
     final documentTextScale = ref.watch(documentTextScaleProvider);
     final versionInfo = ref.watch(appVersionInfoProvider);
+    final syncStatus = ref.watch(documentSyncStatusProvider).value;
+    final syncInProgress =
+        _refetching || syncStatus?.activity == offline.SyncActivity.syncing;
     return AlertDialog(
       title: const Text('Settings'),
       content: ConstrainedBox(
@@ -186,15 +191,16 @@ class _NotesSettingsDialogState extends ConsumerState<_NotesSettingsDialog> {
               const SizedBox(height: 12),
               FilledButton.tonalIcon(
                 key: const Key('sync-now-button'),
-                onPressed: _refetching ? null : _syncNow,
-                icon: _refetching
+                onPressed: syncInProgress ? null : _syncNow,
+                icon: syncInProgress
                     ? const SizedBox.square(
                         dimension: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh),
                 label: Text(
-                  _refetching
+                  _refetching ||
+                          syncStatus?.activity == offline.SyncActivity.syncing
                       ? 'Synchronizing…'
                       : widget.offlineEnabled
                       ? 'Sync now'

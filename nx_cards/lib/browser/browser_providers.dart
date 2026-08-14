@@ -98,9 +98,9 @@ final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
 
 final cardsLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
   if (!ref.watch(cardsOfflineEnabledProvider)) return null;
-  final workspace = ref.watch(cardWorkspaceProvider);
-  if (workspace == null) return null;
-  return synchronizeWorkspace(workspace.syncLibrary);
+  final synchronizer = ref.watch(cardLibrarySynchronizerProvider);
+  if (synchronizer == null) return null;
+  return (reason) => synchronizer.syncLibrary(reason: reason);
 });
 
 void invalidateCardsData(Ref ref) {

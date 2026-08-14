@@ -169,7 +169,7 @@ final class NativeCardLibrary implements CardWorkspace {
   Future<void> syncLibrary() => _synchronizer.syncLibrary();
 
   @override
-  Future<void> close() async {}
+  Future<void> close() => _synchronizer.close();
 }
 
 // ignore_for_file: prefer_initializing_formals

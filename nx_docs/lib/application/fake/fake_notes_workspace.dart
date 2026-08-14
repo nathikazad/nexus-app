@@ -6,6 +6,7 @@ import 'package:nx_docs/domain/catalog/catalog_query.dart';
 import 'package:nx_docs/domain/catalog/catalog_state.dart';
 import 'package:nx_docs/domain/document/document.dart';
 import 'package:nx_docs/domain/document/document_summary.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 final class FakeNotesWorkspace implements NotesWorkspace {
   FakeNotesWorkspace({Iterable<NxDocument> documents = const <NxDocument>[]})
@@ -99,6 +100,11 @@ final class FakeNotesWorkspace implements NotesWorkspace {
   }
 
   @override
+  Future<void> ensureDocumentAvailable(int documentId) {
+    return openDocument(documentId).refresh();
+  }
+
+  @override
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
@@ -150,7 +156,9 @@ final class FakeNotesWorkspace implements NotesWorkspace {
   }
 
   @override
-  Future<void> syncLibrary() async {
+  Future<void> syncLibrary({
+    offline.SyncReason reason = offline.SyncReason.manual,
+  }) async {
     uploadCount += 1;
   }
 

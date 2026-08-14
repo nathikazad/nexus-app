@@ -16,23 +16,25 @@ final class CardLibrarySynchronizer {
     CardAudioRepository? audioRepository,
   }) : _localStore = localStore,
        _transport = transport,
-       _uploader = uploader,
-       _audioRepository = audioRepository;
+       _audioRepository = audioRepository {
+    _supervisor = SyncSupervisor<int>(
+      reconciler: _CardPullReconciler(
+        localStore: localStore,
+        requireTransport: _requireTransport,
+        afterPull: () => unawaited(prefetchAudio()),
+      ),
+      prepare: uploader?.uploadPending,
+      coalescingWindow: Duration.zero,
+    );
+  }
 
   final LocalCardsStore _localStore;
   final CardsSyncTransport? _transport;
-  final CardsUploader? _uploader;
   final CardAudioRepository? _audioRepository;
-  final ReconciliationCoordinator<int, void> _runs =
-      ReconciliationCoordinator<int, void>();
+  late final SyncSupervisor<int> _supervisor;
 
-  Future<void> syncLibrary() => _runs.runFull(_syncLibraryOnce);
-
-  Future<void> _syncLibraryOnce() async {
-    final transport = _requireTransport();
-    await _uploader?.uploadPending();
-    await _localStore.applyCardSnapshot(await transport.syncCards());
-    unawaited(prefetchAudio());
+  Future<void> syncLibrary({SyncReason reason = SyncReason.manual}) {
+    return _supervisor.requestFull(reason);
   }
 
   CardsSyncTransport _requireTransport() {
@@ -77,4 +79,29 @@ final class CardLibrarySynchronizer {
       }
     }
   }
+
+  Future<void> close() => _supervisor.close();
+}
+
+final class _CardPullReconciler implements PullReconciler<int> {
+  const _CardPullReconciler({
+    required LocalCardsStore localStore,
+    required CardsSyncTransport Function() requireTransport,
+    required void Function() afterPull,
+  }) : _localStore = localStore,
+       _requireTransport = requireTransport,
+       _afterPull = afterPull;
+
+  final LocalCardsStore _localStore;
+  final CardsSyncTransport Function() _requireTransport;
+  final void Function() _afterPull;
+
+  @override
+  Future<void> pullAll() async {
+    await _localStore.applyCardSnapshot(await _requireTransport().syncCards());
+    _afterPull();
+  }
+
+  @override
+  Future<void> pullKeys(Set<int> keys) => pullAll();
 }
