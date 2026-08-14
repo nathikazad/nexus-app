@@ -351,13 +351,30 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     _rememberPreferences();
   }
 
+  bool get _allRecallStatesSelected =>
+      _recallStates.length == RecallCardState.values.length;
+
   void _toggleRecallState(RecallCardState state) {
     setState(() {
-      if (_recallStates.contains(state)) {
+      if (_allRecallStatesSelected) {
+        _recallStates
+          ..clear()
+          ..add(state);
+      } else if (_recallStates.contains(state)) {
         if (_recallStates.length > 1) _recallStates.remove(state);
       } else {
         _recallStates.add(state);
       }
+      _resetCount();
+    });
+    _rememberPreferences();
+  }
+
+  void _selectAllRecallStates() {
+    setState(() {
+      _recallStates
+        ..clear()
+        ..addAll(RecallCardState.values);
       _resetCount();
     });
     _rememberPreferences();
@@ -606,12 +623,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
     ref.watch(reviewProgressionSettingsProvider);
-    final maxCount = _isBookStudy
-        ? _bookCandidates.length
-        : _mode == StudyMode.study &&
-              _studyPresentation == StudyPresentation.draw
-        ? _drawCandidates.length
-        : _candidates.length;
+    final maxCount = _availableCount;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: ListView(
@@ -913,6 +925,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         spacing: 8,
         runSpacing: 8,
         children: [
+          FilterChip(
+            label: const Text('All'),
+            selected: _allRecallStatesSelected,
+            onSelected: (_) => _selectAllRecallStates(),
+          ),
           for (final state in RecallCardState.values)
             FilterChip(
               label: Text(switch (state) {
@@ -921,7 +938,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 RecallCardState.retained => 'Retained',
                 RecallCardState.newCard => 'New',
               }),
-              selected: _recallStates.contains(state),
+              selected:
+                  !_allRecallStatesSelected && _recallStates.contains(state),
               onSelected: (_) => _toggleRecallState(state),
             ),
         ],

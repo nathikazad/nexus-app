@@ -61,7 +61,7 @@ void main() {
     expect(find.text('Standard'), findsOneWidget);
     expect(find.text('Fast'), findsOneWidget);
     expect(find.text('Choose the order'), findsNothing);
-    expect(find.text('All'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'All'), findsOneWidget);
     expect(find.text('Due'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('What should be in front?')).dy,
@@ -139,7 +139,7 @@ void main() {
     expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Retained'), findsOneWidget);
-    expect(find.text('All'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'All'), findsOneWidget);
     expect(find.text('Due'), findsOneWidget);
     expect(find.text('How many cards?'), findsOneWidget);
     expect(find.text('Choose the order'), findsNothing);
@@ -302,6 +302,18 @@ void main() {
     expect(find.widgetWithText(FilterChip, 'Relearning'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Retained'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'New'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'All'))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'New'))
+          .selected,
+      isFalse,
+    );
     expect(find.text('1 out of 2 cards are due now'), findsOneWidget);
 
     await tester.ensureVisible(find.widgetWithText(FilterChip, 'Past'));
@@ -312,13 +324,33 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilterChip, 'New'));
     await tester.pump();
-    expect(find.text('3 available'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'All'))
+          .selected,
+      isFalse,
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'New'))
+          .selected,
+      isTrue,
+    );
+
+    await tester.tap(find.widgetWithText(FilterChip, 'Learning'));
+    await tester.pump();
+    expect(find.text('2 available'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Due'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Due'));
     await tester.pump();
-    expect(find.text('2 out of 3 cards are due now'), findsOneWidget);
+    expect(find.text('1 out of 2 cards are due now'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilterChip, 'All'));
+    await tester.pump();
     expect(find.text('2 available'), findsOneWidget);
   });
 

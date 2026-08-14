@@ -2,3 +2,4 @@
 library;
 
 export 'settings_page.dart';
+export 'appearance.dart';

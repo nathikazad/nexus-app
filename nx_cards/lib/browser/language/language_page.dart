@@ -135,17 +135,20 @@ class _LanguageCategoryCard extends StatelessWidget {
         children: [
           Text(
             '$value',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'monospace',
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: RecallColors.ink,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 10, color: RecallColors.faint),
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -181,14 +184,20 @@ class _LanguageCategoryCard extends StatelessWidget {
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: RecallColors.soft,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: RecallColors.line),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                            ),
                           ),
                           child: Icon(
                             categoryIcon(category),
                             size: 20,
-                            color: RecallColors.ink,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(width: 11),
@@ -294,6 +303,27 @@ class LanguageCategoryPage extends ConsumerWidget {
             now,
             historyWindow: historyWindow,
           );
+          if (category == 'Phrase') {
+            final pastWordIds = <int>{
+              for (final card in data.cards)
+                if (card.isWordCard &&
+                    card.learningStatus == LearningStatus.learnt)
+                  card.id,
+            };
+            final existingOrder = <int, int>{
+              for (final (index, card) in notStarted.indexed) card.id: index,
+            };
+            int pastLinkCount(StudyCard card) =>
+                card.linkedWordIds.intersection(pastWordIds).length;
+            notStarted.sort((left, right) {
+              final byPastLinks = pastLinkCount(
+                right,
+              ).compareTo(pastLinkCount(left));
+              return byPastLinks != 0
+                  ? byPastLinks
+                  : existingOrder[left.id]!.compareTo(existingOrder[right.id]!);
+            });
+          }
           final queue = data.studyQueue(
             DateTime.now(),
             studyCategory: category,

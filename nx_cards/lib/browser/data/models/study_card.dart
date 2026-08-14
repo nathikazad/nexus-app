@@ -14,8 +14,10 @@ class StudyCard {
     this.modelTypeName,
     this.sourceBookId,
     this.sourceBookName,
+    Set<int> linkedWordIds = const <int>{},
     this.updatedAt,
   }) : schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
+       linkedWordIds = Set<int>.unmodifiable(linkedWordIds),
        tags = Map<String, List<String>>.unmodifiable({
          for (final entry in tags.entries)
            entry.key: List<String>.unmodifiable(entry.value),
@@ -71,6 +73,7 @@ class StudyCard {
   final String? modelTypeName;
   final int? sourceBookId;
   final String? sourceBookName;
+  final Set<int> linkedWordIds;
 
   /// Server update time is deliberately retained for future local/remote
   /// conflict handling.
@@ -120,6 +123,7 @@ class StudyCard {
     Map<StudyCue, List<CardReview>>? reviewHistory,
     bool? suspended,
     LearningStatus? learningStatus,
+    Set<int>? linkedWordIds,
     DateTime? updatedAt,
   }) {
     return StudyCard(
@@ -133,6 +137,7 @@ class StudyCard {
       modelTypeName: modelTypeName,
       sourceBookId: sourceBookId,
       sourceBookName: sourceBookName,
+      linkedWordIds: linkedWordIds ?? this.linkedWordIds,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
+import 'package:nx_cards/settings/appearance.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -10,22 +11,32 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(reviewProgressionSettingsProvider);
+    final appearance = ref.watch(appearanceProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Review settings')),
       body: settings.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
             Center(child: Text('Could not load settings: $error')),
-        data: (value) => _SettingsForm(initial: value),
+        data: (value) => appearance.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, _) => _SettingsForm(
+            initial: value,
+            initialAppearance: AppAppearance.system,
+          ),
+          data: (appearance) =>
+              _SettingsForm(initial: value, initialAppearance: appearance),
+        ),
       ),
     );
   }
 }
 
 class _SettingsForm extends ConsumerStatefulWidget {
-  const _SettingsForm({required this.initial});
+  const _SettingsForm({required this.initial, required this.initialAppearance});
 
   final ReviewProgressionSettings initial;
+  final AppAppearance initialAppearance;
 
   @override
   ConsumerState<_SettingsForm> createState() => _SettingsFormState();
@@ -33,6 +44,7 @@ class _SettingsForm extends ConsumerStatefulWidget {
 
 class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late bool _automaticProgression = widget.initial.automaticProgressionEnabled;
+  late AppAppearance _appearance = widget.initialAppearance;
   late int _historyWindow = widget.initial.historyWindow;
   late int _pastPercentage = widget.initial.moveToPastPercentage;
   late int _currentPercentage = widget.initial.moveToCurrentPercentage;
@@ -43,6 +55,11 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   bool _syncFailed = false;
 
   bool get _valid => _currentPercentage < _pastPercentage;
+
+  Future<void> _selectAppearance(AppAppearance appearance) async {
+    setState(() => _appearance = appearance);
+    await ref.read(appearanceProvider.notifier).setAppearance(appearance);
+  }
 
   Future<void> _save() async {
     if (!_valid || _saving) return;
@@ -97,6 +114,46 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Text(
+                'Appearance',
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                'Choose how Nx Cards looks on this device.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _SettingsCard(
+                child: SegmentedButton<AppAppearance>(
+                  segments: const [
+                    ButtonSegment(
+                      value: AppAppearance.system,
+                      icon: Icon(Icons.brightness_auto_outlined),
+                      label: Text('System'),
+                    ),
+                    ButtonSegment(
+                      value: AppAppearance.light,
+                      icon: Icon(Icons.light_mode_outlined),
+                      label: Text('Light'),
+                    ),
+                    ButtonSegment(
+                      value: AppAppearance.dark,
+                      icon: Icon(Icons.dark_mode_outlined),
+                      label: Text('Dark'),
+                    ),
+                  ],
+                  selected: {_appearance},
+                  onSelectionChanged: (selection) =>
+                      _selectAppearance(selection.single),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 18),
               const Text(
                 'Review progression',
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
@@ -313,10 +370,10 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
+    color: Theme.of(context).colorScheme.surface,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
-      side: const BorderSide(color: RecallColors.line),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
     ),
     clipBehavior: Clip.antiAlias,
     child: Padding(padding: const EdgeInsets.all(18), child: child),

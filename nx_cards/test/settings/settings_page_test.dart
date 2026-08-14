@@ -6,8 +6,45 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/settings/settings_page.dart';
+import 'package:nx_cards/settings/appearance.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
+  testWidgets('appearance selection is persisted immediately', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+        ],
+        child: const MaterialApp(home: SettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Appearance'), findsOneWidget);
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SegmentedButton<AppAppearance>>(
+            find.byType(SegmentedButton<AppAppearance>),
+          )
+          .selected,
+      <AppAppearance>{AppAppearance.dark},
+    );
+    expect(
+      SharedPreferences.getInstance().then(
+        (preferences) => preferences.getString('nx_cards.appearance.v1'),
+      ),
+      completion('dark'),
+    );
+  });
+
   testWidgets('full sync reports downloaded card count', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

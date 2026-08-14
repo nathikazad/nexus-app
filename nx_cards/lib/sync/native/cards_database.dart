@@ -13,6 +13,8 @@ class LocalStudyCards extends Table {
   TextColumn get transliteration => text().nullable()();
   TextColumn get audioUrl => text().nullable()();
   TextColumn get examplesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get linkedWordIdsJson =>
+      text().withDefault(const Constant('[]'))();
   TextColumn get tagsJson => text()();
   TextColumn get learningStatus =>
       text().withDefault(const Constant('not_started'))();
@@ -36,7 +38,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -100,6 +102,12 @@ class CardsDatabase extends _$CardsDatabase {
       if (from < 8) {
         await migrator.alterTable(TableMigration(localStudyCards));
         await customStatement('DROP TABLE IF EXISTS local_card_decks');
+      }
+      if (from < 9) {
+        await migrator.addColumn(
+          localStudyCards,
+          localStudyCards.linkedWordIdsJson,
+        );
       }
     },
   );

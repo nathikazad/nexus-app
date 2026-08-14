@@ -15,6 +15,7 @@ import shutil
 import subprocess
 from typing import Any, Iterable, Mapping, Protocol, Sequence
 import urllib.request
+import urllib.error
 import uuid
 
 
@@ -1193,7 +1194,32 @@ class BookImporter:
             wrapper,
             [ids[int(chapter["number"])] for chapter in manifest["chapters"]],
         )
-        self.client.set_model(payload)
+        try:
+            self.client.set_model(payload)
+        except urllib.error.HTTPError as error:
+            if error.code != 413:
+                raise
+            attributes = {
+                item["key"]: item for item in payload.get("attributes", [])
+            }
+            self.client.set_model(
+                {
+                    "id": payload["id"],
+                    "description": payload["description"],
+                    "attributes": [attributes["document"]],
+                }
+            )
+            self.client.set_model(
+                {
+                    "id": payload["id"],
+                    "attributes": [
+                        attributes["json_document"],
+                        attributes["pinned"],
+                        attributes["publish"],
+                    ],
+                    "relations": payload["relations"],
+                }
+            )
         updated = self._get_book(manifest)
         preserved_fields = (
             "name",

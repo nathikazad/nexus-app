@@ -129,7 +129,7 @@ class _HomeScaffold extends ConsumerWidget {
       data: (data) => _SourcesDashboard(data: data),
     );
     return Scaffold(
-      backgroundColor: RecallColors.soft,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: AppBar(
         title: const Text(
           'Library',

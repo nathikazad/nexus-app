@@ -47,8 +47,21 @@ StudyCard? studyCardFromModel(
     modelTypeName: modelTypeName,
     sourceBookId: book?.id,
     sourceBookName: book?.name,
+    linkedWordIds: _linkedWordIds(model),
     updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
   );
+}
+
+Set<int> _linkedWordIds(Model model) {
+  if (model.modelType?.name != phraseCardModelType) return const <int>{};
+  return <int>{
+    for (final relation in model.relationsList ?? const <Relation>[])
+      if ((relation.relationName == wordPhrasesRelation ||
+              relation.relationName == verbPhraseConjugationRelation) &&
+          (relation.modelType == wordCardModelType ||
+              relation.modelType == verbCardModelType))
+        relation.modelId,
+  };
 }
 
 List<LanguageExample> _languageExamplesFromPhraseRelations(

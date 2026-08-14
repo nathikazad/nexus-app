@@ -381,6 +381,62 @@ void main() {
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
     expect(stateOrder, orderedEquals([...stateOrder]..sort()));
   });
+
+  testWidgets('future phrases prioritize links to past words', (tester) async {
+    const initial = CardSchedule.initial(enabled: true);
+    final cards = <StudyCard>[
+      _word(id: 1, learningStatus: LearningStatus.learnt, schedule: initial),
+      _word(id: 2, learningStatus: LearningStatus.learnt, schedule: initial),
+      _word(id: 3, learningStatus: LearningStatus.learning, schedule: initial),
+      _word(
+        id: 101,
+        learningStatus: LearningStatus.notStarted,
+        schedule: initial,
+        category: 'Phrase',
+        modelTypeName: 'Phrase',
+        linkedWordIds: const <int>{3},
+      ),
+      _word(
+        id: 102,
+        learningStatus: LearningStatus.notStarted,
+        schedule: initial,
+        category: 'Phrase',
+        modelTypeName: 'Phrase',
+        linkedWordIds: const <int>{1, 2, 3},
+      ),
+      _word(
+        id: 103,
+        learningStatus: LearningStatus.notStarted,
+        schedule: initial,
+        category: 'Phrase',
+        modelTypeName: 'Phrase',
+        linkedWordIds: const <int>{1},
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(cards: cards)),
+          ),
+        ],
+        child: const MaterialApp(
+          home: LanguageCategoryPage(category: 'Phrase'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Future  3'));
+    await tester.pumpAndSettle();
+
+    final phraseOrder = <String>[
+      'word 102',
+      'word 103',
+      'word 101',
+    ].map((label) => tester.getCenter(find.text(label)).dy).toList();
+    expect(phraseOrder, orderedEquals(<double>[...phraseOrder]..sort()));
+  });
 }
 
 final class _RecordingCardLibrary implements CardLibrary {
@@ -403,6 +459,7 @@ StudyCard _word({
   String category = 'Noun',
   String? modelTypeName,
   List<int> recallRatings = const <int>[],
+  Set<int> linkedWordIds = const <int>{},
 }) => StudyCard(
   id: id,
   content: LanguageCardContent(
@@ -440,6 +497,7 @@ StudyCard _word({
           'Word Category': [category],
         },
   modelTypeName: modelTypeName ?? (category == 'Script' ? 'Script' : 'Word'),
+  linkedWordIds: linkedWordIds,
 );
 
 StudyCard _bookCard(int id) => StudyCard(

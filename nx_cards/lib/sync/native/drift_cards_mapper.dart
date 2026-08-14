@@ -35,6 +35,7 @@ final class DriftCardsMapper {
               : const <Object?>[],
         ),
       ),
+      linkedWordIdsJson: Value(jsonEncode(card.linkedWordIds.toList()..sort())),
       tagsJson: jsonEncode(card.tags),
       learningStatus: Value(card.learningStatus.storageValue),
       dueAt: Value(card.nextDueAt),
@@ -76,9 +77,16 @@ final class DriftCardsMapper {
       modelTypeName: row.modelType,
       sourceBookId: row.sourceBookId,
       sourceBookName: row.sourceBookName,
+      linkedWordIds: _intSet(row.linkedWordIdsJson),
       updatedAt: row.updatedAt?.toUtc(),
     );
   }
+}
+
+Set<int> _intSet(String raw) {
+  final value = jsonDecode(raw);
+  if (value is! List) return const <int>{};
+  return value.whereType<num>().map((item) => item.toInt()).toSet();
 }
 
 Object? _cueNode(Map<String, dynamic> schedule, StudyCue cue) {

@@ -185,7 +185,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
         children: [
           Positioned.fill(
             child: ColoredBox(
-              color: RecallColors.ink,
+              color: Theme.of(context).colorScheme.inverseSurface,
               child: Stack(
                 children: [
                   if (widget.previousStatus case final status?)
@@ -221,8 +221,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: RecallColors.line),
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Row(
@@ -275,13 +277,17 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: RecallColors.ink,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'DUE',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onInverseSurface,
                                       fontFamily: 'monospace',
                                       fontSize: 8,
                                       fontWeight: FontWeight.w700,
@@ -296,10 +302,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(
+                    Icon(
                       Icons.drag_indicator,
                       size: 17,
-                      color: RecallColors.faint,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ],
                 ),

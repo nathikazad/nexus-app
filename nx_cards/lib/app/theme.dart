@@ -82,6 +82,73 @@ ThemeData buildRecallTheme() {
   );
 }
 
+ThemeData buildRecallDarkTheme() {
+  const background = Color(0xff101012);
+  const surface = Color(0xff18181b);
+  const ink = Color(0xfff4f4f5);
+  const line = Color(0xff3f3f46);
+  const soft = Color(0xff27272a);
+  final base = ThemeData(
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xffa78bfa),
+      brightness: Brightness.dark,
+      surface: surface,
+    ),
+    useMaterial3: true,
+  );
+  return base.copyWith(
+    scaffoldBackgroundColor: background,
+    dividerColor: line,
+    textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: surface,
+      foregroundColor: ink,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: soft,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: line),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: line),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: ink),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: line),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: ink,
+        foregroundColor: background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: ink,
+        side: const BorderSide(color: line),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+    ),
+  );
+}
+
 TextStyle get monoLabel => const TextStyle(
   fontFamily: 'monospace',
   fontSize: 11,

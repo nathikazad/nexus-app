@@ -191,5 +191,12 @@ void main() {
             as LanguageCardContent;
 
     expect(content.examples, isEmpty);
+    expect(
+      studyCardFromModel(
+        phrase,
+        relatedModels: <int, Model>{11: word},
+      )!.linkedWordIds,
+      <int>{11},
+    );
   });
 }
