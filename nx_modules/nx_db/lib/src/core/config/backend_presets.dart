@@ -42,6 +42,31 @@ class BackendUrls {
     required this.imageHttp,
   });
 
+  /// Builds the standard Nexus routes exposed by Caddy from one HTTP origin.
+  factory BackendUrls.fromOrigin(String origin) {
+    final uri = Uri.parse(origin);
+    if ((uri.scheme != 'http' && uri.scheme != 'https') ||
+        !uri.hasAuthority ||
+        (uri.path.isNotEmpty && uri.path != '/') ||
+        uri.hasQuery ||
+        uri.hasFragment) {
+      throw ArgumentError.value(origin, 'origin', 'Must be an HTTP(S) origin');
+    }
+
+    final httpOrigin = uri.replace(path: '').toString();
+    final wsOrigin = uri
+        .replace(
+          scheme: uri.scheme == 'https' ? 'wss' : 'ws',
+          path: '',
+        )
+        .toString();
+    return BackendUrls(
+      graphqlHttp: '$httpOrigin/graphql',
+      sockWs: '$wsOrigin/realtime',
+      imageHttp: httpOrigin,
+    );
+  }
+
   final String graphqlHttp;
   final String sockWs;
   final String imageHttp;
@@ -66,22 +91,10 @@ BackendUrls resolve(BackendPreset p) {
     case BackendPreset.localhost:
       return kIntegrationTestBackendUrls;
     case BackendPreset.piLan:
-      return const BackendUrls(
-        graphqlHttp: 'http://10.0.0.156/graphql',
-        sockWs: 'ws://10.0.0.156/realtime',
-        imageHttp: 'http://10.0.0.156',
-      );
+      return BackendUrls.fromOrigin('http://10.0.0.156');
     case BackendPreset.piTailscale:
-      return const BackendUrls(
-        graphqlHttp: 'http://100.108.43.37/graphql',
-        sockWs: 'ws://100.108.43.37/realtime',
-        imageHttp: 'http://100.108.43.37',
-      );
+      return BackendUrls.fromOrigin('http://100.108.43.37');
     case BackendPreset.piWan:
-      return const BackendUrls(
-        graphqlHttp: 'https://nexus.nathikazad.com/graphql',
-        sockWs: 'wss://nexus.nathikazad.com/realtime',
-        imageHttp: 'https://nexus.nathikazad.com',
-      );
+      return BackendUrls.fromOrigin('https://nexus.nathikazad.com');
   }
 }

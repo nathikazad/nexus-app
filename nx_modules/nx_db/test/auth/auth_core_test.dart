@@ -52,6 +52,14 @@ void main() {
       expect(tailscale.imageHttp, 'http://100.108.43.37');
     });
 
+    test('standard Caddy routes derive from one origin', () {
+      final urls = BackendUrls.fromOrigin('https://example.com/');
+
+      expect(urls.graphqlHttp, 'https://example.com/graphql');
+      expect(urls.sockWs, 'wss://example.com/realtime');
+      expect(urls.imageHttp, 'https://example.com');
+    });
+
     test('CR11.5 login persists prefs', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
