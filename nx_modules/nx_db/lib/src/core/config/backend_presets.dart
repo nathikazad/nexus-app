@@ -15,9 +15,9 @@ enum BackendPreset {
 
   /// Same URLs as [kIntegrationTestBackendUrls]: GraphQL on this host (e.g. Docker `-p 5001:5001`).
   localhost('localhost', 'Local (127.0.0.1 / Docker)'),
-  piLan('pi_lan', 'Pi (LAN)'),
-  piTailscale('pi_tailscale', 'Pi (Tailscale)'),
-  piWan('pi_wan', 'Pi (WAN)');
+  piLan('pi_lan', 'Pi Caddy (LAN)'),
+  piTailscale('pi_tailscale', 'Pi Caddy (Tailscale)'),
+  piWan('pi_wan', 'Pi Caddy (WAN)');
 
   const BackendPreset(this.key, this.label);
 
@@ -67,20 +67,20 @@ BackendUrls resolve(BackendPreset p) {
       return kIntegrationTestBackendUrls;
     case BackendPreset.piLan:
       return const BackendUrls(
-        graphqlHttp: 'http://10.0.0.156:5001/graphql',
-        sockWs: 'ws://10.0.0.156:8002',
-        imageHttp: 'http://10.0.0.156:8001',
+        graphqlHttp: 'http://10.0.0.156/graphql',
+        sockWs: 'ws://10.0.0.156/realtime',
+        imageHttp: 'http://10.0.0.156',
       );
     case BackendPreset.piTailscale:
       return const BackendUrls(
-        graphqlHttp: 'http://100.108.43.37:5001/graphql',
-        sockWs: 'ws://100.108.43.37:8002',
-        imageHttp: 'http://100.108.43.37:8001',
+        graphqlHttp: 'http://100.108.43.37/graphql',
+        sockWs: 'ws://100.108.43.37/realtime',
+        imageHttp: 'http://100.108.43.37',
       );
     case BackendPreset.piWan:
       return const BackendUrls(
-        graphqlHttp: 'https://graphql.nathikazad.com/graphql',
-        sockWs: 'wss://socket.nathikazad.com',
+        graphqlHttp: 'https://nexus.nathikazad.com/graphql',
+        sockWs: 'wss://nexus.nathikazad.com/realtime',
         imageHttp: 'https://nexus.nathikazad.com',
       );
   }

@@ -39,12 +39,17 @@ void main() {
       }
     });
 
-    test('CR11.4b pi WAN splits GraphQL, socket, and HTTP hosts', () {
+    test('CR11.4b Pi presets use a single Caddy origin', () {
       final u = resolve(BackendPreset.piWan);
 
-      expect(u.graphqlHttp, 'https://graphql.nathikazad.com/graphql');
-      expect(u.sockWs, 'wss://socket.nathikazad.com');
+      expect(u.graphqlHttp, 'https://nexus.nathikazad.com/graphql');
+      expect(u.sockWs, 'wss://nexus.nathikazad.com/realtime');
       expect(u.imageHttp, 'https://nexus.nathikazad.com');
+
+      final tailscale = resolve(BackendPreset.piTailscale);
+      expect(tailscale.graphqlHttp, 'http://100.108.43.37/graphql');
+      expect(tailscale.sockWs, 'ws://100.108.43.37/realtime');
+      expect(tailscale.imageHttp, 'http://100.108.43.37');
     });
 
     test('CR11.5 login persists prefs', () async {
