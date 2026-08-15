@@ -349,7 +349,7 @@ class _FastRecallRowState extends State<_FastRecallRow> {
                       : Duration.zero,
                   curve: Curves.easeOutCubic,
                   transform: Matrix4.translationValues(_dragOffset, 0, 0),
-                  color: Colors.white,
+                  color: RecallPalette.of(context).surface,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onHorizontalDragStart: _canSwipe ? _startSwipe : null,

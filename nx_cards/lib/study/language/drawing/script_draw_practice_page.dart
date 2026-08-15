@@ -110,9 +110,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                     height: 148,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: RecallColors.soft,
+                      color: RecallPalette.of(context).soft,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: RecallColors.line),
+                      border: Border.all(color: RecallPalette.of(context).line),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -133,11 +133,11 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                     key: const ValueKey<String>(
                                       'draw-practice-letter',
                                     ),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 82,
                                       height: 1,
                                       fontWeight: FontWeight.w500,
-                                      color: RecallColors.ink,
+                                      color: RecallPalette.of(context).ink,
                                     ),
                                   ),
                                 ),

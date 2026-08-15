@@ -276,7 +276,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         (card) =>
             card.content is LanguageCardContent &&
             !card.suspended &&
-            _learningStatuses.contains(card.learningStatus),
+            _matchesRecallFilters(card),
       )
       .toList(growable: false);
 
@@ -435,11 +435,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     _rememberPreferences();
   }
 
-  void _selectOrder(StudyOrder order) {
-    setState(() => _order = order);
-    _rememberPreferences();
-  }
-
   void _selectCount(double count) {
     setState(() => _count = count.round());
     _rememberPreferences();
@@ -565,7 +560,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 eligibleIds.contains(card.id) &&
                 card.content is LanguageCardContent &&
                 !card.suspended &&
-                _learningStatuses.contains(card.learningStatus),
+                _matchesRecallFilters(card),
           )
           .toList(growable: true);
       if (_order == StudyOrder.shuffle) cards.shuffle(Random.secure());
@@ -752,22 +747,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       _SetupCard(
                         number: '02',
                         title: 'Which letters?',
-                        child: _learningStatusChoices(),
+                        child: _recallFilterChoices(),
                       ),
                       const SizedBox(height: 14),
                       _SetupCard(
                         number: '03',
-                        title: 'How many letters?',
+                        title: 'How many cards?',
                         child: _countControl(maxCount),
-                      ),
-                      const SizedBox(height: 14),
-                      _SetupCard(
-                        number: '04',
-                        title: 'Choose the order',
-                        child: _OrderControl(
-                          value: _order,
-                          onChanged: _selectOrder,
-                        ),
                       ),
                       const SizedBox(height: 22),
                       FilledButton.icon(
@@ -1067,23 +1053,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             ),
           ],
         );
-}
-
-class _OrderControl extends StatelessWidget {
-  const _OrderControl({required this.value, required this.onChanged});
-
-  final StudyOrder value;
-  final ValueChanged<StudyOrder> onChanged;
-
-  @override
-  Widget build(BuildContext context) => SegmentedButton<StudyOrder>(
-    segments: const [
-      ButtonSegment(value: StudyOrder.normal, label: Text('Normal')),
-      ButtonSegment(value: StudyOrder.shuffle, label: Text('Shuffle')),
-    ],
-    selected: {value},
-    onSelectionChanged: (selection) => onChanged(selection.single),
-  );
 }
 
 class _SetupCard extends StatelessWidget {

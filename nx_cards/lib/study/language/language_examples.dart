@@ -49,11 +49,12 @@ class _ExampleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final audioUrl = example.audioUrl;
+    final palette = RecallPalette.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: RecallColors.soft,
+        color: palette.soft,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: RecallColors.line),
+        border: Border.all(color: palette.line),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),

@@ -579,7 +579,7 @@ void main() {
     );
   });
 
-  testWidgets('script study offers drawing practice by learning status', (
+  testWidgets('script drawing reuses study sheet filters and card count', (
     tester,
   ) async {
     final learning = _scriptCard(
@@ -625,6 +625,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Which letters?'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'All'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Learning'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Relearning'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Retained'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'New'), findsOneWidget);
+    expect(find.text('Due'), findsOneWidget);
+    expect(find.text('How many cards?'), findsOneWidget);
+    expect(find.text('How many letters?'), findsNothing);
+    expect(find.text('Choose the order'), findsNothing);
     expect(find.text('1 available'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilterChip, 'Past'));
     await tester.pumpAndSettle();

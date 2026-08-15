@@ -157,21 +157,25 @@ class _RecallWordRecap extends StatelessWidget {
   final List<RecallRecapEntry> entries;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(13),
-      border: Border.all(color: RecallColors.line),
-    ),
-    child: Column(
-      children: [
-        for (var index = 0; index < entries.length; index++) ...[
-          if (index > 0) const Divider(height: 1),
-          _RecallWordRecapRow(entry: entries[index]),
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return DecoratedBox(
+      key: const ValueKey('recall-word-recap'),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: palette.line),
+      ),
+      child: Column(
+        children: [
+          for (var index = 0; index < entries.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            _RecallWordRecapRow(entry: entries[index]),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _RecallWordRecapRow extends StatelessWidget {

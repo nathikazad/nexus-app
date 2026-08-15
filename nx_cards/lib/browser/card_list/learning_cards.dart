@@ -43,9 +43,9 @@ class LearningCardsTab extends ConsumerWidget {
                 ? Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: RecallColors.soft,
+                      color: RecallPalette.of(context).soft,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: RecallColors.line),
+                      border: Border.all(color: RecallPalette.of(context).line),
                     ),
                     child: Text(
                       emptyText,

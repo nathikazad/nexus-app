@@ -28,11 +28,11 @@ class CardMetric extends StatelessWidget {
               const SizedBox(width: 5),
               Text(
                 '$value',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: RecallColors.ink,
+                  color: RecallPalette.of(context).ink,
                 ),
               ),
             ],

@@ -363,31 +363,30 @@ class _WordRecap extends StatelessWidget {
   final List<VoiceStudyRecapEntry> entries;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text('WORDS', style: monoLabel),
-      const SizedBox(height: 8),
-      Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: RecallColors.ink.withValues(alpha: 0.1)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            for (var index = 0; index < entries.length; index += 1) ...[
-              if (index > 0)
-                Divider(
-                  height: 1,
-                  color: RecallColors.ink.withValues(alpha: 0.1),
-                ),
-              _WordRecapRow(entry: entries[index]),
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('WORDS', style: monoLabel),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: palette.line),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              for (var index = 0; index < entries.length; index += 1) ...[
+                if (index > 0) Divider(height: 1, color: palette.line),
+                _WordRecapRow(entry: entries[index]),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _WordRecapRow extends StatelessWidget {
@@ -465,7 +464,7 @@ class _UsageRecap extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: RecallColors.ink.withValues(alpha: 0.045),
+      color: RecallPalette.of(context).soft,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
@@ -511,8 +510,9 @@ class _UsageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
     final style = TextStyle(
-      color: emphasized ? RecallColors.ink : RecallColors.muted,
+      color: emphasized ? palette.ink : palette.muted,
       fontWeight: emphasized ? FontWeight.w700 : FontWeight.w400,
     );
     return Row(
@@ -554,7 +554,7 @@ class _LatestTurn extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     decoration: BoxDecoration(
-      color: RecallColors.ink.withValues(alpha: 0.045),
+      color: RecallPalette.of(context).soft,
       borderRadius: BorderRadius.circular(10),
     ),
     child: Row(
@@ -664,7 +664,7 @@ class _AnswerReveal extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     decoration: BoxDecoration(
-      color: RecallColors.ink.withValues(alpha: 0.045),
+      color: RecallPalette.of(context).soft,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
@@ -695,24 +695,27 @@ class _AnswerValue extends StatelessWidget {
   final bool primary;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      SizedBox(width: 118, child: Text(label, style: monoLabel)),
-      Expanded(
-        child: Text(
-          value.isEmpty ? '—' : value,
-          textAlign: TextAlign.right,
-          style: TextStyle(
-            color: value.isEmpty ? RecallColors.muted : RecallColors.ink,
-            fontSize: primary ? 21 : 16,
-            height: 1.2,
-            fontWeight: primary ? FontWeight.w600 : FontWeight.w500,
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 118, child: Text(label, style: monoLabel)),
+        Expanded(
+          child: Text(
+            value.isEmpty ? '—' : value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              color: value.isEmpty ? palette.muted : palette.ink,
+              fontSize: primary ? 21 : 16,
+              height: 1.2,
+              fontWeight: primary ? FontWeight.w600 : FontWeight.w500,
+            ),
           ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _StatusOrb extends StatelessWidget {

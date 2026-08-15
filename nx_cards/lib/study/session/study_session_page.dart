@@ -173,8 +173,8 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                           value: (_index + 1) / widget.prompts.length,
                           minHeight: 4,
                           borderRadius: BorderRadius.circular(9),
-                          color: RecallColors.ink,
-                          backgroundColor: RecallColors.line,
+                          color: RecallPalette.of(context).ink,
+                          backgroundColor: RecallPalette.of(context).line,
                         ),
                         const SizedBox(height: 24),
                         Expanded(

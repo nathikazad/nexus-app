@@ -266,7 +266,7 @@ class _StudySheetRow extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.all(6),
                         style: IconButton.styleFrom(
-                          foregroundColor: RecallColors.ink,
+                          foregroundColor: RecallPalette.of(context).ink,
                         ),
                         onPressed: loading ? null : onAudio,
                         icon: loading

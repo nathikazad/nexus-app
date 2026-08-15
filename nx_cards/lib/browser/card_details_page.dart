@@ -189,50 +189,54 @@ class _CardContent extends StatelessWidget {
   final LanguageCardContent? languageContent;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: RecallColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: RecallColors.line),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _PlainField(label: 'Front', value: card.front),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 15),
-            child: Divider(height: 1),
-          ),
-          _PlainField(
-            label: languageContent == null ? 'Back' : card.language ?? 'Back',
-            value: card.back,
-            style: languageContent == null
-                ? null
-                : const TextStyle(
-                    fontSize: 28,
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
-                  ),
-          ),
-          if (languageContent != null &&
-              languageContent!.transliteration.isNotEmpty) ...[
-            const SizedBox(height: 5),
-            SelectableText(
-              languageContent!.transliteration,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.4,
-                fontStyle: FontStyle.italic,
-                color: RecallColors.faint,
-              ),
-            ),
-          ],
-        ],
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return DecoratedBox(
+      key: const ValueKey('card-content'),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.line),
       ),
-    ),
-  );
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PlainField(label: 'Front', value: card.front),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 15),
+              child: Divider(height: 1),
+            ),
+            _PlainField(
+              label: languageContent == null ? 'Back' : card.language ?? 'Back',
+              value: card.back,
+              style: languageContent == null
+                  ? null
+                  : const TextStyle(
+                      fontSize: 28,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
+                    ),
+            ),
+            if (languageContent != null &&
+                languageContent!.transliteration.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              SelectableText(
+                languageContent!.transliteration,
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.4,
+                  fontStyle: FontStyle.italic,
+                  color: RecallColors.faint,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PlainField extends StatelessWidget {
@@ -476,32 +480,35 @@ class _StatTile extends StatelessWidget {
   final String? detail;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: RecallColors.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: RecallColors.line),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label.toUpperCase(), style: monoLabel),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        if (detail case final detail?) ...[
-          const SizedBox(height: 2),
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(), style: monoLabel),
+          const SizedBox(height: 6),
           Text(
-            detail,
-            style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
+          if (detail case final detail?) ...[
+            const SizedBox(height: 2),
+            Text(
+              detail,
+              style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+            ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _ReviewHistory extends StatefulWidget {
@@ -529,6 +536,7 @@ class _ReviewHistoryState extends State<_ReviewHistory> {
   Widget build(BuildContext context) {
     final reviews = widget.reviews;
     final selected = reviews[_selectedIndex];
+    final palette = RecallPalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -551,9 +559,9 @@ class _ReviewHistoryState extends State<_ReviewHistory> {
           key: const ValueKey('review-history-graph'),
           padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
           decoration: BoxDecoration(
-            color: RecallColors.surface,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: RecallColors.line),
+            border: Border.all(color: palette.line),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -619,6 +627,7 @@ class _ReviewHistoryState extends State<_ReviewHistory> {
                             painter: _ReviewGraphPainter(
                               reviews: reviews,
                               selectedIndex: _selectedIndex,
+                              palette: palette,
                             ),
                           ),
                         ),
@@ -652,6 +661,7 @@ class _ReviewGraphPainter extends CustomPainter {
   const _ReviewGraphPainter({
     required this.reviews,
     required this.selectedIndex,
+    required this.palette,
   });
 
   static const height = 126.0;
@@ -663,6 +673,7 @@ class _ReviewGraphPainter extends CustomPainter {
 
   final List<CardReview> reviews;
   final int selectedIndex;
+  final RecallPalette palette;
 
   static double widthFor(int count) =>
       count <= 1 ? 64 : _padding * 2 + (count - 1) * _step;
@@ -673,7 +684,7 @@ class _ReviewGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final guide = Paint()
-      ..color = RecallColors.line
+      ..color = palette.line
       ..strokeWidth = 1;
     canvas.drawLine(Offset(0, yesY), Offset(size.width, yesY), guide);
     canvas.drawLine(Offset(0, noY), Offset(size.width, noY), guide);
@@ -690,7 +701,7 @@ class _ReviewGraphPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = RecallColors.faint
+        ..color = palette.faint
         ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke,
     );
@@ -703,7 +714,7 @@ class _ReviewGraphPainter extends CustomPainter {
           point,
           9,
           Paint()
-            ..color = RecallColors.soft
+            ..color = palette.soft
             ..style = PaintingStyle.fill,
         );
       }
@@ -711,14 +722,14 @@ class _ReviewGraphPainter extends CustomPainter {
         point,
         5.5,
         Paint()
-          ..color = success ? RecallColors.ink : RecallColors.surface
+          ..color = success ? palette.ink : palette.surface
           ..style = PaintingStyle.fill,
       );
       canvas.drawCircle(
         point,
         5.5,
         Paint()
-          ..color = RecallColors.ink
+          ..color = palette.ink
           ..strokeWidth = index == selectedIndex ? 2 : 1.4
           ..style = PaintingStyle.stroke,
       );
@@ -727,10 +738,10 @@ class _ReviewGraphPainter extends CustomPainter {
       final dateLabel = TextPainter(
         text: TextSpan(
           text: _monthDay(reviewedAt),
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'monospace',
             fontSize: 8,
-            color: RecallColors.faint,
+            color: palette.faint,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -746,7 +757,8 @@ class _ReviewGraphPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ReviewGraphPainter oldDelegate) =>
       oldDelegate.reviews != reviews ||
-      oldDelegate.selectedIndex != selectedIndex;
+      oldDelegate.selectedIndex != selectedIndex ||
+      oldDelegate.palette != palette;
 }
 
 class _SelectedReview extends StatelessWidget {
@@ -757,6 +769,7 @@ class _SelectedReview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final success = review.rating >= 3;
+    final palette = RecallPalette.of(context);
     final elapsed = Duration(seconds: review.elapsedSeconds);
     final next = Duration(seconds: review.scheduledSeconds);
     return Row(
@@ -766,16 +779,16 @@ class _SelectedReview extends StatelessWidget {
           height: 30,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: success ? RecallColors.ink : RecallColors.soft,
+            color: success ? palette.ink : palette.soft,
             shape: BoxShape.circle,
-            border: success ? null : Border.all(color: RecallColors.line),
+            border: success ? null : Border.all(color: palette.line),
           ),
           child: Text(
             success ? 'Y' : 'N',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: success ? Colors.white : RecallColors.muted,
+              color: success ? palette.background : palette.muted,
             ),
           ),
         ),
@@ -812,17 +825,20 @@ class _CardField extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: RecallColors.soft,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: RecallColors.line),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: _PlainField(label: label, value: value),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.soft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: _PlainField(label: label, value: value),
+      ),
+    );
+  }
 }
 
 class _StatusPill extends StatelessWidget {
@@ -832,24 +848,24 @@ class _StatusPill extends StatelessWidget {
   final IconData icon;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-    decoration: BoxDecoration(
-      color: RecallColors.soft,
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: RecallColors.faint),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: RecallColors.muted),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: palette.soft,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: palette.faint),
+          const SizedBox(width: 5),
+          Text(label, style: TextStyle(fontSize: 11, color: palette.muted)),
+        ],
+      ),
+    );
+  }
 }
 
 String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {

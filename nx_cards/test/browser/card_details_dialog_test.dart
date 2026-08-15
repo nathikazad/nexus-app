@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
+import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 
@@ -30,6 +31,28 @@ void main() {
       find.byKey(const ValueKey('review-direction-selector')),
       findsNothing,
     );
+  });
+
+  testWidgets('card content uses a readable dark surface', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        child: MaterialApp(
+          theme: buildRecallTheme(),
+          darkTheme: buildRecallDarkTheme(),
+          themeMode: ThemeMode.dark,
+          home: CardDetailsPage(card: _card()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final content = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('card-content')),
+    );
+    final decoration = content.decoration as BoxDecoration;
+    expect(decoration.color, const Color(0xff18181b));
+    expect(decoration.color, isNot(const Color(0xfff4f4f5)));
   });
 
   testWidgets('only offers recall directions with collected history', (

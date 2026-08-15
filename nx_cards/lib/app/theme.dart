@@ -17,6 +17,86 @@ class RecallColors {
   static const emerald = Color(0xff047857);
 }
 
+@immutable
+class RecallPalette extends ThemeExtension<RecallPalette> {
+  const RecallPalette({
+    required this.background,
+    required this.surface,
+    required this.ink,
+    required this.muted,
+    required this.faint,
+    required this.line,
+    required this.soft,
+  });
+
+  final Color background;
+  final Color surface;
+  final Color ink;
+  final Color muted;
+  final Color faint;
+  final Color line;
+  final Color soft;
+
+  static RecallPalette of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<RecallPalette>() ??
+        (theme.brightness == Brightness.dark ? _darkPalette : _lightPalette);
+  }
+
+  @override
+  RecallPalette copyWith({
+    Color? background,
+    Color? surface,
+    Color? ink,
+    Color? muted,
+    Color? faint,
+    Color? line,
+    Color? soft,
+  }) => RecallPalette(
+    background: background ?? this.background,
+    surface: surface ?? this.surface,
+    ink: ink ?? this.ink,
+    muted: muted ?? this.muted,
+    faint: faint ?? this.faint,
+    line: line ?? this.line,
+    soft: soft ?? this.soft,
+  );
+
+  @override
+  RecallPalette lerp(covariant RecallPalette? other, double t) {
+    if (other == null) return this;
+    return RecallPalette(
+      background: Color.lerp(background, other.background, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      ink: Color.lerp(ink, other.ink, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      faint: Color.lerp(faint, other.faint, t)!,
+      line: Color.lerp(line, other.line, t)!,
+      soft: Color.lerp(soft, other.soft, t)!,
+    );
+  }
+}
+
+const _lightPalette = RecallPalette(
+  background: RecallColors.background,
+  surface: RecallColors.surface,
+  ink: RecallColors.ink,
+  muted: RecallColors.muted,
+  faint: RecallColors.faint,
+  line: RecallColors.line,
+  soft: RecallColors.soft,
+);
+
+const _darkPalette = RecallPalette(
+  background: Color(0xff101012),
+  surface: Color(0xff18181b),
+  ink: Color(0xfff4f4f5),
+  muted: Color(0xffa1a1aa),
+  faint: Color(0xff71717a),
+  line: Color(0xff3f3f46),
+  soft: Color(0xff27272a),
+);
+
 ThemeData buildRecallTheme() {
   final base = ThemeData(
     brightness: Brightness.light,
@@ -28,6 +108,7 @@ ThemeData buildRecallTheme() {
     useMaterial3: true,
   );
   return base.copyWith(
+    extensions: const [_lightPalette],
     scaffoldBackgroundColor: RecallColors.background,
     dividerColor: RecallColors.line,
     textTheme: base.textTheme.apply(
@@ -98,6 +179,7 @@ ThemeData buildRecallDarkTheme() {
     useMaterial3: true,
   );
   return base.copyWith(
+    extensions: const [_darkPalette],
     scaffoldBackgroundColor: background,
     dividerColor: line,
     textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
