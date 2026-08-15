@@ -146,12 +146,12 @@ Expands each section in [`nx-db-test-cases.md`](./nx-db-test-cases.md): **what**
 
 ---
 
-## 11. Core — `db.dart`, `auth.dart`, `backend_presets.dart`, `cf_access.dart`
+## 11. Core — `db.dart`, `auth.dart`, `backend_presets.dart`
 
 | ID | What it tests | Input | Expected |
 |----|----------------|-------|----------|
 | CR11.1 | `createClient` HTTP header | Endpoint + userId | Default headers include `x-user-id` |
-| CR11.2 | CF HTTP→HTTPS | Host that `CfAccess.endpointNeedsCfAccess` treats as CF | `https://` used in client (mock or spy if needed) |
+| CR11.2 | Public HTTP→HTTPS | Known public host | `https://` used in client (mock or spy if needed) |
 | CR11.3 | `BackendPreset.fromKey` | Known keys | Non-null preset |
 | CR11.4 | `resolve(preset)` | Each preset in enum | `graphqlHttp`, `sockWs`, `imageHttp` non-empty strings |
 | CR11.5 | `AuthController.login` | Valid userId + preset | Writes `PrefsKeys` (userId, endpoint, preset, sock) |

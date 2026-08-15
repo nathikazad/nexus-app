@@ -4,13 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:nx_db/auth.dart';
 
 /// Same host normalization as [uploadExpenseSnapshot] (MCP `http_server.py`).
-String _normalizeImageBaseForCf(String url) {
-  var ep = url;
-  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
-    ep = ep.replaceFirst('http://', 'https://');
-  }
-  return ep;
-}
+String _normalizeImageBase(String url) => normalizeHttpEndpoint(url);
 
 /// POST `{imageBaseUrl}/teller/sync` — sync Teller transactions into timeline events.
 Future<TellerSyncResult> postTellerSync({
@@ -52,12 +46,9 @@ Future<TellerSyncResult> _postExternalSync({
   final trimmed = imageBaseUrl.endsWith('/')
       ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
       : imageBaseUrl;
-  final base = _normalizeImageBaseForCf(trimmed);
+  final base = _normalizeImageBase(trimmed);
   final uri = Uri.parse('$base$path');
   final headers = <String, String>{'x-user-id': userId};
-  if (CfAccess.shouldAttachHeaders(base)) {
-    headers.addAll(CfAccess.headers);
-  }
   final client = httpClient ?? http.Client();
   final closeClient = httpClient == null;
   try {

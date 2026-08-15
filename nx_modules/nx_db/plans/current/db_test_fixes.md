@@ -83,7 +83,7 @@ Without these, the helpers are de-facto untested even though they're the most-sh
 - **`transcript_providers.dart`** — Riverpod wiring is uncovered; only the repository tests touch transcript. Add `transcript_providers_test.dart` for the standard "container override + read" pattern.
 - **`backend_ping.dart`** — no test. Easy to mock with `MockGraphQLClient` if it just queries.
 - **`tag_node.dart`, `attribute.dart`, `relation.dart`** — covered transitively via `Model` and `tag_system` tests, which is fine, but if these grow standalone behavior they'll need their own files. Currently OK.
-- **`core/config/`** — covered inside `auth/auth_core_test.dart` (CR11.2–11.4 test `normalizeHttpEndpointForCf`, `BackendPreset.fromKey`, `resolve`). Mixing concerns is mild — a clean split would be `test/core/config/{backend_presets_test, cf_access_test, graphql_http_config_test}.dart`. Not urgent, but improves discoverability per the "find the test for X" rule.
+- **`core/config/`** — covered inside `auth/auth_core_test.dart` (CR11.2–11.4 test `normalizeHttpEndpoint`, `BackendPreset.fromKey`, `resolve`). Mixing concerns is mild — a clean split would be `test/core/config/{backend_presets_test, graphql_http_config_test}.dart`. Not urgent, but improves discoverability per the "find the test for X" rule.
 
 ## Conventions — minor inconsistencies
 

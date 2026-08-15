@@ -15,7 +15,7 @@ Concrete examples in the current layout:
 - `src/db.dart` is just the GraphQL client factory.
 - `src/auth.dart` mixes `User`, `AuthController`, and four sibling providers
   (`userIdProvider`, `endpointProvider`, `appStatusProvider`, …).
-- `src/cf_access.dart`, `src/graphql_http_config.dart`, `src/backend_presets.dart`,
+- `src/graphql_http_config.dart`, `src/backend_presets.dart`, and
   `src/backend_ping.dart` all sit at the top level with no grouping; you can't
   tell from the names which are "config", which are "networking", which are
   "auth".
@@ -51,7 +51,6 @@ nx_db/
       core/                             # cross-cutting infrastructure
         config/
           backend_presets.dart
-          cf_access.dart
           graphql_http_config.dart
         client/
           graphql_client.dart           # was db.dart (createClient)
@@ -165,7 +164,6 @@ These exist today but should leave the package:
 | `src/auth.dart` (userIdProvider, endpointProvider, …)  | `auth/auth_providers.dart`                            |
 | `src/backend_ping.dart`                                | `auth/backend_ping.dart`                              |
 | `src/backend_presets.dart`                             | `core/config/backend_presets.dart`                    |
-| `src/cf_access.dart`                                   | `core/config/cf_access.dart`                          |
 | `src/graphql_http_config.dart`                         | `core/config/graphql_http_config.dart`                |
 | `src/login_page.dart`                                  | **out of `nx_db`** (app or `nx_auth_ui`)              |
 | `src/models/Model.dart`                                | `kgql/models/model.dart`                              |

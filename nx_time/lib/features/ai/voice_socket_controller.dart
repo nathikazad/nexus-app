@@ -496,10 +496,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       _appLogUploader ??= NxAppLogUploader(
         httpBaseUrl: httpBaseUrl,
         origin: 'nx_time',
-        headers: {
-          'X-User-Id': userId,
-          if (CfAccess.shouldAttachHeaders(httpBaseUrl)) ...CfAccess.headers,
-        },
+        headers: {'X-User-Id': userId},
       );
       return existing;
     }
@@ -516,10 +513,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     _appLogUploader = NxAppLogUploader(
       httpBaseUrl: httpBaseUrl,
       origin: 'nx_time',
-      headers: {
-        'X-User-Id': userId,
-        if (CfAccess.shouldAttachHeaders(httpBaseUrl)) ...CfAccess.headers,
-      },
+      headers: {'X-User-Id': userId},
     );
     final player = _player ??= NxWavAudioPlayer();
     final socket = NxVoiceSocketClient()
@@ -653,11 +647,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       'X-User-Id': userId,
       'X-Client-App': 'nx_time',
       'X-Agent-Id': 'nx_time',
-      if (CfAccess.shouldAttachHeaders(socketUrl)) ...CfAccess.headers,
     };
     debugPrint(
       '[nx_time voice] socket headers client_app=nx_time '
-      'agent_id=nx_time cf=${CfAccess.shouldAttachHeaders(socketUrl)}',
+      'agent_id=nx_time',
     );
     final connected = await socket.connect(socketUrl, headers: headers);
     if (!connected) {

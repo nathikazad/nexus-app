@@ -18,23 +18,12 @@ String _basenameFromPayloadPath(Map<String, dynamic> payload) {
   return p.replaceAll('\\', '/').split('/').last;
 }
 
-/// Same rules as [normalizeHttpEndpointForCf] in nx_db (public API is @visibleForTesting).
-String _normalizeImageBaseForCf(String url) {
-  var ep = url;
-  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
-    ep = ep.replaceFirst('http://', 'https://');
-  }
-  return ep;
-}
+/// Same rules as [normalizeHttpEndpoint] in nx_db (public API is @visibleForTesting).
+String _normalizeImageBase(String url) => normalizeHttpEndpoint(url);
 
-Map<String, String> _imageGetHeaders(String imageBaseUrl, String userId) {
-  final ep = _normalizeImageBaseForCf(imageBaseUrl);
-  final h = <String, String>{'x-user-id': userId};
-  if (CfAccess.shouldAttachHeaders(ep)) {
-    h.addAll(CfAccess.headers);
-  }
-  return h;
-}
+Map<String, String> _imageGetHeaders(String userId) => <String, String>{
+  'x-user-id': userId,
+};
 
 Future<void> _showBillImageFullScreen(
   BuildContext context,
@@ -274,11 +263,11 @@ class _BillThumb extends StatelessWidget {
     final baseRaw = imageBaseUrl.endsWith('/')
         ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
         : imageBaseUrl;
-    final base = _normalizeImageBaseForCf(baseRaw);
+    final base = _normalizeImageBase(baseRaw);
     final uri = Uri.parse(
       '$base/images/file',
     ).replace(queryParameters: {'name': filename});
-    final headers = _imageGetHeaders(imageBaseUrl, userId);
+    final headers = _imageGetHeaders(userId);
 
     final url = uri.toString();
 

@@ -5,7 +5,6 @@ export 'src/core/client/db_audit_context.dart';
 export 'src/core/client/graphql_client.dart';
 export 'src/core/client/graphql_client_provider.dart';
 export 'src/core/config/backend_presets.dart';
-export 'src/core/config/cf_access.dart';
 export 'src/core/config/graphql_http_config.dart';
 
 // Auth

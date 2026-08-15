@@ -28,9 +28,8 @@ Every app needs the same machinery to use it:
 - A way for the user to sign in with a user id and pick which backend
   environment to hit (laptop, Pi-LAN, Pi-Tailscale, prod), then have
   that session survive an app restart.
-- A `GraphQLClient` configured with the right endpoint, the right
-  `x-user-id` header, and the right Cloudflare Access headers for
-  remote backends.
+- A `GraphQLClient` configured with the right endpoint and the right
+  authentication headers.
 - Typed Dart classes for the entities the API returns (`Model`,
   `ModelType`, `Relation`, `Tag…`) and the write payloads it expects
   (`SetModelRequest`, `SetModelTypeRequest`).
@@ -207,7 +206,6 @@ nx_db/
           graphql_client_provider.dart   # graphqlClientProvider
         config/
           backend_presets.dart           # BackendPreset enum + resolve()
-          cf_access.dart                 # Cloudflare Access headers
           graphql_http_config.dart       # x-user-id header injection
         json/
           payload_unwrap.dart            # one place for the String|Map|null dance

@@ -6,7 +6,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
-import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
     show BleClient;
 import 'package:nexus_voice_assistant/data/gps/gps_upload_manager.dart';
@@ -505,14 +504,12 @@ class BleBackgroundService {
         'X-User-Id': userId,
         'X-Client-App': 'nx_main',
         'X-Agent-Id': 'nx_main',
-        if (CfAccess.shouldAttachHeaders(url)) ...CfAccess.headers,
       };
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
           ? telemetryHttpBaseUrl!
           : httpBaseFromSocketUrl(url);
       final uploadHeaders = {
         'X-User-Id': userId,
-        if (CfAccess.shouldAttachHeaders(uploadBase)) ...CfAccess.headers,
       };
       unawaited(printServerClockDrift(uploadBase, uploadHeaders));
       telemetryUploadManager = TelemetryUploadManager(

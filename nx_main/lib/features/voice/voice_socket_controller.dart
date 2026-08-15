@@ -614,7 +614,6 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       origin: 'nx_main',
       headers: {
         'X-User-Id': userId,
-        if (CfAccess.shouldAttachHeaders(httpBaseUrl)) ...CfAccess.headers,
       },
     );
   }

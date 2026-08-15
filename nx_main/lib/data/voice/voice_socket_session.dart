@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:nx_db/auth.dart';
 import 'package:nx_voice/nx_voice.dart';
 
 class VoiceSocketSessionConfig {
@@ -210,7 +209,6 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
       'X-User-Id': config.userId,
       'X-Client-App': config.clientApp,
       'X-Agent-Id': config.agentId,
-      if (CfAccess.shouldAttachHeaders(config.socketUrl)) ...CfAccess.headers,
     };
   }
 }

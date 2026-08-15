@@ -100,19 +100,14 @@ class MirrorPublishTriggerService implements MirrorPublishTrigger {
   Uri _resolve(String path) => Uri.parse('$normalizedBaseUrl$path');
 
   String get normalizedBaseUrl {
-    var value = _baseUri.toString().replaceFirst(RegExp(r'/+$'), '');
-    if (CfAccess.endpointNeedsCfAccess(value) && value.startsWith('http://')) {
-      value = value.replaceFirst('http://', 'https://');
-    }
-    return value;
+    final value = _baseUri.toString().replaceFirst(RegExp(r'/+$'), '');
+    return normalizeHttpEndpoint(value);
   }
 
   Map<String, String> _headers({bool contentTypeJson = false}) {
-    final base = normalizedBaseUrl;
     return {
       if (contentTypeJson) 'Content-Type': 'application/json',
       'X-User-Id': _userId,
-      if (CfAccess.shouldAttachHeaders(base)) ...CfAccess.headers,
     };
   }
 

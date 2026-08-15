@@ -4,13 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:nx_db/auth.dart';
 import 'package:teller_connect/teller_connect.dart';
 
-String _normalizeMcpBaseForCf(String url) {
-  var ep = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
-    ep = ep.replaceFirst('http://', 'https://');
-  }
-  return ep;
-}
+String _normalizeMcpBase(String url) => normalizeHttpEndpoint(
+  url.endsWith('/') ? url.substring(0, url.length - 1) : url,
+);
 
 Map<String, String> _headers(
   String base,
@@ -19,9 +15,6 @@ Map<String, String> _headers(
 }) {
   final headers = <String, String>{'x-user-id': userId};
   if (jsonBody) headers['content-type'] = 'application/json';
-  if (CfAccess.shouldAttachHeaders(base)) {
-    headers.addAll(CfAccess.headers);
-  }
   return headers;
 }
 
@@ -84,7 +77,7 @@ Future<List<TellerLinkedAccount>> fetchTellerAccounts({
   required String userId,
   http.Client? httpClient,
 }) async {
-  final base = _normalizeMcpBaseForCf(imageBaseUrl);
+  final base = _normalizeMcpBase(imageBaseUrl);
   final uri = Uri.parse('$base/teller/accounts');
   final client = httpClient ?? http.Client();
   final closeClient = httpClient == null;
@@ -119,7 +112,7 @@ Future<List<TellerLinkedAccount>> registerTellerEnrollment({
   required TellerData enrollment,
   http.Client? httpClient,
 }) async {
-  final base = _normalizeMcpBaseForCf(imageBaseUrl);
+  final base = _normalizeMcpBase(imageBaseUrl);
   final uri = Uri.parse('$base/teller/enrollment');
   final client = httpClient ?? http.Client();
   final closeClient = httpClient == null;

@@ -19,7 +19,7 @@ Future<void> pingGraphqlBackend({
   Duration timeout = kBackendLoginPingTimeout,
   http.Client? httpClient,
 }) async {
-  final ep = normalizeHttpEndpointForCf(graphqlHttpUrl);
+  final ep = normalizeHttpEndpoint(graphqlHttpUrl);
   final uri = Uri.parse(ep);
   final headers = <String, String>{
     'Content-Type': 'application/json',

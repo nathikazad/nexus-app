@@ -28,7 +28,7 @@ class HttpCardAudioRepository implements CardAudioRepository {
     try {
       final response = await client.get(
         _resolve(audioUrl),
-        headers: imageHeaders(baseUrl, userId),
+        headers: imageHeaders(userId),
       );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw CardAudioFetchException(

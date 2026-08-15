@@ -2588,19 +2588,14 @@ class MicroblogPostRepository {
   }
 
   String get normalizedBaseUrl {
-    var value = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
-    if (CfAccess.endpointNeedsCfAccess(value) && value.startsWith('http://')) {
-      value = value.replaceFirst('http://', 'https://');
-    }
-    return value;
+    final value = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+    return normalizeHttpEndpoint(value);
   }
 
   Map<String, String> httpHeaders({bool contentTypeJson = false}) {
-    final base = normalizedBaseUrl;
     return {
       if (contentTypeJson) 'content-type': 'application/json',
       'x-user-id': userId,
-      if (CfAccess.shouldAttachHeaders(base)) ...CfAccess.headers,
     };
   }
 }

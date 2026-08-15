@@ -29,13 +29,7 @@ String expenseSnapshotTimestamp12Digits() {
 }
 
 /// Upload image bytes to MCP HTTP [imageBaseUrl]/snapshots with `source=expense_app`.
-String _normalizeImageBaseForCf(String url) {
-  var ep = url;
-  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
-    ep = ep.replaceFirst('http://', 'https://');
-  }
-  return ep;
-}
+String _normalizeImageBase(String url) => normalizeHttpEndpoint(url);
 
 Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   required String imageBaseUrl,
@@ -47,13 +41,10 @@ Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   final trimmed = imageBaseUrl.endsWith('/')
       ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
       : imageBaseUrl;
-  final base = _normalizeImageBaseForCf(trimmed);
+  final base = _normalizeImageBase(trimmed);
   final uri = Uri.parse('$base/snapshots');
   final req = http.MultipartRequest('POST', uri);
   req.headers['x-user-id'] = userId;
-  if (CfAccess.shouldAttachHeaders(base)) {
-    req.headers.addAll(CfAccess.headers);
-  }
   req.fields['timestamp'] = expenseSnapshotTimestamp12Digits();
   req.fields['source'] = 'expense_app';
   final tz = DateTime.now().timeZoneName;

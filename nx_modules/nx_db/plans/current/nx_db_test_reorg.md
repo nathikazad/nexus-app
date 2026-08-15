@@ -15,8 +15,7 @@ where coverage stands today and how to restructure the suite so it mirrors
 | `core/client/graphql_client.dart` (`createClient`) | none directly | **gap** — only exercised transitively through providers |
 | `core/client/graphql_client_provider.dart` | overridden in many tests, never asserted | smoke only |
 | `core/config/backend_presets.dart` | `unit/core_auth_db_test.dart` (CR11.3, CR11.4) | adequate |
-| `core/config/cf_access.dart` | `unit/core_auth_db_test.dart` (CR11.2) | one-liner, partial |
-| `core/config/graphql_http_config.dart` | `unit/core_auth_db_test.dart` (CR11.1) | one-liner |
+| `core/config/graphql_http_config.dart` | `unit/core_auth_db_test.dart` (CR11.1–2) | basic header and HTTPS normalization coverage |
 | `core/json/json_coercion.dart` | none (helpers are still private/internal) | **gap** — extracting them was a stated motivation of the reorg |
 | `core/json/payload_unwrap.dart` | implicitly tested via `parseKgqlModelsResult` and `parseKgqlAggregateResult` | **gap** — no direct tests of the unified helper |
 | `auth/user.dart` | none | **gap** |

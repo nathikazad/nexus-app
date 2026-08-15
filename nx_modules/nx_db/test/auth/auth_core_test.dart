@@ -17,9 +17,9 @@ void main() {
       expect(h['x-user-id'], '42');
     });
 
-    test('CR11.2 normalizeHttpEndpointForCf upgrades CF http to https', () {
+    test('CR11.2 normalizeHttpEndpoint upgrades public HTTP to HTTPS', () {
       expect(
-        normalizeHttpEndpointForCf('http://graphql.nathikazad.com/graphql'),
+        normalizeHttpEndpoint('http://graphql.nathikazad.com/graphql'),
         'https://graphql.nathikazad.com/graphql',
       );
     });

@@ -1,16 +1,13 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:nx_db/nx_db.dart';
-
 import 'package:nx_views/gps/domain/gps_point.dart';
 
 String _normalizeBase(String baseUrl) => baseUrl.replaceAll(RegExp(r'/+$'), '');
 
-Map<String, String> _headers(String baseUrl, String userId) => {
-  'X-User-Id': userId,
-  if (CfAccess.shouldAttachHeaders(baseUrl)) ...CfAccess.headers,
-};
+Map<String, String> _headers(String userId) => {
+      'X-User-Id': userId,
+    };
 
 String _dateString(DateTime day) {
   return '${day.year.toString().padLeft(4, '0')}-'
@@ -29,7 +26,7 @@ Future<List<DateTime>> fetchGpsDates(
     final base = _normalizeBase(baseUrl);
     final response = await client.get(
       Uri.parse('$base/gps/dates'),
-      headers: _headers(baseUrl, userId),
+      headers: _headers(userId),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw GpsChartException(
@@ -70,7 +67,7 @@ Future<List<GpsPoint>> fetchGpsDay(
       Uri.parse(
         '$base/gps/day',
       ).replace(queryParameters: {'date': _dateString(day)}),
-      headers: _headers(baseUrl, userId),
+      headers: _headers(userId),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw GpsChartException(
@@ -103,9 +100,8 @@ Future<List<GpsPoint>> fetchGpsDay(
           altitudeM: _doubleOrNull(item['altitude_m']),
           speedMps: _doubleOrNull(item['speed_mps']),
           headingDeg: _doubleOrNull(item['heading_deg']),
-          isMocked: item['is_mocked'] is bool
-              ? item['is_mocked'] as bool
-              : null,
+          isMocked:
+              item['is_mocked'] is bool ? item['is_mocked'] as bool : null,
         ),
       );
     }

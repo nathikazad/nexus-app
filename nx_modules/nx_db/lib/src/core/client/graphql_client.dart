@@ -152,7 +152,7 @@ GraphQLClient createClient(
   String userId, {
   String auditSourceKind = 'nx_mobile',
 }) {
-  final ep = normalizeHttpEndpointForCf(endpoint);
+  final ep = normalizeHttpEndpoint(endpoint);
   final defaultHeaders = buildHttpLinkDefaultHeaders(ep, userId);
 
   final httpLink = HttpLink(

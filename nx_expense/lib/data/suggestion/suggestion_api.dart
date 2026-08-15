@@ -10,16 +10,11 @@ String normalizeSuggestionHttpBase(String url) {
   while (value.endsWith('/')) {
     value = value.substring(0, value.length - 1);
   }
-  if (CfAccess.endpointNeedsCfAccess(value) && value.startsWith('http://')) {
-    value = value.replaceFirst('http://', 'https://');
-  }
-  return value;
+  return normalizeHttpEndpoint(value);
 }
 
 Map<String, String> suggestionHttpHeaders(String base, String userId) {
-  final headers = <String, String>{'x-user-id': userId};
-  if (CfAccess.shouldAttachHeaders(base)) headers.addAll(CfAccess.headers);
-  return headers;
+  return <String, String>{'x-user-id': userId};
 }
 
 String resolveSuggestionAssetUrl(String imageBaseUrl, String path) {

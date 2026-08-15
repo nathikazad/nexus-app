@@ -20,10 +20,7 @@ final peopleImageConfigProvider = Provider<PeopleImageConfig?>((ref) {
   if (baseUrl == null || baseUrl.trim().isEmpty || userId == null) {
     return null;
   }
-  return PeopleImageConfig(
-    baseUrl: baseUrl,
-    headers: imageHeaders(baseUrl, userId),
-  );
+  return PeopleImageConfig(baseUrl: baseUrl, headers: imageHeaders(userId));
 });
 
 final peopleRepositoryProvider = Provider<PersonRepository>((ref) {

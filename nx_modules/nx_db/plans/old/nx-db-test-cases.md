@@ -109,14 +109,13 @@ Brief index of **what** to cover for the shared **`nx_db`** package: GraphQL cli
 
 ---
 
-## 11. Core — `db.dart`, `auth.dart`, `backend_presets.dart`, `cf_access.dart`
+## 11. Core — `db.dart`, `auth.dart`, `backend_presets.dart`
 
 | Surface | Behaviors to test |
 |--------|-------------------|
 | **`createClient` / `graphqlClientProvider`** | Headers (e.g. `x-user-id`); HTTPS upgrade for CF tunnels when applicable |
 | **`AuthController`** | Login persists prefs; logout clears; `userIdProvider` / `endpointProvider` / `sockWsUrlProvider` / `imageBaseUrlProvider` |
 | **`BackendPreset` / `resolve`** | Known presets → non-empty URLs; no duplicate keys in `PrefsKeys` usage |
-| **`CfAccess`** | When `shouldAttachHeaders` / `endpointNeedsCfAccess` — headers attached (unit-level or mocked HTTP if added later) |
 
 ---
 

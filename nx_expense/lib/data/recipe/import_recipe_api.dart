@@ -4,13 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:nx_db/auth.dart';
 
 /// Same host normalization as [uploadExpenseSnapshot] / [postTellerSync] (MCP `http_server.py`).
-String _normalizeImageBaseForCf(String url) {
-  var ep = url;
-  if (CfAccess.endpointNeedsCfAccess(ep) && ep.startsWith('http://')) {
-    ep = ep.replaceFirst('http://', 'https://');
-  }
-  return ep;
-}
+String _normalizeImageBase(String url) => normalizeHttpEndpoint(url);
 
 String _trimBase(String imageBaseUrl) {
   return imageBaseUrl.endsWith('/')
@@ -26,9 +20,6 @@ Map<String, String> _mcpHeaders(
   final headers = <String, String>{'x-user-id': userId};
   if (jsonBody) {
     headers['Content-Type'] = 'application/json';
-  }
-  if (CfAccess.shouldAttachHeaders(base)) {
-    headers.addAll(CfAccess.headers);
   }
   return headers;
 }
@@ -103,7 +94,7 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
   required String recipeUrl,
   http.Client? httpClient,
 }) async {
-  final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
+  final base = _normalizeImageBase(_trimBase(imageBaseUrl));
   final uri = Uri.parse('$base/import-recipe');
   final client = httpClient ?? http.Client();
   final closeClient = httpClient == null;
@@ -139,7 +130,7 @@ Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   required String recipeText,
   http.Client? httpClient,
 }) async {
-  final base = _normalizeImageBaseForCf(_trimBase(imageBaseUrl));
+  final base = _normalizeImageBase(_trimBase(imageBaseUrl));
   final uri = Uri.parse('$base/import-recipe');
   final client = httpClient ?? http.Client();
   final closeClient = httpClient == null;

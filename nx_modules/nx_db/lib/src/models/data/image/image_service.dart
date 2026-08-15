@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:nx_db/src/core/config/cf_access.dart';
 import 'package:nx_db/src/models/domain/image/image_entry.dart';
 
 /// Disk cache for image GETs (lazy-loaded by [CachedNetworkImage] in app UIs).
@@ -15,10 +14,9 @@ final imageCacheManager = CacheManager(
   ),
 );
 
-/// Headers for image HTTP API and [CachedNetworkImage] (`X-User-Id`, optional CF Access).
-Map<String, String> imageHeaders(String baseUrl, String userId) => {
+/// Headers for image HTTP API and [CachedNetworkImage].
+Map<String, String> imageHeaders(String userId) => {
       'X-User-Id': userId,
-      if (CfAccess.shouldAttachHeaders(baseUrl)) ...CfAccess.headers,
     };
 
 /// Strips trailing slashes from [baseUrl] for joining paths.
@@ -64,7 +62,7 @@ bool _allDigits(String s) {
 
 /// Fetches calendar days that have at least one image for [source] (`necklace` or `desktop`).
 ///
-/// Calls `GET {baseUrl}/images/dates?source=...` with `X-User-Id` and optional Cloudflare Access headers.
+/// Calls `GET {baseUrl}/images/dates?source=...` with `X-User-Id`.
 Future<List<DateTime>> fetchAvailableDates(
   String baseUrl,
   String userId,
@@ -79,8 +77,7 @@ Future<List<DateTime>> fetchAvailableDates(
       queryParameters: {'source': source},
     );
 
-    final response =
-        await client.get(uri, headers: imageHeaders(baseUrl, userId));
+    final response = await client.get(uri, headers: imageHeaders(userId));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ImageServiceException(
         'GET /images/dates failed: ${response.statusCode} ${response.body}',
@@ -132,8 +129,7 @@ Future<List<ImageEntry>> fetchImagesForDay(
       },
     );
 
-    final response =
-        await client.get(uri, headers: imageHeaders(baseUrl, userId));
+    final response = await client.get(uri, headers: imageHeaders(userId));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ImageServiceException(
         'GET /images/day failed: ${response.statusCode} ${response.body}',
